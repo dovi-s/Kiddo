@@ -566,7 +566,7 @@ export default function EventCreate() {
               content. The wizard step heading inside main IS the page
               content's h1. Having both was a WCAG h1-uniqueness issue. */}
           <p className="text-base font-semibold font-heading text-foreground">
-            {eventCategory === null ? "New occasion or goal" : isSavingsGoal ? "New savings goal" : "New occasion"}
+            {eventCategory === null ? "New occasion" : isSavingsGoal ? "New savings goal" : "New occasion"}
           </p>
           <div className="flex-1" />
         </div>

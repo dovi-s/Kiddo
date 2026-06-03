@@ -9322,7 +9322,7 @@ export default function Dashboard() {
               </div>
             </motion.section>
 
-            {/* ===== Occasions and Goals ===== */}
+            {/* ===== Occasions ===== */}
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -9332,17 +9332,17 @@ export default function Dashboard() {
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
                 <span className="kiddo-section-label">
                   {isOwnerMode
-                    ? "Your Occasions and Goals"
+                    ? "Your Occasions"
                     : recipientFirstNameDisplay
-                      ? `${recipientFirstNameDisplay}'s Occasions and Goals`
-                      : "Occasions and Goals"}
+                      ? `${recipientFirstNameDisplay}'s Occasions`
+                      : "Occasions"}
                 </span>
                 {!isReadOnlyFund && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                     className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
-                    aria-label="New occasion or goal"
+                    aria-label="New occasion"
                   >
                     <Plus size={13} />
                   </button>
@@ -10033,7 +10033,7 @@ export default function Dashboard() {
                     {/* ── "All in the same fund" clarity note ── */}
                     {activeEvents.length > 0 && (
                       <p style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
-                        Every occasion and goal is the same one fund. Nothing is set aside. 🌱
+                        Every occasion goes into the same one fund. Nothing is set aside. 🌱
                       </p>
                     )}
 
@@ -14158,7 +14158,7 @@ export default function Dashboard() {
           <DialogTitle className="sr-only">Your family's traditions</DialogTitle>
           <div className="p-6 space-y-5">
             <div>
-              <p className="text-sm font-medium text-primary">Occasions and Goals</p>
+              <p className="text-sm font-medium text-primary">Occasions</p>
               <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">What does your family celebrate?</h2>
               <p className="mt-2 text-sm text-muted-foreground">We'll suggest the right milestones at the right time. Pick as many as apply.</p>
             </div>

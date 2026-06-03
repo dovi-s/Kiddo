@@ -526,7 +526,7 @@ export function CreateEventSheet({
     (!isEditing && step !== "category" && step !== "done");
 
   const headerContent = () => {
-    if (step === "category") return { title: "New occasion or goal", sub: (fundName && !isOwnerMode) ? `What are you creating for ${fundName}?` : "What are you creating?" };
+    if (step === "category") return { title: "New occasion", sub: (fundName && !isOwnerMode) ? `A moment for ${fundName} that people can gift around.` : "A moment people can gift around." };
     if (step === "type") return { title: "What's the occasion?", sub: (fundName && !isOwnerMode) ? `For ${fundName}` : "Pick one" };
     if (step === "goal-type") return { title: "Savings goal", sub: isOwnerMode ? "What are you saving for?" : fundName ? `What is ${fundName} saving for?` : "What are they saving for?" };
     if (step === "details") return { title: isEditing && !isCreatingFromArchived ? "Edit occasion" : selectedGiftingType?.label ?? "Occasion", sub: isEditing && !isCreatingFromArchived ? "Update the details" : "Tell people what it's about" };
