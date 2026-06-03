@@ -849,7 +849,7 @@ export default function GiftSuccess() {
               Demo gift. No card was charged.
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--kiddo-evergreen))]/85">
-              You're in the Dunphy demo. Everything below is illustrative; no real money moved and balances reset periodically.{" "}
+              You're in the Dunphy demo. Everything below is illustrative, and balances reset periodically.{" "}
               <Link href="/get-started" className="font-semibold underline underline-offset-2">
                 Create a real fund →
               </Link>
