@@ -45,6 +45,7 @@ import { MemoryTab } from "./MemoryTab";
 import { GiftTab } from "./GiftTab";
 import { ActivityTab } from "./ActivityTab";
 import { CoParentSection, KidViewSection } from "./FamilySettings";
+import { InvestingSection } from "./InvestingSettings";
 import { registerForPushNotificationsAsync } from "../push";
 import {
   authenticate as authenticateBiometric,
@@ -401,11 +402,7 @@ function AccountTab({
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <Section title="How gifts get invested">
-        <SettingsRow title={`${childName}'s mix`} value="Family default" />
-        <SettingsRow title="Gifter choice" value="Allowed when useful" />
-        <SettingsRow title="Hold as cash" value="Available before investing" />
-      </Section>
+      <InvestingSection activeFund={activeFund} />
 
       <CoParentSection activeFund={activeFund} />
       <KidViewSection activeFund={activeFund} />

@@ -691,6 +691,49 @@ export async function apiUpdateKidViewSettings(
   return parseJson<KidViewSettings>(res);
 }
 
+// ─── Investing settings (strategy + gifter preferences) ────────────────────
+export type ManagedStrategy = "growth" | "balanced" | "conservative" | "custom";
+
+export interface InvestmentPreferences {
+  defaultMode: "managed" | "stock" | "cash";
+  managedStrategy: ManagedStrategy;
+  defaultTicker: string;
+  allowGifterStockPick: boolean;
+  allowGifterCashGift: boolean;
+  autoInvestEnabled: boolean;
+  updatedAt: string;
+}
+
+export async function apiGetFundStrategy(fundId: string): Promise<{ strategy: ManagedStrategy; customAllocations: any }> {
+  const res = await apiFetch(`/api/funds/${fundId}/strategy`);
+  return parseJson<{ strategy: ManagedStrategy; customAllocations: any }>(res);
+}
+
+/** Set the managed mix. growth/balanced/conservative are free; custom is Plus-gated (throws on 403). */
+export async function apiSetFundStrategy(fundId: string, strategy: ManagedStrategy): Promise<{ strategy: ManagedStrategy }> {
+  const res = await apiFetch(`/api/funds/${fundId}/strategy`, {
+    method: "PATCH",
+    body: JSON.stringify({ strategy }),
+  });
+  return parseJson<{ strategy: ManagedStrategy }>(res);
+}
+
+export async function apiGetInvestmentPreferences(fundId: string): Promise<InvestmentPreferences> {
+  const res = await apiFetch(`/api/funds/${fundId}/investment-preferences`);
+  return parseJson<InvestmentPreferences>(res);
+}
+
+export async function apiUpdateInvestmentPreferences(
+  fundId: string,
+  patch: Partial<Pick<InvestmentPreferences, "allowGifterStockPick" | "allowGifterCashGift" | "autoInvestEnabled" | "defaultMode" | "defaultTicker">>,
+): Promise<InvestmentPreferences> {
+  const res = await apiFetch(`/api/funds/${fundId}/investment-preferences`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  return parseJson<InvestmentPreferences>(res);
+}
+
 export async function apiGetMobilePushPreferences(): Promise<MobilePushPreferences> {
   const res = await apiFetch("/api/mobile-push/preferences");
   return parseJson<MobilePushPreferences>(res);
