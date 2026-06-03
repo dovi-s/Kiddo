@@ -23,6 +23,7 @@ import {
   apiGetDashboardSummary,
   apiGetFundGifts,
   apiGetFunds,
+  apiGetMemory,
   apiGetMobilePushPreferences,
   apiLogout,
   apiQueueTestMobilePush,
@@ -34,9 +35,11 @@ import {
   type ApiGift,
   type ApiUser,
   type DashboardSummary,
+  type MemoryEntry,
   WEB_BASE,
 } from "../api";
 import { FundHomeTab } from "./FundHomeTab";
+import { MemoryTab } from "./MemoryTab";
 import { registerForPushNotificationsAsync } from "../push";
 import {
   authenticate as authenticateBiometric,
@@ -205,82 +208,9 @@ function TabBar({ active, onPress }: { active: Tab; onPress: (tab: Tab) => void 
 // directly and supplies the summary it fetches.
 
 // ─── Memory Tab ─────────────────────────────────────────────────────────────
+// MemoryTab now lives in ./MemoryTab.tsx — a faithful mirror of the web
+// Memory Book timeline, fed by the real GET /api/funds/:id/memory feed.
 
-function MemoryTab({
-  activeFund,
-  gifts,
-  loading,
-  refreshing,
-  onRefresh,
-}: {
-  activeFund: ApiFund | null;
-  gifts: GiftWithFund[];
-  loading: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
-}) {
-  const childName = getChildName(activeFund);
-  const fundGifts = activeFund ? gifts.filter((g) => g.fundId === activeFund.id) : gifts;
-  const contributorCount = useMemo(() => new Set(fundGifts.map((g) => g.senderName || "Anonymous")).size, [fundGifts]);
-
-  return (
-    <ScrollView
-      style={[styles.scroll, styles.memoryScroll]}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.memoryCover}>
-        <Text style={styles.memoryEyebrow}>Memory Book</Text>
-        <Text style={styles.memoryTitle}>{childName}'s story lives here.</Text>
-        <Text style={styles.memoryBody}>
-          Every gift. Every note. Every person who believed in {childName}'s future.
-        </Text>
-        {activeFund ? (
-          <View style={styles.memoryStats}>
-            <StatPill value={`${contributorCount}`} label="people" />
-            <StatPill value={`${fundGifts.length}`} label="gifts" />
-            <StatPill value={formatBalance(parseFloat(String(activeFund.balance || "0")))} label="fund" />
-          </View>
-        ) : null}
-      </View>
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.evergreen} />
-          <Text style={styles.loadingText}>Opening the Memory Book...</Text>
-        </View>
-      ) : fundGifts.length === 0 ? (
-        <View style={styles.memoryEmpty}>
-          <Text style={styles.memoryEmptyTitle}>It starts with you.</Text>
-          <Text style={styles.memoryEmptyBody}>
-            Write the first note, then every gift and every message will build the story automatically.
-          </Text>
-          <Pressable style={styles.memoryNoteBtn}>
-            <Text style={styles.memoryNoteText}>Write the first note</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.memoryList}>
-          <Text style={styles.chapterTitle}>The Beginning</Text>
-          {fundGifts.slice(0, 12).map((gift) => (
-            <View key={gift.id} style={styles.memoryGiftCard}>
-              <Text style={styles.memoryGiftFrom}>From {gift.senderName || "Anonymous"}</Text>
-              <Text style={styles.memoryGiftDate}>{formatShortDate(gift.createdAt) || "A gift for the future"}</Text>
-              {gift.message
-                ? <Text style={styles.memoryQuote}>"{gift.message}"</Text>
-                : <Text style={styles.memoryQuote}>No note. Still part of the story.</Text>}
-              <Text style={styles.memoryGiftAmount}>{formatBalance(gift.amount)}</Text>
-              <View style={styles.memoryProvenance}>
-                <Text style={styles.memoryProvenanceText}>Invested in {gift.recipientName}'s future with Kiddo.</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
-  );
-}
 
 // ─── Gift Tab ────────────────────────────────────────────────────────────────
 
@@ -903,6 +833,9 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
   // the web Dashboard is built on). Drives the rich FundHomeTab.
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  // The Memory Book timeline for the active fund (drives MemoryTab).
+  const [memory, setMemory] = useState<MemoryEntry[]>([]);
+  const [memoryLoading, setMemoryLoading] = useState(false);
 
   const activeFund = useMemo(
     () => (selectedFundId ? funds.find((f) => f.id === selectedFundId) : null) ?? funds[0] ?? null,
@@ -931,12 +864,34 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     }
   }, []);
 
+  // Memory Book feed for the active fund — same request-ref staleness guard.
+  const memoryReqRef = useRef<string | undefined>(undefined);
+  const loadMemory = useCallback(async (fundId: string | undefined) => {
+    memoryReqRef.current = fundId;
+    if (!fundId) {
+      setMemory([]);
+      setMemoryLoading(false);
+      return;
+    }
+    setMemoryLoading(true);
+    try {
+      const next = await apiGetMemory(fundId);
+      if (memoryReqRef.current === fundId) setMemory(next);
+    } catch {
+      if (memoryReqRef.current === fundId) setMemory([]);
+    } finally {
+      if (memoryReqRef.current === fundId) setMemoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // Clear stale data immediately on switch so the new fund never shows the
-    // previous fund's holdings/gifts for a frame.
+    // previous fund's holdings/gifts/memory for a frame.
     setSummary(null);
+    setMemory([]);
     loadSummary(activeFund?.id);
-  }, [activeFund?.id, loadSummary]);
+    loadMemory(activeFund?.id);
+  }, [activeFund?.id, loadSummary, loadMemory]);
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -972,7 +927,12 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
-  const handleRefresh = () => { setRefreshing(true); loadDashboard(true); loadSummary(activeFund?.id); };
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadDashboard(true);
+    loadSummary(activeFund?.id);
+    loadMemory(activeFund?.id);
+  };
 
   const childName = getChildName(activeFund);
 
@@ -1047,8 +1007,8 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
       {tab === "memory" && (
         <MemoryTab
           activeFund={activeFund}
-          gifts={gifts}
-          loading={loading}
+          entries={memory}
+          loading={loading || memoryLoading}
           refreshing={refreshing}
           onRefresh={handleRefresh}
         />

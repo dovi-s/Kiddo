@@ -254,6 +254,57 @@ export interface DashboardSummary {
   plusFirstMediaAt: string | null;
 }
 
+// ─── Memory Book ────────────────────────────────────────────────────────────
+//
+// Mirrors GET /api/funds/:fundId/memory (server/routes.ts). A timeline of
+// gift messages, milestones, parent notes, and photos — the emotional core the
+// web Memory Book renders. Gift entries carry the full gift sub-record.
+
+export interface MemoryGift {
+  id: string;
+  senderName: string | null;
+  senderEmail?: string | null;
+  amount: string;
+  netAmount?: string | null;
+  status?: string | null;
+  message: string | null;
+  photoUrl?: string | null;
+  createdAt: string;
+  eventName?: string | null;
+  eventId?: string | null;
+  executionModel?: string | null;
+  selectedTicker?: string | null;
+  sharesAcquired?: string | null;
+  priceAtPurchase?: string | null;
+  recurringGiftId?: string | null;
+  parentContributionId?: string | null;
+}
+
+export type MemoryEntryType =
+  | "gift_message"
+  | "milestone"
+  | "photo"
+  | "note"
+  | "parent_note"
+  | "parent_investment_start";
+
+export interface MemoryEntry {
+  id: string;
+  fundId: string;
+  giftId: string | null;
+  type: MemoryEntryType;
+  content: string | null;
+  authorName: string | null;
+  authorPhotoUrl?: string | null;
+  photoUrl?: string | null;
+  videoUrl?: string | null;
+  visibility: "public" | "family" | "private";
+  isFeatured?: boolean;
+  mediaStatus?: string;
+  createdAt: string;
+  gift: MemoryGift | null;
+}
+
 export interface MobilePushPreferences {
   enabled: boolean;
   deviceCount: number;
@@ -505,6 +556,12 @@ export async function apiGetFundGifts(fundId: string): Promise<ApiGift[]> {
 export async function apiGetDashboardSummary(fundId: string): Promise<DashboardSummary> {
   const res = await apiFetch(`/api/funds/${fundId}/dashboard-summary`);
   return parseJson<DashboardSummary>(res);
+}
+
+/** The Memory Book timeline for a fund (gift messages, milestones, notes, photos). */
+export async function apiGetMemory(fundId: string): Promise<MemoryEntry[]> {
+  const res = await apiFetch(`/api/funds/${fundId}/memory`);
+  return parseJson<MemoryEntry[]>(res);
 }
 
 export async function apiCreateFund(data: {
