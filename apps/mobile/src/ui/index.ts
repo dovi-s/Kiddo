@@ -28,3 +28,5 @@ export type { SkeletonProps } from "./Skeleton";
 
 export { haptic, markFontsLoaded, areFontsLoaded, elevate } from "./native";
 export type { HapticIntent } from "./native";
+
+export { loadBrandFonts } from "./fonts";

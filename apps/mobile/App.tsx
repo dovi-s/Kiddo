@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications";
 import { ActivityIndicator, AppState, AppStateStatus, Linking, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "@kora/tokens";
-import { elevate } from "./src/ui";
+import { elevate, loadBrandFonts } from "./src/ui";
 import { appCopy } from "@kora/content";
 import type { OnboardingAccountType, OnboardingInvestmentChoice, OnboardingStep, PublicGiftDestination } from "@kora/types";
 
@@ -632,6 +632,16 @@ class ErrorBoundary extends React.Component<
 }
 
 export default function App() {
+  // Load the brand fonts (DM Sans + Bricolage Grotesque) and force one re-render
+  // once they register, so KText swaps from the system fallback to the brand
+  // typeface. Without this the whole app renders generic and looks unlike web.
+  const [, setFontTick] = React.useState(0);
+  React.useEffect(() => {
+    loadBrandFonts()
+      .then(() => setFontTick((t) => t + 1))
+      .catch(() => {});
+  }, []);
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
