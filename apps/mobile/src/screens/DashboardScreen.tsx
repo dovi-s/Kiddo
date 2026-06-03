@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -424,7 +425,10 @@ function AccountTab({
           <Text style={styles.planBody}>
             One active event. Platform fee: $2 on gifts up to $200, then 1% of the full gift amount over $200.
           </Text>
-          <Pressable style={styles.primarySmallBtn}>
+          <Pressable
+            style={styles.primarySmallBtn}
+            onPress={() => Linking.openURL(`${WEB_BASE}/pricing`).catch(() => {})}
+          >
             <Text style={styles.primarySmallBtnText}>See Kiddo+</Text>
           </Pressable>
         </View>
@@ -1185,34 +1189,34 @@ const styles = StyleSheet.create({
   growthTrustText: { color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "600" },
 
   // Settings / Account
-  settingsRow: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: spacing.md, flexDirection: "row", justifyContent: "space-between", gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
+  settingsRow: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, flexDirection: "row", justifyContent: "space-between", gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.surface.muted },
   settingsTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
-  settingsValue: { color: "#6B7280", fontSize: 14, fontWeight: "700", maxWidth: "52%" },
-  planCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
+  settingsValue: { color: semanticColors.text.muted, fontSize: 14, fontWeight: "700", maxWidth: "52%" },
+  planCard: { backgroundColor: semanticColors.surface.card, borderRadius: radius.hero, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.surface.muted },
   planTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
-  planBody: { color: "#6B7280", fontSize: 14, lineHeight: 21 },
-  pushCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
+  planBody: { color: semanticColors.text.muted, fontSize: 14, lineHeight: 21 },
+  pushCard: { backgroundColor: semanticColors.surface.card, borderRadius: radius.hero, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.surface.muted },
   pushTitle: { color: colors.ink, fontSize: 15, fontWeight: "900" },
-  pushBody: { color: "#6B7280", fontSize: 13, lineHeight: 19 },
-  pushMeta: { color: "#8B948C", fontSize: 12, fontWeight: "700", marginTop: 4 },
+  pushBody: { color: semanticColors.text.muted, fontSize: 13, lineHeight: 19 },
+  pushMeta: { color: semanticColors.text.muted, fontSize: 12, fontWeight: "700", marginTop: 4 },
   pushMessage: { color: colors.ink, fontSize: 12, lineHeight: 18 },
   deviceRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "#EEE8DC",
+    borderTopColor: semanticColors.surface.muted,
   },
   deviceRowPressed: { opacity: 0.6 },
   deviceRowTitle: { color: colors.ink, fontSize: 14, fontWeight: "600" },
-  deviceRowMeta: { color: "#8B948C", fontSize: 11, marginTop: 2 },
-  deviceRowRevoke: { color: "#9A4A2C", fontSize: 12, fontWeight: "700" },
-  toggleBtn: { borderRadius: 999, backgroundColor: "#F3F4F6", paddingVertical: 8, paddingHorizontal: 14 },
+  deviceRowMeta: { color: semanticColors.text.muted, fontSize: 11, marginTop: 2 },
+  deviceRowRevoke: { color: colors.goldInk, fontSize: 12, fontWeight: "700" },
+  toggleBtn: { borderRadius: radius.pill, backgroundColor: semanticColors.surface.muted, paddingVertical: 8, paddingHorizontal: 14 },
   toggleBtnOn: { backgroundColor: colors.evergreen },
-  toggleText: { color: "#6B7280", fontSize: 12, fontWeight: "900" },
+  toggleText: { color: semanticColors.text.muted, fontSize: 12, fontWeight: "900" },
   toggleTextOn: { color: "#FFFFFF" },
-  signOutBtn: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, alignItems: "center", borderWidth: 1, borderColor: "#FECACA" },
-  signOutText: { color: "#DC2626", fontSize: 15, fontWeight: "800" },
+  signOutBtn: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, alignItems: "center", borderWidth: 1, borderColor: "#E4B8B0" },
+  signOutText: { color: "#B23B2E", fontSize: 15, fontWeight: "800" },
 
   // Event composer
   composerWrap: { padding: spacing.md, gap: spacing.md, paddingBottom: 32 },
