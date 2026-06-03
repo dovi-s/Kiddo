@@ -9951,7 +9951,7 @@ export async function registerRoutes(
       // anywhere in the UI.
       const labelOf = (k: string) =>
         k === "growth" || k === "auto_invest" ? "Growth Mix"
-          : k === "balanced" ? "Steady & Balanced"
+          : k === "balanced" ? "Balanced Mix"
             : k === "conservative" ? "Conservative Mix"
               : k === "custom" ? "Custom ETF Mix"
                 : k;

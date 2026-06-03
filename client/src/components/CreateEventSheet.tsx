@@ -510,8 +510,8 @@ export function CreateEventSheet({
     if (!investPrefs) return "Managed growth mix";
     if (investPrefs.defaultMode === "stock" && investPrefs.defaultTicker) return investPrefs.defaultTicker;
     if (investPrefs.defaultMode === "cash") return "Held as cash";
-    if (investPrefs.managedStrategy === "balanced") return "Steady & Balanced portfolio";
-    if (investPrefs.managedStrategy === "conservative") return "Conservative Mix portfolio";
+    if (investPrefs.managedStrategy === "balanced") return "Balanced portfolio";
+    if (investPrefs.managedStrategy === "conservative") return "Conservative portfolio";
     return "Growth index portfolio";
   })();
 

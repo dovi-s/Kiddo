@@ -248,7 +248,7 @@ const readFileAsDataUrl = (file: File) =>
 
 const getStrategyLabel = (strategy?: string | null) => {
   const normalized = String(strategy || "").toLowerCase();
-  if (normalized === "balanced") return "Steady & Balanced";
+  if (normalized === "balanced") return "Balanced Mix";
   if (normalized === "conservative") return "Conservative Mix";
   if (normalized === "custom") return "Custom ETF Mix";
   return "Growth Mix";

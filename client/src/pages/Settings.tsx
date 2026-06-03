@@ -325,7 +325,7 @@ function FundDetailsSnapshot({
         <p className="text-xs font-medium text-foreground">Fund details</p>
         <span className="text-[11px] text-muted-foreground">
           {fund.investmentStrategy === "balanced"
-            ? "Steady & Balanced"
+            ? "Balanced Mix"
             : fund.investmentStrategy === "conservative"
               ? "Conservative Mix"
               : fund.investmentStrategy === "custom"
@@ -1141,7 +1141,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 // converges to the mean over longer horizons (sigma / sqrt(years)). Always paired with
 // the standard "past performance does not guarantee future results" disclaimer.
 // Canonical strategy emojis (per project locked emoji map):
-//   📈 Growth · 🌿 Balanced · ⚖️ Conservative · 🎯 Custom
+//   📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎯 Custom
 // Surface the emoji on each card title for instant differentiation
 // (matches the chip on the holdings header, the StrategyIcon on the
 // recurring schedule cards, and the per-strategy register elsewhere).
@@ -1163,7 +1163,7 @@ const STRATEGIES = [
   },
   {
     key: "balanced",
-    emoji: "🌿",
+    emoji: "⚖️",
     label: "Balanced Mix",
     description: "Growth with stability · more bonds to soften ups and downs.",
     bestFor: "Best for children with 5–10 years to go.",
@@ -1178,7 +1178,7 @@ const STRATEGIES = [
   },
   {
     key: "conservative",
-    emoji: "⚖️",
+    emoji: "🛡️",
     label: "Conservative Mix",
     description: "Capital preservation tilt · protect what's there as 18 approaches.",
     bestFor: "Best for children approaching 18.",
@@ -1398,7 +1398,7 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
           data-testid="option-gifting-default-managed"
         >
           <p className="text-sm font-medium text-foreground">Managed mix</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Use your fund's investing style, like Growth Mix or Steady & Balanced.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Use your fund's investing style, like Growth Mix or Balanced Mix.</p>
         </button>
         <button
           type="button"
@@ -1752,7 +1752,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2 flex-wrap">
                     {/* Canonical strategy emoji — matches the locked map
-                        (📈 Growth · 🌿 Balanced · ⚖️ Conservative · 🎯
+                        (📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎯
                         Custom). Helps the eye distinguish options at a
                         glance instead of having to read each label. */}
                     {strategy.emoji && (

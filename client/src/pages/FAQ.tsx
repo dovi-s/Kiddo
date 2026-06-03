@@ -183,7 +183,7 @@ const faqItems = [
     id: "auto-invest",
     category: "Investing",
     question: "What happens after a gift comes in?",
-    answer: "Every fund has one family default. Most families use a managed recurring-investment style like Growth Mix or Steady & Balanced. Some choose a specific default stock. Others prefer to hold gifts as cash until they invest later. Gifts follow that family default unless the parent has explicitly allowed a stock override or a cash option in fund settings.",
+    answer: "Every fund has one family default. Most families use a managed recurring-investment style like Growth Mix or Balanced Mix. Some choose a specific default stock. Others prefer to hold gifts as cash until they invest later. Gifts follow that family default unless the parent has explicitly allowed a stock override or a cash option in fund settings.",
   },
   {
     id: "rebalancing",

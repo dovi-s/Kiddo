@@ -29,7 +29,7 @@ function getDefaultLabel(prefs: any): string {
   }
   if (prefs.defaultMode === "cash") return "Hold as cash";
   const strategy = prefs.managedStrategy;
-  if (strategy === "balanced") return "Steady & Balanced portfolio";
+  if (strategy === "balanced") return "Balanced portfolio";
   return "Growth index portfolio";
 }
 

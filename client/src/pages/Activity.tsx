@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
+import { STRATEGY_SHORT, STRATEGY_EMOJI } from "@/lib/strategy";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { EnlighteningReveal } from "@/components/ui/gemini";
@@ -3304,16 +3305,17 @@ export default function Activity() {
                                     diff in metadata; render it as a two-line
                                     arrow form so the parent can SEE the
                                     change without parsing prose. Per the
-                                    locked strategy emoji map (Conservative
-                                    ⚖️ / Balanced 🌿 / Growth 📈 / Custom 🎯).
+                                    strategy emoji map (Conservative
+                                    🛡️ / Balanced ⚖️ / Growth 📈 / Custom 🎯),
+                                    centralized in @/lib/strategy.
                                     Never on gifter or Memory Book surfaces —
                                     those are different philosophies. */}
                                 {(normalizedType === "fund_strategy_changed" || normalizedType === "custom_allocations_changed") && (() => {
                                   const STRATEGY_LABELS: Record<string, { label: string; emoji: string }> = {
-                                    conservative: { label: "Conservative", emoji: "⚖️" },
-                                    balanced:     { label: "Balanced",     emoji: "🌿" },
-                                    growth:       { label: "Growth",       emoji: "📈" },
-                                    custom:       { label: "Custom",       emoji: "🎯" },
+                                    conservative: { label: STRATEGY_SHORT.conservative, emoji: STRATEGY_EMOJI.conservative },
+                                    balanced:     { label: STRATEGY_SHORT.balanced,     emoji: STRATEGY_EMOJI.balanced },
+                                    growth:       { label: STRATEGY_SHORT.growth,       emoji: STRATEGY_EMOJI.growth },
+                                    custom:       { label: STRATEGY_SHORT.custom,       emoji: STRATEGY_EMOJI.custom },
                                   };
                                   if (normalizedType === "fund_strategy_changed") {
                                     // Accept both metadata shapes: the newer

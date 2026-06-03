@@ -162,6 +162,7 @@ import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
+import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
@@ -345,11 +346,11 @@ function lookupPickMeta(ticker: string | null | undefined, quotedStocks: AutoInv
 // emoji or it dilutes the category. Adding a new strategy? Add it to this map.
 // "cash" is intentionally lowercase + no emoji — it's a holding state, not a strategy.
 const STRATEGY_META: Record<string, { name: string; emoji: string }> = {
-  growth:       { name: "Growth Mix",       emoji: "📈" },
-  balanced:     { name: "Steady & Balanced", emoji: "🌿" },
-  conservative: { name: "Conservative Mix", emoji: "⚖️" },
-  custom:       { name: "Custom ETF Mix",   emoji: "🎯" },
-  cash:         { name: "cash",             emoji: "" },
+  growth:       { name: STRATEGY_LABEL.growth,       emoji: STRATEGY_EMOJI.growth },
+  balanced:     { name: STRATEGY_LABEL.balanced,     emoji: STRATEGY_EMOJI.balanced },
+  conservative: { name: STRATEGY_LABEL.conservative, emoji: STRATEGY_EMOJI.conservative },
+  custom:       { name: STRATEGY_LABEL.custom,       emoji: STRATEGY_EMOJI.custom },
+  cash:         { name: "cash",                      emoji: "" },
 };
 
 // Friendly label for a fund's investment strategy. Used to label managed/auto recurring
@@ -7766,13 +7767,13 @@ export default function Dashboard() {
                               )}
 
                               {/* Managed-bucket section. Header reads
-                                  "Emma's mix (⚖️ Conservative)" — uses the
+                                  "Emma's mix (🛡️ Conservative)" — uses the
                                   canonical `mixIdentityFor` so the bucket
                                   name matches every other surface (the
                                   recurring schedule list, per-row chips,
                                   etc.), and the current preset rides as
                                   a parenthetical with the locked strategy
-                                  emoji (⚖️ Conservative · 🌿 Balanced ·
+                                  emoji (🛡️ Conservative · ⚖️ Balanced ·
                                   📈 Growth · 🎯 Custom). The structural
                                   cue (this bucket is platform-managed vs
                                   the gifter-picked "Chosen with love"
@@ -11453,7 +11454,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <span className="text-base">{STRATEGY_META[strategy]?.emoji ?? STRATEGY_META.growth.emoji}</span>
                           <p className="text-sm font-semibold text-foreground">
-                            {isCustom ? "Custom mix" : isBalanced ? "Steady & Balanced" : isConservative ? "Conservative Mix" : "Growth Mix"}
+                            {isCustom ? "Custom mix" : isBalanced ? "Balanced Mix" : isConservative ? "Conservative Mix" : "Growth Mix"}
                           </p>
                         </div>
                         {allocations.length > 0 ? (
@@ -13607,7 +13608,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <span className="text-base">{STRATEGY_META[strategy]?.emoji ?? STRATEGY_META.growth.emoji}</span>
                           <p className="text-sm font-semibold text-foreground">
-                            {isCustom ? "Custom mix" : isBalanced ? "Steady & Balanced" : isConservative ? "Conservative Mix" : "Growth Mix"}
+                            {isCustom ? "Custom mix" : isBalanced ? "Balanced Mix" : isConservative ? "Conservative Mix" : "Growth Mix"}
                           </p>
                         </div>
                         {allocations.length > 0 ? (

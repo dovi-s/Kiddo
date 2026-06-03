@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Check, Shield, ShieldCheck, Lock, TrendingUp, Wa
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
+import { STRATEGY_LABEL } from "@/lib/strategy";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { haptic } from "@/lib/haptics";
@@ -1075,7 +1076,7 @@ export default function ActivateInvesting() {
                 {[
                   {
                     id: "growth",
-                    label: "Growth Mix",
+                    label: STRATEGY_LABEL.growth,
                     description: "Long-term growth with broad diversification",
                     icon: <TrendingUp size={20} />,
                     tag: "Most popular",
@@ -1083,15 +1084,15 @@ export default function ActivateInvesting() {
                   },
                   {
                     id: "balanced",
-                    label: "Steady & Balanced",
-                    description: "Lower risk with more bond allocation",
+                    label: STRATEGY_LABEL.balanced,
+                    description: "A steadier mix with more bonds",
                     icon: <Shield size={20} />,
                     tag: null,
                     locked: false,
                   },
                   {
                     id: "conservative",
-                    label: "Conservative Mix",
+                    label: STRATEGY_LABEL.conservative,
                     description: "Capital preservation tilt. Steadier as the handoff nears",
                     icon: <ShieldCheck size={20} />,
                     tag: null,
@@ -1294,11 +1295,11 @@ export default function ActivateInvesting() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Investment approach</p>
                   <p className="text-sm font-medium text-foreground" data-testid="text-review-strategy">
                     {strategy === "growth"
-                      ? "Growth Mix"
+                      ? STRATEGY_LABEL.growth
                       : strategy === "balanced"
-                        ? "Steady & Balanced"
+                        ? STRATEGY_LABEL.balanced
                         : strategy === "conservative"
-                          ? "Conservative Mix"
+                          ? STRATEGY_LABEL.conservative
                           : "Custom"}
                   </p>
                 </div>
