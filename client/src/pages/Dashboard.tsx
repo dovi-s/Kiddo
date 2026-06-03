@@ -9457,17 +9457,10 @@ export default function Dashboard() {
                   // kid). Captures the more concrete "let's build the fund
                   // through year one" framing that parents of newborns
                   // actually have in mind. No date — it's a goal.
-                  if (isNewborn && !activeEvents.some(e =>
-                    String(e.name || "").toLowerCase().includes("first year") ||
-                    String(e.name || "").toLowerCase().includes("year one"))) {
-                    suggestions.push({
-                      key: "sug-first-year", emoji: "🌱",
-                      name: `${childFirstSug}'s First Year`,
-                      sub: "Savings goal", countdown: "no date needed",
-                      sortMs: Number.POSITIVE_INFINITY,
-                      prefill: { name: `${childFirstSug}'s First Year`, eventType: "just_because", goalAmount: "2500", eventCategory: "savings_goal" },
-                    });
-                  }
+                  // "First Year" savings-goal suggestion removed — same reasoning
+                  // as the First Car / College Fund goals below: fund-level dollar
+                  // goals don't compose and imply an earmark a UTMA can't keep.
+                  // For a newborn, the 1st-birthday occasion (above) is the rally.
                 }
 
                 // Cultural traditions - read early so we can interleave
@@ -9546,24 +9539,16 @@ export default function Dashboard() {
                       prefill: { name: `${childFirstSug}'s Graduation`, eventType: "graduation", eventDate: `${gradYear}-06-01`, eventCategory: "gifting_occasion" },
                     });
                   }
-                  if (!activeEvents.some(e => String((e as any).name || "").toLowerCase().includes("car"))) {
-                    suggestions.push({
-                      key: "sug-car", emoji: "🚗",
-                      name: `${childFirstSug}'s First Car`,
-                      sub: "Savings goal", countdown: "no date needed",
-                      sortMs: Number.POSITIVE_INFINITY,
-                      prefill: { name: `${childFirstSug}'s First Car`, eventType: "just_because", goalAmount: "5000", eventCategory: "savings_goal" },
-                    });
-                  }
-                  if (!activeEvents.some(e => String((e as any).name || "").toLowerCase().includes("college"))) {
-                    suggestions.push({
-                      key: "sug-college", emoji: "📚",
-                      name: `${childFirstSug}'s College Fund`,
-                      sub: "Savings goal", countdown: "no date needed",
-                      sortMs: Number.POSITIVE_INFINITY,
-                      prefill: { name: `${childFirstSug}'s College Fund`, eventType: "just_because", goalAmount: "50000", eventCategory: "savings_goal" },
-                    });
-                  }
+                  // Fund-level dollar-goal suggestions (First Car / College Fund)
+                  // intentionally REMOVED. A goal tracks the WHOLE fund toward a
+                  // number, so multiple goals don't compose — a "$5,000 First Car"
+                  // suggestion next to a $22k fund is already 4x "met" (absurd) —
+                  // and "save $X for college" implies an earmark a UTMA can't keep
+                  // (529 territory we deliberately don't compete on). The parent's
+                  // "what's the target / on track?" need is answered honestly by
+                  // the at-majority projection; the rally/progress mechanic, if
+                  // wanted, belongs at the OCCASION level (composes, honest). The
+                  // savings_goal rendering path stays dormant for that future use.
                 }
 
                 // Holiday - Oct through Dec (only when no cultural traditions set)
