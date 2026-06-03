@@ -31,6 +31,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, Skeleton, haptic } from "../ui";
+import { projectFundValue, ageFromBirthdate } from "../lib/projection";
 import {
   formatBalance,
   WEB_BASE,
@@ -244,6 +245,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
   // Tapping a holding opens a detail sheet (cost basis, % of fund, who picked it) —
   // the web's per-holding depth surface, instead of navigating away.
   const [selectedHolding, setSelectedHolding] = useState<ApiHolding | null>(null);
+  const [projectionOpen, setProjectionOpen] = useState(false);
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -656,6 +658,27 @@ export function FundHomeTab(props: FundHomeTabProps) {
                 value={`${d.peopleCount} ${d.peopleCount === 1 ? "person" : "people"}`}
               />
             </View>
+            <Pressable
+              onPress={() => {
+                haptic("selection");
+                setProjectionOpen(true);
+              }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                marginTop: spacing.sm,
+                paddingTop: spacing.sm,
+                borderTopWidth: 1,
+                borderTopColor: semanticColors.surface.muted,
+              }}
+            >
+              <KText variant="label" color={colors.evergreen}>
+                See what it could become
+              </KText>
+              <Ionicons name="arrow-forward" size={15} color={colors.evergreen} />
+            </Pressable>
           </KiddoCard>
         </View>
       ) : hasStarted && summaryPending ? (
@@ -879,7 +902,141 @@ export function FundHomeTab(props: FundHomeTabProps) {
           onClose={() => setSelectedHolding(null)}
         />
       ) : null}
+
+      {projectionOpen && activeFund ? (
+        <ProjectionSheet
+          startingValue={d.totalValue}
+          monthly={d.monthlyRecurring}
+          birthdate={activeFund.recipientBirthdate}
+          childName={childName}
+          isOwnerMode={isOwnerMode}
+          onClose={() => setProjectionOpen(false)}
+        />
+      ) : null}
     </>
+  );
+}
+
+// Projection sheet — "what the fund could become." Uses the locked projection
+// math (mirror of shared/projection.ts): 7% net of the 0.10% fee, contributions
+// through majority, then pure compound. Milestone-age picker + a projected curve.
+function ProjectionSheet({
+  startingValue,
+  monthly,
+  birthdate,
+  childName,
+  isOwnerMode,
+  onClose,
+}: {
+  startingValue: number;
+  monthly: number;
+  birthdate?: string | null;
+  childName: string;
+  isOwnerMode: boolean;
+  onClose: () => void;
+}) {
+  const currentAge = ageFromBirthdate(birthdate) ?? 5;
+  const contributionYears = Math.max(0, 18 - currentAge); // UTMA window (default majority 18)
+  const MILESTONES = [18, 21, 25, 30, 40, 50, 65];
+  const ages = MILESTONES.filter((a) => a > currentAge + 0.5);
+  const [age, setAge] = useState<number>(ages.find((a) => a >= currentAge + 5) ?? ages[0] ?? 18);
+
+  const project = (toAge: number) =>
+    projectFundValue({ startingValue, monthlyContribution: monthly, yearsAhead: toAge - currentAge, contributionYears });
+  const target = project(age);
+
+  // trajectory now → selected age
+  const width = Math.max(220, Dimensions.get("window").width - 72);
+  const height = 110;
+  const series: number[] = [];
+  const yearsAhead = age - currentAge;
+  const stepN = 40;
+  for (let i = 0; i <= stepN; i++) series.push(project(currentAge + (yearsAhead * i) / stepN));
+  const max = Math.max(...series);
+  const min = Math.min(...series);
+  const span = Math.max(max - min, 1);
+  const px = (i: number) => (i / stepN) * width;
+  const py = (v: number) => height - 6 - ((v - min) / span) * (height - 12);
+  const line = series.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
+  const areaPath = `${line} L${width.toFixed(1)},${height} L0,${height} Z`;
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(14,37,24,0.4)" }} onPress={onClose} />
+      <View
+        style={{
+          backgroundColor: colors.cream,
+          borderTopLeftRadius: radius.container,
+          borderTopRightRadius: radius.container,
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: 40,
+        }}
+      >
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface.muted, alignSelf: "center", marginBottom: spacing.md }} />
+        <KText variant="sectionLabel" color={semanticColors.text.muted}>
+          {isOwnerMode ? "What your fund could become" : `What ${childName}'s fund could become`}
+        </KText>
+        <View style={{ marginTop: spacing.xs }}>
+          <CountUp value={target} color={colors.evergreen} />
+        </View>
+        <KText variant="body" color={semanticColors.text.muted} style={{ marginTop: 2 }}>
+          when {isOwnerMode ? "you're" : `${childName} is`} {age}
+        </KText>
+
+        {/* age milestone pills */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.md }}>
+          {ages.map((a) => {
+            const on = a === age;
+            return (
+              <Pressable
+                key={a}
+                onPress={() => {
+                  haptic("selection");
+                  setAge(a);
+                }}
+                style={{
+                  paddingVertical: 7,
+                  paddingHorizontal: 14,
+                  borderRadius: radius.pill,
+                  backgroundColor: on ? colors.evergreen : semanticColors.surface.card,
+                  borderWidth: 1,
+                  borderColor: on ? colors.evergreen : semanticColors.surface.muted,
+                }}
+              >
+                <KText variant="label" color={on ? "#FFFFFF" : semanticColors.text.primary}>
+                  {a}
+                </KText>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* trajectory */}
+        <View style={{ marginTop: spacing.md }}>
+          <Svg width={width} height={height}>
+            <Defs>
+              <LinearGradient id="projFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={colors.gold} stopOpacity={0.22} />
+                <Stop offset="1" stopColor={colors.gold} stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
+            <Path d={areaPath} fill="url(#projFill)" />
+            <Path d={line} stroke={colors.evergreen} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+            <Circle cx={px(stepN)} cy={py(series[stepN])} r={4} fill={colors.gold} />
+          </Svg>
+        </View>
+
+        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: spacing.sm }}>
+          Based on {formatBalance(startingValue)} today{monthly > 0 ? ` plus ${formatBalance(monthly)}/mo` : ""}, at a 7%
+          average annual return after our 0.10% fee.
+        </KText>
+        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: 4 }}>
+          A projection, not a promise — markets rise and fall.
+        </KText>
+        <Button label="Done" onPress={onClose} fullWidth style={{ marginTop: spacing.md }} />
+      </View>
+    </Modal>
   );
 }
 
