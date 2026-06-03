@@ -5169,9 +5169,20 @@ export default function Dashboard() {
         {/* At-18 welcome banner — extracted to
             @/components/dashboard/KidAt18WelcomeBanner. Renders only when
             the viewer is the kid and the claim is recent (server gates
-            kidClaimedAt). One-time, dismissable, per-fund localStorage. */}
+            kidClaimedAt). One-time, dismissable, per-fund localStorage.
+
+            ALSO gate on isOwnerMode. kidClaimedAt comes from the
+            dashboard-summary query, which is cached per-FUND not per-VIEWER
+            (["/api/funds", fundId, "dashboard-summary"]). On a shared browser
+            / demo persona-switch, the kid's cached summary (kidClaimedAt set)
+            can bleed to a NON-owner viewing the same fund (e.g. the previous-
+            owner parent), wrongly rendering "This is your fund now, {Kid}" for
+            them. isOwnerMode derives from the per-viewer funds list (accessRole
+            === 'owner'), which does NOT bleed — so it's the reliable guard.
+            The banner is inherently owner-only ("this is YOUR fund"), so this
+            is correct-by-construction, not just defensive. */}
         <KidAt18WelcomeBanner
-          kidClaimedAt={(dashboardSummary as any)?.kidClaimedAt as string | null | undefined}
+          kidClaimedAt={isOwnerMode ? ((dashboardSummary as any)?.kidClaimedAt as string | null | undefined) : null}
           fundId={activeFundId}
           childFirstName={recipientFirstNameDisplay}
         />
@@ -7558,7 +7569,12 @@ export default function Dashboard() {
                             const sharesLbl = hShares > 0
                               ? (hShares >= 1 ? hShares.toFixed(2) : hShares.toFixed(4)) + " shares"
                               : null;
-                            const pctLbl = hPct > 0 ? `${Math.round(hPct)}% of ${childPoss}` : null;
+                            // Holdings under 0.5% round to 0 with Math.round —
+                            // "0% of your fund" on a real $300 holding reads as
+                            // worthless. Floor the label at "<1%" for any
+                            // positive-but-sub-1% position.
+                            const pctRound = Math.round(hPct);
+                            const pctLbl = hPct > 0 ? `${pctRound < 1 ? "<1" : pctRound}% of ${childPoss}` : null;
                             const overlapSide = h._overlapSide;
                             const ticker = h.ticker.toUpperCase();
                             const handleAddMore = () => {
@@ -7888,6 +7904,23 @@ export default function Dashboard() {
                 const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
                 return s + (Number.isFinite(n) && n > 0 ? n : 0);
               }, 0);
+              // Owner-mode reframe: post-handoff, the previous owner's
+              // contributions are presented as gifts TO the new owner (the
+              // breakdown card up top reads "$X incl. $Y from Dad"). This
+              // footer was still showing the others-only total ($8,320) while
+              // the gifter list right above it includes the parent — a visible
+              // contradiction. In owner mode add the parent's contributions so
+              // the footer agrees with the card. Summed from the SAME
+              // loveLiveGifts source as totalGifted, so the two can't diverge.
+              // Non-owner (parent) view is unchanged.
+              const parentInvestedForOwner = isOwnerMode
+                ? loveLiveGifts.reduce((s, g) => {
+                    if (!(g as any).parentContributionId) return s;
+                    const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
+                    return s + (Number.isFinite(n) && n > 0 ? n : 0);
+                  }, 0)
+                : 0;
+              const displayGiftedTotal = totalGifted + parentInvestedForOwner;
               const fmtWhole = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
               const childName = recipientFirstNameDisplay;
               return (
@@ -8343,7 +8376,7 @@ export default function Dashboard() {
                         );
                       })()}
                       <p style={{ fontSize: 13.5, color: "rgb(100,92,86)", marginTop: 8, lineHeight: 1.5 }}>
-                        {fmtWhole(totalGifted)} gifted to {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund.{" "}
+                        {fmtWhole(displayGiftedTotal)} gifted to {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund.{" "}
                         {/* Inline share-loop close. The community signal
                             here ("X people love Emma") is the moment to
                             invite more — but the surface used to end at
