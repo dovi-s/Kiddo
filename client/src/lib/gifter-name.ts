@@ -36,10 +36,18 @@ export function gifterShortName(name?: string | null): string {
   const words = trimmed.split(/\s+/);
 
   // Pass 1: first capitalized name that isn't a weak leader or a possessive.
-  for (const w of words) {
+  // If that capitalized word IMMEDIATELY follows a possessive, keep the owner
+  // ("Phil's Office" -> "Phil's Office", not a bare "Office") — but only when the
+  // possessive is the directly-preceding word, so "Grandpa's friend Earl" still
+  // yields "Earl" (the name follows "friend", not the possessive).
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
     if (WEAK_NAME_LEADERS.has(cleanToken(w))) continue;
     if (/['’]s$/.test(w)) continue;
-    if (/^[A-Z]/.test(w)) return w;
+    if (/^[A-Z]/.test(w)) {
+      const prev = i > 0 ? words[i - 1] : "";
+      return /['’]s$/.test(prev) ? `${prev} ${w}` : w;
+    }
   }
 
   // Pass 2: descriptive phrase. Drop leading weak leaders, keep the rest whole.
