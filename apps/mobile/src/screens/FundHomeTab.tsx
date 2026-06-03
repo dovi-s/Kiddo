@@ -430,6 +430,29 @@ export function FundHomeTab(props: FundHomeTabProps) {
       showsVerticalScrollIndicator={false}
       refreshControl={refresh}
     >
+      {/* ── activate investing (fund not yet active = identity not verified) ── */}
+      {!isReadOnly && String(activeFund.status || "").toLowerCase() === "draft" ? (
+        <KiddoCard>
+          <KText variant="eyebrow" color={colors.goldInk}>One quick step</KText>
+          <KText variant="heading" style={{ marginTop: 2 }}>Activate investing</KText>
+          <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
+            Gifts are held safely until we verify your identity — a secure, one-time step required to invest.
+            It takes a couple of minutes on the web.
+          </KText>
+          <Button
+            label="Verify identity on the web"
+            onPress={() => {
+              haptic("selection");
+              Linking.openURL(`${WEB_BASE}/activate-investing`).catch(() => {});
+            }}
+            fullWidth
+          />
+          <KText variant="caption" color={semanticColors.text.muted} center style={{ marginTop: spacing.sm }}>
+            You may need to sign in. Identity steps stay on our secure web flow.
+          </KText>
+        </KiddoCard>
+      ) : null}
+
       {/* ── approaching-handoff banner (within 90 days of turning 18) ──────── */}
       {(() => {
         const days = daysUntil18(activeFund?.recipientBirthdate);
