@@ -22,6 +22,8 @@ import {
   apiCreateEvent,
   apiCreateMemoryNote,
   apiCreateMemoryPhoto,
+  apiUpdateMemoryEntry,
+  apiDeleteMemoryEntry,
   apiUploadMemoryPhoto,
   apiGetAllEvents,
   apiGetDashboardSummary,
@@ -891,6 +893,22 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
                     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || null;
                   const url = await apiUploadMemoryPhoto(activeFund.id, dataUrl);
                   await apiCreateMemoryPhoto(activeFund.id, url, caption, authorName);
+                  await loadMemory(activeFund.id);
+                }
+              : undefined
+          }
+          onEditEntry={
+            activeFund
+              ? async (id: string, content: string) => {
+                  await apiUpdateMemoryEntry(id, content);
+                  await loadMemory(activeFund.id);
+                }
+              : undefined
+          }
+          onDeleteEntry={
+            activeFund
+              ? async (id: string) => {
+                  await apiDeleteMemoryEntry(id);
                   await loadMemory(activeFund.id);
                 }
               : undefined

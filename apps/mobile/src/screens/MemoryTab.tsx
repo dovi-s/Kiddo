@@ -7,7 +7,7 @@
 // entries the web renders) on the brand kit.
 
 import React, { useMemo, useState } from "react";
-import { Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Alert, Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
@@ -56,9 +56,23 @@ export interface MemoryTabProps {
   onAddNote?: (content: string) => Promise<void>;
   /** Upload + attach a photo (data URL) with an optional caption. */
   onAddPhoto?: (dataUrl: string, caption: string) => Promise<void>;
+  /** Edit a parent-authored entry's text. */
+  onEditEntry?: (id: string, content: string) => Promise<void>;
+  /** Delete a parent-authored entry. */
+  onDeleteEntry?: (id: string) => Promise<void>;
 }
 
-export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh, onAddNote, onAddPhoto }: MemoryTabProps) {
+export function MemoryTab({
+  activeFund,
+  entries,
+  loading,
+  refreshing,
+  onRefresh,
+  onAddNote,
+  onAddPhoto,
+  onEditEntry,
+  onDeleteEntry,
+}: MemoryTabProps) {
   const childName = childNameOf(activeFund);
   const isReadOnly =
     (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
@@ -121,7 +135,12 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
       ) : (
         <View style={{ gap: spacing.sm }}>
           {entries.map((entry) => (
-            <MemoryCard key={entry.id} entry={entry} />
+            <MemoryCard
+              key={entry.id}
+              entry={entry}
+              onEdit={!isReadOnly ? onEditEntry : undefined}
+              onDelete={!isReadOnly ? onDeleteEntry : undefined}
+            />
           ))}
         </View>
       )}
@@ -300,10 +319,57 @@ function CoverStat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function MemoryCard({ entry }: { entry: MemoryEntry }) {
+function MemoryCard({
+  entry,
+  onEdit,
+  onDelete,
+}: {
+  entry: MemoryEntry;
+  onEdit?: (id: string, content: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
+}) {
   const { icon, tint } = presentation(entry.type);
   const gift = entry.gift;
   const isGift = entry.type === "gift_message" && gift;
+  // Parent-authored, non-gift entries are editable/deletable (matches the
+  // server: gift-linked entries reject edits). Backfilled gift rows have a giftId.
+  const canManage = !entry.giftId && (entry.type === "note" || entry.type === "photo" || entry.type === "parent_note");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry.content || "");
+  const [busy, setBusy] = useState(false);
+
+  const saveEdit = async () => {
+    if (!onEdit || busy) return;
+    setBusy(true);
+    try {
+      await onEdit(entry.id, draft);
+      haptic("success");
+      setEditing(false);
+    } catch {
+      haptic("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!onDelete) return;
+    Alert.alert("Delete this entry?", "This removes it from the Memory Book. This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await onDelete(entry.id);
+            haptic("success");
+          } catch {
+            haptic("error");
+          }
+        },
+      },
+    ]);
+  };
   const who = isGift
     ? gift!.senderName?.trim() || "Someone"
     : entry.authorName?.trim() || (entry.type.startsWith("parent") ? "You" : "Kiddo");
@@ -353,8 +419,16 @@ function MemoryCard({ entry }: { entry: MemoryEntry }) {
             {isGift && gift!.eventName ? ` · ${gift!.eventName}` : ""}
           </KText>
 
-          {/* body */}
-          {entry.content || gift?.message ? (
+          {/* body (or inline editor) */}
+          {editing ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <KInput value={draft} onChangeText={setDraft} multiline style={{ minHeight: 72, textAlignVertical: "top" }} />
+              <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+                <Button label="Save" onPress={saveEdit} loading={busy} disabled={!draft.trim()} style={{ flex: 1 }} />
+                <Button label="Cancel" variant="ghost" onPress={() => { setEditing(false); setDraft(entry.content || ""); }} />
+              </View>
+            </View>
+          ) : entry.content || gift?.message ? (
             <KText
               variant="body"
               style={{ marginTop: spacing.sm, fontStyle: entry.type === "milestone" ? "normal" : "italic" }}
@@ -396,6 +470,22 @@ function MemoryCard({ entry }: { entry: MemoryEntry }) {
                 Invested in {gift!.selectedTicker}
                 {gift!.sharesAcquired ? ` · ${parseFloat(gift!.sharesAcquired).toFixed(4)} shares` : ""}
               </KText>
+            </View>
+          ) : null}
+
+          {/* manage (parent-authored entries only) */}
+          {canManage && !editing && (onEdit || onDelete) ? (
+            <View style={{ flexDirection: "row", gap: spacing.lg, marginTop: spacing.sm }}>
+              {onEdit ? (
+                <Pressable onPress={() => { setDraft(entry.content || ""); setEditing(true); }} hitSlop={8}>
+                  <KText variant="caption" color={colors.evergreen}>Edit</KText>
+                </Pressable>
+              ) : null}
+              {onDelete ? (
+                <Pressable onPress={confirmDelete} hitSlop={8}>
+                  <KText variant="caption" color="#C0392B">Delete</KText>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </View>

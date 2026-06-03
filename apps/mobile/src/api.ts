@@ -589,6 +589,24 @@ export async function apiCreateMemoryNote(
   return parseJson<MemoryEntry>(res);
 }
 
+/** Edit a parent-authored memory entry's text. Gift-linked entries can't be edited. */
+export async function apiUpdateMemoryEntry(id: string, content: string): Promise<MemoryEntry> {
+  const res = await apiFetch(`/api/memory/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ content: content.trim() }),
+  });
+  return parseJson<MemoryEntry>(res);
+}
+
+/** Delete a parent-authored memory entry (owner only). */
+export async function apiDeleteMemoryEntry(id: string): Promise<void> {
+  const res = await apiFetch(`/api/memory/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error || "Couldn't delete that entry.");
+  }
+}
+
 /**
  * Upload a parent photo to the Memory Book (data URL → stored file). Plus-gated:
  * a 402 throws with the server's upgrade message. Returns the stored URL to
