@@ -6150,23 +6150,20 @@ export default function Dashboard() {
                   .filter((t: number) => t > 0)
                   .sort((a: number, b: number) => a - b)[0];
                 const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
-                if (active.length === 1) {
-                  // Single schedule: show its NATIVE cadence ("$25/day"), not a
-                  // monthly-equivalent. Converting a daily schedule to "/mo" gave
-                  // a random-looking "$760.94/mo" that didn't match the "$25/day"
-                  // shown in the recurring card just below.
-                  const only = active[0] as any;
-                  const amt = parseFloat(String(only?.amount || "0"));
-                  const per = only?.frequency === "daily" ? "day"
-                    : only?.frequency === "weekly" ? "week"
-                    : only?.frequency === "yearly" ? "year"
-                    : "month";
-                  label = `${formatMoneyFriendly(amt)}/${per} recurring${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                const per = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
+                const cadences = new Set(active.map((c: any) => c.frequency || "monthly"));
+                if (active.length === 1 || cadences.size === 1) {
+                  // One schedule, or several sharing a cadence: show the real amount
+                  // in that cadence ("$25/day", or summed "$75/month"). NOT a monthly-
+                  // equivalent, which for a daily schedule gave a random-looking
+                  // "$760.94/mo" that matched nothing else on screen.
+                  const total = active.reduce((s: number, c: any) => s + parseFloat(String(c?.amount || "0")), 0);
+                  label = `${formatMoneyFriendly(total)}/${per((active[0] as any)?.frequency)} recurring${active.length > 1 ? ` · ${active.length} active` : ""}${nextLabel ? ` · next ${nextLabel}` : ""}`;
                 } else {
-                  // Multiple schedules (possibly mixed cadences): a combined
-                  // monthly-equivalent total + the count is the right summary.
-                  const monthly = sumMonthlyEquivalent(active as any[]);
-                  label = `${formatMoneyFriendly(monthly)}/mo recurring · ${active.length} active${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                  // Mixed cadences ($25/day + $10/year): no honest single amount, so
+                  // a combined monthly-equivalent reads as a random number. Show the
+                  // count; the per-schedule rows below carry the real amounts.
+                  label = `${active.length} active recurring${nextLabel ? ` · next ${nextLabel}` : ""}`;
                 }
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)]";
                 onClick = () => summaryScrollTo("recurring");
@@ -8818,22 +8815,28 @@ export default function Dashboard() {
                         if (status !== "active") return sum;
                         return sum + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency);
                       }, 0);
-                      const monthlyLabel = activeMonthly > 0
-                        ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(activeMonthly))
+                      const activeContribs = shownContribs.filter((c) => (optimisticContribStatus[String(c.id)] ?? c.status) === "active");
+                      const perCadence = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
+                      // Combined amount only when the active schedules share a cadence
+                      // ("$75/month"). Mixed cadences ($25/day + $10/year) have no honest
+                      // single amount, so the summary shows just the count and the
+                      // per-schedule rows below carry the real amounts.
+                      const activeAmtLabel = activeMonthly > 0 && new Set(activeContribs.map((c) => c.frequency || "monthly")).size === 1
+                        ? `${formatMoneyFriendly(activeContribs.reduce((s, c) => s + parseFloat(String(c.amount || "0")), 0))}/${perCadence(activeContribs[0].frequency)}`
                         : null;
                       // Empty active/paused set: only the OWNER (whose plan ended at handoff) sees the
                       // "Ended when you took ownership" line; anyone else with no recurring just sees
-                      // "No recurring yet" — never the handoff copy.
+                      // "No recurring yet"; never the handoff copy.
                       const summaryText = shownContribs.length === 0
                         ? (isOwnerMode ? "Ended when you took ownership" : "No recurring yet")
                         : allPaused
                         ? `${pausedCount} paused`
                         : pausedCount === 0
-                          ? monthlyLabel
-                            ? `${activeCount} active · ${monthlyLabel}/month`
+                          ? activeAmtLabel
+                            ? `${activeCount} active · ${activeAmtLabel}`
                             : `${activeCount} active`
-                          : monthlyLabel
-                            ? `${activeCount} active · ${monthlyLabel}/month · ${pausedCount} paused`
+                          : activeAmtLabel
+                            ? `${activeCount} active · ${activeAmtLabel} · ${pausedCount} paused`
                             : `${activeCount} active · ${pausedCount} paused`;
                       // The summary line earns its place when it adds something
                       // the rows don't: a combined total across 2+ schedules, a
@@ -10367,21 +10370,17 @@ export default function Dashboard() {
                                   })();
                                   const arrivalLabel = goalDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
                                   const childFirst = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the";
-                                  const monthlyDisplay = M > 0 ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(M)) : null;
-                                  // Show a single schedule's native cadence ("$25/day"), not the
-                                  // monthly-equivalent, mirroring the hero. M (the monthly rate) still
-                                  // drives the projection math above; only the label changes.
-                                  const rateLabel = activeRecurring.length === 1
-                                    ? (() => {
-                                        const c = activeRecurring[0] as any;
-                                        const amt = parseFloat(String(c?.amount || "0"));
-                                        const per = c?.frequency === "daily" ? "day"
-                                          : c?.frequency === "weekly" ? "week"
-                                          : c?.frequency === "yearly" ? "year"
-                                          : "month";
-                                        return `${formatMoneyFriendly(amt)}/${per}`;
-                                      })()
-                                    : (monthlyDisplay ? `${monthlyDisplay}/mo` : null);
+                                  // Mirror the hero/card: one schedule, or several sharing a
+                                  // cadence, show the real amount ("$25/day", "$75/month").
+                                  // Mixed cadences ($25/day + $10/year) have no honest single
+                                  // amount, so the projection omits it. M (the monthly rate)
+                                  // still drives the months-to-goal math above.
+                                  const rPer = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
+                                  const rateLabel = activeRecurring.length === 0
+                                    ? null
+                                    : (activeRecurring.length === 1 || new Set(activeRecurring.map((c: any) => c.frequency || "monthly")).size === 1)
+                                      ? `${formatMoneyFriendly(activeRecurring.reduce((s: number, c: any) => s + parseFloat(String(c?.amount || "0")), 0))}/${rPer((activeRecurring[0] as any)?.frequency)}`
+                                      : null;
                                   return (
                                     <div style={{ borderRadius: 10, background: "rgba(26,67,50,0.05)", border: "1px solid rgba(26,67,50,0.15)", padding: "10px 12px" }}>
                                       <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(26,67,50)", lineHeight: 1.5 }}>
