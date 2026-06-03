@@ -565,7 +565,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
           fundId,
           type: "kid_age_18_reached",
           title: `${childName} turned ${majorityAge}`,
-          description: `Legal control of the fund transfers to ${childName} today (UTMA majority age ${majorityAge} per state law). Memory Book entries reserved for this milestone are now visible in their Kid View. Nothing was sold.`,
+          description: `Legal control of the fund transferred to ${childName} (UTMA majority age ${majorityAge} per state law). Memory Book entries reserved for this milestone are now visible in their Kid View. Nothing was sold.`,
         })
         .catch((err: any) => {
           log(`activity log write failed for fund ${fundId}: ${String(err)}`, WORKER_SOURCE);
@@ -617,7 +617,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
               fundId,
               type: "age18_invite_auto_sent",
               title: `Auto-sent claim link to ${childName}`,
-              description: `${childName}'s claim link was sent automatically to ${childEmail} today.`,
+              description: `${childName}'s claim link was sent automatically to ${childEmail}.`,
             })
             .catch(() => undefined);
         } catch {
