@@ -68,6 +68,11 @@ export default function P2PDemo() {
     title: "Cash or stock? | Kiddo concept preview",
     description:
       "A concept preview of how Kiddo could turn an everyday payment into a gift that compounds. Not a live feature.",
+    // Fenced preview: never index it. It moves no real money and isn't a live
+    // feature, so surfacing it in search would imply Kiddo offers peer-to-peer
+    // payments today. Matches its deliberate absence from the sitemap; it stays
+    // a link-only concept page reached from the post-handoff KidView surface.
+    robots: "noindex,nofollow",
   });
 
   const [step, setStep] = useState<Step>("intro");
