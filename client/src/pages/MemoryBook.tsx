@@ -3182,7 +3182,16 @@ export default function MemoryBook() {
                               at upload time (event.imageFocalX / imageFocalY).
                               Defaults to center when focal point isn't set
                               (legacy events from before the focal-point ship). */}
-                          <div style={{ height: 90, position: "relative", overflow: "hidden" }}>
+                          {/* Top corners rounded to the button's INNER radius
+                              (outer 18 minus the 1.5px border = 16.5). Without
+                              this the cover is a rectangle clipped only by the
+                              button's overflow:hidden, and the button's white
+                              background bleeds through a 1px hairline along the
+                              top rounded corners. The seam is invisible on the
+                              plain-emoji cards but the shadowed avatar's paint
+                              path surfaces it on "Gift anytime" — rounding the
+                              cover itself kills it on every card identically. */}
+                          <div style={{ height: 90, position: "relative", overflow: "hidden", borderTopLeftRadius: 16.5, borderTopRightRadius: 16.5 }}>
                             {evt.imageUrl ? (() => {
                               const fx = (evt as any).imageFocalX != null ? Number((evt as any).imageFocalX) : 0.5;
                               const fy = (evt as any).imageFocalY != null ? Number((evt as any).imageFocalY) : 0.5;
