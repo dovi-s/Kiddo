@@ -354,15 +354,22 @@ function getEntryIdentity(
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
-  // A gift that landed seconds ago reading "May 27, 2026" feels stale — it's
-  // the moment, not a calendar fact. Show "Just now" for the first few minutes
-  // so a brand-new entry feels brand-new. This is a genuine delight for any
-  // real gift the moment it arrives, and it's what makes the demo's just-sent
-  // gift read as truly live when the prospect taps through to watch it land.
-  // Only fires for fresh past-dated entries (guards against clock-skew future
-  // dates); every older entry keeps the exact calendar date.
+  // A gift that landed recently reading "May 27, 2026" feels stale — it's the
+  // moment, not a calendar fact. Soften fresh entries with warm relative
+  // phrasing (Just now → Today → Yesterday → N days ago → Last week) so a new
+  // gift feels new; everything ~2 weeks+ keeps the exact calendar date (the
+  // right grain for a lifetime archive). Only fires for past-dated entries
+  // (guards against clock-skew future dates). UTC day boundaries to match the
+  // absolute format's timeZone:"UTC".
   const sinceMs = Date.now() - d.getTime();
   if (sinceMs >= 0 && sinceMs < 5 * 60 * 1000) return "Just now";
+  const DAY = 24 * 60 * 60 * 1000;
+  const utcDayIndex = (t: number) => Math.floor(t / DAY);
+  const daysAgo = utcDayIndex(Date.now()) - utcDayIndex(d.getTime());
+  if (daysAgo === 0) return "Today";
+  if (daysAgo === 1) return "Yesterday";
+  if (daysAgo >= 2 && daysAgo <= 6) return `${daysAgo} days ago`;
+  if (daysAgo >= 7 && daysAgo <= 13) return "Last week";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
@@ -3522,7 +3529,11 @@ export default function MemoryBook() {
                    fund data settles. */
                 <div className="border-b border-border/70 px-4 py-4" data-testid="memory-gifter-roster">
                   <p className="kiddo-section-label mb-3">{isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "Who gave"}</p>
-                  <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                  {/* pt-1 matches pb-1: overflow-x-auto forces overflow-y to clip,
+                      so without top room the avatars' 2px evergreen ring (an outset
+                      box-shadow) gets cut at the top — most visible on the owner's
+                      photo tile. Symmetric padding gives the ring room both sides. */}
+                  <div className="flex gap-4 overflow-x-auto pt-1 pb-1" style={{ scrollbarWidth: "none" }}>
                     {gifterRoster.map((gifter) => {
                       const isActive = gifterFilter?.toLowerCase() === gifter.name.toLowerCase();
                       // Owner treatment — same as every other surface
