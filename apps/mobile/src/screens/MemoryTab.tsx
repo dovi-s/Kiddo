@@ -6,11 +6,11 @@
 // This rebuild consumes the real GET /api/funds/:fundId/memory feed (the same
 // entries the web renders) on the brand kit.
 
-import React, { useMemo } from "react";
-import { Image, RefreshControl, ScrollView, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
-import { KText, KiddoCard, Skeleton } from "../ui";
+import { KText, KiddoCard, KInput, Button, Skeleton, haptic } from "../ui";
 import { formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
 
 function childNameOf(fund?: ApiFund | null): string {
@@ -51,10 +51,14 @@ export interface MemoryTabProps {
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
+  /** Write a parent note to the timeline. Resolves once saved + the feed reloads. */
+  onAddNote?: (content: string) => Promise<void>;
 }
 
-export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh }: MemoryTabProps) {
+export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh, onAddNote }: MemoryTabProps) {
   const childName = childNameOf(activeFund);
+  const isReadOnly =
+    (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
 
   const stats = useMemo(() => {
     const giftEntries = entries.filter((e) => e.gift && !NON_COUNTING.has(String(e.gift.status || "").toLowerCase()));
@@ -93,6 +97,11 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh 
         ) : null}
       </KiddoCard>
 
+      {/* composer — write a note onto the timeline (owner / co-admin only) */}
+      {activeFund && !isReadOnly && onAddNote ? (
+        <NoteComposer childName={childName} onAddNote={onAddNote} />
+      ) : null}
+
       {loading ? (
         <>
           <Skeleton height={110} rounded={radius.card} />
@@ -114,6 +123,106 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh 
         </View>
       )}
     </ScrollView>
+  );
+}
+
+// Write-a-note composer. Collapsed to a single prompt row until tapped, then
+// expands to a multiline field + save. Mirrors the web Memory composer's plainest
+// path (a text note); photos/sealed letters are a later build-out.
+function NoteComposer({
+  childName,
+  onAddNote,
+}: {
+  childName: string;
+  onAddNote: (content: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    const content = text.trim();
+    if (!content || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onAddNote(content);
+      haptic("success");
+      setText("");
+      setOpen(false);
+    } catch (e: any) {
+      haptic("error");
+      setError(e?.message || "Couldn't save your note. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <Pressable
+        onPress={() => {
+          haptic("selection");
+          setOpen(true);
+        }}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.sm,
+          backgroundColor: semanticColors.surface.card,
+          borderRadius: radius.card,
+          borderWidth: 1,
+          borderColor: semanticColors.surface.muted,
+          padding: spacing.md,
+        }}
+      >
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: colors.gold + "1F",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="create-outline" size={18} color={colors.goldInk} />
+        </View>
+        <KText variant="body" color={semanticColors.text.muted} style={{ flex: 1 }}>
+          Write something for {childName}…
+        </KText>
+      </Pressable>
+    );
+  }
+
+  return (
+    <KiddoCard>
+      <KText variant="sectionLabel" color={semanticColors.text.muted}>Add to the book</KText>
+      <KInput
+        placeholder={`A note for ${childName} to read one day…`}
+        value={text}
+        onChangeText={setText}
+        multiline
+        autoFocus
+        style={{ minHeight: 96, textAlignVertical: "top", marginTop: spacing.xs }}
+      />
+      {error ? (
+        <KText variant="caption" color="#C0392B" style={{ marginTop: spacing.xs }}>{error}</KText>
+      ) : null}
+      <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+        <Button label="Add to the book" onPress={submit} loading={saving} disabled={!text.trim()} style={{ flex: 1 }} />
+        <Button
+          label="Cancel"
+          variant="ghost"
+          onPress={() => {
+            setOpen(false);
+            setText("");
+            setError(null);
+          }}
+        />
+      </View>
+    </KiddoCard>
   );
 }
 

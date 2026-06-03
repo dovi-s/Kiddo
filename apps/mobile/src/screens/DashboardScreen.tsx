@@ -20,6 +20,7 @@ import { slugify } from "@kora/utils";
 import { KText, KiddoCard, Button, elevate } from "../ui";
 import {
   apiCreateEvent,
+  apiCreateMemoryNote,
   apiGetAllEvents,
   apiGetDashboardSummary,
   apiGetFundGifts,
@@ -839,6 +840,16 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           loading={loading || memoryLoading}
           refreshing={refreshing}
           onRefresh={handleRefresh}
+          onAddNote={
+            activeFund
+              ? async (content: string) => {
+                  const authorName =
+                    [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || null;
+                  await apiCreateMemoryNote(activeFund.id, content, authorName);
+                  await loadMemory(activeFund.id);
+                }
+              : undefined
+          }
         />
       )}
       {tab === "gift" && (

@@ -573,11 +573,18 @@ export async function apiGetMemory(fundId: string): Promise<MemoryEntry[]> {
 export async function apiCreateMemoryNote(
   fundId: string,
   content: string,
+  authorName?: string | null,
   visibility: "public" | "family" | "private" = "family",
 ): Promise<MemoryEntry> {
   const res = await apiFetch(`/api/funds/${fundId}/memory`, {
     method: "POST",
-    body: JSON.stringify({ type: "note", content: content.trim(), visibility, kidVisibility: "kid_now" }),
+    body: JSON.stringify({
+      type: "note",
+      content: content.trim(),
+      ...(authorName ? { authorName } : {}),
+      visibility,
+      kidVisibility: "kid_now",
+    }),
   });
   return parseJson<MemoryEntry>(res);
 }
