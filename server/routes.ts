@@ -3306,6 +3306,22 @@ export async function registerRoutes(
           body[key] = new Date(body[key] as string);
         }
       }
+      // recipientBirthdate is a calendar DATE, not an instant. Anchor it to
+      // noon UTC so it can never render as the previous day when a client
+      // formats it in a local timezone (a midnight-UTC value shows "Nov 1"
+      // for a Nov 2 birthday west of UTC). The web + mobile clients already
+      // send noon UTC; this backstops any other caller (a script, a future
+      // client) that posts a date-only or midnight value. Day-granular, so
+      // the under-18 check below is unaffected.
+      if (
+        body.recipientBirthdate instanceof Date &&
+        !Number.isNaN(body.recipientBirthdate.getTime())
+      ) {
+        const d = body.recipientBirthdate as Date;
+        body.recipientBirthdate = new Date(
+          Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12),
+        );
+      }
       if (
         String(body.accountType || "").toUpperCase() === "UTMA" &&
         body.recipientBirthdate instanceof Date &&
