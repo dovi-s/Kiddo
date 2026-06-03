@@ -239,6 +239,7 @@ function AccountTab({
   onLogout: () => void;
 }) {
   const [loggingOut, setLoggingOut] = useState(false);
+  const [taxOpen, setTaxOpen] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushDeviceCount, setPushDeviceCount] = useState(0);
   const [pushBusy, setPushBusy] = useState(false);
@@ -524,14 +525,44 @@ function AccountTab({
         <SettingsRow title="Name" value={displayName} />
         <SettingsRow title="Email" value={user.email} />
         <SettingsRow title="Privacy" value="Private" />
-        <SettingsRow title="Tax documents" value="View" />
-        <SettingsRow title="Legal" value="Disclosures" />
+        <SettingsRow title="Tax documents" value="View" onPress={() => setTaxOpen(true)} />
+        <SettingsRow
+          title="Legal"
+          value="Disclosures"
+          onPress={() => Linking.openURL(`${WEB_BASE}/legal?tab=terms`).catch(() => {})}
+        />
       </Section>
 
       <Pressable onPress={handleLogout} disabled={loggingOut} style={styles.signOutBtn}>
         <Text style={styles.signOutText}>{loggingOut ? "Signing out..." : "Sign out"}</Text>
       </Pressable>
+
+      <TaxDocsSheet visible={taxOpen} childName={childName} onClose={() => setTaxOpen(false)} />
     </ScrollView>
+  );
+}
+
+// Tax documents — honest pre-custody state. No 1099/tax forms are generated until
+// investing is live and a tax year closes; mirror the web's "nothing yet" posture
+// rather than imply documents exist.
+function TaxDocsSheet({ visible, childName, onClose }: { visible: boolean; childName: string; onClose: () => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(14,37,24,0.4)" }} onPress={onClose} />
+      <View style={{ backgroundColor: colors.cream, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 40 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface.muted, alignSelf: "center", marginBottom: spacing.md }} />
+        <KText variant="heading">Tax documents</KText>
+        <KText variant="body" color={semanticColors.text.muted} style={{ marginTop: spacing.sm }}>
+          There aren't any yet. Tax forms (like a 1099) are issued once investing is live and a tax year
+          closes — they'll appear here, and we'll email you when one is ready.
+        </KText>
+        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: spacing.sm }}>
+          A UTMA's earnings are reported under {childName}'s Social Security Number. Most kids owe little or
+          no tax thanks to the standard deduction, but this isn't tax advice — check with a tax professional.
+        </KText>
+        <Button label="Done" onPress={onClose} fullWidth style={{ marginTop: spacing.lg }} />
+      </View>
+    </Modal>
   );
 }
 
@@ -1018,13 +1049,20 @@ function StatPill({ value, label }: { value: string; label: string }) {
   );
 }
 
-function SettingsRow({ title, value }: { title: string; value: string }) {
-  return (
-    <View style={styles.settingsRow}>
+function SettingsRow({ title, value, onPress }: { title: string; value: string; onPress?: () => void }) {
+  const inner = (
+    <>
       <Text style={styles.settingsTitle}>{title}</Text>
-      <Text style={styles.settingsValue} numberOfLines={1}>{value}</Text>
-    </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "60%" }}>
+        <Text style={styles.settingsValue} numberOfLines={1}>{value}</Text>
+        {onPress ? <Ionicons name="chevron-forward" size={15} color="#8B948C" /> : null}
+      </View>
+    </>
   );
+  if (onPress) {
+    return <Pressable style={styles.settingsRow} onPress={onPress}>{inner}</Pressable>;
+  }
+  return <View style={styles.settingsRow}>{inner}</View>;
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
