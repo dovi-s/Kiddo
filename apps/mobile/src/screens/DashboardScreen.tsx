@@ -21,6 +21,8 @@ import { KText, KiddoCard, Button, elevate } from "../ui";
 import {
   apiCreateEvent,
   apiCreateMemoryNote,
+  apiCreateMemoryPhoto,
+  apiUploadMemoryPhoto,
   apiGetAllEvents,
   apiGetDashboardSummary,
   apiGetFundGifts,
@@ -842,6 +844,17 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
                   const authorName =
                     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || null;
                   await apiCreateMemoryNote(activeFund.id, content, authorName);
+                  await loadMemory(activeFund.id);
+                }
+              : undefined
+          }
+          onAddPhoto={
+            activeFund
+              ? async (dataUrl: string, caption: string) => {
+                  const authorName =
+                    [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || null;
+                  const url = await apiUploadMemoryPhoto(activeFund.id, dataUrl);
+                  await apiCreateMemoryPhoto(activeFund.id, url, caption, authorName);
                   await loadMemory(activeFund.id);
                 }
               : undefined

@@ -589,6 +589,42 @@ export async function apiCreateMemoryNote(
   return parseJson<MemoryEntry>(res);
 }
 
+/**
+ * Upload a parent photo to the Memory Book (data URL → stored file). Plus-gated:
+ * a 402 throws with the server's upgrade message. Returns the stored URL to
+ * attach to a photo entry. Mirrors the web composer's upload-photo path.
+ */
+export async function apiUploadMemoryPhoto(fundId: string, dataUrl: string): Promise<string> {
+  const res = await apiFetch(`/api/funds/${fundId}/memory/upload-photo`, {
+    method: "POST",
+    body: JSON.stringify({ dataUrl }),
+  });
+  const data = await parseJson<{ url: string }>(res);
+  return data.url;
+}
+
+/** Create a photo entry on the timeline (after apiUploadMemoryPhoto returns a url). */
+export async function apiCreateMemoryPhoto(
+  fundId: string,
+  photoUrl: string,
+  caption?: string | null,
+  authorName?: string | null,
+  visibility: "public" | "family" | "private" = "family",
+): Promise<MemoryEntry> {
+  const res = await apiFetch(`/api/funds/${fundId}/memory`, {
+    method: "POST",
+    body: JSON.stringify({
+      type: "photo",
+      photoUrl,
+      ...(caption && caption.trim() ? { content: caption.trim() } : {}),
+      ...(authorName ? { authorName } : {}),
+      visibility,
+      kidVisibility: "kid_now",
+    }),
+  });
+  return parseJson<MemoryEntry>(res);
+}
+
 export async function apiCreateFund(data: {
   name: string;
   slug: string;

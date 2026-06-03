@@ -8,10 +8,11 @@
 
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, KInput, Button, Skeleton, haptic } from "../ui";
-import { formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
+import { API_BASE, formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -53,9 +54,11 @@ export interface MemoryTabProps {
   onRefresh: () => void;
   /** Write a parent note to the timeline. Resolves once saved + the feed reloads. */
   onAddNote?: (content: string) => Promise<void>;
+  /** Upload + attach a photo (data URL) with an optional caption. */
+  onAddPhoto?: (dataUrl: string, caption: string) => Promise<void>;
 }
 
-export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh, onAddNote }: MemoryTabProps) {
+export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh, onAddNote, onAddPhoto }: MemoryTabProps) {
   const childName = childNameOf(activeFund);
   const isReadOnly =
     (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
@@ -97,9 +100,9 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
         ) : null}
       </KiddoCard>
 
-      {/* composer — write a note onto the timeline (owner / co-admin only) */}
+      {/* composer — write a note / add a photo (owner / co-admin only) */}
       {activeFund && !isReadOnly && onAddNote ? (
-        <NoteComposer childName={childName} onAddNote={onAddNote} />
+        <NoteComposer childName={childName} onAddNote={onAddNote} onAddPhoto={onAddPhoto} />
       ) : null}
 
       {loading ? (
@@ -132,9 +135,11 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
 function NoteComposer({
   childName,
   onAddNote,
+  onAddPhoto,
 }: {
   childName: string;
   onAddNote: (content: string) => Promise<void>;
+  onAddPhoto?: (dataUrl: string, caption: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -154,6 +159,36 @@ function NoteComposer({
     } catch (e: any) {
       haptic("error");
       setError(e?.message || "Couldn't save your note. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addPhoto = async () => {
+    if (!onAddPhoto || saving) return;
+    setError(null);
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        setError("Photo access is needed to add a picture.");
+        return;
+      }
+      const r = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 0.6,
+      });
+      if (r.canceled || !r.assets?.[0]?.base64) return;
+      const a = r.assets[0];
+      const dataUrl = `data:${a.mimeType || "image/jpeg"};base64,${a.base64}`;
+      setSaving(true);
+      await onAddPhoto(dataUrl, text);
+      haptic("success");
+      setText("");
+      setOpen(false);
+    } catch (e: any) {
+      haptic("error");
+      setError(e?.message || "Couldn't add the photo.");
     } finally {
       setSaving(false);
     }
@@ -210,8 +245,27 @@ function NoteComposer({
       {error ? (
         <KText variant="caption" color="#C0392B" style={{ marginTop: spacing.xs }}>{error}</KText>
       ) : null}
-      <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+      <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm, alignItems: "center" }}>
         <Button label="Add to the book" onPress={submit} loading={saving} disabled={!text.trim()} style={{ flex: 1 }} />
+        {onAddPhoto ? (
+          <Pressable
+            onPress={addPhoto}
+            disabled={saving}
+            accessibilityLabel="Add a photo"
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: radius.control,
+              borderWidth: 1.5,
+              borderColor: semanticColors.surface.muted,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: saving ? 0.5 : 1,
+            }}
+          >
+            <Ionicons name="image-outline" size={20} color={colors.evergreen} />
+          </Pressable>
+        ) : null}
         <Button
           label="Cancel"
           variant="ghost"
@@ -253,8 +307,14 @@ function MemoryCard({ entry }: { entry: MemoryEntry }) {
   const who = isGift
     ? gift!.senderName?.trim() || "Someone"
     : entry.authorName?.trim() || (entry.type.startsWith("parent") ? "You" : "Kiddo");
-  const showPhoto =
-    entry.photoUrl && (entry.mediaStatus === "external" || entry.mediaStatus === "stored" || !entry.mediaStatus);
+  // Resolve relative /uploads paths to absolute so RN's <Image> can load them
+  // (the web serves them same-origin; the native app has no implicit base).
+  const photoUri = entry.photoUrl
+    ? entry.photoUrl.startsWith("/")
+      ? `${API_BASE}${entry.photoUrl}`
+      : entry.photoUrl
+    : null;
+  const showPhoto = Boolean(photoUri) && entry.mediaStatus !== "broken";
 
   return (
     <KiddoCard>
@@ -310,7 +370,7 @@ function MemoryCard({ entry }: { entry: MemoryEntry }) {
           {/* photo */}
           {showPhoto ? (
             <Image
-              source={{ uri: entry.photoUrl! }}
+              source={{ uri: photoUri! }}
               style={{
                 width: "100%",
                 height: 180,
