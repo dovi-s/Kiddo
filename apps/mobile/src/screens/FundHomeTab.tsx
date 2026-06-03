@@ -255,6 +255,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
   const [selectedHolding, setSelectedHolding] = useState<ApiHolding | null>(null);
   const [projectionOpen, setProjectionOpen] = useState(false);
   const [age18Open, setAge18Open] = useState(false);
+  const [kidViewOpen, setKidViewOpen] = useState(false);
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -629,6 +630,9 @@ export function FundHomeTab(props: FundHomeTabProps) {
           <QuickLink icon="share-social" label="Share link" gold onPress={handleShare} />
         ) : null}
         <QuickLink icon="eye-outline" label="Gifter page" onPress={openGifterPage} />
+        {!isOwnerMode ? (
+          <QuickLink icon="happy-outline" label={`${childName}'s view`} onPress={() => setKidViewOpen(true)} />
+        ) : null}
         {!isReadOnly ? (
           <QuickLink
             icon={activeEvent ? "calendar" : "add-circle-outline"}
@@ -936,7 +940,130 @@ export function FundHomeTab(props: FundHomeTabProps) {
           onClose={() => setAge18Open(false)}
         />
       ) : null}
+
+      {kidViewOpen && activeFund ? (
+        <KidViewPreview
+          childName={childName}
+          totalValue={d.totalValue}
+          peopleCount={d.peopleCount}
+          contributors={d.contributors}
+          holdings={[...d.chosen, ...d.managed]}
+          history={d.history}
+          countdown={countdown}
+          onClose={() => setKidViewOpen(false)}
+        />
+      ) : null}
     </>
+  );
+}
+
+// Kid View preview — what the child sees: warm, simplified, celebratory, read-only.
+// Mirrors the web's "preview Kid View" (parent-facing). No money depth/cost basis —
+// just "this is yours, it's growing, and people love you."
+function KidViewPreview({
+  childName,
+  totalValue,
+  peopleCount,
+  contributors,
+  holdings,
+  history,
+  countdown,
+  onClose,
+}: {
+  childName: string;
+  totalValue: number;
+  peopleCount: number;
+  contributors: { name: string }[];
+  holdings: ApiHolding[];
+  history: number[];
+  countdown: string | null;
+  onClose: () => void;
+}) {
+  const owned = holdings.slice(0, 8);
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.evergreen }}>
+        <ScrollView
+          contentContainerStyle={{ padding: spacing.lg, paddingTop: 64, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <KText variant="eyebrow" color="rgba(248,245,240,0.6)">Preview of {childName}'s view</KText>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={24} color="rgba(255,255,255,0.8)" />
+            </Pressable>
+          </View>
+
+          {/* the big warm moment */}
+          <KText variant="title" color="#FFF7E8" style={{ marginTop: spacing.xl }}>
+            Hi {childName} 👋
+          </KText>
+          <KText variant="body" color="rgba(248,245,240,0.82)" style={{ marginTop: spacing.xs }}>
+            This is your money. People who love you have been growing it for your future.
+          </KText>
+          <KText variant="display" color="#FFFFFF" tabular style={{ fontSize: 52, lineHeight: 58, marginTop: spacing.md }}>
+            {formatBalance(totalValue)}
+          </KText>
+          {countdown ? (
+            <KText variant="caption" color="rgba(248,245,240,0.6)" style={{ marginTop: 2 }}>
+              It becomes fully yours in {countdown}.
+            </KText>
+          ) : null}
+
+          {/* growth */}
+          {history.length >= 2 ? (
+            <View style={{ marginTop: spacing.lg, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: radius.card, padding: spacing.md }}>
+              <KText variant="caption" color="#F8D889">It's been growing 🌱</KText>
+              <View style={{ marginTop: spacing.sm }}>
+                <GrowthChart points={history} />
+              </View>
+            </View>
+          ) : null}
+
+          {/* people who love you */}
+          {peopleCount > 0 ? (
+            <View style={{ marginTop: spacing.lg }}>
+              <KText variant="bodyStrong" color="#FFF7E8">
+                {peopleCount} {peopleCount === 1 ? "person loves" : "people love"} you
+              </KText>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm }}>
+                {contributors.slice(0, 8).map((c) => (
+                  <View key={c.name} style={{ alignItems: "center", width: 60 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: tintFor(c.name), alignItems: "center", justifyContent: "center" }}>
+                      <KText variant="bodyStrong" color="#FFFFFF">{c.name.charAt(0).toUpperCase()}</KText>
+                    </View>
+                    <KText variant="caption" color="rgba(248,245,240,0.7)" center numberOfLines={1} style={{ marginTop: 4, maxWidth: 60 }}>
+                      {c.name.split(" ")[0]}
+                    </KText>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {/* companies you own */}
+          {owned.length > 0 ? (
+            <View style={{ marginTop: spacing.lg }}>
+              <KText variant="bodyStrong" color="#FFF7E8">Companies you own a piece of</KText>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm }}>
+                {owned.map((h) => (
+                  <View key={h.id} style={{ alignItems: "center", width: 64 }}>
+                    <StockLogo ticker={h.ticker} size={44} />
+                    <KText variant="caption" color="rgba(248,245,240,0.7)" center numberOfLines={1} style={{ marginTop: 4, maxWidth: 64 }}>
+                      {h.name || h.ticker}
+                    </KText>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          <KText variant="caption" color="rgba(248,245,240,0.5)" style={{ marginTop: spacing.xl }}>
+            This is a preview of what {childName} sees in Kid View.
+          </KText>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
