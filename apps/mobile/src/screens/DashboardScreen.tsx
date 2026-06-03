@@ -40,6 +40,8 @@ import {
 } from "../api";
 import { FundHomeTab } from "./FundHomeTab";
 import { MemoryTab } from "./MemoryTab";
+import { GiftTab } from "./GiftTab";
+import { ActivityTab } from "./ActivityTab";
 import { registerForPushNotificationsAsync } from "../push";
 import {
   authenticate as authenticateBiometric,
@@ -172,7 +174,7 @@ function TabBar({ active, onPress }: { active: Tab; onPress: (tab: Tab) => void 
     { id: "home", label: "Home", icon: "home-outline", iconActive: "home" },
     { id: "memory", label: "Memory", icon: "book-outline", iconActive: "book" },
     { id: "gift", label: "Gift", icon: "gift-outline", iconActive: "gift" },
-    { id: "growth", label: "Growth", icon: "trending-up-outline", iconActive: "trending-up" },
+    { id: "growth", label: "Activity", icon: "pulse-outline", iconActive: "pulse" },
     { id: "settings", label: "Settings", icon: "settings-outline", iconActive: "settings" },
   ];
 
@@ -212,188 +214,10 @@ function TabBar({ active, onPress }: { active: Tab; onPress: (tab: Tab) => void 
 // Memory Book timeline, fed by the real GET /api/funds/:id/memory feed.
 
 
-// ─── Gift Tab ────────────────────────────────────────────────────────────────
-
-function GiftTab({
-  activeFund,
-  gifts,
-  onAddFund,
-  onCreateEvent,
-}: {
-  activeFund: ApiFund | null;
-  gifts: GiftWithFund[];
-  onAddFund: () => void;
-  onCreateEvent: () => void;
-}) {
-  const childName = getChildName(activeFund);
-  const giftUrl = activeFund ? `${WEB_BASE}/${activeFund.slug}` : "";
-  const recentGifts = activeFund ? gifts.filter((g) => g.fundId === activeFund.id).slice(0, 3) : [];
-  // Post-handoff parent (previous_owner): read-only — they no longer own the fund, so the
-  // share/create-event CTAs are a false affordance. 2026-05-31 launch audit.
-  const isReadOnly = (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
-
-  const handleShare = async () => {
-    if (!activeFund) return;
-    try { await shareFund(activeFund); } catch {}
-  };
-
-  return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      {!activeFund ? (
-        <View style={styles.emptyHero}>
-          <Text style={styles.emptyTitle}>Create the fund first.</Text>
-          <Text style={styles.emptyBody}>Then Kiddo gives you one link people can use to give in under a minute.</Text>
-          <Pressable onPress={onAddFund} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Start a fund</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <>
-          <View style={styles.giftHero}>
-            <Text style={styles.giftEyebrow}>Gift link</Text>
-            <Text style={styles.giftTitle}>Share {childName}'s gift link.</Text>
-            <Text style={styles.giftBody}>No account needed. Takes 60 seconds. Every gift can become part of the Memory Book.</Text>
-            <View style={styles.giftUrlBox}>
-              <Text style={styles.giftUrlText} numberOfLines={1}>{giftUrl}</Text>
-            </View>
-            {!isReadOnly && (
-              <>
-                <Pressable onPress={handleShare} style={styles.giftPrimaryBtn}>
-                  <Ionicons name="share-social" size={16} color="#3D2B09" style={{ marginRight: 6 }} />
-                  <Text style={styles.giftPrimaryBtnText}>Share gift link</Text>
-                </Pressable>
-                <Pressable onPress={onCreateEvent} style={styles.giftSecondaryBtn}>
-                  <Text style={styles.giftSecondaryBtnText}>Create birthday page</Text>
-                </Pressable>
-              </>
-            )}
-            {isReadOnly && (
-              <Text style={styles.giftBody}>This fund was transferred to {childName}. They manage gifting from here.</Text>
-            )}
-          </View>
-
-          <View style={styles.giftTrustStrip}>
-            <Ionicons name="shield-checkmark-outline" size={14} color="#5E675F" style={{ marginRight: 6 }} />
-            <Text style={styles.giftTrustText}>When investing is live, money will be held through our broker-dealer partner. SIPC protects against brokerage failure, not market losses.</Text>
-          </View>
-
-          <Section title="Recent gifts">
-            {recentGifts.length === 0 ? (
-              <SoftCard
-                title="The first gift is the hardest."
-                body={`Share ${childName}'s gift link to start receiving investments. After that, it is just birthdays.`}
-              />
-            ) : (
-              recentGifts.map((gift) => (
-                <ListRow
-                  key={gift.id}
-                  icon="gift-outline"
-                  title={`${formatBalance(gift.amount)} from ${gift.senderName || "someone who loves them"}`}
-                  body={gift.message ? `"${gift.message}"` : `Invested in ${childName}'s future with Kiddo.`}
-                  right={formatShortDate(gift.createdAt) || ""}
-                />
-              ))
-            )}
-          </Section>
-
-          <View style={styles.giftLoopNudge}>
-            <Text style={styles.giftLoopText}>
-              The more you share, the more it grows.
-            </Text>
-          </View>
-        </>
-      )}
-    </ScrollView>
-  );
-}
-
-// ─── Growth Tab ──────────────────────────────────────────────────────────────
-
-function GrowthTab({
-  activeFund,
-  gifts,
-  onSelectFund,
-  onAddFund,
-}: {
-  activeFund: ApiFund | null;
-  gifts: GiftWithFund[];
-  onSelectFund: (fund: ApiFund) => void;
-  onAddFund: () => void;
-}) {
-  const childName = getChildName(activeFund);
-  const balance = activeFund ? parseFloat(String(activeFund.balance || "0")) : 0;
-  const fundGifts = activeFund ? gifts.filter((g) => g.fundId === activeFund.id) : [];
-  const giftTotal = fundGifts.reduce((sum, g) => sum + parseFloat(String(g.amount || "0")), 0);
-  const momentum = Math.min(100, Math.max(16, fundGifts.length * 18 + (balance > 0 ? 24 : 0)));
-
-  return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      {!activeFund ? (
-        <View style={styles.emptyHero}>
-          <Text style={styles.emptyTitle}>Growth starts with a gift.</Text>
-          <Text style={styles.emptyBody}>Create a fund, share the link, and this screen becomes the living record of what is growing.</Text>
-          <Pressable onPress={onAddFund} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Start a fund</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <>
-          <View style={styles.growthHero}>
-            <Text style={styles.growthLabel}>What the fund is worth</Text>
-            <Text style={styles.growthAmount}>{formatBalance(balance)}</Text>
-            <Text style={styles.growthBody}>
-              {childName}'s gifts are held in one place and invested according to your family settings.
-            </Text>
-            <View style={styles.growthTrack}>
-              <View style={[styles.growthFill, { width: `${momentum}%` }]} />
-            </View>
-            <Text style={styles.growthMeta}>
-              {fundGifts.length} gift{fundGifts.length === 1 ? "" : "s"} received so far
-            </Text>
-          </View>
-
-          <Section title="What happened recently">
-            {fundGifts.length === 0 ? (
-              <SoftCard title="Nothing yet." body={`Share ${childName}'s link and the first gift will appear here.`} />
-            ) : (
-              <>
-                <ListRow
-                  icon="trending-up-outline"
-                  title={`${formatBalance(giftTotal)} received`}
-                  body={`${fundGifts.length} gift${fundGifts.length === 1 ? "" : "s"} now part of ${childName}'s fund.`}
-                />
-                {fundGifts.slice(0, 2).map((gift) => (
-                  <ListRow
-                    key={gift.id}
-                    icon="heart-outline"
-                    title={`${gift.senderName || "Someone"} added ${formatBalance(gift.amount)}`}
-                    body={gift.message ? `"${gift.message}"` : "Every gift has a story."}
-                    right={formatShortDate(gift.createdAt) || ""}
-                  />
-                ))}
-              </>
-            )}
-          </Section>
-
-          <Section title="Where gifts go">
-            <SoftCard
-              title={`${childName}'s mix`}
-              body="Gifts follow your family investing settings. Keep this plain, calm, and easy to explain before changing anything."
-            />
-            <View style={styles.growthTrustBox}>
-              <Text style={styles.growthTrustText}>
-                When investing is live, funds will be held through our broker-dealer partner. SIPC protects against brokerage failure, not market losses.
-              </Text>
-            </View>
-            <Pressable onPress={() => onSelectFund(activeFund)} style={styles.primaryBtn}>
-              <Text style={styles.primaryBtnText}>View fund details</Text>
-            </Pressable>
-          </Section>
-        </>
-      )}
-    </ScrollView>
-  );
-}
+// ─── Gift + Activity Tabs ────────────────────────────────────────────────────
+// GiftTab now lives in ./GiftTab.tsx (web share/gifter surface) and the old
+// GrowthTab is replaced by ./ActivityTab.tsx (the web /activity ledger; growth
+// itself now lives on Home). DashboardScreen renders both directly.
 
 // ─── Account Tab ─────────────────────────────────────────────────────────────
 
@@ -940,7 +764,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     home: "Home",
     memory: "Memory Book",
     gift: "Gift Link",
-    growth: "Growth",
+    growth: "Activity",
     settings: "Settings",
   };
 
@@ -1016,16 +840,21 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
       {tab === "gift" && (
         <GiftTab
           activeFund={activeFund}
-          gifts={gifts}
+          gifts={summary?.gifts ?? []}
+          events={events}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           onAddFund={onAddFund}
           onCreateEvent={() => setCreatingEvent(true)}
         />
       )}
       {tab === "growth" && (
-        <GrowthTab
+        <ActivityTab
           activeFund={activeFund}
-          gifts={gifts}
-          onSelectFund={onSelectFund}
+          summary={summary}
+          loading={loading || summaryLoading}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           onAddFund={onAddFund}
         />
       )}
