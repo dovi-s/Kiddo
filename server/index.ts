@@ -800,6 +800,23 @@ app.use((req, res, next) => {
   startPmfSurveyTriggerWorker(log);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Client-aborted or reset connections are not server faults. The peer went
+    // away mid-request (closed tab, HMR reload, flaky mobile link, proxy
+    // timeout), so don't surface them as 500s, don't page ops, and don't try
+    // to write to a socket that's already gone (that throws write-after-end).
+    const code = err?.code;
+    const clientAbort =
+      code === "ECONNRESET" ||
+      code === "ECONNABORTED" ||
+      code === "EPIPE" ||
+      err?.type === "request.aborted" ||
+      _req.aborted === true;
+    if (clientAbort || res.headersSent || res.writableEnded) {
+      // Nothing safe to send; let the socket close. (next() would re-enter the
+      // default handler and also fail on a dead socket.)
+      return;
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
