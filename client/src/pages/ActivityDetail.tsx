@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Gift, TrendingUp, Clock, Check, Share2, MessageCircle, Calendar, DollarSign, User, AlertCircle, ShieldCheck, Banknote, CreditCard, PartyPopper, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { Nav } from "@/components/layout/Nav";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -132,8 +132,8 @@ export default function ActivityDetail() {
   if (isLoading) {
     return (
       <PageTransition>
-        <div className="min-h-screen bg-background">
-          <Nav />
+        <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+          <AppHeader />
           <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
             <div className="space-y-6">
               <Skeleton className="h-8 w-32" />
@@ -149,8 +149,8 @@ export default function ActivityDetail() {
   if (error || !activity) {
     return (
       <PageTransition>
-        <div className="min-h-screen bg-background">
-          <Nav />
+        <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+          <AppHeader />
           <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-12 text-center">
             <p className="text-muted-foreground" data-testid="text-activity-not-found">Activity not found</p>
             <Link href="/activity">
@@ -176,8 +176,8 @@ export default function ActivityDetail() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background">
-        <Nav />
+      <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+        <AppHeader />
         
         <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
           <motion.button
