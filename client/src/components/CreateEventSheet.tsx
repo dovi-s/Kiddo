@@ -884,30 +884,15 @@ export function CreateEventSheet({
                 </p>
               </div>
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={S.label()}>Gift goal <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {[...GIFTING_GOAL_PRESETS, { label: "No goal", value: "" }].map((p) => (
-                    <button key={p.label} type="button"
-                      onClick={() => { haptic("light"); setGoalPreset(p.value === goalPreset ? "" : p.value); setCustomGoal(""); }}
-                      style={S.pill(goalPreset === p.value)}>
-                      {p.label}
-                    </button>
-                  ))}
-                  <button type="button" onClick={() => { haptic("light"); setGoalPreset("custom"); }}
-                    style={S.pill(goalPreset === "custom")}>
-                    Custom
-                  </button>
-                </div>
-                {goalPreset === "custom" && (
-                  <input type="number" value={customGoal} onChange={(e) => setCustomGoal(e.target.value)}
-                    placeholder="Enter amount" min="10" max="100000"
-                    style={{ marginTop: 10, ...S.input(true) }} autoFocus />
-                )}
-                <p style={{ marginTop: 8, fontSize: 12, color: "rgba(26,23,16,0.38)", lineHeight: 1.5 }}>
-                  A goal gives people something to rally around. Occasions with a goal raise 3x more.
-                </p>
-              </div>
+              {/* Occasion "Gift goal" field removed. It set a goal that tracked
+                  the WHOLE fund (a "$500" occasion goal rendered "$22,540 of $500"
+                  — already met, absurd, same bug as the fund goals), and the
+                  "raise 3x more" line was an unsubstantiated pre-launch conversion
+                  stat. Goals are retired everywhere; occasions are pure moments.
+                  An honest occasion-level drive (a slice of gifts via THIS
+                  occasion toward a target) can return later if it proves out
+                  against funded-k. goalPreset/customGoal state stays (preview +
+                  submit read it) and simply resolves to "no goal". */}
 
               {isEditing && !isCreatingFromArchived && editEvent?.slug && fundSlug && (
                 <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 14, background: "white", border: `1.5px solid ${BORDER}` }}>
