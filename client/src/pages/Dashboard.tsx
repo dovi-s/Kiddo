@@ -132,7 +132,6 @@ import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-lin
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
-import { useCountUp } from "@/hooks/use-count-up";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
 import { toast } from "@/hooks/use-toast";
@@ -182,6 +181,7 @@ import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { getCulturalSuggestions, TRADITION_LABELS, TRADITION_ICONS, type CulturalBackground, type CulturalTradition } from "@/lib/cultural-calendar";
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
+import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 // Dead-import audit 2026-05-25: QRCodeSVG was previously imported here
 // but never referenced. The ShareModal child renders its own QR via
@@ -887,22 +887,6 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-// Presentational-only hero roll for the Dunphy demo's "gift just landed" beat.
-// DemoGiftMoment's gift is a no-op toast (the $ is already baked into the seeded
-// balance), so the normal hero count-up has nothing to animate. This rolls the
-// hero from (balance − giftAmount) up to the real seeded balance, synced to the
-// toast, so the prospect FEELS the money land — and it ends exactly on the real
-// number, so there's zero data drift. Mounted fresh per beat (keyed) so
-// useCountUp's initial display starts at `fromValue` and eases up to `toValue`.
-function DemoHeroRoll({ fromValue, toValue, durationMs = 1400, onDone }: { fromValue: number; toValue: number; durationMs?: number; onDone: () => void }) {
-  const { value } = useCountUp({ from: fromValue, to: toValue, duration: durationMs });
-  useEffect(() => {
-    const t = window.setTimeout(onDone, durationMs + 300);
-    return () => window.clearTimeout(t);
-  }, [onDone, durationMs]);
-  return <>{formatCurrency(value)}</>;
-}
-
 // Friendlier money formatter for action labels and warm-context UI: drops the
 // .00 cents on whole amounts ("$50" not "$50.00") but preserves cents when
 // they're meaningful ("$50.42 (+$0.42)" — the 42¢ is the whole story of the
@@ -1115,6 +1099,9 @@ export default function Dashboard() {
   const searchParams = new URLSearchParams(search);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  // Demo sandbox: re-derive the holdings overlay when a gift is recorded
+  // in-place so the hero rolls + "What X owns" updates immediately.
+  const demoOverlayVersion = useDemoOverlayVersion();
   const { data: subscription } = useSubscription();
   const queryClient = useQueryClient();
 
@@ -2136,7 +2123,9 @@ export default function Dashboard() {
     if (activeFundId) setActiveFundId(activeFundId);
   }, [activeFundId]);
 
-  const cashBalance = parseFloat((activeFund as any)?.cashBalance || "0");
+  // Demo-only: sell proceeds land in cash (invested↓ + cash↑ = same hero total).
+  // Recomputed each render; the Dashboard re-renders on demoOverlayVersion change.
+  const cashBalance = parseFloat((activeFund as any)?.cashBalance || "0") + readDemoCashDelta(activeFundId, isDemoAccount);
   // Hero balance derives from sum(holdings.currentValue) + cash + pending —
   // NOT from f.balance + cash + pending. Earlier this read f.balance, but
   // f.balance is only incremented manually on gift settlement (cost-basis
@@ -2147,7 +2136,22 @@ export default function Dashboard() {
   // a few rows down. Both numbers were sourced legitimately, but they
   // don't get to disagree. Falls back to f.balance when holdings haven't
   // loaded yet (initial cached render, or dashboard summary errored).
-  const summaryHoldings = (dashboardSummary as any)?.holdings as { currentValue?: string }[] | undefined;
+  // Demo-only: land session gifts inside the holdings so the hero (sum of
+  // holdings.currentValue) AND "What X owns" (same source) both reflect them and
+  // stay reconciled. No-op off demo / no gifts → returns the raw holdings.
+  const overlaidHoldings = useMemo(
+    () => applyDemoSellsToHoldings(
+      applyDemoBuysToHoldings(
+        applyDemoLiveGiftsToHoldings((dashboardSummary?.holdings ?? []) as any[], isDemoAccount, activeFundId),
+        isDemoAccount,
+        activeFundId,
+      ),
+      isDemoAccount,
+      activeFundId,
+    ),
+    [dashboardSummary?.holdings, isDemoAccount, activeFundId, demoOverlayVersion],
+  );
+  const summaryHoldings = overlaidHoldings as { currentValue?: string }[] | undefined;
   const investedMarketValue = Array.isArray(summaryHoldings) && summaryHoldings.length > 0
     ? summaryHoldings.reduce((s, h) => s + parseFloat(String(h?.currentValue || "0")), 0)
     : parseFloat(activeFund?.balance || "0");
@@ -2176,28 +2180,10 @@ export default function Dashboard() {
     duration: 1200,
   });
 
-  // Demo "gift just landed" hero roll. DemoGiftMoment (the toast) dispatches a
-  // presentational signal when its beat fires; we roll the hero from
-  // (balance − amount) up to the real seeded balance so the gift is FELT on the
-  // hero, not just announced in a toast. No data mutation — purely visual, ends
-  // on the real number. Only fires for the fund currently being viewed.
-  const [demoBeat, setDemoBeat] = useState<{ id: number; amount: number } | null>(null);
-  useEffect(() => {
-    if (!activeFundId) return;
-    // This file has a local `Event` type (the occasion model) that shadows the
-    // DOM Event, and globalThis.Event didn't resolve cleanly here. Since this is
-    // a demo-only visual signal, type the handler param as `any` and drop the
-    // casts — `(e: any) => void` is assignable to addEventListener's listener.
-    const handler = (e: any) => {
-      const detail = (e && e.detail) || {};
-      if (String(detail.fundId) !== String(activeFundId)) return;
-      const amount = Number(detail.amount);
-      if (!Number.isFinite(amount) || amount <= 0) return;
-      setDemoBeat({ id: Date.now(), amount });
-    };
-    window.addEventListener("kiddo:demo-gift-landed", handler);
-    return () => window.removeEventListener("kiddo:demo-gift-landed", handler);
-  }, [activeFundId]);
+  // (The old presentational "demo gift landed" hero-roll signal was retired in
+  // the demo-sandbox work: a recorded demo gift now lands in a holding, so the
+  // hero rolls off the REAL number via the count-up. No `kiddo:demo-gift-landed`
+  // listener / DemoHeroRoll hack needed.)
 
   // Chart-scrub state (Revolut-style tactile chart). When the parent
   // hovers or finger-drags across the trend chart, this holds the
@@ -2374,7 +2360,10 @@ export default function Dashboard() {
   });
   // Derive directly from dashboardSummary so fund switches always show correct holdings immediately.
   // Fall back to the independently-fetched data only when the summary failed to load.
-  const holdings: Holding[] = dashboardSummary?.holdings ?? holdingsFetched;
+  // overlaidHoldings === dashboardSummary.holdings when off-demo / no gifts, so
+  // this preserves the original fallback (independently-fetched holdings only
+  // when the summary failed to load) while the demo sees the gift land here too.
+  const holdings: Holding[] = overlaidHoldings.length ? (overlaidHoldings as Holding[]) : (dashboardSummary?.holdings ?? holdingsFetched);
   const holdingsLoading = holdingsQueryLoading || (!!activeFundId && dashboardSummaryLoading && !dashboardSummary);
 
   const { data: giftsFetched = [], isLoading: giftsQueryLoading } = useQuery<GiftType[]>({
@@ -2876,7 +2865,7 @@ export default function Dashboard() {
     return map;
   }, [dashboardThankYous]);
 
-  const { data: parentContributions = [], refetch: refetchParentContributions } = useQuery<ParentContribution[]>({
+  const { data: rawParentContributions = [], refetch: refetchParentContributions } = useQuery<ParentContribution[]>({
     queryKey: ["/api/funds", activeFundId, "parent-contributions"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${activeFundId}/parent-contributions`, { credentials: "include" });
@@ -2887,6 +2876,12 @@ export default function Dashboard() {
     staleTime: Infinity, // data is fed by dashboardSummary effect; only fetches on explicit refetch/invalidation
     initialData: () => dashboardSummary?.parentContributions,
   });
+  // Demo-only: append a session-recorded recurring set-up so it shows as active
+  // (the sandbox mocks the POST, so the refetch alone never includes it).
+  const parentContributions = useMemo<ParentContribution[]>(
+    () => applyDemoRecurringToContributions(rawParentContributions, isDemoAccount, activeFundId),
+    [rawParentContributions, isDemoAccount, activeFundId, demoOverlayVersion],
+  );
   const activeAutoInvest = parentContributions.find((c) => c.status === "active");
   const pausedAutoInvest = parentContributions.find((c) => c.status === "paused");
 
@@ -4416,11 +4411,20 @@ export default function Dashboard() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save recurring investment.");
       haptic("success");
-      // Demo convert-the-intent: a demo visitor who just set up recurring is at
-      // peak intent, but the sandbox won't persist it — so instead of a dead-end
-      // we fire DemoActionMoment (a "start your own fund" conversion toast). New
-      // plans only; editing an existing one isn't a fresh intent signal.
-      if (!isEditing && (user as any)?.isDemoAccount) {
+      // Demo: record the set-up into the overlay so it shows as an ACTIVE
+      // schedule (bumps the recurring chip count + monthly total + adds a row) —
+      // the sandbox mocks the POST, so the refetch alone would drop it. Then fire
+      // DemoActionMoment (the "start your own fund" conversion toast) — a demo
+      // visitor at peak intent. New plans only; editing isn't a fresh signal.
+      if (!isEditing && isDemoAccount) {
+        recordDemoRecurring({
+          fundId: activeFundId,
+          userId: String((user as any)?.id || ""),
+          amount: String(amt),
+          frequency: autoInvestFrequency,
+          executionModel: autoInvestExecutionModel,
+          selectedTicker: autoInvestExecutionModel === "pick" ? autoInvestTicker : null,
+        });
         try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "recurring", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
       }
       // Capture the saved plan id so the next step ("note") can PATCH the note
@@ -4791,7 +4795,24 @@ export default function Dashboard() {
       if (res.ok) {
         haptic("success");
         setSellSuccess(true);
-        toast({ title: "Moved to cash", description: `${formatCurrency(parseFloat(data.saleValue || "0"))} will settle inside the fund.` });
+        // Demo: record the sell so it reflects — the holding shrinks, the
+        // proceeds land in cash (invested↓ + cash↑ = same hero total), and a
+        // "Moved to cash" row shows in Activity + bell. The sandbox mocks the
+        // POST, so the refetch alone would drop it.
+        const demoProceeds = (() => {
+          const totalSh = parseFloat(sellingHolding.shares || "0") || 0;
+          const curVal = parseFloat(sellingHolding.currentValue || "0") || 0;
+          return totalSh > 0 ? (shares * curVal) / totalSh : 0;
+        })();
+        if (isDemoAccount) {
+          recordDemoSell({
+            fundId: String(activeFundId),
+            ticker: String(sellingHolding.ticker || ""),
+            shares: String(shares),
+            proceeds: demoProceeds.toFixed(2),
+          });
+        }
+        toast({ title: "Moved to cash", description: `${formatCurrency(parseFloat(data.saleValue || "0") || demoProceeds)} will settle inside the fund.` });
         invalidateActiveFundFreshness();
         setSellTaxExplainer(null);
         setTimeout(() => {
@@ -5713,21 +5734,19 @@ export default function Dashboard() {
                           // blink-and-miss. Count-up duration bumped to 1200ms
                           // 2026-05-12 (was 900ms default) — hero balance is the
                           // focal element on the duration ladder.
-                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash || !!demoBeat) ? "hsl(var(--kiddo-gold-light))" : "white",
+                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
                           letterSpacing: "-1.5px",
                           lineHeight: 1,
                           marginBottom: 4,
-                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash || !!demoBeat) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
+                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
                           transition: "color 0.55s ease, filter 0.55s ease",
                         }}
                         data-testid="text-total-balance"
-                        aria-live={isScrubbing || balanceAnimating || !!demoBeat ? "off" : "polite"}
+                        aria-live={isScrubbing || balanceAnimating ? "off" : "polite"}
                       >
                         {isScrubbing
                           ? formatCurrency(scrubbedTrendPoint!.value)
-                          : demoBeat
-                            ? <DemoHeroRoll key={demoBeat.id} fromValue={Math.max(0, rawTotalValue - demoBeat.amount)} toValue={rawTotalValue} onDone={() => setDemoBeat(null)} />
-                            : formatCurrency(displayHeroBalance)}
+                          : formatCurrency(displayHeroBalance)}
                       </motion.div>
 
                       {/* Hero gain pill removed — the +$X all-time gain (and its
@@ -9635,36 +9654,32 @@ export default function Dashboard() {
                 // Type-aware empty-state copy. Tiles are 140px wide, so each line stays terse;
                 // the warm aspiration ("share the link and watch it grow") shows up via the
                 // emoji + verb pair rather than a paragraph the tile can't fit.
-                // Empty-state copy per occasion type. The word "fund"
-                // is intentionally avoided here — the footer says
-                // "All occasions and goals go into the same fund"
-                // (one fund per kid, money is fungible), so a tile
-                // labeled "Cake fund" / "Cap & gown fund" /
-                // "Welcome fund" inside that section directly
-                // contradicts the footer (reads as if the kid has
-                // a separate cake fund AND a main fund). Each tile
-                // is an OCCASION the parent is saving toward,
-                // pointing at the kid's single fund. Audit-flagged
-                // 2026-05-26. Locked: no "X fund" wording on tile
-                // empty states.
+                // Empty-state copy for an occasion with no gifts yet. Framing
+                // rule (LOCKED): an occasion is a MOMENT people gift around, NOT
+                // a savings target — so we avoid "Toward [thing]" (earmark/goal
+                // language), which contradicted this section's own promise that
+                // "every occasion goes into the same one fund, nothing is set
+                // aside." "Open for gifts" frames the empty tile as a gifting
+                // moment awaiting its first gift. (Also: no "X fund" wording —
+                // it reads as if the kid had a separate fund per occasion.)
                 const emptyStateByType: Record<string, string> = {
-                  car: "🚗 Toward first wheels",
-                  graduation: "🎓 Toward cap & gown",
-                  birthday: "🎂 Toward their cake day",
-                  holiday: "🎄 Toward holiday glow",
+                  car: "🚗 Open for gifts",
+                  graduation: "🎓 Open for gifts",
+                  birthday: "🎂 Open for gifts",
+                  holiday: "🎄 Open for gifts",
                   baby_shower: "🍼 Welcome to the world",
-                  religious_holiday: "✡️ Toward family traditions",
+                  religious_holiday: "✡️ Open for gifts",
                   just_because: "💛 Start the story",
                 };
                 const emptyStateByName = (eventName: string): string | null => {
                   const n = eventName.toLowerCase();
-                  if (n.includes("car")) return "🚗 Toward first wheels";
-                  if (n.includes("college") || n.includes("school")) return "📚 Toward college";
-                  if (n.includes("graduation")) return "🎓 Toward cap & gown";
-                  if (n.includes("hanukkah")) return "🕎 Toward the festival";
-                  if (n.includes("christmas") || n.includes("holiday")) return "🎄 Toward holiday glow";
-                  if (n.includes("birthday")) return "🎂 Toward their cake day";
-                  if (n.includes("trip") || n.includes("travel")) return "🌍 Toward the adventure";
+                  if (n.includes("car")) return "🚗 Open for gifts";
+                  if (n.includes("college") || n.includes("school")) return "📚 Open for gifts";
+                  if (n.includes("graduation")) return "🎓 Open for gifts";
+                  if (n.includes("hanukkah")) return "🕎 Open for gifts";
+                  if (n.includes("christmas") || n.includes("holiday")) return "🎄 Open for gifts";
+                  if (n.includes("birthday")) return "🎂 Open for gifts";
+                  if (n.includes("trip") || n.includes("travel")) return "🌍 Open for gifts";
                   return null;
                 };
 

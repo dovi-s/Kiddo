@@ -691,6 +691,17 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // Book's own warm template.
   const nowMs = Date.now();
   const thankMinAgeMs = 60 * 24 * 60 * 60 * 1000;
+  // A few warm, parent-voiced variants so tapping different "Thanked" entries
+  // in the demo reveals real-feeling notes, not one identical template. Picked
+  // deterministically by gifter name (reproducible). Em-dash-free per the
+  // locked voice rule.
+  const THANK_VARIANTS: Array<(first: string, amt: string, kidName: string, willRead: string, age: number) => string> = [
+    (first, amt, kidName, willRead, age) => `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kidName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kidName}'s future.\n\n${kidName} will read this when ${willRead} ${age}.\n\nWith love,\nPhil`,
+    (first, amt, kidName, willRead, age) => `${first}, just wanted to say thank you. Your $${amt} went straight into ${kidName}'s fund, and ${willRead} going to see it (and this note) at ${age}. We're so grateful you're part of ${kidName}'s story.\n\nPhil`,
+    (first, amt, kidName) => `Thank you, ${first}! ${kidName}'s fund grew by $${amt} because of you. We can't wait to show ${kidName} who was there from the very start.\n\nWith love,\nPhil and Claire`,
+    (first, amt, kidName, willRead, age) => `Dear ${first},\n\nWhat a generous gift, $${amt} toward ${kidName}'s future. Years from now ${willRead} going to understand exactly what this meant. Thank you for believing in ${kidName} this early.\n\nPhil`,
+    (first, amt, kidName) => `${first}, thank you so much. The $${amt} is invested and already part of something that will be ${kidName}'s one day. It really does take people like you.\n\nWith love,\nPhil`,
+  ];
   for (const eg of externalGifts) {
     const age = nowMs - eg.createdAt.getTime();
     if (age < thankMinAgeMs) continue; // recent gifts stay awaiting (actionable)
@@ -706,7 +717,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       giftId: eg.giftId,
       senderName: eg.senderName,
       senderEmail: eg.senderEmail || null,
-      message: `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kid.firstName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kid.firstName}'s future.\n\n${kid.firstName} will read this when ${willRead} ${kid.majorityAge}.\n\nWith love,\nPhil`,
+      message: THANK_VARIANTS[
+        Math.abs(eg.senderName.split("").reduce((s, c) => s + c.charCodeAt(0), 0)) % THANK_VARIANTS.length
+      ](first, amt, kid.firstName, willRead, kid.majorityAge),
       status: "sent",
       sentAt: new Date(eg.createdAt.getTime() + 3 * 24 * 60 * 60 * 1000),
     } as any);
@@ -819,9 +832,13 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     // old gift. The dashboard still uses eventDate for the next-birthday countdown.
     { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
   ];
-  if (kid.ageYears < 18) {
-    occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });
-  }
+  // NOTE: a forward-looking "Graduation" occasion was seeded here, but it landed
+  // with ZERO gifts (no historical gift carried occasion:"graduation"), so it
+  // rendered as a stark-empty tile next to the populated Birthday — and its
+  // goal-era "Toward cap & gown" empty-state read as an earmark we no longer do.
+  // Dropped: the demo now shows ONE strong, fully-populated occasion (Birthday)
+  // plus the "Gift anytime" catch-all, which also keeps the Dashboard and the
+  // Memory Book occasion strips consistent (both only show gift-bearing groups).
   // Attribute the annual BIRTHDAY gifts (Gloria/Cam/Mitchell) to the Birthday
   // occasion so the Memory Book's occasions strip shows a real, NATURAL group
   // ("{kid}'s Birthday · N gifts · $X raised") next to the catch-all "Gift

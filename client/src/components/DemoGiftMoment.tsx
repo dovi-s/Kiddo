@@ -34,6 +34,7 @@ import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
+import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
 
 const SESSION_KEY = "kiddo.demo.giftMoment.shown.v1"; // generic beat: once per session
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
@@ -112,12 +113,11 @@ export function DemoGiftMoment() {
               </ToastAction>
             ),
           });
-          // Presentational hero-roll signal (Dashboard listens). Only for a
-          // real landed amount — a recurring "on its way" hasn't landed, so it
-          // shouldn't roll the hero. No data mutated.
-          if (!isRecurring) {
-            window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(amount) } }));
-          }
+          // No presentational hero-roll hack needed: the gift was recorded into
+          // the overlay by GiftSuccess, so it lands in a holding → the hero's
+          // invested total rises → the count-up rolls it (real + sticky) → and
+          // it's in the Activity feed, bell, and Memory Book. One recorded fact,
+          // reflected everywhere.
         };
       }
     }
@@ -142,6 +142,12 @@ export function DemoGiftMoment() {
 
       fire = () => {
         try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
+        // Record a REAL session gift (Stage 1 of the demo sandbox), so the
+        // ambient beat now genuinely lands a gift_received row in the Activity
+        // feed, lights the notification bell, appears in the Memory Book, and
+        // ticks the useFunds-backed surfaces (/funds total, header). Capped +
+        // once-per-session so the demo never floods with fake gifts.
+        recordDemoLiveGift({ fundId: fund.id, senderName: g.sender, amount: g.amount, ticker: g.ticker });
         haptic("success");
         toast({
           title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
@@ -156,9 +162,9 @@ export function DemoGiftMoment() {
             </ToastAction>
           ),
         });
-        // Presentational hero-roll signal — Dashboard rolls the hero up by this
-        // amount, synced to the toast. No data mutated.
-        window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(g.amount) } }));
+        // The recorded gift lands in a holding, so the hero's invested total
+        // rises and the count-up rolls it (real + sticky) — no presentational
+        // hero-roll hack needed.
       };
     }
 

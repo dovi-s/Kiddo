@@ -54,7 +54,7 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle } from "lucide-react";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -664,6 +664,10 @@ export default function MemoryBook() {
   const [composerStep, setComposerStep] = useState<"compose" | "preview">("compose");
   const [composerMessage, setComposerMessage] = useState("");
   const [sendingThankYou, setSendingThankYou] = useState(false);
+  // Which sent thank-you is expanded for viewing. Tapping a "✓ Thanked" badge
+  // reveals the note you actually sent (the badge was a dead status label
+  // before) — closes the loop "what did I write to them again?".
+  const [viewThankYouGiftId, setViewThankYouGiftId] = useState<string | null>(null);
 
   // Bulk thank-you composer — added 2026-05-25 to close the gifter-thanks
   // audit gap. When a gifter has multiple gifts awaiting thanks, the
@@ -5185,13 +5189,39 @@ export default function MemoryBook() {
                               return null;
                             }
 
+                            const isViewingThanks = viewThankYouGiftId === entry.giftId;
                             return (
                               <div className="mt-2">
                                 {isSent ? (
-                                  <div className="flex items-center gap-1.5 px-1">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                                  <div className="px-1">
+                                    {/* Tappable status — reveals the note you sent. */}
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewThankYouGiftId(isViewingThanks ? null : entry.giftId!)}
+                                      aria-expanded={isViewingThanks}
+                                      className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.14)] transition-colors"
+                                      data-testid={`button-view-thanks-${entry.id}`}
+                                    >
                                       ✓ Thanked{ty.sentAt ? ` · ${new Date(ty.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
-                                    </span>
+                                      <ChevronDown size={11} className="transition-transform" style={{ transform: isViewingThanks ? "rotate(180deg)" : "none" }} />
+                                    </button>
+                                    {isViewingThanks && (
+                                      <div className="mt-2 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.03)] p-3.5">
+                                        <p className="text-[9.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen)/0.7)] mb-1.5">
+                                          What you sent {senderName}
+                                        </p>
+                                        {ty.message ? (
+                                          <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-[hsl(var(--kiddo-ink)/0.85)]">{ty.message}</p>
+                                        ) : (
+                                          <p className="text-[12.5px] italic text-[hsl(var(--kiddo-ink)/0.55)]">You sent a thank-you{ty.sentAt ? `` : ""}.</p>
+                                        )}
+                                        {ty.sentAt && (
+                                          <p className="mt-2.5 text-[10px] text-[hsl(var(--kiddo-ink)/0.45)]">
+                                            Sent {new Date(ty.sentAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 ) : (
                                   <>

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { TrendingUp, CheckCircle2, Info, Clock, Zap, Banknote } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { recordDemoBuy } from "@/lib/demo-live-gifts";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 
 // Derived from the canonical universe (shared/stock-picks.ts) — the cash-invest
@@ -80,6 +82,8 @@ export function InvestCashModal({
   fundAverageGiftDate: _fundAverageGiftDate,
   onSuccess,
 }: InvestCashModalProps) {
+  const { user } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const [step, setStep] = useState<"choose" | "confirm" | "done">("choose");
   const [investMode, setInvestMode] = useState<"default" | "stock" | "keep" | "withdraw">("default");
   const [selectedTicker, setSelectedTicker] = useState("");
@@ -172,6 +176,18 @@ export function InvestCashModal({
       if (res.ok) {
         haptic("success");
         setStep("done");
+        // Demo: record the buy so it reflects — the holding grows, the cash
+        // drops by the same amount (invested↑ + cash↓ = same hero total), and an
+        // "Invested $X" row shows in Activity. The sandbox mocks the POST, so the
+        // refetch alone would drop it. Only the invest modes move cash into a
+        // holding ("keep" is a no-op; "withdraw" leaves the fund entirely).
+        if (isDemoAccount && (investMode === "default" || investMode === "stock")) {
+          recordDemoBuy({
+            fundId,
+            ticker: investMode === "stock" ? selectedTicker : "",
+            amount: roundedAmountToInvest.toFixed(2),
+          });
+        }
         void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
         void queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "holdings"] });
         void queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
