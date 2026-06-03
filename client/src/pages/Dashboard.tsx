@@ -10400,6 +10400,23 @@ export default function Dashboard() {
                                   </div>
                                 )}
 
+                                {/* No-gifts empty state. The gifts section above
+                                    hid itself when empty BECAUSE of goals — an
+                                    empty "Gifts" list next to a "$X of $Y" goal
+                                    bar read as a contradiction. Fund-level goals
+                                    are retired, so that reason is gone: show a
+                                    warm prompt that confirms this is where
+                                    supporters appear AND nudges a share (loop
+                                    fuel) instead of a blank. */}
+                                {evGifts.length === 0 && !isArch && (
+                                  <div>
+                                    <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 6 }}>Gifts via this occasion page</p>
+                                    <p style={{ fontSize: 12, color: "rgba(26,23,16,0.5)", lineHeight: 1.5, margin: 0 }}>
+                                      No gifts here yet. Share the link and the first person to give shows up right here.
+                                    </p>
+                                  </div>
+                                )}
+
                                 {/* Occasion code - active occasions only.
                                     Hidden for read-only roles — the code
                                     is a gift-routing affordance (anyone
