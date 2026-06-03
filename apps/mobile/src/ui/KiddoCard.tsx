@@ -62,12 +62,19 @@ export function KiddoCard({ children, variant = "default", onPress, style, padde
     borderWidth: hero ? 0 : 1,
     borderColor: semanticColors.surface.muted,
     padding: padded ? spacing.md : 0,
+    // Clip the native gradient bands to the rounded corners.
+    ...(hero && !isWeb ? { overflow: "hidden" as const } : null),
     ...heroBg,
     ...shadowStyle,
   };
 
   const inner = (
     <>
+      {/* Native hero gradient — react-native has no CSS gradient and we don't
+          take the expo-linear-gradient dep, so approximate the web's 145deg
+          evergreen→deep with stacked bands behind the content. Web uses the real
+          backgroundImage gradient on `base`. */}
+      {hero && !isWeb ? <NativeHeroGradient /> : null}
       {/* Glass edge — faint top highlight that catches light. Skipped on hero
           (its gradient owns the top). Clipped to the rounded top corners. */}
       {!hero && (
@@ -114,6 +121,34 @@ function PressableCard({
     >
       <Animated.View style={[baseStyle, { transform: [{ scale }] }]}>{children}</Animated.View>
     </Pressable>
+  );
+}
+
+// Diagonal-ish evergreen→deep gradient faked with stacked bands (native only;
+// web uses a real CSS backgroundImage gradient). Absolute-fills the hero card
+// behind its content; the card clips it via overflow:hidden.
+function lerpHex(a: string, b: string, t: number): string {
+  const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+  const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+  const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+function NativeHeroGradient() {
+  const BANDS = 14;
+  const bands = [];
+  for (let i = 0; i < BANDS; i++) {
+    bands.push(
+      <View key={i} style={{ flex: 1, backgroundColor: lerpHex(colors.evergreen, "#0E2618", i / (BANDS - 1)) }} />,
+    );
+  }
+  return (
+    <View
+      pointerEvents="none"
+      style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, flexDirection: "column" }}
+    >
+      {bands}
+    </View>
   );
 }
 

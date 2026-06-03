@@ -1,62 +1,33 @@
 // Brand-font loader. The web app renders in DM Sans (body) + Bricolage Grotesque
-// (headings); without these the native app falls back to the system font and
-// looks generic / "different from web". The token family names are the
-// @expo-google-fonts identifiers (DMSans_400Regular … BricolageGrotesque_700Bold),
-// so we register faces under those exact names and KText picks them up via
-// markFontsLoaded().
+// (headings); without these the app falls back to the system font and looks
+// generic / "different from web" — on a physical device most of all.
 //
-//   • Web (Expo web preview): inject @font-face from the Fontsource CDN — works
-//     immediately in the browser the founder is testing in.
-//   • Native device: load the same faces via expo-font if reachable; if not
-//     (offline, or once @expo-google-fonts is bundled instead), it degrades to
-//     the clean system fallback. Bundling @expo-google-fonts/dm-sans +
-//     bricolage-grotesque is the production path on device.
+// The TTFs are BUNDLED in apps/mobile/assets/fonts and loaded via expo-font
+// (already a dependency). This works on a real device AND on web with no extra
+// install — Metro bundles .ttf as an asset and expo-font registers it under the
+// exact @expo-google-fonts family names the design tokens reference
+// (DMSans_400Regular … BricolageGrotesque_700Bold). Once loaded, markFontsLoaded()
+// flips KText from the system fallback to the brand faces.
 
-import { Platform } from "react-native";
 import { markFontsLoaded } from "./native";
-
-const CDN = "https://cdn.jsdelivr.net/fontsource/fonts";
-
-const FACES: Array<{ family: string; weight: number; slug: string; w: string }> = [
-  { family: "DMSans_400Regular", weight: 400, slug: "dm-sans", w: "400" },
-  { family: "DMSans_500Medium", weight: 500, slug: "dm-sans", w: "500" },
-  { family: "DMSans_600SemiBold", weight: 600, slug: "dm-sans", w: "600" },
-  { family: "DMSans_700Bold", weight: 700, slug: "dm-sans", w: "700" },
-  { family: "BricolageGrotesque_700Bold", weight: 700, slug: "bricolage-grotesque", w: "700" },
-];
 
 let started = false;
 
-/** Idempotent. Resolves after fonts are registered (or skipped). */
+/** Idempotent. Resolves after the brand fonts register (or quietly skips). */
 export async function loadBrandFonts(): Promise<void> {
   if (started) return;
   started = true;
-
-  if (Platform.OS === "web") {
-    if (typeof document === "undefined") return;
-    if (!document.getElementById("kiddo-brand-fonts")) {
-      const style = document.createElement("style");
-      style.id = "kiddo-brand-fonts";
-      style.textContent = FACES.map(
-        (f) =>
-          `@font-face{font-family:'${f.family}';font-style:normal;font-weight:${f.weight};` +
-          `font-display:swap;src:url('${CDN}/${f.slug}@latest/latin-${f.w}-normal.woff2') format('woff2');}`,
-      ).join("");
-      document.head.appendChild(style);
-    }
-    markFontsLoaded();
-    return;
-  }
-
-  // Native: best-effort remote load. If it throws (offline / format), the kit
-  // stays on the system font — no crash, no broken-family fallback.
   try {
     const Font = await import("expo-font");
-    const map: Record<string, string> = {};
-    for (const f of FACES) map[f.family] = `${CDN}/${f.slug}@latest/latin-${f.w}-normal.ttf`;
-    await Font.loadAsync(map);
+    await Font.loadAsync({
+      DMSans_400Regular: require("../../assets/fonts/DMSans_400Regular.ttf"),
+      DMSans_500Medium: require("../../assets/fonts/DMSans_500Medium.ttf"),
+      DMSans_600SemiBold: require("../../assets/fonts/DMSans_600SemiBold.ttf"),
+      DMSans_700Bold: require("../../assets/fonts/DMSans_700Bold.ttf"),
+      BricolageGrotesque_700Bold: require("../../assets/fonts/BricolageGrotesque_700Bold.ttf"),
+    });
     markFontsLoaded();
   } catch {
-    /* keep system fallback */
+    // Font load failed (rare) — the kit stays on the clean system fallback.
   }
 }
