@@ -111,6 +111,17 @@ async function wipeDemoState(): Promise<void> {
     await db.delete(thankYous).where(inArray(thankYous.fundId, demoFundIds));
     await db.delete(transactions).where(inArray(transactions.fundId, demoFundIds));
     await db.delete(recurringGifts).where(inArray(recurringGifts.fundId, demoFundIds));
+    // memory_entries.gift_id → gifts.id (no cascade). Clear it BEFORE deleting
+    // demo gifts or the gifts delete FK-fails on memory_entries_gift_id_gifts_id_fk.
+    // The fund-scoped memoryEntries delete above misses ORPHANS: an interrupted
+    // reseed can leave a memory_entry whose own fundId is no longer in
+    // demoFundIds yet whose gift_id still points at a demo gift. That orphan
+    // survives the delete above and trips the gifts delete — which aborts the
+    // whole reset before the funds are deleted, so the seed then sees Phil's
+    // funds and SKIPS (the root cause of "occasions missing" / "data gone").
+    // Delete by gift_id to catch the orphans too. Same class of bug + fix as the
+    // referral_events.event_id clear below.
+    await db.execute(drizzleSql`DELETE FROM memory_entries WHERE gift_id IN (SELECT id FROM gifts WHERE fund_id IN (${idsList}))`);
     await db.delete(gifts).where(inArray(gifts.fundId, demoFundIds));
     await db.delete(holdings).where(inArray(holdings.fundId, demoFundIds));
     await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
