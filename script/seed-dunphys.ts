@@ -321,6 +321,29 @@ async function seedGifterNotifications(
   return byEmail.size;
 }
 
+// Memory entries to mark isFeatured (the Memory Book "Pinned" lens) — chosen
+// per-kid inside seedKidFund, written once at the end of the run. The store is
+// the same .local/memory-entry-meta.json the server's patchMemoryMeta writes;
+// MERGED (never truncated) so non-demo local pins survive a reseed. NOTE: the
+// running dev server caches this file in-process (loadMemoryMeta) — restart it
+// after seeding for pins to show.
+const PINNED_MEMORY_ENTRY_IDS: string[] = [];
+async function writeDemoMemoryEntryMeta(): Promise<void> {
+  if (PINNED_MEMORY_ENTRY_IDS.length === 0) return;
+  const metaPath = path.join(process.cwd(), ".local", "memory-entry-meta.json");
+  let store: Record<string, { visibility?: string; isFeatured?: boolean }> = {};
+  try {
+    store = JSON.parse((await fsp.readFile(metaPath, "utf8")) || "{}") || {};
+  } catch {
+    store = {};
+  }
+  for (const id of PINNED_MEMORY_ENTRY_IDS) {
+    store[id] = { visibility: "public", isFeatured: true };
+  }
+  await fsp.mkdir(path.dirname(metaPath), { recursive: true });
+  await fsp.writeFile(metaPath, JSON.stringify(store, null, 2), "utf8");
+}
+
 async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], parentDisplayName: string): Promise<string> {
   // Idempotent: if Phil already owns a fund with this slug, return its id.
   const [existing] = await db.select().from(funds).where(
@@ -496,7 +519,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // thank-yous after the loop (so the demo shows the "Thanked" state, not only
   // the auto-backfilled "awaiting" drafts). Phil's recurring cycles are excluded
   // — the Memory Book renders those as "from you", never thankable.
-  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date; occasion?: string }> = [];
+  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date; occasion?: string; memoryEntryId?: string; hasAudio?: boolean }> = [];
   for (const g of giftList) {
     const isRecurring = g.kind === "recurring";
     // A parent ONE-TIME top-up (Phil's own money, not an external gift): counts
@@ -638,7 +661,8 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
 
     // Ordinary gifts: one gift_message memory entry each, mirroring the
     // public-gift webhook (with the same audio/transcript fields).
-    await db.insert(memoryEntries).values({
+    // .returning() so the entry id can be pinned below (Pinned lens wear).
+    const [giftMemoryEntry] = await db.insert(memoryEntries).values({
       fundId: fund.id,
       giftId: insertedGift.id,
       type: "gift_message",
@@ -655,8 +679,8 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
             : null)
         : null,
       createdAt: new Date(g.createdAt),
-    } as any);
-    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt), occasion: g.occasion });
+    } as any).returning();
+    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt), occasion: g.occasion, memoryEntryId: giftMemoryEntry?.id, hasAudio: !!g.hasAudio });
   }
 
   // Backfill the schedule's realized totals from the cycles just written —
@@ -723,6 +747,22 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       status: "sent",
       sentAt: new Date(eg.createdAt.getTime() + 3 * 24 * 60 * 60 * 1000),
     } as any);
+  }
+
+  // Pin the precious entries so the Memory Book's "Pinned" lens reads worn,
+  // not guaranteed-empty. A real parent pins a few favorites over the years;
+  // an 80k/266-gift book with zero pins is a tell. Two tasteful pins per kid:
+  // the very FIRST external gift (the "it all started here" entry) and any
+  // voice-note gift (Gloria's audio — the marquee Memory Book artifact).
+  // isFeatured lives in the file-based meta store (.local/memory-entry-meta.json,
+  // see routes.ts patchMemoryMeta), NOT the DB — collected here, written once
+  // at the end of the run by writeDemoMemoryEntryMeta.
+  const oldestExternal = [...externalGifts].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+  if (oldestExternal?.memoryEntryId) PINNED_MEMORY_ENTRY_IDS.push(oldestExternal.memoryEntryId);
+  for (const eg of externalGifts) {
+    if (eg.hasAudio && eg.memoryEntryId && eg.memoryEntryId !== oldestExternal?.memoryEntryId) {
+      PINNED_MEMORY_ENTRY_IDS.push(eg.memoryEntryId);
+    }
   }
 
   // Gifter milestone-update opt-ins for the "who's following along" surface
@@ -1152,6 +1192,10 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     seededFundIds.push(fundId);
     console.log(`  fund: ${kid.firstName}'s Fund (${kid.slug}) → ${fundId}`);
   }
+
+  // 3a. Mark the per-kid precious entries as Pinned (file-based meta store).
+  await writeDemoMemoryEntryMeta();
+  console.log(`  pinned: ${PINNED_MEMORY_ENTRY_IDS.length} Memory Book entries (restart the dev server to pick up .local meta)`);
 
   // 3b. Hand Haley's fund off to Haley — the graduated adult-account demo.
   //

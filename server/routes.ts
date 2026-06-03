@@ -14143,26 +14143,40 @@ export async function registerRoutes(
     try {
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
-      // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      // Backfill missing drafts so existing gifts always have a thank-you entry.
-      const [fundGifts, existingThankYous] = await Promise.all([
-        storage.getGiftsByFund(req.params.fundId),
-        storage.getThankYousByFund(req.params.fundId),
-      ]);
-      const thankedGiftIds = new Set(existingThankYous.map((ty) => ty.giftId).filter(Boolean));
-      for (const gift of fundGifts) {
-        if (thankedGiftIds.has(gift.id)) continue;
-        const giftAmt = parseFloat(gift.amount || '0');
-        const formattedAmt = giftAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const message = `Thank you ${gift.senderName} for your generous gift of $${formattedAmt} to ${fund.name}!`;
-        await storage.createThankYou({
-          fundId: fund.id,
-          giftId: gift.id,
-          senderName: gift.senderName,
-          senderEmail: gift.senderEmail || null,
-          message,
-          status: 'draft',
-        });
+      // Access enforced by requireOwnedFundParam (owner or accepted collaborator,
+      // plus previous_owner read-only).
+      // Backfill missing drafts so existing gifts always have a thank-you entry —
+      // but ONLY for roles that can actually send (owner/co-admin). A
+      // previous_owner/viewer GET is a read; it must not write draft rows the
+      // reader can't act on.
+      const accessRole = String(req.fundAccessRole || '');
+      if (accessRole === 'owner' || accessRole === 'co-admin') {
+        const [fundGifts, existingThankYous] = await Promise.all([
+          storage.getGiftsByFund(req.params.fundId),
+          storage.getThankYousByFund(req.params.fundId),
+        ]);
+        const thankedGiftIds = new Set(existingThankYous.map((ty) => ty.giftId).filter(Boolean));
+        for (const gift of fundGifts) {
+          if (thankedGiftIds.has(gift.id)) continue;
+          // Parent-contribution money (recurring auto-invest cycles, linked to
+          // a schedule) is family money, not a thankable external gift — don't
+          // manufacture drafts for it. Pre-handoff the client suppressed these
+          // as "self" by sender email; post-handoff the OWNER is the grown kid,
+          // so without this skip their first Memory Book load drafted a
+          // thank-you for every one of Dad's auto-invest cycles.
+          if ((gift as any).parentContributionId || String((gift as any).source || '') === 'recurring_worker') continue;
+          const giftAmt = parseFloat(gift.amount || '0');
+          const formattedAmt = giftAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const message = `Thank you ${gift.senderName} for your generous gift of $${formattedAmt} to ${fund.name}!`;
+          await storage.createThankYou({
+            fundId: fund.id,
+            giftId: gift.id,
+            senderName: gift.senderName,
+            senderEmail: gift.senderEmail || null,
+            message,
+            status: 'draft',
+          });
+        }
       }
       const items = await storage.getThankYousByFund(req.params.fundId);
       res.json(items);

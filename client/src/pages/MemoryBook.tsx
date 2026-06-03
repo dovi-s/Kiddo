@@ -486,6 +486,13 @@ export default function MemoryBook() {
   const { data: memoryAccessFunds = [] } = useFunds();
   const memoryFundAccessRole = (memoryAccessFunds.find((f: any) => String(f.id) === String(fundId)) as any)?.accessRole;
   const canModerateMemory = memoryFundAccessRole === "owner" || memoryFundAccessRole === "co-admin";
+  // Previous custodian (parent after the at-majority handoff). Read-only on
+  // the fund, but the thank-yous in this book are ones THEY sent during the
+  // custodial years — so they get the ✓ Thanked story (badges + reveal),
+  // never the workflow (Awaiting chips/filters, composer, drafts). Without
+  // this split, Phil viewing handed-off Haley's book saw every gift badged
+  // "No thanks yet" + actionable chrome that could only 403.
+  const isPreviousOwnerMemory = memoryFundAccessRole === "previous_owner";
   // Honor OS reduced-motion. When set, the heavy slides + zooms in
   // this page become quiet opacity fades. Modal sheets stop sliding
   // 100px from below; the book-page swap stops translating 96px
@@ -983,6 +990,9 @@ export default function MemoryBook() {
   // read-heavy and rarely changes inside a single session; mutations
   // (sending a thank-you, marking one as sent) invalidate the query
   // explicitly so the cache stays accurate for actionable events.
+  // previous_owner loads these too (read-only): the sent notes are part
+  // of the book's story and they're the ones who sent them. The server
+  // skips the draft-backfill write for non-moderator reads.
   const { data: thankYouList = [], refetch: refetchThankYous } = useQuery<any[]>({
     queryKey: ["thank-yous", fundId],
     queryFn: async () => {
@@ -994,7 +1004,7 @@ export default function MemoryBook() {
       }
       return data;
     },
-    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
+    enabled: !!fundId && isAuthenticated && !authLoading && (canModerateMemory || isPreviousOwnerMemory),
     initialData: () => (fundId ? readLocalCache<any[]>(`${MEMORY_THANK_YOUS_CACHE_PREFIX}${fundId}`) : undefined),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
@@ -1453,7 +1463,9 @@ export default function MemoryBook() {
     // auto-open the inline composer at that gift. Without this, the user
     // lands on the entry but has to spot and click "Say thanks" to actually
     // do the thing — that's the "lands in random place" complaint.
-    if (giftParam && target.giftId && target.gift) {
+    // Moderators only: a previous_owner/viewer can't send (server 403s
+    // writes), so never auto-open a composer they can't use.
+    if (canModerateMemory && giftParam && target.giftId && target.gift) {
       const tyState = thankYouStateForGift(target.gift);
       if (tyState === "draft" || tyState === "missing") {
         const tyForGift = thankYouByGiftId.get(String(target.giftId));
@@ -2806,7 +2818,12 @@ export default function MemoryBook() {
                 </p>
               </div>
 
-              {/* Actions */}
+              {/* Actions — moderators only. For previous_owner / viewer
+                  these are 403 traps (the /api/funds/:fundId mutator gate
+                  blocks every write for those roles), so the buttons must
+                  not render: a read-only book shows the story, not dead
+                  controls. */}
+              {canModerateMemory && (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
                 <button
                   type="button"
@@ -2855,6 +2872,7 @@ export default function MemoryBook() {
                   Add memory
                 </button>
               </div>
+              )}
             </div>
           </div>
         </EnlighteningReveal>
@@ -3640,6 +3658,12 @@ export default function MemoryBook() {
                       >
                         <Pin size={12} /> Pinned
                       </button>
+                      {/* Awaiting = the thank-you WORKFLOW, so moderators
+                          only. A previous_owner/viewer can't send thanks;
+                          for them this chip could only ever filter to an
+                          un-actionable (and, with no drafts backfilled,
+                          empty) list. */}
+                      {canModerateMemory && (
                       <button
                         onClick={() => {
                           if (isAwaiting) {
@@ -3660,6 +3684,7 @@ export default function MemoryBook() {
                       >
                         Awaiting thanks
                       </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setMoreFiltersOpen((v) => !v)}
@@ -3703,7 +3728,7 @@ export default function MemoryBook() {
                         </button>
                       ))}
                     </div>
-                    {(activeFilter === "all" || activeFilter === "gift_message") && (
+                    {canModerateMemory && (activeFilter === "all" || activeFilter === "gift_message") && (
                       <div className="flex flex-wrap gap-2" data-testid="memory-thankyou-filter-bar">
                         <span className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground self-center mr-1">Thanks:</span>
                         {[
@@ -3838,6 +3863,10 @@ export default function MemoryBook() {
                 template that enumerates the count + total. Sends ONE
                 consolidated email via POST /thank-yous/bulk-send. */}
             {(() => {
+              // Sending is moderator-only; previous_owner now loads the
+              // thank-you rows (read-only story), so without this guard the
+              // unsent rows would surface a bulk-send card that can only 403.
+              if (!canModerateMemory) return null;
               if (!gifterFilter || gifterFilter.toLowerCase() === "anonymous") return null;
               // Find every thank-you row for this gifter that's unsent
               // AND has a reachable email. Anonymous + contactless are
@@ -4664,10 +4693,16 @@ export default function MemoryBook() {
                                 renders in the row, so the pill duplicated info
                                 the parent could read directly. Thank-you state
                                 pills (Thanked / Awaiting / Missing) carry signal
-                                the row doesn't otherwise expose, so they stay. */}
+                                the row doesn't otherwise expose, so they stay.
+                                ✓ Thanked is STORY (shows for every role that
+                                can see the book's thank-yous); Awaiting/Missing
+                                are WORKFLOW prompts, moderators only — a
+                                read-only viewer was seeing every gift stamped
+                                "No thanks yet" purely because their thank-you
+                                query never loads. */}
                             {tyState === "sent" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">✓ Thanked</span>}
-                            {tyState === "draft" && <span className="inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-2 py-0.5 text-[10px] font-bold text-[hsl(43,55%,28%)]">⏳ Awaiting thanks</span>}
-                            {tyState === "missing" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink)/0.06)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-ink)/0.55)]">No thanks yet</span>}
+                            {canModerateMemory && tyState === "draft" && <span className="inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-2 py-0.5 text-[10px] font-bold text-[hsl(43,55%,28%)]">⏳ Awaiting thanks</span>}
+                            {canModerateMemory && tyState === "missing" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink)/0.06)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-ink)/0.55)]">No thanks yet</span>}
                           </div>
                         );
 
@@ -4918,7 +4953,7 @@ export default function MemoryBook() {
                                   })()}
                                 </div>
                               </div>
-                              {(entry.gift.eventName || ticker || exec === "family" || exec === "cash" || (tyState && tyState !== "anonymous")) && (
+                              {(entry.gift.eventName || ticker || exec === "family" || exec === "cash" || tyState === "sent" || (canModerateMemory && tyState && tyState !== "anonymous")) && (
                                 <div className="mt-2.5 ml-12">
                                   {tagBlock}
                                 </div>
@@ -5152,8 +5187,12 @@ export default function MemoryBook() {
                             );
                           })()}
 
-                          {/* Thank-you section */}
-                          {isOwner && entry.giftId && (() => {
+                          {/* Thank-you section. Owner gets the full
+                              workflow; previous_owner gets ONLY the sent
+                              reveal below ("What you sent Gloria" — they
+                              are who sent it, during the custodial years).
+                              Composer/Say-thanks stays owner-only. */}
+                          {(isOwner || isPreviousOwnerMemory) && entry.giftId && (() => {
                             const ty = thankYouByGiftId.get(String(entry.giftId));
                             // Never prompt the owner to thank their OWN
                             // contributions (e.g. a parent's recurring
@@ -5244,7 +5283,7 @@ export default function MemoryBook() {
                                       </div>
                                     )}
                                   </div>
-                                ) : (
+                                ) : isOwner ? (
                                   <>
                                     {!isOpen && (
                                       <button
@@ -5392,7 +5431,7 @@ export default function MemoryBook() {
                                       </div>
                                     )}
                                   </>
-                                )}
+                                ) : null}
                               </div>
                             );
                           })()}
