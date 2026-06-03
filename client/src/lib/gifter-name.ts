@@ -1,14 +1,19 @@
 // Shared gifter display-name helper. A naive first-word split mangles the warm,
 // descriptive names families actually use on gift links: "Aunt Sarah" -> "Aunt",
 // "The Johnsons" -> "The", "Phil's office" -> "Phil's", "Uncle Joe" -> "Uncle".
-// Instead, show the first word that carries IDENTITY by skipping leading weak
-// tokens (titles/relations/articles): "Coach Mike" -> "Mike", "Aunt Sarah" ->
-// "Sarah", "The Johnsons" -> "Johnsons". A possessive that owns a common noun
-// stays whole ("Phil's office" -> "Phil's office", not the bare "office" that
-// reads wrong in "office's story"); a possessive leading a real name jumps to
-// it ("Phil's Sarah" -> "Sarah", "Grandpa's friend Earl" -> "Earl"). A plain
-// first name isn't weak, so
-// "Gloria Pritchett" -> "Gloria" exactly as a person expects.
+//
+// Two passes:
+//   1. The first real NAME wins. Skip leading weak tokens (titles / relations /
+//      articles) and possessives, and return the first capitalized identity
+//      word: "Coach Mike" -> "Mike", "Aunt Sarah" -> "Sarah", "The Johnsons" ->
+//      "Johnsons", "Grandpa's friend Earl" -> "Earl", "Gloria Pritchett" ->
+//      "Gloria".
+//   2. No real name means a DESCRIPTIVE group ("The book club", "A friend",
+//      "Phil's office"). Drop only leading weak LEADERS and keep the rest whole,
+//      so the identity survives ("book club", "friend", "Phil's office") instead
+//      of collapsing to a bare noun ("book", "office") that reads wrong in
+//      "office's story". A possessive is NOT a weak leader, so "Phil's office"
+//      keeps its "Phil's".
 //
 // Single source of truth: Dashboard (Who-loves roster) and Memory Book (the
 // gifter list + filter labels) both import this so they can't drift; the
@@ -23,28 +28,22 @@ export const WEAK_NAME_LEADERS = new Set([
   "pastor", "father", "fr", "sister", "rabbi", "reverend", "rev", "senor", "senora",
 ]);
 
+const cleanToken = (w: string): string => w.toLowerCase().replace(/[.,]/g, "");
+
 export function gifterShortName(name?: string | null): string {
   const trimmed = String(name || "").trim();
   if (!trimmed) return trimmed;
   const words = trimmed.split(/\s+/);
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i];
-    const lc = w.toLowerCase().replace(/[.,]/g, "");
-    if (WEAK_NAME_LEADERS.has(lc)) continue;
-    if (/['’]s$/.test(w)) {
-      // A possessive ("Phil's") is only a weak LEADER when it leads to a real
-      // name. If one follows, jump straight to it, skipping any intermediate
-      // common nouns ("Grandpa's friend Earl" -> "Earl", "Phil's Sarah" ->
-      // "Sarah"). If NO name follows, the possessive owns a common noun and the
-      // whole phrase IS the identity ("Phil's office", "Mom's book club");
-      // stripping it would leave a bare noun that reads wrong in "office's
-      // story", so keep the phrase whole.
-      const proper = words.slice(i + 1).find(
-        (x) => /^[A-Z]/.test(x) && !WEAK_NAME_LEADERS.has(x.toLowerCase().replace(/[.,]/g, "")),
-      );
-      return proper ?? words.slice(i).join(" ");
-    }
-    return w;
+
+  // Pass 1: first capitalized name that isn't a weak leader or a possessive.
+  for (const w of words) {
+    if (WEAK_NAME_LEADERS.has(cleanToken(w))) continue;
+    if (/['’]s$/.test(w)) continue;
+    if (/^[A-Z]/.test(w)) return w;
   }
-  return words[0]; // all tokens were weak/possessive; fall back to the first
+
+  // Pass 2: descriptive phrase. Drop leading weak leaders, keep the rest whole.
+  let start = 0;
+  while (start < words.length && WEAK_NAME_LEADERS.has(cleanToken(words[start]))) start++;
+  return words.slice(start).join(" ") || words[0];
 }

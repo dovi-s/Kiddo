@@ -331,7 +331,7 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
     { name: "Anonymous", amount: 20, yearsAgo: Math.max(0, age - 5), month: birthMonth, day: 13 },
     { name: "The Nguyens next door", amount: 25, yearsAgo: Math.max(0, age - 6), month: birthMonth, day: 17 },
     { name: "Uncle Joe", amount: 40, yearsAgo: Math.max(1, age - 8), month: 11, day: 23 },
-    { name: "A friend", amount: 50, yearsAgo: Math.max(0, age - 3), month: birthMonth, day: 19 },
+    { name: "Helen Park", amount: 50, message: "thinking of you on your birthday", yearsAgo: Math.max(0, age - 3), month: birthMonth, day: 19 },
     { name: "Grandpa's friend Earl", amount: 30, yearsAgo: Math.max(1, age - 10), month: birthMonth, day: 11 },
     { name: "The book club", amount: 60, yearsAgo: Math.max(0, age - 2), month: 11, day: 19 },
     { name: "Coach Mike", amount: 25, message: "great season. proud of you", yearsAgo: Math.max(0, age - 4), month: 8, day: 9 },
