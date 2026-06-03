@@ -1438,6 +1438,31 @@ export default function GiftCheckout() {
 
                   {/* Countdown — visible only when the event date is in the future */}
                   {countdown && (
+                    countdown.days >= 90 ? (() => {
+                      // Far-future event (a graduation years out, etc.): a ticking
+                      // days:hours:mins countdown is absurd at this range ("1458
+                      // Days : 13 Hours : 57 Mins") and fights the page's own
+                      // "grows over time" message. Show the date + the growth
+                      // runway instead, which reframes the long horizon as the
+                      // upside it is for an investment gift.
+                      const evDate = new Date(String(eventData?.event?.eventDate));
+                      const dateLabel = Number.isFinite(evDate.getTime())
+                        ? evDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
+                        : null;
+                      const yrs = Math.round(countdown.days / 365);
+                      const runway = countdown.days >= 365
+                        ? `about ${yrs} year${yrs === 1 ? "" : "s"} to grow`
+                        : `about ${Math.round(countdown.days / 30)} months to grow`;
+                      return (
+                        <div className="kiddo-card p-4 flex items-center justify-center gap-3 text-center">
+                          <span className="text-xl shrink-0" aria-hidden="true">🌱</span>
+                          <div>
+                            {dateLabel && <p className="font-heading text-lg font-bold text-foreground">{dateLabel}</p>}
+                            <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{runway}</p>
+                          </div>
+                        </div>
+                      );
+                    })() : (
                     <div className="kiddo-card p-4 flex items-center justify-center gap-0 text-center">
                       {[{ label: "Days", val: countdown.days }, { label: "Hours", val: countdown.hours }, { label: "Mins", val: countdown.mins }].map(({ label, val }, i) => (
                         <div key={label} className="flex items-center">
@@ -1449,6 +1474,7 @@ export default function GiftCheckout() {
                         </div>
                       ))}
                     </div>
+                    )
                   )}
 
                   {/* Past-event reassurance — replaces the countdown when the
