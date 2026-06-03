@@ -5210,11 +5210,20 @@ export default function Dashboard() {
             Tier-2 deferred item #2. Fires once across the parent's
             lifetime when they upload their first parent-authored
             photo/video/voice on Kiddo+. Per-user dismiss (NOT per-fund) —
-            same parent, same celebration, even with multiple kids. */}
-        <PlusFirstMediaCelebrationBanner
-          plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
-          fundId={activeFundId}
-        />
+            same parent, same celebration, even with multiple kids.
+
+            Gate on activeFundAccessRole === 'owner' (same guard as the
+            co-parent banner above). plusFirstMediaAt is server-scoped to the
+            fund owner, but it rides in the per-fund dashboard-summary cache,
+            so it can bleed to a non-owner viewing the same fund on a shared
+            browser / persona-switch — the same leak the at-18 welcome banner
+            had. The accessRole signal is per-viewer and doesn't bleed. */}
+        {activeFundAccessRole === 'owner' && (
+          <PlusFirstMediaCelebrationBanner
+            plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
+            fundId={activeFundId}
+          />
+        )}
 
         {/* Aggregated recurring-requests nudge — surfaces when ANY
             gifter has used "ask the family to enable monthly" CTA in
