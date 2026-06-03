@@ -813,6 +813,42 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           </View>
           <Text style={styles.headerTabLabel}>{headerTitle[tab]}</Text>
         </View>
+
+        {/* Fund switcher tabs (multi-fund parents) — mirrors the web's
+            Luke/Alex/Haley tab row. Single-fund parents see no tabs. */}
+        {funds.length > 1 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 10, marginHorizontal: -2 }}
+            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 2 }}
+          >
+            {funds.map((f) => {
+              const isActive = f.id === activeFund?.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => setSelectedFundId(f.id)}
+                  style={{ paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: isActive ? colors.evergreen : "transparent" }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: isActive ? "900" : "700",
+                      color: isActive ? colors.evergreen : "#8B948C",
+                    }}
+                  >
+                    {getChildName(f)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            <Pressable onPress={onAddFund} style={{ paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <Ionicons name="add" size={15} color="#8B948C" />
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#8B948C" }}>Add</Text>
+            </Pressable>
+          </ScrollView>
+        ) : null}
       </View>
 
       {/* Tabs */}
