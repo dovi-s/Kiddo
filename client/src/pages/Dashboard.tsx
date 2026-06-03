@@ -8800,11 +8800,20 @@ export default function Dashboard() {
                           : monthlyLabel
                             ? `${activeCount} active · ${monthlyLabel}/month · ${pausedCount} paused`
                             : `${activeCount} active · ${pausedCount} paused`;
+                      // The summary line earns its place when it adds something
+                      // the rows don't: a combined total across 2+ schedules, a
+                      // paused count + Resume-all, or the empty-state copy. With
+                      // exactly ONE active schedule it just re-prints the single
+                      // hero row right below ("1 active · $100/month" over a row
+                      // that already says "$100/month · Active"), so drop it and
+                      // let the header + hero row carry it crisply.
+                      const showSummaryLine = shownContribs.length !== 1 || pausedCount > 0;
                       return (
                         <div className="px-4 pt-3.5 pb-3 border-b border-border/40">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-1">
+                          <p className={`text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 ${showSummaryLine ? "mb-1" : ""}`}>
                             Recurring investments
                           </p>
+                          {showSummaryLine && (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                             <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", fontWeight: 500, flex: 1, minWidth: 0 }}>{summaryText}</p>
                             {allPaused && ownPaused.length > 0 && (
@@ -8817,6 +8826,7 @@ export default function Dashboard() {
                               </button>
                             )}
                           </div>
+                          )}
                         </div>
                       );
                     })()}
