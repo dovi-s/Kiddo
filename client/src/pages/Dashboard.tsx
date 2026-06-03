@@ -9793,7 +9793,13 @@ export default function Dashboard() {
                           </>
                         ) : (
                           <p style={{ fontSize: 9.5, color: giftVol > 0 ? "rgba(26,23,16,0.38)" : "hsl(143,40%,30%)", lineHeight: 1, fontWeight: giftVol > 0 ? 400 : 600 }}>
-                            {isArchived ? "Archived" : giftVol > 0 ? fmtC(giftVol) + " raised" : warmEmpty}
+                            {/* "gifted here" not "raised": an occasion shows the
+                                slice of gifts that came through THIS link (it's
+                                attribution, not a separate balance). "raised"
+                                read like a sub-pot sitting next to the goal's
+                                whole-fund total — the double-count confusion.
+                                "gifted here" frames it as a moment, not a jar. */}
+                            {isArchived ? "Archived" : giftVol > 0 ? fmtC(giftVol) + " gifted here" : warmEmpty}
                           </p>
                         )}
                       </div>
