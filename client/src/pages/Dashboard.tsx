@@ -8061,7 +8061,7 @@ export default function Dashboard() {
                             ? `${formatCurrency(gifter.totalNetAmount)} total`
                             : null,
                           isFirstGifter ? "the first to give" : null,
-                          isRecurring ? "recurring giver" : null,
+                          isRecurring ? "recurring gifter" : null,
                         ].filter(Boolean) as string[];
                         const tooltipText = tooltipParts.join(" · ");
                         return (
@@ -10355,7 +10355,11 @@ export default function Dashboard() {
                                       {evGifts.slice(0, 5).map((g, gi) => {
                                         const gName = displayGifterName(g.senderName, (g as any).isAnonymous);
                                         const gAmt = parseFloat(String(g.netAmount || g.amount || "0"));
-                                        const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : null;
+                                        // Year included: annual gifters (e.g. a grandparent who
+                                        // gives every birthday) otherwise render as identical-looking
+                                        // rows ("Cameron Tucker · Nov 20 · $75" twice) that read as a
+                                        // duplicate bug. The year is what distinguishes them.
+                                        const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : null;
                                         const isLast = gi === Math.min(evGifts.length, 5) - 1;
                                         // Same thank-you state rules as elsewhere: owner self / anonymous / sent / draft / missing.
                                         const evGiftEmail = String((g as any)?.senderEmail || "").trim().toLowerCase();
@@ -10408,7 +10412,7 @@ export default function Dashboard() {
                                     warm prompt that confirms this is where
                                     supporters appear AND nudges a share (loop
                                     fuel) instead of a blank. */}
-                                {evGifts.length === 0 && !isArch && (
+                                {evGifts.length === 0 && !isArch && goal <= 0 && (
                                   <div>
                                     <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 6 }}>Gifts via this occasion page</p>
                                     <p style={{ fontSize: 12, color: "rgba(26,23,16,0.5)", lineHeight: 1.5, margin: 0 }}>
@@ -11863,7 +11867,7 @@ export default function Dashboard() {
             // per row instead of a name. Anonymity doesn't preclude
             // detail: dates, amounts, tickers, messages, and "now worth"
             // deltas all still tell the story without identifying the
-            // giver. Per the design lens (Emma at 18 looking back),
+            // gifter. Per the design lens (Emma at 18 looking back),
             // these gifts ARE part of her story — flattening them to a
             // count is the opposite of what we should do.
             const anonSorted = [...selectedGifter.gifts].sort(
