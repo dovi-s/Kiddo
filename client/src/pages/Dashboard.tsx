@@ -993,6 +993,21 @@ function stripStockSuffix(name?: string | null): string {
 // naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Phil's"
 // the Dashboard never showed.
 
+// Humanize a future countdown. A graduation 4 years out reading "1459 days away"
+// is clinical for an emotional product; switch to days only for the near term,
+// then weeks / months / years. Returns "" for past dates (caller filters it out).
+function humanizeDaysAway(days: number | null | undefined): string {
+  if (days == null || days < 0) return "";
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days < 14) return `${days} days away`;
+  if (days < 60) return `${Math.round(days / 7)} weeks away`;
+  if (days < 365) return `about ${Math.round(days / 30)} months away`;
+  const years = Math.round((days / 365) * 2) / 2; // nearest half-year
+  const yearStr = years % 1 === 0 ? String(years) : years.toFixed(1);
+  return `about ${yearStr} years away`;
+}
+
 type GifterProfile = {
   name: string;
   initials: string;
@@ -10155,7 +10170,7 @@ export default function Dashboard() {
                                       <p style={{ fontSize: 16, fontWeight: 800, color: "rgb(26,23,16)", lineHeight: 1.2, margin: 0 }}>{ev.name}</p>
                                       {(dateStr || isArch) && (
                                         <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.5)", marginTop: 3, margin: "3px 0 0" }}>
-                                          {[dateStr, daysLeft !== null && daysLeft > 0 ? `${daysLeft} days away` : daysLeft === 0 ? "Today" : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
+                                          {[dateStr, daysLeft !== null && daysLeft >= 0 ? humanizeDaysAway(daysLeft) : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
                                         </p>
                                       )}
                                     </div>
@@ -10176,7 +10191,7 @@ export default function Dashboard() {
                                       <p style={{ fontSize: 15, fontWeight: 800, color: "rgb(26,23,16)", lineHeight: 1.2 }}>{ev.name}</p>
                                       {(dateStr || isArch) && (
                                         <p style={{ fontSize: 11, color: "rgba(26,23,16,0.45)", marginTop: 2 }}>
-                                          {[dateStr, daysLeft !== null && daysLeft > 0 ? `${daysLeft} days away` : daysLeft === 0 ? "Today" : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
+                                          {[dateStr, daysLeft !== null && daysLeft >= 0 ? humanizeDaysAway(daysLeft) : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
                                         </p>
                                       )}
                                     </div>

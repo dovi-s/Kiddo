@@ -724,20 +724,15 @@ export function CreateEventSheet({
                   <ChevronRight size={16} color="rgba(26,23,16,0.3)" style={{ flexShrink: 0, marginTop: 5 }} />
                 </button>
 
-                <button type="button" onClick={() => handleSelectCategory("savings_goal")}
-                  style={S.tile()}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = G)}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = BORDER)}
-                  onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.985)")}
-                  onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                >
-                  <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>🎯</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 16, fontWeight: 700, color: INK, lineHeight: 1.2, marginBottom: 5 }}>A savings goal</p>
-                    <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>College, first car, first home. Invest toward something real.</p>
-                  </div>
-                  <ChevronRight size={16} color="rgba(26,23,16,0.3)" style={{ flexShrink: 0, marginTop: 5 }} />
-                </button>
+                {/* "A savings goal" option removed — fund-level dollar goals are
+                    retired (they don't compose on a fungible pot and imply an
+                    earmark a UTMA can't keep; see Dashboard suggestion removal).
+                    Occasions are now the only thing you create here. The
+                    savings_goal step machinery below stays in place but
+                    unreachable, ready to be repurposed as an occasion-level
+                    drive if that ever proves out against funded-k. TODO(ux):
+                    with one category, skip this chooser step and open straight
+                    to occasion creation. */}
               </div>
             </motion.div>
           )}
