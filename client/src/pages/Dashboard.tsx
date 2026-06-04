@@ -9938,7 +9938,11 @@ export default function Dashboard() {
                             </div>
                             <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
                               <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>{traditions.length > 0 ? "Your traditions" : "Add your traditions"}</p>
-                              <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>{traditions.length > 0 ? `${traditions.length} selected` : "Unlock milestone suggestions"}</p>
+                              {/* One-line guard: at fontSize 9 in a 140px tile, longer
+                                  copy wraps and pushes this tile's panel a row taller
+                                  than its siblings (founder-reported misalignment).
+                                  nowrap+ellipsis makes wrapping structurally impossible. */}
+                              <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{traditions.length > 0 ? `${traditions.length} selected` : "Unlocks milestone ideas"}</p>
                               <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600 }}>{traditions.length > 0 ? "Edit →" : "Personalize →"}</p>
                             </div>
                           </button>
@@ -10054,8 +10058,11 @@ export default function Dashboard() {
                             <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>
                               {traditions.length > 0 ? "Your traditions" : "Add your traditions"}
                             </p>
-                            <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>
-                              {traditions.length > 0 ? `${traditions.length} selected` : "Unlock milestone suggestions"}
+                            {/* One-line guard — same fix as the empty-state twin above:
+                                wrapping here pushed "Personalize →" below its siblings'
+                                baseline. nowrap+ellipsis + shorter copy. */}
+                            <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {traditions.length > 0 ? `${traditions.length} selected` : "Unlocks milestone ideas"}
                             </p>
                             <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600, lineHeight: 1 }}>
                               {traditions.length > 0 ? "Edit →" : "Personalize →"}
