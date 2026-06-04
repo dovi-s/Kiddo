@@ -1971,7 +1971,7 @@ export default function Activity() {
                     value: formatCurrency(last30YourContributions),
                     tone: "neutral" as const,
                     meta: last30YourContributionsCount > 0
-                      ? `${last30YourContributionsCount} ${last30YourContributionsCount === 1 ? "time" : "times"}`
+                      ? `${last30YourContributionsCount} ${last30YourContributionsCount === 1 ? "contribution" : "contributions"}`
                       : null,
                   },
                   {
