@@ -41,7 +41,7 @@ import { yearOfLifeForDate, getAgeMilestoneState } from "../shared/age18-decisio
 import { getMajorityAgeForState, US_STATES, UTMA_DEFAULT_MAJORITY_AGE } from "@shared/utma";
 import { recordEvent, eventCtxFromReq } from "./analytics";
 import { uploadMemoryFile } from "./objectStorage";
-import { scanImageBuffer } from "./contentScanner";
+import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
 import { remapOAuthIdentitiesForUser } from "./oauthIdentityStore";
 import { generateTotpSecret, buildOtpauthUri, verifyTotp, generateBackupCodes, hashBackupCodes, findBackupCodeMatch } from "./totp";
 import { deriveActionItemsForUser } from "./actionItems";
@@ -6938,6 +6938,15 @@ export async function registerRoutes(
           // controls both the server-side password validation (in the
           // gift-recurring endpoint) and the client-side UI gating.
           magicLinkAuth: isMagicLinkAuthEnabled(),
+          // Guestbook media capability — TRUE only when a real content
+          // scanner is configured (CONTENT_SCANNER != noop). The no-payment
+          // guestbook path may only carry photo/video/voice once uploads are
+          // scanned: payment gates the gift flow's media, a scanner gates the
+          // free path's. The client renders the media picker on the guestbook
+          // card iff this is true, so wiring a scanner vendor lights the
+          // feature up with zero further code. Per the 2026-06-04 guestbook
+          // safety model (text-only until then).
+          guestbookMediaEnabled: getActiveScannerName() !== "noop",
         },
         availability,
         permanentEventSlug: permanentEvent?.slug,
@@ -14970,6 +14979,25 @@ export async function registerRoutes(
       if (!fundId || !name || note.length < 2) {
         return res.status(400).json({ error: "A name and a note are required." });
       }
+      // Media on guestbook notes — SCANNER-CAPABILITY-GATED. The paid gift
+      // flow's media is gated by payment friction; the free path may only
+      // carry media once a real content scanner is configured (the same
+      // public upload endpoints then scan what they store). Until then,
+      // media fields are rejected with honest copy, and even with a scanner
+      // live, only OUR own /uploads/ paths are accepted (no hotlinks).
+      const mediaFields = {
+        photoUrl: String(req.body?.photoUrl || "").trim(),
+        videoUrl: String(req.body?.videoUrl || "").trim(),
+        audioUrl: String(req.body?.audioUrl || "").trim(),
+      };
+      const hasMedia = Boolean(mediaFields.photoUrl || mediaFields.videoUrl || mediaFields.audioUrl);
+      const scannerLive = getActiveScannerName() !== "noop";
+      if (hasMedia && !scannerLive) {
+        return res.status(400).json({ error: "Notes are words-only for now. Photos and voice are coming." });
+      }
+      if (hasMedia && Object.values(mediaFields).some((u) => u && !u.startsWith("/uploads/"))) {
+        return res.status(400).json({ error: "Media must be uploaded here, not linked from elsewhere." });
+      }
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ error: "That email doesn't look right. It's optional — feel free to leave it blank." });
       }
@@ -14996,9 +15024,9 @@ export async function registerRoutes(
         type: "note",
         content: note,
         authorName: name,
-        photoUrl: null,
-        videoUrl: null,
-        audioUrl: null,
+        photoUrl: mediaFields.photoUrl || null,
+        videoUrl: mediaFields.videoUrl || null,
+        audioUrl: mediaFields.audioUrl || null,
         visibility: "kid_now",
         status: "pending_review",
       } as any);

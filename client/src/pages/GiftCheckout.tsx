@@ -281,6 +281,15 @@ const getSuggestedStock = (eventType?: string, themeId?: string) => {
 // replaces it — see the server endpoint's safety model). Placed at the END
 // of the page so it's the graceful exit ramp, never competing with the gift
 // flow above.
+//
+// MEDIA UPGRADE PATH (pre-wired server-side, 2026-06-04): the public fund
+// payload carries `guestbookMediaEnabled` (true iff a real content scanner
+// is configured), and the guestbook endpoint already accepts
+// photoUrl/videoUrl/audioUrl when it is. When the scanner goes live, drop
+// the shared <MemoryMediaPicker /> (the same component the GiftSuccess
+// post-send recovery uses — "every giving flow exposes the full trio,
+// voice is the moat") into this form behind that flag. Until then, no
+// hidden dead UI ships.
 function GuestbookNoteCard({ fundId, childName }: { fundId?: string | null; childName: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
