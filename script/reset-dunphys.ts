@@ -122,6 +122,14 @@ async function wipeDemoState(): Promise<void> {
     // Delete by gift_id to catch the orphans too. Same class of bug + fix as the
     // referral_events.event_id clear below.
     await db.execute(drizzleSql`DELETE FROM memory_entries WHERE gift_id IN (SELECT id FROM gifts WHERE fund_id IN (${idsList}))`);
+    // thank_yous.gift_id → gifts.id (no cascade). Same orphan class as the
+    // memory_entries delete above: the fund-scoped thankYous delete (line ~111)
+    // misses a thank_you whose own fund_id drifted out of demoFundIds (or is
+    // null) but whose gift_id still points at a demo gift. That orphan survives
+    // and trips the gifts delete on thank_yous_gift_id_gifts_id_fk, aborting the
+    // whole reset before funds are deleted (so the seed then sees Phil's funds
+    // and SKIPS). Delete by gift_id to catch the orphans too.
+    await db.execute(drizzleSql`DELETE FROM thank_yous WHERE gift_id IN (SELECT id FROM gifts WHERE fund_id IN (${idsList}))`);
     await db.delete(gifts).where(inArray(gifts.fundId, demoFundIds));
     await db.delete(holdings).where(inArray(holdings.fundId, demoFundIds));
     await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
@@ -161,6 +169,14 @@ async function wipeDemoState(): Promise<void> {
 
   // 5. Delete the funds themselves.
   if (demoFundIds.length > 0) {
+    // Defensive last-moment re-clear: if the dev server is up, a background
+    // worker (e.g. age-transition for a near-majority kid, recurring worker)
+    // can insert an activity referencing a demo fund AFTER the bulk activities
+    // delete above, racing the funds delete and tripping
+    // activities_fund_id_funds_id_fk. Re-clear fund-keyed activities (the
+    // observed offender) immediately before the funds delete to shrink the
+    // race window to ~microseconds.
+    await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
     await db.delete(funds).where(inArray(funds.id, demoFundIds));
     console.log(`  deleted ${demoFundIds.length} fund(s)`);
   }
