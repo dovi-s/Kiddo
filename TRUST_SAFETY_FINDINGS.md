@@ -90,3 +90,37 @@ Real content scanner (PhotoDNA + moderation vendor); NCMEC reporting partnership
 
 See `project_child_safety_architecture.md` (referenced by `server/contentScanner.ts`) for
 the original architecture intent this audit measured against.
+
+---
+
+## Second independent audit — corroboration (2026-06-04, run `wf_b9213cc9-815`)
+
+A SECOND `trust-safety-audit` (125 agents, 28 confirmed, 3-vote verified) ran
+independently from the first and reached the **same verdict and the same two
+root causes** — the scanner stub + the unscanned video/audio path, and the
+`senderName`/message validation gap. Independent convergence on "do not open
+public UGC yet" is strong signal the conclusion is robust, not an artifact of
+one agent panel. Every CRITICAL/HIGH above was re-confirmed; nothing in the
+remediation plan changes.
+
+Net-new from the second pass (both minor, do not gate launch on them):
+- **KidView has no idle/lock timeout** (`KidView.tsx`) — a left-open unlocked
+  KidView on a shared device stays open. Low severity (parent's own device,
+  PIN-gated, read-only). Fold into the C-bucket KidView hardening.
+- **PIN unlock is skipped when `pinHash` is null** (`routes.ts` unlock) — a
+  fund whose parent never set a PIN issues an access token without a PIN
+  challenge. By-design for no-PIN funds, but the UI shouldn't imply PIN
+  protection when none is set. Cosmetic/edge.
+
+Refuted by the second pass (false positives — do NOT spend effort):
+- "Kid can claim fund before majority age" — REFUTED: `auth.ts` claim gate
+  computes `majorityDate` from the fund's locked `majorityAge` and 409s if
+  it's in the future (the PA-kid-claims-at-18 case is already closed).
+- The PIN brute-force angle (H4) note: an in-memory per-IP+token limiter (5
+  fails / 15 min) already shipped this session (`routes.ts` kid-view unlock);
+  H4's durable fix (Postgres-backed, survives restart) remains the real item.
+
+Coordination note: both audits assign the code fixes to "Claude"; the first
+session owns the in-flight remediation (this doc + the contentScanner fix +
+active `routes.ts` work). The second session stood down on the code to avoid
+clobbering that in-flight work — this corroboration note is its contribution.
