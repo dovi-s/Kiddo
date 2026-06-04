@@ -172,7 +172,7 @@ function Shell({
               </div>
               <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>
             </div>
-          ) : <Logo size="sm" className="text-primary" linkTo={null} />}
+          ) : <Logo size="sm" className="text-primary" linkTo="/" />}
           <div className="w-11" />
         </div>
       </header>

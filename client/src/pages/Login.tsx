@@ -189,7 +189,7 @@ export default function Login() {
                 <Logo> lockup is now the only brand mark, matching GetStarted. */}
             <div className="space-y-2">
               <div className="flex items-center justify-center">
-                <Logo size="lg" showWordmark={true} linkTo={null} />
+                <Logo size="lg" showWordmark={true} linkTo="/" />
               </div>
               <h1 className="text-3xl font-semibold text-foreground">Welcome back</h1>
               <p className="text-base text-muted-foreground">Your child's future is growing.</p>
