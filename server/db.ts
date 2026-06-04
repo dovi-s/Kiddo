@@ -90,3 +90,42 @@ if (process.env.NODE_ENV !== "test" && process.env.DB_POOL_WARM !== "off") {
   const warmTimer = setInterval(() => { void keepPoolWarm(); }, POOL_WARM_INTERVAL_MS);
   warmTimer.unref?.();
 }
+
+// ── Cross-region misconfig tripwire ─────────────────────────────────────────
+// The single biggest perf decision for prod is co-locating the app with the DB:
+// Supabase is in us-west-2 (Oregon), so the Render service MUST be Oregon too
+// (see DEPLOYMENT_PLAN.md). A same-region round-trip is ~1-2ms; cross-region is
+// ~60-97ms, which makes every hot endpoint (10-12 queries each) ~10x slower.
+// There's no programmatic way to read the deploy region, but the ROUND-TRIP
+// TIME is a direct proxy: measure it once at startup and, in production, log a
+// loud warning if it's cross-region-slow. This turns a silent latency footgun
+// into a visible log line the first time prod boots in the wrong region.
+async function checkDbLatency(): Promise<void> {
+  try {
+    // Use an already-warm connection; take the best of 3 to discount jitter.
+    const samples: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const t = process.hrtime.bigint();
+      await pool.query("SELECT 1");
+      samples.push(Number(process.hrtime.bigint() - t) / 1e6);
+    }
+    const best = Math.min(...samples);
+    const threshold = Number(process.env.DB_LATENCY_WARN_MS || 25);
+    if (best > threshold) {
+      const msg =
+        `[db-latency] DB round-trip is ${best.toFixed(0)}ms (threshold ${threshold}ms). ` +
+        `The app and Postgres appear to be in DIFFERENT regions. Supabase is us-west-2 ` +
+        `(Oregon); deploy the app in the SAME region to cut every query ~${Math.round(best / 2)}x. ` +
+        `See DEPLOYMENT_PLAN.md. Set DB_LATENCY_WARN_MS to tune this warning.`;
+      if (process.env.NODE_ENV === "production") console.warn(msg);
+      else console.log(`[db-latency] round-trip ${best.toFixed(0)}ms (dev — remote DB from a local machine is expected to be slow; prod must co-locate). See DEPLOYMENT_PLAN.md.`);
+    }
+  } catch {
+    // Never let a diagnostic break startup.
+  }
+}
+if (process.env.NODE_ENV !== "test") {
+  // Delay so it runs after the pool has had a moment to warm (more representative).
+  const latencyTimer = setTimeout(() => { void checkDbLatency(); }, 4_000);
+  latencyTimer.unref?.();
+}

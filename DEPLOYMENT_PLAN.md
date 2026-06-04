@@ -161,6 +161,19 @@ Supabase yet.
 
 Once the pre-flight is done:
 
+> ### 🚩 RED-FLAG: pick **US West (Oregon)** for the Render region — NOT Ohio.
+> The Supabase Postgres project lives in **AWS `us-west-2` (Oregon)** (confirmed
+> via the prod restore-drill trace, `incidents/restore-drills/2026-05-10.json`).
+> Render and the DB MUST be in the **same region**, or every DB round-trip eats
+> ~60–97ms of cross-country network latency. The hot endpoints fire ~10–12
+> queries each (`dashboard-summary`, `/api/funds`), so a cross-region deploy makes
+> a dashboard load ~1.4s instead of ~100ms — it ships our *dev-machine* latency
+> (which we measured at ~97ms/round-trip, see `server/db.ts`) straight to
+> production. Co-located, the same round-trip is ~1–2ms. This is the single
+> biggest perf decision in the whole deploy and it's a one-time dropdown choice.
+> **If Render ever drops the Oregon option, move the Supabase project to match
+> Render's region instead — never run them apart.**
+
 ### Step 1: Create the Web Service
 
 In Render dashboard → New + → Web Service:
@@ -169,7 +182,7 @@ In Render dashboard → New + → Web Service:
 |---|---|
 | Repository | Connect `dovi-s/Kiddo` (GitHub OAuth from signup) |
 | Name | `kora` (becomes part of the temp `kora.onrender.com` URL) |
-| Region | US East (Ohio) or US West (Oregon) |
+| Region | **US West (Oregon) — MUST match the Supabase `us-west-2` project (see red-flag above). Do NOT pick Ohio.** |
 | Branch | `main` |
 | Root directory | (leave blank) |
 | Runtime | Node |
@@ -334,7 +347,7 @@ Once deployed:
 2. **Staging environment** — Hobby only has one project. Test on the Render temp URL before pointing DNS. When you have customers, upgrade to Pro and add staging.
 3. **Database migrations in CI** — Render runs the start command, not migrations. Either run `npm run db:push` manually before deploying schema changes, OR add a `pre-deploy command` in Render that runs migrations (Render Pro feature).
 4. **Horizontal scaling** — single instance is fine until you have meaningful traffic.
-5. **Multi-region deploys** — pick one region, run there. Multi-region is a Pro+ concern.
+5. **Multi-region deploys** — pick one region, run there. Multi-region is a Pro+ concern. **That one region MUST be US West (Oregon)** to co-locate with the Supabase `us-west-2` DB — see the red-flag in "The Render deploy itself" above. (The app logs a `[db-latency]` warning at startup in production if a round-trip exceeds ~25ms, which catches a cross-region misconfig.)
 6. **The DUNPHY_DEMO_SPEC.md money-flow sandbox** — currently only the gift-checkout endpoint is sandboxed. Production deployment shouldn't change that; demo accounts still work for browse/sandbox.
 7. **The Stripe webhook signing-secret rotation strategy** — set once on deploy, rotate when Stripe asks.
 
