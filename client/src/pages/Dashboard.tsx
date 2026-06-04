@@ -6503,7 +6503,7 @@ export default function Dashboard() {
                           gratitude — once, where the fold happens. */}
                       {isOwnerMode && investedByParentsTotal > 0 && parentContribYears >= 1 && (
                         <p className="px-2 -mt-0.5 mb-0.5 text-[11px] text-muted-foreground/70" data-testid="text-parent-recognition">
-                          including {fmtRow(investedByParentsTotal)} from {custodianLabel} over {parentContribYears} years 💚
+                          including {fmtRow(investedByParentsTotal)} from {custodianLabel} over {parentContribYears} years
                         </p>
                       )}
                       {/* Your recurring + your one-time. Both viewers see the same
@@ -7734,10 +7734,16 @@ export default function Dashboard() {
                                 <div className="space-y-2">
                                   {hasBothSections && (
                                     <div className="flex items-center justify-between px-1 pb-0.5">
-                                      <div className="flex items-center gap-1.5">
-                                        <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Picked just for you" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
-                                        <span className="text-[11px]">💚</span>
-                                      </div>
+                                      {/* No decorative 💚 — "Picked just for {name}" already IS
+                                          the warmth; a heart on top is sentiment stacked on
+                                          sentiment (the greeting-card register the emoji
+                                          discipline bans — only 🌱 is reserved). Same restraint
+                                          pass that removed the hearts from the contribution
+                                          headers (see the one-time subsection comment).
+                                          Functional 💚s (the "Just Because" occasion icon set,
+                                          the Returning-gifter badge) are NOT decoration — keep
+                                          those. 2026-06-04. */}
+                                      <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Picked just for you" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
                                       {!isReadOnlyFund && (
                                         <div className="relative flex items-center gap-1.5">
                                           <AnimatePresence>
