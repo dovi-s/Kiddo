@@ -48,6 +48,29 @@ function presentation(type: MemoryEntryType): { icon: any; tint: string } {
   }
 }
 
+// Collapse consecutive "Recurring started" (parent_investment_start) entries into
+// one summary row, so a fund with several recurring schedules doesn't flood the
+// timeline (mirrors the web's recurring-cycle compression). A lone one stays as-is.
+type Row = { kind: "entry"; entry: MemoryEntry } | { kind: "recurringGroup"; entries: MemoryEntry[] };
+function collapseRecurring(entries: MemoryEntry[]): Row[] {
+  const rows: Row[] = [];
+  let i = 0;
+  while (i < entries.length) {
+    if (entries[i].type === "parent_investment_start") {
+      const group: MemoryEntry[] = [];
+      while (i < entries.length && entries[i].type === "parent_investment_start") {
+        group.push(entries[i]);
+        i++;
+      }
+      rows.push(group.length === 1 ? { kind: "entry", entry: group[0] } : { kind: "recurringGroup", entries: group });
+    } else {
+      rows.push({ kind: "entry", entry: entries[i] });
+      i++;
+    }
+  }
+  return rows;
+}
+
 export interface MemoryTabProps {
   activeFund: ApiFund | null;
   entries: MemoryEntry[];
@@ -98,6 +121,8 @@ export function MemoryTab({
     return { gifts: giftEntries.length, people };
   }, [visibleEntries]);
 
+  const rows = useMemo(() => collapseRecurring(visibleEntries), [visibleEntries]);
+
   const refresh = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />;
 
   return (
@@ -121,7 +146,14 @@ export function MemoryTab({
           <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, flexWrap: "wrap" }}>
             <CoverStat value={`${stats.people}`} label={stats.people === 1 ? "person" : "people"} />
             <CoverStat value={`${stats.gifts}`} label={stats.gifts === 1 ? "gift" : "gifts"} />
-            <CoverStat value={formatBalance(activeFund.balance)} label="fund" />
+            <CoverStat
+              value={formatBalance(
+                parseFloat(activeFund.balance || "0") +
+                  parseFloat((activeFund as any).cashBalance || "0") +
+                  parseFloat(activeFund.pendingBalance || "0"),
+              )}
+              label="fund"
+            />
           </View>
         ) : null}
       </KiddoCard>
@@ -147,14 +179,18 @@ export function MemoryTab({
         </KiddoCard>
       ) : (
         <View style={{ gap: spacing.sm }}>
-          {visibleEntries.map((entry) => (
-            <MemoryCard
-              key={entry.id}
-              entry={entry}
-              onEdit={!isReadOnly ? onEditEntry : undefined}
-              onDelete={!isReadOnly ? onDeleteEntry : undefined}
-            />
-          ))}
+          {rows.map((row, i) =>
+            row.kind === "recurringGroup" ? (
+              <RecurringGroupCard key={`rg-${i}`} entries={row.entries} />
+            ) : (
+              <MemoryCard
+                key={row.entry.id}
+                entry={row.entry}
+                onEdit={!isReadOnly ? onEditEntry : undefined}
+                onDelete={!isReadOnly ? onDeleteEntry : undefined}
+              />
+            ),
+          )}
         </View>
       )}
     </ScrollView>
@@ -308,6 +344,51 @@ function NoteComposer({
           }}
         />
       </View>
+    </KiddoCard>
+  );
+}
+
+// Summary card for a run of collapsed "Recurring started" entries.
+function RecurringGroupCard({ entries }: { entries: MemoryEntry[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const dates = entries
+    .map((e) => new Date(e.createdAt))
+    .filter((d) => !Number.isNaN(d.getTime()))
+    .sort((a, b) => b.getTime() - a.getTime());
+  const when = dates.length
+    ? dates[0].toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : "";
+  return (
+    <KiddoCard onPress={() => setExpanded((v) => !v)}>
+      <View style={{ flexDirection: "row", gap: spacing.sm, alignItems: "center" }}>
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: colors.evergreen + "18",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="repeat" size={18} color={colors.evergreen} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <KText variant="bodyStrong">{entries.length} recurring investments set up</KText>
+          <KText variant="caption" color={semanticColors.text.muted}>
+            {when} · tap to {expanded ? "hide" : "see each"}
+          </KText>
+        </View>
+      </View>
+      {expanded ? (
+        <View style={{ marginTop: spacing.sm, gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: semanticColors.surface.muted }}>
+          {entries.map((e) => (
+            <KText key={e.id} variant="caption" color={semanticColors.text.muted}>
+              • {e.content || "Recurring investment"}
+            </KText>
+          ))}
+        </View>
+      ) : null}
     </KiddoCard>
   );
 }
