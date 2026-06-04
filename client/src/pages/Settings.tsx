@@ -1867,11 +1867,34 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             // love remain two separate buckets with two different stories; this
             // view is the managed-mix story.
             const rowTickers = new Set([...Object.keys(targetMap), ...Object.keys(currentAllocPct)]);
-            const rows = Array.from(rowTickers).map((t) => {
-              const target = targetMap[t] ?? 0;
-              const current = currentAllocPct[t] ?? 0;
-              return { ticker: t, target, current, diff: current - target };
-            }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+            // Largest-remainder (Hamilton) rounding so the displayed today% and
+            // target% each sum to EXACTLY 100 within the managed sleeve, and the
+            // drift column nets to 0. Rounding each cell independently with
+            // toFixed(0) read "66 + 27 + 6 = 99" and made the over/underweights
+            // total -1 instead of balancing — accurate underneath, but it looked
+            // broken. Round both columns to integers that sum to 100, then derive
+            // each drift from the ROUNDED values so "current - target" always
+            // equals the shown drift and the drift column sums to zero.
+            const hamiltonRound = (vals: number[]): number[] => {
+              const floors = vals.map((v) => Math.floor(v));
+              let leftover = Math.round(vals.reduce((s, v) => s + v, 0)) - floors.reduce((s, n) => s + n, 0);
+              const order = vals
+                .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+                .sort((a, b) => b.frac - a.frac);
+              const out = floors.slice();
+              for (let k = 0; k < order.length && leftover > 0; k++) { out[order[k].i] += 1; leftover -= 1; }
+              return out;
+            };
+            const baseRows = Array.from(rowTickers).map((t) => ({
+              ticker: t,
+              target: targetMap[t] ?? 0,
+              current: currentAllocPct[t] ?? 0,
+            }));
+            const roundedCurrent = hamiltonRound(baseRows.map((r) => r.current));
+            const roundedTarget = hamiltonRound(baseRows.map((r) => r.target));
+            const rows = baseRows
+              .map((r, i) => ({ ticker: r.ticker, target: roundedTarget[i], current: roundedCurrent[i], diff: roundedCurrent[i] - roundedTarget[i] }))
+              .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
             const maxDriftPts = rows.reduce((m, r) => Math.max(m, Math.abs(r.diff)), 0);
             const inLine = maxDriftPts <= 3;
             const childPossessive = seIsOwnerMode ? "your mix" : (childName ? `${childName}'s mix` : "Managed mix");
