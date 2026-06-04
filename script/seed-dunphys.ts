@@ -323,8 +323,11 @@ async function seedGifterNotifications(
 
 // Memory entries to mark isFeatured (the Memory Book "Pinned" lens) — chosen
 // per-kid inside seedKidFund, written once at the end of the run. The store is
-// the same .local/memory-entry-meta.json the server's patchMemoryMeta writes;
-// MERGED (never truncated) so non-demo local pins survive a reseed. NOTE: the
+// the same .local/memory-entry-meta.json the server's patchMemoryMeta writes.
+// Merge discipline: keys for entry ids that no longer EXIST in the DB are
+// pruned (each reseed mints new entry ids, so prior demo pins become orphans —
+// without pruning the file grows every reseed and a raced run leaves junk),
+// while keys for live non-demo entries are preserved untouched. NOTE: the
 // running dev server caches this file in-process (loadMemoryMeta) — restart it
 // after seeding for pins to show.
 const PINNED_MEMORY_ENTRY_IDS: string[] = [];
@@ -336,6 +339,18 @@ async function writeDemoMemoryEntryMeta(): Promise<void> {
     store = JSON.parse((await fsp.readFile(metaPath, "utf8")) || "{}") || {};
   } catch {
     store = {};
+  }
+  // Prune orphans: any key whose entry id is gone from the DB.
+  const existingKeys = Object.keys(store);
+  if (existingKeys.length > 0) {
+    const liveRows = await db
+      .select({ id: memoryEntries.id })
+      .from(memoryEntries)
+      .where(inArray(memoryEntries.id, existingKeys));
+    const live = new Set(liveRows.map((r) => r.id));
+    for (const key of existingKeys) {
+      if (!live.has(key)) delete store[key];
+    }
   }
   for (const id of PINNED_MEMORY_ENTRY_IDS) {
     store[id] = { visibility: "public", isFeatured: true };
@@ -759,11 +774,15 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // at the end of the run by writeDemoMemoryEntryMeta.
   const oldestExternal = [...externalGifts].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
   if (oldestExternal?.memoryEntryId) PINNED_MEMORY_ENTRY_IDS.push(oldestExternal.memoryEntryId);
-  for (const eg of externalGifts) {
-    if (eg.hasAudio && eg.memoryEntryId && eg.memoryEntryId !== oldestExternal?.memoryEntryId) {
-      PINNED_MEMORY_ENTRY_IDS.push(eg.memoryEntryId);
-    }
-  }
+  // ONE voice note, not all of them — Gloria's audio birthday gift is ANNUAL,
+  // so pinning every audio entry pinned a-gift-per-year (~50/book on the
+  // first live run; caught by verify-demo-state) and made the Pinned lens
+  // meaningless. A parent pins the precious few; the most RECENT voice note
+  // is the one they'd keep at the top.
+  const newestAudio = [...externalGifts]
+    .filter((eg) => eg.hasAudio && eg.memoryEntryId && eg.memoryEntryId !== oldestExternal?.memoryEntryId)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  if (newestAudio?.memoryEntryId) PINNED_MEMORY_ENTRY_IDS.push(newestAudio.memoryEntryId);
 
   // Gifter milestone-update opt-ins for the "who's following along" surface
   // (file-based store; see seedGifterNotifications above).
@@ -1264,12 +1283,13 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
   }
 
   // 3c. Seed a connected bank for the recurring-setup demo. Recurring pulls
-  //     from a linked bank for EVERYONE (parent + owner), and the setup modal
-  //     disables "Continue" with no bank. Without this, "Set up recurring" /
-  //     "+ Add another" dead-ends at the bank step in the demo — for Phil
-  //     (parent) AND Haley (graduated owner). Demo money is mocked, so this is
-  //     an illustrative connected account, not a real ACH source.
-  for (const [label, uid] of [["phil", philId], ["haley", haleyUserId]] as const) {
+  //     from a linked bank for EVERYONE (parent + owner + co-parent), and the
+  //     setup modal disables "Continue" with no bank. Without this, "Set up
+  //     recurring" / "+ Add another" dead-ends at the bank step in the demo —
+  //     for Phil (parent), Haley (graduated owner), AND Claire (co-parent, who
+  //     has write access on Alex+Luke and can set up recurring too). Demo money
+  //     is mocked, so this is an illustrative connected account, not real ACH.
+  for (const [label, uid] of [["phil", philId], ["haley", haleyUserId], ["claire", userIdByEmail.get("claire@dunphyfamily.com")]] as const) {
     if (!uid) continue;
     const existingBank = await db.select().from(bankAccounts).where(eq(bankAccounts.userId, uid)).limit(1);
     if (existingBank.length > 0) continue;
