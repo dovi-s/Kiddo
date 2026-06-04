@@ -3560,6 +3560,15 @@ export default function MemoryBook() {
                           key={gifter.name}
                           type="button"
                           onClick={() => setGifterFilter(isActive ? null : gifter.name)}
+                          // Native title = the long-name escape hatch. The label
+                          // truncates at 64px (deliberate: a roster of tiles must
+                          // keep one quiet line each — no wrapping, and no marquee,
+                          // which would put ambient motion on up to a dozen tiles
+                          // at once against the calm register). Desktop hover gets
+                          // the FULL name + totals here; touch gets it via the
+                          // tap-through (the filtered entries render full names).
+                          // Mirrors the Dashboard roster's tooltip discipline.
+                          title={gifter.isAnon ? undefined : `${gifter.name} · ${displayAmount(gifter.totalAmount)} · ${gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}`}
                           className="flex flex-col items-center gap-1.5 min-w-[64px] bg-transparent border-none p-0 cursor-pointer"
                         >
                           {ownerProfileImageUrl ? (
