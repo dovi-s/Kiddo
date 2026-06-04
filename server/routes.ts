@@ -13353,7 +13353,7 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       const [entry] = await db
-        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, status: memoryEntries.status, content: memoryEntries.content })
+        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, status: memoryEntries.status, content: memoryEntries.content, authorName: memoryEntries.authorName })
         .from(memoryEntries)
         .where(eq(memoryEntries.id, req.params.id));
       if (!entry) return res.status(404).json({ error: 'Memory entry not found' });
@@ -13379,6 +13379,44 @@ export async function registerRoutes(
         });
       } catch {
         // Audit write is best-effort.
+      }
+      // Guestbook loop-closer: if this entry came from the no-payment
+      // guestbook AND the guest left an email, tell them their note made it
+      // into the book ("we'll tell you when it's in" is the form's promise —
+      // this is the keeping). Fires ONLY on the real pending→published
+      // transition (the idempotent early-return above means re-taps can't
+      // re-send), and ONLY on approve — rejection stays silent by design.
+      // Best-effort: the approval itself already succeeded.
+      try {
+        const gbActivity = await db
+          .select({ metadata: activities.metadata })
+          .from(activities)
+          .where(and(
+            eq(activities.fundId, entry.fundId),
+            eq(activities.type, 'memory_guestbook_note'),
+            sql`${activities.metadata}::text LIKE ${`%"${String(entry.id)}"%`}`,
+          ))
+          .limit(1);
+        if (gbActivity.length > 0) {
+          let gbMeta: any = {};
+          try { gbMeta = JSON.parse(String(gbActivity[0].metadata || '{}')) || {}; } catch { gbMeta = {}; }
+          const guestEmail = String(gbMeta.guestbookEmail || '').trim().toLowerCase();
+          if (guestEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+            const { buildGuestbookNoteApprovedEmail } = await import('./templates/guestbookNoteApproved');
+            const { sendEmail } = await import('./emailDelivery');
+            const giftPageUrl = (fund as any).slug
+              ? `${getAppBaseUrl(req)}/${String((fund as any).slug)}`
+              : `${getAppBaseUrl(req)}/gift/${String(entry.fundId)}`;
+            await sendEmail(buildGuestbookNoteApprovedEmail({
+              to: guestEmail,
+              guestName: String((entry as any).authorName || ''),
+              childFirstName: String(fund.recipientFirstName || fund.name || ''),
+              giftPageUrl,
+            }));
+          }
+        }
+      } catch (gbErr) {
+        console.warn('[guestbook] approval email skipped:', (gbErr as any)?.message || gbErr);
       }
       res.json({ ok: true });
     } catch (error) {

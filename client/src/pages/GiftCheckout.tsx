@@ -395,6 +395,13 @@ function GuestbookNoteCard({ fundId, childName }: { fundId?: string | null; chil
         className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
         data-testid="input-guestbook-email"
       />
+      {/* The email field's honest job — without a stated purpose an optional
+          email field collects nothing. This promise is KEPT by the approval
+          email (server templates/guestbookNoteApproved, sent on the real
+          pending-to-published transition; silence on rejection by design). */}
+      <p className="text-[11px] text-muted-foreground/70 -mt-1">
+        Leave your email and we'll tell you when your note joins the story.
+      </p>
       {error && <p className="text-xs text-red-600" data-testid="text-guestbook-error">{error}</p>}
       <div className="flex items-center gap-3">
         <Button size="sm" className="rounded-xl" onClick={submit} disabled={sending} data-testid="button-send-guestbook-note">
