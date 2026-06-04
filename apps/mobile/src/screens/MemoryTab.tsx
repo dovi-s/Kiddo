@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, KInput, Button, Skeleton, haptic } from "../ui";
 import { API_BASE, formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
+import { isReadOnlyFund } from "../lib/fund";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -74,8 +75,7 @@ export function MemoryTab({
   onDeleteEntry,
 }: MemoryTabProps) {
   const childName = childNameOf(activeFund);
-  const isReadOnly =
-    (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
+  const isReadOnly = isReadOnlyFund(activeFund);
 
   const stats = useMemo(() => {
     const giftEntries = entries.filter((e) => e.gift && !NON_COUNTING.has(String(e.gift.status || "").toLowerCase()));

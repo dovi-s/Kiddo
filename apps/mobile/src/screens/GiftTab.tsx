@@ -11,6 +11,7 @@ import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, haptic } from "../ui";
 import { formatBalance, WEB_BASE, type ApiFund, type ApiEvent, type DashboardGift } from "../api";
 import { looksLikeTestSender } from "../lib/gifters";
+import { isReadOnlyFund } from "../lib/fund";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -46,8 +47,7 @@ export function GiftTab({
 }: GiftTabProps) {
   const childName = childNameOf(activeFund);
   const giftUrl = activeFund ? `${WEB_BASE}/${activeFund.slug}` : "";
-  const isReadOnly =
-    (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
+  const isReadOnly = isReadOnlyFund(activeFund);
 
   const recent = gifts
     .filter((g) => !NON_COUNTING.has(String(g.status || "").toLowerCase()))

@@ -33,6 +33,7 @@ import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, Skeleton, haptic } from "../ui";
 import { projectFundValue, ageFromBirthdate } from "../lib/projection";
 import { looksLikeTestSender } from "../lib/gifters";
+import { isReadOnlyFund, isOwnerModeFund } from "../lib/fund";
 import {
   formatBalance,
   WEB_BASE,
@@ -257,9 +258,8 @@ export function FundHomeTab(props: FundHomeTabProps) {
   } = props;
 
   const childName = childNameOf(activeFund);
-  const isReadOnly =
-    (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
-  const isOwnerMode = Boolean((activeFund as any)?.transferredAt) && (activeFund as any)?.accessRole === "owner";
+  const isReadOnly = isReadOnlyFund(activeFund);
+  const isOwnerMode = isOwnerModeFund(activeFund);
   // Tapping a holding opens a detail sheet (cost basis, % of fund, who picked it) —
   // the web's per-holding depth surface, instead of navigating away.
   const [selectedHolding, setSelectedHolding] = useState<ApiHolding | null>(null);
