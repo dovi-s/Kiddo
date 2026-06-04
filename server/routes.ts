@@ -3318,6 +3318,32 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const existingFunds = await storage.getFundsByUser(userId);
       const body = { ...req.body } as Record<string, unknown>;
+      // IDEMPOTENCY (audit catch 2026-06-04): a refresh mid-POST (or a
+      // network retry) used to mint a duplicate fund — the client's
+      // `creating` flag only guards the button, not the wire. Heuristic,
+      // schema-free dedupe: if this user created a fund with the SAME child
+      // first name + birthdate within the last 2 minutes, that IS this
+      // request retried — return the existing fund as if freshly created.
+      // Deliberately narrow (name + birthdate + 2-minute window) so twins
+      // with different names, re-creating after a deliberate delete, and
+      // legitimate same-name-different-birthdate funds all still work.
+      {
+        const reqFirst = String((body as any).recipientFirstName || "").trim().toLowerCase();
+        const reqDob = String((body as any).recipientBirthdate || "").slice(0, 10);
+        if (reqFirst) {
+          const twoMinAgo = Date.now() - 2 * 60 * 1000;
+          const dupe = existingFunds.find((f: any) => {
+            const created = f?.createdAt ? new Date(f.createdAt).getTime() : 0;
+            if (!created || created < twoMinAgo) return false;
+            if (String(f?.recipientFirstName || "").trim().toLowerCase() !== reqFirst) return false;
+            const fDob = f?.recipientBirthdate ? new Date(f.recipientBirthdate).toISOString().slice(0, 10) : "";
+            return fDob === reqDob || (!fDob && !reqDob);
+          });
+          if (dupe) {
+            return res.status(200).json(dupe);
+          }
+        }
+      }
       // SECURITY (mass-assignment): insertFundSchema does not omit the
       // server-managed financial/custody columns, so a client could create a
       // fund pre-seeded with balance/cashBalance and status:"active" (KYC
