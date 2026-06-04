@@ -3619,12 +3619,36 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeFundId || !hasAutoInvestAccess || !activeAutoInvest || fundHistory.length < 2) return;
     if (isReadOnlyFund) return;
-    const NUDGE_KEY = `kiddo.smartNudge.lastShown.${activeFundId}`;
+    // GLOBAL monthly key, not per-fund (founder catch 2026-06-04: "I keep
+    // getting it, 3 times on the same page"). The old per-fund key meant a
+    // Family parent tabbing Luke → Alex → Haley got THREE modals back to
+    // back — same pitch, three funds, one browsing session. One smart nudge
+    // per month per PERSON is the contract; which fund earns it is just
+    // whichever qualified first. (Also makes demo reseeds irrelevant — new
+    // fund ids no longer mint fresh keys.)
+    const NUDGE_KEY = "kiddo.smartNudge.lastShown";
     const lastShown = localStorage.getItem(NUDGE_KEY);
     const now = Date.now();
     if (lastShown && now - parseInt(lastShown, 10) < 30 * 24 * 60 * 60 * 1000) return;
     const fundCreated = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : now;
     if (now - fundCreated < 30 * 24 * 60 * 60 * 1000) return;
+
+    // DELAYED FIRE (same founder catch: "the timing makes it that I don't
+    // see the value roll in"). The modal used to open the instant data
+    // settled — exactly when the hero's cached→live count-up plays, so the
+    // parent never saw the roll land. The nudge now waits 8 seconds of
+    // settled dashboard before appearing; the roll (~1.2s) + arrival beats
+    // own the open uncontested. The monthly key is written at SHOW time,
+    // and the effect cleanup cancels a pending timer if deps churn or the
+    // user navigates away mid-wait.
+    let nudgeTimer: ReturnType<typeof setTimeout> | null = null;
+    const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
+    const fireNudge = (payload: Parameters<typeof setSmartNudge>[0]) => {
+      nudgeTimer = setTimeout(() => {
+        setSmartNudge(payload);
+        safeLocalSet(NUDGE_KEY, String(Date.now()));
+      }, 8000);
+    };
 
     const monthlyAmt = parseFloat(activeAutoInvest.amount || "0");
     const daysUntil18 = age18Transition?.daysUntil18 ?? null;
@@ -3666,18 +3690,16 @@ export default function Dashboard() {
     // exactly that mislabel — fixed in commit d874e48, locked by this rename.
     const cumulativeGainPct = displayGainPct;
     if (cumulativeGainPct >= 9 && currentProjection && doubledProjection && monthlyAmt > 0) {
-      setSmartNudge({ scenario: "outperforming", returnPct: Math.round(cumulativeGainPct * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
-      safeLocalSet(NUDGE_KEY, String(now));
-      return;
+      fireNudge({ scenario: "outperforming", returnPct: Math.round(cumulativeGainPct * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
+      return cancelNudgeTimer;
     }
 
     // Scenario 2: consistent streak (3+ months)
     const createdAt = activeAutoInvest.createdAt ? new Date(activeAutoInvest.createdAt).getTime() : null;
     const monthsRunning = createdAt ? Math.floor((now - createdAt) / (30 * 24 * 60 * 60 * 1000)) : 0;
     if (monthsRunning >= 3 && currentProjection && doubledProjection && monthlyAmt > 0 && cumulativeGainPct >= 0) {
-      setSmartNudge({ scenario: "consistent", streakMonths: monthsRunning, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
-      safeLocalSet(NUDGE_KEY, String(now));
-      return;
+      fireNudge({ scenario: "consistent", streakMonths: monthsRunning, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
+      return cancelNudgeTimer;
     }
 
     // Scenario 3: milestone hit — never show when fund is down.
@@ -3752,7 +3774,7 @@ export default function Dashboard() {
       if (!nextMilestone || !monthsAtCurrent || monthsAtCurrent <= 0) {
         return;
       }
-      setSmartNudge({
+      fireNudge({
         scenario: "milestone",
         milestoneAmt: hitMilestone,
         nextMilestoneAmt: nextMilestone,
@@ -3766,7 +3788,7 @@ export default function Dashboard() {
         // the "At $X/mo, in N months" trailing copy.
         monthsDoubled: monthsDoubled && monthsDoubled > 0 ? monthsDoubled : undefined,
       });
-      safeLocalSet(NUDGE_KEY, String(now));
+      return cancelNudgeTimer;
     }
   }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
 
