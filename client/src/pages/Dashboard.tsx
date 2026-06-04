@@ -2252,41 +2252,35 @@ export default function Dashboard() {
   // a paid fund. Re-synced 2026-05-29.
   const hasAutoInvestAccess = Boolean(dashboardSummary?.recurringEnabled);
   void isFamily; void isStarter; void activeFundHasStarter;
-  const { data: parentLetter } = useQuery<{ id: string; content: string; type: string; authorName?: string } | null>({
-    queryKey: ["memory", activeFundId, "parent_letter"],
+  // ONE fetch of the fund's memory entries, derived two ways below
+  // (2026-06-04 perf). Previously the parent-letter and the parent-authored-
+  // count were two separate useQuery's hitting the SAME /memory endpoint with
+  // different keys — two identical full-array downloads per dashboard mount.
+  // Now: one query, two useMemo derivations.
+  const { data: memoryEntriesForFund } = useQuery<any[]>({
+    queryKey: ["memory", activeFundId],
     queryFn: async () => {
-      if (!activeFundId) return null;
+      if (!activeFundId) return [];
       const res = await fetch(`/api/funds/${activeFundId}/memory`, { credentials: "include" });
-      if (!res.ok) return null;
-      const entries: any[] = await res.json();
-      return entries.find((e) => e.type === "parent_letter") ?? null;
+      if (!res.ok) return [];
+      return res.json();
     },
     enabled: !!activeFundId,
     staleTime: 1000 * 60 * 5,
   });
-
-  // Parent-authored memory entry count for the proactive Plus prompt
-  // trigger ("third-entry" — fires when a Free parent has written 3+
-  // entries themselves, signaling they're building the Memory Book
-  // even without the media-authoring feature Plus would unlock).
-  // Separate query from parentLetter above to avoid restructuring the
-  // existing parentLetter consumer; same endpoint, response is HTTP-
-  // cacheable so the cost is minimal. Per the locked pre-launch
-  // strategic frame upgrade-conversion plan.
-  const { data: parentAuthoredEntryCount = 0 } = useQuery<number>({
-    queryKey: ["memory-entry-count", activeFundId, user?.id],
-    queryFn: async () => {
-      if (!activeFundId || !user?.id) return 0;
-      const res = await fetch(`/api/funds/${activeFundId}/memory`, { credentials: "include" });
-      if (!res.ok) return 0;
-      const entries: any[] = await res.json();
-      return entries.filter((e) =>
-        e.authorUserId === user.id && e.type !== "parent_letter" && e.type !== "sealed_letter"
-      ).length;
-    },
-    enabled: !!activeFundId && !!user?.id,
-    staleTime: 1000 * 60 * 5,
-  });
+  const parentLetter = useMemo<{ id: string; content: string; type: string; authorName?: string } | null>(
+    () => (memoryEntriesForFund || []).find((e: any) => e.type === "parent_letter") ?? null,
+    [memoryEntriesForFund],
+  );
+  // Parent-authored entry count for the proactive Plus prompt ("third-entry" —
+  // a Free parent who's written 3+ entries themselves is building the Memory
+  // Book even without the media-authoring Plus unlocks).
+  const parentAuthoredEntryCount = useMemo(
+    () => (memoryEntriesForFund || []).filter((e: any) =>
+      e.authorUserId === user?.id && e.type !== "parent_letter" && e.type !== "sealed_letter"
+    ).length,
+    [memoryEntriesForFund, user?.id],
+  );
 
   const { data: giftCodeData } = useQuery<{ code: string; lookupUrl: string }>({
     queryKey: ["/api/funds", activeFundId, "gift-code"],
@@ -3545,8 +3539,11 @@ export default function Dashboard() {
   // totals (f.balance is the manually-incremented cost-basis-style field;
   // sum of holdings.currentValue reflects current market). Falls back to
   // f.balance when holdings array is empty (brand new fund or pre-fetch).
-  const investedCurrentValue = holdings.reduce((sum, h) => sum + parseFloat(h.currentValue || "0"), 0);
-  const investedCostBasis = holdings.reduce((sum, h) => sum + parseFloat(h.costBasis || "0"), 0);
+  // Memoized on `holdings` (2026-06-04 perf): these reduces ran on EVERY
+  // render — including the ~70 frames of each balance count-up animation and
+  // every 30s poll — even though they only change when holdings change.
+  const investedCurrentValue = useMemo(() => holdings.reduce((sum, h) => sum + parseFloat(h.currentValue || "0"), 0), [holdings]);
+  const investedCostBasis = useMemo(() => holdings.reduce((sum, h) => sum + parseFloat(h.costBasis || "0"), 0), [holdings]);
   const invested = holdings.length > 0 ? investedCurrentValue : balance;
   const cash = cashBalance;
   const settling = pendingBalance;
@@ -3806,28 +3803,34 @@ export default function Dashboard() {
     return "gifts_settled";
   })();
 
-  const activeEvents = events.filter((e) => e.status === "active" && !e.isPermanent);
-  const archivedEvents = events.filter((e) => (e.status === "archived" || e.status === "closed") && !e.isPermanent);
+  // The block below (event splits, recent-gift/txn sorts, contributor/month
+  // counts, money math, today's buy/sell totals) is all PURE derivation of
+  // stable query data — but it used to run on EVERY render, including the ~70
+  // frames of each balance count-up animation, chart scrubs, and every poll
+  // tick. Memoizing each on its real inputs removes that O(gifts+txns+holdings)
+  // work from the hot render path. 2026-06-04 perf.
+  const activeEvents = useMemo(() => events.filter((e) => e.status === "active" && !e.isPermanent), [events]);
+  const archivedEvents = useMemo(() => events.filter((e) => (e.status === "archived" || e.status === "closed") && !e.isPermanent), [events]);
 
-  const recentGifts = [...gifts]
+  const recentGifts = useMemo(() => [...gifts]
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-    .slice(0, 5);
-  const recentFundTransactions = [...fundTransactions]
+    .slice(0, 5), [gifts]);
+  const recentFundTransactions = useMemo(() => [...fundTransactions]
     .sort((a, b) => getTransactionTimestamp(b) - getTransactionTimestamp(a))
-    .slice(0, 6);
+    .slice(0, 6), [fundTransactions]);
   // Contributor count: each named gifter = 1, each anonymous gift = 1 contributor.
   // Anonymous gifts are treated as distinct people since we can't link them.
-  const contributorCount = (() => {
+  const contributorCount = useMemo(() => {
     const named = gifterRoster.filter(g => g.name !== "Anonymous").length;
     const anonGifts = gifterRoster.find(g => g.name === "Anonymous")?.giftCount ?? 0;
     return named + anonGifts;
-  })();
-  const giftsThisMonth = gifts.filter((gift) => {
+  }, [gifterRoster]);
+  const giftsThisMonth = useMemo(() => gifts.filter((gift) => {
     const createdAt = gift.createdAt ? new Date(gift.createdAt) : null;
     if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
     const now = new Date();
     return createdAt.getFullYear() === now.getFullYear() && createdAt.getMonth() === now.getMonth();
-  }).length;
+  }).length, [gifts]);
   const heroMomentumLine =
     contributorCount >= 2
       ? `${contributorCount} people have gifted`
@@ -3836,14 +3839,14 @@ export default function Dashboard() {
         : gifts.length === 1
           ? "The first gift has landed"
           : null;
-  const dashboardMoneyMath = calculateDashboardMoneyMath({
+  const dashboardMoneyMath = useMemo(() => calculateDashboardMoneyMath({
     invested,
     cash,
     settling,
     investedCostBasis,
     gifts,
     parentContributions,
-  });
+  }), [invested, cash, settling, investedCostBasis, gifts, parentContributions]);
   const investedPrincipal = dashboardMoneyMath.investedPrincipal;
   const currentFundBasis = dashboardMoneyMath.currentFundBasis;
   const displayContributionValue = dashboardMoneyMath.displayContributionValue;
@@ -3853,20 +3856,20 @@ export default function Dashboard() {
     date.setHours(0, 0, 0, 0);
     return date.getTime();
   }, []);
-  const todaysSellTotal = fundTransactions.reduce((sum, transaction) => {
+  const todaysSellTotal = useMemo(() => fundTransactions.reduce((sum, transaction) => {
     if (String(transaction.type || "").toLowerCase() !== "sell") return sum;
     const timestamp = getTransactionTimestamp(transaction);
     if (timestamp < startOfToday) return sum;
     const amount = parseFloat(transaction.amount || "0");
     return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
-  const todaysBuyTotal = fundTransactions.reduce((sum, transaction) => {
+  }, 0), [fundTransactions, startOfToday]);
+  const todaysBuyTotal = useMemo(() => fundTransactions.reduce((sum, transaction) => {
     if (String(transaction.type || "").toLowerCase() !== "buy") return sum;
     const timestamp = getTransactionTimestamp(transaction);
     if (timestamp < startOfToday) return sum;
     const amount = parseFloat(transaction.amount || "0");
     return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
+  }, 0), [fundTransactions, startOfToday]);
   const cashMovementLine = todaysSellTotal > 0
     ? `${formatCurrency(todaysSellTotal)} moved to cash today`
     : todaysBuyTotal > 0
@@ -4899,7 +4902,9 @@ export default function Dashboard() {
         });
       }
       haptic("success");
-      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId, "parent_letter"] });
+      // The parent-letter + authored-count both derive from the single
+      // ["memory", activeFundId] query now (2026-06-04 dedup) — invalidate it.
+      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
       setLetterInlineOpen(false);
     } catch {
       haptic("error");
@@ -4920,7 +4925,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error("delete failed");
       haptic("success");
       toast({ title: "Letter cleared", description: "You can write a new one anytime." });
-      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId, "parent_letter"] });
+      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
       setLetterDraft("");
       setLetterDeleteConfirm(false);
       setLetterDiscardConfirm(false);
