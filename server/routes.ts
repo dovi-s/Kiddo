@@ -6384,7 +6384,7 @@ export async function registerRoutes(
       // serve the now-wrong "yours when you turn N" copy. (The pre-claim adult-
       // phase celebration still works: transferredAt isn't set until claim.)
       if ((fund as any).transferredAt) {
-        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+        return res.status(404).json({ error: "This fund now belongs to its owner. If that's you, log in to your account to see it." });
       }
       const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
       res.json({
@@ -6401,20 +6401,49 @@ export async function registerRoutes(
     }
   });
 
+  // PIN brute-force guard (audit catch 2026-06-04): a 4-digit PIN is ~10k
+  // possibilities and this endpoint previously accepted UNLIMITED attempts —
+  // the PIN gate was security theater for a surface holding a kid's money
+  // story + Memory Book. Sliding window per IP+token: 5 attempts per 15
+  // minutes, counted only on actual PIN failures so a family sharing one
+  // home IP isn't locked out by successful unlocks. In-memory (same
+  // documented limitation class as the other public limiters — see
+  // LOCAL_STATE_TO_POSTGRES_SPEC.md), pruned on growth.
+  const kidViewPinFailures = new Map<string, { count: number; windowStart: number }>();
   app.post('/api/kid-view/:token/unlock', async (req, res) => {
     try {
+      const pinKey = `${String(req.ip || "unknown")}:${req.params.token}`;
+      const nowMs = Date.now();
+      const PIN_WINDOW_MS = 15 * 60 * 1000;
+      if (kidViewPinFailures.size > 1000) {
+        kidViewPinFailures.forEach((v, k) => {
+          if (nowMs - v.windowStart > PIN_WINDOW_MS) kidViewPinFailures.delete(k);
+        });
+      }
+      const failures = kidViewPinFailures.get(pinKey);
+      if (failures && nowMs - failures.windowStart <= PIN_WINDOW_MS && failures.count >= 5) {
+        return res.status(429).json({ error: "Too many tries. Wait 15 minutes, then try again." });
+      }
       const record = await getKidViewRecordByShareToken(req.params.token);
       if (!record) return res.status(404).json({ error: "Child view not found." });
-      // Gate transferred (claimed) funds â€” see /meta. No PIN/token issued for a
-      // fund the owner now holds directly.
+      // Gate transferred (claimed) funds — see /meta. No PIN/token issued for a
+      // fund the owner now holds directly. Copy points the claimed owner home:
+      // the kid who just claimed often revisits their old Kid View link and
+      // "no longer viewable" read like the fund vanished (audit 2026-06-04).
       const unlockFund = await storage.getFund(record.fundId);
       if (unlockFund && (unlockFund as any).transferredAt) {
-        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+        return res.status(404).json({ error: "This fund now belongs to its owner. If that's you, log in to your account to see it." });
       }
       const pin = String(req.body?.pin || "").trim();
       if (record.pinHash) {
         const ok = await bcrypt.compare(pin, record.pinHash);
-        if (!ok) return res.status(401).json({ error: "That PIN does not match." });
+        if (!ok) {
+          const prev = kidViewPinFailures.get(pinKey);
+          if (prev && nowMs - prev.windowStart <= PIN_WINDOW_MS) prev.count += 1;
+          else kidViewPinFailures.set(pinKey, { count: 1, windowStart: nowMs });
+          return res.status(401).json({ error: "That PIN does not match." });
+        }
+        kidViewPinFailures.delete(pinKey);
       }
       const accessToken = await createKidViewAccessToken(record.fundId, req.params.token);
       res.json({ accessToken });
@@ -6438,7 +6467,7 @@ export async function registerRoutes(
       // Transferred-fund gate â€” see /meta. A claimed fund is the owner's
       // personal account; Kid View no longer applies.
       if ((fund as any).transferredAt) {
-        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+        return res.status(404).json({ error: "This fund now belongs to its owner. If that's you, log in to your account to see it." });
       }
 
       // Test-user gate (durable hygiene). When the fund's owner is flagged as
