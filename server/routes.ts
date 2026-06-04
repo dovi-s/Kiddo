@@ -8274,6 +8274,19 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Video too large. Please use a video under 25MB.' });
       }
 
+      // FAIL-CLOSED: there is no video content scanner yet (the Scanner interface
+      // only scans images), so in production we must NOT accept unscanned video on
+      // this PUBLIC (stranger-gifter) child-facing surface. Allowed in dev/test so
+      // local work isn't blocked; mirrors the photo path's prod fail-closed.
+      // Trust-safety audit C2 — lift when a scanVideo capability lands.
+      if (process.env.NODE_ENV === 'production') {
+        await writeAudit(req, 'public_upload_scan_rejected', 'fund', fund.id, {
+          mediaType: 'video', provider: 'none', reason: 'no-video-scanner',
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        return res.status(500).json({ error: 'Upload failed. Please try again later.' });
+      }
+
       const uploaded = await uploadMemoryFile({
         fundId: req.params.id,
         ext: parsed.ext,
@@ -8316,6 +8329,19 @@ export async function registerRoutes(
       }
       if (parsed.buffer.length > 10 * 1024 * 1024) {
         return res.status(400).json({ error: 'Voice note too large. Max 10MB.' });
+      }
+
+      // FAIL-CLOSED: no audio content scanner exists yet (and audioTranscript is
+      // rendered to the child unscanned), so in production we must NOT accept
+      // unscanned voice notes on this PUBLIC (stranger-gifter) child-facing
+      // surface. Allowed in dev/test; mirrors the photo path. Trust-safety audit
+      // C2 — lift when a scanAudio (+ transcript scan) capability lands.
+      if (process.env.NODE_ENV === 'production') {
+        await writeAudit(req, 'public_upload_scan_rejected', 'fund', fund.id, {
+          mediaType: 'audio', provider: 'none', reason: 'no-audio-scanner',
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        return res.status(500).json({ error: 'Upload failed. Please try again later.' });
       }
 
       const uploaded = await uploadMemoryFile({

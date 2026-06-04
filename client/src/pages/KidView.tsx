@@ -1268,6 +1268,18 @@ export default function KidView() {
                           )}
                         </div>
                       )}
+                      {/* Report affordance on the memory card too. The gift cards
+                          have one; without it the highest-risk surface (an
+                          unscanned stranger photo/voice note) was a reporting
+                          dead-end. Same /api/reports -> T&S queue; a memory_entry
+                          report is auto-flagged. Trust-safety audit C3. */}
+                      <div className="mt-1">
+                        <ReportContentButton
+                          targetType="memory_entry"
+                          targetId={entry.id}
+                          context={{ surface: "kid-view", fundId: content.fund.id }}
+                        />
+                      </div>
                     </div>
                     );
                   })}
