@@ -1858,10 +1858,12 @@ export class WebhookHandlers {
         // double-debiting. Draw the refunded amount from balance first, then
         // cash, so the fund's total holdable value drops by exactly the refund
         // regardless of which bucket the gift landed in; clamp at 0.
-        // NOTE: holding SHARES are not yet reversed here — once DriveWealth
-        // settlement is live the true reversal is a custodian sell; until then
-        // `balance` (which drives withdrawals) is the figure that must not
-        // retain refunded money. Tracked for the custody-wiring work.
+        // Holding SHARES are also reversed below (see the gift_allocations
+        // loop): a settled-then-refunded gift must not leave phantom sellable
+        // shares in the holdings table after its dollars are clawed back. This
+        // is a LOCAL-DB reversal only (custody is still a scaffold stub, so
+        // there is no real custodian sell to place); when DriveWealth settlement
+        // is live, the same allocation rows drive the real sell order.
         if (priorStatus === 'invested' || priorStatus === 'settled') {
           try {
             const fund = await storage.getFund(gift.fundId);
@@ -1883,6 +1885,58 @@ export class WebhookHandlers {
             }
           } catch (reverseErr) {
             console.error('[Webhook] Failed to reverse fund balance on refund:', gift.id, reverseErr);
+          }
+
+          // Reverse this gift's INVESTED HOLDINGS (shares + cost basis). The cash
+          // reversal above pulls dollars out of balance/cash, but an already-
+          // invested gift also created holdings rows + per-gift gift_allocations;
+          // left alone, those become phantom sellable shares for money the fund
+          // no longer holds. Back out ONLY this gift's slice via its own
+          // allocation rows (a gift may span several tickers in an auto basket;
+          // a ticker may be co-funded by other gifts). Mirrors the partial-sell
+          // math in routes.ts. Idempotent: this runs only when priorStatus was
+          // invested/settled (the gift is already 'refunded' above), and the
+          // allocation rows are deleted at the end as a second backstop. Clamped
+          // at 0 so a rounding drift can never go negative.
+          try {
+            const allocations = await storage.getGiftAllocationsByGift(gift.id);
+            for (const alloc of allocations) {
+              const allocShares = parseFloat(String(alloc.shares || '0')) || 0;
+              const allocCost = parseFloat(String(alloc.costBasis || '0')) || 0;
+              if (allocShares <= 0 && allocCost <= 0) continue;
+              const holding = await storage.getHoldingByFundAndTicker(gift.fundId, alloc.ticker);
+              if (!holding) continue;
+              const curShares = parseFloat(String(holding.shares || '0')) || 0;
+              const curCost = parseFloat(String(holding.costBasis || '0')) || 0;
+              const curValue = parseFloat(String(holding.currentValue || '0')) || 0;
+              const remainingShares = curShares - allocShares;
+              if (remainingShares <= 0.0001) {
+                // This gift was the last/only contributor — remove the holding
+                // and any straggler allocation rows for the ticker.
+                await storage.deleteHolding(holding.id);
+                await storage.deleteGiftAllocationsByFundAndTicker(gift.fundId, alloc.ticker);
+              } else {
+                // Preserve the holding's current per-share market value: scale
+                // currentValue by the surviving share fraction (no re-quote in a
+                // webhook); costBasis drops by this gift's actual basis.
+                const remainingFraction = curShares > 0 ? remainingShares / curShares : 0;
+                const remainingCost = Math.max(0, curCost - allocCost);
+                const remainingValue = Math.max(0, curValue * remainingFraction);
+                await storage.updateHolding(holding.id, {
+                  shares: remainingShares.toFixed(6),
+                  costBasis: remainingCost.toFixed(2),
+                  currentValue: remainingValue.toFixed(2),
+                  gain: (remainingValue - remainingCost).toFixed(2),
+                });
+              }
+            }
+            // Drop this gift's allocation rows last — finishes attribution
+            // cleanup and acts as a second idempotency backstop.
+            if (allocations.length > 0) {
+              await storage.deleteGiftAllocationsByGift(gift.id);
+            }
+          } catch (holdingReverseErr) {
+            console.error('[Webhook] Failed to reverse holdings on refund:', gift.id, holdingReverseErr);
           }
         }
       }

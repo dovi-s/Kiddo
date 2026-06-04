@@ -59,6 +59,7 @@ export interface IStorage {
   getGiftAllocationsByFund(fundId: string): Promise<GiftAllocation[]>;
   getGiftAllocationsByFundAndTicker(fundId: string, ticker: string): Promise<GiftAllocation[]>;
   createGiftAllocation(allocation: InsertGiftAllocation): Promise<GiftAllocation>;
+  getGiftAllocationsByGift(giftId: string): Promise<GiftAllocation[]>;
   deleteGiftAllocationsByGift(giftId: string): Promise<void>;
   deleteGiftAllocationsByFundAndTicker(fundId: string, ticker: string): Promise<void>;
   scaleGiftAllocationsByFundAndTicker(fundId: string, ticker: string, scale: number): Promise<void>;
@@ -315,6 +316,10 @@ export class DatabaseStorage implements IStorage {
   async createGiftAllocation(allocation: InsertGiftAllocation): Promise<GiftAllocation> {
     const [created] = await db.insert(giftAllocations).values(allocation).returning();
     return created;
+  }
+
+  async getGiftAllocationsByGift(giftId: string): Promise<GiftAllocation[]> {
+    return db.select().from(giftAllocations).where(eq(giftAllocations.giftId, giftId));
   }
 
   async deleteGiftAllocationsByGift(giftId: string): Promise<void> {
