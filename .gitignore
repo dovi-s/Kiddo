@@ -28,6 +28,13 @@ apps/mobile/.expo
 !.claude/workflows/security-audit.js
 *.log
 
+# Local eyeballing/QA scratch — demo screenshots + one-off compare/audit
+# scripts a dev runs by hand. Local-only, never product code, and keeping
+# them ignored means they can't be accidentally swept into a commit.
+.shots/
+.audit.cjs
+.cmp.cjs
+
 # IDE
 .vscode/
 .idea/
