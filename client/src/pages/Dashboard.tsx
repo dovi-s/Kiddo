@@ -9794,18 +9794,23 @@ export default function Dashboard() {
                   });
                 }
 
-                // Age-gated (13+) - graduation, first car, college fund. Skipped
-                // once the fund is transferred: an adult owner (or the previous
-                // owner viewing the handed-off fund) shouldn't be pitched their
-                // "first car / college / graduation" — those are a minor's
-                // milestones and read as stale on a grown, handed-off account.
-                if (childAgeNow !== null && childAgeNow >= 13 && !Boolean((activeFund as any)?.transferredAt)) {
+                // Graduation suggestion. Skipped once the fund is transferred:
+                // an adult owner (or the previous owner viewing the handed-off
+                // fund) shouldn't be pitched a minor's milestones — they read
+                // as stale on a grown, handed-off account.
+                if (childAgeNow !== null && !Boolean((activeFund as any)?.transferredAt)) {
                   const gradYear = childBirthdate ? childBirthdate.getFullYear() + 18 : new Date().getFullYear() + 4;
                   const yearsUntilGrad = gradYear - new Date().getFullYear();
-                  // Never suggest a graduation that already happened (a 20-year-old
-                  // not-yet-transferred fund would otherwise get "Class of 2023 ·
-                  // This year").
-                  if (yearsUntilGrad >= 0 && !activeEvents.some(e => e.eventType === "graduation")) {
+                  // RELEVANCE WINDOW (founder call 2026-06-04): suggest only
+                  // within ~2 years of graduation — junior/senior year, when
+                  // creating a gifting page is something a parent would
+                  // actually do. The old 13+ gate surfaced "Class of 2030 ·
+                  // 4 yrs away" for a 13-year-old: defensible, but nobody
+                  // creates a gifting page five years early and it confused
+                  // more than it invited (mirrors the Driver's License tile's
+                  // tight 14-16 window). Lower bound 0 still guards against
+                  // suggesting a graduation that already happened.
+                  if (yearsUntilGrad >= 0 && yearsUntilGrad <= 2 && !activeEvents.some(e => e.eventType === "graduation")) {
                     const yearsUntil = yearsUntilGrad;
                     const gradDateMs = new Date(gradYear, 5, 1).getTime();
                     suggestions.push({
