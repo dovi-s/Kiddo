@@ -2217,8 +2217,20 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
-    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, rawTotalValue);
-  }, [activeFundId, rawTotalValue, dashboardSummary]);
+    // DEMO accounts persist a seed ~0.6% BELOW live (founder call
+    // 2026-06-04: "should the demo have a lower cached amount always so
+    // [you] can always do the roll-in thing?"). The roll's premise is
+    // "you've been away; here's what changed" — a real returning parent
+    // always has a yesterday-number, and the demo's fiction is stepping
+    // into Phil's life mid-stream, so a synthetic last-visit number is
+    // set dressing, not a lie: the START is bent, the END is always the
+    // true balance, up-only holds by construction. Every fund-tab open
+    // in the demo now plays the returning-parent moment; the ambient
+    // DemoGiftMoment beat separately demos live ARRIVAL. Real accounts:
+    // exact live value, untouched.
+    const seedToStore = isDemoAccount ? rawTotalValue * 0.994 : rawTotalValue;
+    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, seedToStore);
+  }, [activeFundId, rawTotalValue, dashboardSummary, isDemoAccount]);
 
   // Per-fund cached seed for the hero's "$X at 65" projection peek. Same
   // Acorns-style pattern as the balance: paint the last known projection
@@ -3614,8 +3626,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
-    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, heroProjectedAt65);
-  }, [activeFundId, heroProjectedAt65, dashboardSummary]);
+    // Demo under-seed matches the balance write above so the hero and the
+    // at-65 peek roll together — one number rolling while its sibling sits
+    // still would read as a glitch, not a moment.
+    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, isDemoAccount ? heroProjectedAt65 * 0.994 : heroProjectedAt65);
+  }, [activeFundId, heroProjectedAt65, dashboardSummary, isDemoAccount]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
   // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.

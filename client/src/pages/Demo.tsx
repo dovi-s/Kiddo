@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Mascot } from "@/components/ui/mascot";
 import { GradientText } from "@/components/ui/gemini";
 import { useToast } from "@/hooks/use-toast";
+import { writeLocalCache } from "@/lib/local-cache";
 import { haptic } from "@/lib/haptics";
 import { setActiveFundId } from "@/hooks/use-active-fund";
 import { useAuth } from "@/hooks/use-auth";
@@ -113,13 +114,41 @@ export default function Demo() {
   // /dashboard and gifters go to /my-gifts. The "Skip to Haley"
   // featured CTA below uses a specialized version that auto-selects
   // Haley's fund and lands on /age-18-plan.
+  // Pre-seed each fund's count-up cache slightly BELOW its live balance so
+  // the very first dashboard open plays the cached→roll moment (founder call
+  // 2026-06-04). Demo login clears localStorage, so without this a prospect's
+  // first paint has no "last visit" number and the product's best micro-beat
+  // never fires. The demo's fiction is stepping into Phil's life mid-stream —
+  // a synthetic yesterday-number is set dressing: the start is bent ~0.6%,
+  // the END is always the true balance. Best-effort; navigation never waits
+  // on failure. (The Dashboard's own cache-write keeps re-seeding low for
+  // demo accounts, so every later fund-tab open rolls too.)
+  const preSeedDemoRoll = async () => {
+    try {
+      const res = await fetch("/api/funds", { credentials: "include" });
+      if (!res.ok) return;
+      const funds = await res.json().catch(() => []) as Array<{ id: string; balance?: string; pendingBalance?: string; cashBalance?: string }>;
+      for (const f of funds) {
+        const total = (parseFloat(String(f.balance || "0")) || 0)
+          + (parseFloat(String(f.pendingBalance || "0")) || 0)
+          + (parseFloat(String(f.cashBalance || "0")) || 0);
+        if (total > 0 && f.id) {
+          // Same envelope + key as Dashboard's FUND_BALANCE_CACHE_PREFIX
+          // write (writeLocalCache wraps {savedAt, value}).
+          writeLocalCache(`kiddo.fund.balance.v1:${f.id}`, total * 0.994);
+        }
+      }
+    } catch { /* set dressing only — never block the login */ }
+  };
+
   const handleLogin = async (email: string) => {
     setLoadingEmail(email);
     haptic("selection");
     try {
       await login({ email, password: DEMO_PASSWORD });
-      haptic("success");
       const account = ACCOUNTS.find((a) => a.email === email);
+      if (account?.role !== "gifter") await preSeedDemoRoll();
+      haptic("success");
       const dest = account?.role === "gifter" ? "/my-gifts" : "/dashboard";
       setLocation(dest);
     } catch (err) {
@@ -145,6 +174,9 @@ export default function Demo() {
     haptic("selection");
     try {
       await login({ email: FEATURED_EMAIL, password: DEMO_PASSWORD });
+      // Same first-open roll pre-seed as handleLogin — the featured
+      // walkthrough lands on dashboards too.
+      await preSeedDemoRoll();
       // After login (which cleared the previous user's caches), fetch
       // Phil's funds fresh from server and locate the featured fund by slug.
       const fundsRes = await fetch("/api/funds", { credentials: "include" });
