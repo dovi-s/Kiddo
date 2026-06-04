@@ -76,17 +76,35 @@ is still gift-toned — trivial follow-up.)
   server-side source (the gift row); the gap was the detail endpoint not carrying
   it, now fixed. A migration would touch 56+ money-flow write sites for no benefit.
 
-## Tracked follow-ups (Phase 2, optional)
+## Phase 2 — shipped 2026-06-03 (same branch)
 
-1. **Mobile → `/api/activities`.** Repoint `ActivityTab` at the activity feed
-   (instead of `dashboard-summary.transactions`) and `extraNodeModules`-map
-   `@shared` in `metro.config.js`, then import `canonicalLabel`. This is the only
-   path to true web↔native label unity. Until then, keep mobile's strings matching
-   the canonical wording (noted at `ActivityTab.tsx labelFor`).
-2. **Dedupe the two `StatusPill` components** (`Activity.tsx` inline ~809 vs
-   `activity-helpers.tsx` exported). Presentation-level; low priority.
-3. **Finish the gifter_recurring_* visual** — give those 3 rows their intended
-   icon/palette in `resolveTypeVisual` (label already fixed).
+- **gifter_recurring_* visual completed.** In both `Activity.tsx` and
+  `activity-helpers.tsx` `resolveTypeVisual`, the three types are now checked
+  BEFORE the `GIFT_TYPES` short-circuit, so they get the pause/resume/cancel
+  icon + warning/sage/destructive palette (not the generic green gift tile).
+  Dead duplicate branches removed.
+- **StatusPill deduped.** `Activity.tsx`'s inline copy was byte-for-byte
+  identical to the exported one in `activity-helpers.tsx` (same palette values,
+  icons, and the type-derived "failed" fallback). Deleted the local copy;
+  `Activity.tsx` now imports the shared one. Single status chip across feed,
+  modal, and detail page.
+- **Guard test added.** `script/test-activity-semantics.ts` (npm
+  `test:activity-semantics`, wired into `test:all:runtime`) pins the canonical
+  wording for a representative set, asserts every bucketed type has a label,
+  locks the gifter_recurring_* fix, and checks category bucketing. Prevents the
+  four-way drift from silently returning.
+
+## Tracked follow-ups (Phase 3, needs a device to verify)
+
+1. **Mobile → `/api/activities`.** Repoint `ActivityTab` off
+   `dashboard-summary.transactions` (vocabulary: `gift`/`sell`/`withdrawal`) and
+   onto the activity feed, `extraNodeModules`-map `@shared` in `metro.config.js`,
+   then import `canonicalLabel`. This is the only path to true web↔native label
+   unity. **Deferred deliberately:** it's a data-source rebuild of a native screen
+   that can't be visually verified without a device/screenshots, and blind-matching
+   web's eyebrow labels (e.g. "Portfolio" for a `sell`) onto standalone native rows
+   may be worse UX than mobile's current "Sold". Until then, keep mobile's strings
+   matching the canonical wording (noted at `ActivityTab.tsx labelFor`).
 
 ## The principle, for future work
 Add a new activity type → give it a `canonicalLabel` entry and a category bucket

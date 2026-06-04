@@ -89,6 +89,15 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: "Gift released" };
   if (t === "gift_received_cash")
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: "Gift held as cash" };
+  // Gifter recurring-schedule lifecycle — checked before the GIFT_TYPES group
+  // (these are members of GIFT_TYPES) so they get the pause/resume/cancel tile,
+  // not the generic gift tile. Mirrors Activity.tsx resolveTypeVisual.
+  if (t === "gifter_recurring_paused")
+    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Pause size={16} />, label: "Gifter paused recurring" };
+  if (t === "gifter_recurring_resumed")
+    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Play size={16} />, label: "Gifter resumed recurring" };
+  if (t === "gifter_recurring_cancelled")
+    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Gifter cancelled recurring" };
   if (GIFT_TYPES.includes(t))
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: t === "gift_invested" ? "Gift invested" : "Gift received" };
   if (t === "recurring_paused")

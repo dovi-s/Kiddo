@@ -9,6 +9,7 @@ import { useLocation, useSearch, Link } from "wouter";
 import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { canonicalLabel } from "@shared/activity-semantics";
+import { StatusPill } from "@/lib/activity-helpers";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
@@ -315,6 +316,19 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
     return { ...PALETTE.GIFT, icon: <Gift size={16} />, label: "Gift released" };
   if (t === "gift_received_cash")
     return { ...PALETTE.GIFT, icon: <Gift size={16} />, label: "Gift held as cash" };
+  // Gifter recurring-schedule lifecycle — checked BEFORE the GIFT_TYPES group
+  // because these are MEMBERS of GIFT_TYPES (they bucket into the Gifts filter)
+  // yet must NOT inherit the generic gift tile. Previously they sat AFTER the
+  // GIFT_TYPES.includes short-circuit below, so a paused/resumed/cancelled
+  // gifter schedule rendered as a green "Gift received" tile (label was also
+  // wrong until the shared canonical layer landed). Now they get the
+  // pause/resume/cancel treatment they were always meant to have.
+  if (t === "gifter_recurring_paused")
+    return { ...PALETTE.WARNING, icon: <Pause size={16} />, label: "Gifter paused recurring" };
+  if (t === "gifter_recurring_resumed")
+    return { ...PALETTE.RECURRING, icon: <Play size={16} />, label: "Gifter resumed recurring" };
+  if (t === "gifter_recurring_cancelled")
+    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <XIcon size={16} />, label: "Gifter cancelled recurring" };
   if (GIFT_TYPES.includes(t))
     return { ...PALETTE.GIFT, icon: <Gift size={16} />, label: t === "gift_invested" ? "Gift invested" : "Gift received" };
   // Auto / recurring family — sage palette (parent ongoing action)
@@ -322,12 +336,6 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
     return { ...PALETTE.WARNING, icon: <Pause size={16} />, label: "Recurring paused" };
   if (t === "recurring_resumed")
     return { ...PALETTE.RECURRING, icon: <Play size={16} />, label: "Recurring resumed" };
-  if (t === "gifter_recurring_paused")
-    return { ...PALETTE.WARNING, icon: <Pause size={16} />, label: "Gifter paused recurring" };
-  if (t === "gifter_recurring_resumed")
-    return { ...PALETTE.RECURRING, icon: <Play size={16} />, label: "Gifter resumed recurring" };
-  if (t === "gifter_recurring_cancelled")
-    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <XIcon size={16} />, label: "Gifter cancelled recurring" };
   if (t === "auto_invest")
     return { ...PALETTE.RECURRING, icon: <Repeat size={16} />, label: "Recurring investment" };
   if (t === "parent_contribution")
@@ -800,41 +808,11 @@ function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast
   );
 }
 
-// `parent_contribution_failed` and `payment_failed` activity rows don't carry
-// an explicit `status` column (they're conceptually "this happened" rows, not
-// state transitions on a money object). The Failed pill needs to render anyway
-// so a parent scanning History sees "Failed" inline without expanding. Pass
-// the activity type alongside the status and we'll derive a status when the
-// type itself implies one.
-function StatusPill({ status, type }: { status?: string | null; type?: string | null }) {
-  let resolved = status || null;
-  if (!resolved && type) {
-    if (type === "parent_contribution_failed" || type === "payment_failed") resolved = "failed";
-  }
-  if (!resolved) return null;
-  const status_ = resolved;
-  const map: Record<string, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
-    pending:    { label: "Pending",    ...PALETTE.PILL_PENDING,  icon: <Clock size={9} /> },
-    processing: { label: "Processing", ...PALETTE.GROWTH,        icon: <Clock size={9} /> },
-    invested:   { label: "Invested",   ...PALETTE.GIFT,          icon: <ArrowUp size={9} /> },
-    settled:    { label: "Settled",    ...PALETTE.GIFT,          icon: <Check size={9} /> },
-    failed:     { label: "Failed",     ...PALETTE.ALERT_FAILED,  icon: <AlertCircle size={9} /> },
-    refunded:   { label: "Refunded",   ...PALETTE.PILL_REFUNDED, icon: <Clock size={9} /> },
-    host_hold:  { label: "On hold",    ...PALETTE.PILL_PENDING,  icon: <Clock size={9} /> },
-  };
-  const m = map[status_];
-  if (!m) return null;
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 3,
-      fontSize: 9.5, fontWeight: 700,
-      background: m.bg, color: m.color,
-      borderRadius: 999, padding: "2px 6px",
-    }}>
-      {m.icon}{m.label}
-    </span>
-  );
-}
+// StatusPill now lives in @/lib/activity-helpers and is imported above — the
+// two copies were byte-for-byte identical (same palette values, icons, and the
+// type-derived "failed" fallback for parent_contribution_failed /
+// payment_failed). Single source so the feed, the detail-history modal, and the
+// deep-link detail page render the status chip identically.
 
 // Inline SkeletonRow replaced by the shared KiddoSkeleton primitive — see
 // the loading state below. This keeps the local skeleton declaration removed

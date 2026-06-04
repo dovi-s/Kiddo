@@ -20,6 +20,7 @@ const TEST_STEPS = [
   "test:capture-at-intent",
   "test:launch-readiness",
   "test:memory-utils",
+  "test:activity-semantics",
   "test:mobile-gifter-logos",
   "test:ui:smoke",
 ] as const;
