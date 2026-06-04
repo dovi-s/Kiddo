@@ -169,6 +169,48 @@ export async function uploadMemoryFile(input: UploadInput): Promise<UploadResult
   return getStorageMode() === "supabase" ? uploadToSupabase(input) : uploadToLocal(input);
 }
 
+// Best-effort deletion of a stored media object when its memory entry is removed.
+// Without this, a parent-rejected or admin-removed photo/video/voice note kept
+// living at its public URL indefinitely (trust-safety audit H5: deletion only
+// removed the DB row). Handles the three stored shapes:
+//   - local "/uploads/memory/..." → fs.unlink (with a path-traversal guard)
+//   - a Supabase object (our public URL or a bare object path) → Storage DELETE
+//   - an external/data URL (gifter-pasted image, YouTube/Vimeo/Loom embed) → skip,
+//     it isn't an object we own.
+// Never throws; logs + returns false on failure so a delete handler is never
+// blocked (the DB row is already gone — orphaning a file is better than 500ing
+// the user's delete).
+export async function deleteMemoryFile(ref: string | null | undefined): Promise<boolean> {
+  const r = String(ref || "").trim();
+  if (!r || r.startsWith("data:")) return false;
+  try {
+    if (isLocalUploadPath(r)) {
+      const abs = path.resolve(process.cwd(), r.replace(/^\/+/, ""));
+      const root = path.resolve(process.cwd(), "uploads");
+      if (abs !== root && !abs.startsWith(root + path.sep)) return false; // traversal guard
+      await fs.unlink(abs).catch(() => {});
+      return true;
+    }
+    if (getStorageMode() === "supabase") {
+      const marker = `/storage/v1/object/public/${BUCKET}/`;
+      const idx = r.indexOf(marker);
+      let objectPath: string | null = null;
+      if (idx >= 0) objectPath = r.slice(idx + marker.length);
+      else if (!isFullUrl(r)) objectPath = r.replace(/^\/+/, ""); // bare "{fundId}/{file}"
+      if (!objectPath) return false; // external full URL — not ours
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${objectPath}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, apikey: SUPABASE_SERVICE_ROLE_KEY },
+      });
+      return res.ok;
+    }
+    return false;
+  } catch (err) {
+    console.warn("[objectStorage] deleteMemoryFile failed (non-fatal):", (err as any)?.message || err);
+    return false;
+  }
+}
+
 // ─── Read-time URL resolution (signed-read for the private bucket) ──────────
 // Foundation for the signed-read migration in STORAGE_DURABILITY_SPEC.md.
 // Stored media references are a MIX today, so the resolver must handle all:

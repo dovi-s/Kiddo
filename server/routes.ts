@@ -40,7 +40,7 @@ import { registerFundReadRoutes } from "./routes/funds";
 import { yearOfLifeForDate, getAgeMilestoneState } from "../shared/age18-decisions";
 import { getMajorityAgeForState, US_STATES, UTMA_DEFAULT_MAJORITY_AGE } from "@shared/utma";
 import { recordEvent, eventCtxFromReq } from "./analytics";
-import { uploadMemoryFile } from "./objectStorage";
+import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
 import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
 import { remapOAuthIdentitiesForUser } from "./oauthIdentityStore";
 import { generateTotpSecret, buildOtpauthUri, verifyTotp, generateBackupCodes, hashBackupCodes, findBackupCodeMatch } from "./totp";
@@ -14123,7 +14123,7 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       const [entry] = await db
-        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, type: memoryEntries.type, content: memoryEntries.content, createdAt: memoryEntries.createdAt })
+        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, type: memoryEntries.type, content: memoryEntries.content, createdAt: memoryEntries.createdAt, photoUrl: memoryEntries.photoUrl, videoUrl: memoryEntries.videoUrl, audioUrl: memoryEntries.audioUrl })
         .from(memoryEntries)
         .where(eq(memoryEntries.id, req.params.id));
 
@@ -14141,6 +14141,13 @@ export async function registerRoutes(
 
       await storage.deleteMemoryEntry(req.params.id);
       await deleteMemoryMeta(req.params.id);
+
+      // Purge the stored media too — deleting only the DB row left the file
+      // living at its public URL indefinitely (trust-safety audit H5). Best-
+      // effort; never blocks the delete (the row is already gone).
+      for (const mediaUrl of [entry.photoUrl, entry.videoUrl, entry.audioUrl]) {
+        if (mediaUrl) await deleteMemoryFile(mediaUrl);
+      }
 
       // Activity ledger — Memory Book is the kid-domain story; deletions are
       // load-bearing edits the parent should be able to audit. Snippet of
@@ -21486,9 +21493,17 @@ export async function registerRoutes(
   app.delete('/api/admin/memory/:id', isAdmin, async (req: any, res) => {
     try {
       const id = String(req.params.id);
-      const before = await db.execute(sql`SELECT id, fund_id, type, content FROM memory_entries WHERE id = ${id}`);
+      const before = await db.execute(sql`SELECT id, fund_id, type, content, photo_url, video_url, audio_url FROM memory_entries WHERE id = ${id}`);
       if (!before.rows?.[0]) return res.status(404).json({ error: 'Entry not found' });
       await storage.deleteMemoryEntry(id);
+      // Purge the stored media too (trust-safety audit H5) — admin "remove" of
+      // flagged/CSAM content must not leave the file recoverable at its URL.
+      {
+        const row: any = before.rows[0];
+        for (const mediaUrl of [row?.photo_url, row?.video_url, row?.audio_url]) {
+          if (mediaUrl) await deleteMemoryFile(String(mediaUrl));
+        }
+      }
       await writeAudit(req, 'admin_memory_deleted', 'memory_entries', id, { reason: req.body?.reason || null, before: before.rows[0] });
       res.json({ ok: true });
     } catch (error) {
