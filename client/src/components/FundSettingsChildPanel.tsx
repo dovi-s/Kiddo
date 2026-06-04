@@ -115,6 +115,37 @@ export function FundSettingsChildPanel({
           onOpenInviteModal={onOpenInviteModal}
         />
       )}
+      {/* Collaborator's own access note — the warm read-only answer to "what
+          am I here?" The full CoParentAccessCard is owner-machinery (invite
+          button, access list, revoke, plan upsell — every piece 403s or
+          mis-describes for a collaborator), so collaborators get this small
+          truthful card instead of either the owner card or nothing.
+          2026-06-04, follow-up to the accessRole tag fix. */}
+      {!fundIsOwnerHeld && fundIsCollaborator && (
+        <section className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card" data-testid="collaborator-access-note">
+          <div className="p-5">
+            <h2 className="text-base font-bold text-foreground">Your access</h2>
+            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  {fundIsCoAdmin ? "Co-Admin" : "Viewer"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                  {fundIsCoAdmin
+                    ? `You can see everything and manage the day-to-day: occasions, Memory Book entries, thank-yous, and child details.`
+                    : `You can see the fund's growth, activity, and Memory Book. Making changes stays with the custodian.`}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">
+                {fundIsCoAdmin ? "Co-Admin" : "Viewer"}
+              </span>
+            </div>
+            <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
+              {(fund as any)?.recipientFirstName ? `${(fund as any).recipientFirstName}'s` : "The"} primary custodian manages who has access and the money settings. You are not on the legal UTMA account.
+            </p>
+          </div>
+        </section>
+      )}
       <FundDetailsCard fund={fund} onEditFund={onEditFund} />
       {!fundIsOwnerHeld && !fundIsCollaborator && <SuccessorCustodianCard fund={fund} />}
       <LegalDocumentsCard />

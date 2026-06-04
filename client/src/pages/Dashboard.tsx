@@ -6427,10 +6427,27 @@ export default function Dashboard() {
                 return s + (Number.isFinite(n) && n > 0 ? n : 0);
               }, 0);
               const giftsFromOthersTotal = sumAmt(fromOthersRows);
-              // Parent-mode rows ("Your recurring / Your one-time"): the account
-              // holder IS the viewer.
-              const yourAutoInvestTotal = sumAmt(recurringRows);
+              // Parent-mode rows ("Your recurring / Your one-time") are VIEWER-KEYED:
+              // only money THIS viewer actually sent. Previously "Your recurring"
+              // summed ALL custodian recurring — correct only while the viewer WAS
+              // the (sole) custodian. A co-admin (Claire) saw Phil's $100/mo labeled
+              // "Your recurring investments" (founder catch 2026-06-04), and the
+              // OTHER account-holder's one-time money landed in NO row at all (Phil
+              // never saw Mom's additions; Claire never saw Dad's) — a silent
+              // reconciliation hole for any two-contributor family. The other
+              // holder's money now gets its own named row below.
+              const yourAutoInvestTotal = sumAmt(recurringRows.filter((g) => senderOf(g) === ownerEmail));
               const yourOneTimeTotal = sumAmt(oneTimeAccountHolderRows.filter((g) => senderOf(g) === ownerEmail));
+              const otherHolderRows = [...recurringRows, ...oneTimeAccountHolderRows].filter((g) => senderOf(g) !== ownerEmail);
+              const otherHolderTotal = sumAmt(otherHolderRows);
+              // Name the other contributor the way the family does ("Dad"/"Mom" via
+              // the server-enriched preferredName), falling back to first name.
+              const otherHolderNames = Array.from(new Set(
+                otherHolderRows
+                  .map((g) => (String((g as any).gifterPreferredName || "").trim()) || String((g as any).senderName || "").trim().split(/\s+/)[0])
+                  .filter(Boolean),
+              ));
+              const otherHolderLabel = otherHolderNames.length === 1 ? otherHolderNames[0] : "Family";
               // Owner-mode (post-handoff) split: what the custodian parent(s) put
               // in BEFORE handoff vs. what the owner (e.g. Haley) adds herself.
               // Reserves "Your additions" for the owner's own money and credits
@@ -6684,6 +6701,27 @@ export default function Dashboard() {
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </button>
+                      {/* The OTHER account-holder's money — the co-parent's view of
+                          the custodian's recurring ("Dad's contributions"), or the
+                          custodian's view of the co-parent's additions ("Mom's
+                          contributions"). Display-only (no drill-down: the schedule
+                          lists below are viewer-keyed). Owner mode has its own fold
+                          ("Invested by Dad" recognition line), so this row is
+                          parent/co-parent mode only. */}
+                      {!isOwnerMode && otherHolderTotal > 0 && (
+                        <div
+                          className="w-full flex items-baseline justify-between py-1.5 px-2 -mx-2 text-left"
+                          data-testid="last30-row-other-holder"
+                        >
+                          <span className="text-sm text-muted-foreground">{otherHolderLabel}'s contributions</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-foreground tabular-nums">
+                              {fmtRow(otherHolderTotal)}
+                            </span>
+                            <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                          </span>
+                        </div>
+                      )}
                       {marketGrowth30 != null && (
                         <button
                           type="button"
