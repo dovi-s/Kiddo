@@ -11399,7 +11399,19 @@ export default function Dashboard() {
                 and post-handoff owners (they have their own doorway:
                 "Start one for someone you love"). Sibling pattern: this is
                 that owner-mode doorway pointed outward from the parent
-                seat. */}
+                seat.
+
+                HELD IN RESERVE (founder-noted 2026-06-04): if post-launch
+                data shows desktop taps with poor completion (shares
+                recorded but few referred visits), the fix is NOT an
+                Acorns-style channel-icon grid (referral-program anatomy —
+                rejected by name; the no-bounty identity framing dies the
+                moment WhatsApp/X logos appear). The right addition is ONE
+                quiet secondary: "or send it by email →" (mailto: with the
+                warm message + ref link prefilled) — email is the only
+                desktop-native channel that's brandless and on-register.
+                Measure first via parentReferral.shares vs .visits on the
+                Admin k-factor panel; ship only if the gap is real. */}
             {!isReadOnlyFund && !isOwnerMode && (
               <button
                 type="button"
