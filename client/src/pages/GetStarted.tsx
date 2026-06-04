@@ -256,6 +256,10 @@ export default function GetStarted() {
   useScrollResetOnChange(step);
   const [authMode, setAuthMode] = useState<OnboardingAuthMode>("none");
   const [oauth, setOauth] = useState<AuthProvidersStatus>({ google: false, apple: false });
+  // The default {false,false} is indistinguishable from "fetched, no providers",
+  // so track whether the providers fetch has actually resolved before deciding
+  // to auto-expand the email form.
+  const [oauthLoaded, setOauthLoaded] = useState(false);
   const [accountType, setAccountType] = useState<OnboardingAccountType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -497,8 +501,23 @@ export default function GetStarted() {
   }, [accountType, birthdate, email, investment, name, progress?.current, progress?.total, step]);
 
   useEffect(() => {
-    void fetchAuthProviders().then(setOauth).catch(() => undefined);
+    void fetchAuthProviders()
+      .then(setOauth)
+      .catch(() => undefined)
+      .finally(() => setOauthLoaded(true));
   }, []);
+
+  // Auto-expand the email fields when NO OAuth provider is configured: email is
+  // then the only sign-up path, so hiding it behind a "Continue with email"
+  // click (which leaves an orphaned button with no visible field) is pure
+  // friction on the most conversion-critical screen. Only flips the untouched
+  // "none" state, so a resumed-draft / manual choice is respected, and it never
+  // shows the form to an already-authenticated visitor. When OAuth IS wired, the
+  // progressive disclosure (OAuth buttons primary, email behind the reveal) stays.
+  useEffect(() => {
+    if (!oauthLoaded || oauth.google || oauth.apple || isRealAuthenticated) return;
+    setAuthMode((m) => (m === "none" ? "email" : m));
+  }, [oauthLoaded, oauth.google, oauth.apple, isRealAuthenticated]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
