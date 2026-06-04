@@ -1255,16 +1255,16 @@ function projectionRangeForStrategy(
   };
 }
 
-// Maps years-until-18 to the recommended preset key. The picker uses this to highlight
-// one preset with a "Recommended for {child}" badge based on the child's actual age.
-// Suggestion only — parent always overrides with no friction.
-function recommendedStrategyKey(yearsTo18: number | null): string | null {
-  if (yearsTo18 == null || !Number.isFinite(yearsTo18)) return null;
-  if (yearsTo18 >= 10) return "growth";
-  if (yearsTo18 >= 5) return "balanced";
-  if (yearsTo18 >= 0) return "conservative";
-  return null;
-}
+// (Removed 2026-06-03: recommendedStrategyKey + the "★ Recommended for
+// {child}" badge. Matching a preset to THIS child's age is a personalized
+// investment recommendation — the exact surface the self-directed pivot
+// (ACCOUNT_MODEL.md §2b, 2026-05-28) removed to preserve the
+// platform-not-adviser posture; the Dashboard's age-band nudge was already
+// disabled behind STRATEGY_NUDGE_ENABLED=false for the same reason. The
+// picker is now a neutral menu: generic per-card horizon descriptors stay
+// (uniform for every user, counsel packet Part 8 Q1 covers where that line
+// sits), but nothing is matched to a specific child. Re-add only if the
+// RIA memo blesses a recommendation surface.)
 
 // Family-default stock picker on Settings → Gifting Defaults. Derived from the
 // canonical universe (shared/stock-picks.ts) so the parent's "Family default"
@@ -1554,8 +1554,10 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
     ? Math.round((managedMixInvestedValue / investedValue) * 100)
     : 0;
 
-  // Compute years-until-18 from the recipient's birthdate, then surface the
-  // age-appropriate strategy as "Recommended for {child}". Suggestion only — parent overrides.
+  // Compute years-until-18 from the recipient's birthdate. Feeds the
+  // projection-range context line below (NOT a recommendation — the
+  // age-matched "Recommended for {child}" badge was removed 2026-06-03 per
+  // the self-directed posture; see the note above GIFTER_STOCK_OPTIONS).
   const yearsTo18 = ((): number | null => {
     const raw = (fund as any)?.recipientBirthdate;
     if (!raw) return null;
@@ -1566,12 +1568,10 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
     const ms = eighteenth.getTime() - Date.now();
     return ms > 0 ? ms / (365.25 * 24 * 60 * 60 * 1000) : 0;
   })();
-  // Post-handoff adult owner: suppress the age-to-majority recommendation +
-  // child horizon. yearsTo18 clamps to 0 past the 18th birthday, which would
-  // otherwise force "Recommended: Conservative — best for children approaching
-  // 18" onto a grown owner whose real horizon is decades. Let them just pick.
+  // Post-handoff adult owner: suppress the child-horizon framing. yearsTo18
+  // clamps to 0 past the 18th birthday, which would otherwise render
+  // kid-horizon copy onto a grown owner whose real horizon is decades.
   const seIsOwnerMode = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
-  const recommendedKey = seIsOwnerMode ? null : recommendedStrategyKey(yearsTo18);
   // Tier copy hardcodes "18" (only the conservative tier: "approaching 18" /
   // "as 18 approaches"). Reflect the fund's REAL age of majority so an AL/NE
   // (19) or MS/PA/CA (21) fund reads its true handoff age, not a flat 18. The
@@ -1783,16 +1783,10 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                         🔒 Plus
                       </span>
                     )}
-                    {/* Stronger "Recommended for Emma" badge — gold/cream
-                        warmth (vs the previous evergreen which competed
-                        with Active), bigger type, slightly more padding.
-                        Only appears on the age-band-matched preset, so
-                        it's a single quiet recommendation per render. */}
-                    {recommendedKey === strategy.key && (
-                      <span className="rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.07em]" style={{ background: "hsl(43, 75%, 55%, 0.16)", color: "hsl(43, 55%, 30%)" }}>
-                        ★ Recommended{childName ? ` for ${childName}` : ""}
-                      </span>
-                    )}
+                    {/* (The "★ Recommended for {child}" badge was removed
+                        2026-06-03 — an age-matched preset is a personalized
+                        investment recommendation, which the self-directed
+                        posture forbids. Neutral menu only.) */}
                     {isLocked && <Lock size={12} className="text-muted-foreground" />}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{seIsOwnerMode ? strategy.description.replace(/\s*·?\s*protect what's there as \d+ approaches/i, " · protect what's there").replace(/\s*as \d+ approaches/i, "") : ageifyTierCopy(strategy.description)}</p>

@@ -329,12 +329,15 @@ export function InvestCashModal({
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-foreground">Where should this amount go?</p>
 
+                {/* No "Recommended" badge — even nudging toward the fund's own
+                    default counts as steering an investment choice, and the
+                    self-directed posture keeps every menu neutral. The card is
+                    already listed first and pre-selected; that's enough. */}
                 <OptionCard
                   selected={investMode === "default"}
                   onClick={() => setInvestMode("default")}
                   title={`Use ${childName}'s fund default`}
                   description={prefs ? getDefaultLabel(prefs) : "Loading..."}
-                  badge="Recommended"
                 />
 
                 <OptionCard

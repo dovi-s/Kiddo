@@ -839,12 +839,17 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     createdAt: fundCreatedAt,
   } as any);
 
-  // ── Lived-in lifecycle: glide-path de-risking + real occasions ──
-  // The product AUTOMATICALLY shifts the managed index sleeve toward a steadier
-  // mix as the child nears majority (protection, not trading). These activity
-  // rows narrate that on the timeline; the matching SHARE moves were executed by
-  // buildPortfolio (rebalancesForKid) at the same dates against real prices —
-  // so the story and the numbers agree. kid.strategy is the CURRENT/latest mix.
+  // ── Lived-in lifecycle: PARENT-CHOSEN de-risking + real occasions ──
+  // SELF-DIRECTED POSTURE (2026-06-03, founder catch): the product does NOT
+  // auto-shift allocations — the old auto glide-path + age-band nudges were
+  // removed in the self-directed pivot (ACCOUNT_MODEL.md §2b) to avoid the
+  // adviser posture. So the seeded history must read as PHIL'S OWN choices,
+  // never "automatically moved" (a demo narrating discretionary rebalancing
+  // would misrepresent the product to prospects, press, and counsel). The
+  // share moves were executed by buildPortfolio (rebalancesForKid) at the
+  // same dates against real prices — so the story and the numbers agree;
+  // rebalancesForKid is just the demo's stand-in for "Phil chose this at
+  // these ages." kid.strategy is the CURRENT/latest mix.
   const bday = new Date(kid.birthdate);
   const atAge = (years: number) => { const d = new Date(bday); d.setFullYear(d.getFullYear() + years); return d; };
   // Mirror the canonical labels in lib/strategy.ts — "Steady & Balanced" is the
@@ -861,10 +866,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         userId: parentUserId,
         fundId: fund.id,
         type: "fund_strategy_changed",
-        title: `Automatically moved to a steadier mix as ${kid.firstName} turned ${s.at}`,
-        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · protecting the fund as ${kid.firstName} gets older`,
+        // Viewer-neutral phrasing + explicit attribution: Phil's view and
+        // Haley's post-handoff view share these rows, so no bare "you".
+        title: `Mix changed to ${STRATEGY_LABEL[s.to]}`,
+        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · ${parentDisplayName}'s choice as ${kid.firstName} turned ${s.at}`,
         createdAt: atAge(s.at),
-        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "age_band", automatic: true }),
+        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "parent_choice", automatic: false, contributorName: parentDisplayName }),
       } as any);
     }
   }
