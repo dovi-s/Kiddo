@@ -39,7 +39,11 @@ export function buildVolatilityReassuranceEmail(input: VolatilityReassuranceInpu
     ``,
     horizonLine,
     ``,
-    `Nothing's been sold. The shares you own are the same shares. The price the market quoted them at today was lower; the math of long-horizon compounding still works.`,
+    // Honest hedge (audit 2026-06-04): the old closer ("the math of
+    // long-horizon compounding still works") read as "drops are an
+    // illusion." Drops can persist, and losses are real if you sell - the
+    // reassurance must rest on the HORIZON, not on an implied rebound.
+    `Nothing's been sold. The shares you own are the same shares; the market just quoted a lower price today. Markets can stay down for stretches too. The long horizon is the plan for exactly that.`,
     ``,
     `If you want to think about strategy, this is a calm time to do it. If you don't, doing nothing is usually the right move at moments like this.`,
   ].join("\n");

@@ -66,6 +66,9 @@ import {
   sealedLetterFor,
   type KidStory,
 } from "./lib/demo-roster";
+// Single source for the growth-passed milestone's constants + copy: the seed
+// must write byte-identical rows to the engine (see GROWTH_PASSED_GIFTS).
+import { GROWTH_PASSED_GIFTS } from "../server/milestones";
 
 // Real historical prices (committed fixture); every gift buys real shares at
 // the actual adjusted close on its month. Loaded once.
@@ -1076,21 +1079,25 @@ async function seedGrowthPassedMilestoneFromSnapshots(
       gi += 1;
     }
     const value = parseFloat(String(s.totalValue || "0"));
-    if (contributed >= 250 && value >= contributed * 2) {
+    if (contributed >= GROWTH_PASSED_GIFTS.contributedFloor && value >= contributed * GROWTH_PASSED_GIFTS.multiple) {
       crossing = { date: snapDate };
       break;
     }
   }
   if (!crossing) return;
-  const title = "Growth passed the gifts";
-  const description = `${childFirst}'s fund has now grown by more than everyone put in, combined.`;
+  // Constants + copy imported from the engine (server/milestones.ts
+  // GROWTH_PASSED_GIFTS) so the seeded rows are byte-identical to what the
+  // real engine writes — duplicated literals drifting apart was the failure
+  // mode (code-review 2026-06-04).
+  const title = GROWTH_PASSED_GIFTS.title;
+  const description = GROWTH_PASSED_GIFTS.description(childFirst);
   await db.insert(activities).values({
     userId,
     fundId,
-    type: "milestone_growth_passed_gifts",
+    type: GROWTH_PASSED_GIFTS.activityType,
     title,
     description,
-    metadata: JSON.stringify({ milestone: "growth_passed_gifts", contributed: Math.round(contributed), key: "k:growth_passed_gifts" }),
+    metadata: JSON.stringify({ milestone: "growth_passed_gifts", contributed: Math.round(contributed), key: GROWTH_PASSED_GIFTS.dedupeKey }),
     createdAt: crossing.date,
   } as any);
   await db.insert(memoryEntries).values({
