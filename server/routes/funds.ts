@@ -131,12 +131,15 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // Dunphy demo's Claire account exposed this gap end-to-end.
       try {
         const collaboratorRows = await db
-          .select({ fundId: fundCollaborators.fundId })
+          .select({ fundId: fundCollaborators.fundId, role: fundCollaborators.role })
           .from(fundCollaborators)
           .where(and(
             eq(fundCollaborators.userId, userId),
             eq(fundCollaborators.status, "accepted"),
           ));
+        const roleByFundId = new Map(
+          collaboratorRows.map((row) => [String(row.fundId || ""), String(row.role || "")]),
+        );
         const collaboratorFundIds = collaboratorRows
           .map((row) => String(row.fundId || ""))
           .filter(Boolean);
@@ -147,10 +150,19 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
             .select()
             .from(fundsTable)
             .where(inArray(fundsTable.id, missingFundIds));
-          // Tag with accessRole='collaborator' so client surfaces can
-          // identify them without re-querying fund_collaborators.
+          // Tag with the collaborator's REAL role ('co-admin' | 'viewer'),
+          // matching what requireOwnedFundParam derives per-request. The old
+          // generic accessRole='collaborator' tag broke role gating in BOTH
+          // directions (found 2026-06-04 via the demo's Claire): client
+          // checks for === 'co-admin' failed, so a co-admin was shown the
+          // owner-only co-parent invite card + Kiddo+ upsell ("Primary
+          // custodian · Full control" on someone else's fund), while
+          // MemoryBook's canModerateMemory denied them their actual co-admin
+          // powers. Unknown/legacy role values degrade to 'viewer' — the
+          // same conservative mapping the per-request middleware uses.
           for (const fund of collabFunds) {
-            funds.push({ ...(fund as any), accessRole: "collaborator" as const });
+            const role = roleByFundId.get(String((fund as any)?.id || ""));
+            funds.push({ ...(fund as any), accessRole: role === "co-admin" ? ("co-admin" as const) : ("viewer" as const) });
           }
         }
       } catch (collabErr) {

@@ -85,11 +85,19 @@ export function FundSettingsChildPanel({
   // See project_adult_account_is_parent_2_0_onramp.
   const fundIsOwnerHeld =
     (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
-  // Co-parent (co-admin): inviting OTHER co-parents and closing the fund are
-  // owner-only structural actions (the server 403s a co-admin), so hide those
-  // cards instead of showing controls that fail. The co-parent still manages the
-  // day-to-day. Mirrors the owner-only Settings gating (CO_PARENT_PERMISSIONS_NOTE).
-  const fundIsCoAdmin = (fund as any)?.accessRole === "co-admin";
+  // Collaborators (co-admin AND viewer): managing access, closing the fund,
+  // and naming a successor custodian are owner-only structural actions (the
+  // server 403s them), so hide those cards instead of showing controls that
+  // fail. The co-admin still manages the day-to-day. NOTE 2026-06-04: this
+  // previously checked only === "co-admin", and /api/funds used to tag
+  // collaborator funds with a generic accessRole="collaborator" — so the
+  // demo's Claire (co-admin) saw the owner-only co-parent card complete with
+  // "Primary custodian · Full control" and a Kiddo+ invite upsell on a fund
+  // already covered by Phil's Family plan. The list route now stamps real
+  // roles ('co-admin' | 'viewer'); this gate covers both.
+  const fundAccessRole = String((fund as any)?.accessRole || "");
+  const fundIsCoAdmin = fundAccessRole === "co-admin";
+  const fundIsCollaborator = fundIsCoAdmin || fundAccessRole === "viewer";
   return (
     <div className="space-y-4" data-testid="settings-child-panel">
       <ChildIdentityCard fund={fund} onEditChild={onEditFund} />
@@ -99,7 +107,7 @@ export function FundSettingsChildPanel({
           they later create). See project_adult_account_is_parent_2_0_onramp. */}
       {!fundIsOwnerHeld && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
       <InvitationsToYouCard />
-      {!fundIsOwnerHeld && !fundIsCoAdmin && (
+      {!fundIsOwnerHeld && !fundIsCollaborator && (
         <CoParentAccessCard
           fund={fund}
           user={user}
@@ -108,9 +116,9 @@ export function FundSettingsChildPanel({
         />
       )}
       <FundDetailsCard fund={fund} onEditFund={onEditFund} />
-      {!fundIsOwnerHeld && <SuccessorCustodianCard fund={fund} />}
+      {!fundIsOwnerHeld && !fundIsCollaborator && <SuccessorCustodianCard fund={fund} />}
       <LegalDocumentsCard />
-      {!fundIsCoAdmin && <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />}
+      {!fundIsCollaborator && <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />}
     </div>
   );
 }
