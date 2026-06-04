@@ -5343,7 +5343,6 @@ export async function registerRoutes(
               }
             : undefined;
           const activeEventCountRow = activeEventCountRows[0];
-          const currentFundValue = Number(fund.balance || 0) + Number(fund.pendingBalance || 0);
           const nextMilestoneTarget = [100, 500, 1000, 2500].find((target) => Number(stats.totalGifted || 0) < target) || null;
           const nextMilestoneProgress = nextMilestoneTarget
             ? Math.max(0, Math.min(100, (Number(stats.totalGifted || 0) / nextMilestoneTarget) * 100))
@@ -5352,23 +5351,14 @@ export async function registerRoutes(
             ? notificationStore.subscribersByFund?.[fund.id]?.[email] || null
             : null;
 
-          // 30-day balance sparkline — added 2026-05-19 as the gifter-side
-          // Read-Only Fund Tracking enrichment from the Five Towns roadmap.
-          // Pulls snapshots from the last 30 days for this fund so the
-          // Gifter Dashboard card can render a small SVG sparkline showing
-          // recent fund trajectory. Same data source as the parent
-          // Dashboard's trend chart — exposed to gifters because total
-          // balance is ALREADY exposed (currentFundValue above); adding
-          // 30-day history is the same domain, not a step-change in
-          // privacy. No PII (no gifter names, no per-position breakdown);
-          // just the total fund value over time.
-          // valueHistory30d derives from the snapshot rows fetched in the
-          // batched Promise.all above (sparkline; non-fatal if empty).
-          const valueHistory30d: Array<{ at: string; totalValue: number }> =
-            (((snapshotRowsRes as any)?.rows as any[]) || []).map((r) => ({
-              at: new Date(r.snapshot_date).toISOString(),
-              totalValue: Number(r.total_value || 0),
-            }));
+          // 30-day fund-VALUE sparkline REMOVED from the gifter payload
+          // (founder call 2026-06-04). It plotted the child's total fund value
+          // over time — the child's net-worth trajectory + the parent's
+          // performance, shown to anyone who gifted once via a public link.
+          // A gifter's function (gift, see what they gave, gift again) never
+          // needed it. The snapshot fetch itself is left in the batched
+          // Promise.all for now (harmless; other future per-fund reads may
+          // reuse it) but its output no longer leaves the server for a gifter.
 
           // Sponsorship eligibility per fund. True when the fund is on
           // the Free tier (i.e., the gifter could meaningfully cover a
@@ -5401,37 +5391,28 @@ export async function registerRoutes(
           // allocation rows are deleted on refund). thankYou attaches the
           // parent's SENT note (the loop's payoff — previously gifters
           // never saw these anywhere). Newest-first; capped at 100 rows.
+          // CHILD-MONEY MINIMIZATION (founder call 2026-06-04): the per-gift
+          // `nowWorth` (live current value) is no longer sent. It could become
+          // a LIE the moment the parent sells the gift's shares (the gift row
+          // keeps the recorded allocation; the holding is gone), it implies a
+          // donor claim on a gift that is the child's now, and it leaks fund
+          // performance to an outsider. The gifter sees the gift AMOUNT + what
+          // it bought + their note + the family's thank-you; the growth story
+          // is the forward "if invested" projection only. Dropping nowWorth
+          // also removes the per-gift allocation + price-per-share work below.
           let yourGifts: Array<{
             id: string;
             amount: number;
             createdAt: string | null;
             ticker: string | null;
             message: string | null;
-            nowWorth: number | null;
             thankYou: { message: string; sentAt: string | null } | null;
           }> = [];
           try {
             const myGiftRows = (giftRowsByFund.get(fund.id) || []).slice(0, 100);
             if (myGiftRows.length > 0) {
               const giftIds = myGiftRows.map((r: any) => String(r.id));
-              const pricePerShare = new Map<string, number>();
-              for (const h of holdingsForFund) {
-                const sh = parseFloat(String(h.shares || "0"));
-                const cv = parseFloat(String(h.currentValue || "0"));
-                if (sh > 0 && cv > 0) pricePerShare.set(String(h.ticker), cv / sh);
-              }
-              // Allocations + thank-yous are independent — fetch concurrently.
-              const [allocRows, thankRows] = await Promise.all([
-                db.select().from(giftAllocations).where(inArray(giftAllocations.giftId, giftIds)),
-                db.select().from(thankYous).where(and(inArray(thankYous.giftId, giftIds), eq(thankYous.status, "sent"))),
-              ]);
-              const allocsByGift = new Map<string, Array<{ ticker: string; shares: number }>>();
-              for (const a of allocRows) {
-                const key = String(a.giftId);
-                const list = allocsByGift.get(key) || [];
-                list.push({ ticker: String(a.ticker), shares: parseFloat(String(a.shares || "0")) || 0 });
-                allocsByGift.set(key, list);
-              }
+              const thankRows = await db.select().from(thankYous).where(and(inArray(thankYous.giftId, giftIds), eq(thankYous.status, "sent")));
               const thankByGift = new Map<string, { message: string; sentAt: string | null }>();
               for (const t of thankRows) {
                 const key = String(t.giftId);
@@ -5443,18 +5424,12 @@ export async function registerRoutes(
                 }
               }
               yourGifts = myGiftRows.map((r: any) => {
-                let nowWorth: number | null = null;
-                for (const a of allocsByGift.get(String(r.id)) || []) {
-                  const px = pricePerShare.get(a.ticker);
-                  if (px && a.shares > 0) nowWorth = (nowWorth ?? 0) + a.shares * px;
-                }
                 return {
                   id: String(r.id),
                   amount: Number(r.amount || 0),
                   createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
                   ticker: r.selected_ticker ? String(r.selected_ticker) : null,
                   message: r.message ? String(r.message) : null,
-                  nowWorth: nowWorth != null ? Number(nowWorth.toFixed(2)) : null,
                   thankYou: thankByGift.get(String(r.id)) || null,
                 };
               });
@@ -5498,8 +5473,10 @@ export async function registerRoutes(
             majorityAge: Number((fund as any).majorityAge) || 18,
             childPhase: ageInfo.phase,
             fundStatus: String(fund.status || "draft"),
-            currentFundValue: Number(currentFundValue.toFixed(2)),
-            holdingsCount: holdingsForFund.filter((holding) => Number(holding.currentValue || 0) > 0).length,
+            // currentFundValue + holdingsCount removed from the gifter payload
+            // (founder call 2026-06-04): a gifter sees neither the child's
+            // total net worth nor the portfolio size. Only gifter-owned
+            // context + occasions remain.
             activeEventCount: Number(activeEventCountRow?.count || 0),
             nextMilestoneTarget,
             nextMilestoneProgress: Number(nextMilestoneProgress.toFixed(1)),
@@ -5508,7 +5485,6 @@ export async function registerRoutes(
             recentMemoryAt: recentMemory?.createdAt ? new Date(recentMemory.createdAt).toISOString() : null,
             updatesEnabled: Boolean(subscriber && !subscriber.unsubscribed),
             eligibleForSponsorship,
-            valueHistory30d,
             yourGifts,
           };
         });
@@ -5598,7 +5574,8 @@ export async function registerRoutes(
           savedFundCount: resolvedFundsPayload.length,
           totalGifted: Number(resolvedFundsPayload.reduce((sum, row) => sum + row.totalGifted, 0).toFixed(2)),
           totalGifts: resolvedFundsPayload.reduce((sum, row) => sum + row.giftCount, 0),
-          trackedFundValue: Number(resolvedFundsPayload.reduce((sum, row) => sum + row.currentFundValue, 0).toFixed(2)),
+          // trackedFundValue (Σ child net worth across all funds) removed —
+          // same minimization (was never rendered anyway). 2026-06-04.
           followingUpdatesCount: resolvedFundsPayload.filter((row) => row.updatesEnabled).length,
         },
         funds: resolvedFundsPayload,

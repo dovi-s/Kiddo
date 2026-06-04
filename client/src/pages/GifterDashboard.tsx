@@ -75,8 +75,9 @@ type GifterFundRow = {
   majorityAge: number;
   childPhase: string;
   fundStatus: string;
-  currentFundValue: number;
-  holdingsCount: number;
+  // currentFundValue + holdingsCount + valueHistory30d intentionally NOT in
+  // the gifter payload (T&S minimization 2026-06-04): a gifter sees no
+  // child net-worth, portfolio size, or value trajectory.
   activeEventCount: number;
   nextMilestoneTarget: number | null;
   nextMilestoneProgress: number;
@@ -90,23 +91,17 @@ type GifterFundRow = {
   // sponsor pill on the fund card. Added 2026-05-25 to replace the
   // previously-removed (false-claim) Sponsor-Plus 'discovery card.'
   eligibleForSponsorship?: boolean;
-  // 30-day fund-value history for the inline sparkline. Server-
-  // populated; sparse weeks are fine — the sparkline interpolates
-  // linearly between snapshots. Empty array when no snapshots
-  // exist (brand-new fund). Locked 2026-05-19 per the gifter
-  // read-only fund tracking enrichment.
-  valueHistory30d?: Array<{ at: string; totalValue: number }>;
   // Per-gift detail for the "Your gifts" expandable (2026-06-04):
-  // every gift this gifter sent to this fund, newest first, with what
-  // it's worth NOW (allocation shares × current per-share value) and
-  // the parent's thank-you note when one was sent.
+  // every gift this gifter sent to this fund, newest first. No live
+  // "now worth" (T&S minimization 2026-06-04) — it can be falsified by a
+  // parent's sale and leaks fund performance. The parent's thank-you note
+  // rides along when one was sent.
   yourGifts?: Array<{
     id: string;
     amount: number;
     createdAt: string | null;
     ticker: string | null;
     message: string | null;
-    nowWorth: number | null;
     thankYou: { message: string; sentAt: string | null } | null;
   }>;
 };
@@ -135,7 +130,6 @@ type GifterDashboardData = {
     savedFundCount: number;
     totalGifted: number;
     totalGifts: number;
-    trackedFundValue: number;
     followingUpdatesCount: number;
   };
   funds: GifterFundRow[];
