@@ -88,6 +88,14 @@ const DIMENSIONS = [
     prompt: `Hunt auth lifecycle flaws: session fixation/regeneration gaps, password-reset/magic-link/OAuth-linking token issues, KYC bypass (the format-stub auto-approve), account-deletion/restore token forgery, privilege escalation via collaborator/co-parent invites, and the founder-claim flow.` },
   { key: 'custody-regulatory', title: 'Custody honesty / regulatory copy',
     prompt: `Hunt false/over-claiming statements that are a legal risk while custody is a stub: present-tense SIPC/custody copy (must be conditional "when investing is live"), hard-named custodian, "SEC RIA"/adviser claims, fabricated testimonials/returns, projections without disclaimers. Cross-check CUSTODIAN_SOURCE_OF_TRUTH.md and ACCOUNT_MODEL.md.` },
+  { key: 'business-logic', title: 'Business-logic abuse / economic exploits',
+    prompt: `Hunt abuse of the money/loop logic that isn't a classic vuln: gaming refunds/chargebacks to extract or duplicate value, recurring-gift/auto-invest manipulation, gift-then-reverse to inflate balances or milestones, reverse-trial / sponsored-Plus coverage abuse (claiming benefits without paying, expired-trial gates), founder-claim/credit abuse, k-factor/referral gaming, and any flow where a determined user nets money or unearned plan benefits the rules didn't intend.` },
+  { key: 'dos-rate-limit', title: 'DoS / rate-limiting / resource exhaustion',
+    prompt: `Hunt availability + abuse-rate gaps: unauthenticated or weakly-limited endpoints that hit the DB/Stripe/email per call (gift creation, link lookups, password-reset/magic-link, KYC), the in-memory-vs-Postgres rate-limiter coverage (which routes are actually protected?), unbounded queries/pagination, expensive regex or N+1 on public paths, email/SMS bombing via gift/invite flows, and large-payload/upload exhaustion.` },
+  { key: 'file-upload-media', title: 'File upload / media / /uploads',
+    prompt: `Hunt upload + media flaws: content-type/extension trust, image/video/audio processing (decompression bombs, EXIF/PII leakage, polyglot files), the contentScanner coverage + fail-open behavior, public /uploads serving kids' media (directory listing, predictable URLs, missing noindex/no-referrer, no signed URLs), path traversal in stored filenames, and SVG/HTML upload XSS.` },
+  { key: 'deps-supply-chain', title: 'Dependencies / supply chain / build',
+    prompt: `Hunt supply-chain + dependency risk: known-vulnerable or unmaintained packages in package.json (esp. anything in the auth/crypto/markdown/image path), postinstall/build scripts that execute untrusted code, lockfile integrity, secrets in the build, risky dynamic require/import, and any CDN/third-party script on public pages that could be tampered with. Flag specific packages/versions and the risk.` },
 ]
 
 // ── Run: find → adversarially verify, pipelined so each dimension's findings
