@@ -124,3 +124,34 @@ Coordination note: both audits assign the code fixes to "Claude"; the first
 session owns the in-flight remediation (this doc + the contentScanner fix +
 active `routes.ts` work). The second session stood down on the code to avoid
 clobbering that in-flight work — this corroboration note is its contribution.
+
+---
+
+## Gifter-surface child-data minimization (founder principle, 2026-06-04)
+
+Founder, reviewing the gifter dashboard: **"a gifter is not family — they
+shouldn't have whole-family info or images of the child."** The line applied:
+
+**FIXED (clean, no product tradeoff):**
+- `dcc7f97` — "Latest Memory Book moment" now shows the gifter's OWN note or a
+  fund-level system/milestone entry, never another named person's note (a
+  grandfather gifter was seeing another gifter's intimate note + the parent's
+  "love you, dad").
+- `4918251` — gifter payload no longer carries the child's raw DOB (revealed
+  birth YEAR = exact age); the projection's years-to-majority is precomputed
+  server-side. Gifter keeps month+day birthday + `majorityAge` only.
+
+**VERIFIED already safe on the gifter surface (no change needed):** child
+PHOTO not sent, last name not sent, whole portfolio/holdings detail not sent
+(only a `holdingsCount` integer).
+
+**DELIBERATELY NOT BUILT (founder "clear no-gos"):** child's full portfolio /
+what the kid owns on the gifter surface; child photos to gifters.
+
+**FOR FOUNDER DECISION (real product-vs-privacy tradeoff, NOT a clean fix):**
+the **total fund value** is shown to every gifter (e.g. "$52,867") — it
+reveals the child's accumulated net worth to anyone who gifted once via a
+public link, but it's also the gifter dashboard's core "watch it grow" hook
+and social proof. And `holdingsCount` ("10 holdings") hints at portfolio
+size. Both are the gifter analog of H3 (public child-data exposure). Left
+as-is pending the founder's call on the hook-vs-exposure tradeoff.
