@@ -3212,17 +3212,44 @@ export default function Dashboard() {
   // beat: the product remembering the family's own history back to them.
   const onThisDayCard = useMemo(() => {
     const now = new Date();
-    const m = now.getUTCMonth();
-    const d = now.getUTCDate();
-    const candidates = (gifts as any[]).filter((g) => {
+    // The beat is OTHER PEOPLE showing up, so the viewer's own money is
+    // excluded: recurring auto-invest cycles + their one-time adds would
+    // otherwise hijack the card with "you gave yourself $100 a year ago"
+    // (and seeded/real monthly cycles share a day-of-month, so they'd
+    // dominate the match almost every month).
+    const viewerEmail = String((user as any)?.email || "").trim().toLowerCase();
+    const isOwnMoney = (g: any) =>
+      Boolean(g.parentContributionId) ||
+      String(g.source || "") === "recurring_worker" ||
+      (!!viewerEmail && String(g.senderEmail || "").trim().toLowerCase() === viewerEmail);
+    const baseEligible = (g: any) => {
       const status = String(g.status || "").toLowerCase();
       if (!["invested", "settled", "completed"].includes(status)) return false;
+      if (isOwnMoney(g)) return false;
       const dt = new Date(String(g.createdAt || 0));
       if (isNaN(dt.getTime())) return false;
-      if (dt.getUTCMonth() !== m || dt.getUTCDate() !== d) return false;
       const years = now.getUTCFullYear() - dt.getUTCFullYear();
       return years >= 1 && (parseFloat(String(g.amount || "0")) || 0) > 0;
-    });
+    };
+    const matchesDay = (g: any, ref: Date) => {
+      const dt = new Date(String(g.createdAt || 0));
+      return dt.getUTCMonth() === ref.getUTCMonth() && dt.getUTCDate() === ref.getUTCDate();
+    };
+    let candidates = (gifts as any[]).filter((g) => baseEligible(g) && matchesDay(g, now));
+    let daysOff = 0;
+    // DEMO grace window: seeded gift dates are frozen at seed-run time, so
+    // an exact-day match almost never lands for a prospect browsing days
+    // later — the marquee memory-machine beat would be invisible in the
+    // demo (the one place it most needs to be seen). Demo accounts look
+    // back up to 6 days and the copy honestly switches "ago today" →
+    // "ago this week". Real accounts keep the pure exact-day anniversary.
+    if (candidates.length === 0 && isDemoAccount) {
+      for (let back = 1; back <= 6 && candidates.length === 0; back++) {
+        const ref = new Date(now.getTime() - back * 24 * 60 * 60 * 1000);
+        candidates = (gifts as any[]).filter((g) => baseEligible(g) && matchesDay(g, ref));
+        if (candidates.length > 0) daysOff = back;
+      }
+    }
     if (candidates.length === 0) return null;
     // Pick the most story-worthy: named external gifter beats anonymous,
     // then older beats newer (deeper time = stronger beat), then larger.
@@ -3249,8 +3276,8 @@ export default function Dashboard() {
       const hValue = h ? parseFloat(String(h.currentValue || "0")) || 0 : 0;
       if (hShares > 0 && hValue > 0) nowWorth = sharesAcquired * (hValue / hShares);
     }
-    return { gift: g, years, nowWorth };
-  }, [gifts, holdings]);
+    return { gift: g, years, nowWorth, daysOff };
+  }, [gifts, holdings, isDemoAccount, user]);
 
   // Hero cycler cards = recent gifts + (when one exists) the anniversary
   // card at index 1, so index 0 stays the newest gift (the new-gift flash
@@ -3264,6 +3291,7 @@ export default function Dashboard() {
       __onThisDay: true,
       __yearsAgo: onThisDayCard.years,
       __nowWorth: onThisDayCard.nowWorth,
+      __daysOff: onThisDayCard.daysOff,
     };
     const rest = recentGiftsFeed.filter((g) => g.id !== onThisDayCard.gift.id);
     return [rest[0], flagged, ...rest.slice(1)].filter(Boolean) as typeof recentGiftsFeed;
@@ -6012,11 +6040,15 @@ export default function Dashboard() {
                                 return (
                                   <>
                                     <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 3 }}>
-                                      {onThisDay ? "On this day" : heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
+                                      {/* Exact-day match = "On this day"; the demo's
+                                          grace-window match (±week) gets the honest
+                                          eyebrow "From the Memory Book" — which is also
+                                          literally where tapping the card lands. */}
+                                      {onThisDay ? (Number((g as any)?.__daysOff || 0) > 0 ? "From the Memory Book" : "On this day") : heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
                                     </p>
                                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
                                       {onThisDay
-                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${formatCurrency(amt)} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago today.`
+                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${formatCurrency(amt)} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago ${Number((g as any)?.__daysOff || 0) > 0 ? "this week" : "today"}.`
                                         : `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added ${formatCurrency(amt)} to ${isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.`}
                                     </p>
                                     {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /

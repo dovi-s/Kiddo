@@ -953,6 +953,19 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // Balance-crossing milestones, data-driven from the curve just generated.
   await seedMilestonesFromSnapshots(fund.id, kid.firstName);
 
+  // "Growth passed the gifts" — the earned-truth milestone the REAL engine
+  // fires at gift-settle (milestone_growth_passed_gifts, 2026-06-04). Demo
+  // funds never run the webhook, so a worn fund that genuinely earned this
+  // (value >= 2x contributed) would be missing its most meaningful page.
+  // Data-driven from the same snapshot curve: the crossing date is the first
+  // month where the real value reached double the money put in by then.
+  await seedGrowthPassedMilestoneFromSnapshots(
+    fund.id,
+    parentUserId,
+    kid.firstName,
+    giftList.map((g) => ({ amount: g.amount, createdAt: new Date(g.createdAt) })),
+  );
+
   // Pre-set Kid View so the parent surface shows a configured "{Kid}'s View ·
   // Active · PIN protected" instead of "Not set up yet". Skip graduated kids:
   // their fund is handed off (owner mode), so there's no parent-set PIN.
@@ -1029,6 +1042,62 @@ async function seedMilestonesFromSnapshots(fundId: string, childFirst: string): 
       createdAt: new Date(crossing.snapshotDate as any),
     } as any);
   }
+}
+
+// "Growth passed the gifts" milestone, data-driven from the snapshot curve.
+// Mirrors server/milestones.ts fireGrowthPassedGiftsMilestone exactly (same
+// activity type, copy, metadata key, $250 floor, value >= 2x contributed)
+// so the demo's worn history matches what the real engine would have
+// written. The crossing date = the first snapshot month where the fund's
+// REAL value reached double the cumulative gifts received by that date.
+async function seedGrowthPassedMilestoneFromSnapshots(
+  fundId: string,
+  userId: string,
+  childFirst: string,
+  giftTimeline: Array<{ amount: number; createdAt: Date }>,
+): Promise<void> {
+  const snaps = await db
+    .select()
+    .from(fundSnapshots)
+    .where(eq(fundSnapshots.fundId, fundId))
+    .orderBy(asc(fundSnapshots.snapshotDate));
+  if (snaps.length === 0 || giftTimeline.length === 0) return;
+  const sortedGifts = [...giftTimeline].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  let gi = 0;
+  let contributed = 0;
+  let crossing: { date: Date } | null = null;
+  for (const s of snaps) {
+    const snapDate = new Date(s.snapshotDate as any);
+    while (gi < sortedGifts.length && sortedGifts[gi].createdAt.getTime() <= snapDate.getTime()) {
+      contributed += sortedGifts[gi].amount;
+      gi += 1;
+    }
+    const value = parseFloat(String(s.totalValue || "0"));
+    if (contributed >= 250 && value >= contributed * 2) {
+      crossing = { date: snapDate };
+      break;
+    }
+  }
+  if (!crossing) return;
+  const title = "Growth passed the gifts";
+  const description = `${childFirst}'s fund has now grown by more than everyone put in, combined.`;
+  await db.insert(activities).values({
+    userId,
+    fundId,
+    type: "milestone_growth_passed_gifts",
+    title,
+    description,
+    metadata: JSON.stringify({ milestone: "growth_passed_gifts", contributed: Math.round(contributed), key: "k:growth_passed_gifts" }),
+    createdAt: crossing.date,
+  } as any);
+  await db.insert(memoryEntries).values({
+    fundId,
+    content: title,
+    type: "milestone",
+    authorName: null,
+    visibility: "kid_now",
+    createdAt: crossing.date,
+  } as any);
 }
 
 // Generate fund_snapshots from the REAL portfolio value month-by-month: replays

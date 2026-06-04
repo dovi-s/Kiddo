@@ -205,8 +205,11 @@ export async function fireGrowthPassedGiftsMilestone(
   if (await hasMilestone(fundId, "milestone_growth_passed_gifts", key)) return;
   // Total put in = every settled gift's net amount (external gifters AND the
   // parent's own contributions — "everyone put in, combined").
+  // net_amount/amount are NUMERIC columns (drizzle decimal) — comparing them
+  // to '' coerces the literal to numeric and throws 22P02, so no NULLIF
+  // string games here: plain numeric COALESCE.
   const result = await db.execute(sql`
-    SELECT COALESCE(SUM(COALESCE(NULLIF(net_amount, ''), amount)::numeric), 0) AS contributed
+    SELECT COALESCE(SUM(COALESCE(net_amount, amount, 0)), 0) AS contributed
     FROM gifts
     WHERE fund_id = ${fundId}
       AND status IN ('invested', 'settled', 'completed')
