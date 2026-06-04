@@ -81,7 +81,7 @@ const ACCOUNTS: DemoAccount[] = [
     email: "haley@dunphyfamily.com",
     display: "Haley Dunphy",
     role: "graduate",
-    oneLiner: "The adult account, one year after the handoff.",
+    oneLiner: "Her own account now, one year after the handoff.",
   },
 ];
 
@@ -268,9 +268,11 @@ export default function Demo() {
           </section>
 
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Step into the adult account</h2>
+            {/* "Personal account", never "adult account", user-facing —
+                terminology locked 2026-06-04 (ownership framing, not age). */}
+            <h2 className="font-heading text-lg font-semibold text-foreground">Step into the account she owns now</h2>
             <p className="text-sm text-muted-foreground">
-              Haley came of age a year ago, and the fund transferred to her. Log in to see the adult account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Phil's dashboard it's a fund he can no longer touch.
+              Haley came of age a year ago, and the fund transferred to her. Log in to see her personal account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Phil's dashboard it's a fund he can no longer touch.
             </p>
             {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
               <button

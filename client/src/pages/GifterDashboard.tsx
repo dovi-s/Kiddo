@@ -144,7 +144,11 @@ function statusLabel(value: string) {
 function phaseLabel(phase: string): string {
   switch (String(phase || "").toLowerCase()) {
     case "adult":
-      return "Adult account";
+      // "Personal account", never "adult account", in user-facing copy —
+      // terminology locked 2026-06-04 (matches the fund badge "PERSONAL ·
+      // Active"; "adult" age-frames an ownership moment + wrong echo for a
+      // family brand). The server phase string stays "adult" internally.
+      return "Personal account";
     case "teen":
       return "Teen fund";
     case "child":
