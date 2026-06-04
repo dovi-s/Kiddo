@@ -177,6 +177,11 @@ async function wipeDemoState(): Promise<void> {
     // observed offender) immediately before the funds delete to shrink the
     // race window to ~microseconds.
     await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
+    // Same race, second offender (observed 2026-06-04): the snapshot writer
+    // re-inserted a fund_snapshots row between the bulk wipe above and the
+    // funds delete, tripping fund_snapshots_fund_id_funds_id_fk and aborting
+    // the whole reset. Re-clear snapshots in the same tight window.
+    await db.delete(fundSnapshots).where(inArray(fundSnapshots.fundId, demoFundIds));
     await db.delete(funds).where(inArray(funds.id, demoFundIds));
     console.log(`  deleted ${demoFundIds.length} fund(s)`);
   }
