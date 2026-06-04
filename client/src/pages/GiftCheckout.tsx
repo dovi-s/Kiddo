@@ -8,7 +8,9 @@ import { Logo } from "@/components/ui/logo";
 import { FounderBadge } from "@/components/ui/founder-badge";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { GoalCard } from "@/components/ui/premium-themes";
-import { RichText } from "@/components/ui/rich-text-editor";
+// Import RichText from the lightweight view module (DOMPurify only) so this
+// PUBLIC gift funnel does NOT bundle the ~130KB gzip tiptap editor. 2026-06-04.
+import { RichText } from "@/components/ui/rich-text-view";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { usePageSeo } from "@/lib/seo";
 import { ThinkingOrb } from "@/components/ui/gemini";
