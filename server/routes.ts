@@ -5226,7 +5226,8 @@ export async function registerRoutes(
             g.amount,
             g.created_at,
             g.selected_ticker,
-            g.message
+            g.message,
+            g.sender_name
           FROM gifts g
           WHERE LOWER(COALESCE(g.sender_email, '')) = ${email}
           ORDER BY g.created_at DESC
@@ -5307,11 +5308,38 @@ export async function registerRoutes(
             }
             return true;
           });
-          const recentMemory = gifterVisibleEntries[0]
+          // PRIVACY (founder catch 2026-06-04): the "Latest Memory Book
+          // moment" must be the GIFTER'S OWN note, or a fund-level system /
+          // milestone entry (Kiddo-authored, no human author) — NEVER another
+          // named person's personal note. Before this, the card surfaced
+          // whatever the single newest broadly-visible entry was, so Jay (a
+          // grandfather) saw Gloria's intimate note to her grandchild
+          // ("pensando en ti hoy mi amor, llamame") and Phil's "love you, dad"
+          // contribution note. The "child is loved by many" social proof
+          // lives elsewhere (gift counts, thank-yous); this card is the
+          // gifter's OWN moment reflected back, which is warmer AND private.
+          const myGiftIdSet = new Set(
+            (giftRowsByFund.get(fund.id) || []).map((g: any) => String(g.id || "")),
+          );
+          const myAuthorNames = new Set(
+            (giftRowsByFund.get(fund.id) || [])
+              .map((g: any) => String(g.sender_name || "").trim().toLowerCase())
+              .filter(Boolean),
+          );
+          const isOwnOrSystemMemory = (e: any): boolean => {
+            if (e.giftId && myGiftIdSet.has(String(e.giftId))) return true; // the gifter's own gift entry
+            const author = String(e.authorName || "").trim();
+            if (!author) return true; // Kiddo-authored fund-level/system entry (e.g. milestone crossings)
+            const t = String(e.type || "");
+            if (t === "milestone" || t.startsWith("milestone_")) return true;
+            return myAuthorNames.has(author.toLowerCase()); // own note matched by name (giftId-less legacy rows)
+          };
+          const ownMemory = gifterVisibleEntries.find(isOwnOrSystemMemory);
+          const recentMemory = ownMemory
             ? {
-                content: gifterVisibleEntries[0].content,
-                authorName: gifterVisibleEntries[0].authorName,
-                createdAt: gifterVisibleEntries[0].createdAt,
+                content: ownMemory.content,
+                authorName: ownMemory.authorName,
+                createdAt: ownMemory.createdAt,
               }
             : undefined;
           const activeEventCountRow = activeEventCountRows[0];
