@@ -539,6 +539,17 @@ export default function GetStarted() {
       if (d.gifterAudience) setGifterAudience(d.gifterAudience);
       if (d.recipientState) setRecipientState(d.recipientState);
       if (d.country) setCountry(d.country);
+      // Resume sanity clamp (audit catch 2026-06-04): a draft can carry a
+      // step its restored fields can't support (e.g. step="projection" with
+      // no birthdate after a partial save), rendering a half-broken screen
+      // the parent didn't break. If the draft step is past "details" but the
+      // details prerequisites are missing, resume AT details — the fields
+      // they did enter are intact, and the flow re-validates forward.
+      const pastDetails = d.step === "projection" || d.step === "investment";
+      const detailsIncomplete = (d.accountType ?? "child") === "child"
+        ? !(d.name && d.birthdate && d.occasion && d.gifterAudience)
+        : !d.name;
+      if (pastDetails && detailsIncomplete) setStep("details");
     } catch {
       window.sessionStorage.removeItem(DRAFT_KEY);
     }
@@ -583,6 +594,12 @@ export default function GetStarted() {
 
   const startOAuth = (provider: "google" | "apple") => {
     haptic("medium");
+    // Save the FULL draft before the OAuth redirect (audit catch 2026-06-04):
+    // this used to write a 9-field subset, silently dropping lastName /
+    // occasion / gifterAudience / recipientState / country. Harmless on the
+    // normal path (auth is step one, those fields are still empty), but a
+    // user who filled details and then back-navigated to auth lost them on
+    // return. step stays "who" — the post-OAuth landing point.
     const draft: OnboardingDraft = {
       step: "who",
       authMode,
@@ -593,6 +610,11 @@ export default function GetStarted() {
       annualGift,
       investment,
       ticker,
+      lastName,
+      occasion,
+      gifterAudience,
+      recipientState,
+      country,
     };
     window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     const returnTo = search ? `/get-started?${search}` : "/get-started";
@@ -948,7 +970,16 @@ export default function GetStarted() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { haptic("selection"); setCountry("OTHER"); }}
+                    onClick={() => {
+                      haptic("selection");
+                      setCountry("OTHER");
+                      // International demand was previously captured ZERO
+                      // times (audit 2026-06-04) — the off-ramp rendered and
+                      // the signal vanished. One event per selection makes
+                      // "how many non-US parents tried to sign up" a real
+                      // number when expansion gets prioritized.
+                      void trackOnboardingSignal("cta_click", "onboarding_country_other", { step: "details" });
+                    }}
                     className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${country === "OTHER" ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"}`}
                     data-testid="option-country-other"
                   >
