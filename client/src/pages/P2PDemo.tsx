@@ -330,9 +330,17 @@ export default function P2PDemo() {
                   compound: by the time they're sixty, closer to {usd0(kidVal)}. The head start is
                   the entire trick.
                 </p>
+                {/* The two-lane bridge (founder note 2026-06-04): the P2P
+                    mechanic the visitor just played with is the ADULT
+                    personal-account concept (post-licensing, per the locked
+                    account model) — the KID fund is the product that exists
+                    today. The convert step names both lanes explicitly so
+                    the insight transfers without implying friend-to-friend
+                    stock is the live kid product. */}
                 <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-                  Start it for a kid you love, and let everyone who loves them add to it for their
-                  whole childhood.
+                  What you just played with is the grown-up version: personal accounts, friend to
+                  friend, coming later. The kid version is real today. Start a fund for a kid you
+                  love, and let everyone who loves them add to it for their whole childhood.
                 </p>
                 <p className="mx-auto mt-3 max-w-md text-xs text-muted-foreground/70">
                   Same 7 percent illustration. Not a guarantee.
