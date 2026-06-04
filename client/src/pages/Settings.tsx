@@ -1904,7 +1904,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                   <p className="kiddo-section-label">
                     Today vs target
                   </p>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className={`text-[10px] ${inLine ? "text-[hsl(var(--kiddo-evergreen))] font-semibold" : "text-muted-foreground"}`}>
                     {inLine ? "On target" : `${maxDriftPts.toFixed(0)} pts off`}
                   </span>
                 </div>
@@ -1921,15 +1921,24 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 )}
                 <div className="space-y-1.5">
                   {rows.map((r) => {
-                    const sign = r.diff > 0.5 ? "+" : r.diff < -0.5 ? "-" : "";
                     const driftAbs = Math.abs(r.diff);
-                    const driftLabel = driftAbs < 0.5 ? "on target" : `${sign}${driftAbs.toFixed(0)} pts`;
-                    const driftColor =
-                      driftAbs < 0.5
-                        ? "text-muted-foreground"
-                        : r.diff > 0
-                          ? "text-[hsl(var(--kiddo-evergreen))]"
-                          : "text-amber-700";
+                    const onTarget = driftAbs < 0.5;
+                    // Direction word instead of a bare +/- sign: "+5" sitting next
+                    // to a "67% → 62%" (downward) arrow read ambiguously. "5 pts
+                    // over" / "4 pts under" is unambiguous on its own.
+                    const direction = r.diff > 0 ? "over" : "under";
+                    const driftLabel = onTarget ? "on target" : `${driftAbs.toFixed(0)} pts ${direction}`;
+                    // Reserve the reassuring evergreen for the GOAL state (on
+                    // target). Drift in EITHER direction is neutral — it isn't
+                    // good or bad, it's just "not there yet," and the mix self-
+                    // corrects by weighting new contributions toward the underweight
+                    // side (see the footer). The old scheme rendered overweight
+                    // green (read as "good") and underweight amber (read as an
+                    // alarm), implying a value judgment that isn't real: both are
+                    // equidistant from target.
+                    const driftColor = onTarget
+                      ? "text-[hsl(var(--kiddo-evergreen))]"
+                      : "text-muted-foreground";
                     return (
                       <div key={r.ticker} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 text-[11px]">
                         <span className="font-semibold text-foreground tabular-nums">{r.ticker}</span>
