@@ -3027,6 +3027,14 @@ export default function Dashboard() {
     const recent = gifts.find((g) => {
       const createdAt = g.createdAt ? new Date(g.createdAt).getTime() : 0;
       if (createdAt <= oneDayAgo) return false;
+      // Demo OVERLAY gifts never get this card (founder catch 2026-06-04:
+      // "multiple of the same, some bottom right some top center").
+      // DemoGiftMoment already announces the ambient gift with its own
+      // top-center toast at record time, and the hero flash + roll land it
+      // visually — the bottom-right GiftReceivedToast firing for the SAME
+      // overlay gift was the third announcement of one event. Real gifts
+      // (real ids) keep the card.
+      if (String(g.id || "").startsWith("demo-")) return false;
       return !isGiftToastDismissed(String(g.id || ""));
     });
     if (recent) {
