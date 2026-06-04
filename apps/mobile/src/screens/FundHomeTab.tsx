@@ -307,7 +307,9 @@ export function FundHomeTab(props: FundHomeTabProps) {
     let anonTotal = 0;
     for (const g of gifts) {
       const name = (g.senderName || "").trim();
-      if (!name || g.isAnonymous) {
+      // "Someone" / "Someone who loves X" is the anonymous display fallback — fold
+      // it into the anon bucket instead of rendering a named "Someone" avatar.
+      if (!name || g.isAnonymous || /^someone\b/i.test(name)) {
         anonCount += 1;
         anonTotal += num(g.netAmount ?? g.amount);
         continue;

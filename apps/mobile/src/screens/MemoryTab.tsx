@@ -14,6 +14,7 @@ import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, KInput, Button, Skeleton, haptic, Appear } from "../ui";
 import { API_BASE, formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
 import { isReadOnlyFund } from "../lib/fund";
+import { looksLikeTestSender } from "../lib/gifters";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -77,15 +78,25 @@ export function MemoryTab({
   const childName = childNameOf(activeFund);
   const isReadOnly = isReadOnlyFund(activeFund);
 
+  // Hide test/seed-sender gift entries (the "test" gift) so the timeline + cover
+  // counts match Home, which already filters them.
+  const visibleEntries = useMemo(
+    () => entries.filter((e) => !(e.gift && looksLikeTestSender(e.gift.senderName, e.gift.senderEmail))),
+    [entries],
+  );
+
   const stats = useMemo(() => {
-    const giftEntries = entries.filter((e) => e.gift && !NON_COUNTING.has(String(e.gift.status || "").toLowerCase()));
+    const giftEntries = visibleEntries.filter(
+      (e) => e.gift && !NON_COUNTING.has(String(e.gift.status || "").toLowerCase()),
+    );
+    // Unique named people, excluding the anonymous "Someone" fallback (matches Home).
     const people = new Set(
       giftEntries
         .map((e) => (e.gift?.senderName || "").trim().toLowerCase())
-        .filter(Boolean),
+        .filter((n) => n && !/^someone\b/.test(n)),
     ).size;
     return { gifts: giftEntries.length, people };
-  }, [entries]);
+  }, [visibleEntries]);
 
   const refresh = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />;
 
@@ -126,7 +137,7 @@ export function MemoryTab({
           <Skeleton height={110} rounded={radius.card} />
           <Skeleton height={110} rounded={radius.card} />
         </>
-      ) : entries.length === 0 ? (
+      ) : visibleEntries.length === 0 ? (
         <KiddoCard>
           <KText variant="heading">It starts with the first gift.</KText>
           <KText variant="caption" style={{ marginTop: spacing.xs }}>
@@ -136,7 +147,7 @@ export function MemoryTab({
         </KiddoCard>
       ) : (
         <View style={{ gap: spacing.sm }}>
-          {entries.map((entry) => (
+          {visibleEntries.map((entry) => (
             <MemoryCard
               key={entry.id}
               entry={entry}

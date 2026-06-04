@@ -51,8 +51,14 @@ function present(type: string): { icon: any; tint: string; negative: boolean } {
 // strings below matching the canonical wording (e.g. "Recurring investment",
 // "Gift received", "Withdrawal", "Dividend").
 function labelFor(tx: DashboardTransaction): string {
-  if (tx.description && tx.description.trim()) return tx.description.trim();
   const t = tx.type.toLowerCase();
+  const desc = (tx.description || "").trim();
+  const descL = desc.toLowerCase();
+  // Gifts: the stored description is a raw internal label ("gift payment") — show
+  // the canonical "Gift received" instead of leaking it verbatim.
+  if (t.includes("gift") || descL === "gift payment" || descL === "gift") return "Gift received";
+  // Otherwise prefer a human description (e.g. "Moved 0.5 shares of CMCSA to cash").
+  if (desc) return desc;
   if (t.includes("withdraw")) return "Withdrawal";
   if (t.includes("fee")) return "Platform fee";
   if (t.includes("sell") || t.includes("sold")) return "Sold";
