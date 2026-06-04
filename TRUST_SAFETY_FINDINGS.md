@@ -148,10 +148,17 @@ PHOTO not sent, last name not sent, whole portfolio/holdings detail not sent
 **DELIBERATELY NOT BUILT (founder "clear no-gos"):** child's full portfolio /
 what the kid owns on the gifter surface; child photos to gifters.
 
-**FOR FOUNDER DECISION (real product-vs-privacy tradeoff, NOT a clean fix):**
-the **total fund value** is shown to every gifter (e.g. "$52,867") — it
-reveals the child's accumulated net worth to anyone who gifted once via a
-public link, but it's also the gifter dashboard's core "watch it grow" hook
-and social proof. And `holdingsCount` ("10 holdings") hints at portfolio
-size. Both are the gifter analog of H3 (public child-data exposure). Left
-as-is pending the founder's call on the hook-vs-exposure tradeoff.
+**RESOLVED — founder call: remove ALL child money-state from the gifter
+surface (`0988305` render removal + `7b37026` payload trim):**
+- Total fund value + 30-day value sparkline → gone (child net worth +
+  parent performance).
+- `holdingsCount` → gone (portfolio size).
+- Per-gift live "now worth" → gone — founder's sharpest point: it can become
+  a **LIE** the moment the parent sells the gift's shares (the gift row keeps
+  the recorded allocation; the holding is gone), implies a donor claim on a
+  gift that's the child's now, and leaks performance.
+- `summary.trackedFundValue` (Σ net worth across funds) → gone.
+The gifter now sees only gifter-OWNED context (what they gave, what it
+bought, their notes, the family's thank-yous, occasions) plus the FORWARD
+"if invested" projection — safe because it's hypothetical and a later sale
+can't falsify it. Removed from the wire, not just the render.
