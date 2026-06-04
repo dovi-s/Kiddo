@@ -7839,6 +7839,25 @@ export async function registerRoutes(
         return res.status(409).json({ error: "This handoff link is for the child, not the parent." });
       }
 
+      // Idempotency: once a DIFFERENT user has claimed, refuse — stops a second
+      // token-holder (a sibling, or anyone the link leaks to) from overriding the
+      // real recipient's claim. Trust-safety audit C4.
+      if (found.record.childClaimedByUserId && found.record.childClaimedByUserId !== userId) {
+        return res.status(409).json({ error: "This fund has already been claimed." });
+      }
+      // Account-takeover guard: when the parent put the child's email on file, the
+      // claim may only come FROM that address — closes the sibling/token-leak
+      // takeover where someone else signs in and claims ownership. When no child
+      // email is on file (the parent shared the link out-of-band on purpose), there
+      // is nothing to match against, so the idempotency guard above is the control.
+      const intendedClaimEmail = String(found.record.childEmail || "").trim().toLowerCase();
+      if (intendedClaimEmail) {
+        const claimantEmail = String((req.user as any).email || "").trim().toLowerCase();
+        if (claimantEmail !== intendedClaimEmail) {
+          return res.status(403).json({ error: "This handoff link can only be claimed from the email address it was sent to. Please sign in with that email and try again." });
+        }
+      }
+
       const claimed = await patchAgeTransitionRecord(fund.id, {
         childClaimedAt: new Date().toISOString(),
         childClaimedByUserId: userId,
