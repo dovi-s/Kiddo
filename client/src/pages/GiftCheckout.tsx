@@ -270,6 +270,139 @@ const getSuggestedStock = (eventType?: string, themeId?: string) => {
   return STOCK_PICKS.find((s) => s.symbol === "DIS") || STOCK_PICKS[0];
 };
 
+// ── Guestbook note (note-first occasion CTA, founder-locked 2026-06-04) ──
+// "The occasion is a guestbook; the money sits under it." On DATED event
+// pages only, a guest who isn't gifting money gets a zero-pressure way to
+// put a note in the kid's Memory Book — the century-old guestbook norm a
+// host will happily share, where "scan to give money" reads as fundraising.
+// Note-leavers are also the warmest non-gifter pipeline (they showed up and
+// wrote). v1 is TEXT ONLY (photos wait for the content scanner) and every
+// note lands pending parent review (payment was the spam filter; approval
+// replaces it — see the server endpoint's safety model). Placed at the END
+// of the page so it's the graceful exit ramp, never competing with the gift
+// flow above.
+function GuestbookNoteCard({ fundId, childName }: { fundId?: string | null; childName: string }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!fundId) return null;
+
+  const submit = async () => {
+    if (sending) return;
+    setError(null);
+    if (!name.trim() || note.trim().length < 2) {
+      setError("A name and a note are all it takes.");
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch(`/api/public/funds/${encodeURIComponent(fundId)}/guestbook-note`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), note: note.trim(), email: email.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || "Could not save your note. Please try again.");
+        return;
+      }
+      haptic("success");
+      setDone(true);
+    } catch {
+      setError("Could not save your note. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5 text-center" data-testid="guestbook-note-success">
+        <p className="text-sm font-semibold text-foreground">Your note is on its way to {childName}'s Memory Book 🌱</p>
+        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+          The family takes a look first, then it joins the story.
+        </p>
+        <button
+          type="button"
+          onClick={() => { haptic("selection"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          className="mt-3 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2"
+          data-testid="guestbook-add-gift-too"
+        >
+          Want to add a gift with it? Takes about a minute →
+        </button>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => { haptic("selection"); setOpen(true); }}
+        className="w-full rounded-2xl border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-5 py-4 text-center text-sm text-muted-foreground hover:text-foreground hover:border-[hsl(var(--kiddo-evergreen)/0.4)] transition-colors"
+        data-testid="button-open-guestbook-note"
+      >
+        Just here to celebrate? <span className="font-semibold text-foreground">Leave {childName} a note</span> for the Memory Book. No payment, no account.
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-5 space-y-3" data-testid="guestbook-note-form">
+      <div>
+        <p className="text-sm font-semibold text-foreground">A note for {childName}'s Memory Book</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {childName} reads these for years. The family reviews notes before they appear.
+        </p>
+      </div>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Your name"
+        maxLength={80}
+        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+        data-testid="input-guestbook-name"
+      />
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder={`From you to ${childName}...`}
+        rows={3}
+        maxLength={500}
+        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+        data-testid="textarea-guestbook-note"
+      />
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email (optional)"
+        maxLength={254}
+        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+        data-testid="input-guestbook-email"
+      />
+      {error && <p className="text-xs text-red-600" data-testid="text-guestbook-error">{error}</p>}
+      <div className="flex items-center gap-3">
+        <Button size="sm" className="rounded-xl" onClick={submit} disabled={sending} data-testid="button-send-guestbook-note">
+          {sending ? "Sending..." : "Add to the Memory Book"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => { haptic("light"); setOpen(false); }}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function GiftCheckout() {
   const { fund: fundSlug, event: eventSlug } = useParams<{ fund: string; event?: string }>();
   const searchString = useSearch();
@@ -2785,6 +2918,13 @@ export default function GiftCheckout() {
               {isRecurring && !hasRecurringEmail && <p className="text-center text-xs text-[hsl(var(--kiddo-evergreen))]" data-testid="text-recurring-email-required">Recurring gifts need an email so you can manage the schedule.</p>}
               {executionModel === "pick" && !selectedStock && <p className="text-center text-xs text-muted-foreground">Choose a company to continue.</p>}
               {payError && <p className="text-center text-sm text-red-500" data-testid="text-pay-error">{payError}</p>}
+
+              {/* Guestbook exit ramp — DATED occasion pages only (a real
+                  event has guests who came to celebrate, not to transact;
+                  the anytime page keeps its single-purpose gift focus). */}
+              {eventData?.event && !eventData.event.isPermanent && (
+                <GuestbookNoteCard fundId={eventData?.fund?.id} childName={recipientName} />
+              )}
 
               <footer className="pb-8 pt-2 text-center space-y-3">
                 <TrustMicroStrip />

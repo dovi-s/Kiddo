@@ -14929,6 +14929,107 @@ export async function registerRoutes(
     }
   });
 
+  // ── Guestbook notes (note-first occasion CTA, founder-locked 2026-06-04) ──
+  // A no-payment way for an event guest to put a note in the kid's Memory
+  // Book: "the occasion is a guestbook; the money sits under it." The CTA on
+  // occasion pages reads note-first (a guestbook is a century-old norm a host
+  // will happily put on a table card; "scan to give money" is not), with
+  // gifting as the graceful second beat.
+  //
+  // SAFETY MODEL — payment was accidentally the spam filter (the only other
+  // gifter-content path is the paid-gift webhook), so a free write path gets
+  // three explicit replacements:
+  //   1. ALWAYS lands status='pending_review' — parent approval from the
+  //      existing Memory Book tray, REGARDLESS of fund.gifterMemoryModeration.
+  //      Nothing renders anywhere until the parent approves.
+  //   2. TEXT ONLY, length-capped, URL-rejected (spam links die at submit even
+  //      though review would catch them — don't make the parent moderate spam).
+  //   3. Rate-limited per ip+fund and per fund (in-memory; same documented
+  //      limitation class as the other public limiters — see
+  //      LOCAL_STATE_TO_POSTGRES_SPEC.md).
+  // Photos/voice stay EXCLUDED until the content scanner is live (Tier-1
+  // child-safety gate).
+  const guestbookRate = new Map<string, { count: number; windowStart: number }>();
+  const guestbookAllow = (key: string, max: number, windowMs: number): boolean => {
+    const now = Date.now();
+    const entry = guestbookRate.get(key);
+    if (!entry || now - entry.windowStart > windowMs) {
+      guestbookRate.set(key, { count: 1, windowStart: now });
+      return true;
+    }
+    if (entry.count >= max) return false;
+    entry.count += 1;
+    return true;
+  };
+  app.post('/api/public/funds/:fundId/guestbook-note', async (req: any, res) => {
+    try {
+      const fundId = String(req.params.fundId || "").trim();
+      const name = String(req.body?.name || "").trim().slice(0, 80);
+      const note = String(req.body?.note || "").trim().slice(0, 500);
+      const email = String(req.body?.email || "").trim().toLowerCase().slice(0, 254);
+      if (!fundId || !name || note.length < 2) {
+        return res.status(400).json({ error: "A name and a note are required." });
+      }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "That email doesn't look right. It's optional — feel free to leave it blank." });
+      }
+      if (/https?:\/\/|www\./i.test(`${name} ${note}`)) {
+        return res.status(400).json({ error: "Links can't go in the Memory Book. Just words, from you to them." });
+      }
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: "Fund not found" });
+      if (String(fund.status || "").toLowerCase() !== "active") {
+        return res.status(410).json({ error: "This fund isn't accepting new notes right now." });
+      }
+      // Demo funds: mock success, write nothing — a visitor's note must never
+      // land in the shared Dunphy data (same discipline as demo money flows).
+      if (await isDemoFund(fundId)) {
+        return res.status(201).json({ ok: true, demo: true, message: "Demo mode. Nothing was saved." });
+      }
+      const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown");
+      if (!guestbookAllow(`gb:${ip}:${fundId}`, 3, 60 * 60 * 1000) || !guestbookAllow(`gbf:${fundId}`, 60, 24 * 60 * 60 * 1000)) {
+        return res.status(429).json({ error: "Too many notes for now. Please try again later." });
+      }
+      const entry = await storage.createMemoryEntry({
+        fundId,
+        giftId: null,
+        type: "note",
+        content: note,
+        authorName: name,
+        photoUrl: null,
+        videoUrl: null,
+        audioUrl: null,
+        visibility: "kid_now",
+        status: "pending_review",
+      } as any);
+      const childName = String(fund.recipientFirstName || fund.name || "the child");
+      try {
+        await storage.createActivity({
+          userId: fund.userId,
+          fundId,
+          type: "memory_guestbook_note",
+          title: `${name} left a note for ${childName}`,
+          description: note.length > 120 ? `${note.slice(0, 117)}...` : note,
+          metadata: JSON.stringify({
+            memoryEntryId: (entry as any)?.id || null,
+            // Optional contact: the warmest non-gifter pipeline there is —
+            // someone who showed up and wrote. Mined later (never emailed
+            // without a real reason; no marketing list).
+            guestbookEmail: email || null,
+            pendingReview: true,
+          }),
+        } as any);
+      } catch {
+        // Activity row is discovery sugar; the note itself (the thing the
+        // guest cares about) already landed in the pending tray.
+      }
+      return res.status(201).json({ ok: true });
+    } catch (error) {
+      console.error("Error saving guestbook note:", error);
+      return res.status(500).json({ error: "Could not save your note. Please try again." });
+    }
+  });
+
   // Cross-fund roll-up of everything the Activity page's Pending and Scheduled tabs need
   // in one round trip: parent_contributions (active + paused) and recurring_gifts (active)
   // across every fund the logged-in user owns, with the fund name + recipient first name

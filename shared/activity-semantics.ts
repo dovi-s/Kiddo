@@ -206,6 +206,9 @@ export function canonicalLabel(type?: string | null): string | null {
   if (t === "memory_entry_added") return "Memory added";
   if (t === "memory_entry_edited") return "Memory edited";
   if (t === "memory_entry_deleted") return "Memory deleted";
+  // Guestbook: a no-payment note left from the public occasion page
+  // (note-first event CTA, 2026-06-04). Lands pending parent review.
+  if (t === "memory_guestbook_note") return "Note left";
   if (t.startsWith("memory_")) return "Memory Book";
 
   // Growth / portfolio
