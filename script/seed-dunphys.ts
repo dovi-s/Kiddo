@@ -1330,7 +1330,12 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         fundId,
         userId: claireId,
         email: "claire@dunphyfamily.com",
-        role: "co-parent",
+        // "co-admin" is the canonical editor role across the app (auth
+        // middleware, /api/funds access merge, plan-benefits-usage all check
+        // it). The display label for co-admin is literally "Co-parent (can
+        // edit)". The old "co-parent" value matched NO code path, so Claire was
+        // silently downgraded to a read-only viewer AND uncounted as a co-parent.
+        role: "co-admin",
         status: "accepted",
         acceptedAt: new Date(),
         invitedAt: new Date(),
