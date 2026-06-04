@@ -5156,6 +5156,19 @@ export default function MemoryBook() {
                               : null;
                             const isFreshGift = ageDays !== null && ageDays < 7;
                             const showGainPill = !isFreshGift && gainDollars !== null && Math.abs(gainDollars) > 0.01;
+                            // "Just landed" gets a TIGHTER window than the
+                            // gain-pill suppression (which stays 7d — a
+                            // 5-day-old gift's $0.40 move is still noise).
+                            // The pill's claim is "invested, value not
+                            // surfaced YET" — past ~2 days that reads
+                            // stale next to the entry's own "2 days ago"
+                            // timestamp (founder catch 2026-06-04; surfaced
+                            // by a sessionStorage demo-overlay gift, which
+                            // never gains a value in-session and would
+                            // otherwise wear the pill for a week of tab
+                            // life). After the window: silent, same as the
+                            // no-value aged case. Better than wrong.
+                            const isJustLanded = ageDays !== null && ageDays < 2;
                             // Value differs from cost basis by more than a
                             // cent. When false, the "Now worth $X" line is
                             // pure duplication of the gift amount at the
@@ -5199,7 +5212,7 @@ export default function MemoryBook() {
                                         </span>
                                       )}
                                     </span>
-                                  ) : currentValue === null && isFreshGift ? (
+                                  ) : currentValue === null && isJustLanded ? (
                                     <span className="text-[10px] font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
                                   ) : null}
                                 </div>
