@@ -323,6 +323,10 @@ export function PlanBenefitsCard({ plan }: Props) {
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
+                {/* Labeled like "What's included" / "Right now" so this card
+                    reads as a suggestion, not a stray feature blurb floating
+                    after the stats. */}
+                <p className="text-xs uppercase tracking-wide text-primary/70 mb-1">Suggested for you</p>
                 <p className="text-sm font-semibold text-foreground">{nudge.title}</p>
                 <p className="mt-0.5 text-xs text-foreground/70 leading-relaxed">{nudge.body}</p>
               </div>
