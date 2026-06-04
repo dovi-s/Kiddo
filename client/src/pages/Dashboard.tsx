@@ -3293,6 +3293,14 @@ export default function Dashboard() {
       __nowWorth: onThisDayCard.nowWorth,
       __daysOff: onThisDayCard.daysOff,
     };
+    // Dormant-fund edge (code-review catch 2026-06-04): when the anniversary
+    // gift IS the newest gift (no gifts in over a year), relocating it to
+    // index 1 would crown the SECOND-newest gift with the "Latest gift"
+    // eyebrow. Flag it in place at index 0 instead — it's both the latest
+    // and the anniversary, and the "On this day" telling wins.
+    if (recentGiftsFeed[0]?.id === onThisDayCard.gift.id) {
+      return [flagged, ...recentGiftsFeed.slice(1)] as typeof recentGiftsFeed;
+    }
     const rest = recentGiftsFeed.filter((g) => g.id !== onThisDayCard.gift.id);
     return [rest[0], flagged, ...rest.slice(1)].filter(Boolean) as typeof recentGiftsFeed;
   }, [recentGiftsFeed, onThisDayCard]);

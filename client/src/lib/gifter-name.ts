@@ -39,14 +39,19 @@ export function gifterShortName(name?: string | null): string {
   // If that capitalized word IMMEDIATELY follows a possessive, keep the owner
   // ("Phil's Office" -> "Phil's Office", not a bare "Office") — but only when the
   // possessive is the directly-preceding word, so "Grandpa's friend Earl" still
-  // yields "Earl" (the name follows "friend", not the possessive).
+  // yields "Earl" (the name follows "friend", not the possessive). A possessive
+  // whose BASE is itself a weak leader never counts as an owner: "Grandpa's
+  // Phil" -> "Phil", not "Grandpa's Phil" (code-review catch 2026-06-04 —
+  // relationship possessives are descriptors, not identities).
+  const possessiveBase = (w: string): string => cleanToken(w).replace(/['’]s$/, "");
   for (let i = 0; i < words.length; i++) {
     const w = words[i];
     if (WEAK_NAME_LEADERS.has(cleanToken(w))) continue;
     if (/['’]s$/.test(w)) continue;
     if (/^[A-Z]/.test(w)) {
       const prev = i > 0 ? words[i - 1] : "";
-      return /['’]s$/.test(prev) ? `${prev} ${w}` : w;
+      const prevIsOwnerPossessive = /['’]s$/.test(prev) && !WEAK_NAME_LEADERS.has(possessiveBase(prev));
+      return prevIsOwnerPossessive ? `${prev} ${w}` : w;
     }
   }
 

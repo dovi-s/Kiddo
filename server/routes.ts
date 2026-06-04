@@ -14997,8 +14997,17 @@ export async function registerRoutes(
   // Photos/voice stay EXCLUDED until the content scanner is live (Tier-1
   // child-safety gate).
   const guestbookRate = new Map<string, { count: number; windowStart: number }>();
+  const GUESTBOOK_MAX_WINDOW_MS = 24 * 60 * 60 * 1000;
   const guestbookAllow = (key: string, max: number, windowMs: number): boolean => {
     const now = Date.now();
+    // Prune expired buckets when the map grows (per-IP keys are unbounded on
+    // a public surface; without this the long-lived process leaks one entry
+    // per visitor IP forever — code-review catch 2026-06-04).
+    if (guestbookRate.size > 1000) {
+      guestbookRate.forEach((v, k) => {
+        if (now - v.windowStart > GUESTBOOK_MAX_WINDOW_MS) guestbookRate.delete(k);
+      });
+    }
     const entry = guestbookRate.get(key);
     if (!entry || now - entry.windowStart > windowMs) {
       guestbookRate.set(key, { count: 1, windowStart: now });
@@ -15276,9 +15285,22 @@ export async function registerRoutes(
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      const subscription = await storage.getSubscription(userId);
-      if (!subscription || (subscription.plan !== 'family' && subscription.plan !== 'legacy') || subscription.status !== 'active') {
-        return res.status(403).json({ error: 'Family or Legacy plan required to manage gift reminders' });
+      // Plan gate applies to REMINDER management only (reminders are the
+      // Family-plan feature). An AUTO-CHARGING row (stripeSubscriptionId set)
+      // is money-safety territory: any fund owner must be able to stop a
+      // gifter's real card charges regardless of their own plan. Gifter
+      // auto-charge subs exist on Plus/trial/sponsored funds too
+      // (covered_starter / trial_active unlock recurring at checkout), and
+      // Activity renders the "Stop this recurring gift" button for all of
+      // them — gating the stop on Family meant a Plus parent's stop click
+      // 403'd while Stripe kept charging the gifter's card (code-review
+      // catch, 2026-06-04).
+      const isAutoChargeRow = Boolean(giftRecord.stripeSubscriptionId);
+      if (!isAutoChargeRow) {
+        const subscription = await storage.getSubscription(userId);
+        if (!subscription || (subscription.plan !== 'family' && subscription.plan !== 'legacy') || subscription.status !== 'active') {
+          return res.status(403).json({ error: 'Family or Legacy plan required to manage gift reminders' });
+        }
       }
 
       // MONEY SAFETY (2026-06-04): if this row is a real auto-charging Stripe

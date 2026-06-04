@@ -88,6 +88,10 @@ export const ENGINE_MILESTONE_TYPES = [
   "milestone_first_voice",
   "milestone_first_photo",
   "milestone_first_kid_pick_approved",
+  // Earned truth: fund value reached 2x everything put in (2026-06-04).
+  // Without this registration the type mis-bucketed to "update" and rendered
+  // a generic Update tile (code-review catch).
+  "milestone_growth_passed_gifts",
 ];
 
 export const MILESTONE_TYPES = [
@@ -253,6 +257,7 @@ export function canonicalLabel(type?: string | null): string | null {
   if (t === "milestone_first_voice") return "First voice";
   if (t === "milestone_first_photo") return "First photo";
   if (t === "milestone_first_kid_pick_approved") return "First pick";
+  if (t === "milestone_growth_passed_gifts") return "Milestone";
 
   // Age-phase milestones (state-agnostic labels; internal strings keep age*_)
   if (t === "age18_child_claimed" || t === "age18_handoff_completed_child") return "Fund handed off";

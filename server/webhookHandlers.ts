@@ -388,7 +388,16 @@ export class WebhookHandlers {
           parseFloat(settledFund.pendingBalance || '0') +
           parseFloat(String((settledFund as any).cashBalance || '0'));
         await fireMoneyCrossMilestones(gift.fundId, ownerId, prevTotal, newTotal);
-        await fireGrowthPassedGiftsMilestone(gift.fundId, ownerId, newTotal);
+        // Growth-passed compares SETTLED money only (balance + cash, NO
+        // pendingBalance): `contributed` sums settled-status gifts, so a
+        // large pending/held gift would inflate the value side without the
+        // contributed side and falsely fire this once-per-lifetime claim
+        // (code-review catch, 2026-06-04). Money-cross keeps the full total;
+        // it's a loose celebration, not a precise arithmetic statement.
+        const settledTotal =
+          parseFloat(settledFund.balance || '0') +
+          parseFloat(String((settledFund as any).cashBalance || '0'));
+        await fireGrowthPassedGiftsMilestone(gift.fundId, ownerId, settledTotal);
         if (!isParentContrib) {
           if (gift.senderEmail) {
             await fireReturningGifterMilestone(gift.fundId, ownerId, gift.senderEmail, gift.senderName || null);

@@ -296,7 +296,9 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // self-view ("your future / who loves you / Start one for someone you
       // love") instead of the read-only previous-owner view. Only entries with
       // no prior tag are ones the viewer owns directly → default those to owner.
-      const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: (f.accessRole as 'owner' | 'previous_owner' | 'collaborator' | undefined) || 'owner' }));
+      // (accessRole union: 'collaborator' removed 2026-06-04 — nothing emits
+      // the generic tag anymore; the collaborator merge above stamps real roles.)
+      const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: (f.accessRole as 'owner' | 'previous_owner' | 'co-admin' | 'viewer' | undefined) || 'owner' }));
 
       // Union with funds this user has been accepted into as a collaborator.
       // The shape is identical to owned funds plus an accessRole tag the

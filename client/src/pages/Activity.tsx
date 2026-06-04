@@ -359,6 +359,8 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   // family) so milestones feel like ribbons, not status changes.
   if (t === "milestone_money_cross")
     return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🌱</span>, label: "Milestone" };
+  if (t === "milestone_growth_passed_gifts")
+    return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🌱</span>, label: "Milestone" };
   if (t === "milestone_returning_gifter")
     return { ...PALETTE.SUBTLE_CREAM, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>💚</span>, label: "Returning gifter" };
   if (t === "milestone_unique_gifters")
