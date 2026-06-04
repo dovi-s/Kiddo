@@ -13918,7 +13918,7 @@ export default function Dashboard() {
                       )}
                       {showProjection && (
                         <p className="text-[10px] text-green-800/45 leading-snug pt-0.5">
-                          *Assuming a 7% yearly average. Markets vary. Time is what compounds.
+                          *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
                         </p>
                       )}
                     </div>
@@ -15269,7 +15269,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">
-                        *Assuming a 7% yearly average. Markets vary. Time is what compounds.
+                        *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
                       </p>
                     </div>
                   )}

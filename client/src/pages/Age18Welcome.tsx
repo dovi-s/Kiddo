@@ -327,7 +327,7 @@ export default function Age18Welcome() {
                 title="Keep growing it"
                 math={
                   balance > 0
-                    ? `${formatMoney(balance)} today becomes about ${formatMoney(projectedAt65, { decimals: 0 })} by 65 if you don't touch it. Markets average ~7% a year long-term.`
+                    ? `${formatMoney(balance)} today becomes about ${formatMoney(projectedAt65, { decimals: 0 })} by 65 if you don't touch it. Markets average ~7% a year long-term; estimate is net of Kiddo's annual fee.`
                     : "Markets average ~7% a year long-term. Compounding works while you sleep."
                 }
                 tone="grow"
@@ -366,7 +366,7 @@ export default function Age18Welcome() {
                   — enough to start another Kiddo for the next generation.
                 </p>
                 <p className="text-[10px] text-muted-foreground/70 leading-snug">
-                  Assumes 7% yearly average. Illustrative only. Markets vary.
+                  Assumes 7% yearly average, net of Kiddo's annual fee. Illustrative only. Markets vary.
                 </p>
               </div>
             )}

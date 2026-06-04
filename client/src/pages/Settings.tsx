@@ -1558,14 +1558,20 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   // projection-range context line below (NOT a recommendation — the
   // age-matched "Recommended for {child}" badge was removed 2026-06-03 per
   // the self-directed posture; see the note above GIFTER_STOCK_OPTIONS).
+  // Years until the fund's REAL age of majority (state-specific: 18/19/21), NOT a
+  // flat 18. The projection range below scales sigma by 1/sqrt(years), so a
+  // hardcoded 18 made AL/NE (19) and CA/KY/MS/PA (21) funds show a too-wide band
+  // for the wrong transfer age. (Variable name kept as yearsTo18 to avoid churn;
+  // it now means years-to-majority.)
   const yearsTo18 = ((): number | null => {
     const raw = (fund as any)?.recipientBirthdate;
     if (!raw) return null;
     const bd = new Date(raw);
     if (isNaN(bd.getTime())) return null;
-    const eighteenth = new Date(bd);
-    eighteenth.setFullYear(eighteenth.getFullYear() + 18);
-    const ms = eighteenth.getTime() - Date.now();
+    const majorityAge = Number((fund as any)?.majorityAge) || 18;
+    const majorityBirthday = new Date(bd);
+    majorityBirthday.setFullYear(majorityBirthday.getFullYear() + majorityAge);
+    const ms = majorityBirthday.getTime() - Date.now();
     return ms > 0 ? ms / (365.25 * 24 * 60 * 60 * 1000) : 0;
   })();
   // Post-handoff adult owner: suppress the child-horizon framing. yearsTo18

@@ -1445,7 +1445,7 @@ export default function Account() {
                 <div className="p-5">
                   <p className="text-sm font-semibold text-foreground">This fund is yours</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    There's no subscription on a fund you own. Kiddo's only ongoing cost is the annual fee: $1/year per $1,000 invested, charged on invested assets only.
+                    There's no subscription on a fund you own. Kiddo's only ongoing cost is the annual fee: $1/year per $1,000 invested, charged on invested assets only once investing is live.
                   </p>
                 </div>
               </SectionCard>

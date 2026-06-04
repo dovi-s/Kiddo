@@ -1242,7 +1242,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed. But gifts that last? Those are.
+            At 7% historical average returns net of Kiddo's annual fee, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed. But gifts that last? Those are.
           </motion.p>
         ) : projectedAmount ? (
           <motion.p
@@ -1252,7 +1252,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed. But gifts that last? Those are.
+            At 7% historical average returns net of Kiddo's annual fee, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed. But gifts that last? Those are.
           </motion.p>
         ) : null}
 
