@@ -1,13 +1,23 @@
 # Dunphy Family Demo Account Spec
 
-> Status: **Spec — not built yet.** A shareable, paper-trading-style
-> demo account that lets prospects, press, and onboarding traffic
-> play with a fully-populated Kora experience without creating an
-> account. Modeled on the Dunphy family from *Modern Family* because
-> universal recognition, multi-generational, and ranges from newborn-
-> ish to college-aged in one household.
+> Status: **BUILT and live at `/demo` — this file is the living reference.**
+> A shareable, paper-trading-style demo that lets prospects, press, and
+> onboarding traffic play with a fully-populated Kiddo experience without
+> creating an account. Modeled on the Dunphy family from *Modern Family*
+> because universal recognition, multi-generational, and a built-in
+> age-ladder in one household.
 >
-> Last updated: 2026-06-01
+> The build evolved past the original plan in two big ways: (1) the demo is
+> a LIFECYCLE demo — the three kids are staged across the whole arc (young
+> active fund → 30 days from majority → handed off / adult-owned), and
+> (2) the demo is INTERACTIVE — a visitor's own actions (send a gift, set
+> up recurring, sell, invest cash) visibly land via a client-side overlay
+> (`client/src/lib/demo-live-gifts.ts`) without ever touching the shared
+> seeded data. Sections below were trued up 2026-06-03; where this doc and
+> `script/lib/demo-roster.ts` / `script/seed-dunphys.ts` disagree, the
+> code is the source of truth.
+>
+> Last updated: 2026-06-03
 
 ---
 
@@ -44,19 +54,20 @@ To re-seed with the new data: `npm run reset:dunphys` then
 
 ---
 
-## TL;DR
+## TL;DR (as built)
 
-Build six demo accounts (one parent + five gifters) seeded with a
-realistic Dunphy-family fund state. Auth path same as real users but
-flagged `isDemoAccount: true` in the DB so:
-- No real Stripe charges (mock checkout flow)
-- No real DriveWealth orders (mock invest flow)
-- All money flows are paper-trading style
-- Nightly cron resets the demo state so every visitor sees the same
-  carefully-curated story
+Eight demo accounts (Phil + Claire + five gifters + Haley the graduate)
+seeded with a realistic Dunphy-family fund state. Auth path same as real
+users but flagged `isDemoAccount: true` in the DB so:
+- No real Stripe charges (`server/demoSandbox.ts` mocks the money flows)
+- No real brokerage orders; all money flows are paper-trading style
+- A visitor's own actions reflect via the per-tab sessionStorage overlay
+  (`demo-live-gifts.ts`) — the shared seeded data never mutates
+- Reset is MANUAL today: `npm run reset:dunphys` (re-seeds from scratch).
+  No nightly cron was built; the banner says "amounts reset periodically."
+  Demo login clears client-side caches so personas don't bleed.
 
-Shareable credentials. Live URL `kiddofund.com/demo`. Cost: ~3-5
-days of focused work after the build greenlight.
+Shareable credentials. Live at `/demo` with one-click persona logins.
 
 ---
 
@@ -70,11 +81,14 @@ Three jobs only a demo account can do:
 2. **Sales / press / investor demos**. Live walkthroughs need a
    populated fund. Showing an empty Free account underrepresents the
    product; showing a real customer's fund violates privacy.
-3. **The $284k aggregate moment**. The Dunphy family aggregate
-   ($24,500 today → potential $284,000 at 65 combined across three
-   kids) is the "lean forward" number for investor / press demos.
-   No real customer's data delivers this on demand; a seeded demo
-   does.
+3. **The time-machine moment**. The three kids form an ascending arc
+   driven by real historical returns (Luke ~$22k at 13 → Alex ~$52k at
+   20 → Haley ~$79k handed off at 21+): the same product at three points
+   in time, ~$150k aggregate. That arc plus per-gift "now worth" lines
+   ("$60 of Apple in 2009 → ~$6,900 today") is the "lean forward" moment
+   for investor / press demos. No real customer's data delivers this on
+   demand; a seeded demo does. (Exact dollars drift with live prices —
+   they're emergent, not hardcoded; see Financial realism above.)
 
 ---
 
@@ -87,16 +101,21 @@ Three jobs only a demo account can do:
 | **Phil Dunphy** | `phil@dunphyfamily.com` | Custodian for all three kids | Kiddo Family |
 | **Claire Dunphy** | `claire@dunphyfamily.com` | Co-parent on all three funds | (collaborator, no plan) |
 
-### Kids (UTMA fund recipients)
+### Kids (the lifecycle ladder — source of truth: `script/lib/demo-roster.ts`)
 
-| Name | Age | Fund balance | Strategy | Job in the demo |
-|---|---|---|---|---|
-| **Haley Dunphy** | 18 (handoff in 30 days) | $12,847.32 | Conservative | Age-18 handoff demo. Phil's letter visible, physical book ordered, ceremony email primed. |
-| **Alex Dunphy** | 15 | $8,234.17 | Balanced | College-fund goal demo. $50k target, projection page, upgrade nudge active. |
-| **Luke Dunphy** | 13 | $3,421.88 | Growth | Long-horizon demo. 47 years to 65, "potential $127,891" number. |
+All three funds use CA majority age 21. Balances are EMERGENT from real
+historical prices (re-derive with `npm run report:demo-portfolio`); the
+figures below are the ~targets the roster is tuned to, not hardcoded values.
 
-**Aggregate:** $24,503.37 today across three kids, 47 unique gifters,
-potential $284,000 combined at 65.
+| Name | Age | ~Balance | Strategy | Recurring | Job in the demo |
+|---|---|---|---|---|---|
+| **Luke Dunphy** | 13 | ~$22k | Growth Mix | $100/mo active | The young active fund. Long-horizon projections, smart nudges, the gamer-gift personality (NTDOY/RBLX/MCD). |
+| **Alex Dunphy** | 20 (~30 days from majority 21) | ~$52k | Balanced Mix | $50/mo paused | The approaching-handoff demo. Phil's SEALED letter, ceremony/handoff preview, age-18-plan surfaces. |
+| **Haley Dunphy** | 22 (PAST majority — handed off) | ~$79k | Conservative Mix | ended at handoff | The graduated adult account ("Haley's Fund", accountType Personal). Log in as Haley for the owner view (unlocked letter, kid-2.0 surfaces); as Phil for the previous-owner read-only story view. |
+
+**Aggregate:** ~$150k emergent across three kids; 19+ gifters per fund's
+"Who loves {kid}" roster. The arc IS the pitch: same product, three
+points in an 18-year relationship.
 
 ### Gifters (sender accounts)
 
@@ -117,12 +136,12 @@ entry is the whole product in one quote.
 
 ## Demo credentials (shareable)
 
-All seven accounts use the same password: **`dunphyfamily`**
+All eight accounts use the same password: **`dunphyfamily`**
 
 ### On password strength
 
 `dunphyfamily` is 12 characters, no numbers or symbols. It meets
-Kora's current minimum (auth.ts:649 — ≥8 chars, no complexity rules)
+Kiddo's current minimum (auth.ts:649 — ≥8 chars, no complexity rules)
 and is intentionally simple for a **public demo credential** where
 the security posture is "the account is read-only, sandboxed, and
 resets nightly — anyone can know the password."
@@ -131,7 +150,7 @@ A stronger demo password (`Dunphys2026!`, `dunphy-family-demo-2026`,
 etc.) is fine if it reads better in marketing copy, but doesn't add
 real security since the password is shared publicly at `/demo`.
 
-**Separate concern: production password requirements.** Kora's
+**Separate concern: production password requirements.** Kiddo's
 current 8-char minimum with no complexity rules is weak by modern
 standards. Worth auditing as a separate task — recommend min 10
 chars + zxcvbn-style strength scoring instead of arbitrary "must
@@ -147,6 +166,7 @@ patterns. Not blocking this demo, but flag.
 | `mitchell@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard with the recurring-gift flow visible |
 | `cameron@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard — three Disney gifts (one per kid) prominent |
 | `manny@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard — Roblox + young-gifter angle |
+| `haley@dunphyfamily.com` | `dunphyfamily` | The graduate — post-handoff ADULT OWNER view of her own fund (unlocked letter, owner-mode recurring, kid-2.0 doorway) |
 
 Password meets the auth.ts requirement (≥ 8 chars). Same password
 across accounts because demo creds are shared publicly; security
@@ -279,11 +299,21 @@ multi-gifter personas).
   reset)
 - Kid View — real PIN flow, real age-aware copy, real holdings
 - Projection page — real math on the seeded balances
-- The at-18 lifecycle (Haley is 30 days from majority) — can preview
-  the ceremony emails, the letter, the handoff modal
-- Recurring investments — show as configured for Alex + Luke, can be
-  toggled / paused in the demo without affecting real money
-- Co-parent flow — Claire's view of Phil's funds works
+- The at-majority lifecycle, BOTH SIDES: Alex is ~30 days from majority
+  (sealed letter, handoff preview) and Haley is already handed off (log
+  in as Haley for the real adult-owner experience; as Phil for the real
+  previous-owner read-only view)
+- Recurring investments — Luke's $100/mo active; Alex's paused; Haley's
+  ended-at-handoff (read-only treatment). Visitor-created recurring
+  reflects via the demo overlay (Scheduled tab, recurring chip)
+- Interactive sandbox: a sent gift lands in the Activity feed + bell +
+  Memory Book + rolls the hero; sell moves money to cash; invest-cash
+  buys into a holding — all per-tab overlay, all reconciled so
+  invested + cash never drifts
+- Co-parent flow — Claire is a seeded co-admin on the minor funds
+- Memory Book thank-yous — seeded SENT thank-yous (older gifts) +
+  a realistic awaiting backlog (recent + email-less gifts), plus a few
+  pinned entries (first gift, Gloria's voice note)
 
 ### Doesn't (sandboxed)
 
@@ -324,10 +354,16 @@ Per project-wide locked discipline:
 
 ---
 
-## Ship order (when this becomes a Q-priority)
+## Ship order — ALL PHASES BUILT (kept for the historical record)
 
-Each phase is shippable on its own. The big upfront cost is Phase 0;
-after that each piece is incremental.
+Phase 0-4 below all shipped, with implementation differences worth
+knowing: the seed is `script/seed-dunphys.ts` (+ `script/lib/demo-roster.ts`
+casting + `script/lib/demo-portfolio.ts` engine), NOT a
+`server/demoSeedData.ts`; sandboxing is `server/demoSandbox.ts`; there is
+NO `demoResetWorker` cron — reset is manual via `npm run reset:dunphys`;
+the interactive overlay (`client/src/lib/demo-live-gifts.ts`) and the
+lifecycle staging (Haley handed off) were built on top and are not in the
+phases below.
 
 ### Phase 0 — Infrastructure (~1 day)
 
@@ -373,10 +409,9 @@ after that each piece is incremental.
 
 ## Open questions
 
-1. **Should `claire@dunphyfamily.com` be a separate login or auto-
-   collaborator-on-Phil's-funds?** Recommended: separate login, set
-   up as a co-parent via the existing invitation flow at seed time.
-   Demonstrates the real co-parent UX.
+1. ~~Should `claire@dunphyfamily.com` be a separate login?~~ RESOLVED
+   as built: separate login, seeded as a co-admin collaborator on the
+   minor funds. Demonstrates the real co-parent UX.
 
 2. **Voice-memo content for Gloria — IP + copyright situation.**
    THREE phases of asset, each with different legal posture:
@@ -400,7 +435,7 @@ after that each piece is incremental.
        1. **Voice actor on Fiverr (~$50, recommended)** — find a
           Spanish-speaking voice actor with a Latin American accent
           (Colombian preferred to match the source character).
-          Script: 30 seconds, Kora-owned, royalty-free, with rights
+          Script: 30 seconds, Kiddo-owned, royalty-free, with rights
           assignment. Risk: zero.
        2. **AI-generated voice (e.g., ElevenLabs Spanish voice)** —
           legally cleaner than copyrighted media but still has its
@@ -409,7 +444,7 @@ after that each piece is incremental.
    **Never use a YouTube/show clip in production.** That's straight
    copyright infringement (the studio owns the audio) AND right-of-
    publicity (Sofía Vergara's voice is protected). The fact that
-   Kora is small doesn't change the legal exposure — a single
+   Kiddo is small doesn't change the legal exposure — a single
    DMCA takedown or C&D from Disney's IP team would be embarrassing
    and possibly newsworthy.
 
@@ -418,15 +453,15 @@ after that each piece is incremental.
    trademarks of 20th Century Studios / Disney. Using them in a
    public-facing demo is a calculated risk, not a free lunch:
 
-   - **Low risk while Kora is small** — Disney's IP team isn't
+   - **Low risk while Kiddo is small** — Disney's IP team isn't
      scanning small fintech demos. Realistic exposure is ~0 in
      the first 1,000 users.
    - **Rises with press / scale** — the moment TechCrunch writes
-     about Kora and mentions the Dunphy demo, the risk surface
+     about Kiddo and mentions the Dunphy demo, the risk surface
      widens. C&D becomes plausible.
    - **Two mitigations if/when this matters:**
      - Add a footer disclaimer: "The Dunphy family is used as a
-       cultural reference; Kora is not affiliated with or
+       cultural reference; Kiddo is not affiliated with or
        endorsed by 20th Century Studios or Disney."
      - Or rename to "The Murphy family" / "The Smith family" /
        homage-but-original character names. Loses the universal-
@@ -452,7 +487,7 @@ after that each piece is incremental.
    a live walkthrough.
 
 6. **Email domain.** `dunphyfamily.com` must either (a) be a real
-   domain Kora owns and parks (recommended — protects the demo
+   domain Kiddo owns and parks (recommended — protects the demo
    brand from anyone registering it later) or (b) be a non-existent
    domain that's hardcoded as "demo-safe" in the email worker so
    notifications never attempt actual SMTP delivery. Recommended:
@@ -475,21 +510,16 @@ after that each piece is incremental.
 
 ---
 
-## When to come back to this spec
+## Maintaining this (the demo is built; the doc's job changed)
 
-Build the demo when ONE of these is true:
-
-1. **Marketing traffic justifies it.** If `/get-started` is hitting
-   significant traffic and showing low conversion, a `/demo`
-   intercept might help — prospects who "want to see it first"
-   become leads who saw it and converted.
-2. **A press / fundraising moment is coming up.** Demos shine in
-   sales walkthroughs. If TechCrunch is two weeks away, the demo
-   becomes urgent.
-3. **The first 10 customers are landed.** Demos help convert
-   prospects #11-100. Before #10, founder-led sales walkthroughs of
-   the real product beat any pre-recorded demo.
-
-Until one of those is true, this spec waits. The Dunphy framing is
-recognizable enough that this won't go stale — Modern Family will
-still be a universal reference in 2030.
+- **Story changes** (ages, amounts, gifters, notes): edit
+  `script/lib/demo-roster.ts`, run `npm run report:demo-portfolio` to
+  sanity-check the emergent balances offline, then
+  `npm run reset:dunphys` + restart the dev server (some demo state —
+  Memory Book pins, gifter notification opt-ins — lives in `.local`
+  files the server caches in-process; see LOCAL_STATE_TO_POSTGRES_SPEC.md).
+- **Staged-demo expansion** (`DEMO_SANDBOX_PLAN.md`) tracks the
+  interactive-overlay roadmap; this file tracks the personas + sandbox
+  architecture + locked rules.
+- **Before any press moment:** revisit Open Question 3 (character-name
+  IP) — ship the footer disclaimer, keep the 1-hour rename script ready.
