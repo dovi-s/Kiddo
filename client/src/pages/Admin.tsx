@@ -4085,6 +4085,11 @@ function CulturalStatsSection() {
 }
 
 function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  // Week-1 support reality (ops audit 2026-06-04): "my account is
+  // alice@example.com" is the FIRST line of most tickets, and this tab
+  // previously offered only Ctrl+F over a 500-row table. Client-side
+  // search over the already-fetched list — no server change needed.
+  const [userSearch, setUserSearch] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ title: string; endpoint: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ userId: string; email: string } | null>(null);
@@ -4163,11 +4168,15 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   if (isError) return <div className="text-center py-12 text-muted-foreground">Could not load users. {(error as any)?.message || ""}</div>;
 
   const safeUsers = asArray<any>(users);
+  const userQ = userSearch.trim().toLowerCase();
   const filteredUsers = safeUsers.filter((u: any) => {
     const matchesKyc = !kycFilter || String(u.kyc_status || "").toLowerCase() === kycFilter;
     const normalizedPlan = String(u.sub_plan || "free").toLowerCase();
     const matchesPlan = !planFilter || (planFilter === "paid" ? ["starter", "family", "legacy"].includes(normalizedPlan) : normalizedPlan === planFilter);
-    return matchesKyc && matchesPlan;
+    const matchesQ = !userQ
+      || [u.email, u.first_name, u.last_name, u.id]
+        .some((v) => String(v || "").toLowerCase().includes(userQ));
+    return matchesKyc && matchesPlan && matchesQ;
   });
 
   const handleExportUsers = () => {
@@ -4298,6 +4307,15 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-lg font-semibold" data-testid="heading-users-tab">All Users ({filteredUsers.length}{filteredUsers.length !== safeUsers.length ? ` of ${safeUsers.length}` : ""})</h2>
         <div className="flex items-center gap-3">
+          <input
+            type="search"
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            placeholder="Search email or name"
+            aria-label="Search users by email or name"
+            className="h-8 w-56 rounded-lg border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            data-testid="input-users-search"
+          />
           <button
             onClick={handleExportUsers}
             className="text-xs text-primary hover:underline"
@@ -4512,6 +4530,11 @@ function FundsTab() {
 }
 
 function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  // Week-1 support reality (ops audit 2026-06-04): "my gift never showed
+  // up, the charge is pi_..." needs a lookup by sender email / name / fund
+  // / Stripe session / payment-intent id. The endpoint SELECTs g.*, so the
+  // ids are already client-side — search the fetched rows, no server change.
+  const [giftSearch, setGiftSearch] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ title: string; endpoint: string } | null>(null);
   const queryClient = useQueryClient();
@@ -4559,7 +4582,16 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
   const parsedGifts = toRowsPayload<any>(giftsPayload);
   const safeGifts = asArray<any>(parsedGifts.rows);
-  const visibleGifts = safeGifts.filter((g: any) => !statusFilter || String(g.status || "").toLowerCase() === statusFilter);
+  const giftQ = giftSearch.trim().toLowerCase();
+  const visibleGifts = safeGifts.filter((g: any) => {
+    if (statusFilter && String(g.status || "").toLowerCase() !== statusFilter) return false;
+    if (!giftQ) return true;
+    return [
+      g.sender_email, g.sender_name, g.fund_name, g.id,
+      g.stripe_session_id, g.stripe_payment_intent_id,
+      g.stripeSessionId, g.stripePaymentIntentId,
+    ].some((v) => String(v || "").toLowerCase().includes(giftQ));
+  });
 
   const handleExportGifts = () => {
     const headers = [
@@ -4671,6 +4703,15 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-lg font-semibold" data-testid="heading-gifts-tab">All Gifts ({visibleGifts.length}{visibleGifts.length !== safeGifts.length ? ` of ${safeGifts.length}` : ""})</h2>
         <div className="flex items-center gap-3">
+          <input
+            type="search"
+            value={giftSearch}
+            onChange={(e) => setGiftSearch(e.target.value)}
+            placeholder="Search email, name, fund, or pi_/cs_ id"
+            aria-label="Search gifts by sender, fund, or Stripe id"
+            className="h-8 w-64 rounded-lg border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            data-testid="input-gifts-search"
+          />
           <button
             onClick={handleExportGifts}
             className="text-xs text-primary hover:underline"
