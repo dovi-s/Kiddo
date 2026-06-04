@@ -377,11 +377,17 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
           {childName} reads these for years. The family reviews notes before they appear.
         </p>
       </div>
+      {/* aria-labels: placeholder-only inputs lose their accessible name the
+          moment the user types (and screen readers treat placeholders
+          unevenly). autoComplete lets the browser fill name/email in one tap;
+          this is a no-account guest form, so every keystroke saved matters. */}
       <input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Your name"
+        aria-label="Your name"
+        autoComplete="name"
         maxLength={80}
         className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
         data-testid="input-guestbook-name"
@@ -390,6 +396,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder={`From you to ${childName}...`}
+        aria-label={`Your note for ${childName}`}
         rows={3}
         maxLength={500}
         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary resize-none"
@@ -400,6 +407,8 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Email (optional)"
+        aria-label="Email (optional)"
+        autoComplete="email"
         maxLength={254}
         className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
         data-testid="input-guestbook-email"
