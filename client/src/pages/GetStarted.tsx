@@ -1119,7 +1119,35 @@ export default function GetStarted() {
                   <p className="mt-1 text-sm text-muted-foreground">Let's build something incredible for {name}.</p>
                 </AnimatedBlock>
               )}
-              <Dock primary={<Button onClick={() => void handleContinue()} disabled={!canContinue || creating} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-details-continue">{isLastStep ? (creating ? "Creating fund..." : "Create fund and get gift link") : "Continue"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
+              {/* Blocked-tap telemetry (audit catch 2026-06-04): a disabled
+                  button swallows clicks, so "1,000 parents stuck on the
+                  details step missing field Y" was invisible to analytics.
+                  The capture-phase wrapper sees the tap the button can't,
+                  names the missing fields, and throttles to once per step
+                  per session — diagnosis, not keystroke surveillance. */}
+              <Dock primary={
+                <span
+                  onClickCapture={() => {
+                    if (canContinue || creating) return;
+                    try {
+                      const k = "kiddo.onboarding.blockedSignal.details";
+                      if (window.sessionStorage.getItem(k)) return;
+                      window.sessionStorage.setItem(k, "1");
+                      const missing: string[] = [];
+                      if (country !== "US") missing.push("country");
+                      if (!name.trim()) missing.push("name");
+                      if (accountType === "child") {
+                        if (!birthdate || dobIssue) missing.push("birthdate");
+                        if (!occasion) missing.push("occasion");
+                        if (!gifterAudience) missing.push("gifterAudience");
+                      }
+                      void trackOnboardingSignal("cta_click", "onboarding_blocked_details", { missing: missing.join(",") });
+                    } catch { /* telemetry only */ }
+                  }}
+                >
+                  <Button onClick={() => void handleContinue()} disabled={!canContinue || creating} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-details-continue">{isLastStep ? (creating ? "Creating fund..." : "Create fund and get gift link") : "Continue"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>
+                </span>
+              } />
             </div>
           </Shell>
         )}
@@ -1128,7 +1156,26 @@ export default function GetStarted() {
           <Shell key="projection" back={goBack} progress={progress} direction={direction}>
             <div className="flex flex-1 flex-col">
               <AnimatedBlock>
-                <ScreenLead title={accountType === "personal" ? "Here is what your gifts could become." : `Here is what starting today looks like for ${displayName}.`} />
+                {/* Occasion-personalized aha moment (audit catch 2026-06-04:
+                    the occasion the parent JUST chose was collected and then
+                    ignored by the very next screen). The math stays the
+                    honest $X/yr slider — the occasion line gives that number
+                    a mental model: "$300/yr" is abstract; "one birthday's
+                    worth of gifts, every year" is the family they actually
+                    have. Personalized-outcome framing is the documented
+                    5-20% conversion lever this step exists for. */}
+                <ScreenLead
+                  title={accountType === "personal" ? "Here is what your gifts could become." : `Here is what starting today looks like for ${displayName}.`}
+                  description={accountType === "child"
+                    ? occasion === "Birthday"
+                      ? "Think of it as one birthday's worth of gifts, arriving every year."
+                      : occasion === "Holiday"
+                        ? "Think of it as one holiday season's worth of gifts, arriving every year."
+                        : occasion === "Just because"
+                          ? "No occasion required. Steady gifts, year after year."
+                          : undefined
+                    : undefined}
+                />
               </AnimatedBlock>
               <AnimatedBlock className="mt-6 space-y-3">
                 <div className="flex flex-wrap gap-2">{onboardingAnnualGiftOptions.map((amount) => <button key={amount} onClick={() => { haptic("selection"); setAnnualGift(amount); }} className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${annualGift === amount ? "bg-primary text-primary-foreground shadow-premium-sm" : "bg-card text-foreground"}`} data-testid={`projection-amount-${amount}`}>${amount.toLocaleString()}/yr</button>)}</div>

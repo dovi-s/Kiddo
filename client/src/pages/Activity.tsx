@@ -1946,6 +1946,24 @@ export default function Activity() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgb(140,130,122)" }}>
                   Money summary
+                  {/* All-time anchor (2026-06-04): a quiet 30-day window on a
+                      worn fund ("3 gifts") read as a bug against a 134-gift
+                      lifetime — founder hit exactly this. One muted count
+                      keeps the narrow lens from looking broken. Rendered
+                      only when the lifetime story is meaningfully bigger
+                      than the window's. */}
+                  {(() => {
+                    const allTimeGifts = allVisible.filter((i) => {
+                      const t = normalizeActivityType(i.type);
+                      if (t !== "gift_received" && t !== "gift_received_cash" && t !== "large_gift_hold_started") return false;
+                      return !isParentGift(i);
+                    }).length;
+                    return allTimeGifts > Math.max(last30GiftsCount * 2, 5) ? (
+                      <span style={{ fontWeight: 600, letterSpacing: 0, textTransform: "none", color: "rgba(140,130,122,0.8)" }}>
+                        {" "}· {allTimeGifts.toLocaleString("en-US")} gifts all-time
+                      </span>
+                    ) : null;
+                  })()}
                 </p>
                 <select
                   value={summaryPeriod}
