@@ -133,6 +133,10 @@ export default function ClaimFund() {
         <div className="max-w-md w-full bg-white border border-border/60 rounded-2xl p-6 text-center shadow-sm">
           <p className="text-sm font-semibold text-foreground mb-2">Open this from your Kid View.</p>
           <p className="text-xs text-muted-foreground">The claim link needs to come from inside your unlocked Kid View page so we know it's actually you.</p>
+          {/* Re-entry path (audit catch 2026-06-04): the unlock expires after
+              ~12 hours, and a kid landing here with a stale token had no next
+              step — a dead-end on the single most important flow. */}
+          <p className="text-xs text-muted-foreground mt-2">If you unlocked it earlier, the unlock may have expired. Open your Kid View link again, enter your PIN, and tap the claim button from there.</p>
         </div>
       </div>
     );
@@ -347,6 +351,19 @@ export default function ClaimFund() {
             Set up your own login. The fund moves from your custodian to you. Nothing gets sold. The investments stay where they are. You decide what happens next.
           </motion.p>
 
+          {/* The sober line before the warm form (audit catch 2026-06-04):
+              claiming is a one-way legal action and the flow said so
+              nowhere. One sentence, plain register, no scare styling —
+              informed beats ambushed. */}
+          <motion.p
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.34 }}
+            className="text-xs text-muted-foreground/80 leading-relaxed mb-5"
+          >
+            One thing to know first: claiming is permanent. The account becomes yours alone, and it can't be handed back to your custodian afterward.
+          </motion.p>
+
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label htmlFor="claim-input-first-name" className="text-xs font-semibold text-foreground mb-1 block">Your name</label>
@@ -400,6 +417,14 @@ export default function ClaimFund() {
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" data-testid="claim-error" role="alert" aria-live="polite">
                 {error}
+                {/* Next step travels WITH the error (audit 2026-06-04):
+                    the most common failure is an expired unlock, and the
+                    recovery lives on a different page — say so here, where
+                    screen readers announce it, instead of relying on the
+                    reassurance bullets below the fold. */}
+                <span className="block mt-1 text-red-700/80">
+                  Stuck? Open your Kid View link again, enter your PIN, and tap the claim button from there. Or email support@kiddofund.com.
+                </span>
               </div>
             )}
 

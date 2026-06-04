@@ -74,7 +74,7 @@ export default function Age18() {
   usePageSeo({
     title: "What happens when your child turns 18 | Kiddo",
     description:
-      "At 18, the fund becomes hers. Here is exactly what happens legally, what she receives, and how Kiddo makes the handoff matter.",
+      "At 18, the fund becomes theirs. Here is exactly what happens legally, what your child receives, and how Kiddo makes the handoff matter.",
     ogType: "article",
   });
 
@@ -111,11 +111,18 @@ export default function Age18() {
       <section className="pt-24 pb-14 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-5xl px-4 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Age-18 transition</p>
+          {/* "theirs", not "hers" (2026-06-04): the hero + meta are the
+              impression-setters on a public page about EVERY family's kid;
+              a generic-she H1 reads as not-for-you to half the audience.
+              Named-example sections below keep their pronouns. The early
+              "(some states say 19 or 21)" hedge keeps the 18 shorthand
+              honest before nine more instances of it land; the full state
+              note stays at the bottom. */}
           <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-            At 18, the fund becomes hers.
+            At 18, the fund becomes theirs.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-            Everything her family built. Every gift. Every note. Every investment. Hers. Here is exactly what happens and how Kiddo makes it matter.
+            Everything their family built. Every gift. Every note. Every investment. Theirs. Here is exactly what happens and how Kiddo makes it matter. (In some states the age is 19 or 21; the handoff works the same way.)
           </p>
           <div className="mx-auto mt-8 max-w-3xl rounded-[28px] border border-border bg-card px-6 py-6 text-left shadow-premium-sm">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Most platforms do nothing at 18</p>

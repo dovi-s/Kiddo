@@ -901,7 +901,11 @@ export default function KidView() {
             {[
               { value: cleanedGifts.length, label: "gifts\nreceived" },
               { value: uniqueGifters, label: "people\ngave" },
-              { value: timeUntil18Display, label: "until you\ndecide" },
+              // "until it's yours", not "until you decide" — ownership
+              // framing (terminology locked 2026-06-04): the fact is the
+              // fund TRANSFERS at majority; "you decide" overstated a
+              // minor's autonomy on a custodial asset.
+              { value: timeUntil18Display, label: "until it's\nyours" },
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -1568,7 +1572,10 @@ export default function KidView() {
                         placeholder="Why does this company matter to you?"
                         className="min-h-[110px] w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
                       />
-                      <Button className="w-full" onClick={handleSuggestStock} disabled={savingSuggestion}>
+                      {/* Disabled-on-empty parity with the younger form's
+                          button — previously a teen could tap Send with a
+                          blank ticker and eat a server 400. */}
+                      <Button className="w-full" onClick={handleSuggestStock} disabled={savingSuggestion || !suggestionTicker.trim()}>
                         {savingSuggestion ? "Saving..." : "Send suggestion"}
                       </Button>
                     </div>
