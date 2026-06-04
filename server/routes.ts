@@ -2235,15 +2235,15 @@ export async function registerRoutes(
 
   const ensureFundSlugAndPermanentEvent = async (fund: any, userId: string) => {
     let ensuredFund = fund;
-    const desiredSlugSource =
-      String(ensuredFund.slug || "").trim() ||
-      String(ensuredFund.name || ensuredFund.recipientFirstName || "fund");
-    const desiredSlug = slugify(desiredSlugSource);
-    const canonicalSlugOwner = desiredSlug ? await storage.getFundBySlug(desiredSlug) : null;
-    if (
-      !desiredSlug ||
-      (canonicalSlugOwner && canonicalSlugOwner.id !== ensuredFund.id)
-    ) {
+    // Fast path (2026-06-04 perf): a fund that already HAS a slug skips the
+    // getFundBySlug collision round trip. Slugs are minted unique at creation
+    // (generateUniqueFundSlug), so an existing slug is already canonical; the
+    // collision re-check only ever mattered for the empty-slug / legacy case,
+    // which still runs the full path. Steady state for every demo fund and
+    // almost every real fund — one fewer remote-DB round trip per fund.
+    const existingSlug = String(ensuredFund.slug || "").trim();
+    if (!existingSlug) {
+      const desiredSlug = slugify(String(ensuredFund.name || ensuredFund.recipientFirstName || "fund"));
       const slug = await generateUniqueFundSlug(
         desiredSlug || String(ensuredFund.name || ensuredFund.recipientFirstName || "fund"),
         ensuredFund.id,

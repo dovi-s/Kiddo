@@ -61,26 +61,38 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
     try {
       const userId = (req.user as any).id;
       const userEmail = String((req.user as any).email || "").trim().toLowerCase();
-      let funds = await storage.getFundsByUser(userId);
-      // Merge in transferred funds (where the user is the previous
-      // custodian and the kid has claimed). Per FUND_STATES_SPEC.md
-      // item 4: post-handoff, the fund stays in the parent's list
-      // but renders read-only with a "Transferred" pill. Without this
-      // merge the fund disappears entirely from the parent's view
-      // once fund.userId flips to the kid. The append is at the END
-      // of the active list (after the dedupe-on-email merge below)
-      // so active funds stay top-of-list and transferred ones sit
-      // beneath them.
-      const previouslyOwned = await storage.getPreviouslyOwnedFundsByUser(userId);
+      // The four independent preamble reads ran SERIALLY (~5 remote-DB round
+      // trips before the per-fund loop even started — a big chunk of this
+      // endpoint's latency, which every demo login hits first). Fetch them
+      // CONCURRENTLY. 2026-06-04 perf:
+      //   - own funds
+      //   - transferred ("previously owned") funds — kept in the parent's list
+      //     read-only post-handoff per FUND_STATES_SPEC.md item 4
+      //   - accepted collaborator rows (co-parent access; merged below)
+      //   - dup-email candidate user rows (canonical merge below)
+      const [ownFunds, previouslyOwned, collaboratorRows, emailCandidates] = await Promise.all([
+        storage.getFundsByUser(userId),
+        storage.getPreviouslyOwnedFundsByUser(userId),
+        db.select({ fundId: fundCollaborators.fundId, role: fundCollaborators.role })
+          .from(fundCollaborators)
+          .where(and(eq(fundCollaborators.userId, userId), eq(fundCollaborators.status, "accepted")))
+          .catch((err) => { console.warn("[funds] collaborator rows fetch skipped:", (err as any)?.message || err); return [] as Array<{ fundId: string | null; role: string | null }>; }),
+        userEmail
+          ? db.select({ id: users.id, createdAt: users.createdAt }).from(users).where(sql`LOWER(${users.email}) = ${userEmail}`)
+              .catch((err) => { console.warn("[funds] canonical candidates skipped:", (err as any)?.message || err); return [] as Array<{ id: string; createdAt: Date | null }>; })
+          : Promise.resolve([] as Array<{ id: string; createdAt: Date | null }>),
+      ]);
+      let funds = ownFunds;
 
-      if (userEmail) {
+      // Canonical-email merge ONLY runs when there are DUPLICATE user rows
+      // sharing this email (rare — real dup-account artifacts). For the common
+      // single-row case (every demo persona, almost every real user), ownFunds
+      // is already correct, so skip the redundant per-candidate re-fetch of the
+      // SAME user's funds. 2026-06-04 perf.
+      if (userEmail && emailCandidates.some((c) => String(c.id) !== String(userId))) {
         try {
-          const candidates = await db
-            .select({ id: users.id, createdAt: users.createdAt })
-            .from(users)
-            .where(sql`LOWER(${users.email}) = ${userEmail}`);
-
-          if (candidates.length >= 1) {
+          const candidates = emailCandidates;
+          {
             const allFunds = await Promise.all(
               candidates.map(async (candidate) => {
                 const candidateFunds = await storage.getFundsByUser(candidate.id);
@@ -130,13 +142,7 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // would happily grant them access. Locked 2026-05-21 after the
       // Dunphy demo's Claire account exposed this gap end-to-end.
       try {
-        const collaboratorRows = await db
-          .select({ fundId: fundCollaborators.fundId, role: fundCollaborators.role })
-          .from(fundCollaborators)
-          .where(and(
-            eq(fundCollaborators.userId, userId),
-            eq(fundCollaborators.status, "accepted"),
-          ));
+        // collaboratorRows is fetched in the batched Promise.all above.
         const roleByFundId = new Map(
           collaboratorRows.map((row) => [String(row.fundId || ""), String(row.role || "")]),
         );
@@ -181,18 +187,38 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       const activeIds = new Set(funds.map((f: any) => String(f?.id || "")));
       const transferredOnly = previouslyOwned.filter((f: any) => !activeIds.has(String(f?.id || "")));
 
+      // captureFundSnapshot is the HEAVY part of the per-fund loop (~5 round
+      // trips: balance-heal UPDATE + all-snapshot backfill UPDATE + existence
+      // SELECT + upsert), but it only needs to run ONCE per fund per day. One
+      // batch query tells us which funds already have today's snapshot, so a
+      // same-day repeat load — and EVERY demo persona, whose seed writes
+      // snapshots through today — skips it entirely. It stays the daily trigger
+      // for view-only funds that don't yet have today's snapshot. 2026-06-04 perf.
+      const fundIdsForSnapshot = funds.map((f: any) => String(f?.id || "")).filter(Boolean);
+      const fundsWithTodaySnapshot = new Set<string>();
+      if (fundIdsForSnapshot.length > 0) {
+        try {
+          const idsSql = sql.join(fundIdsForSnapshot.map((id) => sql`${id}`), sql`, `);
+          const snapRows: any = await db.execute(sql`
+            SELECT DISTINCT fund_id FROM fund_snapshots
+            WHERE fund_id IN (${idsSql}) AND snapshot_date::date = CURRENT_DATE
+          `);
+          for (const r of (snapRows.rows as any[]) || []) fundsWithTodaySnapshot.add(String(r.fund_id));
+        } catch (err) {
+          console.warn("[funds] today-snapshot check skipped:", (err as any)?.message || err);
+        }
+      }
+
       // Per-fund setup runs CONCURRENTLY (2026-06-04 perf). Each fund's
       // slug-ensure + permanent-event + snapshot touches only that fund's own
-      // rows, so there's no cross-fund contention — but the old serial loop
-      // paid ~7 remote-DB round trips PER fund in sequence (the dominant cost
-      // of this endpoint: measured 4.4s for 3 funds). Promise.all collapses it
-      // to ~7 round trips wall-clock regardless of fund count. Order is
-      // preserved by map (results land in the same index as their input).
+      // rows, so there's no cross-fund contention. Order is preserved by map.
       const ensuredFunds: any[] = await Promise.all(
         funds.map(async (fund: any) => {
           try {
             const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
-            await captureFundSnapshot(ensured.id);
+            if (!fundsWithTodaySnapshot.has(String(ensured.id))) {
+              await captureFundSnapshot(ensured.id);
+            }
             return ensured;
           } catch (err) {
             console.error("Failed to ensure fund setup:", fund.id, err);
