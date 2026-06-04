@@ -574,7 +574,7 @@ export default function TaxDocuments() {
             </div>
           ) : (
             <div className="kiddo-card overflow-hidden">
-              <div className="hidden md:grid md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.4)] border-b border-[hsl(var(--kiddo-border))]">
+              <div className="hidden md:grid md:grid-cols-[72px_1fr_72px_96px_104px_110px] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.4)] border-b border-[hsl(var(--kiddo-border))]">
                 <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ticker</div>
                 <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Position</div>
                 <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Shares</div>
@@ -585,7 +585,7 @@ export default function TaxDocuments() {
               {basisRows.map((r, i) => (
                 <div
                   key={r.ticker}
-                  className={`grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-3 ${i < basisRows.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""}`}
+                  className={`grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_72px_96px_104px_110px] gap-3 px-4 py-3 ${i < basisRows.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""}`}
                 >
                   <div className="hidden md:flex items-center">
                     <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
@@ -625,7 +625,7 @@ export default function TaxDocuments() {
                   </div>
                 </div>
               ))}
-              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
+              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_72px_96px_104px_110px] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
                 <div className="hidden md:block" />
                 <div className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">Total</div>
                 <div className="hidden md:block" />
@@ -746,7 +746,7 @@ export default function TaxDocuments() {
                   as the cost-basis table above. Pre-migration sales
                   surface NULL realizedGain as "—" so the user knows
                   the data exists but isn't computed for that row. */}
-              <div className="hidden md:grid md:grid-cols-[80px_1fr_auto_auto_auto_110px] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.2)] border-b border-[hsl(var(--kiddo-border))]">
+              <div className="hidden md:grid md:grid-cols-[72px_1fr_100px_100px_104px_110px] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.2)] border-b border-[hsl(var(--kiddo-border))]">
                 <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ticker</div>
                 <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Date</div>
                 <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Proceeds</div>
@@ -778,7 +778,7 @@ export default function TaxDocuments() {
                 return (
                   <div
                     key={s.id}
-                    className={`grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_110px] gap-3 px-4 py-3 ${
+                    className={`grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_100px_100px_104px_110px] gap-3 px-4 py-3 ${
                       i < realizedSales.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""
                     }`}
                     data-testid={`realized-sale-${s.id}`}
@@ -820,7 +820,7 @@ export default function TaxDocuments() {
                   </div>
                 );
               })}
-              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_110px] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
+              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_100px_100px_104px_110px] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
                 <div className="hidden md:block" />
                 <div className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">Total realized · {yearFilter}</div>
                 <div className="hidden md:block" />
