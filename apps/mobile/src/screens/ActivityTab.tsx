@@ -9,7 +9,7 @@ import React, { useMemo } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
-import { KText, KiddoCard, Button, Skeleton } from "../ui";
+import { KText, KiddoCard, Button, Skeleton, Appear } from "../ui";
 import { formatBalance, type ApiFund, type DashboardSummary, type DashboardTransaction } from "../api";
 
 function childNameOf(fund?: ApiFund | null): string {
@@ -108,15 +108,17 @@ export function ActivityTab({ activeFund, summary, loading, refreshing, onRefres
       refreshControl={refresh}
     >
       {/* balance header */}
-      <KiddoCard>
-        <KText variant="sectionLabel" color={semanticColors.text.muted}>{childName}'s fund</KText>
-        <KText variant="display" tabular style={{ fontSize: 38, lineHeight: 44, marginTop: 2 }}>
-          {formatBalance(activeFund.balance)}
-        </KText>
-        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: 2 }}>
-          Worth today, held in {childName}'s name.
-        </KText>
-      </KiddoCard>
+      <Appear delay={0}>
+        <KiddoCard>
+          <KText variant="sectionLabel" color={semanticColors.text.muted}>{childName}'s fund</KText>
+          <KText variant="display" tabular style={{ fontSize: 38, lineHeight: 44, marginTop: 2 }}>
+            {formatBalance(activeFund.balance)}
+          </KText>
+          <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: 2 }}>
+            Worth today, held in {childName}'s name.
+          </KText>
+        </KiddoCard>
+      </Appear>
 
       <KText variant="sectionLabel" color={semanticColors.text.muted}>All activity</KText>
 

@@ -12,6 +12,7 @@ import { KText, KiddoCard, Button, haptic } from "../ui";
 import { formatBalance, WEB_BASE, type ApiFund, type ApiEvent, type DashboardGift } from "../api";
 import { looksLikeTestSender } from "../lib/gifters";
 import { isReadOnlyFund } from "../lib/fund";
+import { Appear } from "../ui";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -97,6 +98,7 @@ export function GiftTab({
       refreshControl={refresh}
     >
       {/* hero */}
+      <Appear delay={0}>
       <KiddoCard variant="hero">
         <KText variant="eyebrow" color="#F8D889">Gift link</KText>
         <KText variant="title" color="#FFF7E8" style={{ marginTop: 4 }}>
@@ -131,6 +133,7 @@ export function GiftTab({
           </KText>
         )}
       </KiddoCard>
+      </Appear>
 
       {/* occasions */}
       {!isReadOnly ? (

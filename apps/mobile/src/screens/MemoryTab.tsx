@@ -11,7 +11,7 @@ import { Alert, Image, Pressable, RefreshControl, ScrollView, View } from "react
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
-import { KText, KiddoCard, KInput, Button, Skeleton, haptic } from "../ui";
+import { KText, KiddoCard, KInput, Button, Skeleton, haptic, Appear } from "../ui";
 import { API_BASE, formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
 import { isReadOnlyFund } from "../lib/fund";
 
@@ -97,6 +97,7 @@ export function MemoryTab({
       refreshControl={refresh}
     >
       {/* cover */}
+      <Appear delay={0}>
       <KiddoCard variant="hero">
         <KText variant="eyebrow" color="#F8D889">Memory Book</KText>
         <KText variant="title" color="#FFF7E8" style={{ marginTop: 4 }}>
@@ -113,6 +114,7 @@ export function MemoryTab({
           </View>
         ) : null}
       </KiddoCard>
+      </Appear>
 
       {/* composer — write a note / add a photo (owner / co-admin only) */}
       {activeFund && !isReadOnly && onAddNote ? (
