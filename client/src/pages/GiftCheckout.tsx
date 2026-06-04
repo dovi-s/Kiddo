@@ -290,7 +290,7 @@ const getSuggestedStock = (eventType?: string, themeId?: string) => {
 // post-send recovery uses — "every giving flow exposes the full trio,
 // voice is the moat") into this form behind that flag. Until then, no
 // hidden dead UI ships.
-function GuestbookNoteCard({ fundId, childName }: { fundId?: string | null; childName: string }) {
+function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: string | null; childName: string; onAddGiftToo?: (name: string, email: string) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -337,7 +337,16 @@ function GuestbookNoteCard({ fundId, childName }: { fundId?: string | null; chil
         </p>
         <button
           type="button"
-          onClick={() => { haptic("selection"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          onClick={() => {
+            haptic("selection");
+            // Carry the guest's identity into the gift form — the warmest
+            // convert in the funnel should never retype their own name.
+            // (Their note is already in the pending tray; we deliberately
+            // do NOT copy it into the gift message — that would hand the
+            // family a duplicate to moderate.)
+            onAddGiftToo?.(name.trim(), email.trim());
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           className="mt-3 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2"
           data-testid="guestbook-add-gift-too"
         >
@@ -2939,7 +2948,18 @@ export default function GiftCheckout() {
                   event has guests who came to celebrate, not to transact;
                   the anytime page keeps its single-purpose gift focus). */}
               {eventData?.event && !eventData.event.isPermanent && (
-                <GuestbookNoteCard fundId={eventData?.fund?.id} childName={recipientName} />
+                <GuestbookNoteCard
+                  fundId={eventData?.fund?.id}
+                  childName={recipientName}
+                  // Second-beat prefill: the guest already typed who they are;
+                  // the gift form opens with name + email filled (only filling
+                  // empty fields would be over-caution — it's the same person
+                  // seconds later).
+                  onAddGiftToo={(name, email) => {
+                    if (name) setSenderName(name);
+                    if (email) setSenderEmail(email);
+                  }}
+                />
               )}
 
               <footer className="pb-8 pt-2 text-center space-y-3">
