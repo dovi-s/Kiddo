@@ -101,6 +101,11 @@ export function RecurringRequestsNudge({
       if (!a?.metadata) continue;
       try {
         const meta = JSON.parse(a.metadata as string);
+        // Fulfilled requests (the worker emailed the gifter after a prior
+        // upgrade stamped resolvedAt) don't count toward the nudge — guards
+        // the downgrade case, where old already-answered asks would
+        // otherwise resurrect the "2 gifters want monthly" card.
+        if (meta?.resolvedAt) continue;
         const email = String(meta?.gifterEmail || "").trim().toLowerCase();
         const name = String(meta?.gifterName || "").trim() || "Someone";
         if (!email || byEmail.has(email)) continue;

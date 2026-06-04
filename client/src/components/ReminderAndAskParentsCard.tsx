@@ -239,7 +239,12 @@ export function ReminderAndAskParentsCard({
               <Check size={14} strokeWidth={2.5} />
             </div>
             <div className="flex-1 text-xs text-foreground leading-relaxed">
-              We let {safeChildName}'s family know you'd love to give monthly. The decision is theirs; we'll never pressure them.
+              {/* "we'll email you" is a REAL promise: the recurring-request
+                  fulfillment pass in recurringContributionWorker emails this
+                  gifter when the fund's coverage flips recurring on. Added
+                  2026-06-03 with that worker — don't soften one without the
+                  other. */}
+              We let {safeChildName}'s family know you'd love to give monthly. The decision is theirs; we'll never pressure them. If they turn it on, we'll email you.
             </div>
           </div>
         ) : askOpen === "idle" ? (

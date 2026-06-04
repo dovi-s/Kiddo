@@ -7,6 +7,7 @@ import { buildParentHandoffRecurringEmail } from './templates/parentHandoffRecur
 import { getUncachableStripeClient } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { buildReminderStopUrl } from './reminderStopToken';
+import { getFundCoverageState } from './services/monetization';
 
 type LogFn = (message: string, source?: string) => void;
 
@@ -888,6 +889,121 @@ async function processGifterRecurringDunning(log: LogFn): Promise<void> {
   }
 }
 
+// Close the recurring-request loop. When a gifter on a free fund clicks
+// "ask the family to enable monthly," a `recurring_request` activity row is
+// written and the parent gets a nudge — but until 2026-06-03 NOTHING told
+// the gifter when the parent actually upgraded: their raised hand just
+// rotted. This pass scans unresolved requests on funds that NOW support
+// recurring and emails each waiting gifter once ("you can set up your
+// recurring gift now"), converting the parent's upgrade directly into the
+// gifter activation it was asked for — the highest-intent conversion signal
+// in the gifter funnel finally gets its callback.
+//
+// Worker-pass (not webhook-hook) BY DESIGN: coverage can flip on via Stripe
+// subscription, sponsorship purchase, plan change, or post-handoff — one
+// scan catches every path with one code path. Resolution is recorded in the
+// activity row's own metadata (resolvedAt — no schema change), marked
+// BEFORE sending (same crash-safe discipline as the reminder sender), and
+// deduped per fund+email so a twice-asking gifter gets one email.
+async function processRecurringRequestFulfillment(log: LogFn): Promise<void> {
+  const result = await pool.query<Record<string, any>>(`
+    SELECT
+      a.id, a.fund_id, a.metadata,
+      f.user_id AS fund_user_id, f.slug AS fund_slug,
+      f.name AS fund_name, f.recipient_first_name, f.transferred_at
+    FROM activities a
+    JOIN funds f ON f.id = a.fund_id
+    WHERE a.type = 'recurring_request'
+      AND f.status = 'active'
+      -- A year-old ask answered out of nowhere reads as zombie automation;
+      -- older requests stay quietly unresolved.
+      AND a.created_at > NOW() - INTERVAL '365 days'
+      AND (a.metadata IS NULL OR a.metadata NOT LIKE '%"resolvedAt"%')
+    ORDER BY a.created_at ASC
+    LIMIT 50
+  `);
+  if (result.rows.length === 0) return;
+
+  // Coverage computed once per fund (the rows cluster by fund).
+  const supportedByFund = new Map<string, boolean>();
+  const emailedKeys = new Set<string>();
+  let sent = 0;
+
+  for (const row of result.rows) {
+    try {
+      const fundId = String(row.fund_id);
+      let supported = supportedByFund.get(fundId);
+      if (supported === undefined) {
+        if (row.transferred_at) {
+          supported = true; // post-handoff owner funds support recurring, free
+        } else {
+          const coverage = await getFundCoverageState(String(row.fund_user_id), fundId);
+          supported = coverage === 'covered_family' || coverage === 'covered_starter' || coverage === 'trial_active';
+        }
+        supportedByFund.set(fundId, supported);
+      }
+      if (!supported) continue;
+
+      let meta: any = {};
+      try { meta = JSON.parse(String(row.metadata || '{}')) || {}; } catch { meta = {}; }
+      const gifterEmail = String(meta.gifterEmail || '').trim().toLowerCase();
+      const gifterName = String(meta.gifterName || '').trim() || 'there';
+
+      // Mark resolved FIRST (crash-safe: a crash after this loses one email,
+      // never double-sends), and regardless of email validity so malformed
+      // rows don't get rescanned forever.
+      await pool.query(
+        `UPDATE activities SET metadata = $1 WHERE id = $2`,
+        [JSON.stringify({ ...meta, resolvedAt: new Date().toISOString() }), row.id],
+      );
+      if (!gifterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gifterEmail)) continue;
+
+      const key = `${fundId}:${gifterEmail}`;
+      if (emailedKeys.has(key)) continue; // same gifter asked twice → one email
+      emailedKeys.add(key);
+
+      const childName = String(row.recipient_first_name || row.fund_name || 'the child');
+      const giftUrl = row.fund_slug
+        ? `${getBaseUrl()}/${String(row.fund_slug)}`
+        : `${getBaseUrl()}/gift/${fundId}`;
+      const firstName = gifterName.split(' ')[0] || 'there';
+      const intro = [
+        `Hi ${firstName},`,
+        '',
+        `You asked to give to ${childName} on a schedule, and we promised to let you know.`,
+        `Good news: ${childName}'s family turned on recurring contributions. You can set yours up any time from the gift page — pick the amount and cadence, cancel whenever you like.`,
+      ].join('\n');
+      const { html } = renderKiddoEmail({
+        heading: `You can set up your recurring gift to ${childName}`,
+        intro,
+        cta: { text: `Set up your recurring gift`, url: giftUrl },
+      });
+      await sendEmail({
+        to: gifterEmail,
+        subject: `Good news — you can now give to ${childName} monthly`,
+        text: [
+          `Hi ${firstName},`,
+          '',
+          `You asked to give to ${childName} on a schedule, and we promised to let you know.`,
+          `Good news: ${childName}'s family turned on recurring contributions. Set yours up any time — pick the amount and cadence, cancel whenever you like.`,
+          '',
+          `Set it up: ${giftUrl}`,
+          '',
+          '— The Kiddo team',
+        ].join('\n'),
+        html,
+        tags: ['recurring_request_fulfilled'],
+        metadata: { fundId, activityId: String(row.id) },
+      });
+      sent += 1;
+      log(`recurring-request fulfilled: emailed ${gifterEmail} for fund ${fundId}`, WORKER_SOURCE);
+    } catch (err) {
+      log(`recurring-request fulfillment error for activity ${String(row.id)}: ${String(err)}`, WORKER_SOURCE);
+    }
+  }
+  if (sent > 0) log(`recurring-request fulfillment: ${sent} gifter(s) notified`, WORKER_SOURCE);
+}
+
 export async function runRecurringContributionWorker(log: LogFn = () => undefined): Promise<void> {
   if (workerRunning) return;
   workerRunning = true;
@@ -895,6 +1011,7 @@ export async function runRecurringContributionWorker(log: LogFn = () => undefine
     await processParentContributions(log);
     await processGifterRecurring(log);
     await processGifterRecurringDunning(log);
+    await processRecurringRequestFulfillment(log);
     await processAnniversaryMilestones(log);
   } catch (err) {
     log(`recurring contribution worker failed: ${String(err)}`, WORKER_SOURCE);
