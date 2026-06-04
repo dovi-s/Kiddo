@@ -30,7 +30,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
-import { KText, KiddoCard, Button, Skeleton, haptic } from "../ui";
+import { KText, KiddoCard, Button, Skeleton, haptic, Appear } from "../ui";
 import { projectFundValue, ageFromBirthdate } from "../lib/projection";
 import { looksLikeTestSender } from "../lib/gifters";
 import { isReadOnlyFund, isOwnerModeFund } from "../lib/fund";
@@ -497,6 +497,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
       })()}
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <Appear delay={0}>
       <KiddoCard variant="hero">
         {/* identity row */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -564,6 +565,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
           ) : null}
         </View>
       </KiddoCard>
+      </Appear>
 
       {/* ── first-gift nudge (only before the fund is funded) ──────────────── */}
       {!hasStarted && !isReadOnly ? (
@@ -582,18 +584,20 @@ export function FundHomeTab(props: FundHomeTabProps) {
 
       {/* ── recurring chip ─────────────────────────────────────────────────── */}
       {hasStarted && !isReadOnly ? (
-        <RecurringChip
-          activeCount={d.activeRecurring.length}
-          pausedCount={d.pausedRecurring.length}
-          monthly={d.monthlyRecurring}
-          enabled={d.recurringEnabled}
-          onPress={() => onSelectFund(activeFund)}
-        />
+        <Appear delay={80}>
+          <RecurringChip
+            activeCount={d.activeRecurring.length}
+            pausedCount={d.pausedRecurring.length}
+            monthly={d.monthlyRecurring}
+            enabled={d.recurringEnabled}
+            onPress={() => onSelectFund(activeFund)}
+          />
+        </Appear>
       ) : null}
 
       {/* ── 30-day / fund-so-far summary ───────────────────────────────────── */}
       {hasStarted ? (
-        <View>
+        <Appear delay={160}>
           <SectionLabel>{isOwnerMode ? "Your fund so far" : `${childName}'s fund so far`} 🌱</SectionLabel>
           <KiddoCard>
             {!summaryReady ? (
@@ -641,7 +645,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
               </KText>
             </View>
           </KiddoCard>
-        </View>
+        </Appear>
       ) : null}
 
       {/* ── cash waiting (informational; cash auto-invests, no action needed) ── */}
@@ -658,7 +662,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
       ) : null}
 
       {/* ── quick links ────────────────────────────────────────────────────── */}
-      <View style={{ flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" }}>
+      <Appear delay={240} style={{ flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" }}>
         {!isReadOnly ? (
           <QuickLink icon="share-social" label="Share link" gold onPress={handleShare} />
         ) : null}
@@ -673,7 +677,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
             onPress={onCreateEvent}
           />
         ) : null}
-      </View>
+      </Appear>
 
       {/* ── growth chart (only with real summary data; skeleton while pending) ── */}
       {hasStarted && summaryReady ? (
