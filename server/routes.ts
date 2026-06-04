@@ -63,6 +63,7 @@ import {
   logMonetizationActivity,
   invalidateMonetizationStateCache,
 } from "./services/monetization";
+import { verifyReminderStopSignature } from "./reminderStopToken";
 import { z } from "zod";
 import { getMobilePushSettings, queueMobilePush, registerMobilePushDevice, updateMobilePushSettings } from "./mobilePushWorker";
 import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllocations } from "./fundStrategyConfig";
@@ -14856,6 +14857,57 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error creating gift reminder:', error);
       res.status(500).json({ error: 'Failed to save reminder' });
+    }
+  });
+
+  // One-click stop for reminder-only recurring_gifts (the signed link in
+  // every reminder email, also the RFC 8058 List-Unsubscribe target).
+  // PUBLIC + unauthenticated BY DESIGN: reminder signup creates no user
+  // account, so the gifter has no login to gate on — the HMAC signature
+  // (reminderStopToken.ts, keyed by SESSION_SECRET over id:email) is the
+  // auth. Idempotent; GET because it's an email click. Returns a minimal
+  // branded HTML page, not JSON — the clicker is a human in a mail app.
+  // Added 2026-06-03: without this, "Unsubscribe any time" had no
+  // implementing mechanism for account-less reminder gifters.
+  app.get('/api/recurring-gifts/:id/stop', async (req: any, res) => {
+    const page = (title: string, body: string) =>
+      `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${title} | Kiddo</title></head>` +
+      `<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAF7F2;color:#1A1710;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;">` +
+      `<div style="max-width:420px;text-align:center;"><p style="font-size:22px;font-weight:700;margin:0 0 10px;">${title}</p><p style="font-size:15px;line-height:1.6;color:rgba(26,23,16,0.65);margin:0;">${body}</p></div></body></html>`;
+    try {
+      const scheduleId = String(req.params.id || "").trim();
+      const email = String(req.query.e || "").trim().toLowerCase();
+      const sig = String(req.query.sig || "");
+      if (!scheduleId || !email || !verifyReminderStopSignature(scheduleId, email, sig)) {
+        return res.status(403).send(page("That link didn't work", "It may be incomplete or expired. You can also just ignore the reminder emails, or write to support@kiddofund.com and we'll stop them for you."));
+      }
+      const rows = await db.execute(sql`
+        SELECT id, sender_email, stripe_subscription_id, status
+        FROM recurring_gifts
+        WHERE id = ${scheduleId}
+        LIMIT 1
+      `);
+      const row = (rows.rows as any[])?.[0];
+      if (!row || String(row.sender_email || "").trim().toLowerCase() !== email) {
+        return res.status(403).send(page("That link didn't work", "It may be incomplete or expired. You can also just ignore the reminder emails, or write to support@kiddofund.com and we'll stop them for you."));
+      }
+      // Reminder-only rows only. A Stripe-subscription row charges a card;
+      // stopping THAT belongs in the authenticated gifter dashboard (and its
+      // emails never carry this link), so refuse rather than half-cancel.
+      if (row.stripe_subscription_id) {
+        return res.status(400).send(page("This one needs your dashboard", "This schedule charges a card, so it's managed from your gifter dashboard. Request a sign-in link from the login page and you can cancel it there."));
+      }
+      if (String(row.status || "") !== 'cancelled') {
+        await db.execute(sql`
+          UPDATE recurring_gifts
+          SET status = 'cancelled', pause_reason = 'unsubscribe_link', paused_at = NOW()
+          WHERE id = ${scheduleId}
+        `);
+      }
+      return res.send(page("Reminders stopped", "You won't get any more gift reminders for this schedule. You can always set up a new one from the gift page."));
+    } catch (error) {
+      console.error('Error stopping gift reminder:', error);
+      return res.status(500).send(page("Something went wrong", "Please try the link again, or write to support@kiddofund.com and we'll stop the reminders for you."));
     }
   });
 

@@ -6,6 +6,7 @@ import { renderKiddoEmail } from './templates/baseTemplate';
 import { buildParentHandoffRecurringEmail } from './templates/parentHandoffRecurring';
 import { getUncachableStripeClient } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { buildReminderStopUrl } from './reminderStopToken';
 
 type LogFn = (message: string, source?: string) => void;
 
@@ -629,6 +630,13 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
       -- link 410s, so reminding a gifter to "gift again" there is a dead end
       -- (and reads as broken). Reminders auto-resume if the fund is reopened.
       AND f.status = 'active'
+      -- REMINDER-ONLY rows. Stripe-subscription rows auto-charge (Stripe
+      -- bills; the invoice.paid webhook advances next_charge_date) — without
+      -- this filter, a due-now sub row would get this email's "We won't
+      -- charge anything" line right before Stripe charges them, AND the
+      -- worker would advance next_charge_date underneath the webhook's
+      -- bookkeeping. Found in the 2026-06-03 gifter recurring audit.
+      AND rg.stripe_subscription_id IS NULL
       AND rg.sender_email IS NOT NULL
       AND rg.next_charge_date IS NOT NULL
       AND rg.next_charge_date <= NOW()
@@ -653,6 +661,14 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
       const nextChargeDate = advanceDate(row.next_charge_date as Date | string | null, row.frequency as string);
       await storage.updateRecurringGift(row.id as string, { nextChargeDate });
 
+      // One-click stop link. Reminder-only gifters have NO account (signup
+      // is just email + cadence), so they can't magic-link into the gifter
+      // dashboard to cancel — this signed link is their ONLY unsubscribe
+      // path, and it's what makes the "Unsubscribe any time" promise in
+      // ReminderAndAskParentsCard true. Also sent as the RFC 8058
+      // List-Unsubscribe header (these are recurring opt-in emails — the
+      // exact class Gmail/Yahoo require one-click unsubscribe for).
+      const stopUrl = buildReminderStopUrl(getBaseUrl(), row.id as string, senderEmail);
       const reminderIntro = [
         `Hi ${senderName},`,
         '',
@@ -665,6 +681,7 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
         heading: `Time to gift ${childName} again`,
         intro: reminderIntro,
         cta: { text: `Send a gift`, url: giftUrl },
+        unsubscribeUrl: stopUrl,
       });
       await sendEmail({
         to: senderEmail,
@@ -679,10 +696,12 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
           giftUrl,
           '',
           `Not the right time? Ignore this email. We won't charge anything.`,
+          `Stop these reminders: ${stopUrl}`,
           '',
           '— The Kiddo team',
         ].join('\n'),
         html: reminderHtml,
+        listUnsubscribeUrl: stopUrl,
         tags: ['gift_reminder'],
         metadata: {
           recurringGiftId: row.id as string,
