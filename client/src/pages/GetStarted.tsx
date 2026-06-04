@@ -894,16 +894,25 @@ export default function GetStarted() {
                     <p className="text-lg font-semibold text-foreground">For my child.</p>
                   </div>
                 </button>
+                {/* "For myself" — a DOORWAY, not a dead button (2026-06-04).
+                    Previously disabled + "Coming soon": a dead control on the
+                    most precious funnel step made the product read unfinished
+                    at the exact moment trust forms. Now it routes to the P2P
+                    concept preview, which exists precisely to tell this story
+                    honestly ("the grown-up version, coming later") and whose
+                    finale routes back here — a closed loop instead of a wall.
+                    The dormant personal-account flow plumbing in this file
+                    stays intact for the day the door opens for real. */}
                 <button
-                  disabled
-                  className="get-started-choice opacity-50 cursor-not-allowed"
+                  onClick={() => { haptic("light"); setLocation("/p2p-preview"); }}
+                  className="get-started-choice"
                   data-testid="option-personal-fund"
                 >
                   <div className="flex items-center gap-4">
                     <div className="get-started-choice__icon text-xl">🙋</div>
                     <div className="flex items-center gap-3">
                       <p className="text-lg font-semibold text-foreground">For myself.</p>
-                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon</span>
+                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon · see the idea →</span>
                     </div>
                   </div>
                 </button>
