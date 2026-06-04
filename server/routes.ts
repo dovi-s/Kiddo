@@ -14891,6 +14891,13 @@ export async function registerRoutes(
         'event_created_no_share_24h',
         'share_no_checkout_48h',
         'no_gift_14d',
+        // Parent-to-parent "pass it along" loop (founder-locked 2026-06-04):
+        // the quiet end-of-dashboard referral with NO bounty (paying for the
+        // loop is the EarlyBird trap — locked discipline). share = the parent
+        // tapped/shared the link; visit = a referred visitor landed on the
+        // homepage carrying the ref. Judged by funded-k like every channel.
+        'parent_referral_share',
+        'parent_referral_visit',
       ]);
       if (!validActions.has(parsed.data.action)) {
         return res.status(400).json({ error: 'Invalid referral action' });
@@ -18431,6 +18438,20 @@ export async function registerRoutes(
       const kBroad = Math.round(giftersPerFund * broadConvRate * 1000) / 1000;
       const kStrict = Math.round(giftersPerFund * strictConvRate * 1000) / 1000;
 
+      // Parent-to-parent "pass it along" channel (2026-06-04): shares tapped
+      // on the dashboard row vs referred homepage visits. Deliberately a
+      // separate, secondary loop from the gifter loop above — measured here
+      // so it's judged by the same funded-k lens before anyone is tempted to
+      // pay for it.
+      const parentRefResult = await db.execute(sql`
+        SELECT action, COUNT(*)::int AS c
+        FROM referral_events
+        WHERE action IN ('parent_referral_share', 'parent_referral_visit')
+        GROUP BY action
+      `);
+      const parentRef: Record<string, number> = {};
+      for (const r of (parentRefResult.rows || []) as any[]) parentRef[String(r.action)] = Number(r.c) || 0;
+
       return res.json({
         basis: "all-time, business-state (gifts/funds). Windowed event-store loop conversion: /api/admin/funnels",
         reach: {
@@ -18461,6 +18482,10 @@ export async function registerRoutes(
           acquiredParentsFunded: n(gd.acquired_parents_funded), // ...and complete the gift (full loop)
           totalIntents: n(gd.total_intents),
           multiFundGifters: n(mf.multi_fund_gifters),           // one gifter, gifts across >1 family
+        },
+        parentReferral: {
+          shares: parentRef["parent_referral_share"] || 0,   // dashboard "pass it along" taps
+          visits: parentRef["parent_referral_visit"] || 0,   // referred homepage landings
         },
         byOccasion: (occasionResult.rows || []).map((r: any) => ({
           occasion: String(r.occasion || "unspecified"),

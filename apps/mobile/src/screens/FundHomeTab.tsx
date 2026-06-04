@@ -36,6 +36,7 @@ import { looksLikeTestSender } from "../lib/gifters";
 import {
   formatBalance,
   WEB_BASE,
+  apiRecordParentReferralShare,
   type ApiFund,
   type ApiEvent,
   type DashboardSummary,
@@ -937,6 +938,40 @@ export function FundHomeTab(props: FundHomeTabProps) {
           </KText>
           <Button label="Start a fund" onPress={onAddFund} />
         </KiddoCard>
+      ) : null}
+
+      {/* ── pass it along (parent→parent, 2026-06-04) ──────────────────────
+          Mirrors the web dashboard's end-of-page row 1:1 (locked rule: match
+          web). A DIFFERENT species from Share-{kid}'s-link: this hands a
+          FRIEND'S family the product, no bounty ever. End-of-scroll = the
+          conviction peak; native share sheet = a text between parents at
+          pickup, the real medium of this behavior. Hidden for read-only
+          roles + post-handoff owners (they have the doorway above). */}
+      {!isReadOnly && !isOwnerMode && activeFund ? (
+        <Pressable
+          onPress={() => {
+            haptic("selection");
+            const refCode = `pf-${String(activeFund.id || "").slice(0, 12)}`;
+            void apiRecordParentReferralShare(activeFund.id, refCode);
+            void Share.share({
+              message: `We started an investment fund for our kid that family and friends gift into. Thought your family might want this too. ${WEB_BASE}/?ref=${refCode}`,
+            }).catch(() => {});
+          }}
+          style={{
+            marginTop: spacing.md,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderStyle: "dashed",
+            borderColor: "rgba(26,23,16,0.16)",
+            alignItems: "center",
+          }}
+        >
+          <KText variant="caption" color={semanticColors.text.muted} center>
+            Know a family who'd want this? <KText variant="caption" style={{ fontWeight: "600" }}>Pass it along →</KText>
+          </KText>
+        </Pressable>
       ) : null}
       </ScrollView>
 

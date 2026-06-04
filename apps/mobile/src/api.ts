@@ -538,6 +538,21 @@ export async function apiGetFunds(): Promise<ApiFund[]> {
   return parseJson<ApiFund[]>(res);
 }
 
+// Parent-to-parent "pass it along" analytics (2026-06-04). Fire-and-forget:
+// callers must never await-block the share sheet on this. Mirrors the web
+// dashboard row; the Admin k-factor panel reads these (parentReferral).
+export async function apiRecordParentReferralShare(fundId: string, refCode: string): Promise<void> {
+  try {
+    await apiFetch("/api/referral-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refCode, fundId, action: "parent_referral_share", channel: "mobile" }),
+    });
+  } catch {
+    /* analytics only */
+  }
+}
+
 export async function apiGetFundHoldings(fundId: string): Promise<ApiHolding[]> {
   const res = await apiFetch(`/api/funds/${fundId}/holdings`);
   return parseJson<ApiHolding[]>(res);

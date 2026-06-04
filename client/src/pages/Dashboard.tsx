@@ -11319,6 +11319,63 @@ export default function Dashboard() {
                 per-fund + HOW preferences), the right path is the
                 Settings nav entry. Removing this card finishes that
                 IA work rather than regressing it. */}
+
+            {/* ── Pass it along (parent→parent, founder-locked 2026-06-04) ──
+                A DIFFERENT SPECIES from "Share {kid}'s link": Share brings
+                money INTO this kid's fund (the gifter loop — owns the top
+                bar, hero, roster nudge); this hands a FRIEND'S family the
+                product. Deliberately end-of-page: the parent has just read
+                the whole arc (gifts, growth, who loves them, the handoff
+                promise) — the one moment "I want this for people I love"
+                occurs naturally and the ask isn't growth-hacking. Quiet
+                text-first row, no button chrome, verb is "pass along"
+                (never "share" — that word belongs to the gifter loop).
+                NO bounty, ever: paying for the loop is the EarlyBird trap
+                (locked discipline; mercenaries, not believers). Measured
+                via referral_events → the Admin k-factor panel
+                (parentReferral.shares/visits) so the channel is judged by
+                funded-k like everything else. Hidden for read-only roles
+                and post-handoff owners (they have their own doorway:
+                "Start one for someone you love"). Sibling pattern: this is
+                that owner-mode doorway pointed outward from the parent
+                seat. */}
+            {!isReadOnlyFund && !isOwnerMode && (
+              <button
+                type="button"
+                onClick={async () => {
+                  haptic("selection");
+                  const refCode = `pf-${String(activeFundId || "").slice(0, 12)}`;
+                  const url = `${window.location.origin}/?ref=${encodeURIComponent(refCode)}`;
+                  // Fire-and-forget analytics; the share must never wait on it.
+                  try {
+                    void fetch("/api/referral-events", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ refCode, fundId: activeFundId, action: "parent_referral_share", channel: "web" }),
+                    });
+                  } catch { /* analytics only */ }
+                  const shareText = "We started an investment fund for our kid that family and friends gift into. Thought your family might want this too.";
+                  if (navigator.share) {
+                    try { await navigator.share({ title: "Kiddo", text: shareText, url }); } catch { /* user dismissed */ }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText(`${shareText} ${url}`);
+                      toast({ title: "Link copied", description: "Paste it to a parent who'd want this." });
+                    } catch { /* clipboard blocked */ }
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "14px 16px", marginBottom: 14,
+                  background: "transparent", border: "1px dashed rgba(26,23,16,0.14)",
+                  borderRadius: 14, cursor: "pointer", textAlign: "center",
+                }}
+                data-testid="button-pass-it-along"
+              >
+                <span style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)" }}>
+                  Know a family who'd want this? <span style={{ fontWeight: 600, color: "rgba(26,23,16,0.75)" }}>Pass it along →</span>
+                </span>
+              </button>
+            )}
             <TrustMicroStrip />
           </>
         )}

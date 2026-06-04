@@ -386,6 +386,34 @@ export default function Home() {
   // the network (per the hook's locked behavior).
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
 
+  // Parent-referral landing (pass-it-along loop, 2026-06-04). A ?ref=pf-...
+  // visitor was handed this page by a parent who has a fund: (1) record the
+  // visit once per session (fire-and-forget; the page must never wait), (2)
+  // stash the ref so a later signup can be attributed to the channel, (3)
+  // flip a small warm banner above the hero — referred visitors arrive with
+  // borrowed trust, and acknowledging the hand-off converts better than
+  // pretending they walked in cold.
+  const [referredVisit, setReferredVisit] = useState(false);
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get("ref") || "";
+      if (!ref.startsWith("pf-")) return;
+      setReferredVisit(true);
+      window.localStorage.setItem("kiddo.parentRef", ref);
+      const sentKey = `kiddo.parentRefVisitSent:${ref}`;
+      if (!window.sessionStorage.getItem(sentKey)) {
+        window.sessionStorage.setItem(sentKey, "1");
+        // No fundId on the visit event: the ref carries a truncated fund id,
+        // and a malformed FK would fail the insert. refCode is the join key.
+        void fetch("/api/referral-events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refCode: ref, action: "parent_referral_visit", channel: "web" }),
+        });
+      }
+    } catch { /* analytics + warmth only — never block the page */ }
+  }, []);
+
   useEffect(() => {
     if (!isLoading && isAuthenticated && !isDemo) {
       // Wait for funds to load before deciding destination — otherwise
@@ -430,6 +458,12 @@ export default function Home() {
               className="mx-auto max-w-4xl text-center"
             >
               <Mascot size="lg" variant="planting" className="mx-auto mb-5 drop-shadow-sm" context="home-hero" />
+              {referredVisit && (
+                <p className="mx-auto mb-4 inline-block rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-1.5 text-xs font-medium text-[hsl(var(--kiddo-evergreen))]" data-testid="text-referred-banner">
+                  A parent you know passed this along. Look around, or{" "}
+                  <Link href="/demo" className="font-semibold underline underline-offset-2">see a real fund in action →</Link>
+                </p>
+              )}
               <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">
                 Cash gifts disappear. Kiddo gifts last.
               </p>
