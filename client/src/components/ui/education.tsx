@@ -137,7 +137,7 @@ export const educationContent = {
   },
   sipc: {
     title: "What is SIPC protection?",
-    content: "Once invested, your fund is held through our broker-dealer partner, the brokerage behind Kiddo. SIPC protection then covers up to $500,000 if anything ever happens to the brokerage firm. It does not protect against market losses.",
+    content: "When investing is live, your fund will be held through our broker-dealer partner (Member FINRA/SIPC). SIPC protection then covers up to $500,000 if anything ever happens to the broker-dealer. It does not protect against market losses.",
   },
   fees: {
     title: "How do fees work?",

@@ -147,7 +147,7 @@ export function TrustMicroStrip() {
         <span>No hidden charges. Ever.</span>
       </div>
       <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/55">
-        Kiddo's only ongoing fee is $1/year per $1,000 invested, charged on invested assets only. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses.{" "}
+        Kiddo's only ongoing fee is $1/year per $1,000 invested, charged on invested assets only. When investing is live, eligible securities are then protected up to $500,000 against broker-dealer failure. Not a protection against market losses.{" "}
         <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-muted-foreground">sipc.org</a>
         {" · "}Investing involves risk. But so does a gift card.
       </p>

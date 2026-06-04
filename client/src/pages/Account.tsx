@@ -1886,7 +1886,7 @@ export default function Account() {
                 <div>
                   <p className="text-sm font-bold text-foreground">SIPC protection</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Our broker-dealer partner is a registered broker-dealer and member of FINRA/SIPC. Once your investing account is open, eligible securities are protected up to $500,000 against brokerage failure. This does not protect against market losses.
+                    When investing is live, securities are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then protected up to $500,000 against broker-dealer failure, not market loss. This does not protect against market losses.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>

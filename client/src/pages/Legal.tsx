@@ -172,7 +172,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through our broker-dealer partner, a FINRA-registered broker-dealer and SIPC member. Once your investing account is open, clearing and custody are handled by our broker-dealer partner. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
+                  <p>When investing is live, our broker-dealer partner (a FINRA-registered broker-dealer and SIPC member) will offer the securities and handle clearing and custody. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>

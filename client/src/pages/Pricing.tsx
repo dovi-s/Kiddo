@@ -94,7 +94,7 @@ const plans: readonly Plan[] = [
       "Gifter reminder system (birthday and repeat-gift reminders)",
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View. Your child sees what they own and how their fund grows",
-      "SIPC-protected investments via our broker-dealer partner (at launch)",
+      "SIPC protection via our broker-dealer partner when investing is live",
     ],
     note: "No credit card. No commitment.",
   },
