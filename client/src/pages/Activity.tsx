@@ -1667,14 +1667,31 @@ export default function Activity() {
       .sort((a, b) => a.ms - b.ms);
     if (pts.length < 2) return 0;
     const { startMs, endMs } = summaryRange;
-    // Unrealized gain at the window's end (latest snapshot at/before endMs).
-    let endGain = pts[pts.length - 1].gain;
-    for (let i = pts.length - 1; i >= 0; i--) { if (pts[i].ms <= endMs) { endGain = pts[i].gain; break; } }
-    // ...and at the window's start (latest snapshot at/before startMs). If the
-    // window opens before any snapshot existed, gain started at 0 (no holdings).
-    let startGain = 0;
-    for (let i = pts.length - 1; i >= 0; i--) { if (pts[i].ms <= startMs) { startGain = pts[i].gain; break; } }
-    return endGain - startGain;
+    // Gain at an arbitrary time, INTERPOLATED between the bracketing
+    // snapshots (founder catch 2026-06-04: "this all seems ways off").
+    // The old backward-snap ("latest snapshot at/before startMs") silently
+    // STRETCHED the window when snapshots are sparse: with monthly
+    // snapshots, "Last 30 days" anchored to Apr 30 and reported ~35 days
+    // of growth under a 30-day label — and disagreed visibly with the
+    // Dashboard chart's range stat. Linear interpolation pro-rates the
+    // boundary months so the window means what it says regardless of
+    // snapshot density. Before the first snapshot, gain was 0 (no
+    // holdings); past the last, it's the latest known.
+    const gainAt = (ms: number): number => {
+      if (ms <= pts[0].ms) return 0;
+      if (ms >= pts[pts.length - 1].ms) return pts[pts.length - 1].gain;
+      for (let i = pts.length - 1; i >= 0; i--) {
+        if (pts[i].ms <= ms) {
+          const a = pts[i];
+          const b = pts[i + 1];
+          if (!b || b.ms === a.ms) return a.gain;
+          const frac = (ms - a.ms) / (b.ms - a.ms);
+          return a.gain + (b.gain - a.gain) * frac;
+        }
+      }
+      return 0;
+    };
+    return gainAt(endMs) - gainAt(startMs);
   })();
 
   // Count enrichment for the 30-day summary cards. Dollars answer "how
