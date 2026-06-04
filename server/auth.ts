@@ -416,17 +416,15 @@ function getDevHeaderUserId(req: Request): string | null {
 
 async function resolveRequestUser(req: Request): Promise<(User & { isSuperAdmin?: boolean }) | null> {
   if ((req as any).isAuthenticated?.() && (req as any).user) {
+    // req.user is ALREADY canonicalized by passport.deserializeUser, which runs
+    // on every request and does getUser(id) + getUserByEmail(email) +
+    // getEffectiveAdminFlags before populating the session user. Re-fetching the
+    // canonical user here was a redundant remote-DB round trip (~97ms) on EVERY
+    // authenticated request — the single biggest fixed per-request tax, paid
+    // app-wide. Trust the deserialized user and re-apply admin flags (pure, no
+    // DB) so the flags reflect the current super-admin list. 2026-06-04 perf.
     const sessionUser = (req as any).user as User & { isSuperAdmin?: boolean };
-    let canonical: User | undefined;
-    try {
-      canonical = sessionUser?.email ? await getUserByEmail(sessionUser.email) : undefined;
-    } catch (err) {
-      // Transient DB error. Fall back to the session user so a connection blip
-      // doesn't log out an authenticated user or accidentally deny admin access.
-      console.warn("[resolveRequestUser] DB lookup failed, using session user:", (err as Error).message);
-    }
-    const resolved = canonical || sessionUser;
-    return { ...resolved, ...getEffectiveAdminFlags(resolved, getSuperAdminEmails()) };
+    return { ...sessionUser, ...getEffectiveAdminFlags(sessionUser, getSuperAdminEmails()) };
   }
 
   // Mobile bearer token. Only checked when there's no passport session — the web

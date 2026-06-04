@@ -5226,7 +5226,26 @@ export async function registerRoutes(
         .map(async (fund: any) => {
           const stats = statsByFund.get(fund.id) || { totalGifted: 0, giftCount: 0, lastGiftAt: null };
           const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
-          const holdingsForFund = await storage.getHoldingsByFund(fund.id);
+          // Batch the five INDEPENDENT per-fund reads into one concurrent round
+          // trip instead of ~6 serial ones (2026-06-04 perf). Each keeps its
+          // original non-fatal fallback via .catch so one failing read still
+          // renders the card. Downstream derivations are unchanged.
+          const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const [holdingsForFund, filteredEntries, activeEventCountRows, snapshotRowsRes, fundCoverageState] = await Promise.all([
+            storage.getHoldingsByFund(fund.id).catch((err) => { console.warn("[gifter-dashboard] holdings fetch failed:", err); return [] as any[]; }),
+            storage.getMemoryEntriesByFund(fund.id).catch((err) => { console.warn("[gifter-dashboard] memory fetch failed:", err); return [] as any[]; }),
+            db.select({ count: sql<number>`count(*)::int` }).from(events)
+              .where(and(eq(events.fundId, fund.id), eq(events.status, "active")))
+              .catch((err) => { console.warn("[gifter-dashboard] event-count failed:", err); return [{ count: 0 }] as any[]; }),
+            db.execute(sql`
+              SELECT snapshot_date, total_value
+              FROM fund_snapshots
+              WHERE fund_id = ${fund.id}
+                AND snapshot_date >= ${thirtyDaysAgoIso}
+              ORDER BY snapshot_date ASC
+            `).catch((err) => { console.warn("[gifter-dashboard] sparkline fetch failed:", err); return { rows: [] } as any; }),
+            getFundCoverageState(fund.userId, fund.id).catch((err) => { console.warn("[gifter-dashboard] coverage lookup failed:", err); return null; }),
+          ]);
           // Memory preview MUST go through storage.getMemoryEntriesByFund
           // not a direct table SELECT — the storage helper applies the
           // locked filters from feedback_memory_book_inversion:
@@ -5237,8 +5256,8 @@ export async function registerRoutes(
           // surfaced junk like "Someone who loves Emma sent a gift of
           // $50.00." as the "Latest Memory Book moment" on the gifter
           // dashboard — exactly the failure the locked filters exist
-          // to prevent. User flagged this 2026-05-23.
-          const filteredEntries = await storage.getMemoryEntriesByFund(fund.id);
+          // to prevent. User flagged this 2026-05-23. (filteredEntries is
+          // fetched in the batched Promise.all above.)
           // Entry-level VISIBILITY gate (2026-06-04). The storage helper's
           // locked filters handle junk/moderation, not privacy — without this
           // gate the gifter dashboard surfaced Phil's SEALED letter ("Alex, if
@@ -5267,10 +5286,7 @@ export async function registerRoutes(
                 createdAt: gifterVisibleEntries[0].createdAt,
               }
             : undefined;
-          const [activeEventCountRow] = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(events)
-            .where(and(eq(events.fundId, fund.id), eq(events.status, "active")));
+          const activeEventCountRow = activeEventCountRows[0];
           const currentFundValue = Number(fund.balance || 0) + Number(fund.pendingBalance || 0);
           const nextMilestoneTarget = [100, 500, 1000, 2500].find((target) => Number(stats.totalGifted || 0) < target) || null;
           const nextMilestoneProgress = nextMilestoneTarget
@@ -5290,25 +5306,13 @@ export async function registerRoutes(
           // 30-day history is the same domain, not a step-change in
           // privacy. No PII (no gifter names, no per-position breakdown);
           // just the total fund value over time.
-          const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          let valueHistory30d: Array<{ at: string; totalValue: number }> = [];
-          try {
-            const snapRes = await db.execute(sql`
-              SELECT snapshot_date, total_value
-              FROM fund_snapshots
-              WHERE fund_id = ${fund.id}
-                AND snapshot_date >= ${thirtyDaysAgoIso}
-              ORDER BY snapshot_date ASC
-            `);
-            valueHistory30d = ((snapRes.rows as any[]) || []).map((r) => ({
+          // valueHistory30d derives from the snapshot rows fetched in the
+          // batched Promise.all above (sparkline; non-fatal if empty).
+          const valueHistory30d: Array<{ at: string; totalValue: number }> =
+            (((snapshotRowsRes as any)?.rows as any[]) || []).map((r) => ({
               at: new Date(r.snapshot_date).toISOString(),
               totalValue: Number(r.total_value || 0),
             }));
-          } catch (err) {
-            // Non-fatal — sparkline gracefully renders nothing if data
-            // missing. Card still shows currentFundValue.
-            console.warn("[gifter-dashboard] sparkline fetch failed:", err);
-          }
 
           // Sponsorship eligibility per fund. True when the fund is on
           // the Free tier (i.e., the gifter could meaningfully cover a
@@ -5322,17 +5326,14 @@ export async function registerRoutes(
           // when applicable, replacing the previously-removed
           // 'discovery card' that made a false claim about scrolling
           // up to find the option.
-          let eligibleForSponsorship = false;
-          try {
-            const fundCoverage = await getFundCoverageState(fund.userId, fund.id);
-            eligibleForSponsorship =
-              fundCoverage !== 'covered_family' &&
-              fundCoverage !== 'covered_starter' &&
-              fundCoverage !== 'trial_active';
-          } catch (err) {
-            // Non-fatal — pill simply doesn't render on this fund.
-            console.warn("[gifter-dashboard] coverage lookup failed:", err);
-          }
+          // eligibleForSponsorship derives from the coverage state fetched in
+          // the batched Promise.all above. A null (lookup failed) leaves it
+          // false — the sponsor pill simply doesn't render, same as before.
+          const eligibleForSponsorship =
+            fundCoverageState != null &&
+            fundCoverageState !== 'covered_family' &&
+            fundCoverageState !== 'covered_starter' &&
+            fundCoverageState !== 'trial_active';
 
           // Per-gift detail for the card's "Your gifts" expandable
           // (2026-06-04). "7 gifts sent" is a number; "your $200 in 2019 is
@@ -5363,7 +5364,11 @@ export async function registerRoutes(
                 const cv = parseFloat(String(h.currentValue || "0"));
                 if (sh > 0 && cv > 0) pricePerShare.set(String(h.ticker), cv / sh);
               }
-              const allocRows = await db.select().from(giftAllocations).where(inArray(giftAllocations.giftId, giftIds));
+              // Allocations + thank-yous are independent — fetch concurrently.
+              const [allocRows, thankRows] = await Promise.all([
+                db.select().from(giftAllocations).where(inArray(giftAllocations.giftId, giftIds)),
+                db.select().from(thankYous).where(and(inArray(thankYous.giftId, giftIds), eq(thankYous.status, "sent"))),
+              ]);
               const allocsByGift = new Map<string, Array<{ ticker: string; shares: number }>>();
               for (const a of allocRows) {
                 const key = String(a.giftId);
@@ -5371,8 +5376,6 @@ export async function registerRoutes(
                 list.push({ ticker: String(a.ticker), shares: parseFloat(String(a.shares || "0")) || 0 });
                 allocsByGift.set(key, list);
               }
-              const thankRows = await db.select().from(thankYous)
-                .where(and(inArray(thankYous.giftId, giftIds), eq(thankYous.status, "sent")));
               const thankByGift = new Map<string, { message: string; sentAt: string | null }>();
               for (const t of thankRows) {
                 const key = String(t.giftId);
@@ -13371,20 +13374,31 @@ export async function registerRoutes(
 
   app.get('/api/funds/:fundId/memory', isAuthenticated, async (req: any, res) => {
     try {
-      const fund = await storage.getFund(req.params.fundId);
+      // Reuse the fund the requireOwnedFundParam middleware already loaded
+      // (req.ownedFund) instead of a redundant getFund round trip. 2026-06-04 perf.
+      const fund = req.ownedFund || await storage.getFund(req.params.fundId);
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
       // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      const allEntries = await storage.getMemoryEntriesByFund(req.params.fundId);
+      // The four fund-scoped reads below are independent — fetch them
+      // concurrently instead of four serial remote-DB round trips. 2026-06-04 perf.
+      const [allEntries, giftsForFund, fundEvents, fundHoldings] = await Promise.all([
+        storage.getMemoryEntriesByFund(req.params.fundId),
+        storage.getGiftsByFund(req.params.fundId),
+        storage.getEventsByFund(req.params.fundId),
+        storage.getHoldingsByFund(req.params.fundId),
+      ]);
       // Filter out pending-review entries from the parent's MAIN Memory Book
       // view. The pending tray is a separate endpoint (GET .../memory/pending)
       // so the main view stays clean — pending items appear as a distinct
       // tray + dot, not mixed in with approved entries.
       const entries = allEntries.filter((e) => String((e as any).status || 'published') !== 'pending_review');
-      const giftsForFund = await storage.getGiftsByFund(req.params.fundId);
-      const fundEvents = await storage.getEventsByFund(req.params.fundId);
-      const fundHoldings = await storage.getHoldingsByFund(req.params.fundId);
+      // Index the gifts already loaded above so per-entry enrichment is a Map
+      // lookup, not a getGift() round trip per entry (the worst N+1 here:
+      // a fund with N gift-linked entries fired N redundant queries for rows
+      // already in giftsForFund). 2026-06-04 perf.
+      const giftById = new Map(giftsForFund.map((g: any) => [String(g.id), g]));
       const singleHolding = fundHoldings.length === 1 ? fundHoldings[0] : null;
       const eventNameById = new Map(fundEvents.filter((e: any) => !e.isPermanent).map((e: any) => [String(e.id), e.name as string]));
       const enriched = await Promise.all(
@@ -13403,7 +13417,7 @@ export async function registerRoutes(
             ),
             gift: null,
           };
-          const gift = await storage.getGift(entry.giftId);
+          const gift = giftById.get(String(entry.giftId)) || null;
           const giftEventName = gift?.eventId ? (eventNameById.get(String(gift.eventId)) ?? null) : null;
           return {
             ...entry,

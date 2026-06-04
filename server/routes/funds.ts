@@ -181,17 +181,25 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       const activeIds = new Set(funds.map((f: any) => String(f?.id || "")));
       const transferredOnly = previouslyOwned.filter((f: any) => !activeIds.has(String(f?.id || "")));
 
-      const ensuredFunds: any[] = [];
-      for (const fund of funds) {
-        try {
-          const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
-          await captureFundSnapshot(ensured.id);
-          ensuredFunds.push(ensured);
-        } catch (err) {
-          console.error("Failed to ensure fund setup:", fund.id, err);
-          ensuredFunds.push(fund);
-        }
-      }
+      // Per-fund setup runs CONCURRENTLY (2026-06-04 perf). Each fund's
+      // slug-ensure + permanent-event + snapshot touches only that fund's own
+      // rows, so there's no cross-fund contention — but the old serial loop
+      // paid ~7 remote-DB round trips PER fund in sequence (the dominant cost
+      // of this endpoint: measured 4.4s for 3 funds). Promise.all collapses it
+      // to ~7 round trips wall-clock regardless of fund count. Order is
+      // preserved by map (results land in the same index as their input).
+      const ensuredFunds: any[] = await Promise.all(
+        funds.map(async (fund: any) => {
+          try {
+            const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
+            await captureFundSnapshot(ensured.id);
+            return ensured;
+          } catch (err) {
+            console.error("Failed to ensure fund setup:", fund.id, err);
+            return fund;
+          }
+        }),
+      );
       // Tag transferred-only funds so client surfaces can identify
       // them without re-checking previous_owner_id every render. The
       // accessRole='previous_owner' tag mirrors the per-fund auth
