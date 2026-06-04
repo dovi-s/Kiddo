@@ -4443,10 +4443,16 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <p className="kiddo-section-label mb-1">Memory Book entries from gifters</p>
-                <p className="text-[11px] text-muted-foreground mb-4">Default: instant. Your gift link is private, and you can delete any entry anytime.</p>
+                {/* Copy honesty (2026-06-03): the gift link is NOT private — slugs
+                    are derived from the child's name (/emma), the page is public
+                    by design. "Unlisted" is the true claim: only people you share
+                    it with are likely to find it. And no "most parents do X"
+                    pre-launch — we have no usage base to claim a majority; say
+                    what OFF does instead. */}
+                <p className="text-[11px] text-muted-foreground mb-4">Default: instant. Your gift link is unlisted (only people you share it with are likely to find it), and you can delete any entry anytime.</p>
                 <NotificationSwitchRow
                   title="Require my approval first"
-                  body={`When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. ${((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "Most people" : "Most parents"} leave this off so notes appear in real time as gifters add them.`}
+                  body={`When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Left off, they appear in real time as gifters add them.`}
                   checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
                   disabled={!primaryFund?.id || updateMemoryModeration.isPending}
                   onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
