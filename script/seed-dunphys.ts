@@ -739,7 +739,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     (first, amt, kidName, willRead, age) => `${first}, just wanted to say thank you. Your $${amt} went straight into ${kidName}'s fund, and ${willRead} going to see it (and this note) at ${age}. We're so grateful you're part of ${kidName}'s story.\n\nPhil`,
     (first, amt, kidName) => `Thank you, ${first}! ${kidName}'s fund grew by $${amt} because of you. We can't wait to show ${kidName} who was there from the very start.\n\nWith love,\nPhil and Claire`,
     (first, amt, kidName, willRead, age) => `Dear ${first},\n\nWhat a generous gift, $${amt} toward ${kidName}'s future. Years from now ${willRead} going to understand exactly what this meant. Thank you for believing in ${kidName} this early.\n\nPhil`,
-    (first, amt, kidName) => `${first}, thank you so much. The $${amt} is invested and already part of something that will be ${kidName}'s one day. It really does take people like you.\n\nWith love,\nPhil`,
+    (first, amt, kidName) => `${first}, thank you so much. The $${amt} is invested and already part of something that will be ${kidName}'s one day. We're so glad you're in ${kidName}'s corner.\n\nWith love,\nPhil`,
   ];
   for (const eg of externalGifts) {
     const age = nowMs - eg.createdAt.getTime();
@@ -813,8 +813,11 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // relationship lived-in (active author, not just a name on the access list).
   // Dated ~4 months back so it sits naturally in the recent timeline.
   {
+    // Haley's note reads as a handoff-moment note ("this is yours now baby
+    // girl... i saved everything") — date it near the transfer (~1y ago),
+    // not 4 months ago, or the timeline says she wrote "now" 8 months late.
     const claireNoteDate = new Date();
-    claireNoteDate.setDate(claireNoteDate.getDate() - 120);
+    claireNoteDate.setDate(claireNoteDate.getDate() - (kid.ageYears >= kid.majorityAge ? 355 : 120));
     await db.insert(memoryEntries).values({
       fundId: fund.id,
       type: "parent_note",

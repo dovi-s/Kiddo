@@ -39,49 +39,49 @@ const ACCOUNTS: DemoAccount[] = [
     email: "phil@dunphyfamily.com",
     display: "Phil Dunphy",
     role: "parent",
-    oneLiner: "Parent dashboard, Family tier. All three kids' funds from one seat.",
+    oneLiner: "Dad. The parent dashboard on the Family plan, with all three kids' funds in one place.",
   },
   {
     email: "claire@dunphyfamily.com",
     display: "Claire Dunphy",
     role: "co-parent",
-    oneLiner: "Co-parent view of the same three funds. Demonstrates the partner-access flow.",
+    oneLiner: "Co-parent. The same three funds from her own login.",
   },
   {
     email: "jay@dunphyfamily.com",
     display: "Jay Pritchett",
     role: "gifter",
-    oneLiner: "Grandfather. Large birthday gifts in Google stock. The cool-grandpa pattern.",
+    oneLiner: "Grandfather. Big birthday gifts in Google stock.",
   },
   {
     email: "gloria@dunphyfamily.com",
     display: "Gloria Pritchett",
     role: "gifter",
-    oneLiner: "Grandmother. Disney gifts with Spanish-language notes. The Memory Book emotional layer.",
+    oneLiner: "Step-grandmother, married to Jay. Disney gifts with notes in Spanish.",
   },
   {
     email: "mitchell@dunphyfamily.com",
     display: "Mitchell Pritchett",
     role: "gifter",
-    oneLiner: "Uncle. Recurring annual birthday gift in Apple. Set-it-and-forget-it gifter.",
+    oneLiner: "Uncle. A recurring Apple gift every birthday, on autopilot.",
   },
   {
     email: "cameron@dunphyfamily.com",
     display: "Cameron Tucker",
     role: "gifter",
-    oneLiner: "Uncle. Gifts Disney stock to all three kids. \"Because magic is always a good investment.\"",
+    oneLiner: "Uncle. Disney stock for all three kids. \"Because magic is always a good investment.\"",
   },
   {
     email: "manny@dunphyfamily.com",
     display: "Manny Delgado",
     role: "gifter",
-    oneLiner: "Step-uncle, close to the kids' age. Small gift in Roblox stock. The young-gifter angle.",
+    oneLiner: "Step-uncle, closest to the kids' age. A small Roblox gift.",
   },
   {
     email: "haley@dunphyfamily.com",
     display: "Haley Dunphy",
     role: "graduate",
-    oneLiner: "Graduated to her own account. The fund is fully hers now, the real post-handoff adult experience.",
+    oneLiner: "The adult account, one year after the handoff.",
   },
 ];
 
@@ -190,7 +190,7 @@ export default function Demo() {
               See Kiddo through the <GradientText>Dunphys</GradientText>.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              A paper-trading-style demo. Real screens, illustrative dollars. Pick any account below to log in. No card needed.
+              A full working demo: real screens, illustrative dollars. Pick any account below to log in. No card needed.
             </p>
           </div>
 
@@ -219,7 +219,7 @@ export default function Demo() {
                   Alex is weeks from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already graduated a year ago; log in as Haley below to step into the adult account after the handoff.)
+                  In a few weeks, the fund her dad Phil built becomes hers. This is the handoff page he sees: the projection slider, his sealed letter, Gloria's voice memos, a whole childhood of gifts. Start here.
                 </p>
               </div>
               <button
@@ -238,7 +238,7 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             <h2 className="font-heading text-lg font-semibold text-foreground">Or start with Phil</h2>
             <p className="text-sm text-muted-foreground">
-              Three kids at three life stages: Luke growing up and getting gifts, Alex weeks from taking ownership, Haley already graduated to her own adult account. The whole arc in one family.
+              Three kids at three stages: Luke still getting gifts, Alex weeks from taking ownership, and Haley's fund already handed off. The whole arc in one family.
             </p>
             {ACCOUNTS.filter((a) => a.role === "parent").map((account) => (
               <button
@@ -264,9 +264,9 @@ export default function Demo() {
           </section>
 
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Or step into the adult account</h2>
+            <h2 className="font-heading text-lg font-semibold text-foreground">Step into the adult account</h2>
             <p className="text-sm text-muted-foreground">
-              Haley crossed majority a year ago, so her fund transferred to her. Log in as Haley to step into the real adult account after the handoff: the same fund, now self-directed and fully hers, with the whole Memory Book unlocked. From Phil's dashboard you also see it as a fund he can no longer touch. That's the other half of the moment.
+              Haley came of age a year ago, and the fund transferred to her. Log in to see the adult account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Phil's dashboard it's a fund he can no longer touch.
             </p>
             {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
               <button
@@ -292,9 +292,9 @@ export default function Demo() {
           </section>
 
           <section className="mx-auto mt-10 grid max-w-4xl gap-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Or log in as a gifter</h2>
+            <h2 className="font-heading text-lg font-semibold text-foreground">Log in as a gifter</h2>
             <p className="text-sm text-muted-foreground">
-              See the gifter side of the loop. Each account demonstrates a different gifter pattern.
+              Everyone in the family gives differently. Pick one to see their side.
             </p>
             <div className="grid gap-2 md:grid-cols-2">
               {ACCOUNTS.filter((a) => a.role !== "parent" && a.role !== "graduate").map((account) => (
@@ -338,7 +338,7 @@ export default function Demo() {
                 Everything you see is illustrative. Dollar amounts, gifts, and holdings are seeded; no real money moved.
               </li>
               <li className="list-disc">
-                Try the full flow. Sending a gift, setting up recurring investments, exploring the Memory Book all work, but no card is charged and no brokerage order fires.
+                Try the full flow. Sending a gift, setting up recurring investments, exploring the Memory Book all work, but no card is charged and no real trade is placed.
               </li>
               <li className="list-disc">
                 Demo state resets periodically. If something looks different from what you expected, that's why.

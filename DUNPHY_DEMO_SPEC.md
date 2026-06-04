@@ -122,10 +122,10 @@ points in an 18-year relationship.
 | Name | Email | Relationship | Demo persona |
 |---|---|---|---|
 | **Jay Pritchett** | `jay@dunphyfamily.com` | Grandfather | Large gift ($500 at Christmas, Google stock). The "cool grandpa" use case. |
-| **Gloria Pritchett** | `gloria@dunphyfamily.com` | Grandmother | Voice-memo gifter (in Spanish). The multilingual + Memory Book moat demo. |
+| **Gloria Pritchett** | `gloria@dunphyfamily.com` | Step-grandmother (Jay's wife) | Voice-memo gifter (in Spanish). The multilingual + Memory Book moat demo. |
 | **Mitchell Pritchett** | `mitchell@dunphyfamily.com` | Uncle | Recurring $100/year (Apple). The "set it and forget it" gifter. |
 | **Cameron Tucker** | `cameron@dunphyfamily.com` | Uncle | Photo gifter with note, gives Disney stock to all three kids. The Memory Book emotional layer. |
-| **Manny Delgado** | `manny@dunphyfamily.com` | Cousin | Young gifter (Roblox stock). The "anyone can gift" angle. |
+| **Manny Delgado** | `manny@dunphyfamily.com` | Step-uncle (Gloria's son) | Young gifter (Roblox stock). The "anyone can gift" angle. |
 
 **The one love-mark hidden in the Memory Book:** Cam gave Disney
 stock to all three Dunphy kids with the note
