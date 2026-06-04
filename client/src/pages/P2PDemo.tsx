@@ -318,14 +318,21 @@ export default function P2PDemo() {
                 <h2 className="mt-5 font-heading text-3xl font-bold text-foreground md:text-4xl">
                   You just felt the whole idea.
                 </h2>
+                {/* Name the newborn's horizon (audit 2026-06-04): Maya's
+                    block states its 30 years, so this one states its sixty —
+                    an unverifiable big number reads as marketing math; a
+                    checkable one reads as honesty. "whole childhood" instead
+                    of "eighteen years": warmer, and majority is 21 in some
+                    states (the locked hardcoded-18 rule). */}
                 <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
                   For Maya, thirty years turned that $30 into {usd0(futureVal)}. Start the same $30
                   for a newborn instead of a thirty-something and it has a whole lifetime to
-                  compound: closer to {usd0(kidVal)}. The head start is the entire trick.
+                  compound: by the time they're sixty, closer to {usd0(kidVal)}. The head start is
+                  the entire trick.
                 </p>
                 <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-                  Start it for a kid you love, and let everyone who loves them add to it for the
-                  next eighteen years.
+                  Start it for a kid you love, and let everyone who loves them add to it for their
+                  whole childhood.
                 </p>
                 <p className="mx-auto mt-3 max-w-md text-xs text-muted-foreground/70">
                   Same 7 percent illustration. Not a guarantee.
