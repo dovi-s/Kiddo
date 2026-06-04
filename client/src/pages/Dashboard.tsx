@@ -7743,7 +7743,15 @@ export default function Dashboard() {
                                           Functional 💚s (the "Just Because" occasion icon set,
                                           the Returning-gifter badge) are NOT decoration — keep
                                           those. 2026-06-04. */}
-                                      <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Picked just for you" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
+                                      {/* Owner mode says "Hand-picked", not "Picked just for
+                                          you": a graduated owner's OWN buys land in this same
+                                          bucket, and "picked just for you" reads off when she
+                                          did the picking herself. "Hand-picked" covers both
+                                          the gifter-picked history (Gloria's DIS) and her own
+                                          picks without losing warmth. Parent view keeps the
+                                          stronger "Picked just for {child}" — there the pickers
+                                          are always OTHER people, so it's precisely true. */}
+                                      <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Hand-picked" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
                                       {!isReadOnlyFund && (
                                         <div className="relative flex items-center gap-1.5">
                                           <AnimatePresence>
