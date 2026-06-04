@@ -2865,15 +2865,165 @@ export async function registerRoutes(
       // only touches the DB when there are actually host-held gifts (rare). So
       // it runs as a tiny conditional step after the single parallel wave above
       // — a no-op (zero round trips) for the overwhelmingly common case.
-      const largeGiftHoldsRaw = await timeStage("large_gift_holds", async () => {
+      // ── Second wave kickoff (2026-06-04 perf) ───────────────────────────
+      // The six remaining stages (large-gift holds, per-event gift codes,
+      // kid-claimed welcome, co-parent acceptance, recurring coverage, gift
+      // enrichment) each depend ONLY on base-wave results (gifts, events,
+      // fund, userId) — never on each other — but they used to run as six
+      // SERIAL round-trip waves (recurring-coverage alone does ~4 internal
+      // serial queries). Kick them ALL off here so they run concurrently;
+      // each stage below just awaits its already-running promise. Every promise
+      // keeps the stage's original try/catch so one failing surface never
+      // fails the whole summary.
+      const customEvents = eventsForFund.filter((e: any) => !e.isPermanent);
+      const viewerIsOwner = fund.userId === userId;
+
+      const largeGiftHoldsRawP = (async () => {
         const heldGifts = giftsForFund.filter((gift: any) => String(gift.status || "").toLowerCase() === "host_hold");
-        if (heldGifts.length === 0) return { heldGifts: [], entitlement: null, coverageStatus: null };
+        if (heldGifts.length === 0) return { heldGifts: [] as any[], entitlement: null as any, coverageStatus: null as any };
         const [entitlement, coverageStatus] = await Promise.all([
           hasPaidPlanForFund(fund.userId, fund.id),
           getFundCoverageState(fund.userId, fund.id),
         ]);
         return { heldGifts, entitlement, coverageStatus };
-      });
+      })();
+
+      const eventGiftCodeEntriesP = Promise.all(
+        customEvents.map(async (e: any) => {
+          try {
+            const record = await ensureGiftCodeForEvent(e, fund);
+            return [e.id, { code: record.code, lookupUrl: `${getAppBaseUrl(req)}/gift` }] as const;
+          } catch {
+            return null;
+          }
+        }),
+      ).then((results) => Object.fromEntries(results.filter(Boolean) as [string, { code: string; lookupUrl: string }][]));
+
+      const kidClaimedAtP = (async (): Promise<string | null> => {
+        try {
+          const transitionRecord = await getAgeTransitionRecord(fund.id);
+          if (transitionRecord.ownershipTransferredAt && transitionRecord.childClaimedByUserId === userId) {
+            const claimedAt = transitionRecord.childClaimedAt || transitionRecord.ownershipTransferredAt;
+            const ageMs = Date.now() - new Date(claimedAt).getTime();
+            if (ageMs >= 0 && ageMs < 60 * 24 * 60 * 60 * 1000) return claimedAt as any;
+          }
+        } catch {
+          // Treat errors here as "not the kid" — the welcome banner just
+          // doesn't render. No reason to fail the entire dashboard summary.
+        }
+        return null;
+      })();
+
+      const coparentAcceptanceP = (async (): Promise<{ collaboratorId: string; name: string; acceptedAt: string } | null> => {
+        if (!viewerIsOwner) return null;
+        try {
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          const acceptedRows = await db.execute(sql`
+            SELECT
+              fc.id AS collaborator_id,
+              fc.email,
+              fc.accepted_at,
+              fc.user_id,
+              u.first_name,
+              u.last_name,
+              u.preferred_name
+            FROM fund_collaborators fc
+            LEFT JOIN users u ON u.id = fc.user_id
+            WHERE fc.fund_id = ${fund.id}
+              AND fc.status = 'accepted'
+              AND fc.accepted_at IS NOT NULL
+              AND fc.accepted_at >= ${thirtyDaysAgo.toISOString()}
+            ORDER BY fc.accepted_at DESC
+            LIMIT 1
+          `);
+          const row = (acceptedRows.rows as any[])?.[0];
+          if (row) {
+            const first = String(row.first_name || row.preferred_name || "").trim();
+            const last = String(row.last_name || "").trim();
+            const fullName = [first, last].filter(Boolean).join(" ").trim();
+            const displayName = fullName || String(row.email || "Your co-parent").split("@")[0];
+            return {
+              collaboratorId: String(row.collaborator_id),
+              name: displayName,
+              acceptedAt: new Date(row.accepted_at).toISOString(),
+            };
+          }
+        } catch {
+          // Best-effort; never block dashboard summary on this surface.
+        }
+        return null;
+      })();
+
+      const recurringEnabledP = (async () => {
+        const [coverage, fundIsDemo] = await Promise.all([
+          getFundCoverageState(fund.userId, fund.id),
+          isDemoFund(fund.id),
+        ]);
+        // Post-handoff owner: the now-adult owns the fund (transferredAt set,
+        // and fund.userId is them). Recurring is FREE for them — the parent
+        // subscription retires at majority and AUM (0.10%) is the only
+        // post-handoff revenue, so the owner auto-invests in their OWN account
+        // with no Plus sub. Per kid-2.0.
+        const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === (req.user as any)?.id;
+        return fundIsDemo
+          || isPostHandoffOwner
+          || coverage === "covered_starter"
+          || coverage === "covered_family"
+          || coverage === "trial_active";
+      })();
+
+      const enrichedGiftsForFundP = (async () => {
+        const giftEmails = Array.from(new Set(
+          giftsForFund
+            .filter((g: any) => g.isAnonymous !== true)
+            .map((g: any) => String(g.senderEmail || "").trim().toLowerCase())
+            .filter(Boolean),
+        ));
+        const infoByEmail = new Map<string, { preferredName: string | null; avatarUrl: string | null }>();
+        if (giftEmails.length > 0) {
+          try {
+            const rows = await db
+              .select({
+                email: users.email,
+                preferredName: users.preferredName,
+                profileImageUrl: users.profileImageUrl,
+              })
+              .from(users)
+              .where(inArray(sql`lower(${users.email})`, giftEmails));
+            for (const r of rows) {
+              if (!r.email) continue;
+              infoByEmail.set(String(r.email).trim().toLowerCase(), {
+                preferredName: (r.preferredName && String(r.preferredName).trim()) || null,
+                avatarUrl: (r as any).profileImageUrl || null,
+              });
+            }
+          } catch (enrichErr) {
+            console.warn("[dashboard-summary] gifter enrichment failed (non-fatal):", (enrichErr as any)?.message || enrichErr);
+          }
+        }
+        return giftsForFund.map((g: any) => {
+          if (g.isAnonymous === true) return { ...g, gifterPreferredName: null, gifterAvatarUrl: null };
+          const match = infoByEmail.get(String(g.senderEmail || "").trim().toLowerCase());
+          return { ...g, gifterPreferredName: match?.preferredName || null, gifterAvatarUrl: match?.avatarUrl || null };
+        });
+      })();
+
+      // Await all six concurrently (they've been running since kickoff above).
+      const [
+        largeGiftHoldsRaw,
+        eventGiftCodeEntries,
+        kidClaimedAt,
+        coparentAcceptance,
+        recurringEnabled,
+        enrichedGiftsForFund,
+      ] = await timeStage("second_wave_parallel", () => Promise.all([
+        largeGiftHoldsRawP,
+        eventGiftCodeEntriesP,
+        kidClaimedAtP,
+        coparentAcceptanceP,
+        recurringEnabledP,
+        enrichedGiftsForFundP,
+      ]));
 
       // Fallback principal_basis here MUST come from gifts, not from balance.
       // f.balance mirrors current market value, so balance+cash+pending equals
@@ -2940,99 +3090,8 @@ export async function registerRoutes(
           : { hostPlan: "free", coverageStatus: "uncovered", holds: [] };
       })();
 
-      const customEvents = eventsForFund.filter((e: any) => !e.isPermanent);
-      const eventGiftCodeEntries = await timeStage("event_gift_codes", () =>
-        Promise.all(
-          customEvents.map(async (e: any) => {
-            try {
-              const record = await ensureGiftCodeForEvent(e, fund);
-              return [e.id, { code: record.code, lookupUrl: `${getAppBaseUrl(req)}/gift` }] as const;
-            } catch {
-              return null;
-            }
-          }),
-        ).then((results) => Object.fromEntries(results.filter(Boolean) as [string, { code: string; lookupUrl: string }][])),
-      );
-
-      // Detect: is the current viewer the kid who just claimed this fund?
-      // Look up the age-transition record and check if the user is the
-      // childClaimedByUserId AND the ownership has been transferred to them.
-      // The Dashboard uses kidClaimedAt to render a one-time at-18 welcome
-      // banner above the parent-style hero — replacing the "share with
-      // gifters / set up auto-invest" CTAs (which assume a parent viewer)
-      // with a kid-appropriate "this is yours, here's what changed, here's
-      // the parent letter, here are your gifters to thank" surface. Null
-      // when the viewer isn't the kid OR the claim/transfer was more than
-      // 60 days ago (one-time welcome, not a permanent banner).
-      let kidClaimedAt: string | null = null;
-      try {
-        const transitionRecord = await getAgeTransitionRecord(fund.id);
-        if (
-          transitionRecord.ownershipTransferredAt &&
-          transitionRecord.childClaimedByUserId === userId
-        ) {
-          const claimedAt = transitionRecord.childClaimedAt || transitionRecord.ownershipTransferredAt;
-          const ageMs = Date.now() - new Date(claimedAt).getTime();
-          if (ageMs >= 0 && ageMs < 60 * 24 * 60 * 60 * 1000) {
-            kidClaimedAt = claimedAt;
-          }
-        }
-      } catch {
-        // Treat errors here as "not the kid" — the welcome banner just
-        // doesn't render. No reason to fail the entire dashboard summary.
-      }
-
-      // Co-parent acceptance celebration (Tier-2 deferred item #1, shipped
-      // 2026-05-23). When the fund OWNER views the dashboard and a
-      // co-parent collaborator was added/accepted within the last 30 days,
-      // surface the acceptance so the Dashboard can render a one-time
-      // banner ("Claire accepted your invite to Emma's fund"). Renders
-      // only for the inviter (fund.userId === viewer); the accepted
-      // co-parent themselves doesn't see this — they see normal access.
-      // Banner is one-time + dismissable via per-fund-per-collab-id
-      // localStorage flag on the client side.
-      let coparentAcceptance: {
-        collaboratorId: string;
-        name: string;
-        acceptedAt: string;
-      } | null = null;
-      if (fund.userId === userId) {
-        try {
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-          const acceptedRows = await db.execute(sql`
-            SELECT
-              fc.id AS collaborator_id,
-              fc.email,
-              fc.accepted_at,
-              fc.user_id,
-              u.first_name,
-              u.last_name,
-              u.preferred_name
-            FROM fund_collaborators fc
-            LEFT JOIN users u ON u.id = fc.user_id
-            WHERE fc.fund_id = ${fund.id}
-              AND fc.status = 'accepted'
-              AND fc.accepted_at IS NOT NULL
-              AND fc.accepted_at >= ${thirtyDaysAgo.toISOString()}
-            ORDER BY fc.accepted_at DESC
-            LIMIT 1
-          `);
-          const row = (acceptedRows.rows as any[])?.[0];
-          if (row) {
-            const first = String(row.first_name || row.preferred_name || "").trim();
-            const last = String(row.last_name || "").trim();
-            const fullName = [first, last].filter(Boolean).join(" ").trim();
-            const displayName = fullName || String(row.email || "Your co-parent").split("@")[0];
-            coparentAcceptance = {
-              collaboratorId: String(row.collaborator_id),
-              name: displayName,
-              acceptedAt: new Date(row.accepted_at).toISOString(),
-            };
-          }
-        } catch {
-          // Best-effort; never block dashboard summary on this surface.
-        }
-      }
+      // (customEvents, eventGiftCodeEntries, kidClaimedAt, and coparentAcceptance
+      // are produced by the concurrent second wave above.)
 
       // Plus first-media unlock celebration (Tier-2 deferred item #2,
       // shipped 2026-05-23). When the fund owner is on Kiddo+ and the
@@ -3061,74 +3120,8 @@ export async function registerRoutes(
         // Best-effort; never block dashboard summary on this surface.
       }
 
-      // Whether recurring investments are unlocked for this fund. The
-      // client uses this for hasAutoInvestAccess (the recurring CTA + the
-      // parent-authored Memory Book media gate). Derived from the FUND
-      // OWNER's coverage so a co-parent on a free personal plan still sees
-      // recurring on a paid fund; OR'd with the demo bypass so the seeded
-      // demo recurring plans always render (mirrors the parent-contributions
-      // GET). Same predicate the GET/POST gate on — single source of truth.
-      const recurringEnabled = await timeStage("recurring_coverage", async () => {
-        const [coverage, fundIsDemo] = await Promise.all([
-          getFundCoverageState(fund.userId, fund.id),
-          isDemoFund(fund.id),
-        ]);
-        // Post-handoff owner: the now-adult owns the fund (transferredAt set,
-        // and fund.userId is them). Recurring is FREE for them — the parent
-        // subscription retires at majority and AUM (0.10%) is the only
-        // post-handoff revenue, so the owner auto-invests in their OWN account
-        // with no Plus sub. (Charging a sub to invest in your own account would
-        // contradict subscription-retires-at-majority.) Per kid-2.0.
-        const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === (req.user as any)?.id;
-        return fundIsDemo
-          || isPostHandoffOwner
-          || coverage === "covered_starter"
-          || coverage === "covered_family"
-          || coverage === "trial_active";
-      });
-
-      // Enrich gift rows with the matched account's preferred display name +
-      // avatar — the SAME shape GET /api/funds/:id/gifts returns. The
-      // Dashboard seeds its gifts query cache straight from this payload
-      // (Dashboard.tsx ~2078), so without the enrichment here the money
-      // summary's "other account-holder" row fell back to a bare first name
-      // ("Phil's contributions" instead of "Dad's") until a manual refetch
-      // hit the standalone endpoint. Never enriches anonymous gifts.
-      const enrichedGiftsForFund = await timeStage("gift_enrichment", async () => {
-        const giftEmails = Array.from(new Set(
-          giftsForFund
-            .filter((g: any) => g.isAnonymous !== true)
-            .map((g: any) => String(g.senderEmail || "").trim().toLowerCase())
-            .filter(Boolean),
-        ));
-        const infoByEmail = new Map<string, { preferredName: string | null; avatarUrl: string | null }>();
-        if (giftEmails.length > 0) {
-          try {
-            const rows = await db
-              .select({
-                email: users.email,
-                preferredName: users.preferredName,
-                profileImageUrl: users.profileImageUrl,
-              })
-              .from(users)
-              .where(inArray(sql`lower(${users.email})`, giftEmails));
-            for (const r of rows) {
-              if (!r.email) continue;
-              infoByEmail.set(String(r.email).trim().toLowerCase(), {
-                preferredName: (r.preferredName && String(r.preferredName).trim()) || null,
-                avatarUrl: (r as any).profileImageUrl || null,
-              });
-            }
-          } catch (enrichErr) {
-            console.warn("[dashboard-summary] gifter enrichment failed (non-fatal):", (enrichErr as any)?.message || enrichErr);
-          }
-        }
-        return giftsForFund.map((g: any) => {
-          if (g.isAnonymous === true) return { ...g, gifterPreferredName: null, gifterAvatarUrl: null };
-          const match = infoByEmail.get(String(g.senderEmail || "").trim().toLowerCase());
-          return { ...g, gifterPreferredName: match?.preferredName || null, gifterAvatarUrl: match?.avatarUrl || null };
-        });
-      });
+      // (recurringEnabled and enrichedGiftsForFund are produced by the
+      // concurrent second wave above.)
 
       const responsePayload = await timeStage("response_assembly", async () => ({
           fundId: fund.id,
