@@ -2206,10 +2206,19 @@ export default function Dashboard() {
     prevValueRef.current = rawTotalValue;
   }, [rawTotalValue]);
   // Persist the live balance per-fund so the next session seeds the count-up from the last known value.
+  // GUARDED on dashboardSummary being resolved (2026-06-04 perfection pass):
+  // in the window where the fund row has loaded but the summary (holdings)
+  // hasn't, rawTotalValue = 0 invested + pending + cash — a low-but-positive
+  // PARTIAL total. Writing that would poison the seed, and the next session
+  // would "roll up" from a number the fund was never actually at — a fake
+  // gain, the one dishonesty this animation must never produce. The window
+  // only exists on cold caches (first visit, post-demo-login clear), which
+  // is precisely when the seed is being established.
   useEffect(() => {
-    if (!activeFundId || !rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
+    if (!activeFundId || !dashboardSummary) return;
+    if (!rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
     writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, rawTotalValue);
-  }, [activeFundId, rawTotalValue]);
+  }, [activeFundId, rawTotalValue, dashboardSummary]);
 
   // Per-fund cached seed for the hero's "$X at 65" projection peek. Same
   // Acorns-style pattern as the balance: paint the last known projection
@@ -3193,6 +3202,73 @@ export default function Dashboard() {
       .sort((a, b) => new Date(String(b.createdAt || 0)).getTime() - new Date(String(a.createdAt || 0)).getTime());
   }, [gifts]);
 
+  // ── "On this day" gift anniversary (founder-locked 2026-06-04) ──
+  // The relationship version of fintech's "feel time": when a gift was given
+  // on TODAY's date in a previous year, one card in the hero cycler becomes
+  // "Gloria gave $50 three years ago today" with the REAL current value of
+  // that exact gift (its actual shares at the live price — same honest math
+  // as the Memory Book's now-worth lines). Composes entirely from data we
+  // already load; nothing is projected, nothing is promised. Memory-machine
+  // beat: the product remembering the family's own history back to them.
+  const onThisDayCard = useMemo(() => {
+    const now = new Date();
+    const m = now.getUTCMonth();
+    const d = now.getUTCDate();
+    const candidates = (gifts as any[]).filter((g) => {
+      const status = String(g.status || "").toLowerCase();
+      if (!["invested", "settled", "completed"].includes(status)) return false;
+      const dt = new Date(String(g.createdAt || 0));
+      if (isNaN(dt.getTime())) return false;
+      if (dt.getUTCMonth() !== m || dt.getUTCDate() !== d) return false;
+      const years = now.getUTCFullYear() - dt.getUTCFullYear();
+      return years >= 1 && (parseFloat(String(g.amount || "0")) || 0) > 0;
+    });
+    if (candidates.length === 0) return null;
+    // Pick the most story-worthy: named external gifter beats anonymous,
+    // then older beats newer (deeper time = stronger beat), then larger.
+    candidates.sort((a, b) => {
+      const aNamed = a.senderName && !a.isAnonymous ? 1 : 0;
+      const bNamed = b.senderName && !b.isAnonymous ? 1 : 0;
+      if (aNamed !== bNamed) return bNamed - aNamed;
+      const aT = new Date(String(a.createdAt)).getTime();
+      const bT = new Date(String(b.createdAt)).getTime();
+      if (aT !== bT) return aT - bT;
+      return (parseFloat(String(b.amount || "0")) || 0) - (parseFloat(String(a.amount || "0")) || 0);
+    });
+    const g = candidates[0];
+    const years = now.getUTCFullYear() - new Date(String(g.createdAt)).getUTCFullYear();
+    // Real now-worth, single-ticker gifts only (the only case where "this
+    // exact gift's value" is honest without allocation math): the gift's
+    // recorded shares at the holding's live per-share price.
+    let nowWorth: number | null = null;
+    const ticker = String(g.selectedTicker || "").toUpperCase();
+    const sharesAcquired = parseFloat(String(g.sharesAcquired || "0")) || 0;
+    if (ticker && sharesAcquired > 0) {
+      const h = holdings.find((x) => String(x.ticker || "").toUpperCase() === ticker);
+      const hShares = h ? parseFloat(String(h.shares || "0")) || 0 : 0;
+      const hValue = h ? parseFloat(String(h.currentValue || "0")) || 0 : 0;
+      if (hShares > 0 && hValue > 0) nowWorth = sharesAcquired * (hValue / hShares);
+    }
+    return { gift: g, years, nowWorth };
+  }, [gifts, holdings]);
+
+  // Hero cycler cards = recent gifts + (when one exists) the anniversary
+  // card at index 1, so index 0 stays the newest gift (the new-gift flash
+  // logic watches recentGiftsFeed[0] and must keep doing so). The flagged
+  // copy of the gift row keeps its REAL id, so the existing tap-through
+  // deep link (/memory/:fundId?gift=ID) works unchanged.
+  const heroCards = useMemo(() => {
+    if (!onThisDayCard) return recentGiftsFeed;
+    const flagged = {
+      ...onThisDayCard.gift,
+      __onThisDay: true,
+      __yearsAgo: onThisDayCard.years,
+      __nowWorth: onThisDayCard.nowWorth,
+    };
+    const rest = recentGiftsFeed.filter((g) => g.id !== onThisDayCard.gift.id);
+    return [rest[0], flagged, ...rest.slice(1)].filter(Boolean) as typeof recentGiftsFeed;
+  }, [recentGiftsFeed, onThisDayCard]);
+
   // Reset hero gift index when switching funds
   useEffect(() => { setHeroGiftIdx(0); }, [activeFundId]);
 
@@ -3342,13 +3418,13 @@ export default function Dashboard() {
   // cycle could rotate the new gift off before they looked back at
   // the hero.
   useEffect(() => {
-    if (recentGiftsFeed.length <= 1) return;
+    if (heroCards.length <= 1) return;
     if (newGiftFlash) return;
     const timer = setInterval(() => {
-      setHeroGiftIdx(i => (i + 1) % Math.min(recentGiftsFeed.length, 5));
+      setHeroGiftIdx(i => (i + 1) % Math.min(heroCards.length, 5));
     }, 4500);
     return () => clearInterval(timer);
-  }, [recentGiftsFeed.length, newGiftFlash]);
+  }, [heroCards.length, newGiftFlash]);
 
   const uncoveredFeesThisMonth = useMemo(() => {
     if (isFundCovered) return 0;
@@ -3464,11 +3540,14 @@ export default function Dashboard() {
 
   // Persist the live projection per-fund so the next session seeds the
   // count-up from the last known projection. Same pattern as the balance
-  // cache write above.
+  // cache write above — including the dashboardSummary guard, because the
+  // projection derives from totalValue and inherits the same partial-load
+  // poison window (see the balance write's comment).
   useEffect(() => {
-    if (!activeFundId || !heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
+    if (!activeFundId || !dashboardSummary) return;
+    if (!heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
     writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, heroProjectedAt65);
-  }, [activeFundId, heroProjectedAt65]);
+  }, [activeFundId, heroProjectedAt65, dashboardSummary]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
   // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.
@@ -5825,7 +5904,7 @@ export default function Dashboard() {
                       )}
 
                       {/* Cycling gift strip */}
-                      {recentGiftsFeed.length > 0 && (() => {
+                      {heroCards.length > 0 && (() => {
                         // Key the card by gift id (with index as fallback) so a
                         // brand-new gift arriving at index 0 while the user was
                         // already parked on index 0 still drives an
@@ -5836,7 +5915,7 @@ export default function Dashboard() {
                         // at index 0 (the latest gift); if they manually
                         // dotted away to an older gift mid-flash, we don't
                         // mis-paint that older gift as "just arrived."
-                        const cardKey = recentGiftsFeed[heroGiftIdx]?.id ?? `idx-${heroGiftIdx}`;
+                        const cardKey = heroCards[heroGiftIdx]?.id ?? `idx-${heroGiftIdx}`;
                         const cardIsFlashing = newGiftFlash && heroGiftIdx === 0;
                         return (
                         <div style={{ marginBottom: 20 }}>
@@ -5855,7 +5934,7 @@ export default function Dashboard() {
                               role="button"
                               tabIndex={0}
                               onClick={() => {
-                                const heroGift = recentGiftsFeed[heroGiftIdx];
+                                const heroGift = heroCards[heroGiftIdx];
                                 if (!heroGift?.id || !activeFundId) return;
                                 haptic("selection");
                                 setLocation(`/memory/${activeFundId}?gift=${heroGift.id}`);
@@ -5863,7 +5942,7 @@ export default function Dashboard() {
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
-                                  const heroGift = recentGiftsFeed[heroGiftIdx];
+                                  const heroGift = heroCards[heroGiftIdx];
                                   if (!heroGift?.id || !activeFundId) return;
                                   haptic("selection");
                                   setLocation(`/memory/${activeFundId}?gift=${heroGift.id}`);
@@ -5885,7 +5964,7 @@ export default function Dashboard() {
                               data-testid="card-hero-recent-gift"
                             >
                               {(() => {
-                                const g = recentGiftsFeed[heroGiftIdx];
+                                const g = heroCards[heroGiftIdx];
                                 const ticker = (g as any)?.selectedTicker as string | null | undefined;
                                 const holdingName = ticker
                                   ? friendlyHoldingName(ticker, holdings.find(h => h.ticker === ticker)?.name)
@@ -5922,13 +6001,23 @@ export default function Dashboard() {
                                   ? (giftExec === "cash" ? "cash" : `${childPossessive} mix`)
                                   : null;
                                 const destinationPrefix = destinationName === "cash" ? "Held as " : "Went into ";
+                                // "On this day" anniversary card — the memory-machine
+                                // beat in the cycler rotation. Same card chrome, same
+                                // tap-through to the Memory Book entry; only the story
+                                // changes: when it was given, and what that exact gift
+                                // is worth now (real shares at the live price).
+                                const onThisDay = Boolean((g as any)?.__onThisDay);
+                                const yearsAgo = Number((g as any)?.__yearsAgo || 0);
+                                const otdNowWorth = (g as any)?.__nowWorth as number | null | undefined;
                                 return (
                                   <>
                                     <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 3 }}>
-                                      {heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
+                                      {onThisDay ? "On this day" : heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
                                     </p>
                                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
-                                      {displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added {formatCurrency(amt)} to {isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.
+                                      {onThisDay
+                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${formatCurrency(amt)} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago today.`
+                                        : `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added ${formatCurrency(amt)} to ${isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.`}
                                     </p>
                                     {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /
                                         🌱 Settling / No thanks yet) intentionally dropped from the
@@ -5945,7 +6034,16 @@ export default function Dashboard() {
                                         holding / event / message doesn't shrink the card vs gifts
                                         that have all three. Same render priority as before. */}
                                     <div style={{ minHeight: 16, marginTop: 8 }}>
-                                      {destinationName ? (
+                                      {onThisDay && typeof otdNowWorth === "number" && otdNowWorth > 0 ? (
+                                        // The payoff line: this exact gift's value today.
+                                        // Real shares at the live price; "~" because prices
+                                        // move. Only renders when honestly computable
+                                        // (single-ticker gifts with recorded shares).
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.3 }}>
+                                          Now worth ~{formatCurrency(otdNowWorth)}
+                                          {holdingName ? ` · ${holdingName}` : ""}
+                                        </p>
+                                      ) : destinationName ? (
                                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
                                           {/* Dollar amount intentionally dropped here — the gift
                                               narrative line above (e.g. "Dovi added $100 to Emma's

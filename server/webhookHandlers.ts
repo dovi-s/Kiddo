@@ -11,6 +11,7 @@ import path from 'path';
 import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations } from './fundStrategyConfig';
 import {
   fireMoneyCrossMilestones,
+  fireGrowthPassedGiftsMilestone,
   fireReturningGifterMilestone,
   fireUniqueGiftersMilestone,
   fireFirstVoiceMilestone,
@@ -387,6 +388,7 @@ export class WebhookHandlers {
           parseFloat(settledFund.pendingBalance || '0') +
           parseFloat(String((settledFund as any).cashBalance || '0'));
         await fireMoneyCrossMilestones(gift.fundId, ownerId, prevTotal, newTotal);
+        await fireGrowthPassedGiftsMilestone(gift.fundId, ownerId, newTotal);
         if (!isParentContrib) {
           if (gift.senderEmail) {
             await fireReturningGifterMilestone(gift.fundId, ownerId, gift.senderEmail, gift.senderName || null);
