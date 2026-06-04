@@ -47,6 +47,28 @@ import {
 
 const NON_COUNTING = new Set(["pending", "failed", "refunded", "canceled", "cancelled", "host_hold"]);
 
+// Auto-invest ETF universe = the "Managed mix". Mirrors the server's
+// ADMIN_ASSET_UNIVERSE auto_invest set (marketQuotes.ts). Anything NOT here is a
+// gifter-chosen individual stock ("Chosen with love").
+const MANAGED_MIX_ETFS = new Set([
+  "VTI", "VXUS", "BND", "VGT", "VUG", "VYM", "SCHD", "QQQ", "VOO", "VEA", "VWO", "BNDX", "AGG",
+]);
+
+// Mirror of shared/test-content.ts looksLikeTestSender — drops dev/test/seed junk
+// gifters ("test", "tester", "qqqqq", "aaaa") from identity lists. Anonymous /
+// "Someone" fallbacks pass through.
+const TEST_SENDER_TOKEN_RE = /^(test|testing|tstgin|tstng|qqqqq|tester)\b/i;
+const REPEATED_CHAR_RE = /^([a-z])\1{2,}$/i;
+function looksLikeTestSender(name?: string | null, email?: string | null): boolean {
+  const n = String(name || "").trim();
+  if (TEST_SENDER_TOKEN_RE.test(n)) return true;
+  const compact = n.replace(/\s+/g, "");
+  if (compact && REPEATED_CHAR_RE.test(compact)) return true;
+  const localPart = String(email || "").trim().toLowerCase().split("@")[0] || "";
+  if (localPart && TEST_SENDER_TOKEN_RE.test(localPart)) return true;
+  return false;
+}
+
 function num(v: unknown): number {
   const n = parseFloat(String(v ?? "0"));
   return Number.isFinite(n) ? n : 0;
@@ -283,9 +305,12 @@ export function FundHomeTab(props: FundHomeTabProps) {
     const pending = num(activeFund?.pendingBalance);
     const totalValue = balance + cash + pending;
 
-    const gifts: DashboardGift[] = (summary?.gifts ?? []).filter(
-      (g) => !NON_COUNTING.has(String(g.status || "").toLowerCase()),
-    );
+    const gifts: DashboardGift[] = (summary?.gifts ?? [])
+      .filter((g) => !NON_COUNTING.has(String(g.status || "").toLowerCase()))
+      // Drop dev/test/seed junk senders ("test", "qqqqq", mash) so they don't
+      // appear in the roster, recent gifts, or counts — mirrors the web's
+      // looksLikeTestSender (shared/test-content.ts). Anonymous gifts pass.
+      .filter((g) => !looksLikeTestSender(g.senderName, g.senderEmail));
     const giftsTotal = gifts.reduce((s, g) => s + num(g.netAmount ?? g.amount), 0);
 
     // contributors: unique named senders + an anonymous bucket
@@ -323,15 +348,13 @@ export function FundHomeTab(props: FundHomeTabProps) {
       return s + (f === "weekly" ? a * 4.33 : f === "yearly" ? a / 12 : f === "daily" ? a * 30 : a);
     }, 0);
 
-    // holdings split: "chosen" = tickers that came from a gifter pick; rest = managed mix
+    // holdings split by ASSET TYPE (matches the web's source classification):
+    // the auto-invest ETF set = "Managed mix"; everything else (individual
+    // stocks like NFLX) = "Chosen with love". The prior allocation-source split
+    // misclassified stocks with incomplete allocation records into the mix.
     const holdings: ApiHolding[] = summary?.holdings ?? [];
-    const chosenTickers = new Set(
-      (summary?.giftAllocations ?? [])
-        .filter((a) => String(a.source || "").toLowerCase() === "pick")
-        .map((a) => a.ticker.toUpperCase()),
-    );
-    const chosen = holdings.filter((h) => chosenTickers.has(h.ticker.toUpperCase()));
-    const managed = holdings.filter((h) => !chosenTickers.has(h.ticker.toUpperCase()));
+    const chosen = holdings.filter((h) => !MANAGED_MIX_ETFS.has(h.ticker.toUpperCase()));
+    const managed = holdings.filter((h) => MANAGED_MIX_ETFS.has(h.ticker.toUpperCase()));
     const holdingsTotal = holdings.reduce((s, h) => s + num(h.currentValue), 0);
 
     // principal + growth from the gifts (cost basis) vs current invested value
@@ -536,17 +559,21 @@ export function FundHomeTab(props: FundHomeTabProps) {
           <GiftCarousel gifts={d.recent} childName={childName} />
         ) : null}
 
-        {/* hero CTAs */}
+        {/* hero CTAs — Share + a projection peek (mirrors the web hero; the old
+            "Open fund" sent users to an obsolete, thinner detail screen — Home IS
+            the fund view now). */}
         <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
           {!isReadOnly ? (
             <Button label="Share" onPress={handleShare} variant="monetization" style={{ flex: 1 }} />
           ) : null}
-          <Button
-            label="Open fund"
-            onPress={() => onSelectFund(activeFund)}
-            variant="outline"
-            style={{ flex: 1 }}
-          />
+          {hasStarted ? (
+            <Button
+              label="See its future"
+              onPress={() => setProjectionOpen(true)}
+              variant="outline"
+              style={{ flex: 1 }}
+            />
+          ) : null}
         </View>
       </KiddoCard>
 
@@ -629,21 +656,16 @@ export function FundHomeTab(props: FundHomeTabProps) {
         </View>
       ) : null}
 
-      {/* ── cash waiting ───────────────────────────────────────────────────── */}
+      {/* ── cash waiting (informational; cash auto-invests, no action needed) ── */}
       {d.cash > 0 && !isReadOnly ? (
-        <KiddoCard onPress={() => onSelectFund(activeFund)}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flex: 1 }}>
-              <KText variant="eyebrow" color={colors.goldInk}>Cash is waiting</KText>
-              <KText variant="title" tabular style={{ marginTop: 2 }}>
-                {formatBalance(d.cash)}
-              </KText>
-              <KText variant="caption" style={{ marginTop: 2 }}>
-                Invests automatically on the next cycle, usually 1 to 2 business days.
-              </KText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={semanticColors.text.muted} />
-          </View>
+        <KiddoCard>
+          <KText variant="eyebrow" color={colors.goldInk}>Cash is waiting</KText>
+          <KText variant="title" tabular style={{ marginTop: 2 }}>
+            {formatBalance(d.cash)}
+          </KText>
+          <KText variant="caption" style={{ marginTop: 2 }}>
+            Invests automatically on the next cycle, usually 1 to 2 business days.
+          </KText>
         </KiddoCard>
       ) : null}
 

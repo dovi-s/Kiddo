@@ -28,12 +28,13 @@ apps/mobile/.expo
 !.claude/workflows/security-audit.js
 *.log
 
-# Local eyeballing/QA scratch — demo screenshots + one-off compare/audit
-# scripts a dev runs by hand. Local-only, never product code, and keeping
-# them ignored means they can't be accidentally swept into a commit.
+# Local eyeballing/QA scratch — demo screenshots + dot-prefixed one-off
+# scripts a dev runs by hand (.cmp.cjs, .audit.cjs, .fix.cjs, ...). Local-only,
+# never product code. The .*.cjs pattern future-proofs against new scratch
+# names and prevents accidental commits; real .cjs all live under script/ with
+# normal (non-dot) names, so the pattern never catches actual code.
 .shots/
-.audit.cjs
-.cmp.cjs
+.*.cjs
 
 # IDE
 .vscode/
