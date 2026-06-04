@@ -47,9 +47,15 @@ export default function TaxDocsExplainer() {
           <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
             What your 1099 actually says.
           </h1>
+          {/* "Once investing is live" hedge per the custody-copy rule: 1099s
+              are a live-brokerage capability, and pre-custody nothing real is
+              issued. Also "by mid-February", not "every January" - brokerages
+              send consolidated 1099s by the Feb 15 deadline; promising January
+              sets up a support ticket every February. */}
           <p className="text-base text-foreground/80 leading-relaxed">
-            Every January, Kiddo ships you two forms. Here's what each one means
-            and what to do with it. Five-minute read.
+            Once investing is live, every tax season brings two forms (they land
+            by mid-February). Here's what each one means and what to do with it.
+            Five-minute read.
           </p>
         </header>
 
@@ -60,8 +66,8 @@ export default function TaxDocsExplainer() {
             <>
               <p>
                 Companies you own (like Apple, Disney, Vanguard funds) pay you a small
-                slice of their profits four times a year. That's a dividend. The 1099-DIV
-                is the IRS's record of how much you got over the whole year.
+                slice of their profits, usually four times a year. That's a dividend. The
+                1099-DIV is the IRS's record of how much you got over the whole year.
               </p>
               <p>
                 Two lines matter most:
@@ -171,18 +177,22 @@ export default function TaxDocsExplainer() {
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>
                   <strong>Tax software (TurboTax, FreeTaxUSA, Cash App Taxes).</strong>{" "}
-                  Most will import directly from Kiddo's brokerage. If not, type
-                  the numbers from each form into the matching screens. They walk
-                  you through it.
+                  Most can import the forms directly from our broker-dealer
+                  partner. If not, type the numbers from each form into the
+                  matching screens. They walk you through it.
                 </li>
                 <li>
                   <strong>An accountant.</strong>{" "}
                   Hand them both forms. They handle the rest.
                 </li>
               </ul>
+              {/* "a handful", not a count - Washington now taxes large capital
+                  gains despite having no income tax, and New Hampshire's
+                  dividends tax just phased out, so any specific number goes
+                  stale. */}
               <p className="pt-2">
                 Federal forms only cover federal tax. Your state might charge
-                its own capital gains tax (most do; nine states don't). Tax
+                its own capital gains tax (most do; a handful don't). Tax
                 software handles state automatically.
               </p>
             </>
@@ -205,9 +215,9 @@ export default function TaxDocsExplainer() {
                 basis for those shares (Kiddo invests in fractional shares too,
                 so the math lands at 3.012 shares; the cost basis is the same
                 per-share number either way). When you sell, the difference
-                between $166 and the sale price is your gain. Kiddo's brokerage
-                reports this to the IRS automatically; you don't need to track
-                it yourself.
+                between $166 and the sale price is your gain. Our broker-dealer
+                partner reports this to the IRS automatically; you don't need to
+                track it yourself.
               </p>
               <p>
                 If you ever see "cost basis: unknown" on a sale (rare, but
@@ -216,6 +226,37 @@ export default function TaxDocsExplainer() {
                 which means 100% of the sale gets taxed as gain. Email us first
                 if this comes up; we can usually reconstruct the basis from
                 your gift records.
+              </p>
+            </>
+          }
+        />
+
+        {/* The GIVER's side. This page is reachable by any signed-in account
+            (incl. gifter personas - founder caught Jay reading it 2026-06-04),
+            and everything above speaks to the fund's owner. One short section
+            answers the question a generous grandparent actually has, instead
+            of leaving them to misread the kiddie-tax math as theirs. Numbers:
+            2025 annual gift-tax exclusion is $19,000 per giver per recipient;
+            above it, Form 709 uses the lifetime exemption - a form, not a
+            bill, for nearly everyone. */}
+        <Section
+          icon={<TrendingUp size={16} />}
+          title="If you're the one giving"
+          body={
+            <>
+              <p>
+                Everything above is about the fund's owner. If you're the
+                grandparent, aunt, or friend sending the gifts: there's no tax
+                form from us for you, and the kid doesn't owe tax on receiving
+                your gift.
+              </p>
+              <p>
+                One number worth knowing: you can give up to $19,000 per person
+                per year (the 2025 federal exclusion; it adjusts most years)
+                with nothing to file. Give more than that to one kid in one
+                year and you file Form 709 with your return. For nearly
+                everyone that's just paperwork that counts against a
+                multi-million-dollar lifetime allowance, not a tax bill.
               </p>
             </>
           }
