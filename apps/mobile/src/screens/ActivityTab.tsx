@@ -28,6 +28,10 @@ function present(type: string): { icon: any; tint: string; negative: boolean } {
   const t = type.toLowerCase();
   if (t.includes("withdraw") || t.includes("debit")) return { icon: "arrow-up-circle", tint: "#C0392B", negative: true };
   if (t.includes("fee")) return { icon: "remove-circle", tint: "#C0392B", negative: true };
+  // Sell — holdings converted to cash WITHIN the fund (a reallocation, not money
+  // leaving). Checked explicitly: "sell" matched none of the cases below and
+  // fell through to the gift default, so a sale rendered with a gift icon.
+  if (t.includes("sell") || t.includes("sold")) return { icon: "swap-horizontal", tint: colors.evergreen, negative: false };
   if (t.includes("invest") || t.includes("buy")) return { icon: "trending-up", tint: colors.evergreen, negative: false };
   if (t.includes("dividend")) return { icon: "cash", tint: colors.evergreen, negative: false };
   if (t.includes("contribution") || t.includes("recurring")) return { icon: "repeat", tint: colors.evergreen, negative: false };
@@ -51,6 +55,7 @@ function labelFor(tx: DashboardTransaction): string {
   const t = tx.type.toLowerCase();
   if (t.includes("withdraw")) return "Withdrawal";
   if (t.includes("fee")) return "Platform fee";
+  if (t.includes("sell") || t.includes("sold")) return "Sold";
   if (t.includes("invest")) return "Invested";
   if (t.includes("dividend")) return "Dividend";
   if (t.includes("contribution")) return "Recurring investment";

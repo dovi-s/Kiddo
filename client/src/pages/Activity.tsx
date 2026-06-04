@@ -8,7 +8,14 @@ import { useLocation, useSearch, Link } from "wouter";
 // (billing event), Mail (invitation).
 import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
-import { canonicalLabel } from "@shared/activity-semantics";
+import {
+  canonicalLabel,
+  GIFT_TYPES,
+  GROWTH_TYPES,
+  normalizeActivityType,
+  isInternalOnlyType,
+  mapItemToCategory,
+} from "@shared/activity-semantics";
 import { StatusPill } from "@/lib/activity-helpers";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -84,159 +91,15 @@ const filterOptions: { value: FilterType; label: string }[] = [
   { value: "growth",     label: "Portfolio" },
 ];
 
-// Filter category mapping. Every activity type that gets written to the
-// `activities` table should fall into exactly ONE category here so the filter
-// pills can route it cleanly. Earlier these lists drifted behind the server's
-// growing type vocabulary — gift_received_cash, large_gift_hold_*,
-// kid_stock_suggestion, refund, kyc_action_required, etc. all surfaced under
-// "All" but disappeared when any specific filter was selected. Audit done
-// against every storage.createActivity({ type: ... }) call site.
-// "Gifts" = money + lifecycle events from EXTERNAL gifters. Includes the
-// gifter's own recurring schedule lifecycle events (paused/resumed/
-// cancelled) — those are about a gift relationship with someone else, not
-// about the parent's own money, so they belong with the gift ecosystem.
-const GIFT_TYPES = [
-  "gift_received",
-  "gift_invested",
-  "gift_received_cash",         // gift held as cash (pick failed / empty basket)
-  "large_gift_hold_started",    // gift on hold pending parent decision
-  "large_gift_hold_released",   // gift hold lifted, money invested
-  "refund",                     // gift refunded back to sender
-  "gifter_recurring_paused",    // an external gifter's recurring schedule was paused
-  "gifter_recurring_resumed",
-  "gifter_recurring_cancelled",
-];
-// "Yours" (internal value: "auto") = money + lifecycle events from the
-// PARENT. Their own contributions (one-time + recurring fires) and their
-// own schedule actions (pause/resume/cancel/edit). Single answer to
-// "what did I do?"
-const AUTO_TYPES = [
-  "auto_invest",
-  "parent_contribution",
-  "parent_contribution_failed", // recurring worker fired but Stripe declined
-  "recurring_paused",           // parent paused their own schedule
-  "recurring_resumed",          // parent resumed
-];
-const GROWTH_TYPES = [
-  "sell",
-  "withdrawal",
-  "bank_linked",
-  "bank_unlinked",              // bank account removed
-  "cash_invested",
-  // Strategy + custom-mix changes are PORTFOLIO decisions, not "milestones".
-  // Moved here 2026-05-31 so they populate the Portfolio filter (where a
-  // strategy switch belongs) instead of cluttering Milestones with admin
-  // events. GROWTH_TYPES is checked before MILESTONE_TYPES in the mapper.
-  "fund_strategy_changed",
-  "custom_allocations_changed",
-];
-// Milestone types fired by the server-side milestones engine. Each is a
-// celebratory row (not a transaction) that captures an emotional moment
-// the raw audit ledger would otherwise miss — money-cross thresholds,
-// returning gifters, anniversaries, first-X moments. All bucket to
-// the "Milestones" filter and get celebratory styling via getTypeConfig.
-const ENGINE_MILESTONE_TYPES = [
-  "milestone_money_cross",            // Fund crossed $100/$500/$1k/etc.
-  "milestone_returning_gifter",       // 2nd / 5th / 10th gift from same person
-  "milestone_unique_gifters",         // 5 / 10 / 25 distinct people gave
-  "milestone_anniversary",            // Fund's 1st / 5th / 10th / 18th year
-  "milestone_first_voice",            // First voice memory
-  "milestone_first_photo",            // First photo memory
-  "milestone_first_kid_pick_approved",// Kid's first approved suggestion
-];
-
-const MILESTONE_TYPES = [
-  ...ENGINE_MILESTONE_TYPES,
-  "event_pass_purchased",
-  "subscription_started", "subscription_canceled", "subscription_renewal", "payment_failed",
-  "kyc_approved", "kyc_action_required", "kyc_pending_review",
-  "starter_plan_activated", "family_plan_activated",
-  "memory_entry_added", "memory_milestone_added",
-  "memory_entry_edited", "memory_entry_deleted",   // parent-edited Memory Book entries
-  "age16_parent_notice", "age17_memory_book_preview", "age18_handoff_ready",
-  "kid_stock_suggestion",       // kid suggested a stock from KidView; parent reviews
-  "kid_suggestion_approved", "kid_suggestion_declined", // parent's review entry — pairs with the suggestion above
-  "fund_created",               // origin row for the fund's history
-  // fund_strategy_changed + custom_allocations_changed moved to GROWTH_TYPES
-  // (the Portfolio filter) 2026-05-31 — a strategy/mix change is a portfolio
-  // decision, not a milestone. Keeping them here made Milestones confusing.
-  "event_created", "event_archived", "event_unarchived",
-  "ssn_provided",               // tax ID added (last4 in metadata, never full)
-  "successor_custodian_added", "successor_custodian_changed", "successor_custodian_removed",
-  "child_profile_updated",      // name / photo / birthdate / pronoun
-  "majority_state_updated",     // residency state set → recomputes age of majority / handoff date
-];
-// `upgrade_*` rows (upgrade_viewed / upgrade_landed / upgrade_dismissed /
-// upgrade_clicked / etc.) are written by `logMonetizationActivity` with the
-// hardcoded title "Monetization trigger event" — they're pure CTA-funnel
-// analytics for product-side instrumentation, never user-facing. The
-// stale `monetization_trigger_event` literal is kept for any legacy rows
-// that pre-date the type rename.
-//
-// `payment_failed` was previously in this list (suppressed). Promoted to
-// a real History row when subscription billing rows landed in Activity —
-// a parent whose Kiddo+ charge fails needs to see it so they can fix the
-// card. Now buckets under Milestones filter via MILESTONE_TYPES.
-const INTERNAL_ONLY_TYPES = ["monetization_trigger_event"];
-function isInternalOnlyType(t: string): boolean {
-  return INTERNAL_ONLY_TYPES.includes(t) || t.startsWith("upgrade_");
-}
-
-function normalizeActivityType(type?: string | null): string {
-  return (type || "event_update").toString();
-}
-
-// Category derivation 2026-05-25 audit revision: was type-only, which
-// mis-bucketed PARENT one-time gifts (type=gift_received with
-// metadata.isParentContribution=true) into "gift" (the From-others
-// bucket) instead of "auto" (the Yours bucket). Recurring parent fires
-// already create parent_contribution activity rows so they land in
-// "auto" correctly via type alone; one-time parent gifts ride on
-// gift_received and need the metadata check to ride into the right
-// bucket. The deep-link destination from Dashboard's gifter modal
-// (?filter=auto&highlight={giftId}) was landing on the right page but
-// the highlight row was filtered out — user-flagged: "clicking these
-// are not going to the exact right place." Now bucketing respects
-// the metadata flag so one-time parent gifts show up under Yours.
-function isParentContributionItem(item: any): boolean {
-  if (typeof item?.isParentContribution === "boolean") return item.isParentContribution;
-  const raw = item?.metadata;
-  if (!raw || typeof raw !== "string") return false;
-  try {
-    const parsed = JSON.parse(raw) as { isParentContribution?: unknown };
-    return parsed.isParentContribution === true;
-  } catch {
-    return false;
-  }
-}
-
-function mapItemToCategory(item: any): "gift" | "auto" | "growth" | "memory" | "milestone" | "nudge" | "update" {
-  const t = normalizeActivityType(item?.type);
-  // Parent's own gift_received rows are PARENT contributions, not
-  // from-others gifts. Bucket them as "auto" so the Yours filter
-  // captures them and the From-others Gifts filter excludes them.
-  if (t === "gift_received" && isParentContributionItem(item)) return "auto";
-  return mapActivityTypeToCategory(item?.type);
-}
-
-function mapActivityTypeToCategory(type?: string | null): "gift" | "auto" | "growth" | "memory" | "milestone" | "nudge" | "update" {
-  const t = normalizeActivityType(type);
-  if (GIFT_TYPES.includes(t)) return "gift";
-  if (AUTO_TYPES.includes(t)) return "auto";
-  if (GROWTH_TYPES.includes(t)) return "growth";
-  if (t.startsWith("lifecycle_")) return "nudge";
-  if (t.startsWith("memory_") || t === "memory_entry_added") return "memory";
-  // Age-phase lifecycle rows (age16_parent_notice, age17_memory_book_preview,
-  // age18_preview_prepared, age18_invite_prepared, age18_handoff_requested,
-  // age18_child_claimed, age18_handoff_completed_child/parent, etc.) are
-  // canonical milestones. Prefix-match keeps any future age*_ event auto-
-  // bucketed without re-listing it here. Without this, the kid claiming the
-  // fund at 18 — the climax of the product per the design lens — would only
-  // appear under "All" and never under Milestones.
-  if (t.startsWith("age16_") || t.startsWith("age17_") || t.startsWith("age18_")) return "milestone";
-  if (MILESTONE_TYPES.includes(t)) return "milestone";
-  return "update";
-}
+// Filter category mapping + type-bucket arrays + normalizeActivityType +
+// isInternalOnlyType now live in shared/activity-semantics.ts (the single
+// source of truth, locked by script/test-activity-semantics.ts) and are
+// imported above. They used to be defined inline here and were the canonical
+// copy; they were moved to shared so the deep-link detail page, the
+// detail-history modal, and the native app all bucket/label events the same
+// way this feed does. GIFT_TYPES + GROWTH_TYPES are imported for the
+// resolveTypeVisual color/icon branches; mapItemToCategory + isInternalOnlyType
+// for the feed's filter pills and summary math.
 
 // Named semantic palette for activity-row pills. Extracted 2026-05-25
 // from the inline rgb() literals previously scattered through every

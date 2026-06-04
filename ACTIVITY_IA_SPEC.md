@@ -94,6 +94,21 @@ is still gift-toned — trivial follow-up.)
   locks the gifter_recurring_* fix, and checks category bucketing. Prevents the
   four-way drift from silently returning.
 
+## Phase 2 (cont.) — shipped 2026-06-03
+
+- **Category logic deduped into shared.** `Activity.tsx` no longer defines its
+  own `GIFT_TYPES`/`AUTO_TYPES`/`GROWTH_TYPES`/`MILESTONE_TYPES` +
+  `mapActivityTypeToCategory`/`mapItemToCategory`/`isParentContributionItem`/
+  `isInternalOnlyType`/`normalizeActivityType` (~150 lines) — it imports the five
+  it uses from `shared/activity-semantics.ts`. The shared category logic is now
+  exercised by the real feed (not just the guard test), so `shared/` is the true
+  single source for BOTH labels and categories. Behaviour verified unchanged via
+  tsc + the guard test.
+- **Mobile sell-icon bug fixed.** `present()` in `ActivityTab.tsx` matched none of
+  its cases for `sell` and fell through to the gift default, so a sale rendered
+  with a gift icon. Now `sell`/`sold` → swap icon, evergreen tint, label "Sold".
+  (Logic fix; clearly correct independent of visual QA.)
+
 ## Tracked follow-ups (Phase 3, needs a device to verify)
 
 1. **Mobile → `/api/activities`.** Repoint `ActivityTab` off
