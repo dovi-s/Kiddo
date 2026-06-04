@@ -6540,9 +6540,17 @@ export default function Dashboard() {
 
               const total30 = giftsFromOthersTotal + accountHolderContribTotal + marketGrowth30 - periodWithdrawals;
 
-              // Next scheduled run — soonest active parent_contribution.
+              // Next scheduled run — soonest active parent_contribution OWNED BY
+              // THE VIEWER. Viewer-keyed for the same reason as the rows above:
+              // this date renders under "YOUR recurring investments", and the
+              // fund-scoped list contains every account-holder's schedules — a
+              // $0-recurring co-admin (Claire) would otherwise read the
+              // custodian's next charge date as her own ("Your recurring ·
+              // starts Jun 18"). Same-family follow-up to the 2026-06-04
+              // viewer-keying fix.
               const nextScheduled = (parentContributions || [])
                 .filter((c: any) => c.status === "active" && c.nextRunDate)
+                .filter((c: any) => !c.userId || String(c.userId) === String((user as any)?.id || ""))
                 .map((c: any) => ({ ...c, nextTs: new Date(String(c.nextRunDate)).getTime() }))
                 .filter((c: any) => Number.isFinite(c.nextTs) && c.nextTs > Date.now())
                 .sort((a: any, b: any) => a.nextTs - b.nextTs)[0];
