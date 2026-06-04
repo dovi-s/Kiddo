@@ -2772,6 +2772,14 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: "Fund not found" });
 
       const userId = (req.user as any).id;
+      // ONE parallel wave for every independent read (2026-06-04 perf). This
+      // used to be two serial Promise.all stages, but the only thing in the
+      // second stage that actually depended on the first was largeGiftHolds
+      // (it needs the gifts list) — so snapshots, transactions, parent
+      // contributions, and allocations are folded in here, and largeGiftHolds
+      // runs as a tiny conditional step below. Halves the DB wall-clock from
+      // two round-trip waves to one. parentContributions is unconditional now
+      // (recurring is free across tiers — see hasAutoInvestAccess below).
       const [
         rawHoldings,
         giftsForFund,
@@ -2781,6 +2789,10 @@ export async function registerRoutes(
         recurringGiftRows,
         subscription,
         fundMembership,
+        snapshots,
+        recentTransactionRows,
+        parentContributionRows,
+        giftAllocationsForFund,
       ] = await timeStage("base_parallel_fetch", () =>
         Promise.all([
           storage.getHoldingsByFund(fund.id),
@@ -2791,6 +2803,33 @@ export async function registerRoutes(
           storage.getRecurringGiftsByFund(fund.id),
           storage.getSubscription(userId),
           storage.getFundMembership(userId, fund.id),
+          db
+            .select()
+            .from(fundSnapshots)
+            .where(eq(fundSnapshots.fundId, fund.id))
+            .orderBy(fundSnapshots.snapshotDate)
+            .catch(() => []),
+          db
+            .select({
+              id: transactions.id,
+              type: transactions.type,
+              amount: transactions.amount,
+              status: transactions.status,
+              description: transactions.description,
+              metadata: transactions.metadata,
+              giftId: transactions.giftId,
+              eventId: transactions.eventId,
+              fundId: transactions.fundId,
+              completedAt: transactions.completedAt,
+              createdAt: transactions.createdAt,
+            })
+            .from(transactions)
+            .where(eq(transactions.fundId, fund.id))
+            .orderBy(desc(transactions.completedAt), desc(transactions.createdAt))
+            .limit(12)
+            .catch(() => []),
+          storage.getParentContributionsByFund(fund.id),
+          storage.getGiftAllocationsByFund(fund.id).catch(() => []),
         ]),
       );
 
@@ -2822,49 +2861,19 @@ export async function registerRoutes(
       // need to know the subscriber's tier (not for recurring access).
       void plan; void isGlobalActive; void fundMembership;
 
-      // Run all remaining DB queries in parallel - none depend on each other
-      const [snapshots, recentTransactionRows, parentContributionRows, largeGiftHoldsRaw, giftAllocationsForFund] = await timeStage("second_parallel_fetch", () =>
-        Promise.all([
-          db
-            .select()
-            .from(fundSnapshots)
-            .where(eq(fundSnapshots.fundId, fund.id))
-            .orderBy(fundSnapshots.snapshotDate)
-            .catch(() => []),
-          db
-            .select({
-              id: transactions.id,
-              type: transactions.type,
-              amount: transactions.amount,
-              status: transactions.status,
-              description: transactions.description,
-              metadata: transactions.metadata,
-              giftId: transactions.giftId,
-              eventId: transactions.eventId,
-              fundId: transactions.fundId,
-              completedAt: transactions.completedAt,
-              createdAt: transactions.createdAt,
-            })
-            .from(transactions)
-            .where(eq(transactions.fundId, fund.id))
-            .orderBy(desc(transactions.completedAt), desc(transactions.createdAt))
-            .limit(12)
-            .catch(() => []),
-          hasAutoInvestAccess
-            ? storage.getParentContributionsByFund(fund.id)
-            : Promise.resolve([]),
-          (async () => {
-            const heldGifts = giftsForFund.filter((gift: any) => String(gift.status || "").toLowerCase() === "host_hold");
-            if (heldGifts.length === 0) return { heldGifts: [], entitlement: null, coverageStatus: null };
-            const [entitlement, coverageStatus] = await Promise.all([
-              hasPaidPlanForFund(fund.userId, fund.id),
-              getFundCoverageState(fund.userId, fund.id),
-            ]);
-            return { heldGifts, entitlement, coverageStatus };
-          })(),
-          storage.getGiftAllocationsByFund(fund.id).catch(() => []),
-        ])
-      );
+      // largeGiftHolds is the ONLY read that depends on the gifts list, and it
+      // only touches the DB when there are actually host-held gifts (rare). So
+      // it runs as a tiny conditional step after the single parallel wave above
+      // — a no-op (zero round trips) for the overwhelmingly common case.
+      const largeGiftHoldsRaw = await timeStage("large_gift_holds", async () => {
+        const heldGifts = giftsForFund.filter((gift: any) => String(gift.status || "").toLowerCase() === "host_hold");
+        if (heldGifts.length === 0) return { heldGifts: [], entitlement: null, coverageStatus: null };
+        const [entitlement, coverageStatus] = await Promise.all([
+          hasPaidPlanForFund(fund.userId, fund.id),
+          getFundCoverageState(fund.userId, fund.id),
+        ]);
+        return { heldGifts, entitlement, coverageStatus };
+      });
 
       // Fallback principal_basis here MUST come from gifts, not from balance.
       // f.balance mirrors current market value, so balance+cash+pending equals
