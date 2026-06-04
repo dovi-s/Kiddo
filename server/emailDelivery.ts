@@ -27,9 +27,27 @@ export type EmailMessage = {
 
 export type EmailDeliveryResult = {
   delivered: boolean;
-  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed";
+  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed" | "demo_suppressed";
   providerId?: string | null;
 };
+
+// Domains we deliberately never deliver to via a REAL provider. The Dunphy
+// demo accounts live at dunphyfamily.com — a domain WE DO NOT OWN. Demo
+// lifecycle workers (recurring reminders, anniversaries, age-18, thank-yous,
+// milestone updates) address these accounts, and some of those emails carry
+// BEARER TOKENS (collaborator invites, age-transition invites, kid-view
+// links): delivered for real, they'd hand working access links to whoever
+// registers the domain with a catch-all inbox — plus burn sender reputation
+// on bounces. Per-worker isDemoAccount skips exist but are opt-in; this is
+// the chokepoint backstop. example.* are IANA-reserved (test senders).
+// The guard only fires when a real provider is enabled, so the dev
+// console/outbox transport still shows demo emails for local testing.
+const NEVER_DELIVER_DOMAINS = new Set([
+  "dunphyfamily.com",
+  "example.com",
+  "example.org",
+  "example.net",
+]);
 
 const EMAIL_OUTBOX_PATH = path.join(process.cwd(), ".local", "email-outbox.jsonl");
 
@@ -227,6 +245,21 @@ export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryRes
 
   const postmarkEnabled = Boolean(String(process.env.POSTMARK_SERVER_TOKEN || "").trim());
   const sendgridEnabled = Boolean(String(process.env.SENDGRID_API_KEY || "").trim());
+
+  // Demo/never-deliver domain guard — ONLY when a real provider would fire.
+  // Without a provider, sends fall to the local outbox below, which is the
+  // desired dev behavior (you can still inspect what a demo persona would
+  // have received). With a provider, delivering to dunphyfamily.com (a
+  // domain we don't own) could hand bearer-token links to a stranger's
+  // catch-all and burn sender reputation. See NEVER_DELIVER_DOMAINS above.
+  if (postmarkEnabled || sendgridEnabled) {
+    const recipientDomain = String(message.to || "").split("@")[1]?.trim().toLowerCase() || "";
+    if (NEVER_DELIVER_DOMAINS.has(recipientDomain)) {
+      console.log(`[email] demo_suppressed: ${message.subject} -> ${message.to} (never-deliver domain)`);
+      dedupeCache.set(dedupeKey, { sentAt: now, mode: "demo_suppressed" });
+      return { delivered: false, mode: "demo_suppressed", providerId: null };
+    }
+  }
 
   try {
     if (postmarkEnabled) {
