@@ -34,8 +34,15 @@ export function Nav() {
       transition={{ duration: 0.4 }}
       className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg"
     >
+      {/* Equal flex-1 wings keep the center links TRULY centered regardless
+          of flank width. With plain justify-between, the middle group was
+          only centered when the left/right sides happened to balance — the
+          wider auth-aware "Back to your dashboard" button (2026-06-04)
+          visibly shoved How-it-works/Pricing/Stories off center. */}
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Logo size="md" className="text-foreground" />
+        <div className="flex flex-1 items-center justify-start">
+          <Logo size="md" className="text-foreground" />
+        </div>
 
         <div className="hidden md:flex md:items-center md:gap-8">
           {/* Desktop nav restraint: 3 second-tier surfaces + 1 CTA.
@@ -67,7 +74,7 @@ export function Nav() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-1 items-center justify-end gap-4">
           {isAuthenticated ? (
             <Link href="/dashboard">
               <Button size="sm" variant="outline" data-testid="button-back-to-dashboard-nav" onClick={() => haptic('light')}>
