@@ -5480,13 +5480,21 @@ export async function registerRoutes(
             // Birthdate + majorityAge added 2026-05-21 so the gifter
             // dashboard can compute per-gift / per-relationship projected
             // impact ("Your $1,500 to Haley could be worth ~$X when she
-            // turns 21"). Treatment 3 of the five DUNPHY_DEMO_SPEC.md
-            // projection treatments. Same data the parent dashboard
-            // already exposes; not a privacy step-change for the gifter
-            // surface — birthdate ALREADY round-trips via nextBirthdayLabel.
-            recipientBirthdate: fund.recipientBirthdate
-              ? new Date(fund.recipientBirthdate).toISOString().slice(0, 10)
-              : null,
+            // CHILD-EXPOSURE MINIMIZATION (founder T&S call 2026-06-04: a
+            // gifter is not family — strangers reach this via a public link;
+            // give them only what their function needs). The gifter projection
+            // needs YEARS-UNTIL-MAJORITY, not the child's birthdate. Sending
+            // the full ISO DOB leaked the birth YEAR = exact age (the prior
+            // comment's "not a privacy step-change" was wrong: nextBirthdayLabel
+            // is month+day only, never the year). Now we send the computed
+            // integer; the raw DOB never leaves the server for a gifter.
+            yearsUntilMajority: (() => {
+              if (!fund.recipientBirthdate) return null;
+              const md = new Date(fund.recipientBirthdate);
+              md.setFullYear(md.getFullYear() + (Number((fund as any).majorityAge) || 18));
+              const yrs = (md.getTime() - Date.now()) / (365.25 * 24 * 60 * 60 * 1000);
+              return yrs > 0 ? Math.round(yrs * 100) / 100 : 0;
+            })(),
             majorityAge: Number((fund as any).majorityAge) || 18,
             childPhase: ageInfo.phase,
             fundStatus: String(fund.status || "draft"),

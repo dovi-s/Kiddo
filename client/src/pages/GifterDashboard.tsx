@@ -30,7 +30,7 @@ function companyNameForTicker(ticker?: string | null): string {
   if (!t) return "";
   return TICKER_TO_NAME[t] || t;
 }
-import { projectFundValue, yearsBetween } from "@shared/projection";
+import { projectFundValue } from "@shared/projection";
 import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 
 // Per-user gifter dashboard cache. Same caching trio pattern (initialData
@@ -69,7 +69,10 @@ type GifterFundRow = {
   // already exposes nextBirthdayLabel + currentFundValue; these two
   // add the missing pieces (date + majority-age) so the client can
   // compute "your gifts could be worth ~$X when {child} turns N".
-  recipientBirthdate: string | null;
+  // Raw recipientBirthdate is intentionally NOT sent to gifters (T&S
+  // minimization 2026-06-04) — only the precomputed years-to-majority the
+  // projection needs.
+  yearsUntilMajority: number | null;
   majorityAge: number;
   childPhase: string;
   fundStatus: string;
@@ -198,11 +201,12 @@ function computeGifterAttribution(fund: GifterFundRow): {
   yearsAhead: number;
   majorityAge: number;
 } | null {
-  if (!fund.recipientBirthdate) return null;
+  // yearsUntilMajority is now precomputed server-side so the gifter payload
+  // no longer carries the child's raw birthdate / birth year (T&S
+  // minimization 2026-06-04).
+  if (fund.yearsUntilMajority == null) return null;
   if (fund.totalGifted <= 0) return null;
-  const majorityDate = new Date(fund.recipientBirthdate);
-  majorityDate.setFullYear(majorityDate.getFullYear() + fund.majorityAge);
-  const yearsAhead = yearsBetween(new Date(), majorityDate);
+  const yearsAhead = fund.yearsUntilMajority;
   if (yearsAhead < 0.5) return null;
   const projected = projectFundValue({
     startingValue: fund.totalGifted,
