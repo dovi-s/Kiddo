@@ -14,7 +14,22 @@ import { haptic } from "@/lib/haptics";
 import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
 import { GifterFundSparkline } from "@/components/GifterFundSparkline";
+import { StockLogo } from "@/components/ui/stock-logo";
+import { STOCK_PICKS } from "@shared/stock-picks";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+
+// Ticker → company name for the gift rows (founder catch 2026-06-04: a gifter
+// wants to SEE what their money bought — the company + its logo — not a bare
+// "GOOGL"). Covers the featured picks; falls back to the ticker for ETFs /
+// anything not in the list so the label is never empty.
+const TICKER_TO_NAME: Record<string, string> = Object.fromEntries(
+  STOCK_PICKS.map((p) => [p.ticker.toUpperCase(), p.name]),
+);
+function companyNameForTicker(ticker?: string | null): string {
+  const t = String(ticker || "").trim().toUpperCase();
+  if (!t) return "";
+  return TICKER_TO_NAME[t] || t;
+}
 import { projectFundValue, yearsBetween } from "@shared/projection";
 import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 
@@ -1228,6 +1243,32 @@ export default function GifterDashboard() {
                         <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
                       </div>
 
+                      {/* "What your gifts bought" — a logo strip visible WITHOUT
+                          expanding the list (founder catch 2026-06-04: "what did
+                          he invest in for each"). Distinct tickers across this
+                          gifter's gifts to this fund, newest first. Answers the
+                          gifter's first question at a glance; the expandable
+                          below carries the per-gift detail. */}
+                      {(() => {
+                        const tickers = Array.from(new Set(
+                          (fund.yourGifts || [])
+                            .map((g) => String(g.ticker || "").trim().toUpperCase())
+                            .filter(Boolean),
+                        )).slice(0, 6);
+                        if (tickers.length === 0) return null;
+                        return (
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5" data-testid={`gift-tickers-${fund.fundId}`}>
+                            <span className="text-xs text-muted-foreground">Your gifts bought</span>
+                            {tickers.map((t) => (
+                              <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
+                                <StockLogo ticker={t} size={14} fallbackText={false} className="shrink-0" />
+                                <span className="text-[11px] font-medium text-foreground/80">{companyNameForTicker(t)}</span>
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
                       {/* "Your gifts" expandable (2026-06-04) — the per-gift
                           receipt the card's "7 gifts sent" number was hiding:
                           each gift's date, ticker, amount, and what it's worth
@@ -1259,12 +1300,23 @@ export default function GifterDashboard() {
                             <ul className="mt-2 max-h-72 divide-y divide-border/50 overflow-y-auto rounded-2xl border border-border/60 bg-card px-3" data-testid={`your-gifts-list-${fund.fundId}`}>
                               {fund.yourGifts!.map((g) => {
                                 const grew = g.nowWorth != null && Math.abs(g.nowWorth - g.amount) >= 0.5;
+                                const companyName = companyNameForTicker(g.ticker);
                                 return (
                                   <li key={g.id} className="py-2.5">
-                                    <div className="flex items-baseline justify-between gap-2 text-sm">
-                                      <span className="min-w-0 truncate text-muted-foreground">
-                                        {fmtDate(g.createdAt)}
-                                        {g.ticker ? <span className="ml-1.5 text-xs font-medium text-foreground/70">{g.ticker}</span> : null}
+                                    <div className="flex items-center justify-between gap-2 text-sm">
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        {/* Logo + company name answer "what did my
+                                            gift buy" at a glance; the date drops to
+                                            a sub-line so the row leads with the
+                                            company, not the calendar. ETFs/unknown
+                                            tickers fall back to the symbol. */}
+                                        {g.ticker ? <StockLogo ticker={g.ticker} size={22} className="shrink-0" /> : null}
+                                        <span className="flex min-w-0 flex-col">
+                                          <span className="truncate font-medium text-foreground">
+                                            {companyName || "Gift"}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">{fmtDate(g.createdAt)}</span>
+                                        </span>
                                       </span>
                                       <span className="shrink-0 tabular-nums text-foreground">
                                         {fmtMoney(g.amount)}
