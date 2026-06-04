@@ -51,6 +51,13 @@ const CONTENT_ROOTS = [
   // preference labels, gift-lesson explainers). shouldScan filters to
   // just the allowlisted files; the rest of shared/ is skipped.
   "shared",
+  // Email templates are 100% user-facing copy. Added 2026-06-03 after five
+  // em-dashes were found living in rendered email bodies (gifterMagicLink,
+  // giftReceived, parentHandoffRecurring) — the scan had never covered
+  // server/, so email copy drifted rule-free. Comments are stripped by
+  // extractSegments, so code-facing em-dashes in template comments don't
+  // false-positive.
+  "server/templates",
 ];
 
 const INCLUDED_PAGE_FILES = new Set([
@@ -197,6 +204,8 @@ function shouldScan(filePath) {
   const normalized = path.normalize(filePath);
   if (normalized.endsWith(".md")) return true;
   if (normalized.endsWith(path.normalize("client/src/components/ui/share-kit.tsx"))) return true;
+  // Every email template is user-facing prose — scan the whole directory.
+  if (normalized.startsWith(path.normalize("server/templates") + path.sep)) return true;
   if (INCLUDED_COMPONENT_FILES.has(normalized)) return true;
   if (INCLUDED_SHARED_FILES.has(normalized)) return true;
   return INCLUDED_PAGE_FILES.has(normalized);

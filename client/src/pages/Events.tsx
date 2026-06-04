@@ -1051,6 +1051,11 @@ export default function Events() {
                               ) : null}
                             </div>
 
+                            {/* Edit/Pause are writes the server only allows for the
+                                event's creator, the fund owner, or a co-admin —
+                                viewer/previous_owner get a 403. Hide the buttons for
+                                those read-only roles instead of rendering a trap. */}
+                            {!["viewer", "previous_owner"].includes(String((fund as any)?.accessRole || "")) && (
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
@@ -1094,6 +1099,7 @@ export default function Events() {
                                 );
                               })()}
                             </div>
+                            )}
                           </div>
                         </div>
                       </motion.div>

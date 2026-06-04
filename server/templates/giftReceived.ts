@@ -50,7 +50,7 @@ export function buildGiftReceivedEmail(input: GiftReceivedInput): EmailMessage {
   const who = gifterName && gifterName.trim() ? gifterName.trim() : "Someone who loves them";
   const openLine = `${who} just gave ${childFirstName} ${formatUsd(amountUsd)}.`;
   const noteLine = hasNote
-    ? `They left a note, too — it's waiting in ${childFirstName}'s Memory Book.`
+    ? `They left a note, too. It's waiting in ${childFirstName}'s Memory Book.`
     : `It's recorded in ${childFirstName}'s fund.`;
 
   const intro = [
@@ -60,7 +60,7 @@ export function buildGiftReceivedEmail(input: GiftReceivedInput): EmailMessage {
     ``,
     noteLine,
     ``,
-    `This is the part that compounds — not just the money, but the people showing up for ${childFirstName} over the years. Take a look.`,
+    `This is the part that compounds: not just the money, but the people showing up for ${childFirstName} over the years. Take a look.`,
   ].join("\n");
 
   const { html } = renderKiddoEmail({

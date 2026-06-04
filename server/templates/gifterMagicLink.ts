@@ -63,7 +63,7 @@ export function buildGifterMagicLinkEmail(input: GifterMagicLinkInput): EmailMes
     heading = "Your sign-in link";
     subject = "Your Kiddo sign-in link";
     cta = "Sign in to Kiddo";
-    intro = `${greeting} Tap the button below to sign in to your gifter dashboard. The link is good for the next 15 minutes. If you didn't request this, ignore this email — your account stays safe.`;
+    intro = `${greeting} Tap the button below to sign in to your gifter dashboard. The link is good for the next 15 minutes. If you didn't request this, ignore this email. Your account stays safe.`;
     postscript = "We don't ask for passwords on gifter accounts. Every sign-in goes through a fresh link like this one.";
   }
 

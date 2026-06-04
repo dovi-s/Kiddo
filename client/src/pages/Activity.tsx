@@ -4266,11 +4266,14 @@ export default function Activity() {
                                       )}
                                     </div>
                                   )}
-                                  {/* No resume/pause/add/edit/cancel for the
-                                      post-handoff owner — they don't own this
-                                      record, so every mutation 403s. The history
-                                      stays visible above; the actions don't. */}
-                                  {!isOwnerHistorical && (
+                                  {/* No resume/pause/add/edit/cancel unless the
+                                      schedule is YOURS. The server's record-scoped
+                                      routes 403 anyone who isn't the record's
+                                      creator (a co-admin/viewer co-parent, the
+                                      post-handoff owner) — it's the creator's bank
+                                      on file. The history stays visible above;
+                                      the actions render only for the creator. */}
+                                  {!isOwnerHistorical && String((c as any).userId ?? "") === String((user as any)?.id ?? "") && (
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                                     <button
                                       type="button"

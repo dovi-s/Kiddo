@@ -9869,6 +9869,18 @@ export default function Dashboard() {
                 const openCreate = () => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
 
                 if (activeEvents.length === 0 && archivedEvents.length === 0) {
+                  // Read-only roles (viewer, previous_owner): every affordance in
+                  // this empty state WRITES (suggestion tiles + traditions +
+                  // "New" all open create/save flows the server 403s for these
+                  // roles). Don't render an invitation they can't accept — a
+                  // quiet empty line instead.
+                  if (isReadOnlyFund) {
+                    return (
+                      <p style={{ fontSize: 13, color: "rgba(26,23,16,0.45)", lineHeight: 1.55, margin: 0 }}>
+                        No occasions yet.
+                      </p>
+                    );
+                  }
                   return (
                     <div>
                       {/* Warm copy */}
@@ -10008,8 +10020,10 @@ export default function Dashboard() {
                         );
                       })}
 
-                      {/* Traditions tile - always visible; shows selected icons when set */}
-                      {childFirstSug && (
+                      {/* Traditions tile - shows selected icons when set. Hidden
+                          for read-only roles: the picker's save is a fund PATCH
+                          the server 403s for viewer/previous_owner. */}
+                      {!isReadOnlyFund && childFirstSug && (
                         <button
                           type="button"
                           onClick={() => {
