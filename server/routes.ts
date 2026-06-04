@@ -11131,9 +11131,19 @@ export async function registerRoutes(
         hasEntitlementFromStatus(row.status, row.currentPeriodEnd),
       ).length;
       const userFunds = await storage.getFundsByUser(userId);
-      const coverageByFundEntries = await Promise.all(
-        userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
-      );
+      // Coverage is a property of the FUND (the owner's plan), not the viewer
+      // (2026-06-04). The map only covered OWNED funds, so a co-parent with no
+      // subscription of her own (Claire) got an empty map and the Dashboard
+      // read the owner's Family-covered fund as "uncovered" — upselling her
+      // Kiddo+ for a fund the owner already pays for (and a collaborator
+      // buying Plus would double-pay the household). Include collaborated
+      // funds, keyed to the OWNER's id (getFundCoverageState's first param).
+      const collaboratedFundsForCoverage = await storage.getCollaboratedFunds(userId).catch(() => []);
+      const coverageByFundEntries = await Promise.all([
+        ...userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
+        ...collaboratedFundsForCoverage.map(async (fund) =>
+          [String(fund.id), await getFundCoverageState(String(fund.userId), fund.id)] as const),
+      ]);
       const coverageByFund = Object.fromEntries(coverageByFundEntries);
       // Per-fund sponsored-subscription metadata (Prong B of pricing-v3
       // conversion, locked 2026-05-23). Drives the "Plus from {Grandma}"
@@ -11232,9 +11242,19 @@ export async function registerRoutes(
         hasEntitlementFromStatus(row.status, row.currentPeriodEnd),
       ).length;
       const userFunds = await storage.getFundsByUser(userId);
-      const coverageByFundEntries = await Promise.all(
-        userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
-      );
+      // Coverage is a property of the FUND (the owner's plan), not the viewer
+      // (2026-06-04). The map only covered OWNED funds, so a co-parent with no
+      // subscription of her own (Claire) got an empty map and the Dashboard
+      // read the owner's Family-covered fund as "uncovered" — upselling her
+      // Kiddo+ for a fund the owner already pays for (and a collaborator
+      // buying Plus would double-pay the household). Include collaborated
+      // funds, keyed to the OWNER's id (getFundCoverageState's first param).
+      const collaboratedFundsForCoverage = await storage.getCollaboratedFunds(userId).catch(() => []);
+      const coverageByFundEntries = await Promise.all([
+        ...userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
+        ...collaboratedFundsForCoverage.map(async (fund) =>
+          [String(fund.id), await getFundCoverageState(String(fund.userId), fund.id)] as const),
+      ]);
       const coverageByFund = Object.fromEntries(coverageByFundEntries);
       const householdPlan =
         (subscription.plan === "legacy" || subscription.plan === "family") &&
