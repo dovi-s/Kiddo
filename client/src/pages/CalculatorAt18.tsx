@@ -291,7 +291,7 @@ export default function CalculatorAt18() {
                   <p className="mt-1.5 text-[11px] text-muted-foreground">
                     {selectedState
                       ? `In ${US_STATES.find((s) => s.code === selectedState)?.name || "this state"}, the UTMA custodian's control transfers at age ${majorityAge}.`
-                      : "Most states use 18. A few extend custodianship to 19, 20, or 21. Pick yours for accurate math."}
+                      : "Most states use 21; others use 18; Alabama and Nebraska use 19. Pick yours for accurate math."}
                   </p>
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function CalculatorAt18() {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-muted/30 px-4 py-3.5 text-[12.5px] leading-relaxed text-muted-foreground">
                 <Info size={14} className="mt-0.5 flex-shrink-0" />
                 <p>
-                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's annual fee ($1/yr per $1,000 invested) is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (18 in most states; some extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
+                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's annual fee ($1/yr per $1,000 invested) is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (21 in most states, 18 in others, 19 in Alabama and Nebraska). For the full state-by-state table, see the{" "}
                   <Link href="/tools/utma-by-state" className="text-primary hover:underline">
                     UTMA by state
                   </Link>{" "}

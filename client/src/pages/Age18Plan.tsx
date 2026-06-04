@@ -137,7 +137,7 @@ function formatCurrency(n: number) {
 // 7% historical average, 0.10% AUM fee netted, effective monthly compounding,
 // contributions capped at the majority window. The disclaimer travels with
 // every render so a parent who reconciles against reality never feels oversold.
-const KIDDO_PROJECTION_DISCLAIMER = "Assuming 7% yearly average. Markets vary. Time is what compounds.";
+const KIDDO_PROJECTION_DISCLAIMER = "Assuming 7% yearly average, net of Kiddo's annual fee. Markets vary. Time is what compounds.";
 
 function projectAt18(balance: number, yearsLeft: number, monthlyContrib: number): number {
   return projectFundValue({ startingValue: balance, monthlyContribution: monthlyContrib, yearsAhead: yearsLeft });

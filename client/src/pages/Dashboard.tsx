@@ -163,7 +163,7 @@ import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transitio
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
 import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
-import { projectFundValue } from "@shared/projection";
+import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
 import {
   calculateKoraContributionFee,
@@ -3587,7 +3587,11 @@ export default function Dashboard() {
       // uses via shared/projection.ts.
       const monthsToReach = (target: number, monthly: number): number | null => {
         if (!target || target <= totalValue) return 0;
-        const monthlyRate = Math.pow(1 + (0.07 - 0.001), 1 / 12) - 1; // 7% net 0.10% AUM fee, effective monthly
+        // Rate from the SHARED constants (not literals) so this month-by-month
+        // milestone simulator can't drift from projectFundValue's convention.
+        // (projectFundValue itself can't answer "months until target" — it
+        // returns FV at a horizon — so the loop stays, the literals go.)
+        const monthlyRate = Math.pow(1 + (PROJECTION_DEFAULT_ANNUAL_RATE - PROJECTION_AUM_FEE_RATE), 1 / 12) - 1;
         let balance = totalValue;
         for (let m = 1; m <= 120; m += 1) {
           balance = balance * (1 + monthlyRate) + monthly;

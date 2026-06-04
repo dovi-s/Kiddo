@@ -1087,7 +1087,7 @@ export default function GiftSuccess() {
             <div className="inline-flex flex-col items-center rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-5 py-3 max-w-md">
               <p className="text-sm font-semibold text-foreground">Sent anonymously.</p>
               <p className="mt-1 text-xs text-muted-foreground text-center leading-relaxed">
-                {childFirstName ? `${childFirstName}'s` : "The"} family knows the gift came in but won&apos;t see your name. You won&apos;t appear in the public &quot;who&apos;s already given&quot; list either.
+                {childFirstName ? `${childFirstName}'s` : "The"} family sees the gift and the amount, but not your name. It shows as &quot;Anonymous&quot; in the Memory Book and everywhere gifters are listed.
               </p>
             </div>
           </motion.div>

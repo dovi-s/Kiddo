@@ -2757,7 +2757,7 @@ export default function GiftCheckout() {
                           <p>{feeData?.stripeFeeExplanation || (paymentMethod === "bank" ? "ACH processing is charged by Stripe." : paymentMethod === "paypal" ? "PayPal processing is charged by Stripe." : "Card and wallet processing is charged by Stripe.")}</p>
                           <p>{feeData?.koraBaseFeeExplanation || feeData?.koraFeeExplanation || "Kiddo does not charge a normal platform fee on gifts."}</p>
                           <p>{feeData?.koraLargeGiftExplanation || "Kiddo does not add a large-gift fee. For large gifts, ACH usually has the lowest payment-processing cost."}</p>
-                          <p>{feeData?.annualAumFeeExplanation || "Kiddo charges a small annual fee on invested assets only. Cash and pending gifts are not charged."}</p>
+                          <p>{feeData?.annualAumFeeExplanation || "Kiddo charges 0.10% per year ($1 per $1,000) on invested assets only. Cash and pending gifts are not charged."}</p>
                           <div className="rounded-2xl bg-muted/60 p-3"><p className="font-medium text-foreground">How Kiddo fees work</p><p className="mt-1">{feeData?.coverageLabel ? `${feeData.coverageLabel} plan. ` : ""}Kiddo does not take a normal platform fee from gifts. Payment processing is passed through. Optional gift upgrades are separate. The invested-assets fee applies later only to money already invested in the fund.</p></div>
                         </div>
                       </motion.div>
