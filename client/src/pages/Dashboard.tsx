@@ -2348,6 +2348,16 @@ export default function Dashboard() {
     activeCoverageState === "covered_starter" ||
     activeCoverageState === "covered_family" ||
     activeCoverageState === "trial_active";
+  // FUND-keyed plan view for fund-scoped gates (2026-06-04). A co-admin on a
+  // covered fund has effectivePlan "free" (her OWN plan) while the FUND is
+  // paid for — occasion gates and Plus-upsell nudges must read the fund's
+  // coverage, never the viewer's plan, or we upsell a household that already
+  // pays (same bug class as 5390ae1/0fb4f3c). Falls back to the viewer's
+  // plan when the fund is uncovered (then the viewer IS the upsell target).
+  const fundKeyedPlan =
+    activeCoverageState === "covered_family" ? "family"
+      : activeCoverageState === "covered_starter" || activeCoverageState === "trial_active" ? "starter"
+        : effectivePlan;
 
   useEffect(() => {
     if (activeFundId) setPreviewFundId(activeFundId);
@@ -4175,11 +4185,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handler = () => {
-      if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
+      if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
     };
     window.addEventListener("kiddo:create-event", handler);
     return () => window.removeEventListener("kiddo:create-event", handler);
-  }, [isFamily, isStarter]);
+  }, [isFundCovered, isOwnerMode]);
 
   useEffect(() => {
     // Mirror the pill row's behavior — when kid view is already enabled,
@@ -5384,7 +5394,7 @@ export default function Dashboard() {
           <RecurringRequestsNudge
             fundId={activeFundId}
             childName={recipientFirstNameDisplay}
-            effectivePlan={effectivePlan}
+            effectivePlan={fundKeyedPlan}
             className="mb-4"
           />
         )}
@@ -5407,7 +5417,7 @@ export default function Dashboard() {
             g?.status === "settled" || g?.status === "processing"
           ).length;
           const promptKind = pickDashboardPlusPrompt({
-            effectivePlan,
+            effectivePlan: fundKeyedPlan,
             fundId: activeFundId,
             parentAuthoredEntryCount,
             settledGiftCount,
@@ -7774,7 +7784,11 @@ export default function Dashboard() {
                           // self-directed account. No "Plus" chip / upsell for the owner; the
                           // upgrade signal stays for parents. Server mirror: resolveAllowedFund-
                           // Strategy. Per LIFECYCLE_MONETIZATION.md.
-                          const canCustomize = effectivePlan === "starter" || effectivePlan === "family" || isOwnerMode;
+                          // Fund-keyed (2026-06-04): an owner's per-fund starter on a
+                          // DIFFERENT fund shouldn't unlock THIS fund's mix (the server's
+                          // resolveAllowedFundStrategy is per-fund). The chip itself is
+                          // already owner-only (2026-06-01 sweep).
+                          const canCustomize = isFundCovered || isOwnerMode;
 
                           // Renders one holding row. `isChosen` enables the contextual `+`
                           // button — only meaningful for picks (a parent can intentionally
@@ -9603,7 +9617,7 @@ export default function Dashboard() {
                 {!isReadOnlyFund && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                     className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
                     aria-label="New occasion"
                   >
@@ -10073,7 +10087,7 @@ export default function Dashboard() {
 
                 const visibleArchived = showArchivedTilesV2 ? archivedEvents : [];
                 const childFirst = recipientFirstNameDisplay || "your child";
-                const openCreate = () => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
+                const openCreate = () => { haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
 
                 if (activeEvents.length === 0 && archivedEvents.length === 0) {
                   // Read-only roles (viewer, previous_owner): every affordance in
@@ -10300,7 +10314,7 @@ export default function Dashboard() {
                       {!isReadOnlyFund && (
                         <button
                           type="button"
-                          onClick={() => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                          onClick={() => { haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                           style={{
                             width: 72, minWidth: 72, height: 148, flexShrink: 0,
                             borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)",

@@ -98,6 +98,14 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
   // first-kid experience: free, with Family only at the 2nd child.
   const existingChildFundCount = (funds ?? []).filter((f) => {
     const ff = f as any;
+    // OWNED funds only (2026-06-04): the funds list includes collaborated
+    // funds (accessRole co-admin/viewer/previous_owner). Someone else's
+    // child fund must not consume the viewer's own free child-fund slot —
+    // a co-parent creating her FIRST own fund was being pushed straight
+    // to the Family upsell. Missing accessRole (older cached rows) counts
+    // as owner, matching the Dashboard's fallback direction.
+    const role = String(ff.accessRole || "owner");
+    if (role !== "owner") return false;
     const isOwnHeld =
       Boolean(ff.transferredAt) ||
       String(ff.accountType || "").toLowerCase() === "personal" ||

@@ -107,10 +107,27 @@ export default function EventCreate() {
   const isFamily = subscription?.effectivePlan === "family" || subscription?.effectivePlan === "legacy";
   const starterByFund = (subscription?.starterByFund || {}) as Record<string, any>;
   const hasAnyStarter = Object.values(starterByFund).some((membership) => hasStarterEntitlement(membership));
+  // FUND-keyed coverage for the selected fund (2026-06-04). A co-admin
+  // creating an occasion on a covered fund has her OWN plan "free" — the
+  // fund's coverage (the owner's plan, via coverageByFund which includes
+  // collaborated funds since 0fb4f3c) is what gates limits and themes here,
+  // or we'd upsell a household that already pays. Viewer-plan flags remain
+  // as the no-fund-selected fallback. The event COUNT below is still the
+  // viewer's list (a co-admin's count can differ from the fund's); the
+  // server's /api/events gate is fund-keyed and authoritative.
+  const coverageByFund = (subscription?.coverageByFund || {}) as Record<string, string>;
+  const selectedFundCoverage = fundId ? coverageByFund[fundId] : undefined;
+  const selectedFundFamilyCovered = selectedFundCoverage === "covered_family";
+  const selectedFundCovered =
+    selectedFundFamilyCovered ||
+    selectedFundCoverage === "covered_starter" ||
+    selectedFundCoverage === "trial_active";
   const activeCustomEventCount = events.filter((event: any) => !event.isPermanent && event.status === "active").length;
-  const activeEventLimit = isFamily ? Number.POSITIVE_INFINITY : hasAnyStarter ? 3 : 1;
+  const activeEventLimit = (isFamily || selectedFundFamilyCovered)
+    ? Number.POSITIVE_INFINITY
+    : (hasAnyStarter || selectedFundCovered) ? 3 : 1;
   const canCreateAnotherEvent = activeCustomEventCount < activeEventLimit;
-  const hasPremiumEventAccess = isFamily || hasAnyStarter;
+  const hasPremiumEventAccess = isFamily || hasAnyStarter || selectedFundCovered;
 
   const maxSteps = isSavingsGoal ? 3 : 5;
 

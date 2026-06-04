@@ -198,9 +198,24 @@ export default function Events() {
     }
     return false;
   });
-  const isFree = !isFamily && !hasAnyStarter;
+  // FUND-keyed coverage for the selected fund filter (2026-06-04). A co-admin
+  // viewing a covered fund has her OWN plan "free" — the fund's coverage
+  // (owner's plan, via coverageByFund which includes collaborated funds since
+  // 0fb4f3c) is what gates the create-another affordance and the free-plan
+  // upsell framing. Viewer flags remain the "all funds" fallback. Server's
+  // /api/events gate is fund-keyed and authoritative on the count.
+  const coverageByFund = (subscription?.coverageByFund || {}) as Record<string, string>;
+  const selectedFundCoverage = selectedFundId !== "all" ? coverageByFund[selectedFundId] : undefined;
+  const selectedFundFamilyCovered = selectedFundCoverage === "covered_family";
+  const selectedFundCovered =
+    selectedFundFamilyCovered ||
+    selectedFundCoverage === "covered_starter" ||
+    selectedFundCoverage === "trial_active";
+  const isFree = !isFamily && !hasAnyStarter && !selectedFundCovered;
   const activeCustomEventCount = events.filter((event) => !event.isPermanent && event.status === "active").length;
-  const activeEventLimit = isFamily ? Number.POSITIVE_INFINITY : hasAnyStarter ? 3 : 1;
+  const activeEventLimit = (isFamily || selectedFundFamilyCovered)
+    ? Number.POSITIVE_INFINITY
+    : (hasAnyStarter || selectedFundCovered) ? 3 : 1;
   const canCreateAnotherEvent = activeCustomEventCount < activeEventLimit;
   const pendingEventPass: { count: number } | null = null;
   const pendingEventPassSessionId = "";
