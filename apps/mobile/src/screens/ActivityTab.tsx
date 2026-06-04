@@ -35,6 +35,17 @@ function present(type: string): { icon: any; tint: string; negative: boolean } {
   return { icon: "gift", tint: colors.gold, negative: false };
 }
 
+// NOTE (cross-surface consistency): the canonical event labels live in
+// shared/activity-semantics.ts (canonicalLabel) and are the single source of
+// truth for the WEB surfaces (feed / detail / modal / dashboard). This screen
+// can't reuse it yet for two reasons: (1) Metro doesn't resolve the web's
+// "@shared/*" tsconfig alias at runtime, and (2) this tab is fed by
+// dashboard-summary.transactions, whose `type` is the brokerage vocabulary
+// (gift / sell / withdrawal / fee / dividend), NOT the activity vocabulary
+// (gift_received / auto_invest / ...). True web↔native unification = repoint
+// this tab at /api/activities and import canonicalLabel. Until then, keep the
+// strings below matching the canonical wording (e.g. "Recurring investment",
+// "Gift received", "Withdrawal", "Dividend").
 function labelFor(tx: DashboardTransaction): string {
   if (tx.description && tx.description.trim()) return tx.description.trim();
   const t = tx.type.toLowerCase();

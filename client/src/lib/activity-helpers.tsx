@@ -6,6 +6,7 @@
 
 import type { Activity as ActivityType } from "@shared/schema";
 import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, CreditCard, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle } from "lucide-react";
+import { canonicalLabel } from "@shared/activity-semantics";
 
 export type FeedActivity = ActivityType & {
   fundName?: string | null;
@@ -73,9 +74,12 @@ export function parseAmount(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Configures the row's icon tile (background, color, icon, label) for a given
-// activity type. Source of truth for the visual taxonomy of the History feed.
-export function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
+// Configures the row's icon tile (background, color, icon) for a given
+// activity type. The LABEL returned here is a legacy fallback only — the
+// exported getTypeConfig wrapper below overrides it with the shared canonical
+// label so this surface (DetailHistoryModal + Dashboard) names every event
+// identically to the Activity feed and the deep-link detail page.
+function resolveTypeVisual(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
   const t = normalizeActivityType(type);
   if (t === "refund")
     return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <ArrowUp size={16} style={{ transform: "rotate(180deg)" }} />, label: "Refund" };
@@ -128,6 +132,14 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
   if (t === "payment_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Payment failed" };
   return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <Calendar size={16} />, label: "Update" };
+}
+
+// Public accessor — visual from resolveTypeVisual, LABEL from the shared
+// canonical source so DetailHistoryModal + Dashboard rows match the Activity
+// feed and the detail page word-for-word. See shared/activity-semantics.ts.
+export function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
+  const v = resolveTypeVisual(type);
+  return { ...v, label: canonicalLabel(type) ?? v.label };
 }
 
 export function StatusPill({ status, type }: { status?: string | null; type?: string | null }) {

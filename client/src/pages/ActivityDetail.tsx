@@ -11,9 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { projectFundValue, yearsBetween } from "@shared/projection";
+import { canonicalLabel } from "@shared/activity-semantics";
+import { StatusPill } from "@/lib/activity-helpers";
 import type { Activity } from "@shared/schema";
 
-type ActivityWithFund = Activity & { fundName: string | null; recipientFirstName: string | null };
+type ActivityWithFund = Activity & { fundName: string | null; recipientFirstName: string | null; status?: string | null };
 
 async function fetchActivity(id: string): Promise<ActivityWithFund> {
   const response = await fetch(`/api/activities/${id}`, { credentials: "include" });
@@ -165,6 +167,13 @@ export default function ActivityDetail() {
   const normalizedType = normalizeType(activity.type);
   const typeConfig = getTypeConfig(normalizedType);
   const TypeIcon = typeConfig.icon;
+  // Label comes from the shared canonical source so this deep-link detail page
+  // names the transaction identically to the Activity feed row the user tapped
+  // (previously this page showed "Investment"/"Gift Received"/"Sold" where the
+  // feed shows "Recurring investment"/"Gift received"/"Portfolio"). The local
+  // getTypeConfig label is kept only as a fallback for uncovered types.
+  // See shared/activity-semantics.ts.
+  const typeLabel = canonicalLabel(normalizedType) ?? typeConfig.label;
   const fundDisplayName = activity.fundName || capFirst(activity.recipientFirstName) || "Fund";
   const amountLabel = formatAmount(activity.amount as any);
   const metadataLabel =
@@ -218,11 +227,17 @@ export default function ActivityDetail() {
                   <p className="font-serif text-4xl font-bold text-foreground" data-testid="text-activity-amount">
                     ${amountLabel}
                   </p>
-                  <div className="flex items-center justify-center gap-2 mt-2">
+                  <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${typeConfig.bg} ${typeConfig.color} flex items-center gap-1.5`}>
                       <TypeIcon size={14} />
-                      {typeConfig.label}
+                      {typeLabel}
                     </span>
+                    {/* Server-derived status (Pending / Processing / Invested /
+                        Settled / Failed / Refunded / On hold) — same StatusPill
+                        the Activity feed renders, so the detail page tells the
+                        same story as the row it was opened from. Renders nothing
+                        for types without a status. */}
+                    <StatusPill status={activity.status} type={normalizedType} />
                   </div>
                 </motion.div>
               )}
@@ -256,7 +271,7 @@ export default function ActivityDetail() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Type</p>
-                    <p className="font-medium text-foreground" data-testid="text-activity-type">{typeConfig.label}</p>
+                    <p className="font-medium text-foreground" data-testid="text-activity-type">{typeLabel}</p>
                   </div>
                 </div>
               </div>

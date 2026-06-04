@@ -10844,12 +10844,30 @@ export async function registerRoutes(
           console.warn('[Activities] Fund enrichment failed for detail', activity.id, err);
         }
       }
+      // Status enrichment — mirrors the /api/activities list endpoint's rule
+      // (the activities table has no status column). Without this the deep-link
+      // detail page showed no status pill while the feed row it was opened from
+      // showed "Invested"/"Pending"/"Processing" — same transaction, different
+      // story. Source of truth is the linked gift row; metadata.status is the
+      // fallback for non-gift in-flight rows (e.g. withdrawals).
+      let detailStatus: string | null = null;
+      if (activity.metadata) {
+        try {
+          const meta = JSON.parse(activity.metadata as string);
+          if (typeof meta?.status === "string") detailStatus = meta.status;
+          if (meta?.giftId) {
+            const gift = await storage.getGift(meta.giftId);
+            if (gift) detailStatus = gift.status || detailStatus;
+          }
+        } catch { /* malformed metadata - skip */ }
+      }
       res.json({
         ...activity,
         type: activity.type || "event_update",
         title: activity.title || "Fund update",
         fundName: fund?.name || null,
         recipientFirstName: fund?.recipientFirstName || null,
+        status: detailStatus,
       });
     } catch (error) {
       console.error('Error fetching activity:', error);

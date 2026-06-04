@@ -8,6 +8,7 @@ import { useLocation, useSearch, Link } from "wouter";
 // (billing event), Mail (invitation).
 import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
+import { canonicalLabel } from "@shared/activity-semantics";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
@@ -298,7 +299,12 @@ const PALETTE = {
   PILL_REFUNDED:     { bg: "rgb(245,245,245)", color: "rgb(100,92,86)"  },
 } as const;
 
-function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
+// Visual config (background, text color, icon) per activity type. The LABEL
+// returned here is the legacy inline value, kept ONLY as a fallback — the
+// public getTypeConfig wrapper below overrides it with the shared canonical
+// label so the feed, the detail page, the modal, and the dashboard all name
+// the same event identically. See shared/activity-semantics.ts.
+function resolveTypeVisual(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
   const t = normalizeActivityType(type);
   // Gift family — green palette (kid-domain warmth)
   if (t === "refund")
@@ -522,6 +528,16 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
     return { ...PALETTE.WARNING, icon: <BellRing size={16} />, label: "Nudge" };
   // Fallback
   return { ...PALETTE.GROWTH, icon: <Calendar size={16} />, label: "Update" };
+}
+
+// Public accessor — visual (bg/color/icon) from resolveTypeVisual above, but
+// the LABEL comes from the shared canonical source so every surface that shows
+// this event (feed, deep-link detail page, detail-history modal, dashboard,
+// native app) names it identically. Falls back to the legacy inline label for
+// any type the canonical map doesn't cover. See shared/activity-semantics.ts.
+function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
+  const v = resolveTypeVisual(type);
+  return { ...v, label: canonicalLabel(type) ?? v.label };
 }
 
 function parseMetadata(raw: unknown): Record<string, unknown> {
