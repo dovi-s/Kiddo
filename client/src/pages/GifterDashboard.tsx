@@ -13,7 +13,6 @@ import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
 import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
-import { GifterFundSparkline } from "@/components/GifterFundSparkline";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { STOCK_PICKS } from "@shared/stock-picks";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
@@ -1211,29 +1210,34 @@ export default function GifterDashboard() {
                           surface a different cell ('Status: Paused' etc).
                           When active, the slot now goes to 'Your total
                           gifts' which is gifter-owned context. */}
+                      {/* CHILD-MONEY MINIMIZATION (founder call 2026-06-04):
+                          the gifter no longer sees the fund's TOTAL VALUE or its
+                          30-day value sparkline — that's the child's accumulated
+                          net worth + the parent's investment performance, none
+                          of a gifter's business. The gifter's card shows only
+                          gifter-owned context: what THEY gave. (The "watch it
+                          grow" story is the forward, hypothetical projection
+                          below — safe because it's "if invested" and can't be
+                          falsified by a parent's later sale, unlike a live
+                          current-value figure.) */}
                       <div className="mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl bg-muted/40 p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-xs text-muted-foreground">Fund value now</p>
-                              <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.currentFundValue)}</p>
-                            </div>
-                            {(fund.valueHistory30d ?? []).length >= 2 && (
-                              <GifterFundSparkline points={fund.valueHistory30d ?? []} className="mt-0.5 shrink-0" />
-                            )}
-                          </div>
+                          <p className="text-xs text-muted-foreground">Your total gifts</p>
+                          <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.totalGifted)}</p>
                         </div>
-                        {String(fund.fundStatus || "").toLowerCase() === "active" ? (
-                          <div className="rounded-2xl bg-muted/40 p-3">
-                            <p className="text-xs text-muted-foreground">Your total gifts</p>
-                            <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.totalGifted)}</p>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl bg-muted/40 p-3">
-                            <p className="text-xs text-muted-foreground">Status</p>
-                            <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
-                          </div>
-                        )}
+                        <div className="rounded-2xl bg-muted/40 p-3">
+                          {String(fund.fundStatus || "").toLowerCase() === "active" ? (
+                            <>
+                              <p className="text-xs text-muted-foreground">Gifts you've sent</p>
+                              <p className="mt-1 font-medium text-foreground tabular-nums">{fund.giftCount ?? (fund.yourGifts?.length ?? 0)}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-xs text-muted-foreground">Status</p>
+                              <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       {/* Detail rows 2026-05-25 audit: 'Birthday anchor'
@@ -1244,7 +1248,12 @@ export default function GifterDashboard() {
                       <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                         <p>Last gift: {fmtDate(fund.lastGiftAt)}</p>
                         <p>Next birthday: {fund.nextBirthdayLabel || "Not added yet"}</p>
-                        <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
+                        {/* holdings COUNT dropped (2026-06-04): portfolio size
+                            is fund-state with zero gifter utility. Active
+                            events stay — they're occasions to gift to. */}
+                        {fund.activeEventCount > 0 && (
+                          <p>{fund.activeEventCount} {fund.activeEventCount === 1 ? "occasion" : "occasions"} to gift to</p>
+                        )}
                       </div>
 
                       {/* "What your gifts bought" — a logo strip visible WITHOUT
@@ -1303,7 +1312,6 @@ export default function GifterDashboard() {
                           {openGiftsFundId === fund.fundId && (
                             <ul className="mt-2 max-h-72 divide-y divide-border/50 overflow-y-auto rounded-2xl border border-border/60 bg-card px-3" data-testid={`your-gifts-list-${fund.fundId}`}>
                               {fund.yourGifts!.map((g) => {
-                                const grew = g.nowWorth != null && Math.abs(g.nowWorth - g.amount) >= 0.5;
                                 const companyName = companyNameForTicker(g.ticker);
                                 return (
                                   <li key={g.id} className="py-2.5">
@@ -1322,13 +1330,17 @@ export default function GifterDashboard() {
                                           <span className="text-xs text-muted-foreground">{fmtDate(g.createdAt)}</span>
                                         </span>
                                       </span>
+                                      {/* The gift AMOUNT only — no live "now worth"
+                                          (founder call 2026-06-04). A current value
+                                          can become a LIE the moment the parent
+                                          sells those shares (the gift row keeps the
+                                          recorded shares; the holding is gone), it
+                                          implies a donor claim on a gift that's the
+                                          child's now, and it leaks fund performance.
+                                          The honest growth story is the forward
+                                          "if invested" projection below. */}
                                       <span className="shrink-0 tabular-nums text-foreground">
                                         {fmtMoney(g.amount)}
-                                        {grew && (
-                                          <span className={g.nowWorth! >= g.amount ? "font-medium text-[hsl(var(--kiddo-evergreen))]" : "text-muted-foreground"}>
-                                            {" "}→ {fmtMoney(g.nowWorth!)}
-                                          </span>
-                                        )}
                                       </span>
                                     </div>
                                     {g.message && (
