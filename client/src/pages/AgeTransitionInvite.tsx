@@ -11,7 +11,7 @@ import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
+import { formatAgeTransitionDate } from "@/lib/age-transition";
 import { getEmbedVideoUrl } from "@/lib/media";
 import { useCountUp } from "@/hooks/use-count-up";
 
@@ -27,7 +27,8 @@ type TransitionPayload = {
     id: string;
     name: string;
     recipientFirstName: string | null;
-    recipientBirthdate: string | null;
+    majorityAge: number | null;
+    majorityDate: string | null;
     balance: string;
     giftCount: number;
     contributorCount: number;
@@ -104,10 +105,16 @@ export default function AgeTransitionInvite() {
     enabled: !!token,
   });
 
-  const ageTransition = useMemo(
-    () => getAge18Transition(data?.fund.recipientBirthdate, Number((data?.fund as any)?.majorityAge) || 18),
-    [data?.fund.recipientBirthdate, (data?.fund as any)?.majorityAge],
-  );
+  // The server now sends the precomputed majority date (the raw DOB is no
+  // longer exposed for PII minimization). We only need eighteenthBirthday for
+  // formatAgeTransitionDate below.
+  const ageTransition = useMemo(() => {
+    const iso = data?.fund.majorityDate;
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return { eighteenthBirthday: d };
+  }, [data?.fund.majorityDate]);
   const currentUserEmail = user?.email ? String(user.email).trim().toLowerCase() : null;
 
   // Count-up on the kid's three hero stats. This is the celebratory

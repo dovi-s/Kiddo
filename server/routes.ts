@@ -7440,23 +7440,42 @@ export async function registerRoutes(
         tokenType,
         mode,
         supportEmail: "support@kiddofund.com",
-        fund: {
-          id: fund.id,
-          name: fund.name,
-          recipientFirstName: fund.recipientFirstName,
-          recipientBirthdate: fund.recipientBirthdate,
-          balance: fund.balance,
-          totalGain: fund.totalGain,
-          totalContributed: totalContributed.toFixed(2),
-          giftCount: giftsForFund.length,
-          contributorCount,
-        },
+        fund: (() => {
+          // PII minimization: the screen only needs the majority DATE, not the
+          // raw DOB. Precompute it server-side so the exact birthdate never
+          // leaves the server on this token-gated, UNAUTHENTICATED endpoint.
+          const rawMajorityAge = Number((fund as any).majorityAge);
+          const majorityAge =
+            Number.isFinite(rawMajorityAge) && rawMajorityAge >= 18 && rawMajorityAge <= 25
+              ? Math.floor(rawMajorityAge)
+              : 18;
+          let majorityDate: string | null = null;
+          if (fund.recipientBirthdate) {
+            const dob = new Date(fund.recipientBirthdate);
+            if (!Number.isNaN(dob.getTime())) {
+              const d = new Date(dob);
+              d.setFullYear(d.getFullYear() + majorityAge);
+              majorityDate = d.toISOString();
+            }
+          }
+          return {
+            id: fund.id,
+            name: fund.name,
+            recipientFirstName: fund.recipientFirstName,
+            majorityAge,
+            majorityDate,
+            balance: fund.balance,
+            totalGain: fund.totalGain,
+            totalContributed: totalContributed.toFixed(2),
+            giftCount: giftsForFund.length,
+            contributorCount,
+          };
+        })(),
         // PII minimization on this token-gated, UNAUTHENTICATED endpoint
         // (security-audit 2026-05-28): the parent's email is not used by the
         // claim/preview screen, so it is no longer exposed to token holders.
-        // recipientBirthdate (above) is retained because the screen computes the
-        // majority countdown from it; if exact-DOB exposure must also go, the
-        // follow-up is gating this endpoint to a verified recipient.
+        // The recipient's raw DOB is NO LONGER exposed either — only the
+        // precomputed majorityDate (above), which is all the screen renders.
         parent: {
           firstName: parent?.firstName || null,
           message: nextRecord.parentMessage,
@@ -15569,22 +15588,43 @@ export async function registerRoutes(
       // pending"). The aggregate coParentInvitedCount is preserved
       // for backwards compatibility with any consumer still reading
       // the original field.
-      const coParents = await db.select({ id: fundCollaborators.id, status: fundCollaborators.status })
+      const coParents = await db.select({ userId: fundCollaborators.userId, email: fundCollaborators.email, status: fundCollaborators.status })
         .from(fundCollaborators)
         .where(and(
           inArray(fundCollaborators.fundId, fundIds),
           eq(fundCollaborators.role, "co-admin"),
         ));
-      const coParentActiveCount = coParents.filter((c) => c.status === "accepted").length;
-      const coParentPendingCount = coParents.filter((c) => c.status === "pending").length;
+      // Dedupe by PERSON, not row: one co-parent on N funds is ONE co-parent,
+      // not N. A household co-parent (e.g. Mom) is typically on every fund, so
+      // the old per-row count rendered "2 active" for a single person across
+      // two funds. Key by userId when present, else email. A person counts as
+      // active if any of their grants is accepted, else pending.
+      const coParentByPerson = new Map<string, "accepted" | "pending" | "other">();
+      for (const c of coParents) {
+        const key = String(c.userId || c.email || "").toLowerCase();
+        if (!key) continue;
+        const prev = coParentByPerson.get(key);
+        if (c.status === "accepted") coParentByPerson.set(key, "accepted");
+        else if (c.status === "pending") { if (prev !== "accepted") coParentByPerson.set(key, "pending"); }
+        else if (!prev) coParentByPerson.set(key, "other");
+      }
+      const coParentStatuses = Array.from(coParentByPerson.values());
+      const coParentActiveCount = coParentStatuses.filter((s) => s === "accepted").length;
+      const coParentPendingCount = coParentStatuses.filter((s) => s === "pending").length;
       const coParentInvitedCount = coParentActiveCount + coParentPendingCount;
 
-      // Active occasions across the user's funds.
+      // Active occasions across the user's funds. Exclude the permanent
+      // "Gift anytime" catch-all — it's auto-created on every fund, isn't a
+      // user-created occasion, and doesn't count against the plan's active-
+      // occasion limit (mirrors the !isPermanent filter the occasion gate and
+      // every other surface use). Counting it inflated the stat by one per
+      // fund: 2 birthdays + 2 permanents rendered as "4 active occasions".
       const occasions = await db.select({ id: events.id })
         .from(events)
         .where(and(
           inArray(events.fundId, fundIds),
           eq(events.status, "active"),
+          eq(events.isPermanent, false),
         ));
       const activeOccasionsCount = occasions.length;
 
@@ -22774,6 +22814,17 @@ export async function registerRoutes(
         return res.status(410).json({ error: 'Invitation declined. Ask the fund owner to resend.' });
       }
 
+      // 30-day expiry on PENDING tokens. The token-trust model is deliberate
+      // (we don't require an email match), so a token that never expired would
+      // be a standing access grant. Legacy rows with a null invitedAt are
+      // treated as non-expiring (Number.isFinite guards that), so this never
+      // breaks old invites; the resend path bumps invitedAt to re-arm.
+      const invitedAtMs = new Date(row.invitedAt as any).getTime();
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      if (Number.isFinite(invitedAtMs) && Date.now() - invitedAtMs > THIRTY_DAYS_MS) {
+        return res.status(410).json({ error: 'This invitation has expired. Ask the fund owner to resend it.' });
+      }
+
       const userId = (req.user as any).id;
       // Self-acceptance guard. If somehow the fund owner clicked their
       // own invitation link, refuse — they already have full access and
@@ -24278,11 +24329,16 @@ export async function registerRoutes(
       if (existing) {
         // If they previously declined, treat this as a fresh invite.
         const nextStatus = existing.status === 'declined' ? 'pending' : existing.status;
+        // Re-arm the 30-day accept window. The accept handler expires PENDING
+        // tokens older than 30 days; bumping invitedAt here makes the
+        // "ask the fund owner to resend it" remedy actually restore access.
+        // (invitedAt is omitted from the insert schema, so cast to set it.)
         collaborator = await storage.updateCollaborator(existing.id, {
           role,
           status: nextStatus,
           lastNotifiedAt: new Date(),
-        });
+          invitedAt: new Date(),
+        } as any);
       } else {
         collaborator = await storage.createCollaborator({
           fundId: req.params.fundId,

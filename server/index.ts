@@ -565,6 +565,23 @@ app.get("/api/health", async (req, res) => {
     if (!deep) {
       return res.status(200).json({ ...base, db: "ok" });
     }
+    // The deep variant exposes secret-presence/readiness detail. Smoke/deploy
+    // scripts hit ?deep=1 UNAUTHENTICATED and require HTTP 200, so we keep the
+    // route open and 200 for everyone — but only AUTHENTICATED ADMINS get the
+    // detailed payload; everyone else gets the minimal liveness body.
+    let isAdminCaller = false;
+    try {
+      const sessionUser =
+        (req as any).user ?? (req as any).session?.user;
+      isAdminCaller = Boolean(
+        sessionUser?.isAdmin || sessionUser?.isSuperAdmin,
+      );
+    } catch {
+      isAdminCaller = false;
+    }
+    if (!isAdminCaller) {
+      return res.status(200).json({ ...base, db: "ok" });
+    }
     return res.status(200).json({
       ...base,
       db: "ok",
@@ -592,7 +609,7 @@ app.get("/api/health", async (req, res) => {
 });
 
 // Backward-compatible deep health route alias.
-app.get("/api/health/deep", async (_req, res) => {
+app.get("/api/health/deep", async (req, res) => {
   const base = {
     ok: true,
     status: "ok",
@@ -601,6 +618,22 @@ app.get("/api/health/deep", async (_req, res) => {
   };
   try {
     await pool.query("select 1");
+    // Only AUTHENTICATED ADMINS get the secret-presence/readiness detail;
+    // everyone else gets the minimal liveness body. Always 200 (smoke/deploy
+    // scripts hit this unauthenticated and require 200).
+    let isAdminCaller = false;
+    try {
+      const sessionUser =
+        (req as any).user ?? (req as any).session?.user;
+      isAdminCaller = Boolean(
+        sessionUser?.isAdmin || sessionUser?.isSuperAdmin,
+      );
+    } catch {
+      isAdminCaller = false;
+    }
+    if (!isAdminCaller) {
+      return res.status(200).json({ ...base, db: "ok" });
+    }
     return res.status(200).json({
       ...base,
       db: "ok",
