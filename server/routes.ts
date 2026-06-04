@@ -12408,6 +12408,25 @@ export async function registerRoutes(
       }
       const trimmedSenderName = typeof senderName === "string" ? senderName.trim() : "";
       const trimmedEmail = typeof senderEmail === "string" ? senderEmail.trim() : "";
+
+      // Trust-safety H2 (senderName slice): block brand/staff impersonation and
+      // contact info smuggled into the NAME field (a name is not a place for a
+      // URL / email / phone / @handle — that's a contact channel to a child).
+      // Deliberately does NOT touch family titles ("Grandma"/"Uncle Bob" are how
+      // real gifters sign), and skips the anonymous path. Message-content
+      // sanitization is a separate, product-gated decision (H1 moderation) and is
+      // intentionally NOT done here.
+      if (!isAnonymous && trimmedSenderName) {
+        const lowerName = trimmedSenderName.toLowerCase();
+        const hasContactInfo = /https?:\/\/|www\.|\S+@\S+\.\S+|@\w{2,}|\d[\d().\s-]{6,}\d/.test(trimmedSenderName);
+        const STAFF_NAMES = new Set(["admin", "administrator", "support", "support team", "customer support", "moderator", "official", "system", "the team", "the kiddo team"]);
+        if (hasContactInfo) {
+          return res.status(400).json({ error: "Please use a real name — links, emails, phone numbers, and @handles aren't allowed in the name." });
+        }
+        if (lowerName.includes("kiddo") || STAFF_NAMES.has(lowerName)) {
+          return res.status(400).json({ error: "That name isn't available. Please sign your gift with your own name." });
+        }
+      }
       const hasEmail = trimmedEmail.length > 0;
       const validEmail = !hasEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
       const isAnonymousFlag = !!isAnonymous;
