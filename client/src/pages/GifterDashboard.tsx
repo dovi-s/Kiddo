@@ -79,6 +79,19 @@ type GifterFundRow = {
   // exist (brand-new fund). Locked 2026-05-19 per the gifter
   // read-only fund tracking enrichment.
   valueHistory30d?: Array<{ at: string; totalValue: number }>;
+  // Per-gift detail for the "Your gifts" expandable (2026-06-04):
+  // every gift this gifter sent to this fund, newest first, with what
+  // it's worth NOW (allocation shares × current per-share value) and
+  // the parent's thank-you note when one was sent.
+  yourGifts?: Array<{
+    id: string;
+    amount: number;
+    createdAt: string | null;
+    ticker: string | null;
+    message: string | null;
+    nowWorth: number | null;
+    thankYou: { message: string; sentAt: string | null } | null;
+  }>;
 };
 
 type SponsoredSubRow = {
@@ -296,6 +309,10 @@ export default function GifterDashboard() {
   // refetch on resolve so the server is the source of truth. Failure
   // path: rollback + toast.
   const [updatingFollowId, setUpdatingFollowId] = useState<string | null>(null);
+  // "Your gifts" expandable per fund card + tap-to-read thank-you notes
+  // (2026-06-04). One open fund at a time keeps the two-column grid stable.
+  const [openGiftsFundId, setOpenGiftsFundId] = useState<string | null>(null);
+  const [openThankGiftId, setOpenThankGiftId] = useState<string | null>(null);
   const handleToggleFollow = async (fundId: string, currentlyFollowing: boolean) => {
     if (updatingFollowId) return;
     setUpdatingFollowId(fundId);
@@ -1132,7 +1149,7 @@ export default function GifterDashboard() {
                       again, follow updates, sponsor a year).  */}
                   <h2 className="font-heading text-2xl font-semibold text-foreground">Funds you've gifted to</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Each card shows fund value, milestone progress, and your follow-updates toggle.
+                    Each card shows the fund's value, every gift you've sent and what it's worth now, and thank-yous from the family.
                   </p>
                 </div>
                 <Link href={startFundHref}>
@@ -1210,6 +1227,88 @@ export default function GifterDashboard() {
                         <p>Next birthday: {fund.nextBirthdayLabel || "Not added yet"}</p>
                         <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
                       </div>
+
+                      {/* "Your gifts" expandable (2026-06-04) — the per-gift
+                          receipt the card's "7 gifts sent" number was hiding:
+                          each gift's date, ticker, amount, and what it's worth
+                          NOW, plus the parent's thank-you note when one was
+                          sent (tap the heart line to read it). This is the
+                          loop's emotional engine — "your $200 in 2019 is $560
+                          today" — shown to the person who spreads it. */}
+                      {(fund.yourGifts?.length ?? 0) > 0 && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              haptic("light");
+                              setOpenThankGiftId(null);
+                              setOpenGiftsFundId(openGiftsFundId === fund.fundId ? null : fund.fundId);
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/40"
+                            data-testid={`button-your-gifts-${fund.fundId}`}
+                            aria-expanded={openGiftsFundId === fund.fundId}
+                          >
+                            <ChevronDown
+                              className={`h-3.5 w-3.5 transition-transform ${openGiftsFundId === fund.fundId ? "rotate-180" : ""}`}
+                            />
+                            {openGiftsFundId === fund.fundId
+                              ? "Hide your gifts"
+                              : `See your ${fund.yourGifts!.length === 1 ? "gift" : `${fund.yourGifts!.length} gifts`}`}
+                          </button>
+                          {openGiftsFundId === fund.fundId && (
+                            <ul className="mt-2 max-h-72 divide-y divide-border/50 overflow-y-auto rounded-2xl border border-border/60 bg-card px-3" data-testid={`your-gifts-list-${fund.fundId}`}>
+                              {fund.yourGifts!.map((g) => {
+                                const grew = g.nowWorth != null && Math.abs(g.nowWorth - g.amount) >= 0.5;
+                                return (
+                                  <li key={g.id} className="py-2.5">
+                                    <div className="flex items-baseline justify-between gap-2 text-sm">
+                                      <span className="min-w-0 truncate text-muted-foreground">
+                                        {fmtDate(g.createdAt)}
+                                        {g.ticker ? <span className="ml-1.5 text-xs font-medium text-foreground/70">{g.ticker}</span> : null}
+                                      </span>
+                                      <span className="shrink-0 tabular-nums text-foreground">
+                                        {fmtMoney(g.amount)}
+                                        {grew && (
+                                          <span className={g.nowWorth! >= g.amount ? "font-medium text-[hsl(var(--kiddo-evergreen))]" : "text-muted-foreground"}>
+                                            {" "}→ {fmtMoney(g.nowWorth!)}
+                                          </span>
+                                        )}
+                                      </span>
+                                    </div>
+                                    {g.message && (
+                                      <p className="mt-1 truncate text-xs italic text-muted-foreground">"{g.message}"</p>
+                                    )}
+                                    {g.thankYou && (
+                                      <div className="mt-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            haptic("light");
+                                            setOpenThankGiftId(openThankGiftId === g.id ? null : g.id);
+                                          }}
+                                          className="inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                                          data-testid={`button-thank-you-${g.id}`}
+                                        >
+                                          <Heart className="h-3 w-3" />
+                                          {openThankGiftId === g.id ? "Hide their thank-you" : "They sent a thank-you"}
+                                        </button>
+                                        {openThankGiftId === g.id && (
+                                          <blockquote className="mt-1.5 whitespace-pre-line rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-xs leading-relaxed text-foreground">
+                                            {g.thankYou.message}
+                                            {g.thankYou.sentAt && (
+                                              <span className="mt-1 block text-[10px] text-muted-foreground">{fmtDate(g.thankYou.sentAt)}</span>
+                                            )}
+                                          </blockquote>
+                                        )}
+                                      </div>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      )}
 
                       {/* Follow-updates toggle (replaced passive 2026-05-25).
                           Was a flat sentence with a BellRing icon and no
