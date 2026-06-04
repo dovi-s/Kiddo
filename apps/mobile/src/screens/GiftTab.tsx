@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, haptic } from "../ui";
 import { formatBalance, WEB_BASE, type ApiFund, type ApiEvent, type DashboardGift } from "../api";
+import { looksLikeTestSender } from "../lib/gifters";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -50,6 +51,7 @@ export function GiftTab({
 
   const recent = gifts
     .filter((g) => !NON_COUNTING.has(String(g.status || "").toLowerCase()))
+    .filter((g) => !looksLikeTestSender(g.senderName, g.senderEmail))
     .slice(0, 4);
   const activeEvents = events.filter(
     (e) => e.status === "active" && !e.isPermanent && (!activeFund || String(e.fundId) === String(activeFund.id)),

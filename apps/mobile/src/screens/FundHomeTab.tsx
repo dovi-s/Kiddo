@@ -32,6 +32,7 @@ import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg"
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, Skeleton, haptic } from "../ui";
 import { projectFundValue, ageFromBirthdate } from "../lib/projection";
+import { looksLikeTestSender } from "../lib/gifters";
 import {
   formatBalance,
   WEB_BASE,
@@ -54,20 +55,6 @@ const MANAGED_MIX_ETFS = new Set([
   "VTI", "VXUS", "BND", "VGT", "VUG", "VYM", "SCHD", "QQQ", "VOO", "VEA", "VWO", "BNDX", "AGG",
 ]);
 
-// Mirror of shared/test-content.ts looksLikeTestSender — drops dev/test/seed junk
-// gifters ("test", "tester", "qqqqq", "aaaa") from identity lists. Anonymous /
-// "Someone" fallbacks pass through.
-const TEST_SENDER_TOKEN_RE = /^(test|testing|tstgin|tstng|qqqqq|tester)\b/i;
-const REPEATED_CHAR_RE = /^([a-z])\1{2,}$/i;
-function looksLikeTestSender(name?: string | null, email?: string | null): boolean {
-  const n = String(name || "").trim();
-  if (TEST_SENDER_TOKEN_RE.test(n)) return true;
-  const compact = n.replace(/\s+/g, "");
-  if (compact && REPEATED_CHAR_RE.test(compact)) return true;
-  const localPart = String(email || "").trim().toLowerCase().split("@")[0] || "";
-  if (localPart && TEST_SENDER_TOKEN_RE.test(localPart)) return true;
-  return false;
-}
 
 function num(v: unknown): number {
   const n = parseFloat(String(v ?? "0"));
