@@ -1559,19 +1559,25 @@ function RecurringChip({
   }
   return (
     <Pressable
-      onPress={onPress}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.sm,
-        backgroundColor: semanticColors.surface.card,
-        borderRadius: radius.control,
-        borderWidth: dashed ? 1.5 : 1,
-        borderStyle: dashed ? "dashed" : "solid",
-        borderColor: dashed ? tint + "66" : semanticColors.surface.muted,
-        paddingVertical: 12,
-        paddingHorizontal: spacing.md,
+      onPress={() => {
+        haptic("selection");
+        onPress();
       }}
+      style={({ pressed }) => [
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.sm,
+          backgroundColor: semanticColors.surface.card,
+          borderRadius: radius.control,
+          borderWidth: dashed ? 1.5 : 1,
+          borderStyle: dashed ? "dashed" : "solid",
+          borderColor: dashed ? tint + "66" : semanticColors.surface.muted,
+          paddingVertical: 12,
+          paddingHorizontal: spacing.md,
+        },
+        pressed ? { opacity: 0.7 } : null,
+      ]}
     >
       <Ionicons name={icon} size={18} color={tint} />
       <KText variant="label" color={tint} style={{ flex: 1 }}>
@@ -1636,18 +1642,24 @@ function QuickLink({
 }) {
   return (
     <Pressable
-      onPress={onPress}
-      style={{
-        flexGrow: 1,
-        flexBasis: "30%",
-        alignItems: "center",
-        gap: 6,
-        paddingVertical: spacing.md,
-        borderRadius: radius.inner,
-        backgroundColor: gold ? colors.gold : semanticColors.surface.card,
-        borderWidth: gold ? 0 : 1,
-        borderColor: semanticColors.surface.muted,
+      onPress={() => {
+        haptic("selection");
+        onPress();
       }}
+      style={({ pressed }) => [
+        {
+          flexGrow: 1,
+          flexBasis: "30%",
+          alignItems: "center",
+          gap: 6,
+          paddingVertical: spacing.md,
+          borderRadius: radius.inner,
+          backgroundColor: gold ? colors.gold : semanticColors.surface.card,
+          borderWidth: gold ? 0 : 1,
+          borderColor: semanticColors.surface.muted,
+        },
+        pressed ? { opacity: 0.7, transform: [{ scale: 0.97 }] } : null,
+      ]}
     >
       <Ionicons name={icon} size={20} color={gold ? "#38290A" : colors.evergreen} />
       <KText variant="caption" color={gold ? "#38290A" : semanticColors.text.primary} numberOfLines={1} center>
@@ -1707,17 +1719,23 @@ function HoldingRow({
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <Pressable
-      onPress={onPress}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.sm,
-        backgroundColor: semanticColors.surface.card,
-        borderRadius: radius.inner,
-        borderWidth: 1,
-        borderColor: semanticColors.surface.muted,
-        padding: spacing.md,
+      onPress={() => {
+        haptic("selection");
+        onPress();
       }}
+      style={({ pressed }) => [
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.sm,
+          backgroundColor: semanticColors.surface.card,
+          borderRadius: radius.inner,
+          borderWidth: 1,
+          borderColor: semanticColors.surface.muted,
+          padding: spacing.md,
+        },
+        pressed ? { opacity: 0.7, transform: [{ scale: 0.99 }] } : null,
+      ]}
     >
       <StockLogo ticker={holding.ticker} />
       <View style={{ flex: 1, minWidth: 0 }}>
