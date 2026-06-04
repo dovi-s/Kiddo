@@ -1,11 +1,12 @@
 import { Link } from "wouter";
-import { Menu } from "lucide-react";
+import { ArrowRight, Menu } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
 
 // Marketing-surface nav (Home, About, FAQ, Demo, the public pages). The
 // authenticated app uses its own shell (DesktopSidebar / AppHeader), so the
@@ -14,8 +15,17 @@ import { haptic } from "@/lib/haptics";
 // link pointed at /recipient, a route that doesn't exist. Removed 2026-06-03;
 // if an in-app nav is ever needed here again, link real routes (/dashboard,
 // /settings) and the per-fund Kid View share flow, not /recipient.
+//
+// AUTH-AWARE (2026-06-04): a signed-in user who lands on a public page (the
+// app links to /legal, /pricing, the footer everywhere) used to see
+// "Log in / Start for free" — reads as "you're logged out" and offers no way
+// back into the app. When a session exists, the CTA pair swaps to one
+// "Back to your dashboard" link (/dashboard — same default Login uses).
+// useAuth's session query is cached (5-min staleTime), so this costs at most
+// one lightweight /api/auth/user fetch per public-page visit.
 export function Nav() {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   return (
     <motion.nav
@@ -58,14 +68,25 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" data-testid="link-login">
-            <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer hidden md:inline">Log in</span>
-          </Link>
-          <Link href="/get-started">
-            <Button size="sm" data-testid="button-get-started-nav" onClick={() => haptic('light')}>
-              Start for free
-            </Button>
-          </Link>
+          {isAuthenticated ? (
+            <Link href="/dashboard">
+              <Button size="sm" variant="outline" data-testid="button-back-to-dashboard-nav" onClick={() => haptic('light')}>
+                Back to your dashboard
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" data-testid="link-login">
+                <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer hidden md:inline">Log in</span>
+              </Link>
+              <Link href="/get-started">
+                <Button size="sm" data-testid="button-get-started-nav" onClick={() => haptic('light')}>
+                  Start for free
+                </Button>
+              </Link>
+            </>
+          )}
 
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
@@ -82,8 +103,19 @@ export function Nav() {
                 <Link href="/about" onClick={() => setIsOpen(false)} className="font-medium">About</Link>
                 <Link href="/blog" onClick={() => setIsOpen(false)} className="font-medium">Guides</Link>
                 <hr />
-                <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
-                <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Start for free</Button></Link>
+                {isAuthenticated ? (
+                  <Link href="/dashboard">
+                    <Button className="w-full" variant="outline" onClick={() => setIsOpen(false)} data-testid="button-back-to-dashboard-sheet">
+                      Back to your dashboard
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
+                    <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Start for free</Button></Link>
+                  </>
+                )}
               </div>
             </SheetContent>
           </Sheet>
