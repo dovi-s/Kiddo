@@ -1293,12 +1293,31 @@ export default function GifterDashboard() {
                                           {openThankGiftId === g.id ? "Hide their thank-you" : "They sent a thank-you"}
                                         </button>
                                         {openThankGiftId === g.id && (
-                                          <blockquote className="mt-1.5 whitespace-pre-line rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-xs leading-relaxed text-foreground">
-                                            {g.thankYou.message}
-                                            {g.thankYou.sentAt && (
-                                              <span className="mt-1 block text-[10px] text-muted-foreground">{fmtDate(g.thankYou.sentAt)}</span>
-                                            )}
-                                          </blockquote>
+                                          <div className="mt-1.5">
+                                            <blockquote className="whitespace-pre-line rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-xs leading-relaxed text-foreground">
+                                              {g.thankYou.message}
+                                              {g.thankYou.sentAt && (
+                                                <span className="mt-1 block text-[10px] text-muted-foreground">{fmtDate(g.thankYou.sentAt)}</span>
+                                              )}
+                                            </blockquote>
+                                            {/* The loop closing twice: a just-read thank-you is the
+                                                warmest moment to invite the next gift. Occasion-aware
+                                                when the next birthday is known; src-tagged so the
+                                                k-factor panel can attribute regifts to this nudge. */}
+                                            <Link href={`${fund.sharePath}${fund.sharePath.includes("?") ? "&" : "?"}src=thank_you_regift`}>
+                                              <button
+                                                type="button"
+                                                onClick={() => haptic("light")}
+                                                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                                                data-testid={`button-regift-${g.id}`}
+                                              >
+                                                {fund.nextBirthdayLabel
+                                                  ? `Send another for ${fund.childName}'s birthday (${fund.nextBirthdayLabel})`
+                                                  : `Send ${fund.childName} another gift`}
+                                                <ArrowRight className="h-3 w-3" />
+                                              </button>
+                                            </Link>
+                                          </div>
                                         )}
                                       </div>
                                     )}
