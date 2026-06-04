@@ -7,7 +7,7 @@ import { usePageSeo } from "@/lib/seo";
 
 export default function Security() {
   usePageSeo({
-    title: "Kiddo Security | Your child's money is protected.",
+    title: "Kiddo Security | How your child's money is protected",
     description: "When investing is live, investments are held by our broker-dealer partner, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
     ogType: "article",
   });
@@ -19,8 +19,12 @@ export default function Security() {
       <section className="pt-24 pb-16 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-5xl px-4 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Security</p>
+          {/* "How ... is protected" (architecture), not "is protected."
+              (absolute) — pre-custody, an unconditional present-tense
+              protection claim overstates. The body hedges every layer
+              correctly; the headline must not outrun it. 2026-06-03. */}
           <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-            Your child&apos;s money is protected.
+            How your child&apos;s money is protected.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
             Here is exactly how. No jargon. No fine print buried at the bottom. Just the truth, plainly stated.
@@ -33,13 +37,18 @@ export default function Security() {
           {[
             {
               icon: Wallet,
-              title: "We never hold your child&apos;s money. A regulated broker-custodian does.",
+              // Future/conditional, not "we never hold... a custodian does"
+              // (present tense): pre-custody, gift payments route through
+              // Kiddo's Stripe — the unconditional claim was false TODAY and
+              // is exactly the structure question in COUNSEL_ENGAGEMENT_PACKET
+              // Part 2. The architecture statement below is the honest claim.
+              title: "Your child&apos;s investments won&apos;t sit with Kiddo. They&apos;ll sit with a regulated broker-custodian.",
               body: "Kiddo is the experience. Our broker-custodian partner holds the investments once your account is open.",
             },
             {
               icon: Shield,
               title: "What protects your child&apos;s fund",
-              body: "Once investing is live, SIPC coverage and FINRA oversight through our broker-dealer partner, plus encrypted data handling and private fund links, sit underneath the product experience.",
+              body: "Once investing is live, SIPC coverage and FINRA oversight through our broker-dealer partner, plus encrypted data handling and unlisted fund links, sit underneath the product experience.",
             },
             {
               icon: Lock,

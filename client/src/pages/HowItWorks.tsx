@@ -158,8 +158,11 @@ export default function HowItWorks() {
             ))}
           </div>
           <FadeIn className="mt-10 text-center">
+            {/* Not "nothing to manage" — the parent picks the mix, completes
+                KYC, decides on cash. The thing that's genuinely hands-off is
+                gift arrival. Say that. 2026-06-03. */}
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              That is it. Nothing to manage after setup.
+              That is it. Gifts arrive and land on their own from there.
             </p>
             <div className="mt-6">
               <Link href="/get-started">

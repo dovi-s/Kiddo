@@ -52,7 +52,7 @@ export default function About() {
               Family and friends gift money in under 60 seconds. No account needed. No app to download. Just a link, a stock pick, and a note.
             </p>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              That gift gets automatically invested in real stocks inside your child's UTMA account.{" "}
+              That gift goes into your child's UTMA fund and, once investing is live, is invested in real stocks.{" "}
               <span className="font-semibold text-foreground">Disney. Apple. Nike.</span>{" "}
               Whatever feels meaningful to them.
             </p>
@@ -126,7 +126,7 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">The moment it all comes together</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  When they turn 18, they do not just get the money. They get the whole story.
+                  When the fund becomes theirs, they do not just get the money. They get the whole story.
                 </h2>
               </div>
             </div>
