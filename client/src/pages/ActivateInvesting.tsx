@@ -1536,7 +1536,7 @@ export default function ActivateInvesting() {
             >
               <SuccessState
                 message="Your identity check is in review"
-                submessage="Gifts can still arrive in cash while we finish the manual review. We will email you as soon as investing is ready."
+                submessage="Gifts can still arrive in cash while we finish the manual review. Your dashboard updates the moment investing is ready."
               />
               <div className="max-w-xs mx-auto">
                 <Button

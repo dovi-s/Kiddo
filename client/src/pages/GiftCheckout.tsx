@@ -1579,7 +1579,7 @@ export default function GiftCheckout() {
                     {Number.isFinite(activeAmount) && activeAmount >= 500 && (
                       <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3">
                         <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts of $1,000 or more settle the same way as smaller gifts; some get a short verification hold, up to 24 hours. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
                         </p>
                       </div>
                     )}
@@ -1980,7 +1980,7 @@ export default function GiftCheckout() {
                     {Number.isFinite(activeAmount) && activeAmount >= 500 && (
                       <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3">
                         <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts of $1,000 or more settle the same way as smaller gifts; some get a short verification hold, up to 24 hours. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
                         </p>
                       </div>
                     )}

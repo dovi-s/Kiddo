@@ -196,14 +196,22 @@ const BENTO_TILES: BentoTile[] = [
     eyebrow: "For the parent who chooses",
     title: "Customize the mix",
     body: "Pick the holdings the fund follows. Conservative, balanced, growth, or your own. Not a black box.",
+    // Strategy labels + emoji are CANONICAL (lib/strategy.ts): Growth Mix 📈,
+    // Balanced Mix ⚖️, Conservative Mix 🛡️, Custom 🎯. This block previously
+    // drifted (⚖️ on Conservative, off-canon 🌿 on Balanced) AND carried two
+    // claims the self-directed posture forbids: "Default for most parents"
+    // (fabricated majority + a steer) and "fits the 0-10 age bracket"
+    // (age-matched suitability — the same disease as the removed
+    // "Recommended for {child}" badge, in marketing form). Neutral menu
+    // descriptors only; the parent chooses. Fixed 2026-06-03.
     modalLead:
-      "Choose a strategy that reflects the parent you want to be: Conservative ⚖️, Balanced 🌿, Growth 📈, or your own 🎯 Custom. Your pick shapes your child's financial foundation for years. The fund's holdings rebalance toward the target on every gift, and every allocation decision is shown with the percentages and the reason. Not a black box.",
+      "Choose the mix you want: Growth Mix 📈, Balanced Mix ⚖️, Conservative Mix 🛡️, or your own 🎯 Custom. Your pick shapes your child's financial foundation for years. The fund's holdings rebalance toward the target on every gift, and every allocation decision is shown with the percentages and the reason. Not a black box.",
     modalDetails: [
-      "Conservative ⚖️. Bond-weighted, lower volatility, suited to short horizons.",
-      "Balanced 🌿. Vanguard total stock + total international + bonds. Default for most parents.",
-      "Growth 📈. Equity-heavy, longer horizon, fits the 0-10 age bracket.",
+      "Growth Mix 📈. Equity-heavy, built for long horizons.",
+      "Balanced Mix ⚖️. Vanguard total stock + total international + bonds.",
+      "Conservative Mix 🛡️. Bond-weighted, lower volatility, built for shorter horizons.",
       "Custom 🎯. Build your own mix from VTI, VXUS, BND, VGT, VUG, VYM, SCHD, and QQQ. Plus-tier feature.",
-      "Switch strategies as your child grows; auto-rebalancing keeps the mix on target as prices drift.",
+      "Switch any time; new gifts steer the mix back toward your target.",
     ],
     modalCallout: { label: "Rebalancing", value: "contribution-based, no drift selling" },
     deepLink: { href: "/how-it-works#mix", label: "Read the strategy details" },
