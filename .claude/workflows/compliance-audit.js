@@ -153,11 +153,16 @@ const order = { blocker: 0, high: 1, medium: 2, low: 3 }
 confirmed.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
 const fixNow = confirmed.filter((f) => !f.needsLicensedHuman)
 const counselGated = confirmed.filter((f) => f.needsLicensedHuman)
-log(`Confirmed ${confirmed.length} gap(s): ${fixNow.length} fixable in-house, ${counselGated.length} need a licensed human.`)
+log(`Confirmed ${confirmed.length} gap(s): ${fixNow.length} fixable in-house, ${counselGated.length} need a licensed human. Running red-team completeness pass.`)
+
+const completeness = await agent(
+  `You are the compliance red-team LEAD reviewing this audit for COMPLETENESS. ${CONTEXT}\n\nDimensions covered: ${DIMENSIONS.map((d) => d.title).join('; ')}.\nConfirmed gaps: ${JSON.stringify(confirmed.map((f) => ({ title: f.title, area: f.area, severity: f.severity })), null, 2)}\n\nName, specifically and citing where to look: (1) the single highest-severity regulatory gap you suspect was MISSED; (2) any blind-spot area (a regime/rule) a top-tier compliance team would cover that isn't in the dimension list; (3) whether the severity calibration looks right. If coverage looks complete, say so and why.`,
+  { label: 'red-team-completeness', phase: 'Report' },
+)
 
 const report = await agent(
-  `You are the lead compliance reviewer writing the final memo for the Kiddo founder. These findings survived 3-skeptic adversarial verification. Write a tight markdown DECISION MEMO: (1) one-line posture summary, (2) "Safe to fix in-house now" section — grouped by severity, each with location + the exact fix, (3) "Needs a licensed human" section — each phrased as a crisp question to bring to securities/compliance counsel, cross-referenced to COUNSEL_ENGAGEMENT_PACKET.md where it fits. End with the explicit caveat that this is decision-support, NOT legal advice. If clean, say so and note coverage.\n\nFIX-NOW (JSON):\n${JSON.stringify(fixNow, null, 2)}\n\nCOUNSEL-GATED (JSON):\n${JSON.stringify(counselGated, null, 2)}`,
+  `You are the lead compliance reviewer writing the final memo for the Kiddo founder. These findings survived 3-skeptic adversarial verification. Write a tight markdown DECISION MEMO: (1) one-line posture summary, (2) "Safe to fix in-house now" section — grouped by severity, each with location + the exact fix, (3) "Needs a licensed human" section — each phrased as a crisp question to bring to securities/compliance counsel, cross-referenced to COUNSEL_ENGAGEMENT_PACKET.md where it fits. Include the red-team completeness review verbatim before the caveat. End with the explicit caveat that this is decision-support, NOT legal advice. If clean, say so and note coverage.\n\nFIX-NOW (JSON):\n${JSON.stringify(fixNow, null, 2)}\n\nCOUNSEL-GATED (JSON):\n${JSON.stringify(counselGated, null, 2)}\n\nRED-TEAM COMPLETENESS REVIEW:\n${completeness}`,
   { label: 'synthesize-memo', phase: 'Report' },
 )
 
-return { confirmedCount: confirmed.length, fixNowCount: fixNow.length, counselGatedCount: counselGated.length, confirmed, report }
+return { confirmedCount: confirmed.length, fixNowCount: fixNow.length, counselGatedCount: counselGated.length, confirmed, completeness, report }

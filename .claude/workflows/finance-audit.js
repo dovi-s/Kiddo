@@ -136,11 +136,16 @@ const confirmed = perDimension.flat().filter(Boolean).filter((f) => f && f.confi
 phase('Report')
 const order = { critical: 0, high: 1, medium: 2, low: 3 }
 confirmed.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
-log(`Confirmed ${confirmed.length} financial discrepancy(ies) after recomputation + adversarial verification.`)
+log(`Confirmed ${confirmed.length} financial discrepancy(ies) after recomputation + adversarial verification. Running red-team completeness pass.`)
+
+const completeness = await agent(
+  `You are the financial/quantitative red-team LEAD reviewing this audit for COMPLETENESS. ${CONTEXT}\n\nDimensions covered: ${DIMENSIONS.map((d) => d.title).join('; ')}.\nConfirmed discrepancies: ${JSON.stringify(confirmed.map((f) => ({ title: f.title, area: f.area, severity: f.severity })), null, 2)}\n\nName, specifically and citing where to look: (1) the single highest-severity money-math error you suspect was MISSED; (2) any blind-spot calculation a top-tier fintech finance team would re-check that isn't in the dimension list; (3) whether the severity calibration looks right. If coverage looks complete, say so and why.`,
+  { label: 'red-team-completeness', phase: 'Report' },
+)
 
 const report = await agent(
-  `You are the lead financial reviewer writing the final report for the Kiddo team. These discrepancies survived 3-reviewer adversarial recomputation. Write a tight, triaged markdown report: a one-line "are the numbers honest" summary, then findings grouped by severity, each with file:line, "claimed vs actual" (show the math), the impact, and the fix. Be precise; a finding must include the recomputation. If clean, say the audited money math is consistent and note coverage.\n\nCONFIRMED (JSON):\n${JSON.stringify(confirmed, null, 2)}`,
+  `You are the lead financial reviewer writing the final report for the Kiddo team. These discrepancies survived 3-reviewer adversarial recomputation. Write a tight, triaged markdown report: a one-line "are the numbers honest" summary, then findings grouped by severity, each with file:line, "claimed vs actual" (show the math), the impact, and the fix, then include the red-team completeness review verbatim at the end. Be precise; a finding must include the recomputation. If clean, say the audited money math is consistent and note coverage.\n\nCONFIRMED (JSON):\n${JSON.stringify(confirmed, null, 2)}\n\nRED-TEAM COMPLETENESS REVIEW:\n${completeness}`,
   { label: 'synthesize-report', phase: 'Report' },
 )
 
-return { confirmedCount: confirmed.length, confirmed, report }
+return { confirmedCount: confirmed.length, confirmed, completeness, report }

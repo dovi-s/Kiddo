@@ -131,11 +131,16 @@ const confirmed = perDimension.flat().filter(Boolean).filter((f) => f && f.confi
 phase('Report')
 const order = { high: 0, medium: 1, low: 2 }
 confirmed.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
-log(`Confirmed ${confirmed.length} UX/UI finding(s) after adversarial verification.`)
+log(`Confirmed ${confirmed.length} UX/UI finding(s) after adversarial verification. Running red-team completeness pass.`)
+
+const completeness = await agent(
+  `You are the design/UX red-team LEAD reviewing this audit for COMPLETENESS. ${CONTEXT}\n\nDimensions covered: ${DIMENSIONS.map((d) => d.title).join('; ')}.\nConfirmed findings: ${JSON.stringify(confirmed.map((f) => ({ title: f.title, area: f.area, severity: f.severity })), null, 2)}\n\nName, specifically and citing where to look: (1) the single highest-severity usability/a11y problem you suspect was MISSED; (2) any blind-spot flow or actor (parent/gifter/child/owner) a top-tier design team would check that isn't in the dimension list; (3) whether the severity calibration looks right. If coverage looks complete, say so and why.`,
+  { label: 'red-team-completeness', phase: 'Report' },
+)
 
 const report = await agent(
-  `You are the lead design reviewer writing the final report for the Kiddo team. These findings survived 3-skeptic adversarial verification. Write a tight, triaged markdown report: a one-line craft summary, then findings grouped by severity, each with location, who it hurts + in what moment, and the fix. Separate "quick polish" from "real flow/a11y work". Be specific and non-precious — no taste nits. If clean, say the audited experience meets the bar and note coverage.\n\nCONFIRMED (JSON):\n${JSON.stringify(confirmed, null, 2)}`,
+  `You are the lead design reviewer writing the final report for the Kiddo team. These findings survived 3-skeptic adversarial verification. Write a tight, triaged markdown report: a one-line craft summary, then findings grouped by severity, each with location, who it hurts + in what moment, and the fix. Separate "quick polish" from "real flow/a11y work", then include the red-team completeness review verbatim at the end. Be specific and non-precious — no taste nits. If clean, say the audited experience meets the bar and note coverage.\n\nCONFIRMED (JSON):\n${JSON.stringify(confirmed, null, 2)}\n\nRED-TEAM COMPLETENESS REVIEW:\n${completeness}`,
   { label: 'synthesize-report', phase: 'Report' },
 )
 
-return { confirmedCount: confirmed.length, confirmed, report }
+return { confirmedCount: confirmed.length, confirmed, completeness, report }

@@ -131,11 +131,16 @@ const confirmed = perDimension.flat().filter(Boolean).filter((f) => f && f.confi
 phase('Report')
 const order = { high: 0, medium: 1, low: 2 }
 confirmed.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
-log(`Confirmed ${confirmed.length} conversion/discovery finding(s) after adversarial verification.`)
+log(`Confirmed ${confirmed.length} conversion/discovery finding(s) after adversarial verification. Running red-team completeness pass.`)
+
+const completeness = await agent(
+  `You are the growth/conversion red-team LEAD reviewing this audit for COMPLETENESS. ${CONTEXT}\n\nDimensions covered: ${DIMENSIONS.map((d) => d.title).join('; ')}.\nConfirmed findings: ${JSON.stringify(confirmed.map((f) => ({ title: f.title, area: f.area, severity: f.severity })), null, 2)}\n\nName, specifically and citing where to look: (1) the single biggest discovery/conversion leak you suspect was MISSED; (2) any blind-spot area a top-tier growth team would cover that isn't in the dimension list; (3) whether the severity calibration looks right. If coverage looks complete, say so and why.`,
+  { label: 'red-team-completeness', phase: 'Report' },
+)
 
 const report = await agent(
-  `You are the lead growth reviewer writing the final report for the Kiddo founder. These findings survived 3-skeptic adversarial verification. Write a tight, prioritized markdown report: a one-line "biggest leak" summary, then findings grouped by severity, each with location, the conversion/ranking impact, and the fix — ordered by likely effect on FUNDED-k. Separate "quick copy/meta wins" from "structural funnel work". If clean, say the audited surfaces are conversion-sound and note coverage.\n\nCONFIRMED (JSON):\n${JSON.stringify(confirmed, null, 2)}`,
+  `You are the lead growth reviewer writing the final report for the Kiddo founder. These findings survived 3-skeptic adversarial verification. Write a tight, prioritized markdown report: a one-line "biggest leak" summary, then findings grouped by severity, each with location, the conversion/ranking impact, and the fix — ordered by likely effect on FUNDED-k. Separate "quick copy/meta wins" from "structural funnel work", then include the red-team completeness review verbatim at the end. If clean, say the audited surfaces are conversion-sound and note coverage.\n\nCONFIRMED (JSON):\n${JSON.stringify(confirmed, null, 2)}\n\nRED-TEAM COMPLETENESS REVIEW:\n${completeness}`,
   { label: 'synthesize-report', phase: 'Report' },
 )
 
-return { confirmedCount: confirmed.length, confirmed, report }
+return { confirmedCount: confirmed.length, confirmed, completeness, report }

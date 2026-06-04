@@ -1,14 +1,18 @@
 export const meta = {
   name: 'audit-all',
   description:
-    'Runs every Kiddo domain audit (security, compliance/regulatory/legal, finance/fintech, conversion/SEO/messaging, design/UX/UI) in sequence and synthesizes ONE launch-readiness executive summary across all of them. Heavy — spawns many agents. Pass {only:["finance","design"]} to run a subset, {mode:"diff",base:"main"} to scope each to the branch diff.',
+    'Runs every Kiddo domain audit (security, trust & safety, compliance/regulatory/legal, data-privacy, finance/fintech, performance, conversion/SEO/messaging, email, design/UX/UI) in sequence and synthesizes ONE launch-readiness executive summary across all of them. Heavy — spawns many agents. Pass {only:["finance","design"]} to run a subset, {mode:"diff",base:"main"} to scope each to the branch diff.',
   whenToUse:
     'The pre-launch / quarterly "audit everything" sweep. For a single domain, run that domain audit directly instead (cheaper).',
   phases: [
     { title: 'Security' },
+    { title: 'Trust & Safety' },
     { title: 'Compliance / regulatory / legal' },
+    { title: 'Data privacy' },
     { title: 'Finance / fintech correctness' },
+    { title: 'Performance / scale' },
     { title: 'SEO / messaging / conversion' },
+    { title: 'Email program' },
     { title: 'UX / UI / design' },
     { title: 'Executive summary' },
   ],
@@ -17,9 +21,13 @@ export const meta = {
 // The full roster. `only` filters by substring so {only:["finance","design"]} works.
 const AUDITS = [
   { name: 'security-audit', label: 'Security' },
+  { name: 'trust-safety-audit', label: 'Trust & Safety' },
   { name: 'compliance-audit', label: 'Compliance / regulatory / legal' },
+  { name: 'data-privacy-audit', label: 'Data privacy' },
   { name: 'finance-audit', label: 'Finance / fintech correctness' },
+  { name: 'performance-audit', label: 'Performance / scale' },
   { name: 'conversion-audit', label: 'SEO / messaging / conversion' },
+  { name: 'email-audit', label: 'Email program' },
   { name: 'design-audit', label: 'UX / UI / design' },
 ]
 const only = args && Array.isArray(args.only) ? args.only : null

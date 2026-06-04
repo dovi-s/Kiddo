@@ -140,11 +140,16 @@ phase('Report')
 const order = { critical: 0, high: 1, medium: 2, low: 3 }
 confirmed.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
 
-log(`Confirmed ${confirmed.length} finding(s) after adversarial verification.`)
+log(`Confirmed ${confirmed.length} finding(s) after adversarial verification. Running red-team completeness pass.`)
+
+const completeness = await agent(
+  `You are the application-security red-team LEAD reviewing this audit for COMPLETENESS. ${CONTEXT}\n\nDimensions covered: ${DIMENSIONS.map((d) => d.title).join('; ')}.\nConfirmed findings: ${JSON.stringify(confirmed.map((f) => ({ title: f.title, severity: f.severity })), null, 2)}\n\nName, specifically and citing where to look: (1) the single highest-severity vulnerability you suspect was MISSED; (2) any blind-spot attack surface a top-tier security team would cover that isn't in the dimension list; (3) whether the severity calibration looks right. If coverage looks genuinely complete, say so and why.`,
+  { label: 'red-team-completeness', phase: 'Report' },
+)
 
 const report = await agent(
-  `You are the lead security reviewer writing the final report for the Kiddo team. Below are security findings that survived 3-skeptic adversarial verification (majority real). Write a tight, triaged markdown report: a one-line risk summary, then findings grouped by severity, each with file:line, the exploit in one sentence, and the fix. Be precise and non-alarmist; if the list is empty, say the audited scope is clean and note what was covered.\n\nCONFIRMED FINDINGS (JSON):\n${JSON.stringify(confirmed, null, 2)}`,
+  `You are the lead security reviewer writing the final report for the Kiddo team. Below are security findings that survived 3-skeptic adversarial verification (majority real). Write a tight, triaged markdown report: a one-line risk summary, then findings grouped by severity, each with file:line, the exploit in one sentence, and the fix, then include the red-team completeness review verbatim at the end. Be precise and non-alarmist; if the list is empty, say the audited scope is clean and note what was covered.\n\nCONFIRMED FINDINGS (JSON):\n${JSON.stringify(confirmed, null, 2)}\n\nRED-TEAM COMPLETENESS REVIEW:\n${completeness}`,
   { label: 'synthesize-report', phase: 'Report' },
 )
 
-return { confirmedCount: confirmed.length, confirmed, report }
+return { confirmedCount: confirmed.length, confirmed, completeness, report }
