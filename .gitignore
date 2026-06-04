@@ -26,6 +26,12 @@ apps/mobile/.expo
 !.claude/workflows/
 .claude/workflows/*
 !.claude/workflows/security-audit.js
+!.claude/workflows/advisory-panel.js
+!.claude/workflows/compliance-audit.js
+!.claude/workflows/finance-audit.js
+!.claude/workflows/conversion-audit.js
+!.claude/workflows/design-audit.js
+!.claude/workflows/audit-all.js
 *.log
 
 # Local eyeballing/QA scratch — demo screenshots + dot-prefixed one-off
