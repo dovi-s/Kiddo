@@ -22,6 +22,10 @@
 //      with 410 on accept (92f096f).
 //   9. charge.refunded reverses the gift's invested holdings + allocations —
 //      no phantom sellable shares survive a refund (389c907).
+//  10. Sealed parent letters never leak off parent surfaces: the PUBLIC
+//      memory endpoint and the gifter dashboard must not return
+//      parent_letter / parent_only / locked kid_at_18 content (2026-06-04).
+//      Uses the seeded Dunphy letters as permanent canaries.
 
 import "../server/env";
 import { db, pool } from "../server/db";
@@ -363,6 +367,68 @@ async function main() {
         "replayed charge.refunded webhook is a no-op (no double reversal)",
         !!holdingAfterReplay && Math.abs(parseFloat(String(holdingAfterReplay.shares)) - 6) < 0.001,
       );
+    }
+
+    // --- 10. Sealed parent letters never leak off parent surfaces. The demo
+    //         seeds a parent_letter on Alex's fund (visibility kid_at_18,
+    //         "Alex, if you're reading this...") and Haley's ("Haley. It's
+    //         yours now.") — permanent canaries. Checks the two surfaces
+    //         that leaked on 2026-06-04: the UNAUTHENTICATED public memory
+    //         endpoint and the gifter dashboard's "latest moment". ---
+    try {
+      const base = "http://127.0.0.1:5000";
+      const dunphyFunds = await db.select({ id: funds.id, slug: funds.slug }).from(funds);
+      const canaryFunds = dunphyFunds.filter((f) => /-dunphy/.test(String(f.slug || "")));
+      const LETTER_MARKERS = ["if you're reading this", "It's yours now"];
+      if (canaryFunds.length > 0) {
+        let publicLeak = false;
+        let publicChecked = 0;
+        for (const f of canaryFunds) {
+          const res = await fetch(`${base}/api/public/funds/${f.id}/memory`);
+          if (!res.ok) continue;
+          publicChecked++;
+          const body: any[] = await res.json().catch(() => []);
+          for (const entry of body || []) {
+            const content = String(entry?.content || "");
+            if (String(entry?.type || "") === "parent_letter" || LETTER_MARKERS.some((m) => content.includes(m))) {
+              publicLeak = true;
+            }
+          }
+        }
+        if (publicChecked > 0) {
+          ok("public memory endpoint returns no parent_letter / sealed content", !publicLeak);
+        } else {
+          console.log("  - public memory letter check skipped (endpoint unreachable)");
+        }
+
+        const gifterLogin = await fetch(`${base}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "jay@dunphyfamily.com", password: "dunphyfamily" }),
+        });
+        if (gifterLogin.ok) {
+          const cookie = (gifterLogin.headers as any).getSetCookie?.()?.join("; ")
+            || gifterLogin.headers.get("set-cookie")
+            || "";
+          const dashRes = await fetch(`${base}/api/gifter-account/dashboard`, { headers: { Cookie: cookie } });
+          if (dashRes.ok) {
+            const dash: any = await dashRes.json();
+            const moments: string[] = (dash?.funds || [])
+              .map((f: any) => String(f?.recentMemoryPreview?.content ?? f?.recentMemory?.content ?? ""))
+              .filter(Boolean);
+            const gifterLeak = moments.some((c) => LETTER_MARKERS.some((m) => c.includes(m)));
+            ok("gifter dashboard latest-moment contains no parent letters", !gifterLeak);
+          } else {
+            console.log(`  - gifter-dashboard letter check skipped (status ${dashRes.status})`);
+          }
+        } else {
+          console.log(`  - gifter-dashboard letter check skipped (login status ${gifterLogin.status})`);
+        }
+      } else {
+        console.log("  - sealed-letter canary checks skipped (no Dunphy demo funds)");
+      }
+    } catch {
+      console.log("  - sealed-letter canary checks skipped (dev server not reachable)");
     }
   } finally {
     for (const c of cleanup.reverse()) {

@@ -3078,11 +3078,54 @@ export async function registerRoutes(
           || coverage === "trial_active";
       });
 
+      // Enrich gift rows with the matched account's preferred display name +
+      // avatar — the SAME shape GET /api/funds/:id/gifts returns. The
+      // Dashboard seeds its gifts query cache straight from this payload
+      // (Dashboard.tsx ~2078), so without the enrichment here the money
+      // summary's "other account-holder" row fell back to a bare first name
+      // ("Phil's contributions" instead of "Dad's") until a manual refetch
+      // hit the standalone endpoint. Never enriches anonymous gifts.
+      const enrichedGiftsForFund = await timeStage("gift_enrichment", async () => {
+        const giftEmails = Array.from(new Set(
+          giftsForFund
+            .filter((g: any) => g.isAnonymous !== true)
+            .map((g: any) => String(g.senderEmail || "").trim().toLowerCase())
+            .filter(Boolean),
+        ));
+        const infoByEmail = new Map<string, { preferredName: string | null; avatarUrl: string | null }>();
+        if (giftEmails.length > 0) {
+          try {
+            const rows = await db
+              .select({
+                email: users.email,
+                preferredName: users.preferredName,
+                profileImageUrl: users.profileImageUrl,
+              })
+              .from(users)
+              .where(inArray(sql`lower(${users.email})`, giftEmails));
+            for (const r of rows) {
+              if (!r.email) continue;
+              infoByEmail.set(String(r.email).trim().toLowerCase(), {
+                preferredName: (r.preferredName && String(r.preferredName).trim()) || null,
+                avatarUrl: (r as any).profileImageUrl || null,
+              });
+            }
+          } catch (enrichErr) {
+            console.warn("[dashboard-summary] gifter enrichment failed (non-fatal):", (enrichErr as any)?.message || enrichErr);
+          }
+        }
+        return giftsForFund.map((g: any) => {
+          if (g.isAnonymous === true) return { ...g, gifterPreferredName: null, gifterAvatarUrl: null };
+          const match = infoByEmail.get(String(g.senderEmail || "").trim().toLowerCase());
+          return { ...g, gifterPreferredName: match?.preferredName || null, gifterAvatarUrl: match?.avatarUrl || null };
+        });
+      });
+
       const responsePayload = await timeStage("response_assembly", async () => ({
           fundId: fund.id,
           recurringEnabled,
           holdings: holdingsForFund,
-          gifts: giftsForFund,
+          gifts: enrichedGiftsForFund,
           events: eventsForFund,
           history,
           investmentPreferences,
@@ -5189,11 +5232,32 @@ export async function registerRoutes(
           // dashboard — exactly the failure the locked filters exist
           // to prevent. User flagged this 2026-05-23.
           const filteredEntries = await storage.getMemoryEntriesByFund(fund.id);
-          const recentMemory = filteredEntries[0]
+          // Entry-level VISIBILITY gate (2026-06-04). The storage helper's
+          // locked filters handle junk/moderation, not privacy — without this
+          // gate the gifter dashboard surfaced Phil's SEALED letter ("Alex, if
+          // you're reading this you're 21...") as the "Latest Memory Book
+          // moment" to every gifter: content even the kid can't see yet.
+          // Mirrors the gate on /api/age-transition/:token, plus one stricter
+          // rule: parent_letter NEVER shows to gifters (even after it unlocks,
+          // the letter is parent→child, not gifter content).
+          const isAdultRecipient = ageInfo.phase === "adult";
+          const nowMsForGifterGate = Date.now();
+          const gifterVisibleEntries = filteredEntries.filter((entry: any) => {
+            if (String(entry.type || "") === "parent_letter") return false;
+            const entryVis = String(entry.visibility || "kid_now");
+            if (entryVis === "parent_only") return false;
+            if (entryVis === "kid_at_18" && !isAdultRecipient) return false;
+            if (entryVis === "sealed") {
+              const deliverAt = (entry as any).deliverAt ? new Date((entry as any).deliverAt).getTime() : null;
+              if (!deliverAt || Number.isNaN(deliverAt) || deliverAt > nowMsForGifterGate) return false;
+            }
+            return true;
+          });
+          const recentMemory = gifterVisibleEntries[0]
             ? {
-                content: filteredEntries[0].content,
-                authorName: filteredEntries[0].authorName,
-                createdAt: filteredEntries[0].createdAt,
+                content: gifterVisibleEntries[0].content,
+                authorName: gifterVisibleEntries[0].authorName,
+                createdAt: gifterVisibleEntries[0].createdAt,
               }
             : undefined;
           const [activeEventCountRow] = await db
@@ -5529,7 +5593,7 @@ export async function registerRoutes(
     }
     const rows = await db.execute(sql`
       SELECT rg.id, rg.sender_email, rg.sender_name, rg.stripe_subscription_id,
-             rg.status, rg.amount, rg.frequency, rg.fund_id,
+             rg.status, rg.amount, rg.frequency, rg.fund_id, rg.next_charge_date,
              f.recipient_first_name, f.name AS fund_name
       FROM recurring_gifts rg
       INNER JOIN funds f ON f.id = rg.fund_id
@@ -5554,6 +5618,14 @@ export async function registerRoutes(
     yearly: "year",
   };
 
+  // Demo-seeded schedules carry fake Stripe ids ("demo_sub_..." — see
+  // script/seed-dunphys.ts). Real Stripe calls on them fail, which 500'd
+  // History and hard-502'd Edit for the demo's recurring persona
+  // (Mitchell) — the one persona whose whole point is recurring
+  // management. Treat demo ids as Stripe-less everywhere: mutations fall
+  // through to the local-only path, history returns empty instead of 500.
+  const isDemoStripeSubId = (id: unknown): boolean => String(id || "").startsWith("demo_");
+
   // Pause: stop future charges without losing the schedule. Stripe-backed
   // rows use pause_collection behavior 'void' (invoices during the pause
   // are voided, not stacked up to back-charge on resume). Reminder-only
@@ -5564,7 +5636,7 @@ export async function registerRoutes(
       const row = await loadOwnedRecurring(req, res);
       if (!row) return;
       if (String(row.status) === "paused") return res.json({ ok: true, alreadyPaused: true });
-      if (row.stripe_subscription_id) {
+      if (row.stripe_subscription_id && !isDemoStripeSubId(row.stripe_subscription_id)) {
         try {
           const stripe = await getUncachableStripeClient();
           await stripe.subscriptions.update(String(row.stripe_subscription_id), {
@@ -5597,7 +5669,7 @@ export async function registerRoutes(
       if (!row) return;
       if (String(row.status) === "active") return res.json({ ok: true, alreadyActive: true });
       let nextChargeMs: number | null = null;
-      if (row.stripe_subscription_id) {
+      if (row.stripe_subscription_id && !isDemoStripeSubId(row.stripe_subscription_id)) {
         try {
           const stripe = await getUncachableStripeClient();
           const sub = await stripe.subscriptions.update(String(row.stripe_subscription_id), {
@@ -5618,13 +5690,19 @@ export async function registerRoutes(
           WHERE id = ${String(row.id)}
         `);
       } else {
-        // Reminder-only (or Stripe period unavailable): advance the cadence
-        // forward from now so the next reminder fires on schedule.
+        // Reminder-only / demo / Stripe period unavailable: advance from the
+        // STORED next_charge_date when there is one, stepping the cadence
+        // forward until it's in the future. Re-anchoring to "now" (the old
+        // behavior) silently moved occasion-anchored schedules — an annual
+        // birthday gift resumed in June drifted to a June charge date.
         const interval = RECURRING_INTERVAL[String(row.frequency)] || "month";
-        const next = new Date();
-        if (interval === "week") next.setDate(next.getDate() + 7);
-        else if (interval === "year") next.setFullYear(next.getFullYear() + 1);
-        else next.setMonth(next.getMonth() + 1);
+        const stored = row.next_charge_date ? new Date(row.next_charge_date) : null;
+        const next = stored && !Number.isNaN(stored.getTime()) ? stored : new Date();
+        while (next.getTime() <= Date.now()) {
+          if (interval === "week") next.setDate(next.getDate() + 7);
+          else if (interval === "year") next.setFullYear(next.getFullYear() + 1);
+          else next.setMonth(next.getMonth() + 1);
+        }
         await db.execute(sql`
           UPDATE recurring_gifts
           SET status = 'active', pause_reason = NULL, paused_at = NULL,
@@ -5661,7 +5739,7 @@ export async function registerRoutes(
       }
       const amount = Math.round(rawAmount * 100) / 100;
       let nextChargeMs: number | null = null;
-      if (row.stripe_subscription_id) {
+      if (row.stripe_subscription_id && !isDemoStripeSubId(row.stripe_subscription_id)) {
         try {
           const stripe = await getUncachableStripeClient();
           const recipientName = String(row.recipient_first_name || row.fund_name || "the child");
@@ -5722,6 +5800,12 @@ export async function registerRoutes(
       if (!row) return;
       if (!row.stripe_subscription_id) {
         return res.json({ charges: [], totalCharged: 0, count: 0, reminderOnly: true });
+      }
+      if (isDemoStripeSubId(row.stripe_subscription_id)) {
+        // Demo schedule: no real Stripe sub to list invoices for. Empty
+        // (non-reminder) history renders the honest "No charges yet" state
+        // instead of the 500 this used to throw.
+        return res.json({ charges: [], totalCharged: 0, count: 0, reminderOnly: false });
       }
       const stripe = await getUncachableStripeClient();
       const invoices = await stripe.invoices.list({
@@ -7168,7 +7252,31 @@ export async function registerRoutes(
       // 'pending_review' and stay invisible until the parent approves.
       // Other gifters / the public flow must NEVER see them — they're
       // effectively in a parent-only inbox at that point.
-      const entries = allEntries.filter((e) => String((e as any).status || 'published') !== 'pending_review');
+      const pendingFiltered = allEntries.filter((e) => String((e as any).status || 'published') !== 'pending_review');
+      // Entry-level VISIBILITY gate for the PUBLIC surface (2026-06-04).
+      // This endpoint is fully UNAUTHENTICATED, and the meta-level filter
+      // below (parseVisibility(entry.visibility) === "public") is useless as
+      // a privacy gate because absent meta defaults to "public" — so Phil's
+      // SEALED letter ("Alex, if you're reading this you're 21...") was
+      // retrievable by anyone with the fund's public link. Same bug class as
+      // the gifter-dashboard leak fixed at /api/gifter-account/dashboard;
+      // gate mirrors /api/age-transition/:token, with the stricter rule that
+      // parent_letter NEVER appears on a public surface (even after it
+      // unlocks, the letter is parent→child, not public-stream content).
+      const agePhaseForPublic = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
+      const isAdultForPublic = agePhaseForPublic.phase === "adult";
+      const nowMsForPublic = Date.now();
+      const entries = pendingFiltered.filter((e: any) => {
+        if (String(e.type || "") === "parent_letter") return false;
+        const entryVis = String(e.visibility || "kid_now");
+        if (entryVis === "parent_only") return false;
+        if (entryVis === "kid_at_18" && !isAdultForPublic) return false;
+        if (entryVis === "sealed") {
+          const deliverAt = e.deliverAt ? new Date(e.deliverAt).getTime() : null;
+          if (!deliverAt || Number.isNaN(deliverAt) || deliverAt > nowMsForPublic) return false;
+        }
+        return true;
+      });
       const giftsForFund = await storage.getGiftsByFund(req.params.id);
       const fundEvents = await storage.getEventsByFund(req.params.id);
       const fundHoldings = await storage.getHoldingsByFund(req.params.id);

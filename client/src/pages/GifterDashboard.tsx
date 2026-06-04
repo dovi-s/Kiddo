@@ -1271,7 +1271,11 @@ export default function GifterDashboard() {
                       {fund.nextMilestoneTarget && (
                         <div className="mt-4 rounded-2xl bg-muted/30 p-4">
                           <div className="flex items-center justify-between gap-3 text-sm">
-                            <p className="font-medium text-foreground">Next family milestone</p>
+                            {/* Server computes this off the GIFTER's own lifetime total
+                                ([100,500,1000,2500] vs stats.totalGifted) — the old
+                                "Next family milestone" label claimed it was fund-wide,
+                                which read absurd on an $80k fund ("next: $2,500"). */}
+                            <p className="font-medium text-foreground">Your next giving milestone</p>
                             <p className="text-muted-foreground">{fmtMoney(fund.nextMilestoneTarget)}</p>
                           </div>
                           <div className="mt-3 h-2 rounded-full bg-muted">

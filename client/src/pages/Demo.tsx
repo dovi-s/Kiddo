@@ -219,7 +219,11 @@ export default function Demo() {
                   Alex is weeks from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  In a few weeks, the fund her dad Phil built becomes hers. This is the handoff page he sees: the projection slider, his sealed letter, Gloria's voice memos, a whole childhood of gifts. Start here.
+                  {/* "Gloria's notes in Spanish", not "voice memos": the demo-audio
+                      assets don't exist yet (client/public/demo-audio/README.md, IP
+                      question pending), so her memos render text-only. Don't promise
+                      audio the page can't show; upgrade the word when audio lands. */}
+                  In a few weeks, the fund her dad Phil built becomes hers. This is the handoff page he sees: the projection slider, his sealed letter, Gloria's notes in Spanish, a whole childhood of gifts. Start here.
                 </p>
               </div>
               <button
