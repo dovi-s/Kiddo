@@ -828,7 +828,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // so the story and the numbers agree. kid.strategy is the CURRENT/latest mix.
   const bday = new Date(kid.birthdate);
   const atAge = (years: number) => { const d = new Date(bday); d.setFullYear(d.getFullYear() + years); return d; };
-  const STRATEGY_LABEL: Record<string, string> = { growth: "Growth Mix", balanced: "Steady & Balanced", conservative: "Conservative Mix" };
+  // Mirror the canonical labels in lib/strategy.ts — "Steady & Balanced" is the
+  // retired name; everywhere else (Dashboard, holdings) renders "Balanced Mix".
+  const STRATEGY_LABEL: Record<string, string> = { growth: "Growth Mix", balanced: "Balanced Mix", conservative: "Conservative Mix" };
   const STRATEGY_ORDER: Record<string, number> = { growth: 0, balanced: 1, conservative: 2 };
   const currentOrder = STRATEGY_ORDER[kid.strategy] ?? 0;
   for (const s of [{ at: 13, from: "growth", to: "balanced" }, { at: 16, from: "balanced", to: "conservative" }]) {
@@ -841,7 +843,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         fundId: fund.id,
         type: "fund_strategy_changed",
         title: `Automatically moved to a steadier mix as ${kid.firstName} turned ${s.at}`,
-        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · protecting the fund as ${kid.pronoun} nears 18`,
+        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · protecting the fund as ${kid.firstName} gets older`,
         createdAt: atAge(s.at),
         metadata: JSON.stringify({ from: s.from, to: s.to, reason: "age_band", automatic: true }),
       } as any);
