@@ -1102,7 +1102,7 @@ export default function Dashboard() {
   // Demo sandbox: re-derive the holdings overlay when a gift is recorded
   // in-place so the hero rolls + "What X owns" updates immediately.
   const demoOverlayVersion = useDemoOverlayVersion();
-  const { data: subscription } = useSubscription();
+  const { data: subscription, isFetched: subscriptionFetched } = useSubscription();
   const queryClient = useQueryClient();
 
   // Closed-tab fallback for the at-handoff welcome walkthrough. If the
@@ -2348,6 +2348,20 @@ export default function Dashboard() {
     activeCoverageState === "covered_starter" ||
     activeCoverageState === "covered_family" ||
     activeCoverageState === "trial_active";
+  // CONFIDENT-uncovered gate for the Plus upsell MODAL (2026-06-04). The
+  // server always includes a coverage key for every fund the user can see,
+  // so an ABSENT key means "subscription not loaded yet / stale localStorage
+  // cache" — NOT "free fund." `|| "uncovered"` conflates the two, so a Family
+  // parent (or co-admin) whose cached /api/subscription predates a coverage
+  // fix saw the 900ms upsell timer fire before the fresh covered_family data
+  // landed. Only treat a fund as upsell-worthy when the subscription has
+  // actually been fetched this mount AND the fund's key is present AND
+  // uncovered. (isFundCovered itself is left as-is — it's used widely and
+  // defaulting unknown→uncovered is the safe direction for read-only gates.)
+  const activeCoverageConfirmedUncovered =
+    subscriptionFetched &&
+    Object.prototype.hasOwnProperty.call(coverageByFund, String(activeFundId)) &&
+    !isFundCovered;
   // FUND-keyed plan view for fund-scoped gates (2026-06-04). A co-admin on a
   // covered fund has effectivePlan "free" (her OWN plan) while the FUND is
   // paid for — occasion gates and Plus-upsell nudges must read the fund's
@@ -3051,7 +3065,10 @@ export default function Dashboard() {
   // without screaming.)
 
   useEffect(() => {
-    if (!activeFundId || !recentGiftForToast || isFundCovered) return;
+    // Only when we've CONFIRMED the fund is uncovered (see
+    // activeCoverageConfirmedUncovered) — never on a still-loading / stale
+    // subscription, which used to flash the Plus modal at covered families.
+    if (!activeFundId || !recentGiftForToast || !activeCoverageConfirmedUncovered) return;
     const giftId = String(recentGiftForToast.id || "");
     if (!giftId) return;
     const storageKey = `kora:coverage-prompt:${giftId}`;
@@ -3061,7 +3078,7 @@ export default function Dashboard() {
       safeLocalSet(storageKey, "shown");
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [activeFundId, recentGiftForToast, isFundCovered]);
+  }, [activeFundId, recentGiftForToast, activeCoverageConfirmedUncovered]);
 
   const recentGifts30Days = useMemo(() => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -3480,7 +3497,7 @@ export default function Dashboard() {
     }, 0);
   }, [isFundCovered, recentGifts30Days]);
   const shouldShowCumulativeCoveragePrompt =
-    !isFundCovered &&
+    activeCoverageConfirmedUncovered &&
     recentGifts30Days.length >= 3 &&
     uncoveredFeesThisMonth >= KORA_STARTER_MONTHLY;
 
