@@ -857,7 +857,7 @@ export default function TaxDocuments() {
           <p className="kiddo-section-label mb-2">Understanding the kiddie tax</p>
           <div className="kiddo-card p-5">
             <p className="text-sm text-foreground leading-relaxed">
-              For children under 19 (or full-time students under 24), <span className="font-semibold">unearned income</span> above the IRS thresholds is taxed at the parent's rate, not the child's. Only applies when positions are sold and gains are realized. Growth alone isn't taxable.
+              For children under 19 (or full-time students under 24), <span className="font-semibold">unearned income</span> above the IRS thresholds is taxed at the parent's rate, not the child's. It applies to dividends and interest in the year they're paid, and to capital gains when positions are sold. Unrealized growth alone isn't taxable.
             </p>
             <div className="mt-4 rounded-xl bg-[hsl(var(--kiddo-cream-dark)/0.4)] p-4 space-y-2.5">
               <div className="flex items-baseline justify-between gap-3 pb-2 border-b border-[hsl(var(--kiddo-border-light))]">

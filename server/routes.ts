@@ -24007,6 +24007,13 @@ export async function registerRoutes(
       const seedInvested = seedRow ? Number(seedRow.invested_value || 0) : 0;
       const seedTotal = seedRow ? Number(seedRow.total_value || 0) : 0;
 
+      // For the IN-PROGRESS year, cap the averaging window (and the fee
+      // proration below) at "now" instead of Dec 31 — otherwise the last
+      // snapshot is projected flat to year-end and the fee reads as the whole-
+      // year run-rate inside what is otherwise a year-to-date summary. For a
+      // completed year periodEndMs === endMs, so nothing changes.
+      const nowMs = Date.now();
+      const periodEndMs = Math.min(endMs, nowMs);
       let avgInvestedBalanceUsd = 0;
       if (snaps.length > 0) {
         // Use a list of (startMs, value) and (gap to next) for the
@@ -24023,7 +24030,7 @@ export async function registerRoutes(
         let totalWeight = 0;
         for (let i = 0; i < points.length; i += 1) {
           const cur = points[i];
-          const next = i + 1 < points.length ? points[i + 1].start : endMs;
+          const next = i + 1 < points.length ? points[i + 1].start : periodEndMs;
           const span = Math.max(0, next - Math.max(cur.start, startMs));
           if (span <= 0) continue;
           weightedSum += cur.value * span;
@@ -24038,13 +24045,19 @@ export async function registerRoutes(
         avgInvestedBalanceUsd = seedInvested;
       }
 
-      // 5. Estimated fees — 0.10% AUM applied to the time-weighted
-      //    average invested balance. Honest "estimated" framing in
-      //    the response key + the client surface so a CPA reading
-      //    the number knows it's not the exact DriveWealth-issued
-      //    fee accrual. Once DriveWealth wires up actual accruals
-      //    this can be replaced with the authoritative number.
-      const estimatedFeesUsd = avgInvestedBalanceUsd * 0.001;
+      // 5. Estimated fees — 0.10% AUM accrued over the ELAPSED portion of the
+      //    year (prorated daily). For a completed year the fraction is 1, so
+      //    this is the full-year fee (unchanged). For the in-progress year it's
+      //    the fee accrued Jan 1 -> today, consistent with the other year-to-
+      //    date figures in this summary — previously the balance was projected
+      //    flat to Dec 31 and charged the full 0.10%, showing the whole-year
+      //    run-rate (~$22) when only a few months had actually accrued (~$9).
+      //    Honest "estimated" framing stays in the response key + client
+      //    surface; once DriveWealth wires real accruals this pulls the
+      //    authoritative number.
+      const periodDays = Math.max(0, (periodEndMs - startMs) / 86400000);
+      const yearFraction = Math.min(1, periodDays / 365);
+      const estimatedFeesUsd = avgInvestedBalanceUsd * 0.001 * yearFraction;
 
       // 6. Year start / end values. Pull the closest in-year
       //    snapshots to Jan 1 + Dec 31. yearStart prefers the
