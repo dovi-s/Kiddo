@@ -201,6 +201,12 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
     whatTheyDo: "Target is one of the largest US retail chains: groceries, clothes, home goods, and more.",
     whyItMatters: "When more people shop at Target stores or online, Target earns more.",
   },
+  MCD: {
+    emoji: "🍟",
+    youngOwner: "You own a tiny piece of McDonald's. Every Happy Meal, every order of fries, in almost every country.",
+    whatTheyDo: "McDonald's runs one of the biggest fast-food chains in the world, with restaurants nearly everywhere.",
+    whyItMatters: "When more people eat at McDonald's around the world, the company earns more.",
+  },
   CMCSA: {
     emoji: "📺",
     youngOwner: "You own a tiny piece of Comcast. Every Xfinity internet bill, every NBC show, every Universal Studios ride. Pieces of all of it are yours.",
@@ -254,7 +260,11 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
 function getCompanyExplainer(ticker: string, name: string) {
   return (
     COMPANY_EXPLAINERS[ticker] || {
-      emoji: "✨",
+      // Neutral company glyph, not the ✨ sparkle (swept as an AI-tell
+      // everywhere else). Demo funds shouldn't hit this — every seeded
+      // holding now has a real entry above — but a real fund could pick any
+      // ticker, so the fallback stays honest and calm. 2026-06-04.
+      emoji: "🏢",
       youngOwner: `You own a tiny piece of ${name}.`,
       whatTheyDo: `${name} is one of the companies or funds in your account.`,
       whyItMatters: "When the business grows or investors get more confident, the value can rise. When confidence drops, it can fall too.",

@@ -2309,10 +2309,19 @@ export default function Dashboard() {
     queryKey: ["/api/funds", activeFundId, "kid-view-settings"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${activeFundId}/kid-view-settings`, { credentials: "include" });
-      if (!res.ok) throw new Error("Could not load kid view settings");
+      // Return null (not throw) on a non-OK response so a denied fetch doesn't
+      // surface as an errored query. The endpoint is owner/co-admin-gated.
+      if (!res.ok) return null;
       return res.json();
     },
-    enabled: !!activeFundId && activeFund?.accountType === "UTMA",
+    // Kid View is a custodian→child feature — it does NOT apply once a fund has
+    // been HANDED OFF to the now-adult (transferredAt set) or when the viewer is
+    // only the PREVIOUS owner. Firing it there 403'd (the parent no longer owns
+    // the transferred fund) and threw a console error. Gate it out. 2026-06-04.
+    enabled: !!activeFundId
+      && activeFund?.accountType === "UTMA"
+      && activeFundAccessRole !== "previous_owner"
+      && !(activeFund as any)?.transferredAt,
   });
   const { data: investPrefs, refetch: refetchInvestPrefs } = useQuery<any>({
     queryKey: ["/api/funds", activeFundId, "investment-preferences"],

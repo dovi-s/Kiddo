@@ -154,7 +154,13 @@ export function DesktopSidebar() {
       if (!res.ok) return null;
       return res.json();
     },
-    enabled: enabled && !!activeFund?.id,
+    // Don't even fire for a HANDED-OFF fund (transferredAt) or one the viewer
+    // only PREVIOUSLY owned — Kid View no longer applies, and the request 403'd
+    // (logging a console error) since the parent no longer owns it. 2026-06-04.
+    enabled: enabled
+      && !!activeFund?.id
+      && !(activeFund as any)?.transferredAt
+      && (activeFund as any)?.accessRole !== "previous_owner",
     staleTime: 60_000,
   });
 
@@ -331,7 +337,7 @@ export function DesktopSidebar() {
       external: false,
       onClick: null,
     },
-    activeFund?.id && !isOwnerMode && {
+    activeFund?.id && !isOwnerMode && !(activeFund as any)?.transferredAt && (activeFund as any)?.accessRole !== "previous_owner" && {
       id: "kid-view",
       label: childName ? `${childName}'s View` : "Kid's View",
       href: null,
