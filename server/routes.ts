@@ -15114,6 +15114,39 @@ export async function registerRoutes(
         return res.status(403).json({ error: 'Family or Legacy plan required to manage gift reminders' });
       }
 
+      // MONEY SAFETY (2026-06-04): if this row is a real auto-charging Stripe
+      // subscription (not a reminder-only cadence), the status change MUST
+      // reach Stripe — a local-only 'cancelled' left the subscription billing
+      // the gifter's card forever while the parent believed it was stopped
+      // (and the invoice.paid webhook kept bumping next_charge_date on a
+      // cancelled row). Stripe-first, fail-closed: if Stripe errors, return
+      // 502 and change NOTHING locally, so the UI never claims a stop that
+      // didn't happen. Demo subscriptions (demo_sub_*) skip Stripe — they
+      // exist only so the demo renders the auto-charge treatment.
+      const subId = String(giftRecord.stripeSubscriptionId || '');
+      if (subId && !subId.startsWith('demo_')) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          if (status === 'cancelled') {
+            await stripe.subscriptions.cancel(subId);
+          } else if (status === 'paused') {
+            await stripe.subscriptions.update(subId, { pause_collection: { behavior: 'void' } });
+          } else if (status === 'active') {
+            await stripe.subscriptions.update(subId, { pause_collection: null } as any);
+          }
+        } catch (stripeErr: any) {
+          // Already-canceled subs are fine to proceed past (the goal state
+          // holds); anything else must block the local write.
+          const code = String(stripeErr?.code || stripeErr?.raw?.code || '');
+          const msg = String(stripeErr?.message || '');
+          const alreadyCanceled = status === 'cancelled' && (code === 'resource_missing' || /No such subscription|canceled subscription/i.test(msg));
+          if (!alreadyCanceled) {
+            console.error('Stripe update failed for recurring gift status change:', stripeErr);
+            return res.status(502).json({ error: "Couldn't reach the payment processor to stop the charges. Nothing was changed — please try again." });
+          }
+        }
+      }
+
       const updated = await storage.updateRecurringGift(req.params.id, { status });
       if (!updated) {
         return res.status(404).json({ error: 'Gift reminder not found' });

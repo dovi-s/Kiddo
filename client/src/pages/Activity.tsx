@@ -1116,10 +1116,14 @@ export default function Activity() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["/api/me/scheduled"] });
-      toast({ title: "Reminder cancelled", description: "We won't email this gifter again." });
+      // Kind-neutral copy: this mutation stops BOTH reminder-only cadences
+      // (we stop emailing) and auto-charge subscriptions (Stripe sub is
+      // cancelled server-side). The per-row confirm already told the parent
+      // exactly which one they're stopping.
+      toast({ title: "Schedule stopped", description: "This gifter's schedule for the fund has ended." });
     },
     onError: (err: any) => {
-      toast({ title: "Could not cancel reminder", description: err?.message || "Try again in a moment.", variant: "destructive" });
+      toast({ title: "Could not stop the schedule", description: err?.message || "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -4218,12 +4222,26 @@ export default function Activity() {
                   </EnlighteningReveal>
                 )}
 
-                {/* Gift reminders */}
+                {/* Gifter schedules — TWO kinds share this list, branched per
+                    row on stripeSubscriptionId (the payload spreads the full
+                    recurring_gifts row):
+                      • auto-charge rows (real Stripe subscription): the gifter's
+                        card charges automatically each cycle. For non-demo users
+                        the phantom-row guard means these are the ONLY kind here.
+                      • reminder-only rows (no sub id): we email the gifter a
+                        nudge; nothing charges. Demo's seeded rows + future
+                        reminder surfacing.
+                    The old render treated everything as "reminder" — so a real
+                    parent saw their gifter's AUTO-CHARGING schedule described
+                    as "email reminder," and Stop claimed to stop emails while
+                    (pre the 2026-06-04 server fix) leaving Stripe billing the
+                    gifter forever. Labels, copy, and confirm now follow the
+                    row's true kind. */}
                 {scheduledReminders.length > 0 && (
                   <EnlighteningReveal>
                     <div style={{ marginBottom: 22 }}>
                       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgb(140,130,122)", marginBottom: 10 }}>
-                        Gift reminders
+                        Gifter schedules
                       </p>
                       <div className="kiddo-card" style={{
                         padding: "0 18px",
@@ -4234,6 +4252,7 @@ export default function Activity() {
                           const amtNum = parseAmount(r.amount);
                           const isExpanded = expandedScheduledId === `rem:${r.id}`;
                           const idStr = String(r.id);
+                          const isAutoCharge = Boolean(r.stripeSubscriptionId);
                           const isMutating = cancelReminderMutation.isPending && cancelReminderMutation.variables === idStr;
                           return (
                             <div
@@ -4273,7 +4292,7 @@ export default function Activity() {
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                     <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)" }}>
-                                      {r.senderName || "Someone"} · reminder
+                                      {r.senderName || "Someone"} · {isAutoCharge ? "recurring" : "reminder"}
                                     </p>
                                     {amtNum != null && (
                                       <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(120,110,100)" }}>
@@ -4282,7 +4301,9 @@ export default function Activity() {
                                     )}
                                   </div>
                                   <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
-                                    Email reminder to gift {capFirst(r.recipientFirstName) || "the child"}
+                                    {isAutoCharge
+                                      ? `Gives to ${capFirst(r.recipientFirstName) || "the child"} automatically`
+                                      : `Email reminder to gift ${capFirst(r.recipientFirstName) || "the child"}`}
                                     {next ? ` · next ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}
                                   </p>
                                 </div>
@@ -4300,12 +4321,16 @@ export default function Activity() {
                               {isExpanded && (
                                 <div style={{ marginTop: 12, marginLeft: 48 }}>
                                   <p style={{ fontSize: 11.5, color: "rgb(120,110,100)", lineHeight: 1.45, marginBottom: 10 }}>
-                                    {r.senderName || "This gifter"} set up a recurring reminder when they gave. They manage pause/resume themselves from the email. You can stop the reminders entirely from here.
+                                    {isAutoCharge
+                                      ? `${r.senderName || "This gifter"} set up a recurring gift that charges their card automatically. They manage it from their gifter dashboard. Stopping it here cancels their schedule for this fund; they won't be charged again.`
+                                      : `${r.senderName || "This gifter"} set up a recurring reminder when they gave. They manage pause/resume themselves from the email. You can stop the reminders entirely from here.`}
                                   </p>
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const ok = window.confirm(`Stop reminding ${r.senderName || "this gifter"}? They won't receive future reminder emails for this fund.`);
+                                      const ok = window.confirm(isAutoCharge
+                                        ? `Stop ${r.senderName || "this gifter"}'s recurring gift? Their card won't be charged again for this fund.`
+                                        : `Stop reminding ${r.senderName || "this gifter"}? They won't receive future reminder emails for this fund.`);
                                       if (ok) cancelReminderMutation.mutate(idStr);
                                     }}
                                     disabled={isMutating}
@@ -4319,7 +4344,7 @@ export default function Activity() {
                                     }}
                                     data-testid={`button-cancel-reminder-${idStr}`}
                                   >
-                                    Stop reminders
+                                    {isAutoCharge ? "Stop this recurring gift" : "Stop reminders"}
                                   </button>
                                 </div>
                               )}

@@ -1383,6 +1383,16 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         paymentSetupStatus: "active",
         status: "active",
         nextChargeDate: nextBirthday,
+        // Demo-fake subscription id (founder catch 2026-06-04): the Dunphys
+        // are on the FAMILY plan, so the product would have offered Mitchell
+        // the real auto-charging recurring — a reminder-only row here demoed
+        // the free-fund fallback on a paid fund and undersold the marquee
+        // feature. The demo_ prefix makes every consumer behave right: the
+        // Scheduled tab renders the auto-charge treatment, the gifter
+        // dashboard labels "Next charge", the reminder worker skips it
+        // (sub-id rows are excluded), and the status-change endpoints skip
+        // the Stripe call for demo_ ids.
+        stripeSubscriptionId: `demo_sub_mitchell_${kid.slug}`,
       } as any);
     }
     console.log(`  recurring (Mitchell): annual birthday on ${KIDS.length} fund(s)`);
