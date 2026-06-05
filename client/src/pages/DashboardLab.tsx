@@ -6337,6 +6337,88 @@ export default function DashboardLab() {
               </div>
             </motion.section>
 
+            {/* ════════════════════════════════════════════════════════════════
+                LAB: STORY-FIRST "{Child}'s Future" block. The billion-dollar
+                critique's core demand: LEAD with Future + Family, demote the
+                portfolio. Three emotional anchors before any stock ticker:
+                the future projection (the wow number), the people building it
+                (faces, a bank can't have them), and the countdown. Visual
+                LAYERS per the critique: green future card (layer 1) + a soft
+                family card (layer 2), distinct from the white data cards below.
+                NOTE: the existing "who loves" + projection sections still
+                render below — once you confirm leading with this, those get
+                deleted (this is the additive demonstration).
+                ════════════════════════════════════════════════════════════ */}
+            {!isReadOnlyFund && totalValue > 0 && (() => {
+              const yrs = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+              const monthly = activeAutoInvest ? (parseFloat(String((activeAutoInvest as any).amount || "0")) || 0) : 0;
+              const projected = yrs > 0.08
+                ? projectFundValue({ startingValue: totalValue, monthlyContribution: monthly, yearsAhead: yrs })
+                : null;
+              const childName = recipientFirstNameDisplay || "your child";
+              const majAge = age18Transition?.majorityAge || majorityAge;
+              const days = age18Transition ? Math.max(0, Math.round(age18Transition.daysUntil18)) : null;
+              const faces = gifterRoster.slice(0, 6);
+              const FACE_TINTS = ["#E9F0EA", "#F5E9D2", "#EDE7DC", "#E3EDE6", "#F0E6E9", "#E6ECF0"];
+              return (
+                <div className="mt-4 space-y-3" data-testid="lab-future-family">
+                  {/* LAYER 1 — FUTURE: the wow number, on the brand green. */}
+                  {projected != null && (
+                    <div
+                      className="shadow-premium-md"
+                      style={{
+                        background: "linear-gradient(150deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 120%)",
+                        borderRadius: "var(--radius-container)",
+                        padding: "22px 24px",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div style={{ position: "absolute", right: -30, top: -30, width: 140, height: 140, borderRadius: "50%", background: "radial-gradient(circle, hsl(var(--kiddo-gold) / 0.18), transparent 70%)" }} aria-hidden />
+                      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,247,232,0.55)", margin: 0 }}>
+                        {childName}'s future
+                      </p>
+                      <p className="font-heading" style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-1.5px", lineHeight: 1.04, color: "#FFF7E8", margin: "6px 0 0" }}>
+                        {formatCurrency(projected)}
+                      </p>
+                      <p style={{ fontSize: 13.5, color: "rgba(255,247,232,0.78)", margin: "8px 0 0", fontWeight: 500 }}>
+                        🌱 Projected when {childName} turns {majAge}
+                        {days != null && days > 0 && (
+                          <span style={{ color: "rgba(255,247,232,0.55)" }}> · {days.toLocaleString("en-US")} days away</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* LAYER 2 — FAMILY: the people, faces up front. */}
+                  {faces.length > 0 && (
+                    <div
+                      className="shadow-premium-sm"
+                      style={{ background: "hsl(var(--kiddo-evergreen) / 0.05)", border: "1px solid hsl(var(--kiddo-evergreen) / 0.14)", borderRadius: "var(--radius-container)", padding: "18px 20px" }}
+                    >
+                      <p className="font-heading" style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))", margin: 0 }}>
+                        {contributorCount > 0 ? contributorCount : faces.length} people are building {childName}'s future
+                      </p>
+                      <div style={{ display: "flex", gap: 10, marginTop: 14, overflowX: "auto", paddingBottom: 2 }}>
+                        {faces.map((g, i) => (
+                          <div key={g.name + i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, width: 56, flexShrink: 0 }}>
+                            <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: `linear-gradient(160deg, ${FACE_TINTS[g.colorIdx % FACE_TINTS.length]} 0%, #FFFFFF 130%)`, border: "2px solid #FFF", boxShadow: "0 1px 3px rgba(26,23,16,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {g.avatarUrl
+                                ? <img src={g.avatarUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                : <span className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))" }}>{g.initials}</span>}
+                            </div>
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {g.preferredName || g.name.split(" ")[0]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Parent's "your part of the story" moment. Post-handoff the parent
                 becomes a previous owner (read-only); the cold "transferred · view
                 only" hero badge is otherwise the only acknowledgment. This calm
