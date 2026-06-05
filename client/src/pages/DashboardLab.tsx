@@ -1529,41 +1529,60 @@ export default function DashboardLab() {
   const chartScrollRef = useCallback((el: HTMLDivElement | null) => {
     chartObsRef.current?.disconnect();
     chartObsRef.current = null;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    // Replay the wipe via WAAPI directly on the wrapper — NOT a key bump.
-    // The old key-remount re-rendered the entire chart component mid-scroll
-    // (a main-thread hitch, visibly janky on mobile momentum scroll). A
-    // fire-and-forget el.animate() touches no React state, remounts nothing,
-    // and runs compositor-side. Safety holds: a finished/cancelled WAAPI
-    // animation stops applying (fill: none), so the chart always returns to
-    // its natural visible style — it can never stick clipped/blank.
+    if (!el) return;
+    // The wipe is a COMPOSITOR-ONLY counter-transform pair, not clip-path.
+    // clip-path animates on the main thread and repaints the chart SVG every
+    // frame — fired mid-momentum-scroll (exactly when the main thread is
+    // busiest) the reveal edge advanced in irregular steps, which read as
+    // "shaky/jittery" next to the GPU-smooth scroll. Instead: the MOVER (an
+    // overflow-hidden box) slides translateX(-100%)→0 while the INNER chart
+    // counter-slides +100%→0. The transforms cancel, so the chart stays
+    // pixel-still under a sweeping reveal edge — same look, but transform
+    // animations run on the GPU and stay smooth during scroll. Both tracks
+    // share one timing function and start in the same task, so they can't
+    // tear. `overflow: hidden` is applied only WHILE wiping and released
+    // after, so nothing (tooltips, ping dot) is ever clipped at rest.
     //
+    // Safety (the blank-chart doctrine): the chart renders with NO transform
+    // — fully visible by default. The wipe is fire-and-forget WAAPI on top;
+    // finished or cancelled animations stop applying, and the overflow
+    // release is token-guarded, so visibility can never regress. No
+    // el.animate support → no wipe, chart simply stays visible.
+    const mover = el.querySelector<HTMLElement>("[data-chart-wipe-mover]");
+    const inner = el.querySelector<HTMLElement>("[data-chart-wipe-inner]");
+    let movAnim: Animation | null = null;
+    let innAnim: Animation | null = null;
+    let wipeToken = 0;
+    const playWipe = () => {
+      if (!mover || !inner || typeof mover.animate !== "function") return;
+      const token = ++wipeToken;
+      movAnim?.cancel();
+      innAnim?.cancel();
+      mover.style.overflow = "hidden";
+      const timing: KeyframeAnimationOptions = { duration: 850, easing: "cubic-bezier(0.16, 1, 0.3, 1)" };
+      movAnim = mover.animate([{ transform: "translateX(-100%)" }, { transform: "translateX(0px)" }], timing);
+      innAnim = inner.animate([{ transform: "translateX(100%)" }, { transform: "translateX(0px)" }], timing);
+      const release = () => { if (token === wipeToken) mover.style.overflow = ""; };
+      Promise.all([movAnim.finished, innAnim.finished]).then(release, release);
+    };
+    // Mount draw — fires on every (re)mount: initial load, collapse reopen.
+    playWipe();
+    if (typeof IntersectionObserver === "undefined") return;
     // ARMED gating (the anti-jitter): replay ONLY after the chart has FULLY
     // left the viewport. A bare threshold re-fired on every 15% crossing —
     // slow scrolls hovering at the boundary, the collapse's own height
     // animation, and mobile URL-bar show/hide (viewport resize) each stacked
-    // a fresh wipe onto the running one, snapping the chart hidden/visible
-    // repeatedly ("tweaking out"). Full-exit arming = one wipe per genuine
-    // "scrolled away and came back", and cancel() any in-flight wipe first so
-    // two can never compose. Starts unarmed: the mount draw owns the first
-    // reveal (initial callback can't double-draw on top of it).
+    // a fresh wipe onto the running one. Full-exit arming = one wipe per
+    // genuine "scrolled away and came back". Starts unarmed: the mount draw
+    // owns the first reveal (initial callback can't double-draw on top of it).
     let armed = false;
-    let anim: Animation | null = null;
     const obs = new IntersectionObserver((entries) => {
       const entry = entries[entries.length - 1];
       if (!entry) return;
       if (!entry.isIntersecting) { armed = true; return; } // fully out of view → arm the next replay
       if (!armed || entry.intersectionRatio < 0.15) return;
       armed = false;
-      if (typeof el.animate !== "function") return; // ancient browser: skip replay, chart stays visible
-      anim?.cancel();
-      anim = el.animate(
-        [
-          { clipPath: "inset(-30% 100% -30% 0%)" },
-          { clipPath: "inset(-30% -5% -30% 0%)" },
-        ],
-        { duration: 850, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
-      );
+      playWipe();
     }, { threshold: [0, 0.15] });
     obs.observe(el);
     chartObsRef.current = obs;
@@ -7556,21 +7575,16 @@ export default function DashboardLab() {
                 </div>
                 <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
                   <div ref={chartScrollRef}>
-                  <motion.div
-                    className="relative"
-                    // LAB: draws in via `animate` ON MOUNT (guaranteed visible -
-                    // open/close always works). The chartScrollRef observer (see
-                    // its def above) replays the same wipe via WAAPI on the
-                    // wrapper when the chart re-enters view = scroll-replay
-                    // with NO remount (the old key bump re-rendered the whole
-                    // chart mid-scroll — janky on mobile) and no blank-chart
-                    // risk (visibility is mount-driven, never observer-driven).
-                    // Top/bottom insets extended so the wipe never crops the
-                    // hover tooltip.
-                    initial={{ clipPath: "inset(-30% 100% -30% 0%)" }}
-                    animate={{ clipPath: "inset(-30% -5% -30% 0%)" }}
-                    transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-                  >
+                  {/* Compositor wipe pair — see chartScrollRef's definition.
+                      The MOVER (overflow hidden only while wiping) slides
+                      left→right while the INNER counter-slides, so the chart
+                      stays pixel-still under a moving reveal edge. The draw-in
+                      fires on mount (initial load, collapse reopen) and
+                      replays on scroll-back; pure-transform = GPU = smooth
+                      even mid-momentum-scroll, where the old clip-path wipe
+                      repainted the SVG main-thread every frame (the jitter). */}
+                  <div data-chart-wipe-mover>
+                  <div data-chart-wipe-inner className="relative">
                     <DashboardTrendChart data={trendData} onScrub={setScrubbedTrendPoint} />
                     {totalValue > 0 && trendData.length > 0 && (() => {
                       // Live dot — sits on the rightmost end of the chart
@@ -7614,7 +7628,8 @@ export default function DashboardLab() {
                         </div>
                       );
                     })()}
-                  </motion.div>
+                  </div>
+                  </div>
                   </div>
                 </Suspense>
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
