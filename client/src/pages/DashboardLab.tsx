@@ -5938,7 +5938,10 @@ export default function DashboardLab() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.32, delay: 0.22, ease: "easeOut" }}
                         style={{
-                          fontSize: 50,
+                          // LAB move 1: DOMINANT hero. The critique's "willing
+                          // to dedicate half the screen to the number." 50 -> 64,
+                          // tighter tracking. One object, decisively the king.
+                          fontSize: 64,
                           fontWeight: 700,
                           // Gold while EITHER the count-up is running OR a new gift
                           // just arrived. The newGiftFlash window holds the cue lit
@@ -5960,6 +5963,36 @@ export default function DashboardLab() {
                           ? formatCurrency(scrubbedTrendPoint!.value)
                           : formatCurrency(displayHeroBalance)}
                       </motion.div>
+
+                      {/* LAB move 1: hero growth sparkline (rich, not flat) —
+                          real trendData, cream/gold so it reads on green. */}
+                      {!isScrubbing && totalValue > 0 && trendData.length >= 2 && (() => {
+                        const vals = trendData.map((p: any) => Number(p.value) || 0);
+                        const min = Math.min(...vals), max = Math.max(...vals);
+                        const range = max - min || 1;
+                        const W = 320, H = 44;
+                        const pts = vals.map((v, i) => {
+                          const x = vals.length > 1 ? (i / (vals.length - 1)) * W : 0;
+                          const y = H - ((v - min) / range) * (H - 8) - 4;
+                          return [x, y] as const;
+                        });
+                        const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+                        const area = `${line} L${W},${H} L0,${H} Z`;
+                        const [ex, ey] = pts[pts.length - 1];
+                        return (
+                          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="40" preserveAspectRatio="none" aria-hidden style={{ display: "block", marginTop: 2, marginBottom: 12 }}>
+                            <defs>
+                              <linearGradient id="hero-spark-fill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="hsl(var(--kiddo-gold-light))" stopOpacity="0.24" />
+                                <stop offset="100%" stopColor="hsl(var(--kiddo-gold-light))" stopOpacity="0" />
+                              </linearGradient>
+                            </defs>
+                            <path d={area} fill="url(#hero-spark-fill)" />
+                            <path d={line} fill="none" stroke="rgba(255,255,255,0.58)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                            <circle cx={ex} cy={ey} r="3.5" fill="hsl(var(--kiddo-gold-light))" stroke="white" strokeWidth="1.5" />
+                          </svg>
+                        );
+                      })()}
 
                       {/* Hero gain pill removed — the +$X all-time gain (and its
                           percent) was duplicating what the lifetime stats row's
