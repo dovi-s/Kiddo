@@ -4492,6 +4492,16 @@ export default function DashboardLab() {
   const JOURNEY_MS = 9000;
   const journeyBeats = useMemo(() => {
     if (chartRange !== "ALL" || trendData.length < 6) return [];
+    // EARNED, not ambient (2026-06-05 fund-matrix audit): a nine-second
+    // ceremonial replay of a six-day-old flat line cheapens the feature — it
+    // should be dormant at activation and BLOOM as the fund ages (first
+    // anniversary energy, retention not activation). 120-day minimum span.
+    const journeySpanDays = (trendData[trendData.length - 1].ts - trendData[0].ts) / 86400000;
+    if (!(journeySpanDays >= 120)) return [];
+    // Memorialized funds: an upbeat "Watch it grow" on a memorial is a tone
+    // hazard — gated off until the founder decides deliberately (it could be
+    // the most beautiful surface in the product, but not by accident).
+    if (isMemorialized) return [];
     if (typeof window !== "undefined" && typeof window.matchMedia === "function"
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return [];
     const n = trendData.length;
@@ -4619,7 +4629,7 @@ export default function DashboardLab() {
       beats.splice(worstIdx, 1);
     }
     return beats;
-  }, [chartRange, trendData, totalValue, gifts, parentContributions, activeEvents, archivedEvents, memoryEntriesForFund]);
+  }, [chartRange, trendData, totalValue, gifts, parentContributions, activeEvents, archivedEvents, memoryEntriesForFund, isMemorialized]);
 
   const cancelJourney = useCallback(() => {
     journeyTimersRef.current.forEach((t) => window.clearTimeout(t));
