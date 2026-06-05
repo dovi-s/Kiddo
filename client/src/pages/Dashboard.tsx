@@ -3641,9 +3641,12 @@ export default function Dashboard() {
     // STAGGER (2026-06-04, founder UX catch): the balance and the projection
     // used to roll AT THE SAME TIME, so the eye didn't know where to anchor.
     // The projection now holds at its value until the hero balance has settled
-    // (1200ms) plus a ~150ms beat, then rolls — focal number lands first, then
-    // the projection follows. Sequential and intentional.
-    startDelay: 1350,
+    // (1200ms) plus a beat, then rolls — focal number lands first, then the
+    // projection follows. Sequential and intentional. Beat widened 150ms -> 250ms
+    // (1350 -> 1450) on a founder pass: at 150ms the projection trod on the
+    // balance's heels; 250ms lets it read as a deliberate SECOND reveal without
+    // any dead time. Perceptual + tunable — nudge up if it should breathe more.
+    startDelay: 1450,
   });
 
   // Persist the live projection per-fund so the next session seeds the
