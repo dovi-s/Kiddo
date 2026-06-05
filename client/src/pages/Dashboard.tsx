@@ -5747,8 +5747,20 @@ export default function Dashboard() {
                       previous fund or a wrong "Ready for the first gift" empty
                       state. Brand-new funds (balance==0) skip this and
                       land directly on the empty hero — that's the correct state
-                      for them and the optimistic create flow. */}
-                  {dashboardSummaryLoading && !dashboardSummary && getFundTotalValue(activeFund) > 0 ? (
+                      for them and the optimistic create flow.
+
+                      DEMO EXCEPTION (2026-06-04, founder: "the main value rolls
+                      in ~6-7s, should come right after the chart"): the skeleton
+                      held the hero blank for the FULL dashboard-summary load —
+                      ~6s on the dev/demo remote DB — because it waits for the
+                      precise holdings-sum. But for demo funds `f.balance`
+                      already EQUALS the holdings market-value sum (verified), so
+                      `invested` falls back to it and the hero can paint the
+                      correct value the moment /api/funds lands (~1s), then roll
+                      to the (identical) fresh value. The skeleton only protects
+                      REAL funds, whose f.balance is a cost-basis-style field
+                      that would flash low then jump — so it stays for them. */}
+                  {dashboardSummaryLoading && !dashboardSummary && !isDemoAccount && getFundTotalValue(activeFund) > 0 ? (
                     <>
                       <div style={{ marginBottom: 10 }} data-testid="hero-loading-skeleton">
                         <div className="animate-pulse rounded-lg" style={{ width: 180, height: 44, background: "rgba(255,255,255,0.10)", marginBottom: 10 }} />
