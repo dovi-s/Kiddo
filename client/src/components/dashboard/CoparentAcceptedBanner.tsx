@@ -9,12 +9,22 @@
 // visual treatment on the Dashboard above the fold for the brief window
 // where it's relevant.
 //
+// Dismiss animation (2026-06-05): a smooth COLLAPSE, not an instant unmount.
+// Previously dismiss set the flag + forced a re-render, so the banner blinked
+// out and the layout below snapped up — jittery. Now an internal `open` flag
+// drives an AnimatePresence exit that fades + collapses height/padding/margin
+// to 0, so the page glides up seamlessly; the localStorage flag is persisted
+// AFTER the exit completes (onExitComplete) so it never reappears. `overflow:
+// hidden` clips the content as it collapses but NOT the section's own
+// box-shadow (an element's overflow never clips its own shadow), so the card
+// stays beautiful the whole way down.
+//
 // Ships Tier-2 deferred item #1 (locked 2026-05-23).
 
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
-import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { Users } from "lucide-react";
+import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const DISMISS_KEY_PREFIX = "kiddo.coparent-accepted-dismissed.";
 
@@ -33,6 +43,9 @@ export function CoparentAcceptedBanner({
   fundId,
   childFirstName,
 }: CoparentAcceptedBannerProps) {
+  // Hook FIRST (rules of hooks) — before any early return.
+  const [open, setOpen] = useState(true);
+
   if (!acceptance || !fundId) return null;
 
   // Per-collaborator-id dismiss key so future co-parent acceptances on the
@@ -50,22 +63,20 @@ export function CoparentAcceptedBanner({
   const childFirst = (childFirstName || "").trim();
   const coparentFirst = (acceptance.name || "").split(/\s+/)[0] || acceptance.name;
 
-  const dismissBanner = () => {
+  // Persist the dismiss flag only AFTER the collapse finishes, so the exit
+  // animation always gets to play (and it never reappears on the next render).
+  const persistDismiss = () => {
     try {
       safeLocalSet(dismissKey, new Date().toISOString());
     } catch {
       // best-effort
     }
-    window.dispatchEvent(
-      new CustomEvent(ACTIVE_FUND_CHANGE_EVENT, { detail: { id: fundId } }),
-    );
   };
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+    <CollapseDismissSection
+      open={open}
+      onExitComplete={persistDismiss}
       className="mb-4 rounded-3xl border p-6 shadow-premium-sm md:p-7"
       style={{
         borderColor: "hsl(var(--kiddo-evergreen) / 0.32)",
@@ -74,39 +85,39 @@ export function CoparentAcceptedBanner({
       }}
       data-testid="coparent-accepted-banner"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Users size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
-            <p
-              className="text-[10px] font-bold uppercase"
-              style={{
-                color: "hsl(var(--kiddo-evergreen))",
-                letterSpacing: "0.14em",
-              }}
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Users size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
+                <p
+                  className="text-[10px] font-bold uppercase"
+                  style={{
+                    color: "hsl(var(--kiddo-evergreen))",
+                    letterSpacing: "0.14em",
+                  }}
+                >
+                  Co-parent joined
+                </p>
+              </div>
+              <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground leading-snug">
+                {childFirst
+                  ? `${coparentFirst} accepted your invite to ${childFirst}'s fund.`
+                  : `${coparentFirst} accepted your co-parent invite.`}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {coparentFirst} can now see {childFirst ? `${childFirst}'s` : "the"} fund alongside you. Same data, same dashboard, shared view of the gifts that come in.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="coparent-accepted-dismiss"
+              aria-label="Dismiss co-parent acceptance banner"
             >
-              Co-parent joined
-            </p>
+              Dismiss
+            </button>
           </div>
-          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground leading-snug">
-            {childFirst
-              ? `${coparentFirst} accepted your invite to ${childFirst}'s fund.`
-              : `${coparentFirst} accepted your co-parent invite.`}
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {coparentFirst} can now see {childFirst ? `${childFirst}'s` : "the"} fund alongside you. Same data, same dashboard, shared view of the gifts that come in.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={dismissBanner}
-          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          data-testid="coparent-accepted-dismiss"
-          aria-label="Dismiss co-parent acceptance banner"
-        >
-          Dismiss
-        </button>
-      </div>
-    </motion.section>
+    </CollapseDismissSection>
   );
 }

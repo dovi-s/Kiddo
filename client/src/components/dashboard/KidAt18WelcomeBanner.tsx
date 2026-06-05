@@ -19,9 +19,9 @@
 // (yours, nothing sold, sealed letter, gifters) before the kid scans
 // the rest of the surface.
 
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
-import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
+import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const DISMISS_KEY_PREFIX = "kiddo.kid-welcome-dismissed.";
 
@@ -36,6 +36,8 @@ export function KidAt18WelcomeBanner({
   fundId,
   childFirstName,
 }: KidAt18WelcomeBannerProps) {
+  const [open, setOpen] = useState(true);
+
   if (!kidClaimedAt || !fundId) return null;
 
   const dismissKey = `${DISMISS_KEY_PREFIX}${fundId}`;
@@ -51,25 +53,21 @@ export function KidAt18WelcomeBanner({
 
   const childFirst = (childFirstName || "").trim();
 
-  const dismissBanner = () => {
+  // Persisted AFTER the collapse exit (so it always animates out and never
+  // reappears). The old version forced a re-render via the active-fund event,
+  // which blinked the banner out — now the smooth collapse handles it.
+  const persistDismiss = () => {
     try {
       safeLocalSet(dismissKey, new Date().toISOString());
     } catch {
       // Ignore storage failures; the dismiss is best-effort.
     }
-    // Force a re-render via the active-fund event — parent component
-    // listens for this and re-evaluates. Same pattern as other dashboard
-    // dismissals.
-    window.dispatchEvent(
-      new CustomEvent(ACTIVE_FUND_CHANGE_EVENT, { detail: { id: fundId } }),
-    );
   };
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+    <CollapseDismissSection
+      open={open}
+      onExitComplete={persistDismiss}
       className="mb-4 rounded-3xl border p-6 shadow-premium-sm md:p-7"
       style={{
         borderColor: "hsl(var(--kiddo-gold) / 0.42)",
@@ -95,7 +93,7 @@ export function KidAt18WelcomeBanner({
         </div>
         <button
           type="button"
-          onClick={dismissBanner}
+          onClick={() => setOpen(false)}
           className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
           data-testid="kid-welcome-dismiss"
           aria-label="Dismiss welcome banner"
@@ -131,6 +129,6 @@ export function KidAt18WelcomeBanner({
       >
         See your full story →
       </a>
-    </motion.section>
+    </CollapseDismissSection>
   );
 }
