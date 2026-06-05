@@ -3658,6 +3658,7 @@ export default function DashboardLab() {
     lastSeenGiftIdRef.current = acked;
     setNewGiftFlash(false);
     setPendingFlashId(null);
+    setFlashGifterName(null);
   }, [activeFundId]);
 
   // Detect a genuinely new gift and queue it; the firing effect below decides
@@ -3676,6 +3677,15 @@ export default function DashboardLab() {
     setPendingFlashId(String(latestGiftId));
   }, [latestGiftId, activeFundId]);
 
+  // The gift-lands choreography's SECOND limb: the sender's face in the
+  // "people building {child}'s future" roster blooms (gold ring + gentle
+  // scale, CSS keyframes) during the same window the balance rolls gold —
+  // the loop made visible: gift arrives → number rises → the PERSON glows.
+  // Named gifters only (the anonymous cluster stays quiet), and the bloom's
+  // animation-delay lets the eye land on the hero first. Cleared with the
+  // same window + on fund switch.
+  const [flashGifterName, setFlashGifterName] = useState<string | null>(null);
+
   // Fire the queued cue once the tab is visible AND the hero is on screen.
   useEffect(() => {
     if (!pendingFlashId || !activeFundId) return;
@@ -3684,10 +3694,15 @@ export default function DashboardLab() {
     try { safeLocalSet(`${HERO_ACK_PREFIX}${activeFundId}`, pendingFlashId); } catch { /* ignore */ }
     setHeroGiftIdx(0);
     setNewGiftFlash(true);
+    // Capture the landing gift's sender for the face bloom. Anonymous gifts
+    // have no face to bloom — leave null.
+    const landed = recentGiftsFeed.find((g) => String(g.id) === pendingFlashId) as any;
+    const senderName = landed && !landed.isAnonymous ? String(landed.senderName || "").trim() : "";
+    setFlashGifterName(senderName || null);
     setPendingFlashId(null);
-    const t = setTimeout(() => setNewGiftFlash(false), 3800);
+    const t = setTimeout(() => { setNewGiftFlash(false); setFlashGifterName(null); }, 3800);
     return () => clearTimeout(t);
-  }, [pendingFlashId, heroTabVisible, heroInView, activeFundId]);
+  }, [pendingFlashId, heroTabVisible, heroInView, activeFundId, recentGiftsFeed]);
 
   // Carousel container height: locks to the ACTIVE page's offsetHeight, with
   // a CSS `transition: height 0.22s ease` on the container animating between
@@ -5876,12 +5891,26 @@ export default function DashboardLab() {
                  whileInView/whileHover on each <motion.button>, so they replay
                  reliably every time the row re-enters view and never stick
                  blank. No CSS needed for them anymore.) */
+              /* Gift-lands choreography, limb 2: the sender's face blooms while
+                 the hero balance rolls gold. Gold ring swells + a gentle lift,
+                 twice, then back to rest. animation-delay 0.45s so the eye
+                 lands on the hero number first, then finds the person. The
+                 inline boxShadow (owner/recurring rings) resumes when the
+                 animation ends (fill: none). */
+              @keyframes kiddo-face-bloom {
+                0%   { box-shadow: 0 0 0 0 hsl(43, 85%, 50% / 0), 0 3px 10px rgba(26,23,16,0.13); transform: scale(1); }
+                35%  { box-shadow: 0 0 0 7px hsl(43, 85%, 50% / 0.42), 0 6px 18px rgba(26,23,16,0.20); transform: scale(1.10); }
+                100% { box-shadow: 0 0 0 0 hsl(43, 85%, 50% / 0), 0 3px 10px rgba(26,23,16,0.13); transform: scale(1); }
+              }
+              .kiddo-face-bloom { animation: kiddo-face-bloom 1.15s cubic-bezier(0.16,1,0.3,1) 0.45s 2; }
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
-                /* Recent-gifter ring pulse + the chart's live-dot ping are CSS
-                   animations (framer's MotionConfig can't reach them). Static
-                   ring/dot remain — only the motion is dropped. */
+                /* Recent-gifter ring pulse, the face bloom, and the chart's
+                   live-dot ping are CSS animations (framer's MotionConfig can't
+                   reach them). Static ring/dot remain — only the motion is
+                   dropped. */
                 .kiddo-gifter-avatar-pulse { animation: none !important; }
+                .kiddo-face-bloom { animation: none !important; }
                 .animate-ping { animation: none !important; opacity: 0 !important; }
               }
             `}</style>
@@ -8866,6 +8895,11 @@ export default function DashboardLab() {
                         const isFirstGifter = gifter.name === firstGifterName;
                         const lastGiftTs = gifter.lastGiftDate ? new Date(gifter.lastGiftDate).getTime() : 0;
                         const isRecent = lastGiftTs >= recentMs;
+                        // Gift-lands choreography: this gifter's gift is the one
+                        // currently playing the hero arrival cue → their face
+                        // blooms in the same window (see flashGifterName).
+                        const isFlashGifter = !!flashGifterName
+                          && gifter.name.trim().toLowerCase() === flashGifterName.trim().toLowerCase();
                         // Build a rich tooltip for desktop hover (native title
                         // attribute is accessible + zero JS overhead). Shows
                         // last-gift summary so the parent doesn't need to
@@ -8913,7 +8947,10 @@ export default function DashboardLab() {
                           >
                             <div style={{ position: "relative" }}>
                               <div
-                                className={isRecent ? "kiddo-gifter-avatar-pulse" : undefined}
+                                className={[
+                                  isRecent ? "kiddo-gifter-avatar-pulse" : null,
+                                  isFlashGifter ? "kiddo-face-bloom" : null,
+                                ].filter(Boolean).join(" ") || undefined}
                                 style={{
                                   width: 56, height: 56, borderRadius: 9999,
                                   background: color.bg,
