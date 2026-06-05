@@ -1514,17 +1514,17 @@ export default function DashboardLab() {
   // slice. It also matches the "Growth · All-time" stat shown beside it. A
   // parent who wants recent detail taps 1W/1M; the default is the story.
   const [chartRange, setChartRange] = useState<ChartRange>("ALL");
-  // LAB: chart scroll-replay (the heavy, reliable way). The chart sits inside
+  // LAB: chart scroll-replay (the light, reliable way). The chart sits inside
   // the collapse where framer's whileInView never fires (twice clipped it
   // invisible). So the clip draw-in fires on MOUNT via `animate` (guaranteed
   // visible - open/close always works), and THIS callback-ref IntersectionObserver
-  // bumps `chartDrawKey` whenever the chart RE-enters view → the motion.div
-  // remounts → `animate` re-draws. A callback ref (not a useInView hook) is the
-  // key: it re-runs on every remount, so it survives the collapse open/close.
-  // The observer's first (initial) callback is skipped so it never double-draws
-  // on top of the mount draw. Visibility can't regress: it's driven by mount,
-  // not by the observer.
-  const [chartDrawKey, setChartDrawKey] = useState(0);
+  // replays the wipe via a fire-and-forget WAAPI el.animate() whenever the
+  // chart RE-enters view. (Used to bump a React key → remounted the whole
+  // chart mid-scroll → visible jank on mobile.) A callback ref (not a useInView
+  // hook) survives the collapse open/close remounts. The observer's first
+  // (initial) callback is skipped so it never double-draws on top of the mount
+  // draw. Visibility can't regress: it's driven by mount, and a finished WAAPI
+  // animation stops applying, so the chart can't stick clipped.
   const chartObsRef = useRef<IntersectionObserver | null>(null);
   const chartScrollRef = useCallback((el: HTMLDivElement | null) => {
     chartObsRef.current?.disconnect();
@@ -1534,29 +1534,50 @@ export default function DashboardLab() {
     const obs = new IntersectionObserver((entries) => {
       const entry = entries[0];
       if (isFirst) { isFirst = false; return; } // skip the initial observe callback (mount draw owns that)
-      if (entry?.isIntersecting) setChartDrawKey((k) => k + 1);
+      if (!entry?.isIntersecting) return;
+      // Replay the wipe via WAAPI directly on the wrapper — NOT a key bump.
+      // The old key-remount re-rendered the entire chart component mid-scroll
+      // (a main-thread hitch, visibly janky on mobile momentum scroll). A
+      // fire-and-forget el.animate() touches no React state, remounts nothing,
+      // and runs compositor-side. Safety holds: a finished WAAPI animation
+      // stops applying (fill: none), so the chart always returns to its
+      // natural visible style — it can never stick clipped/blank.
+      if (typeof el.animate !== "function") return; // ancient browser: skip replay, chart stays visible
+      el.animate(
+        [
+          { clipPath: "inset(-30% 100% -30% 0%)" },
+          { clipPath: "inset(-30% -5% -30% 0%)" },
+        ],
+        { duration: 850, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+      );
     }, { threshold: 0.15 });
     obs.observe(el);
     chartObsRef.current = obs;
   }, []);
-  // LAB: faces cascade on FIRST appearance + every scroll-back. framer's
-  // whileInView snaps (skips the animation) when the element is already in view
-  // on mount - that's why scroll-replay worked but the initial-load roll-in
-  // didn't. Same callback-ref pattern as the chart, but the faces aren't in a
-  // collapse (they mount once, possibly off-screen), so the observer bumps on
-  // EVERY in-view entry (no skip-first) → the first time you reach them cascades
-  // too. The key bump remounts the row → each face's `animate` re-runs. Safety:
-  // the key-0 mount `animate` makes them visible even if the observer never
-  // fires, so they can't go blank.
-  const [facesDrawKey, setFacesDrawKey] = useState(0);
+  // LAB: faces cascade on FIRST sight + every scroll-back — visibility-driven.
+  // The previous key-remount replay had an ugly initial-load failure: the faces
+  // mounted below the fold, the mount `animate` cascaded INVISIBLY off-screen,
+  // so on the way down you'd see fully-opaque static faces enter the viewport
+  // and then blink out to re-cascade at the observer threshold. Now each face
+  // renders hidden and animates in only while `facesInView` is true, so the
+  // first thing you ever see IS the roll-in (initial load, first scroll-down,
+  // every scroll-back) — no remounts, no <img> reloads, no blink. Hysteresis
+  // via two thresholds: show at ≥25% visible, reset only when fully off-screen,
+  // so hovering at the boundary can't flicker them. Safety: if
+  // IntersectionObserver is unavailable the faces just render visible.
+  const [facesInView, setFacesInView] = useState(false);
   const facesObsRef = useRef<IntersectionObserver | null>(null);
   const facesScrollRef = useCallback((el: HTMLDivElement | null) => {
     facesObsRef.current?.disconnect();
     facesObsRef.current = null;
-    if (!el || typeof IntersectionObserver === "undefined") return;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") { setFacesInView(true); return; }
     const obs = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) setFacesDrawKey((k) => k + 1);
-    }, { threshold: 0.3 });
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.25) setFacesInView(true);
+      else if (!entry.isIntersecting) setFacesInView(false);
+    }, { threshold: [0, 0.25] });
     obs.observe(el);
     facesObsRef.current = obs;
   }, []);
@@ -7522,15 +7543,16 @@ export default function DashboardLab() {
                 <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
                   <div ref={chartScrollRef}>
                   <motion.div
-                    key={chartDrawKey}
                     className="relative"
                     // LAB: draws in via `animate` ON MOUNT (guaranteed visible -
                     // open/close always works). The chartScrollRef observer (see
-                    // its def above) bumps chartDrawKey when the chart re-enters
-                    // view → this remounts → `animate` re-draws = scroll-replay,
-                    // WITHOUT risking the blank-chart bug (visibility is
-                    // mount-driven, never observer-driven). Top/bottom insets
-                    // extended so the wipe never crops the hover tooltip.
+                    // its def above) replays the same wipe via WAAPI on the
+                    // wrapper when the chart re-enters view = scroll-replay
+                    // with NO remount (the old key bump re-rendered the whole
+                    // chart mid-scroll — janky on mobile) and no blank-chart
+                    // risk (visibility is mount-driven, never observer-driven).
+                    // Top/bottom insets extended so the wipe never crops the
+                    // hover tooltip.
                     initial={{ clipPath: "inset(-30% 100% -30% 0%)" }}
                     animate={{ clipPath: "inset(-30% -5% -30% 0%)" }}
                     transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
@@ -8670,9 +8692,22 @@ export default function DashboardLab() {
                         : namedGifters.slice(0, AVATAR_VISIBLE);
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
+                      // Trailing tiles (+N more / less / anonymous cluster) are
+                      // plain buttons, so they reveal in CSS-sync with the
+                      // framer face cascade — tucked in after the last face.
+                      // Without this they'd sit alone, fully visible, while
+                      // the faces are still hidden pre-scroll.
+                      const tileDelay = Math.min(visibleGifters.length, 11) * 0.06;
+                      const tileReveal: React.CSSProperties = {
+                        opacity: facesInView ? 1 : 0,
+                        transform: facesInView ? "none" : "translateY(12px) scale(0.8)",
+                        transition: facesInView
+                          ? `opacity 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s, transform 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s`
+                          : "none",
+                      };
                       return (
                     <div ref={facesScrollRef}>
-                    <div className="lab-faces" key={facesDrawKey} style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                    <div className="lab-faces" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                       {visibleGifters.map((gifter, faceIdx) => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
@@ -8740,16 +8775,20 @@ export default function DashboardLab() {
                             onClick={() => { haptic("selection"); setSelectedGifter(gifter); }}
                             title={tooltipText}
                             className="kiddo-gifter-avatar"
-                            // `animate` (NOT whileInView - it snaps on first
-                            // in-view-on-mount, killing the initial-load cascade).
-                            // The face cascades on mount; the parent row's
-                            // facesDrawKey (bumped by facesScrollRef's observer on
-                            // every in-view entry) remounts it → re-cascade on
-                            // first appearance AND every scroll-back. Delay scoped
-                            // to this transition so hover/tap stay instant.
+                            // Visibility-driven cascade (NOT whileInView - it
+                            // snaps when already in view on mount, and NOT
+                            // key-remount - that cascaded invisibly off-screen
+                            // on initial load, then blinked static faces out on
+                            // first scroll-down). Hidden until facesInView
+                            // (parent row's IntersectionObserver), then rolls
+                            // in staggered — first sight is always the cascade.
+                            // Stagger only applies on the way IN; reset is
+                            // instant and off-screen. Hover/tap stay instant.
                             initial={{ opacity: 0, y: 12, scale: 0.8 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ duration: 0.44, delay: faceIdx * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                            animate={facesInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 12, scale: 0.8 }}
+                            transition={facesInView
+                              ? { duration: 0.44, delay: faceIdx * 0.06, ease: [0.16, 1, 0.3, 1] }
+                              : { duration: 0 }}
                             whileHover={{ y: -4, scale: 1.06, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
                             whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
@@ -8892,7 +8931,7 @@ export default function DashboardLab() {
                           type="button"
                           onClick={() => { haptic("selection"); setAvatarsExpanded(true); }}
                           title={`Show all ${totalNamed} gifters`}
-                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0, ...tileReveal }}
                         >
                           <div style={{
                             width: 56, height: 56, borderRadius: 9999,
@@ -8914,7 +8953,7 @@ export default function DashboardLab() {
                           type="button"
                           onClick={() => { haptic("selection"); setAvatarsExpanded(false); }}
                           title="Show fewer"
-                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0, ...tileReveal }}
                         >
                           <div style={{
                             width: 56, height: 56, borderRadius: 9999,
@@ -8952,7 +8991,7 @@ export default function DashboardLab() {
                           type="button"
                           onClick={() => { haptic("selection"); setSelectedGifter(anonEntry); }}
                           title={`${anonEntry.giftCount} anonymous ${anonEntry.giftCount === 1 ? "gift" : "people"}`}
-                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0, ...tileReveal }}
                         >
                           <div style={{ position: "relative", width: 56, height: 52 }}>
                             {showCluster && (
