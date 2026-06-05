@@ -48,7 +48,7 @@ function getChartRangeLabel(range: ChartRange): string {
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence, MotionConfig } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig, type Variants } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -726,6 +726,18 @@ function LabCollapse({
     </div>
   );
 }
+
+// Occasion tiles (and handoff-section blocks) cascade as VARIANT CHILDREN of
+// their section's whileInView: the section declares hidden/show variants with
+// staggerChildren, and each tile carries these variants WITHOUT its own
+// initial/animate — framer propagates the section's state down through plain
+// DOM wrappers, so tiles deep inside the horizontal scroll row still ride it.
+// Result: the row rises in left-to-right as the section enters view, and
+// replays with it (once:false). Same craft register as the faces cascade.
+const LAB_TILE_VARIANTS: Variants = {
+  hidden: { opacity: 0, y: 10, scale: 0.97 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] } },
+};
 
 // Per-fund local-storage latch for SSN collection. We set this to the
 // fund id immediately after a successful POST. The dashboard then hides
@@ -10249,13 +10261,17 @@ export default function DashboardLab() {
 
             {/* ===== Occasions ===== */}
             {/* LAB: rolls in when scrolled into view, replaying every time
-                (whileInView once:false) - consistent with the faces, the
-                "alive as you scroll" feel the founder wanted for the rest. */}
+                (whileInView once:false) - and the tiles inside cascade
+                left-to-right as variant children (staggerChildren), the same
+                craft register as the faces. */}
             <motion.section
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial="hidden"
+              whileInView="show"
               viewport={{ once: false, amount: 0.2, margin: "0px 0px -40px 0px" }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              variants={{
+                hidden: { opacity: 0, y: 14 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.055, delayChildren: 0.05 } },
+              }}
             >
               {/* ── Section header ── */}
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
@@ -10626,8 +10642,9 @@ export default function DashboardLab() {
                   });
 
                   return (
-                    <button
+                    <motion.button
                       key={key}
+                      variants={LAB_TILE_VARIANTS}
                       type="button"
                       onClick={() => { haptic("light"); setExpandedTileIdV2(isExpanded ? null : String(event.id)); }}
                       style={{
@@ -10715,7 +10732,7 @@ export default function DashboardLab() {
                           </p>
                         )}
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 };
 
@@ -10762,8 +10779,9 @@ export default function DashboardLab() {
                             savingsGoalType: isSavingsGoal ? sug.prefill.eventType : undefined,
                           });
                           return (
-                            <button
+                            <motion.button
                               key={sug.key}
+                              variants={LAB_TILE_VARIANTS}
                               type="button"
                               onClick={() => { haptic("selection"); setEditEventTarget({ name: sug.prefill.name, eventType: sug.prefill.eventType ?? undefined, eventDate: sug.prefill.eventDate ?? undefined, goalAmount: sug.prefill.goalAmount ?? undefined, eventCategory: sug.prefill.eventCategory ?? undefined }); setCreateEventSheetOpen(true); }}
                               style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: `1px solid ${theme.accent}33`, overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}
@@ -10776,7 +10794,7 @@ export default function DashboardLab() {
                                 <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>{sug.sub}</p>
                                 <p style={{ fontSize: 9, color: theme.inkColor, fontWeight: 600 }}>Tap to create</p>
                               </div>
-                            </button>
+                            </motion.button>
                           );
                         })}
                         {/* Cultural "Add your traditions" tile removed 2026-06-04
@@ -10786,10 +10804,10 @@ export default function DashboardLab() {
                             ideas" copy. The cultural-suggestion engine stays in
                             code (dormant); if revived, it belongs INSIDE the
                             occasion-create flow, not as a peer tile here. */}
-                        <button type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
+                        <motion.button variants={LAB_TILE_VARIANTS} type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   );
@@ -10824,8 +10842,9 @@ export default function DashboardLab() {
                           savingsGoalType: isSavingsGoal ? sug.prefill.eventType : undefined,
                         });
                         return (
-                          <button
+                          <motion.button
                             key={sug.key}
+                            variants={LAB_TILE_VARIANTS}
                             type="button"
                             onClick={() => {
                               haptic("selection");
@@ -10863,7 +10882,7 @@ export default function DashboardLab() {
                                 Tap to create
                               </p>
                             </div>
-                          </button>
+                          </motion.button>
                         );
                       })}
 
@@ -10872,7 +10891,8 @@ export default function DashboardLab() {
 
                       {/* Show/hide archived toggle tile */}
                       {archivedEvents.length > 0 && (
-                        <button
+                        <motion.button
+                          variants={LAB_TILE_VARIANTS}
                           type="button"
                           onClick={() => { haptic("light"); setShowArchivedTilesV2(v => !v); }}
                           style={{
@@ -10887,14 +10907,15 @@ export default function DashboardLab() {
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>
                             {showArchivedTilesV2 ? "Hide" : `${archivedEvents.length} archived`}
                           </span>
-                        </button>
+                        </motion.button>
                       )}
 
                       {/* Create tile - always last. Hidden for read-only
                           roles (previous owner, viewer) — they can't create
                           new occasions on a fund they don't control. */}
                       {!isReadOnlyFund && (
-                        <button
+                        <motion.button
+                          variants={LAB_TILE_VARIANTS}
                           type="button"
                           onClick={() => { haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                           style={{
@@ -10907,7 +10928,7 @@ export default function DashboardLab() {
                         >
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
-                        </button>
+                        </motion.button>
                       )}
                     </div>
 
@@ -11565,20 +11586,29 @@ export default function DashboardLab() {
                 the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
                 extended to all transferred-fund viewers 2026-06-02. */}
             {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
-            // LAB: handoff section rolls in on view too (replaying).
+            // LAB: handoff section rolls in on view (replaying) with a two-beat
+            // stagger — the sentence lands first ("The day it all becomes
+            // Luke's."), a breath, then the card rises under it. The sentence
+            // IS the emotional payload; giving it its own beat makes the
+            // section read instead of just appear.
             <motion.section
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial="hidden"
+              whileInView="show"
               viewport={{ once: false, amount: 0.2, margin: "0px 0px -40px 0px" }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              variants={{
+                hidden: { opacity: 0, y: 14 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.16 } },
+              }}
               className="space-y-3"
             >
-              <p className="kiddo-section-label" style={{ textTransform: "none", fontSize: "0.82rem", letterSpacing: "0.01em" }}>
+              <motion.p
+                variants={LAB_TILE_VARIANTS}
+                className="kiddo-section-label" style={{ textTransform: "none", fontSize: "0.82rem", letterSpacing: "0.01em" }}>
                 {recipientFirstNameDisplay
                   ? `The day it all becomes ${recipientFirstNameDisplay}'s.`
                   : "The day it all becomes theirs."}
-              </p>
-              <div style={{
+              </motion.p>
+              <motion.div variants={LAB_TILE_VARIANTS} style={{
                 background: "white",
                 borderRadius: 20,
                 border: "1px solid rgba(26,23,16,0.1)",
@@ -11907,7 +11937,7 @@ export default function DashboardLab() {
                     <path d="M7 4l6 6-6 6" stroke="rgba(26,23,16,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
-              </div>
+              </motion.div>
             </motion.section>
             )}
 
