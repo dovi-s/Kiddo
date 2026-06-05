@@ -102,6 +102,25 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
       .catch(() => { setError(true); setLoading(false); });
   }, [ticker, range]);
 
+  // Hold the trend's draw-in until JUST AFTER the header numbers' count-up
+  // (900ms) settles, so it reads as its own beat — numbers roll in first, then
+  // the line draws in (founder 2026-06-05: "the trend should come right after
+  // the roll in of the numbers, a tiny drop after, smooth"). The sheet remounts
+  // per holding open, so this mount-timer re-anchors to each open's numbers.
+  // ~1050ms = 900 (count-up) + a ~150ms breath, mirroring the hero
+  // balance→projection stagger. Data still fetches immediately; we just gate the
+  // VISUAL so the line never races the numbers, even on a warm cache.
+  const [canDrawChart, setCanDrawChart] = useState(false);
+  useEffect(() => {
+    // Keyed on `ticker` so the stagger REPLAYS every time a different holding
+    // opens (the header numbers re-roll then too), whether the sheet remounts
+    // or just receives a new ticker. NOT keyed on `range` — a range change
+    // mid-session should redraw immediately, not wait out the stagger again.
+    setCanDrawChart(false);
+    const t = setTimeout(() => setCanDrawChart(true), 1050);
+    return () => clearTimeout(t);
+  }, [ticker]);
+
   const min = data.length ? Math.min(...data.map((d) => d.value)) * 0.98 : 0;
   const max = data.length ? Math.max(...data.map((d) => d.value)) * 1.02 : 0;
   const isUp = data.length >= 2 && data[data.length - 1].value >= data[0].value;
@@ -196,6 +215,10 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
         <div className="w-full rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center" style={{ height: 160 }}>
           <span className="text-xs text-muted-foreground">Chart unavailable</span>
         </div>
+      ) : !canDrawChart ? (
+        // Data's ready, but hold the draw until the header numbers settle. Same
+        // calm box (no layout shift) — the line draws into it a beat later.
+        <div className="w-full rounded-2xl overflow-hidden border border-border/40 bg-background" style={{ height: 160 }} />
       ) : (
         <div className="w-full rounded-2xl overflow-hidden border border-border/40 bg-background" style={{ height: 160 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -234,6 +257,11 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
                 fill={`url(#sg-${ticker}-${range})`}
                 dot={false}
                 activeDot={{ r: 4, fill: color }}
+                // Smooth left-to-right draw-in. Gated to start ~1050ms after the
+                // sheet opens (see canDrawChart) so it follows the numbers, not
+                // races them. 1300ms reads smooth without dragging.
+                isAnimationActive={true}
+                animationDuration={1300}
               />
               {/* Buy markers — one gold ReferenceDot per (chart point, gift)
                   pair. Multiple gifts on the same point merge into a
