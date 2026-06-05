@@ -5936,7 +5936,10 @@ export default function DashboardLab() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.32, delay: 0.22, ease: "easeOut" }}
                         style={{
-                          fontSize: 50,
+                          // LAB: monumental hero (neobank "one huge number"
+                          // lever). 50 -> 60, tighter tracking. The single
+                          // highest-confidence premium change I can make blind.
+                          fontSize: 60,
                           fontWeight: 700,
                           // Gold while EITHER the count-up is running OR a new gift
                           // just arrived. The newGiftFlash window holds the cue lit
