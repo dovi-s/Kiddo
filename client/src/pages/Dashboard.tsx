@@ -4076,7 +4076,25 @@ export default function Dashboard() {
       .filter((p) => Number.isFinite(p.ts) && p.ts > 0)
       .sort((a, b) => a.ts - b.ts);
 
-    const filtered = cutoff ? points.filter((p) => p.ts >= cutoff) : points;
+    const prefiltered = cutoff ? points.filter((p) => p.ts >= cutoff) : points;
+    // UNIFORM TIME RESOLUTION (mirrors DashboardLab, founder catch
+    // 2026-06-05). Snapshots are stored at mixed resolution — monthly deep
+    // history, weekly last year, daily last month — and the chart spaces
+    // points by INDEX (recharts category axis), so the dense recent points
+    // hogged ~45% of the ALL chart's width: a 17-year fund looked like its
+    // story began ~2024. Resample to one point per period, sized by the SPAN
+    // (not the range button, so a young fund's ALL view keeps its dailies):
+    // >2.5y → monthly, >200d → weekly, else untouched. Keeps the LAST point
+    // of each period (today's hard anchor survives as the final point).
+    const spanMs = prefiltered.length >= 2 ? prefiltered[prefiltered.length - 1].ts - prefiltered[0].ts : 0;
+    const bucketOf = spanMs > 2.5 * 365.25 * 86400000
+      ? (ts: number) => { const d = new Date(ts); return `${d.getUTCFullYear()}-${d.getUTCMonth()}`; }
+      : spanMs > 200 * 86400000
+        ? (ts: number) => String(Math.floor(ts / (7 * 86400000)))
+        : null;
+    const filtered = bucketOf
+      ? prefiltered.filter((p, i) => i === prefiltered.length - 1 || bucketOf(p.ts) !== bucketOf(prefiltered[i + 1].ts))
+      : prefiltered;
 
     if (filtered.length >= 2) {
       const earliestGift = [...gifts].sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
