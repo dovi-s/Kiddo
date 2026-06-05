@@ -2545,6 +2545,32 @@ export default function DashboardLab() {
     [memoryEntriesForFund, user?.id],
   );
 
+  // Gifter-identity doorway (founder catch 2026-06-05: Jay — a years-long
+  // gifter with zero custodial funds — logged in and saw a blank draft fund
+  // with no acknowledgment of his actual life in the product: "where is the
+  // data?"). His data lives behind /api/gifter-account/dashboard (the
+  // /my-gifts surface); the PARENT dashboard only knows funds you custody,
+  // and the nav has no gifts entry. When the account looks like a non-parent
+  // (no funded funds), peek at the gifter summary; if they've actually
+  // gifted, the empty-state hero opens the right door instead of treating
+  // them as a brand-new parent. Real parents never fire this request, and
+  // the query key matches /my-gifts exactly so the tap lands on a warm cache.
+  const looksLikeNonParent = !fundsLoading && fundsSuccess && funds.every((f: any) => getFundTotalValue(f) <= 0);
+  const { data: gifterPeek } = useQuery<{
+    summary?: { totalGifted?: number };
+    funds?: Array<{ giftCount?: number; totalGifted?: number; childFirstName?: string | null; childName?: string | null }>;
+  }>({
+    queryKey: ["/api/gifter-account/dashboard", (user as any)?.id],
+    queryFn: async () => {
+      const res = await fetch("/api/gifter-account/dashboard", { credentials: "include" });
+      if (!res.ok) return {} as any;
+      return res.json();
+    },
+    enabled: isAuthenticated && looksLikeNonParent,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
   const { data: giftCodeData } = useQuery<{ code: string; lookupUrl: string }>({
     queryKey: ["/api/funds", activeFundId, "gift-code"],
     queryFn: async () => {
@@ -6420,6 +6446,44 @@ export default function DashboardLab() {
                           </button>
                         )}
                       </div>
+                      {(() => {
+                        // The gifter doorway — see the gifterPeek query def.
+                        // "You've given 7 gifts to Luke, Alex & Haley" answers
+                        // "where is the data?" in one sentence and the tap
+                        // lands on /my-gifts with the cache already warm.
+                        const gFunds = (gifterPeek?.funds || []).filter((f) => (f?.giftCount || 0) > 0);
+                        const gCount = gFunds.reduce((s, f) => s + (f.giftCount || 0), 0);
+                        if (gCount <= 0) return null;
+                        const gTotal = gifterPeek?.summary?.totalGifted ?? gFunds.reduce((s, f) => s + (f.totalGifted || 0), 0);
+                        const kidNames = gFunds
+                          .map((f) => String(f.childFirstName || f.childName || "").trim().split(/\s+/)[0])
+                          .filter(Boolean);
+                        const kidsLabel = kidNames.length === 1 ? kidNames[0]
+                          : kidNames.length === 2 ? `${kidNames[0]} & ${kidNames[1]}`
+                          : kidNames.length > 2 ? `${kidNames[0]}, ${kidNames[1]} & ${kidNames.length - 2} more`
+                          : `${gFunds.length} ${gFunds.length === 1 ? "kid" : "kids"}`;
+                        const fmtG = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => { haptic("selection"); setLocation("/my-gifts"); }}
+                            data-testid="button-empty-state-gifter-doorway"
+                            className="lab-tap"
+                            style={{
+                              marginTop: 18, width: "100%", textAlign: "left",
+                              background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)",
+                              borderRadius: 16, padding: "14px 16px", cursor: "pointer",
+                            }}
+                          >
+                            <p style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 3 }}>
+                              Looking for your gifts?
+                            </p>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.5 }}>
+                              You've given {gCount} {gCount === 1 ? "gift" : "gifts"}{gTotal > 0 ? ` (${fmtG.format(gTotal)})` : ""} to {kidsLabel}. See them grow →
+                            </p>
+                          </button>
+                        );
+                      })()}
                     </>
                   ) : (
                     <>
