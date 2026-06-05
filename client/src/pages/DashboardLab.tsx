@@ -7479,18 +7479,19 @@ export default function DashboardLab() {
                     // LAB: the trend "draws in" left-to-right (a clip wipe) -
                     // the honest reveal instead of recharts' point-morph (line
                     // stays isAnimationActive=false; it renders its TRUE shape
-                    // and the wipe uncovers it). whileInView once:false so it
-                    // re-draws BOTH on open (the collapse remounts the content,
-                    // a fresh observer attaches) AND every time you scroll it
-                    // away and back - same as the faces. LENIENT trigger
-                    // (amount 0.1 + a 200px pre-trigger margin) is the fix for
-                    // the earlier invisible-chart bug: the old amount 0.4 never
-                    // fired when the tall chart sat partly below the fold on
-                    // open, leaving it clipped. Top/bottom insets extended so
-                    // the wipe never crops the hover tooltip.
+                    // and the wipe uncovers it). MUST use `animate` (fires on
+                    // mount, unconditionally), NOT whileInView: the chart lives
+                    // inside the collapse's height-animating, lazy-loaded
+                    // content, where framer's in-view observer does NOT fire
+                    // reliably - twice that left the chart permanently clipped-
+                    // invisible. The collapse remounts its content on open, so
+                    // `animate` re-draws every open/close. (Scroll-replay-while-
+                    // open is NOT worth the invisible-chart risk here; visible +
+                    // draws-on-open is the right call for a collapsed chart.)
+                    // Top/bottom insets extended so the wipe never crops the
+                    // hover tooltip.
                     initial={{ clipPath: "inset(-30% 100% -30% 0%)" }}
-                    whileInView={{ clipPath: "inset(-30% -5% -30% 0%)" }}
-                    viewport={{ once: false, amount: 0.1, margin: "0px 0px 200px 0px" }}
+                    animate={{ clipPath: "inset(-30% -5% -30% 0%)" }}
                     transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
                   >
                     <DashboardTrendChart data={trendData} onScrub={setScrubbedTrendPoint} />
