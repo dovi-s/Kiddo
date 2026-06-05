@@ -1437,7 +1437,12 @@ export default function Dashboard() {
   const [kidViewPinHint, setKidViewPinHint] = useState("");
   const [savingKidView, setSavingKidView] = useState(false);
   const [disclosureOpen, setDisclosureOpen] = useState<"growth" | "projection" | null>(null);
-  const [chartRange, setChartRange] = useState<ChartRange>("1M");
+  // Default to ALL, not 1M (2026-06-04, founder): Kiddo's value IS the
+  // long-term compounding arc — the chart should open on the whole journey
+  // (started small → weathered the dips → grew), not a near-flat last-month
+  // slice. It also matches the "Growth · All-time" stat shown beside it. A
+  // parent who wants recent detail taps 1W/1M; the default is the story.
+  const [chartRange, setChartRange] = useState<ChartRange>("ALL");
   const [previewFundId, setPreviewFundId] = useState<string>("");
   const [autoInvestModalOpen, setAutoInvestModalOpen] = useState(false);
   const [autoInvestUpgradeOpen, setAutoInvestUpgradeOpen] = useState(false);
