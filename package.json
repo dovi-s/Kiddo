@@ -65,7 +65,8 @@
         "mobile:phone": "node script/mobile-start.cjs phone",
         "mobile:tunnel": "node script/mobile-start.cjs tunnel",
         "mobile:reset": "node script/mobile-start.cjs reset",
-        "postinstall": "node scripts/postinstall.cjs"
+        "postinstall": "node scripts/postinstall.cjs",
+        "test:gift-draft": "tsx script/test-gift-draft.ts"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.10.0",

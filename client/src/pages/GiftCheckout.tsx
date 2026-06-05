@@ -19,6 +19,7 @@ import { capFirst } from "@/lib/format-name";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
+import { buildGiftDraftKey, isMeaningfulGiftDraft, parseGiftDraft, serializeGiftDraft, type GiftDraftFields } from "@/lib/giftDraft";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
 import { FEATURED_STOCK_PICKS as CANON_FEATURED_STOCK_PICKS, ADDITIONAL_STOCK_PICKS as CANON_ADDITIONAL_STOCK_PICKS } from "@shared/stock-picks";
 import { projectFundValue } from "@shared/projection";
@@ -516,85 +517,65 @@ export default function GiftCheckout() {
   const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Gift draft persistence ─────────────────────────────────────────────
-  // Everything the gifter composes lives in React state, which means a page
-  // refresh OR the Stripe-hosted-checkout cancel path (cancel_url lands back
-  // here as a fresh mount) used to wipe the typed message, recorded audio
-  // and uploaded photo. For a one-shot gifter (grandma, mid-card-entry
-  // second thoughts) that loss is a funnel exit at the moment of maximum
-  // intent. Persist a draft to sessionStorage (tab-scoped — dies with the
-  // tab, survives refresh + the same-tab round-trip to Stripe) and restore
-  // it on mount. GiftSuccess clears all drafts once a payment completes.
-  // NEVER persisted: recurringPassword (credential), payError/submitting.
-  const draftKey = `kiddo-gift-draft:${fundSlug || ""}:${eventSlug || ""}`;
-  const DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // stale-tab guard
+  // Survives refresh + the Stripe-hosted-checkout cancel path (cancel_url
+  // remounts this page) so the gifter's composed message/media/amount is
+  // never wiped at the moment of maximum intent. All logic (allowlist
+  // serialization that can never persist a credential, validating parse,
+  // TTL) lives in lib/giftDraft.ts — tested by script/test-gift-draft.ts.
+  // GiftSuccess clears all drafts once a payment completes.
+  const draftKey = buildGiftDraftKey(fundSlug, eventSlug);
   useEffect(() => {
     // Restore FIRST (declared before the save effect below so the empty
     // first-mount save pass can't clobber an existing draft before it's
     // been read).
     try {
       const raw = sessionStorage.getItem(draftKey);
-      if (!raw) return;
-      const d = JSON.parse(raw);
-      if (d?.v !== 1 || typeof d.ts !== "number" || Date.now() - d.ts > DRAFT_TTL_MS) {
-        sessionStorage.removeItem(draftKey);
+      const d = parseGiftDraft(raw, Date.now());
+      if (!d) {
+        if (raw) sessionStorage.removeItem(draftKey); // stale/garbage cleanup
         return;
       }
-      if (typeof d.selectedAmount === "number" && d.selectedAmount >= 5) setSelectedAmount(d.selectedAmount);
-      if (typeof d.showCustom === "boolean") setShowCustom(d.showCustom);
-      if (typeof d.customAmount === "string") setCustomAmount(d.customAmount);
-      if (d.executionModel === "auto" || d.executionModel === "pick") setExecutionModel(d.executionModel);
-      if (typeof d.selectedStock === "string" && d.selectedStock) setSelectedStock(d.selectedStock);
-      if (typeof d.senderName === "string") setSenderName(d.senderName);
-      if (typeof d.senderEmail === "string") setSenderEmail(d.senderEmail);
-      if (typeof d.isAnonymous === "boolean") setIsAnonymous(d.isAnonymous);
-      if (typeof d.message === "string") setMessage(d.message);
-      if (d.memoryAttachmentMode === "photo" || d.memoryAttachmentMode === "video" || d.memoryAttachmentMode === "audio" || d.memoryAttachmentMode === "none") {
-        setMemoryAttachmentMode(d.memoryAttachmentMode);
-      }
-      if (typeof d.photoUrl === "string") setPhotoUrl(d.photoUrl);
-      if (typeof d.videoUrl === "string") setVideoUrl(d.videoUrl);
-      if (typeof d.audioUrl === "string") setAudioUrl(d.audioUrl);
-      if (typeof d.giftAddOn === "string") setGiftAddOn(d.giftAddOn as GiftAddOnId);
-      if (typeof d.isRecurring === "boolean") setIsRecurring(d.isRecurring);
-      if (d.recurringFrequency === "weekly" || d.recurringFrequency === "monthly" || d.recurringFrequency === "yearly") {
-        setRecurringFrequency(d.recurringFrequency);
-      }
-      if (d.step === "amount" || d.step === "preview" || d.step === "payment") setStep(d.step);
+      if (d.selectedAmount !== undefined) setSelectedAmount(d.selectedAmount);
+      if (d.showCustom !== undefined) setShowCustom(d.showCustom);
+      if (d.customAmount !== undefined) setCustomAmount(d.customAmount);
+      if (d.executionModel !== undefined) setExecutionModel(d.executionModel);
+      if (d.selectedStock !== undefined) setSelectedStock(d.selectedStock);
+      if (d.senderName !== undefined) setSenderName(d.senderName);
+      if (d.senderEmail !== undefined) setSenderEmail(d.senderEmail);
+      if (d.isAnonymous !== undefined) setIsAnonymous(d.isAnonymous);
+      if (d.message !== undefined) setMessage(d.message);
+      if (d.memoryAttachmentMode !== undefined) setMemoryAttachmentMode(d.memoryAttachmentMode);
+      if (d.photoUrl !== undefined) setPhotoUrl(d.photoUrl);
+      if (d.videoUrl !== undefined) setVideoUrl(d.videoUrl);
+      if (d.audioUrl !== undefined) setAudioUrl(d.audioUrl);
+      if (d.giftAddOn !== undefined) setGiftAddOn(d.giftAddOn as GiftAddOnId);
+      if (d.isRecurring !== undefined) setIsRecurring(d.isRecurring);
+      if (d.recurringFrequency !== undefined) setRecurringFrequency(d.recurringFrequency);
+      if (d.step !== undefined) setStep(d.step);
     } catch {
-      // Malformed/blocked storage — start clean, never break checkout.
+      // Blocked storage — start clean, never break checkout.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
   useEffect(() => {
-    // Save pass. Only write once the gifter has actually composed something
-    // (or advanced past the landing) — and if they consciously emptied the
-    // form, drop the draft instead of resurrecting it on refresh.
-    const meaningful =
-      step !== "landing" ||
-      message.trim() !== "" ||
-      senderName.trim() !== "" ||
-      senderEmail.trim() !== "" ||
-      photoUrl !== "" || videoUrl !== "" || audioUrl !== "" ||
-      customAmount.trim() !== "";
+    const fields: GiftDraftFields = {
+      step, selectedAmount, showCustom, customAmount,
+      executionModel, selectedStock,
+      senderName, senderEmail, isAnonymous,
+      message, memoryAttachmentMode, photoUrl, videoUrl, audioUrl,
+      giftAddOn, isRecurring, recurringFrequency,
+    };
     try {
-      if (!meaningful) {
-        // Safe unconditionally: the restore effect above is declared first,
-        // so on mount it has already READ any existing draft before this
-        // empty-state pass removes it; the post-restore re-render writes it
-        // straight back.
+      if (!isMeaningfulGiftDraft(fields)) {
+        // The gifter consciously emptied the form — drop the draft instead
+        // of resurrecting it on refresh. Safe unconditionally: the restore
+        // effect above is declared first, so on mount it has already READ
+        // any existing draft before this empty-state pass removes it; the
+        // post-restore re-render writes it straight back.
         sessionStorage.removeItem(draftKey);
         return;
       }
-      sessionStorage.setItem(draftKey, JSON.stringify({
-        v: 1,
-        ts: Date.now(),
-        step,
-        selectedAmount, showCustom, customAmount,
-        executionModel, selectedStock,
-        senderName, senderEmail, isAnonymous,
-        message, memoryAttachmentMode, photoUrl, videoUrl, audioUrl,
-        giftAddOn, isRecurring, recurringFrequency,
-      }));
+      sessionStorage.setItem(draftKey, serializeGiftDraft(fields, Date.now()));
     } catch {
       // Storage full/blocked — degrade silently to pre-draft behavior.
     }

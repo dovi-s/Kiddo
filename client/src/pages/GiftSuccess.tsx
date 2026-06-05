@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast"
 import { buildTrackedGetStartedHref, trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition"
 import { useAuth } from "@/hooks/use-auth"
 import { recordDemoLiveGift } from "@/lib/demo-live-gifts"
+import { GIFT_DRAFT_PREFIX } from "@/lib/giftDraft"
 
 // Ticker → human-readable company name. Used to render "Nike" instead
 // of "NKE" alongside the brand mark from <StockLogo /> on the gift
@@ -315,7 +316,7 @@ export default function GiftSuccess() {
     try {
       for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
         const key = sessionStorage.key(i)
-        if (key && key.startsWith("kiddo-gift-draft:")) sessionStorage.removeItem(key)
+        if (key && key.startsWith(GIFT_DRAFT_PREFIX)) sessionStorage.removeItem(key)
       }
     } catch {
       // Storage blocked — nothing to clean.
