@@ -14,6 +14,7 @@ import { Logo } from "@/components/ui/logo";
 import { toast } from "@/hooks/use-toast";
 import type { Fund, Event } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { applyDemoLiveGiftsToFunds, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { useNotificationUnreadCount } from "@/components/NotificationsPanel";
 import { useMemoryUnreadCount } from "@/pages/MemoryBook";
 
@@ -57,7 +58,7 @@ export function DesktopSidebar() {
 
   const enabled = isAuthenticated && !shouldHide && !isPublicPage;
 
-  const { data: funds = [] } = useQuery<Fund[]>({
+  const { data: rawFunds = [] } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
     queryFn: async () => {
       const res = await fetch("/api/funds", { credentials: "include" });
@@ -72,6 +73,18 @@ export function DesktopSidebar() {
     staleTime: 30000,
     refetchOnMount: "always",
   });
+  // Demo-only: merge the session's live demo gifts, the SAME merge useFunds()
+  // does (this component rolls its own /api/funds query for the localStorage
+  // initialData warm paint, so it missed the overlay). Without it, a demo
+  // gift bumped the Dashboard hero (holdings overlay) but not this sidebar
+  // balance — two totals $50 apart in the same viewport (founder catch
+  // 2026-06-05). Non-demo: pure pass-through.
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  const overlayVersion = useDemoOverlayVersion();
+  const funds = useMemo(
+    () => applyDemoLiveGiftsToFunds(rawFunds, isDemoAccount),
+    [rawFunds, isDemoAccount, overlayVersion],
+  );
 
   // Active fund id is held in state + kept in sync with the global
   // ACTIVE_FUND_CHANGE_EVENT. Without this listener, switching funds via

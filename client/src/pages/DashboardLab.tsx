@@ -9247,7 +9247,21 @@ export default function DashboardLab() {
               icon={HandCoins}
               title="Your part of the story"
               stat={(() => {
-                const c = parentContributions.reduce((s, p) => s + (parseFloat(String((p as any).totalContributed || "0")) || 0), 0);
+                // Sum the viewer's OWN gift rows (recurring-linked + one-time),
+                // the same rows the fund-so-far sheet buckets into "Your
+                // recurring investments" + "Your one-time additions" — so this
+                // stat equals those two rows summed, exactly. The old version
+                // summed parentContributions.totalContributed (recurring
+                // schedules ONLY): it said "$8,400 contributed so far" while
+                // the sheet itemized $8,400 + $700 one-time (founder caught
+                // the mismatch). One fact = one formula.
+                const me = String(user?.email || "").trim().toLowerCase();
+                const c = !me ? 0 : gifts.reduce((s, g) => {
+                  const sender = String((g as any).senderEmail || "").trim().toLowerCase();
+                  if (sender !== me) return s;
+                  const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
+                  return s + (Number.isFinite(n) && n > 0 ? n : 0);
+                }, 0);
                 return c >= 1 ? `$${Math.round(c).toLocaleString("en-US")} contributed so far` : "Your recurring and one-time gifts";
               })()}
             >
