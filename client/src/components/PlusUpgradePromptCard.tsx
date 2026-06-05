@@ -36,12 +36,13 @@
 // (use-auth.ts) so shared-browser users don't inherit each other's
 // dismissals.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { Camera, Gift, TrendingUp, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
+import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const DISMISS_KEY_PREFIX = "kora:dismissed:plus-prompt:";
 
@@ -112,38 +113,42 @@ export function PlusUpgradePromptCard({
 }: PlusUpgradePromptCardProps) {
   const dismissKey = `${DISMISS_KEY_PREFIX}${kind}`;
 
-  // Initialize dismissed from localStorage so the card doesn't flash
-  // in for one frame on a return visit before the effect runs.
-  const [dismissed, setDismissed] = useState<boolean>(() => {
+  // Already dismissed on a prior visit → render nothing (no flash, no animation).
+  // Read once; the live dismiss below is driven by `open` so it can collapse out.
+  const initiallyDismissed = useMemo(() => {
     if (typeof window === "undefined") return false;
     try {
       return !!window.localStorage.getItem(dismissKey);
     } catch {
       return false;
     }
-  });
+  }, [dismissKey]);
 
+  const [open, setOpen] = useState(true);
   // FeatureWallModal state lives next to the trigger that opens it.
   const [wallOpen, setWallOpen] = useState(false);
 
-  if (dismissed) return null;
+  if (initiallyDismissed) return null;
 
   const copy = PROMPT_COPY[kind];
   const Icon = copy.icon;
   const displayChild = (childName || "your kid").trim() || "your kid";
 
-  const handleDismiss = () => {
+  // Persist AFTER the collapse exit so the card glides closed (was an instant
+  // unmount → snap). The "Not now" button just flips `open`.
+  const persistDismiss = () => {
     try {
       safeLocalSet(dismissKey, new Date().toISOString());
     } catch {
       // best-effort
     }
-    setDismissed(true);
   };
 
   return (
     <div className={className}>
-      <div
+      <CollapseDismissSection
+        open={open}
+        onExitComplete={persistDismiss}
         className="rounded-2xl border border-primary/20 bg-primary/5 p-4"
         data-testid={`plus-upgrade-prompt-${kind}`}
       >
@@ -183,7 +188,7 @@ export function PlusUpgradePromptCard({
                 size="sm"
                 variant="ghost"
                 className="rounded-xl text-muted-foreground"
-                onClick={() => { haptic("light"); handleDismiss(); }}
+                onClick={() => { haptic("light"); setOpen(false); }}
                 data-testid={`plus-prompt-dismiss-${kind}`}
               >
                 Not now
@@ -191,7 +196,7 @@ export function PlusUpgradePromptCard({
             </div>
           </div>
         </div>
-      </div>
+      </CollapseDismissSection>
       <FeatureWallModal
         open={wallOpen}
         onClose={() => setWallOpen(false)}
