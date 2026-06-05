@@ -6396,7 +6396,7 @@ export default function DashboardLab() {
                           // computes from $0/mo and reads far too low, then jumps.
                           // Show a calm pulse placeholder (the skeleton the founder
                           // likes, sized to the pill) instead of a wrong number.
-                          if (!heroDataReady) {
+                          if (!recurringDataReady) {
                             return (
                               <div className="animate-pulse" aria-hidden style={{ height: 40, width: 220, maxWidth: "100%", borderRadius: 9999, background: "rgba(255,255,255,0.12)" }} />
                             );
@@ -11303,7 +11303,7 @@ export default function DashboardLab() {
                         // LAB: hold a pulse until the recurring data lands - same
                         // as the hero projection, else this reads far too low then
                         // jumps (and disagrees with the hero for a beat).
-                        if (!heroDataReady) {
+                        if (!recurringDataReady) {
                           return <div className="animate-pulse" aria-hidden style={{ height: 18, width: 260, maxWidth: "100%", borderRadius: 6, background: "hsl(var(--kiddo-evergreen) / 0.10)", margin: "4px 0" }} />;
                         }
                         const fmtUSD0 = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
