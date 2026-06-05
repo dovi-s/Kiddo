@@ -1539,6 +1539,27 @@ export default function DashboardLab() {
     obs.observe(el);
     chartObsRef.current = obs;
   }, []);
+  // LAB: faces cascade on FIRST appearance + every scroll-back. framer's
+  // whileInView snaps (skips the animation) when the element is already in view
+  // on mount - that's why scroll-replay worked but the initial-load roll-in
+  // didn't. Same callback-ref pattern as the chart, but the faces aren't in a
+  // collapse (they mount once, possibly off-screen), so the observer bumps on
+  // EVERY in-view entry (no skip-first) → the first time you reach them cascades
+  // too. The key bump remounts the row → each face's `animate` re-runs. Safety:
+  // the key-0 mount `animate` makes them visible even if the observer never
+  // fires, so they can't go blank.
+  const [facesDrawKey, setFacesDrawKey] = useState(0);
+  const facesObsRef = useRef<IntersectionObserver | null>(null);
+  const facesScrollRef = useCallback((el: HTMLDivElement | null) => {
+    facesObsRef.current?.disconnect();
+    facesObsRef.current = null;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) setFacesDrawKey((k) => k + 1);
+    }, { threshold: 0.3 });
+    obs.observe(el);
+    facesObsRef.current = obs;
+  }, []);
   const [previewFundId, setPreviewFundId] = useState<string>("");
   const [autoInvestModalOpen, setAutoInvestModalOpen] = useState(false);
   const [autoInvestUpgradeOpen, setAutoInvestUpgradeOpen] = useState(false);
@@ -8650,7 +8671,8 @@ export default function DashboardLab() {
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
                       return (
-                    <div className="lab-faces" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                    <div ref={facesScrollRef}>
+                    <div className="lab-faces" key={facesDrawKey} style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                       {visibleGifters.map((gifter, faceIdx) => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
@@ -8718,14 +8740,16 @@ export default function DashboardLab() {
                             onClick={() => { haptic("selection"); setSelectedGifter(gifter); }}
                             title={tooltipText}
                             className="kiddo-gifter-avatar"
-                            // whileInView directly on EACH face (not parent
-                            // variant-propagation, which wasn't reaching them) so
-                            // the cascade REPLAYS every time the row re-enters
-                            // view. once:false. Entrance delay is scoped to the
-                            // whileInView transition so hover/tap stay instant.
+                            // `animate` (NOT whileInView - it snaps on first
+                            // in-view-on-mount, killing the initial-load cascade).
+                            // The face cascades on mount; the parent row's
+                            // facesDrawKey (bumped by facesScrollRef's observer on
+                            // every in-view entry) remounts it → re-cascade on
+                            // first appearance AND every scroll-back. Delay scoped
+                            // to this transition so hover/tap stay instant.
                             initial={{ opacity: 0, y: 12, scale: 0.8 }}
-                            whileInView={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.44, delay: faceIdx * 0.06, ease: [0.16, 1, 0.3, 1] } }}
-                            viewport={{ once: false, amount: 0.2, margin: "0px 0px -10px 0px" }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.44, delay: faceIdx * 0.06, ease: [0.16, 1, 0.3, 1] }}
                             whileHover={{ y: -4, scale: 1.06, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
                             whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
@@ -8992,6 +9016,7 @@ export default function DashboardLab() {
                         </button>
                         );
                       })()}
+                    </div>
                     </div>
                       );
                     })()}
