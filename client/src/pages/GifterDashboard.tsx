@@ -153,6 +153,12 @@ function fmtMoney(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
 }
 
+// Whole-dollar money, for summary lines where cents are noise (e.g. a family
+// rollup "$3,550 given" reads cleaner than "$3,550.00").
+function fmtMoney0(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0);
+}
+
 // Parse a gifter-safe "Month Day" birthday label (the only birthday signal the
 // server sends — no year, by T&S design) into the ms of its NEXT occurrence, so
 // the family header can surface "who's birthday is next". Returns null if the
@@ -1292,7 +1298,12 @@ export default function GifterDashboard() {
                           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                             <h3 className="font-heading text-lg font-semibold text-foreground">The {group.familyName} family</h3>
                             <span className="text-xs text-muted-foreground">
-                              {group.count} {group.count === 1 ? "kid" : "kids"} · {fmtMoney(group.total)} given
+                              {group.count} {group.count === 1 ? "kid" : "kids"}
+                              {/* The per-family total is a meaningful BREAKDOWN only
+                                  when there are 2+ families; with one family it just
+                                  duplicates the hero's "Total gifted". So show it
+                                  only across families, rounded (cents are noise). */}
+                              {fundGroups.length >= 2 ? ` · ${fmtMoney0(group.total)} given` : ""}
                             </span>
                           </div>
                           {group.nextBirthday && (
