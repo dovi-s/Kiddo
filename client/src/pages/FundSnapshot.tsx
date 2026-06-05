@@ -529,7 +529,19 @@ export default function FundSnapshot() {
           )}
         </div>
 
-        {/* Holdings */}
+        {/* Holdings. Deliberately NO StockLogo here (considered + rejected,
+            2026-06-05): this is the statement-genre surface, shown to third
+            parties (advisor / co-parent / skeptical grandparent) as proof the
+            fund is real. Brokerage statements are typographic, and that
+            absence is part of what reads as "credible record" vs "app
+            screenshot." Also practical: logos are remote images (broken
+            squares if window.print() races the fetch; mud on grayscale
+            printers) and the ETF rows (VTI/VXUS/BND) have no real logos, so
+            the column would render ragged half-logo. The Disney/Apple logo
+            magic lives on the dashboard / gift flow / Kid View on purpose:
+            playful where it's for the family, bank-grade where it's about
+            the money. If this page ever needs more visual, go typographic
+            (e.g. asset-class tint on the ticker chip), never logos. */}
         {holdings.length > 0 && (
           <div className="snapshot-section">
             <p className="snapshot-section-label">Current holdings</p>
