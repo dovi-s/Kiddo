@@ -4534,27 +4534,51 @@ export default function DashboardLab() {
       });
     }
 
-    // The occasion people showed up for — top past, dated occasion by volume.
+    // The occasion people showed up for — top by gift volume. Anchored at the
+    // MEDIAN timestamp of ITS OWN gifts (gifts.eventId attribution), NOT the
+    // event date: birthday occasions are routinely FUTURE-dated while their
+    // gifts have already landed (the demo's exact shape — "Luke's 14th
+    // Birthday, Nov 2026" with $2,415 already gifted). The story moment is
+    // when the crowd showed up, which is always in the past and always on
+    // the drawn line. Falls back to a past event date when no gifts carry
+    // the attribution.
     const t0 = trendData[0].ts;
+    const nowTs = Date.now();
+    const giftTsByEvent = new Map<string, number[]>();
+    for (const g of gifts as any[]) {
+      const eid = String((g as any).eventId || "");
+      const gts = g.createdAt ? new Date(String(g.createdAt)).getTime() : 0;
+      if (!eid || !(gts > 0) || gts > nowTs) continue;
+      const arr = giftTsByEvent.get(eid);
+      if (arr) arr.push(gts); else giftTsByEvent.set(eid, [gts]);
+    }
     const topOccasion = [...activeEvents, ...archivedEvents]
-      .map((e: any) => ({
-        ts: e.eventDate ? new Date(String(e.eventDate)).getTime() : 0,
-        name: String(e.name || ""),
-        vol: parseFloat(String(e.giftVolume || "0")) || 0,
-      }))
-      .filter((e) => Number.isFinite(e.ts) && e.ts > t0 && e.ts <= Date.now() && e.vol > 0 && e.name)
+      .map((e: any) => {
+        const own = (giftTsByEvent.get(String(e.id)) || []).sort((a, b) => a - b);
+        const anchor = own.length
+          ? own[Math.floor(own.length / 2)]
+          : (e.eventDate ? new Date(String(e.eventDate)).getTime() : 0);
+        return { ts: anchor, name: String(e.name || ""), vol: parseFloat(String(e.giftVolume || "0")) || 0 };
+      })
+      .filter((e) => Number.isFinite(e.ts) && e.ts > t0 && e.ts <= nowTs && e.vol > 0 && e.name)
       .sort((a, b) => b.vol - a.vol)[0];
     if (topOccasion) {
       beats.push({ frac: fracForTs(topOccasion.ts), label: topOccasion.name, sub: `${fmt0(topOccasion.vol)} gifted here`, priority: 3 });
     }
 
-    // The Memory Book begins — first saved memory of any kind.
+    // The Memory Book begins — first saved memory of any kind. Skipped when
+    // it's the SAME moment as the first gift (gift notes auto-become memory
+    // entries, so for most funds they coincide — one moment, one caption).
     const firstMemoryTs = (memoryEntriesForFund || [])
       .map((m: any) => (m?.createdAt ? new Date(String(m.createdAt)).getTime() : 0))
       .filter((ts) => Number.isFinite(ts) && ts > 0)
       .sort((a, b) => a - b)[0];
     if (firstMemoryTs) {
-      beats.push({ frac: fracForTs(firstMemoryTs), label: "The Memory Book begins", priority: 3 });
+      const f = fracForTs(firstMemoryTs);
+      const fgFrac = firstGift ? fracForTs(firstGift.ts) : -1;
+      if (Math.abs(f - fgFrac) > 0.03) {
+        beats.push({ frac: f, label: "The Memory Book begins", priority: 3 });
+      }
     }
 
     const thresholds = [1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000];
