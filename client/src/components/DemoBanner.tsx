@@ -17,12 +17,23 @@
 // (zero cost on real-user surfaces). Per DUNPHY_DEMO_SPEC.md.
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { X } from "lucide-react";
 import { isDemoAppSurface } from "@/lib/routes";
 
 const SESSION_DISMISS_KEY = "kora:demo-banner-dismissed";
+
+// Entrance choreography (founder catch 2026-06-05): during the page's
+// skeleton phase this sticky banner used to arrive FULLY FORMED — the one
+// loud, finished element above a calm field of placeholders, which read as
+// broken. It now glides in (fade + slide) after a beat, once the page has
+// started settling. Module-level flag: the glide plays once per app load —
+// tab-to-tab navigation remounts the banner without replaying the entrance
+// (it would read as the banner "reloading"). App-level MotionConfig
+// (reducedMotion="user") strips the slide for reduced-motion users.
+let hasPlayedEntrance = false;
 
 // `sidebarOffset` mirrors the App shell's `!hideGlobalNav`: on desktop the
 // 264px DesktopSidebar is `fixed left-0 z-50`, and this banner is `sticky
@@ -71,8 +82,14 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
     }
   };
 
+  const playEntrance = !hasPlayedEntrance;
+  if (playEntrance) hasPlayedEntrance = true;
+
   return (
-    <div
+    <motion.div
+      initial={playEntrance ? { opacity: 0, y: -10 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className={`sticky top-0 z-50 border-b border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] backdrop-blur-sm${sidebarOffset ? " md:ml-[264px]" : ""}`}
       data-testid="demo-banner"
       role="status"
@@ -119,6 +136,6 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
