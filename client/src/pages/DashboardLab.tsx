@@ -4453,42 +4453,130 @@ export default function DashboardLab() {
   }, [usableFundHistory, gifts, chartRange, activeFund?.createdAt]);
 
   // ── "Watch it grow" journey replay ──────────────────────────────────────
-  // Caption beats from REAL data, ALL range only: where it began, the first
-  // gift (name + amount, reusing trendData's own first-gift event), up to the
-  // three biggest threshold crossings, and today. Beats closer than 6% of the
-  // timeline to their predecessor are dropped (captions never stack); under 3
-  // beats or under 6 points the story isn't worth narrating, so the play
-  // affordance hides. Reduced-motion: no beats → no affordance → no replay.
-  const JOURNEY_MS = 8000;
+  // The fund's WHOLE story narrated from REAL data, ALL range only — the
+  // Memory Book rendered as motion. Beat sources (v2, founder: "is it meant
+  // to show the gifts and recurring and occasions and memories?" — yes):
+  //   P0  Where it began / Today (the spine — never dropped)
+  //   P1  The first gift (name + amount — the origin beat, the brand moment)
+  //   P2  Recurring begins (the discipline moment) · The biggest gift yet
+  //   P3  The top occasion ("Luke's 10th Birthday · $415 gifted here") ·
+  //       The Memory Book begins (first saved memory)
+  //   P4  The two biggest threshold crossings ("Crossed $10k")
+  // Selection: when a rich fund overflows the 8-caption budget, drop the
+  // HIGHEST priority number first (garnish), never the spine. v1 dropped
+  // beats that sat within 6% of the timeline of each other — which silently
+  // deleted the FIRST GIFT (it lives right next to "Where it began") and ate
+  // clustered milestones; clustering is now handled by TIME-spacing in
+  // playJourney (captions queue ≥950ms apart, lagging the reveal edge when
+  // beats bunch) instead of deletion. Under 3 beats or 6 points the story
+  // isn't worth narrating → the affordance hides. Reduced-motion: hidden.
+  const JOURNEY_MS = 9000;
   const journeyBeats = useMemo(() => {
     if (chartRange !== "ALL" || trendData.length < 6) return [];
     if (typeof window !== "undefined" && typeof window.matchMedia === "function"
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return [];
     const n = trendData.length;
-    const beats: Array<{ frac: number; label: string; sub?: string }> = [];
-    beats.push({ frac: 0, label: "Where it began", sub: trendData[0].label });
-    const firstGiftIdx = trendData.findIndex((p: any) => p.event);
-    if (firstGiftIdx > 0) {
-      const ev: any = (trendData[firstGiftIdx] as any).event;
-      beats.push({ frac: firstGiftIdx / (n - 1), label: ev?.label || "First gift", sub: ev?.detail || undefined });
+    type Beat = { frac: number; label: string; sub?: string; priority: number };
+    const beats: Beat[] = [];
+    const fmt0 = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
+    // The wipe edge sweeps POINT-INDEX space (recharts category axis), so a
+    // timestamp maps to the nearest point's index fraction — not raw time.
+    const fracForTs = (ts: number) => {
+      let idx = 0;
+      for (let i = 0; i < n; i++) { if (trendData[i].ts <= ts) idx = i; else break; }
+      return idx / (n - 1);
+    };
+
+    beats.push({ frac: 0, label: "Where it began", sub: trendData[0].label, priority: 0 });
+    beats.push({ frac: 1, label: "Today", sub: fmt0(totalValue), priority: 0 });
+
+    const giftRows = [...gifts]
+      .map((g: any) => ({
+        ts: g.createdAt ? new Date(String(g.createdAt)).getTime() : 0,
+        amt: parseFloat(String(g.netAmount || g.amount || "0")) || 0,
+        name: displayGifterName(g.senderName, (g as any).isAnonymous),
+        recurring: !!(g as any).parentContributionId,
+      }))
+      .filter((g) => Number.isFinite(g.ts) && g.ts > 0 && g.amt > 0)
+      .sort((a, b) => a.ts - b.ts);
+    const firstGift = giftRows[0];
+    if (firstGift) {
+      beats.push({
+        frac: fracForTs(firstGift.ts),
+        label: "The first gift",
+        sub: firstGift.name && firstGift.name !== "Anonymous" ? `${fmt0(firstGift.amt)} from ${firstGift.name}` : fmt0(firstGift.amt),
+        priority: 1,
+      });
     }
+
+    const firstRecurring = [...parentContributions]
+      .map((c: any) => ({
+        ts: c.createdAt ? new Date(String(c.createdAt)).getTime() : 0,
+        amt: parseFloat(String(c.amount || "0")) || 0,
+        freq: String(c.frequency || "monthly").toLowerCase(),
+      }))
+      .filter((c) => Number.isFinite(c.ts) && c.ts > 0 && c.amt > 0)
+      .sort((a, b) => a.ts - b.ts)[0];
+    if (firstRecurring) {
+      const per = firstRecurring.freq === "weekly" ? "week" : firstRecurring.freq === "yearly" ? "year" : firstRecurring.freq === "daily" ? "day" : "month";
+      beats.push({ frac: fracForTs(firstRecurring.ts), label: "Recurring begins", sub: `${fmt0(firstRecurring.amt)}/${per}`, priority: 2 });
+    }
+
+    // Biggest one-time gift — only when it's a real moment ($100+) and not
+    // the first gift retold.
+    const biggest = giftRows.filter((g) => !g.recurring).sort((a, b) => b.amt - a.amt)[0];
+    if (biggest && biggest.ts !== firstGift?.ts && biggest.amt >= 100) {
+      beats.push({
+        frac: fracForTs(biggest.ts),
+        label: "The biggest gift yet",
+        sub: biggest.name && biggest.name !== "Anonymous" ? `${fmt0(biggest.amt)} from ${biggest.name}` : fmt0(biggest.amt),
+        priority: 2,
+      });
+    }
+
+    // The occasion people showed up for — top past, dated occasion by volume.
+    const t0 = trendData[0].ts;
+    const topOccasion = [...activeEvents, ...archivedEvents]
+      .map((e: any) => ({
+        ts: e.eventDate ? new Date(String(e.eventDate)).getTime() : 0,
+        name: String(e.name || ""),
+        vol: parseFloat(String(e.giftVolume || "0")) || 0,
+      }))
+      .filter((e) => Number.isFinite(e.ts) && e.ts > t0 && e.ts <= Date.now() && e.vol > 0 && e.name)
+      .sort((a, b) => b.vol - a.vol)[0];
+    if (topOccasion) {
+      beats.push({ frac: fracForTs(topOccasion.ts), label: topOccasion.name, sub: `${fmt0(topOccasion.vol)} gifted here`, priority: 3 });
+    }
+
+    // The Memory Book begins — first saved memory of any kind.
+    const firstMemoryTs = (memoryEntriesForFund || [])
+      .map((m: any) => (m?.createdAt ? new Date(String(m.createdAt)).getTime() : 0))
+      .filter((ts) => Number.isFinite(ts) && ts > 0)
+      .sort((a, b) => a - b)[0];
+    if (firstMemoryTs) {
+      beats.push({ frac: fracForTs(firstMemoryTs), label: "The Memory Book begins", priority: 3 });
+    }
+
     const thresholds = [1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000];
-    const crossed: Array<{ frac: number; t: number }> = [];
+    const crossed: Beat[] = [];
     for (const t of thresholds) {
       const idx = trendData.findIndex((p, i) => p.value >= t && (i === 0 || trendData[i - 1].value < t));
-      if (idx > 0) crossed.push({ frac: idx / (n - 1), t });
+      if (idx > 0) crossed.push({ frac: idx / (n - 1), label: `Crossed ${t >= 1000 ? `$${t / 1000}k` : `$${t}`}`, priority: 4 });
     }
-    for (const c of crossed.slice(-3)) {
-      beats.push({ frac: c.frac, label: `Crossed ${c.t >= 1000 ? `$${c.t / 1000}k` : `$${c.t}`}` });
+    beats.push(...crossed.slice(-2));
+
+    // Budget: chronological order, then trim from the garnish end.
+    beats.sort((a, b) => a.frac - b.frac || a.priority - b.priority);
+    const MAX_BEATS = 8;
+    while (beats.length > MAX_BEATS) {
+      let worstIdx = -1;
+      let worstP = 0;
+      beats.forEach((b, i) => { if (b.priority > worstP) { worstP = b.priority; worstIdx = i; } });
+      if (worstIdx < 0) break; // only the spine left — never drop it
+      beats.splice(worstIdx, 1);
     }
-    beats.push({
-      frac: 1,
-      label: "Today",
-      sub: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(totalValue),
-    });
-    beats.sort((a, b) => a.frac - b.frac);
-    return beats.filter((b, i, arr) => i === 0 || b.frac === 1 || b.frac - arr[i - 1].frac >= 0.06);
-  }, [chartRange, trendData, totalValue]);
+    return beats;
+  }, [chartRange, trendData, totalValue, gifts, parentContributions, activeEvents, archivedEvents, memoryEntriesForFund]);
 
   const cancelJourney = useCallback(() => {
     journeyTimersRef.current.forEach((t) => window.clearTimeout(t));
@@ -4511,11 +4599,20 @@ export default function DashboardLab() {
     // cancelJourneyRef), THEN this journey's own caption schedule.
     chartWipePlayRef.current({ duration: JOURNEY_MS, easing: "linear" });
     setJourneyPlaying(true);
-    const timers: number[] = journeyBeats.map((b) =>
-      window.setTimeout(() => setJourneyCaption({ label: b.label, sub: b.sub }), Math.round(b.frac * JOURNEY_MS)),
-    );
-    // Let "Today" linger a beat past the draw, then clear.
-    timers.push(window.setTimeout(() => { setJourneyCaption(null); setJourneyPlaying(false); }, JOURNEY_MS + 2400));
+    // TIME-spacing, not deletion: each caption fires at its timeline position
+    // but never sooner than 950ms after the previous one — when beats bunch
+    // (a steep growth year), the narration simply lags the reveal edge a
+    // touch and catches up, one calm pill at a time. The tail may run a beat
+    // past the draw; "Today" still lands last and lingers.
+    const MIN_CAPTION_GAP = 950;
+    let lastAt = -Infinity;
+    const timers: number[] = journeyBeats.map((b) => {
+      const at = Math.max(Math.round(b.frac * JOURNEY_MS), lastAt + MIN_CAPTION_GAP);
+      lastAt = at;
+      return window.setTimeout(() => setJourneyCaption({ label: b.label, sub: b.sub }), at);
+    });
+    // Let "Today" linger a beat past whichever fired last, then clear.
+    timers.push(window.setTimeout(() => { setJourneyCaption(null); setJourneyPlaying(false); }, Math.max(JOURNEY_MS, lastAt) + 2400));
     journeyTimersRef.current = timers;
   };
 
