@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import type { Fund, Event } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { applyDemoLiveGiftsToFunds, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { readFundLiveValue, useFundLiveValue } from "@/lib/fund-live-value";
 import { useNotificationUnreadCount } from "@/components/NotificationsPanel";
 import { useMemoryUnreadCount } from "@/pages/MemoryBook";
 
@@ -206,7 +207,13 @@ export function DesktopSidebar() {
         parseFloat(String((fund as any).pendingBalance || "0")) +
         parseFloat(String((fund as any).cashBalance || "0"))
       : 0;
-  const fundValue = getFundValue(activeFund);
+  // Quote the Dashboard hero's published live total when available — same
+  // number, same formula, can't disagree (fund.balance is settlement-synced
+  // not price-synced, so the funds-list math below can drift from the hero;
+  // see lib/fund-live-value.ts). Falls back to the funds-list math when no
+  // Dashboard has computed this fund yet (e.g. cold load straight to /memory).
+  const liveValue = useFundLiveValue(activeFund?.id);
+  const fundValue = liveValue ?? getFundValue(activeFund);
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(value);
 
@@ -551,7 +558,8 @@ export function DesktopSidebar() {
                 // household-glance surface — the "Your funds" entry up
                 // top owns the selected state in that mode.
                 const selected = !isFundsOverview && fund.id === activeFund.id;
-                const value = getFundValue(fund);
+                // Same live-value-first sourcing as the headline number above.
+                const value = readFundLiveValue(queryClient, fund.id) ?? getFundValue(fund);
                 return (
                   <button
                     key={fund.id}

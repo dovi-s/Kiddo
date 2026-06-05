@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { NotificationsPanel, useBellUnreadCount } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { ShareModal, type SharePage } from "@/components/ui/share-modal";
+import { readFundLiveValue } from "@/lib/fund-live-value";
 import { MOTION_DURATION } from "@/lib/motion";
 import type { Fund } from "@shared/schema";
 
@@ -467,9 +468,14 @@ export function AppHeader() {
                 // rows are "selected" — the household entry up top owns
                 // the check. Otherwise the active per-fund row gets it.
                 const isActive = !isFundsOverview && fund.id === activeFund?.id;
-                const val = parseFloat(String(fund.balance || "0")) +
+                // Quote the Dashboard hero's published live total when this
+                // fund's dashboard has computed one (fund.balance is
+                // settlement-synced, not price-synced — see
+                // lib/fund-live-value.ts); else the funds-list math.
+                const val = readFundLiveValue(queryClient, fund.id) ?? (
+                  parseFloat(String(fund.balance || "0")) +
                   parseFloat(String((fund as any).pendingBalance || "0")) +
-                  parseFloat(String((fund as any).cashBalance || "0"));
+                  parseFloat(String((fund as any).cashBalance || "0")));
                 return (
                   <button
                     key={fund.id}

@@ -186,6 +186,7 @@ import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 // the occasion-create flow; the dashboard no longer imports it.
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
 import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { publishFundLiveValue } from "@/lib/fund-live-value";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 // Dead-import audit 2026-05-25: QRCodeSVG was previously imported here
 // but never referenced. The ShareModal child renders its own QR via
@@ -3583,6 +3584,15 @@ export default function Dashboard() {
   const settling = pendingBalance;
   const uninvestedCash = cash + settling;
   const totalValue = invested + pendingBalance + cashBalance;
+  // Publish the hero's computed live total so the sidebar quotes the SAME
+  // number (it has no holdings query; server fund.balance is
+  // settlement-synced, not price-synced — see lib/fund-live-value.ts).
+  // Mirrors DashboardLab. Gated on the summary being loaded so a half-loaded
+  // zero is never published over a real value.
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary) return;
+    publishFundLiveValue(queryClient, activeFundId, totalValue);
+  }, [queryClient, activeFundId, dashboardSummary, totalValue]);
   // Compute gain from holdings data (more reliable than server-side totalGain which may be stale)
   const computedInvestedGain = investedCurrentValue - investedCostBasis;
   const computedInvestedGainPct = investedCostBasis > 0 ? (computedInvestedGain / investedCostBasis) * 100 : 0;
