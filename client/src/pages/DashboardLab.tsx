@@ -6452,7 +6452,7 @@ export default function DashboardLab() {
                           // computes from $0/mo and reads far too low, then jumps.
                           // Show a calm pulse placeholder (the skeleton the founder
                           // likes, sized to the pill) instead of a wrong number.
-                          if (!recurringDataReady) {
+                          if (!heroDataReady) {
                             return (
                               <div className="animate-pulse" aria-hidden style={{ height: 40, width: 220, maxWidth: "100%", borderRadius: 9999, background: "rgba(255,255,255,0.12)" }} />
                             );
@@ -6639,7 +6639,7 @@ export default function DashboardLab() {
               // LAB: until the recurring data lands, `active`/`paused` are empty
               // so this falls to "Set up recurring" even when there IS recurring
               // (a wrong, jumpy CTA). Hold a calm pulse until we actually know.
-              if (!recurringDataReady) {
+              if (!heroDataReady) {
                 return (
                   <div className="animate-pulse" aria-hidden style={{ height: 34, width: 200, maxWidth: "100%", borderRadius: 9999, background: "hsl(var(--kiddo-evergreen) / 0.08)", marginTop: 12 }} />
                 );
@@ -8834,17 +8834,18 @@ export default function DashboardLab() {
                               const lastDate = new Date(gifter.lastGiftDate);
                               const now = new Date();
                               const sameYear = lastDate.getUTCFullYear() === now.getUTCFullYear();
-                              const dateLabel = lastDate.toLocaleDateString("en-US",
-                                sameYear
-                                  ? { month: "short", day: "numeric", timeZone: "UTC" }
-                                  : { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }
-                              );
+                              const dateLabel = sameYear
+                                ? lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+                                // Prior years: compact "Mon D 'YY" (e.g. "Dec 4 '25")
+                                // instead of "Dec 4, 2025" - the full year overflowed
+                                // the face width and truncated to an ugly ellipsis.
+                                : `${lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} '${String(lastDate.getUTCFullYear()).slice(-2)}`;
                               const isRepeat = gifter.giftCount >= 2;
                               return (
                                 <span style={{
                                   fontSize: 9, fontWeight: 500,
                                   color: "rgb(150,138,128)",
-                                  maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                  maxWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                                   textAlign: "center", marginTop: -2,
                                 }}>
                                   {dateLabel}
@@ -11373,7 +11374,7 @@ export default function DashboardLab() {
                         // LAB: hold a pulse until the recurring data lands - same
                         // as the hero projection, else this reads far too low then
                         // jumps (and disagrees with the hero for a beat).
-                        if (!recurringDataReady) {
+                        if (!heroDataReady) {
                           return <div className="animate-pulse" aria-hidden style={{ height: 18, width: 260, maxWidth: "100%", borderRadius: 6, background: "hsl(var(--kiddo-evergreen) / 0.10)", margin: "4px 0" }} />;
                         }
                         const fmtUSD0 = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
