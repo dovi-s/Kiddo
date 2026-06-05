@@ -5613,8 +5613,13 @@ export default function DashboardLab() {
               /* Faces gently rise + grow on hover/tap. */
               .lab-face { transition: transform .2s cubic-bezier(0.16,1,0.3,1); cursor: default; }
               .lab-face:hover { transform: translateY(-4px) scale(1.06); }
-              /* Faces cascade in one-by-one (the "alive" entrance). */
-              .lab-faces > * { animation: labFaceIn .44s cubic-bezier(0.16,1,0.3,1) backwards; }
+              /* Faces cascade in one-by-one. Mount-staggered as the universal
+                 fallback; where the browser supports scroll-driven animation
+                 (Chrome/Edge), they roll in AS you scroll to them (the founder's
+                 ask - the faces were finishing their cascade off-screen). Each
+                 face animates over a slightly later scroll range = a cascade
+                 scrubbed by your scroll. backwards fill so :hover still works. */
+              .lab-faces > * { animation: labFaceIn .5s cubic-bezier(0.16,1,0.3,1) backwards; }
               .lab-faces > *:nth-child(1){animation-delay:.04s}
               .lab-faces > *:nth-child(2){animation-delay:.09s}
               .lab-faces > *:nth-child(3){animation-delay:.14s}
@@ -5624,8 +5629,23 @@ export default function DashboardLab() {
               .lab-faces > *:nth-child(7){animation-delay:.34s}
               .lab-faces > *:nth-child(n+8){animation-delay:.39s}
               @keyframes labFaceIn { from { opacity: 0; transform: translateY(10px) scale(0.84); } to { opacity: 1; transform: none; } }
+              @keyframes labScrollIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+              @supports (animation-timeline: view()) {
+                .lab-faces > * { animation-delay: 0s; animation-timeline: view(); }
+                .lab-faces > *:nth-child(1){animation-range: entry 6% entry 32%}
+                .lab-faces > *:nth-child(2){animation-range: entry 11% entry 37%}
+                .lab-faces > *:nth-child(3){animation-range: entry 16% entry 42%}
+                .lab-faces > *:nth-child(4){animation-range: entry 21% entry 47%}
+                .lab-faces > *:nth-child(5){animation-range: entry 26% entry 52%}
+                .lab-faces > *:nth-child(6){animation-range: entry 31% entry 57%}
+                .lab-faces > *:nth-child(7){animation-range: entry 36% entry 62%}
+                .lab-faces > *:nth-child(n+8){animation-range: entry 41% entry 67%}
+                /* The collapse rows roll in too, so the page assembles itself as
+                   you scroll (the coherent roll-in the founder described). */
+                .lab-collapse { animation: labScrollIn 1s linear backwards; animation-timeline: view(); animation-range: entry 3% entry 28%; }
+              }
               @media (prefers-reduced-motion: reduce) {
-                .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div,
+                .lab-collapse, .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div,
                 .lab-tap, .lab-face, .lab-faces > * { transition: none !important; animation: none !important; }
               }
             `}</style>
