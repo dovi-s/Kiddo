@@ -8718,6 +8718,25 @@ export default function DashboardLab() {
                           // add more Apple), not for managed mix tickers (those are
                           // auto-allocated by the strategy, so a user-driven "add more BND"
                           // would just fight the rebalancer).
+                          // First-pick year per ticker (from gift rows'
+                          // selectedTicker). Powers the "· since 2019" context
+                          // on RED chosen rows only (2026-06-05): a bare
+                          // "-10.33%" invites day-trader anxiety on an 18-year
+                          // product; the year reframes a dip as a moment in a
+                          // long story. Green rows don't need consoling, and
+                          // managed-mix rows have no pick attribution — both
+                          // stay clean. (The WHO stays in the holding sheet,
+                          // per the founder: positions aggregate many people's
+                          // picks, and the tap-through already names them.)
+                          const firstPickTsByTicker = new Map<string, number>();
+                          for (const g of gifts as any[]) {
+                            const pickT = String((g as any).selectedTicker || "").trim().toUpperCase();
+                            if (!pickT) continue;
+                            const pickTs = (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0;
+                            if (!(pickTs > 0)) continue;
+                            const prev = firstPickTsByTicker.get(pickT);
+                            if (prev == null || pickTs < prev) firstPickTsByTicker.set(pickT, pickTs);
+                          }
                           const renderHoldingRow = (h: HoldingEntry, isChosen = false) => {
                             const hValue   = parseFloat(h.currentValue || "0");
                             const hCost    = parseFloat(h.costBasis    || "0");
@@ -8802,6 +8821,9 @@ export default function DashboardLab() {
                                       {hCost > 0 && Math.abs(hGain) > 0.01 && (
                                         <p className={`text-xs font-semibold tabular-nums ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
                                           {hGain >= 0 ? "+" : ""}{formatCurrency(hGain)} ({hGain >= 0 ? "+" : ""}{hGainPct.toFixed(2)}%)
+                                          {isChosen && hGain < 0 && firstPickTsByTicker.has(ticker) && (
+                                            <span className="font-normal text-muted-foreground/60"> · since {new Date(firstPickTsByTicker.get(ticker)!).getFullYear()}</span>
+                                          )}
                                         </p>
                                       )}
                                     </button>
@@ -8850,6 +8872,35 @@ export default function DashboardLab() {
                           // fewer than 10 items total so vertical scroll is fine.
                           return (
                             <div className={hasBothSections ? "flex flex-col gap-4" : "space-y-2"}>
+                              {/* Composition at a glance (founder-approved
+                                  2026-06-05): picked-vs-mix concentration is
+                                  the one decision-relevant fact in this
+                                  section, and it was buried in two trailing
+                                  totals a screen apart. One two-segment bar
+                                  answers it in a glance — gold = the picks
+                                  (the love layer), evergreen = the mix (the
+                                  spine) — matching each subsection's accent.
+                                  Composition only, deliberately NO performance
+                                  split (see the section-summary comment below:
+                                  side-by-side performance comparisons drive
+                                  performance-chasing). */}
+                              {hasBothSections && investedTotal > 0 && (() => {
+                                const chosenPctRaw = (chosenVal / investedTotal) * 100;
+                                const chosenPctLbl = chosenPctRaw > 0 && chosenPctRaw < 1 ? "<1" : String(Math.round(chosenPctRaw));
+                                const mixPctLbl = chosenPctRaw > 99 && chosenPctRaw < 100 ? "<1" : String(100 - Math.round(chosenPctRaw));
+                                return (
+                                  <div className="px-1" data-testid="holdings-composition-bar">
+                                    <div className="flex h-1.5 w-full overflow-hidden rounded-full" aria-hidden="true">
+                                      <div style={{ width: `${Math.max(2, Math.min(98, chosenPctRaw))}%`, background: "hsl(var(--kiddo-gold))" }} />
+                                      <div style={{ flex: 1, background: "hsl(var(--kiddo-evergreen))" }} />
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-muted-foreground/70 tabular-nums">
+                                      <span>Picked · {chosenPctLbl}%</span>
+                                      <span>{isOwnerMode ? "Your mix" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s mix` : "The mix"} · {mixPctLbl}%</span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               {/* Chosen with love */}
                               {chosenH.length > 0 && (
                                 <div className="space-y-2">
@@ -9727,6 +9778,43 @@ export default function DashboardLab() {
                     ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
                     : "Your part of their story"}
               </p>
+              {(() => {
+                // The identity line (founder-approved 2026-06-05). The title
+                // promises "story"; this is the one sentence of it — count +
+                // first year, both PROVEN by the gift rows (no "every month"
+                // claims the data can't back; "still showing up" only when the
+                // most recent investment is within 45 days, so it's never a
+                // stale flattery). Viewer-keyed like the collapse stat (Claire
+                // sees HER count, Phil his — and previous-owner Phil on a
+                // handed-off fund sees his full era). Hidden until the habit
+                // is real (6+ investments spanning 18+ months) so a new parent
+                // isn't shown "2 investments since 2026" dressed as a streak.
+                const me = String(user?.email || "").trim().toLowerCase();
+                if (!me) return null;
+                let count = 0;
+                let firstTs = Infinity;
+                let lastTs = 0;
+                for (const g of gifts as any[]) {
+                  if (String((g as any).senderEmail || "").trim().toLowerCase() !== me) continue;
+                  const amt = parseFloat(String((g as any).netAmount || (g as any).amount || "0")) || 0;
+                  if (!(amt > 0)) continue;
+                  count += 1;
+                  const ts = (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0;
+                  if (ts > 0) {
+                    if (ts < firstTs) firstTs = ts;
+                    if (ts > lastTs) lastTs = ts;
+                  }
+                }
+                if (count < 6 || !Number.isFinite(firstTs)) return null;
+                if (Date.now() - firstTs < 548 * 86400000) return null; // 18 months
+                const stillShowingUp = lastTs > 0 && Date.now() - lastTs <= 45 * 86400000;
+                return (
+                  <p className="mt-1 text-[12.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]" data-testid="text-your-part-identity">
+                    {count} investments since {new Date(firstTs).getFullYear()}
+                    {stillShowingUp ? " · still showing up" : ""}
+                  </p>
+                );
+              })()}
 
               {/* Layout mirrors "What Emma owns" → Chosen with love / Managed mix:
                   outside uppercase subheaders sit ABOVE each column (not inside
@@ -10248,6 +10336,31 @@ export default function DashboardLab() {
                                         ? ` · Next ${new Date(String(contrib.nextRunDate)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`
                                         : ""}
                                     </p>
+                                    {(() => {
+                                      // Outcome, not just cost (founder-approved
+                                      // 2026-06-05): connect the schedule to the
+                                      // future it funds — the anti-cancel line.
+                                      // Canonical math only (sumMonthlyEquivalent +
+                                      // projectFundValue, the exact pair the hero
+                                      // pill uses), and gated like the hero's
+                                      // honesty rule: only while the majority
+                                      // moment is genuinely ahead, only on live
+                                      // schedules, and only when the contribution
+                                      // is material (≥$100 projected).
+                                      if (isPausedRow || isHandoffEnded) return null;
+                                      if (Boolean((activeFund as any)?.transferredAt) || !age18Transition) return null;
+                                      const yrsAhead = Math.max(0, age18Transition.daysUntil18 / 365.25);
+                                      if (yrsAhead <= 0.08) return null;
+                                      const rowMonthly = sumMonthlyEquivalent([contrib as any]);
+                                      if (!(rowMonthly > 0)) return null;
+                                      const adds = projectFundValue({ startingValue: 0, monthlyContribution: rowMonthly, yearsAhead: yrsAhead, contributionYears: yrsAhead });
+                                      if (!(adds >= 100)) return null;
+                                      return (
+                                        <p className="mt-0.5 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)]">
+                                          🌱 on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
+                                        </p>
+                                      );
+                                    })()}
                                   </div>
                                   <span
                                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -10445,13 +10558,23 @@ export default function DashboardLab() {
                               <span className="ml-1 font-normal text-muted-foreground">· {formatMoneyFriendly(lastOwnGift.amount)}{dateLabel ? ` · ${dateLabel}` : ""}</span>
                             </p>
                           </div>
-                          {currentValue != null && delta != null && Math.abs(delta) >= 0.01 && (
+                          {currentValue != null && (
                             <p className="text-[12px] tabular-nums leading-snug">
                               <span className="text-muted-foreground">Now worth </span>
                               <span className="font-semibold text-foreground">{formatCurrency(currentValue)}</span>
-                              <span className={`ml-1 font-semibold ${delta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
-                                ({delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))}){delta >= 0 ? " 🌱" : ""}
-                              </span>
+                              {/* The delta earns its parenthetical at |Δ| ≥ $1
+                                  (founder-approved 2026-06-05) — a day-old
+                                  "(+$0.18)" undercuts its own moment (same
+                                  sub-$1 rule as the chart stat). Younger
+                                  positions get "Now worth $X 🌱" alone; time
+                                  makes the parenthetical impressive. */}
+                              {delta != null && Math.abs(delta) >= 1 ? (
+                                <span className={`ml-1 font-semibold ${delta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
+                                  ({delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))}){delta >= 0 ? " 🌱" : ""}
+                                </span>
+                              ) : (
+                                <span className="ml-1" aria-hidden="true">🌱</span>
+                              )}
                             </p>
                           )}
                         </div>
