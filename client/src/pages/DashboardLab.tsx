@@ -48,7 +48,7 @@ function getChartRangeLabel(range: ChartRange): string {
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -1443,16 +1443,6 @@ export default function DashboardLab() {
   const holdingsSectionRef = useRef<HTMLElement | null>(null);
   const carouselPage1Ref = useRef<HTMLDivElement | null>(null);
   const carouselPage2Ref = useRef<HTMLDivElement | null>(null);
-  // LAB: the "Who loves" faces cascade fires when the row enters view (once).
-  // Visible on load -> cascades with the load; below the fold (cards expanded
-  // or lower) -> waits and cascades when scrolled to. Never wasted off-screen.
-  const facesRef = useRef<HTMLDivElement | null>(null);
-  // Positive bottom margin = fire slightly BEFORE the row scrolls into view, so
-  // the faces are already cascading when you reach them (no blank-then-pop). A
-  // negative margin here caused a long blank-white gap (row visible, trigger
-  // not yet met). once:false so the cascade REPLAYS every time the row
-  // re-enters view (founder loves it - don't ration it to first-view only).
-  const facesInView = useInView(facesRef, { once: false, margin: "0px 0px 150px 0px" });
   // 2026-05-12: The wrong-shape two-page horizontal-scroll-snap carousel
   // (Page 1 Holdings list + Page 2 donut breakdown + Holdings/Breakdown
   // segmented switcher) was surgically removed. The Holdings LIST itself
@@ -5695,32 +5685,12 @@ export default function DashboardLab() {
               .lab-tap { transition: transform .14s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, filter .2s ease; }
               .lab-tap:hover { transform: translateY(-1.5px); filter: brightness(1.04); }
               .lab-tap:active { transform: translateY(0) scale(0.96); }
-              /* Faces gently rise + grow on hover/tap. */
-              .lab-face { transition: transform .2s cubic-bezier(0.16,1,0.3,1); cursor: default; }
-              .lab-face:hover { transform: translateY(-4px) scale(1.06); }
-              /* Faces cascade in one-by-one when the row enters view (framer
-                 useInView), replaying each time. ROBUSTNESS: faces are VISIBLE
-                 by default (opacity 1) - the cascade is a pure enhancement that
-                 can never leave them blank. When .lab-faces-go lands, the
-                 animation's backwards fill dips each face to opacity 0 through
-                 its stagger delay then animates it in; if the in-view detector
-                 ever fails or reads "out", the faces simply stay shown. The
-                 150px pre-trigger fires the cascade just before they're on
-                 screen, so the dip happens off-screen (no flash). */
-              .lab-faces > * { opacity: 1; }
-              .lab-faces-go > * { animation: labFaceIn .52s cubic-bezier(0.16,1,0.3,1) backwards; }
-              .lab-faces-go > *:nth-child(1){animation-delay:.05s}
-              .lab-faces-go > *:nth-child(2){animation-delay:.11s}
-              .lab-faces-go > *:nth-child(3){animation-delay:.17s}
-              .lab-faces-go > *:nth-child(4){animation-delay:.23s}
-              .lab-faces-go > *:nth-child(5){animation-delay:.29s}
-              .lab-faces-go > *:nth-child(6){animation-delay:.35s}
-              .lab-faces-go > *:nth-child(7){animation-delay:.41s}
-              .lab-faces-go > *:nth-child(n+8){animation-delay:.47s}
-              @keyframes labFaceIn { from { opacity: 0; transform: translateY(10px) scale(0.84); } to { opacity: 1; transform: none; } }
+              /* (The "Who loves" faces cascade + hover are now framer
+                 whileInView/whileHover on each <motion.button>, so they replay
+                 reliably every time the row re-enters view and never stick
+                 blank. No CSS needed for them anymore.) */
               @media (prefers-reduced-motion: reduce) {
-                .lab-tap, .lab-face, .lab-faces > * { transition: none !important; animation: none !important; }
-                .lab-faces > * { opacity: 1 !important; }
+                .lab-tap { transition: none !important; animation: none !important; }
               }
             `}</style>
             <motion.section
@@ -8581,7 +8551,14 @@ export default function DashboardLab() {
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
                       return (
-                    <div ref={facesRef} className={`lab-faces${facesInView ? " lab-faces-go" : ""}`} style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                    <motion.div
+                      className="lab-faces"
+                      initial="hidden"
+                      whileInView="show"
+                      viewport={{ once: false, amount: 0.3, margin: "0px 0px -20px 0px" }}
+                      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+                      style={{ display: "flex", flexWrap: "wrap", gap: 16 }}
+                    >
                       {visibleGifters.map(gifter => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
@@ -8643,12 +8620,16 @@ export default function DashboardLab() {
                         ].filter(Boolean) as string[];
                         const tooltipText = tooltipParts.join(" · ");
                         return (
-                          <button
+                          <motion.button
                             key={gifter.name}
                             type="button"
                             onClick={() => { haptic("selection"); setSelectedGifter(gifter); }}
                             title={tooltipText}
-                            className="kiddo-gifter-avatar lab-face"
+                            className="kiddo-gifter-avatar"
+                            variants={{ hidden: { opacity: 0, y: 10, scale: 0.84 }, show: { opacity: 1, y: 0, scale: 1 } }}
+                            whileHover={{ y: -4, scale: 1.06 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                           >
                             <div style={{ position: "relative" }}>
@@ -8777,7 +8758,7 @@ export default function DashboardLab() {
                                 </span>
                               );
                             })()}
-                          </button>
+                          </motion.button>
                         );
                       })}
                       {/* +N more tile — only when overflow is collapsed.
@@ -8912,7 +8893,7 @@ export default function DashboardLab() {
                         </button>
                         );
                       })()}
-                    </div>
+                    </motion.div>
                       );
                     })()}
 
