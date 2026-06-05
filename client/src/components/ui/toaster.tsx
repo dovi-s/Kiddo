@@ -1,5 +1,5 @@
 import { useToast } from "@/hooks/use-toast"
-import { Check } from "lucide-react"
+import { Check, Sprout } from "lucide-react"
 import {
   Toast,
   ToastClose,
@@ -32,6 +32,25 @@ export function Toaster() {
   return (
     <ToastProvider>
       {cardToasts.map(function ({ id, title, description, action, ...props }) {
+        // Gift-arrival delight beat — the warm, branded treatment (sprout badge
+        // + cream card + gold glow). Distinct from every system toast on
+        // purpose; this is the "watch it land" moment, the conversion peak.
+        if (props.variant === "gift") {
+          return (
+            <Toast key={id} duration={9000} {...props}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))]">
+                <Sprout className="h-5 w-5 text-white" strokeWidth={2} />
+              </div>
+              <div className="grid min-w-0 flex-1 gap-0.5">
+                {title && <ToastTitle className="leading-snug">{title}</ToastTitle>}
+                {description && (
+                  <ToastDescription className="text-[hsl(var(--kiddo-ink)/0.62)] opacity-100">{description}</ToastDescription>
+                )}
+              </div>
+              {action}
+            </Toast>
+          )
+        }
         // Drop the close ✕ on a plain auto-dismissing confirmation (no
         // description, no action) — it's clutter; the toast leaves on its own.
         // Keep it where dismissal is useful: errors and actionable toasts.

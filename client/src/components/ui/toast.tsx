@@ -32,6 +32,13 @@ const toastVariants = cva(
           "w-full justify-between space-x-3 rounded-xl border px-4 py-3 pr-10 shadow-md destructive group border-destructive bg-destructive text-destructive-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
         saved:
           "justify-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground/90 text-background text-xs font-medium shadow-lg backdrop-blur-sm data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+        // The gift-arrival delight beat — the product's emotional peak ("watch
+        // it land"). Deliberately NOT the neutral system card: a warm cream
+        // surface, an evergreen sprout badge (added in the Toaster), and a soft
+        // GOLD glow that echoes the hero count-up's gold-glow language, so a
+        // landing gift feels like a moment, not a notification. 2026-06-04.
+        gift:
+          "w-full items-start gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.16)] bg-[hsl(var(--kiddo-cream))] px-4 py-3.5 text-[hsl(var(--kiddo-ink))] shadow-[0_12px_36px_-8px_hsl(var(--kiddo-gold)/0.45)] data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full data-[state=open]:fade-in-0",
       },
     },
     defaultVariants: {

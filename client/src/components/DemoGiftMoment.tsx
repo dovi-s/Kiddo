@@ -115,9 +115,10 @@ export function DemoGiftMoment() {
           try { window.sessionStorage.removeItem(PENDING_KEY); } catch { /* ignore */ }
           haptic("success");
           toast({
+            variant: "gift", // warm, branded delight treatment — not a system card
             title: isRecurring
-              ? `${sender}'s monthly gift to ${child} is on its way 🌱`
-              : `${sender} added $${amount} to ${child}'s future 🌱`,
+              ? `${sender}'s monthly gift to ${child} is on its way`
+              : `${sender} added $${amount} to ${child}'s future`,
             description: `Going into ${where}. The gift you just sent is landing in ${child}'s Memory Book.`,
             duration: 9000, // a delight beat needs time to read both lines + tap View
             action: (
@@ -172,7 +173,8 @@ export function DemoGiftMoment() {
         recordDemoLiveGift({ fundId: fund.id, senderName: g.sender, amount: g.amount, ticker: g.ticker });
         haptic("success");
         toast({
-          title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
+          variant: "gift", // warm, branded delight treatment — not a system card
+          title: `${g.sender} added $${g.amount} to ${child}'s future`,
           description: `Going into ${where}. A new moment in ${child}'s Memory Book.`,
           duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
           action: (
