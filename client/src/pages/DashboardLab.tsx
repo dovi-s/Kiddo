@@ -5276,7 +5276,19 @@ export default function DashboardLab() {
     }
   };
 
-  const isPageLoading = fundsLoading;
+  // LAB: ONE loading transition, not two. `fundsLoading` alone opened the page
+  // the moment the funds LIST landed, while dashboard-summary (+ recurring)
+  // was still in flight on a cold load — so the page popped from skeleton to
+  // a half-ready mix of pulses and fallback labels ("The full chart over
+  // time"), then settled again: the founder's "weird in-between loading
+  // phase". Now the calm page skeleton holds until the data is actually
+  // there, then reveals ONCE with every number real — and the motion beats
+  // (count-up, faces cascade, chart wipe) all fire on real data. Warm loads
+  // are untouched: localStorage initialData makes heroDataReady true at
+  // first render, so this gate adds zero delay there. Escape hatch: if the
+  // summary query ERRORS, open the page anyway (the per-spot fallback
+  // queries + pulses take over) — never a stuck skeleton.
+  const isPageLoading = fundsLoading || (!!activeFundId && !heroDataReady && !dashboardSummaryError);
 
   return (
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
@@ -5814,6 +5826,12 @@ export default function DashboardLab() {
               <SkeletonBlock className="h-10 flex-1" />
               <SkeletonBlock className="h-10 flex-1" />
             </div>
+            {/* Mirror the collapse rows below the hero so the held skeleton
+                reads as the page taking shape, not a stub (the skeleton now
+                holds through the whole cold load - see isPageLoading). */}
+            <SkeletonBlock className="h-[72px] w-full" />
+            <SkeletonBlock className="h-[72px] w-full" />
+            <SkeletonBlock className="h-[72px] w-full" />
           </div>
         ) : (
           <>

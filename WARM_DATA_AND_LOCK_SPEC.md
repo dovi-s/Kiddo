@@ -106,6 +106,16 @@ dashboard, blurred — and literally it was (it's warm behind it). Use a shared
   fund-switching**, zero-lag demo switch-beat. Remaining Layer-2 work = prefetch
   the *active* fund *before arrival* (needs a pre-dashboard moment: lock screen,
   landing, or hover-intent).
+- **Step 1b — ONE loading transition on cold loads** (shipped 2026-06-05): the
+  page skeleton used to lift the moment the funds LIST landed, while the
+  summary was still in flight — so cold loads popped skeleton → half-ready mix
+  of pulses + fallback labels → settled (the founder's "weird in-between
+  loading phase"). `isPageLoading` now also holds until `heroDataReady` (with a
+  summary-error escape so it can never stick), so the page reveals ONCE, fully
+  real — and the motion beats (count-up, faces cascade, chart wipe) fire on
+  real data. Warm loads unaffected (localStorage initialData opens the gate at
+  first render). The per-spot pulses below remain as the warm-refetch +
+  error-path fallback.
 - **Step 1 — kill the wrong loading-state numbers** (shipped in `DashboardLab.tsx`):
   a `recurringDataReady` / `heroDataReady` gate holds a **calm pulse** instead of a
   *wrong* value while per-fund data loads. Fixed: the hero + handoff "On track for
