@@ -4030,10 +4030,17 @@ export default function Dashboard() {
     };
     const addZeroBaseline = (rows: Array<{ ts: number; label: string; principal: number; value: number }>) => {
       if (rows.length === 0) return rows;
+      // A $0 anchor row is only HONEST where the fund actually held $0: at
+      // creation. ALL always anchors there; range views (1W/1M/YTD/1Y) anchor
+      // there ONLY when the fund was born inside the window. The old
+      // anchor-at-range-cutoff prepended "$0 thirty days ago" onto a
+      // years-old $22k fund — a false cliff at the left edge that exaggerated
+      // the period's growth. Funds older than the window now start at their
+      // real range-start value. (Mirrors the same fix in DashboardLab.tsx.)
       const baselineTs =
         chartRange === "ALL"
           ? (Number.isFinite(createdTs) ? createdTs : NaN)
-          : (Number.isFinite(cutoff || NaN) ? (cutoff as number) : NaN);
+          : (Number.isFinite(createdTs) && cutoff != null && createdTs >= cutoff ? createdTs : NaN);
       if (!Number.isFinite(baselineTs)) return rows;
       if (baselineTs >= rows[0].ts) return rows;
       return [

@@ -4243,10 +4243,17 @@ export default function DashboardLab() {
     };
     const addZeroBaseline = (rows: Array<{ ts: number; label: string; principal: number; value: number }>) => {
       if (rows.length === 0) return rows;
+      // A $0 anchor row is only HONEST where the fund actually held $0: at
+      // creation. ALL always anchors there; range views (1W/1M/YTD/1Y) anchor
+      // there ONLY when the fund was born inside the window. The old
+      // anchor-at-range-cutoff prepended "$0 thirty days ago" onto a
+      // years-old $22k fund — a false cliff at the left edge that exaggerated
+      // the period's growth (and poisoned the "this month" collapse stat).
+      // Funds older than the window now start at their real range-start value.
       const baselineTs =
         chartRange === "ALL"
           ? (Number.isFinite(createdTs) ? createdTs : NaN)
-          : (Number.isFinite(cutoff || NaN) ? (cutoff as number) : NaN);
+          : (Number.isFinite(createdTs) && cutoff != null && createdTs >= cutoff ? createdTs : NaN);
       if (!Number.isFinite(baselineTs)) return rows;
       if (baselineTs >= rows[0].ts) return rows;
       return [
@@ -7559,11 +7566,23 @@ export default function DashboardLab() {
               icon={TrendingUp}
               title={isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}
               stat={(() => {
-                if (!heroDataReady || trendData.length < 2) return "The full chart over time"; // LAB: don't show a "this month" move computed from a half-loaded baseline (it reads as the whole balance)
-                const latest = trendData[trendData.length - 1].value;
+                // LAB: range-INDEPENDENT "this month" move from RAW snapshots —
+                // NOT trendData. trendData is filtered to the selected chart
+                // range AND gets a synthetic $0 baseline row prepended; this
+                // walk landed on that $0 as "the value 30 days ago" and showed
+                // the WHOLE balance as a monthly move ("+$22,743 this month" on
+                // a $22.7k fund). Real snapshot rows over the full history =
+                // the same truth no matter which range the chart is on.
+                if (!heroDataReady) return "The full chart over time"; // don't compute from a half-loaded baseline (it reads as the whole balance)
+                const snaps = [...usableFundHistory]
+                  .map((p) => ({ ts: new Date(p.snapshotDate || 0).getTime(), value: parseFloat(p.totalValue || "0") }))
+                  .filter((p) => Number.isFinite(p.ts) && p.ts > 0)
+                  .sort((a, b) => a.ts - b.ts);
+                if (snaps.length < 2) return "The full chart over time";
+                const latest = snaps[snaps.length - 1].value;
                 const cutoff = Date.now() - 30 * 86400000;
-                let past = trendData[0].value;
-                for (const p of trendData) { if (p.ts <= cutoff) past = p.value; else break; }
+                let past = snaps[0].value;
+                for (const p of snaps) { if (p.ts <= cutoff) past = p.value; else break; }
                 const move = latest - past;
                 if (Math.abs(move) < 1) return "The full chart over time";
                 return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}`;
