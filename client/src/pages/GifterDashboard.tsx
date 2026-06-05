@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
@@ -57,6 +57,11 @@ const GIFTER_DASHBOARD_CACHE_BASE = "kiddo.gifter-dashboard.v1";
 type GifterFundRow = {
   fundId: string;
   childName: string;
+  // The family's last name — ONLY present when the gifter has gifted to 2+ kids
+  // who share it (server nulls it for singletons, so a one-off gifter never
+  // sees a last name). Drives the "The {familyName} family" grouping header so
+  // a cross-family gifter can tell whose kids are whose. 2026-06-04.
+  familyName: string | null;
   fundName: string;
   sharePath: string;
   totalGifted: number;
@@ -258,6 +263,32 @@ export default function GifterDashboard() {
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Group the gifter's funds by FAMILY (server-provided `familyName`, present
+  // only when this gifter has gifted to 2+ kids who share a last name). This
+  // is for the cross-family super-gifter — the loop's actual engine — who
+  // otherwise faces a flat wall of first-name cards where "just Luke" tells
+  // them nothing. Funds in a family cluster under a "The Dunphy family" header;
+  // singletons render headerless (and never expose a last name). Group order
+  // follows the server's recency sort — the first fund seen claims the slot, so
+  // a family stays anchored to its most recent gift.
+  const fundGroups = useMemo(() => {
+    const rows = data?.funds ?? [];
+    const groups: Array<{ key: string; familyName: string | null; funds: GifterFundRow[] }> = [];
+    const indexByKey = new Map<string, number>();
+    for (const f of rows) {
+      const fam = f.familyName ? f.familyName.trim() : "";
+      const key = fam ? `fam:${fam.toLowerCase()}` : `solo:${f.fundId}`;
+      const existing = indexByKey.get(key);
+      if (existing != null) {
+        groups[existing].funds.push(f);
+      } else {
+        indexByKey.set(key, groups.length);
+        groups.push({ key, familyName: fam || null, funds: [f] });
+      }
+    }
+    return groups;
+  }, [data?.funds]);
 
   // Active + paused recurring schedules belonging to this gifter.
   // Powers the "Your recurring gifts" section per locked Decision A
@@ -1181,8 +1212,20 @@ export default function GifterDashboard() {
               {isLoading ? (
                 <p className="mt-4 text-sm text-muted-foreground">Loading your saved funds...</p>
               ) : data?.funds?.length ? (
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {data.funds.map((fund, fundIdx) => {
+                <div className="mt-5 space-y-8">
+                  {fundGroups.map((group) => (
+                    <div key={group.key}>
+                      {/* Family header — only for a real family cluster (2+ kids
+                          sharing a last name). Gives the cross-family gifter the
+                          context a flat first-name list can't. */}
+                      {group.familyName && (
+                        <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <h3 className="font-heading text-lg font-semibold text-foreground">The {group.familyName} family</h3>
+                          <span className="text-xs text-muted-foreground">{group.funds.length} kids you're showing up for</span>
+                        </div>
+                      )}
+                      <div className="grid gap-4 md:grid-cols-2">
+                  {group.funds.map((fund, fundIdx) => {
                     const attribution = computeGifterAttribution(fund);
                     return (
                     <motion.div
@@ -1557,6 +1600,9 @@ export default function GifterDashboard() {
                     </motion.div>
                     );
                   })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/20 p-8 text-center">

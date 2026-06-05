@@ -5478,6 +5478,11 @@ export async function registerRoutes(
           return {
             fundId: fund.id,
             childName: fund.recipientFirstName || fund.name,
+            // Family grouping aid. Raw last name here; nulled below for any
+            // SINGLETON family so a one-off gifter never sees a last name —
+            // it's only exposed when the gifter has gifted to 2+ kids who
+            // share it (a relative who already knows the family). T&S-minimal.
+            familyName: fund.recipientLastName ? String(fund.recipientLastName).trim() : null,
             fundName: fund.name,
             sharePath: buildFundSharePath(fund),
             totalGifted: Number(stats.totalGifted.toFixed(2)),
@@ -5531,6 +5536,27 @@ export async function registerRoutes(
           const bTs = new Date(b.lastGiftAt || b.savedAt || 0).getTime();
           return bTs - aTs;
         });
+
+      // Family grouping (founder 2026-06-04: the cross-family super-gifter — the
+      // loop's actual engine — needs context; "just Luke doesn't do anything").
+      // EXPOSE a last name only when the gifter has gifted to 2+ kids who share
+      // it: that's a relative who knows the family. A one-off gifter (one fund
+      // in a "family") gets familyName=null — no last name leaves the server.
+      // Grouped by last name (NOT owner) so siblings stay together even after
+      // one hands off at 18 and gets their own self-owned account (Haley).
+      {
+        const lastNameCounts = new Map<string, number>();
+        for (const row of resolvedFundsPayload) {
+          const ln = (row as any).familyName ? String((row as any).familyName).toLowerCase() : "";
+          if (ln) lastNameCounts.set(ln, (lastNameCounts.get(ln) || 0) + 1);
+        }
+        for (const row of resolvedFundsPayload) {
+          const ln = (row as any).familyName ? String((row as any).familyName).toLowerCase() : "";
+          if (!ln || (lastNameCounts.get(ln) || 0) < 2) {
+            (row as any).familyName = null; // singleton → never expose a last name
+          }
+        }
+      }
 
       // Sponsor-Plus history — the gifter's active + past sponsored
       // Plus/Family subscriptions on other people's funds. Added 2026-05-23
