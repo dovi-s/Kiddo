@@ -6740,7 +6740,23 @@ export default function DashboardLab() {
                             ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
                             ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
                           ]);
-                          const atMaj = (yrsToMaj > 0.08 && totalValue > 0)
+                          // Honesty gate (founder catch 2026-06-05): Phil viewing
+                          // Haley's HANDED-OFF fund saw "On track for $1,492,705
+                          // when Haley turns 21" — she's a graduate PAST 21, and
+                          // that number was the AT-65 projection wearing the
+                          // at-majority label (the fallback swapped the number
+                          // but not the words). The at-majority framing is only
+                          // honest when that moment is genuinely AHEAD: fund not
+                          // transferred, transition data present, >~1 month out.
+                          // Otherwise the pill says what the number actually is
+                          // — the long horizon, "at 65" — which is also the
+                          // right emotional anchor for an adult-owned fund
+                          // (kid-2.0 keeps growing; parent-2.0 posture).
+                          const showAtMajority = !Boolean((activeFund as any)?.transferredAt)
+                            && !!age18Transition
+                            && yrsToMaj > 0.08
+                            && totalValue > 0;
+                          const atMaj = showAtMajority
                             ? projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj })
                             : displayHeroProjectedAt65;
                           const heroMajAge = age18Transition?.majorityAge || 18;
@@ -6801,7 +6817,12 @@ export default function DashboardLab() {
                               ) : (
                                 <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>🌱</span>
                               )}
-                              <span style={{ minWidth: 0 }}>On track for <span style={{ fontWeight: 800 }}>{fmtMaj}</span> when {heroChildN} turn{heroChildN === "you" ? "" : "s"} {heroMajAge}</span>
+                              <span style={{ minWidth: 0 }}>
+                                On track for <span style={{ fontWeight: 800 }}>{fmtMaj}</span>{" "}
+                                {showAtMajority
+                                  ? <>when {heroChildN} turn{heroChildN === "you" ? "" : "s"} {heroMajAge}</>
+                                  : <>at 65</>}
+                              </span>
                               <span style={{ opacity: 0.8, flexShrink: 0 }}>→</span>
                             </button>
                           );
