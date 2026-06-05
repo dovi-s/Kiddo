@@ -913,12 +913,20 @@ export default function FundSnapshot() {
           letter-spacing: 0.08em;
           margin-bottom: 12px;
         }
+        /* Flex-wrap (not grid) so an incomplete last row CENTERS instead of
+           leaving a lone card orphaned on the left. Works for ANY holding count
+           — no fixed column count eliminates orphans (a 3-col grid orphans at
+           4 holdings, a 4-col at 5/9, etc.); centering the remainder is the only
+           universal fix. Four cards per row: 4 × calc(25% - 6px) + 3 × 8px gap
+           = 100%. 2026-06-05. */
         .snapshot-holdings {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
           gap: 8px;
         }
         .snapshot-holding {
+          flex: 0 0 calc(25% - 6px);
           background: #fdfaf3;
           border: 1px solid rgba(26, 23, 16, 0.08);
           border-radius: 12px;
