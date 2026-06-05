@@ -10190,6 +10190,31 @@ export default function DashboardLab() {
                             )}
                           </div>
                           )}
+                          {(() => {
+                            // The combined anti-cancel line for MULTI-schedule
+                            // cards (the solo card carries it per-row instead —
+                            // see the row's solo-only gate). One sentence for
+                            // the whole card: "together on track to add ~$X by
+                            // 21", summing every ACTIVE schedule on the fund
+                            // (all contributors — the future is funded by all
+                            // of them, same population the hero pill sums).
+                            // Same canonical math + honesty gates as the hero.
+                            if (allContribs.length < 2) return null;
+                            if (Boolean((activeFund as any)?.transferredAt) || !age18Transition) return null;
+                            const yrsAhead = Math.max(0, age18Transition.daysUntil18 / 365.25);
+                            if (yrsAhead <= 0.08) return null;
+                            const activeRows = allContribs.filter((c: any) => (optimisticContribStatus[String(c.id)] ?? c.status) === "active" && c.pauseReason !== "majority_handoff");
+                            if (activeRows.length === 0) return null;
+                            const combinedMonthly = sumMonthlyEquivalent(activeRows as any[]);
+                            if (!(combinedMonthly > 0)) return null;
+                            const adds = projectFundValue({ startingValue: 0, monthlyContribution: combinedMonthly, yearsAhead: yrsAhead, contributionYears: yrsAhead });
+                            if (!(adds >= 100)) return null;
+                            return (
+                              <p className="mt-1 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)]">
+                                🌱 together on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
+                              </p>
+                            );
+                          })()}
                         </div>
                       );
                     })()}
@@ -10347,6 +10372,15 @@ export default function DashboardLab() {
                                       // moment is genuinely ahead, only on live
                                       // schedules, and only when the contribution
                                       // is material (≥$100 projected).
+                                      //
+                                      // SOLO ONLY (founder catch 2026-06-05: "if
+                                      // there's many recurring set?"): with N
+                                      // schedules the same sentence chanted N times
+                                      // turns the beat into boilerplate, and the
+                                      // parent wants the TOTAL anyway — multi-
+                                      // schedule cards get ONE combined line in
+                                      // the card header instead.
+                                      if (!isSoloHero) return null;
                                       if (isPausedRow || isHandoffEnded) return null;
                                       if (Boolean((activeFund as any)?.transferredAt) || !age18Transition) return null;
                                       const yrsAhead = Math.max(0, age18Transition.daysUntil18 / 365.25);
