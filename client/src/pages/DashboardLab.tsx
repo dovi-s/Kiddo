@@ -2149,6 +2149,37 @@ export default function DashboardLab() {
     refetchOnReconnect: true,
   });
 
+  // LAB warm-data (Layer 2, no lock screen needed): once the active fund has
+  // settled, idle-prefetch every OTHER fund's dashboard-summary into the React
+  // Query cache AND localStorage. Switching kids is then instant - no cold
+  // fetch, no empty-state flash - and the demo's "switch = a gift rolls in"
+  // beat lands with zero lag. requestIdleCallback so it never competes with
+  // the active fund's own render/fetch; the cleanup cancels a stale warm-up.
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary || funds.length < 2) return;
+    const others = funds.filter((f: any) => f?.id && f.id !== activeFundId);
+    if (others.length === 0) return;
+    const warm = () => {
+      others.forEach((f: any) => {
+        void queryClient.prefetchQuery({
+          queryKey: ["/api/funds", f.id, "dashboard-summary"],
+          queryFn: async () => {
+            const res = await fetch(`/api/funds/${f.id}/dashboard-summary`, { credentials: "include" });
+            if (!res.ok) throw new Error("prefetch failed");
+            const data = await res.json();
+            try { writeLocalCache(`${DASHBOARD_SUMMARY_CACHE_PREFIX}${f.id}`, data); } catch { /* cache best-effort */ }
+            return data;
+          },
+          staleTime: FUND_ACTIVE_STALE_MS,
+        });
+      });
+    };
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: any) => number);
+    const cancel = (window as any).cancelIdleCallback as undefined | ((id: number) => void);
+    const id = ric ? ric(warm, { timeout: 2500 }) : window.setTimeout(warm, 1200);
+    return () => { if (ric && cancel) cancel(id as number); else window.clearTimeout(id as number); };
+  }, [activeFundId, dashboardSummary, funds, queryClient]);
+
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     writeLocalCache(`${DASHBOARD_SUMMARY_CACHE_PREFIX}${activeFundId}`, dashboardSummary);
