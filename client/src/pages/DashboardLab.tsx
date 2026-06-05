@@ -5962,6 +5962,40 @@ export default function DashboardLab() {
                           : formatCurrency(displayHeroBalance)}
                       </motion.div>
 
+                      {/* LAB: hero growth sparkline — the signature premium-
+                          fintech richness element ("rich, not flat"). Drawn
+                          from REAL trendData (not decorative), in cream/gold so
+                          it reads on the evergreen hero. Glanceable trajectory;
+                          the full interactive chart still lives below. */}
+                      {!isScrubbing && totalValue > 0 && trendData.length >= 2 && (() => {
+                        const vals = trendData.map((p: any) => Number(p.value) || 0);
+                        const min = Math.min(...vals);
+                        const max = Math.max(...vals);
+                        const range = max - min || 1;
+                        const W = 320, H = 46;
+                        const pts = vals.map((v, i) => {
+                          const x = vals.length > 1 ? (i / (vals.length - 1)) * W : 0;
+                          const y = H - ((v - min) / range) * (H - 8) - 4;
+                          return [x, y] as const;
+                        });
+                        const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+                        const area = `${line} L${W},${H} L0,${H} Z`;
+                        const [ex, ey] = pts[pts.length - 1];
+                        return (
+                          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="42" preserveAspectRatio="none" aria-hidden style={{ display: "block", marginBottom: 14, marginTop: -2 }}>
+                            <defs>
+                              <linearGradient id="hero-spark-fill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="hsl(var(--kiddo-gold-light))" stopOpacity="0.26" />
+                                <stop offset="100%" stopColor="hsl(var(--kiddo-gold-light))" stopOpacity="0" />
+                              </linearGradient>
+                            </defs>
+                            <path d={area} fill="url(#hero-spark-fill)" />
+                            <path d={line} fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                            <circle cx={ex} cy={ey} r="3.5" fill="hsl(var(--kiddo-gold-light))" stroke="white" strokeWidth="1.5" />
+                          </svg>
+                        );
+                      })()}
+
                       {/* Hero gain pill removed — the +$X all-time gain (and its
                           percent) was duplicating what the lifetime stats row's
                           "Growth" card already shows below. The hero stays as
