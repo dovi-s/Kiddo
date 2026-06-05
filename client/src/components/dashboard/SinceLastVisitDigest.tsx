@@ -83,6 +83,7 @@ export function SinceLastVisitDigest({
   gifts,
   isDemoAccount,
   ready,
+  subject = "Your fund",
 }: {
   fundId: string | null;
   currentValue: number;
@@ -91,6 +92,9 @@ export function SinceLastVisitDigest({
   // True once the gift list + value are fully loaded, so the digest appears
   // COMPLETE in one shot (no "$182 growth" → "$332 + 2 gifts" flicker).
   ready: boolean;
+  // The headline subject — "Luke's fund" for a parent, "Your fund" for the
+  // grown owner. Makes it a personal update, not a subjectless stat.
+  subject?: string;
 }) {
   // Read the OLD marker ONCE on mount, before the write effect updates it.
   const lastSeen = useMemo<LastSeen | null>(() => {
@@ -238,7 +242,7 @@ export function SinceLastVisitDigest({
             While you were away
           </p>
           <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground leading-snug">
-            Up {fmtMoney0(digest.delta)} since {fmtShortDate(digest.sinceTs)}
+            {subject} is up {fmtMoney0(digest.delta)} since {fmtShortDate(digest.sinceTs)}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
         </div>

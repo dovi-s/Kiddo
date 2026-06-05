@@ -5474,6 +5474,7 @@ export default function Dashboard() {
             gifts={gifts as any}
             isDemoAccount={isDemoAccount}
             ready={Boolean(dashboardSummary)}
+            subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
           />
         )}
 
