@@ -189,9 +189,13 @@ const KIDS = [
     slug: "alex-dunphy",
     strategy: "balanced" as const,
     description: "Alex is weeks from 21. This is where the handoff begins.",
-    // Recurring winds down as the handoff nears (the worker auto-pauses near
-    // majority); the fund still carries years of realized history.
-    recurring: { amount: 50, status: "paused" },
+    // Recurring stays ACTIVE right up to the handoff — the parent keeps
+    // contributing until the fund actually transfers at 21. The worker
+    // auto-pauses AT majority, NOT before (only Haley, already graduated, is
+    // handoff-paused). Fixed 2026-06-04: was seeded "paused", which implied
+    // recurring stops as the handoff nears (it doesn't) and surfaced a
+    // confusing "Recurring paused · resume" prompt on a fund still funding.
+    recurring: { amount: 50, status: "active" },
   },
   {
     firstName: "Luke",
