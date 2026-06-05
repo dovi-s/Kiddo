@@ -7669,6 +7669,25 @@ export default function DashboardLab() {
               );
             })()}
 
+            {/* LAB move 3: the portfolio is the ENGINE, collapsed under one
+                tap by default (the critique's most-repeated demand: nobody
+                opens the app to check Luke's Nintendo allocation). Native
+                <details>, no React state, reuses the entire real section. */}
+            <details data-testid="lab-portfolio-details" style={{ marginTop: 4 }}>
+              <summary
+                className="[&::-webkit-details-marker]:hidden"
+                style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📈</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}</span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>The mix powering the growth. Tap to open.</span>
+                  </span>
+                </span>
+                <ChevronRight size={18} style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
+              </summary>
+              <div style={{ marginTop: 12 }}>
             <motion.section
               ref={holdingsSectionRef}
               initial={{ opacity: 0, y: 8 }}
@@ -8252,6 +8271,8 @@ export default function DashboardLab() {
                 );
               })()}
             </motion.section>
+              </div>
+            </details>
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
