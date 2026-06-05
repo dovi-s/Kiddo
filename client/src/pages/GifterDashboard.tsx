@@ -926,32 +926,56 @@ export default function GifterDashboard() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
-                    <p
-                      className="mt-0.5 font-heading text-3xl font-bold tabular-nums sm:text-4xl"
-                      aria-live={totalGiftedAnimating ? "off" : "polite"}
-                      aria-label={fmtMoney(totalGifted)}
-                    >{fmtMoney(animatedTotalGifted)}</p>
+                {/* First-paint honesty: with no localStorage cache (new
+                    device / fresh context) the query is in flight and these
+                    lifetime stats would briefly render "$0.00 / 0 / 0" — a
+                    returning gifter reads that as "my gifts are gone."
+                    While loading with no data, hold quiet pulse blocks
+                    instead; the count-ups take over the moment data lands.
+                    (Caught in the 2026-06-05 avatar verification run.) */}
+                {isLoading && !data ? (
+                  <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4" aria-hidden="true">
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                      <span className="mt-1.5 block h-9 w-28 animate-pulse rounded-lg bg-white/15 sm:h-10" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Children</p>
+                      <span className="mt-1.5 block h-7 w-8 animate-pulse rounded-lg bg-white/15" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
+                      <span className="mt-1.5 block h-7 w-8 animate-pulse rounded-lg bg-white/15" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
-                    <p
-                      className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
-                      aria-live={savedFundCountAnimating ? "off" : "polite"}
-                      aria-label={String(savedFundCount)}
-                    >{Math.round(animatedSavedFundCount)}</p>
+                ) : (
+                  <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                      <p
+                        className="mt-0.5 font-heading text-3xl font-bold tabular-nums sm:text-4xl"
+                        aria-live={totalGiftedAnimating ? "off" : "polite"}
+                        aria-label={fmtMoney(totalGifted)}
+                      >{fmtMoney(animatedTotalGifted)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
+                      <p
+                        className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
+                        aria-live={savedFundCountAnimating ? "off" : "polite"}
+                        aria-label={String(savedFundCount)}
+                      >{Math.round(animatedSavedFundCount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
+                      <p
+                        className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
+                        aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
+                        aria-label={String(followingUpdatesCount)}
+                      >{Math.round(animatedFollowingUpdatesCount)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
-                    <p
-                      className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
-                      aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
-                      aria-label={String(followingUpdatesCount)}
-                    >{Math.round(animatedFollowingUpdatesCount)}</p>
-                  </div>
-                </div>
+                )}
 
                 {sessionId && mode === "save" && (
                   <div className="mt-5 inline-flex rounded-2xl bg-white/10 px-4 py-2.5 text-sm text-white backdrop-blur-sm">
