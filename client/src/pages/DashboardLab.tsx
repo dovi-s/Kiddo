@@ -5608,6 +5608,10 @@ export default function DashboardLab() {
               .lab-collapse > summary:active { transform: translateY(0) scale(0.992); }
               .lab-chevron { transition: transform .26s cubic-bezier(0.16,1,0.3,1); }
               .lab-collapse[open] > summary .lab-chevron { transform: rotate(90deg); }
+              /* The "Tap to open" hint disappears once the row is open (the
+                 rotated chevron + revealed content already say "open") - so a
+                 collapsed and an open row no longer read identically. */
+              .lab-collapse[open] .lab-hint-open { display: none; }
               @keyframes labReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
               .lab-collapse[open] > div { animation: labReveal .3s cubic-bezier(0.16,1,0.3,1); }
               /* Tactile press on any tappable surface: lift on hover, spring
@@ -6771,7 +6775,7 @@ export default function DashboardLab() {
                       <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🌱</span>
                       <span style={{ minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}</span>
-                        <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Gifts, growth, and where it all went. Tap to open.</span>
+                        <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Gifts, growth, and where it all went. <span className="lab-hint-open">Tap to open</span></span>
                       </span>
                     </span>
                     <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
@@ -7327,7 +7331,7 @@ export default function DashboardLab() {
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📊</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>The full chart over time. Tap to open.</span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>The full chart over time. <span className="lab-hint-open">Tap to open</span></span>
                   </span>
                 </span>
                 <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
@@ -7767,7 +7771,7 @@ export default function DashboardLab() {
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📈</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>The mix powering the growth. Tap to open.</span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} powering the growth. ` : "The mix powering the growth. "}<span className="lab-hint-open">Tap to open</span></span>
                   </span>
                 </span>
                 <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
@@ -8941,7 +8945,7 @@ export default function DashboardLab() {
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🤲</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>Your part of the story</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Your recurring and one-time gifts. Tap to open.</span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Your recurring and one-time gifts. <span className="lab-hint-open">Tap to open</span></span>
                   </span>
                 </span>
                 <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
