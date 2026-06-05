@@ -2994,7 +2994,7 @@ export default function DashboardLab() {
     return map;
   }, [dashboardThankYous]);
 
-  const { data: rawParentContributions = [], refetch: refetchParentContributions } = useQuery<ParentContribution[]>({
+  const { data: rawParentContributions = [], refetch: refetchParentContributions, isLoading: parentContributionsLoading } = useQuery<ParentContribution[]>({
     queryKey: ["/api/funds", activeFundId, "parent-contributions"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${activeFundId}/parent-contributions`, { credentials: "include" });
@@ -3013,6 +3013,17 @@ export default function DashboardLab() {
   );
   const activeAutoInvest = parentContributions.find((c) => c.status === "active");
   const pausedAutoInvest = parentContributions.find((c) => c.status === "paused");
+
+  // LAB: the dashboard mounts before the per-fund queries resolve, so the
+  // recurring line, the at-majority projection, and the collapse stats briefly
+  // compute from EMPTY arrays - "Set up recurring", a too-low projection, a
+  // bogus "+$22,743 this month". Those are WRONG money numbers that then jump.
+  // This gate (true once the recurring + summary data that makes them correct
+  // is in) lets us show a calm skeleton instead of a wrong value meanwhile.
+  // For a fund with genuinely no recurring the queries still resolve (to
+  // empty), so the gate opens and the honest "no recurring" state shows.
+  const recurringDataReady = !activeFundId || (!recurringLoading && !parentContributionsLoading);
+  const heroDataReady = recurringDataReady && (!activeFundId || !!dashboardSummary);
 
   // ===== Detail history modal (per-schedule + all-contributions) =====
   // Same generic modal Activity uses, mounted at Dashboard's page root so
@@ -6381,6 +6392,15 @@ export default function DashboardLab() {
                           </button>
                         )}
                         {(() => {
+                          // LAB: until the recurring data lands, the projection
+                          // computes from $0/mo and reads far too low, then jumps.
+                          // Show a calm pulse placeholder (the skeleton the founder
+                          // likes, sized to the pill) instead of a wrong number.
+                          if (!heroDataReady) {
+                            return (
+                              <div className="animate-pulse" aria-hidden style={{ height: 40, width: 220, maxWidth: "100%", borderRadius: 9999, background: "rgba(255,255,255,0.12)" }} />
+                            );
+                          }
                           // Hero CTA = the long-horizon emotional anchor. Math
                           // (two-phase contribution + compound, 7% yearly average,
                           // UTMA-aware: contributions stop at 18) lives in the
@@ -6559,6 +6579,14 @@ export default function DashboardLab() {
                 label = isOwnerMode ? "Start your own recurring" : "Set up recurring";
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-dashed border-[hsl(var(--kiddo-evergreen)/0.4)] bg-[hsl(var(--kiddo-evergreen)/0.04)]";
                 onClick = () => { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); };
+              }
+              // LAB: until the recurring data lands, `active`/`paused` are empty
+              // so this falls to "Set up recurring" even when there IS recurring
+              // (a wrong, jumpy CTA). Hold a calm pulse until we actually know.
+              if (!recurringDataReady) {
+                return (
+                  <div className="animate-pulse" aria-hidden style={{ height: 34, width: 200, maxWidth: "100%", borderRadius: 9999, background: "hsl(var(--kiddo-evergreen) / 0.08)", marginTop: 12 }} />
+                );
               }
               return (
                 <button
@@ -7382,7 +7410,7 @@ export default function DashboardLab() {
               icon={TrendingUp}
               title={isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}
               stat={(() => {
-                if (trendData.length < 2) return "The full chart over time";
+                if (!heroDataReady || trendData.length < 2) return "The full chart over time"; // LAB: don't show a "this month" move computed from a half-loaded baseline (it reads as the whole balance)
                 const latest = trendData[trendData.length - 1].value;
                 const cutoff = Date.now() - 30 * 86400000;
                 let past = trendData[0].value;
@@ -11272,6 +11300,12 @@ export default function DashboardLab() {
                         </p>
                       )}
                       {totalValue > 0 && age18Transition && (() => {
+                        // LAB: hold a pulse until the recurring data lands - same
+                        // as the hero projection, else this reads far too low then
+                        // jumps (and disagrees with the hero for a beat).
+                        if (!heroDataReady) {
+                          return <div className="animate-pulse" aria-hidden style={{ height: 18, width: 260, maxWidth: "100%", borderRadius: 6, background: "hsl(var(--kiddo-evergreen) / 0.10)", margin: "4px 0" }} />;
+                        }
                         const fmtUSD0 = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
                         const yearsToMajority = age18Transition.daysUntil18 / 365.25;
                         // Sum every active recurring schedule (parent contributions + gifter
