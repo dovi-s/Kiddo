@@ -7,6 +7,7 @@ import { normalizePath, isMarketingRoute } from "@/lib/routes";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { getActiveFundId } from "@/hooks/use-active-fund";
 import { RealtimeProvider } from "@/lib/realtime-context";
 import { Toaster } from "@/components/ui/toaster";
 import { DemoGiftMoment } from "@/components/DemoGiftMoment";
@@ -832,6 +833,20 @@ function App() {
 
   useEffect(() => {
     prefetchCriticalRoutes();
+    // Warm-data Layer 3, web half (WARM_DATA_AND_LOCK_SPEC): in PARALLEL with
+    // the /api/auth/me session check, pre-warm the funds list + the
+    // remembered active fund's dashboard-summary. By the time auth resolves
+    // and Dashboard mounts, its data is in flight or landed — the cold-load
+    // skeleton window shrinks to ~one round-trip. Gated on a remembered fund
+    // id (only written after a prior login), so public visitors never fire
+    // authed requests. (The Face ID lock-screen half is native work,
+    // deferred with the native track.)
+    const rememberedFundId = getActiveFundId();
+    if (rememberedFundId) {
+      void import("@/lib/prefetch").then(({ prefetchDashboard }) => {
+        prefetchDashboard(queryClient, rememberedFundId);
+      });
+    }
   }, []);
   const isPreview = new URLSearchParams(search).has("preview");
   const isGiftPage = isPublicGiftRoute(location);
