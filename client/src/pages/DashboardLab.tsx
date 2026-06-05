@@ -7264,6 +7264,22 @@ export default function DashboardLab() {
               );
             })()}
 
+            {/* LAB: the growth chart is "brokerage software" (the critique) -
+                collapsed under one tap. The hero sparkline already carries the
+                glanceable "it's growing" signal; the full interactive chart is
+                a tap away for those who want it. */}
+            <details data-testid="lab-chart-details" style={{ marginTop: 4 }}>
+              <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📊</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}</span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>The full chart over time. Tap to open.</span>
+                  </span>
+                </span>
+                <ChevronRight size={18} style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
+              </summary>
+              <div style={{ marginTop: 12 }}>
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -7491,6 +7507,8 @@ export default function DashboardLab() {
                 )}
               </div>
             </motion.section>
+              </div>
+            </details>
 
 
             {/* Age-band strategy nudge. Fires once per band when the child's age crosses
@@ -8838,6 +8856,20 @@ export default function DashboardLab() {
               );
             })()}
 
+            {/* LAB: the parent's own recurring + one-time contributions are
+                engine/accounting - collapsed under one tap. */}
+            <details data-testid="lab-yourpart-details" style={{ marginTop: 4 }}>
+              <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🤲</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>Your part of the story</span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Your recurring and one-time gifts. Tap to open.</span>
+                  </span>
+                </span>
+                <ChevronRight size={18} style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
+              </summary>
+              <div style={{ marginTop: 12 }}>
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -9749,6 +9781,8 @@ export default function DashboardLab() {
               </div>
               </div>
             </motion.section>
+              </div>
+            </details>
 
             {/* ===== Occasions ===== */}
             <motion.section
