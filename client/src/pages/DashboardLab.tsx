@@ -5613,9 +5613,20 @@ export default function DashboardLab() {
               /* Faces gently rise + grow on hover/tap. */
               .lab-face { transition: transform .2s cubic-bezier(0.16,1,0.3,1); cursor: default; }
               .lab-face:hover { transform: translateY(-4px) scale(1.06); }
+              /* Faces cascade in one-by-one (the "alive" entrance). */
+              .lab-faces > * { animation: labFaceIn .44s cubic-bezier(0.16,1,0.3,1) backwards; }
+              .lab-faces > *:nth-child(1){animation-delay:.04s}
+              .lab-faces > *:nth-child(2){animation-delay:.09s}
+              .lab-faces > *:nth-child(3){animation-delay:.14s}
+              .lab-faces > *:nth-child(4){animation-delay:.19s}
+              .lab-faces > *:nth-child(5){animation-delay:.24s}
+              .lab-faces > *:nth-child(6){animation-delay:.29s}
+              .lab-faces > *:nth-child(7){animation-delay:.34s}
+              .lab-faces > *:nth-child(n+8){animation-delay:.39s}
+              @keyframes labFaceIn { from { opacity: 0; transform: translateY(10px) scale(0.84); } to { opacity: 1; transform: none; } }
               @media (prefers-reduced-motion: reduce) {
                 .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div,
-                .lab-tap, .lab-face { transition: none !important; animation: none !important; }
+                .lab-tap, .lab-face, .lab-faces > * { transition: none !important; animation: none !important; }
               }
             `}</style>
             <motion.section
@@ -8480,7 +8491,7 @@ export default function DashboardLab() {
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
                       return (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                    <div className="lab-faces" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                       {visibleGifters.map(gifter => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
@@ -11627,6 +11638,7 @@ export default function DashboardLab() {
                     } catch { /* clipboard blocked */ }
                   }
                 }}
+                className="lab-tap"
                 style={{
                   width: "100%", padding: "14px 16px", marginBottom: 14,
                   background: "transparent", border: "1px dashed rgba(26,23,16,0.14)",
