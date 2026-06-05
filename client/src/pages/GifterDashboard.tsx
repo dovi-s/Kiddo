@@ -153,6 +153,21 @@ function fmtMoney(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
 }
 
+// Parse a gifter-safe "Month Day" birthday label (the only birthday signal the
+// server sends — no year, by T&S design) into the ms of its NEXT occurrence, so
+// the family header can surface "who's birthday is next". Returns null if the
+// label is missing or unparseable.
+function nextBirthdayMs(label: string | null): number | null {
+  if (!label) return null;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  for (const yr of [now.getFullYear(), now.getFullYear() + 1]) {
+    const t = new Date(`${label}, ${yr}`).getTime();
+    if (!Number.isNaN(t) && t >= startOfToday) return t;
+  }
+  return null;
+}
+
 function fmtDate(value: string | null) {
   if (!value) return "Not yet gifted";
   return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -272,9 +287,17 @@ export default function GifterDashboard() {
   // singletons render headerless (and never expose a last name). Group order
   // follows the server's recency sort — the first fund seen claims the slot, so
   // a family stays anchored to its most recent gift.
-  const fundGroups = useMemo(() => {
+  type FundGroup = {
+    key: string;
+    familyName: string | null;
+    funds: GifterFundRow[];
+    total: number; // total this gifter has given across the family
+    count: number;
+    nextBirthday: { childName: string; label: string; ms: number } | null; // soonest upcoming birthday in the family
+  };
+  const fundGroups = useMemo<FundGroup[]>(() => {
     const rows = data?.funds ?? [];
-    const groups: Array<{ key: string; familyName: string | null; funds: GifterFundRow[] }> = [];
+    const groups: FundGroup[] = [];
     const indexByKey = new Map<string, number>();
     for (const f of rows) {
       const fam = f.familyName ? f.familyName.trim() : "";
@@ -284,11 +307,37 @@ export default function GifterDashboard() {
         groups[existing].funds.push(f);
       } else {
         indexByKey.set(key, groups.length);
-        groups.push({ key, familyName: fam || null, funds: [f] });
+        groups.push({ key, familyName: fam || null, funds: [f], total: 0, count: 0, nextBirthday: null });
       }
+    }
+    // Per-family rollups — the summary the super-gifter scans: how much they've
+    // put into this family, how many kids, and who's birthday is next (the
+    // actionable "show up for them next" cue).
+    for (const g of groups) {
+      g.total = g.funds.reduce((sum, f) => sum + (f.totalGifted || 0), 0);
+      g.count = g.funds.length;
+      let soonest: { childName: string; label: string; ms: number } | null = null;
+      for (const f of g.funds) {
+        const ms = nextBirthdayMs(f.nextBirthdayLabel);
+        if (ms != null && (soonest == null || ms < soonest.ms)) {
+          soonest = { childName: f.childName, label: f.nextBirthdayLabel || "", ms };
+        }
+      }
+      g.nextBirthday = soonest;
     }
     return groups;
   }, [data?.funds]);
+
+  // Sort control for the cross-family super-gifter (only surfaces at scale — see
+  // the >= 4 gate in the render — so Jay's 3-kid view stays clean). Reorders the
+  // FAMILY groups; "recent" keeps the server's recency order.
+  const [groupSort, setGroupSort] = useState<"recent" | "given" | "birthday">("recent");
+  const sortedGroups = useMemo<FundGroup[]>(() => {
+    const gs = [...fundGroups];
+    if (groupSort === "given") gs.sort((a, b) => b.total - a.total);
+    else if (groupSort === "birthday") gs.sort((a, b) => (a.nextBirthday?.ms ?? Infinity) - (b.nextBirthday?.ms ?? Infinity));
+    return gs;
+  }, [fundGroups, groupSort]);
 
   // Active + paused recurring schedules belonging to this gifter.
   // Powers the "Your recurring gifts" section per locked Decision A
@@ -1213,15 +1262,44 @@ export default function GifterDashboard() {
                 <p className="mt-4 text-sm text-muted-foreground">Loading your saved funds...</p>
               ) : data?.funds?.length ? (
                 <div className="mt-5 space-y-8">
-                  {fundGroups.map((group) => (
+                  {/* Sort control — surfaces ONLY at scale (4+ families/cards),
+                      so the common 1-3 fund view stays clean. For the prolific
+                      cross-family gifter, reorders families by recency, total
+                      given, or whose birthday is next. */}
+                  {fundGroups.length >= 4 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs" data-testid="gifter-sort">
+                      <span className="mr-0.5 text-muted-foreground">Sort</span>
+                      {([["recent", "Recent"], ["given", "Most given"], ["birthday", "Soonest birthday"]] as const).map(([k, label]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setGroupSort(k)}
+                          className={`rounded-full px-2.5 py-1 font-medium transition-colors ${groupSort === k ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {sortedGroups.map((group) => (
                     <div key={group.key}>
                       {/* Family header — only for a real family cluster (2+ kids
                           sharing a last name). Gives the cross-family gifter the
-                          context a flat first-name list can't. */}
+                          context a flat first-name list can't: whose kids, how
+                          much they've put in, and whose birthday is next. */}
                       {group.familyName && (
-                        <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                          <h3 className="font-heading text-lg font-semibold text-foreground">The {group.familyName} family</h3>
-                          <span className="text-xs text-muted-foreground">{group.funds.length} kids you're showing up for</span>
+                        <div className="mb-3">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <h3 className="font-heading text-lg font-semibold text-foreground">The {group.familyName} family</h3>
+                            <span className="text-xs text-muted-foreground">
+                              {group.count} {group.count === 1 ? "kid" : "kids"} · {fmtMoney(group.total)} given
+                            </span>
+                          </div>
+                          {group.nextBirthday && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Next up: {group.nextBirthday.childName}'s birthday · {group.nextBirthday.label}
+                            </p>
+                          )}
                         </div>
                       )}
                       <div className="grid gap-4 md:grid-cols-2">
