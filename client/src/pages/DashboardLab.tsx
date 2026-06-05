@@ -1,8 +1,7 @@
-// DASHBOARD LAB — a FORK of Dashboard.tsx for the /design-lab redesign
-// sandbox (2026-06-04). Renders the real Luke demo dashboard identically
-// when logged into the demo. We redesign sections HERE; the real
-// Dashboard.tsx is untouched until a section is blessed and ported back.
-// Throwaway: delete once the redesign lands.
+// DASHBOARD LAB — clean fork of Dashboard.tsx (reset 2026-06-04 after the
+// blind redesign attempts read worse, not better). Pristine baseline =
+// the real dashboard. Next design comes from a tool/designer that can SEE
+// and iterate; I implement it here. Throwaway: delete when done.
 ﻿import { Fragment, lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
 
 function stripHtml(str: string | null | undefined): string {
@@ -3038,6 +3037,16 @@ export default function DashboardLab() {
 
   useEffect(() => {
     if (giftToastDismissed || !gifts.length) return;
+    // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
+    // (top-center). This bottom-right GiftReceivedToast is the real-product
+    // PLG nudge — firing BOTH meant two different gifts announced at once in
+    // two places ("Manny added $50" top-center + "Phil just gifted $100"
+    // bottom-right). The earlier fix only excluded `demo-` OVERLAY gifts, but
+    // every demo fund also has SEEDED gifts dated today (Phil's monthly
+    // auto-invest), which are real ids and slipped through. Suppress this
+    // toast entirely for demo accounts so the demo shows ONE arrival beat.
+    // (Founder catch 2026-06-04, follow-up.) Real accounts keep the card.
+    if (isDemoAccount) return;
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     // Iterate every recent gift (not just the first) and pick the
     // newest that hasn't already been dismissed. Previously `.find()`
@@ -3047,13 +3056,6 @@ export default function DashboardLab() {
     const recent = gifts.find((g) => {
       const createdAt = g.createdAt ? new Date(g.createdAt).getTime() : 0;
       if (createdAt <= oneDayAgo) return false;
-      // Demo OVERLAY gifts never get this card (founder catch 2026-06-04:
-      // "multiple of the same, some bottom right some top center").
-      // DemoGiftMoment already announces the ambient gift with its own
-      // top-center toast at record time, and the hero flash + roll land it
-      // visually — the bottom-right GiftReceivedToast firing for the SAME
-      // overlay gift was the third announcement of one event. Real gifts
-      // (real ids) keep the card.
       if (String(g.id || "").startsWith("demo-")) return false;
       return !isGiftToastDismissed(String(g.id || ""));
     });
@@ -3084,7 +3086,7 @@ export default function DashboardLab() {
       // canonical surfacing.
       markGiftToastDismissed(String(recent.id || ""));
     }
-  }, [gifts, giftToastDismissed]);
+  }, [gifts, giftToastDismissed, isDemoAccount]);
 
   // (Removed: the effect that surfaced `pendingGiftNotice`. See note on
   // the deleted state above — the banner pattern was the wrong shape for
@@ -5936,10 +5938,7 @@ export default function DashboardLab() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.32, delay: 0.22, ease: "easeOut" }}
                         style={{
-                          // LAB: monumental hero (neobank "one huge number"
-                          // lever). 50 -> 60, tighter tracking. The single
-                          // highest-confidence premium change I can make blind.
-                          fontSize: 60,
+                          fontSize: 50,
                           fontWeight: 700,
                           // Gold while EITHER the count-up is running OR a new gift
                           // just arrived. The newGiftFlash window holds the cue lit
@@ -5961,40 +5960,6 @@ export default function DashboardLab() {
                           ? formatCurrency(scrubbedTrendPoint!.value)
                           : formatCurrency(displayHeroBalance)}
                       </motion.div>
-
-                      {/* LAB: hero growth sparkline — the signature premium-
-                          fintech richness element ("rich, not flat"). Drawn
-                          from REAL trendData (not decorative), in cream/gold so
-                          it reads on the evergreen hero. Glanceable trajectory;
-                          the full interactive chart still lives below. */}
-                      {!isScrubbing && totalValue > 0 && trendData.length >= 2 && (() => {
-                        const vals = trendData.map((p: any) => Number(p.value) || 0);
-                        const min = Math.min(...vals);
-                        const max = Math.max(...vals);
-                        const range = max - min || 1;
-                        const W = 320, H = 46;
-                        const pts = vals.map((v, i) => {
-                          const x = vals.length > 1 ? (i / (vals.length - 1)) * W : 0;
-                          const y = H - ((v - min) / range) * (H - 8) - 4;
-                          return [x, y] as const;
-                        });
-                        const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-                        const area = `${line} L${W},${H} L0,${H} Z`;
-                        const [ex, ey] = pts[pts.length - 1];
-                        return (
-                          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="42" preserveAspectRatio="none" aria-hidden style={{ display: "block", marginBottom: 14, marginTop: -2 }}>
-                            <defs>
-                              <linearGradient id="hero-spark-fill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="hsl(var(--kiddo-gold-light))" stopOpacity="0.26" />
-                                <stop offset="100%" stopColor="hsl(var(--kiddo-gold-light))" stopOpacity="0" />
-                              </linearGradient>
-                            </defs>
-                            <path d={area} fill="url(#hero-spark-fill)" />
-                            <path d={line} fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                            <circle cx={ex} cy={ey} r="3.5" fill="hsl(var(--kiddo-gold-light))" stroke="white" strokeWidth="1.5" />
-                          </svg>
-                        );
-                      })()}
 
                       {/* Hero gain pill removed — the +$X all-time gain (and its
                           percent) was duplicating what the lifetime stats row's
@@ -6336,88 +6301,6 @@ export default function DashboardLab() {
                 </div>
               </div>
             </motion.section>
-
-            {/* ════════════════════════════════════════════════════════════════
-                LAB: STORY-FIRST "{Child}'s Future" block. The billion-dollar
-                critique's core demand: LEAD with Future + Family, demote the
-                portfolio. Three emotional anchors before any stock ticker:
-                the future projection (the wow number), the people building it
-                (faces, a bank can't have them), and the countdown. Visual
-                LAYERS per the critique: green future card (layer 1) + a soft
-                family card (layer 2), distinct from the white data cards below.
-                NOTE: the existing "who loves" + projection sections still
-                render below — once you confirm leading with this, those get
-                deleted (this is the additive demonstration).
-                ════════════════════════════════════════════════════════════ */}
-            {!isReadOnlyFund && totalValue > 0 && (() => {
-              const yrs = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
-              const monthly = activeAutoInvest ? (parseFloat(String((activeAutoInvest as any).amount || "0")) || 0) : 0;
-              const projected = yrs > 0.08
-                ? projectFundValue({ startingValue: totalValue, monthlyContribution: monthly, yearsAhead: yrs })
-                : null;
-              const childName = recipientFirstNameDisplay || "your child";
-              const majAge = age18Transition?.majorityAge || majorityAge;
-              const days = age18Transition ? Math.max(0, Math.round(age18Transition.daysUntil18)) : null;
-              const faces = gifterRoster.slice(0, 6);
-              const FACE_TINTS = ["#E9F0EA", "#F5E9D2", "#EDE7DC", "#E3EDE6", "#F0E6E9", "#E6ECF0"];
-              return (
-                <div className="mt-4 space-y-3" data-testid="lab-future-family">
-                  {/* LAYER 1 — FUTURE: the wow number, on the brand green. */}
-                  {projected != null && (
-                    <div
-                      className="shadow-premium-md"
-                      style={{
-                        background: "linear-gradient(150deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 120%)",
-                        borderRadius: "var(--radius-container)",
-                        padding: "22px 24px",
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div style={{ position: "absolute", right: -30, top: -30, width: 140, height: 140, borderRadius: "50%", background: "radial-gradient(circle, hsl(var(--kiddo-gold) / 0.18), transparent 70%)" }} aria-hidden />
-                      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,247,232,0.55)", margin: 0 }}>
-                        {childName}'s future
-                      </p>
-                      <p className="font-heading" style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-1.5px", lineHeight: 1.04, color: "#FFF7E8", margin: "6px 0 0" }}>
-                        {formatCurrency(projected)}
-                      </p>
-                      <p style={{ fontSize: 13.5, color: "rgba(255,247,232,0.78)", margin: "8px 0 0", fontWeight: 500 }}>
-                        🌱 Projected when {childName} turns {majAge}
-                        {days != null && days > 0 && (
-                          <span style={{ color: "rgba(255,247,232,0.55)" }}> · {days.toLocaleString("en-US")} days away</span>
-                        )}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* LAYER 2 — FAMILY: the people, faces up front. */}
-                  {faces.length > 0 && (
-                    <div
-                      className="shadow-premium-sm"
-                      style={{ background: "hsl(var(--kiddo-evergreen) / 0.05)", border: "1px solid hsl(var(--kiddo-evergreen) / 0.14)", borderRadius: "var(--radius-container)", padding: "18px 20px" }}
-                    >
-                      <p className="font-heading" style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))", margin: 0 }}>
-                        {contributorCount > 0 ? contributorCount : faces.length} people are building {childName}'s future
-                      </p>
-                      <div style={{ display: "flex", gap: 10, marginTop: 14, overflowX: "auto", paddingBottom: 2 }}>
-                        {faces.map((g, i) => (
-                          <div key={g.name + i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, width: 56, flexShrink: 0 }}>
-                            <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: `linear-gradient(160deg, ${FACE_TINTS[g.colorIdx % FACE_TINTS.length]} 0%, #FFFFFF 130%)`, border: "2px solid #FFF", boxShadow: "0 1px 3px rgba(26,23,16,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              {g.avatarUrl
-                                ? <img src={g.avatarUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                : <span className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))" }}>{g.initials}</span>}
-                            </div>
-                            <span style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {g.preferredName || g.name.split(" ")[0]}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
 
             {/* Parent's "your part of the story" moment. Post-handoff the parent
                 becomes a previous owner (read-only); the cold "transferred · view
