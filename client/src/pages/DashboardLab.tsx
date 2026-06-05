@@ -6681,7 +6681,7 @@ export default function DashboardLab() {
                       className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:opacity-75"
                       data-testid="button-start-a-fund-doorway"
                     >
-                      Start a fund →
+                      Start a fund
                     </button>
                   </div>
                 </div>
@@ -7125,7 +7125,7 @@ export default function DashboardLab() {
                           {/* Graduated owner, hasn't started their own yet → invitation. */}
                           {yourRecurringRowTotal === 0 && isOwnerMode && (
                             <span className="text-[11px] font-medium text-[hsl(var(--kiddo-evergreen))]">
-                              {" · start your own →"}
+                              {" · start your own"}
                             </span>
                           )}
                         </span>
@@ -7321,7 +7321,13 @@ export default function DashboardLab() {
                         className="mt-3 w-full text-center text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         data-testid="lifetime-link-recent"
                       >
-                        Last 30 days ↗
+                        {/* Trailing → = "leaves this page" (the page-wide arrow
+                            grammar, founder-locked 2026-06-05): navigation links
+                            get →; in-place actions/modals get NO arrow; ↗/↘ are
+                            reserved for money direction next to a number. This
+                            one navigates to Activity, so it was wearing the
+                            wrong glyph (↗ = trend). */}
+                        Last 30 days →
                       </button>
                     )}
                   </div>
@@ -7995,7 +8001,7 @@ export default function DashboardLab() {
                           Switching to {recommendedLabel}…
                         </span>
                       ) : (
-                        <>Switch to {recommendedLabel} →</>
+                        <>Switch to {recommendedLabel}</>
                       )}
                     </Button>
                     <button
@@ -9209,7 +9215,7 @@ export default function DashboardLab() {
                             }}
                             data-testid="who-loves-share-link"
                           >
-                            Share with one more →
+                            Share with one more
                           </button>
                         )}
                       </p>
@@ -9345,7 +9351,7 @@ export default function DashboardLab() {
                                 className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
                                 data-testid={`gentle-nudge-action-${nudgeKey}`}
                               >
-                                See both schedules →
+                                See both schedules
                               </button>
                               <button
                                 type="button"
@@ -9620,7 +9626,7 @@ export default function DashboardLab() {
                                 style={{ fontSize: 11.5, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                                 onClick={() => ownPaused.forEach(c => handleUpdateAutoInvestStatus(String(c.id), "active"))}
                               >
-                                Resume all →
+                                Resume all
                               </button>
                             )}
                           </div>
@@ -10014,7 +10020,7 @@ export default function DashboardLab() {
                       onClick={() => { openDetailScope({ kind: "contributions" }); }}
                       data-testid="button-one-time-view-all-readonly"
                     >
-                      View past investments →
+                      View past investments
                     </button>
                   ) : lastOwnGift ? (
                     <div className="space-y-2">
@@ -10043,7 +10049,7 @@ export default function DashboardLab() {
                         }}
                         data-testid="button-one-time-add-to-mix-v2"
                       >
-                        Invest {formatMoneyFriendly(lastOwnGift.amount)} in {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund →
+                        Invest {formatMoneyFriendly(lastOwnGift.amount)} in {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund
                       </Button>
                       {lastOwnGift.ticker && (() => {
                         // Mirror the same fallback chain used in the metadata line above
@@ -10079,7 +10085,7 @@ export default function DashboardLab() {
                         onClick={() => { haptic("light"); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
                         data-testid="button-one-time-custom-amount-v2"
                       >
-                        Different amount or stock →
+                        Different amount or stock
                       </button>
                       {/* "View all contributions" — opens the same modal
                           Activity uses, scoped to all the parent's
@@ -10094,7 +10100,7 @@ export default function DashboardLab() {
                         onClick={() => { openDetailScope({ kind: "contributions" }); }}
                         data-testid="button-one-time-view-all-v2"
                       >
-                        View all your investments →
+                        View all your investments
                       </button>
                     </div>
                   ) : activeAutoInvest ? (
@@ -11887,7 +11893,7 @@ export default function DashboardLab() {
                 data-testid="button-pass-it-along"
               >
                 <span style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)" }}>
-                  Know a family who'd want this? <span style={{ fontWeight: 600, color: "rgba(26,23,16,0.75)" }}>Pass it along →</span>
+                  Know a family who'd want this? <span style={{ fontWeight: 600, color: "rgba(26,23,16,0.75)" }}>Pass it along</span>
                 </span>
               </button>
             )}
