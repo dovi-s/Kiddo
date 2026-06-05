@@ -5252,9 +5252,28 @@ export async function registerRoutes(
       }
 
       const allFundIds = Array.from(new Set([...savedFundIds, ...Array.from(statsByFund.keys())]));
-      const fundRecords = await Promise.all(allFundIds.map(async (fundId) => storage.getFund(fundId)));
+      // The gifter dashboard is for EXTERNAL gifting. Funds where the viewer is
+      // part of the HOUSEHOLD — the owner/custodian, the previous owner (the
+      // pre-handoff parent of a now-adult fund), or an accepted co-parent
+      // collaborator — hold their own PARENTAL contributions, NOT gifts. Those
+      // belong on the parent dashboard ("Your contributions"), and showing them
+      // here framed as "89 gifts sent" muddles a parent into a gifter (founder
+      // catch 2026-06-04). Exclude them; the summary stats below reduce over the
+      // filtered list, so the whole page stays consistent. A true external
+      // gifter (grandparent/uncle) owns none of these, so their view is
+      // unchanged. 2026-06-04.
+      const [fundRecords, collaboratedFunds] = await Promise.all([
+        Promise.all(allFundIds.map(async (fundId) => storage.getFund(fundId))),
+        storage.getCollaboratedFunds(userId).catch(() => [] as any[]),
+      ]);
+      const householdFundIds = new Set(collaboratedFunds.map((f: any) => String(f.id)));
       const fundsPayload = fundRecords
-        .filter((fund) => Boolean(fund))
+        .filter((fund) =>
+          Boolean(fund) &&
+          String((fund as any).userId || "") !== userId &&
+          String((fund as any).previousOwnerId || "") !== userId &&
+          !householdFundIds.has(String((fund as any).id || "")),
+        )
         .map(async (fund: any) => {
           const stats = statsByFund.get(fund.id) || { totalGifted: 0, giftCount: 0, lastGiftAt: null };
           const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
