@@ -7447,16 +7447,17 @@ export default function DashboardLab() {
                     className="relative"
                     // LAB: the trend "draws in" left-to-right (a clip wipe) -
                     // the honest reveal we wanted instead of recharts' ugly
-                    // point-morph (which is why the line stays
-                    // isAnimationActive=false; it renders its TRUE shape and the
-                    // wipe uncovers it). whileInView once:false replays on every
-                    // scroll-in, and it re-fires when the collapse opens (the
-                    // content remounts). Top/bottom insets extended so the wipe
-                    // never crops the hover tooltip.
+                    // point-morph (line stays isAnimationActive=false; it renders
+                    // its TRUE shape and the wipe uncovers it). Uses `animate`
+                    // (NOT whileInView) so it ALWAYS fires on mount - whileInView
+                    // never triggered inside the collapse (height-0 mount + lazy
+                    // load), leaving the chart clipped-invisible. The collapse
+                    // remounts its content on open, so this re-draws every open.
+                    // Top/bottom insets extended so the wipe never crops the
+                    // hover tooltip.
                     initial={{ clipPath: "inset(-30% 100% -30% 0%)" }}
-                    whileInView={{ clipPath: "inset(-30% -5% -30% 0%)" }}
-                    viewport={{ once: false, amount: 0.4 }}
-                    transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
+                    animate={{ clipPath: "inset(-30% -5% -30% 0%)" }}
+                    transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
                   >
                     <DashboardTrendChart data={trendData} onScrub={setScrubbedTrendPoint} />
                     {totalValue > 0 && trendData.length > 0 && (() => {
