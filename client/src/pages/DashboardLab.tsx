@@ -1385,7 +1385,7 @@ export default function DashboardLab() {
   // negative margin here caused a long blank-white gap (row visible, trigger
   // not yet met). once:false so the cascade REPLAYS every time the row
   // re-enters view (founder loves it - don't ration it to first-view only).
-  const facesInView = useInView(facesRef, { once: false, margin: "0px 0px 80px 0px" });
+  const facesInView = useInView(facesRef, { once: false, margin: "0px 0px 150px 0px" });
   // 2026-05-12: The wrong-shape two-page horizontal-scroll-snap carousel
   // (Page 1 Holdings list + Page 2 donut breakdown + Holdings/Breakdown
   // segmented switcher) was surgically removed. The Holdings LIST itself
@@ -5642,15 +5642,17 @@ export default function DashboardLab() {
               /* Faces gently rise + grow on hover/tap. */
               .lab-face { transition: transform .2s cubic-bezier(0.16,1,0.3,1); cursor: default; }
               .lab-face:hover { transform: translateY(-4px) scale(1.06); }
-              /* Faces cascade in one-by-one - triggered when the row enters
-                 view (framer useInView, once). Visible on load -> cascades with
-                 the load; below the fold (cards expanded / lower) -> waits and
-                 cascades when you scroll to it. Faces sit hidden (opacity 0)
-                 until the .lab-faces-go class lands; backwards fill holds each
-                 hidden through its stagger delay; the -go rule supplies the
-                 persistent end-opacity so :hover (transform) still works after. */
-              .lab-faces > * { opacity: 0; }
-              .lab-faces-go > * { opacity: 1; animation: labFaceIn .52s cubic-bezier(0.16,1,0.3,1) backwards; }
+              /* Faces cascade in one-by-one when the row enters view (framer
+                 useInView), replaying each time. ROBUSTNESS: faces are VISIBLE
+                 by default (opacity 1) - the cascade is a pure enhancement that
+                 can never leave them blank. When .lab-faces-go lands, the
+                 animation's backwards fill dips each face to opacity 0 through
+                 its stagger delay then animates it in; if the in-view detector
+                 ever fails or reads "out", the faces simply stay shown. The
+                 150px pre-trigger fires the cascade just before they're on
+                 screen, so the dip happens off-screen (no flash). */
+              .lab-faces > * { opacity: 1; }
+              .lab-faces-go > * { animation: labFaceIn .52s cubic-bezier(0.16,1,0.3,1) backwards; }
               .lab-faces-go > *:nth-child(1){animation-delay:.05s}
               .lab-faces-go > *:nth-child(2){animation-delay:.11s}
               .lab-faces-go > *:nth-child(3){animation-delay:.17s}
