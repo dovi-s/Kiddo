@@ -53,6 +53,24 @@ This reframe does three things at once:
    genuinely uncopyable by a bolt-on feature. But this moat only exists if we
    **build the company around the handoff**, not around the gift.
 
+## 2.5 The invariants under the bets
+
+Each load-bearing bet rests on something that won't move in 10 years. Worth
+naming, because it tells us where long-term effort is safe to sink:
+
+- People give gifts to children they love, and resent that most of it is
+  landfill. → the wedge.
+- Every cohort turns 18 and goes financially active; incumbents will keep
+  paying top-dollar CAC for that person. → the prize.
+- Records of being loved appreciate with age and can't be transferred out
+  with the assets. → the moat.
+- Compounding needs time; childhood is the longest runway a person gets.
+  → the meter.
+
+What *isn't* stable: custody vendors, payment rails, regulatory detail,
+channels, the fee structure itself. Those we rent or keep swappable — already
+doctrine. Sink effort into the first list, keep optionality on the second.
+
 ## 3. The North Star + the one metric that gates everything
 
 - **North Star:** own the lifetime financial relationship (kid who received →
