@@ -11270,8 +11270,7 @@ export default function DashboardLab() {
                 the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
                 extended to all transferred-fund viewers 2026-06-02. */}
             {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
-            {/* LAB: the handoff section rolls in on view too (replaying), so the
-                emotional finale lands as you arrive at it. */}
+            // LAB: handoff section rolls in on view too (replaying).
             <motion.section
               initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
