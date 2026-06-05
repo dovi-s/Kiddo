@@ -7017,7 +7017,15 @@ export default function DashboardLab() {
                   testid="lab-summary-details"
                   icon={Sprout}
                   title={isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}
-                  stat={computedInvestedGain >= 1 ? `+$${Math.round(computedInvestedGain).toLocaleString("en-US")} grown so far` : "Gifts, growth, and where it all went"}
+                  // The closed-state stat is the summary OF this sheet, so it
+                  // must show the sheet's own "Market growth" number
+                  // (marketGrowth30: totalValue − contribution flows — the
+                  // ledger that sums exactly to "Worth today"). It previously
+                  // used computedInvestedGain (holdings current − cost basis),
+                  // a different growth definition that drifts by uninvested
+                  // cash/realized bits — founder saw "+$9,553 grown so far"
+                  // collapse open to "Market growth +$9,603.39".
+                  stat={Number.isFinite(marketGrowth30) && marketGrowth30 >= 1 ? `+$${Math.round(marketGrowth30).toLocaleString("en-US")} grown so far` : "Gifts, growth, and where it all went"}
                 >
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
@@ -7572,24 +7580,30 @@ export default function DashboardLab() {
               icon={TrendingUp}
               title={isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}
               stat={(() => {
-                // LAB: range-INDEPENDENT "this month" move from RAW snapshots —
-                // NOT trendData. trendData is filtered to the selected chart
-                // range AND gets a synthetic $0 baseline row prepended; this
-                // walk landed on that $0 as "the value 30 days ago" and showed
-                // the WHOLE balance as a monthly move ("+$22,743 this month" on
-                // a $22.7k fund). Real snapshot rows over the full history =
-                // the same truth no matter which range the chart is on.
+                // LAB: range-INDEPENDENT "this month" move — computed with the
+                // EXACT same recipe as the in-chart "Growth · 1M" box
+                // (growthInRange): live totalValue minus the FIRST snapshot
+                // inside the 30-day window, plus the same today's-sell guard.
+                // One fact = one formula. The previous walk used last-snapshot
+                // minus the snapshot just OUTSIDE the window — off by a
+                // boundary day + the live-vs-snapshot gap, so this said "+$446"
+                // while the chart said "+$609.63" for the same month (founder
+                // caught it). NOT trendData either: that's range-filtered and
+                // carries a synthetic $0 baseline row (the earlier
+                // whole-balance-as-monthly-move bug).
                 if (!heroDataReady) return "The full chart over time"; // don't compute from a half-loaded baseline (it reads as the whole balance)
                 const snaps = [...usableFundHistory]
                   .map((p) => ({ ts: new Date(p.snapshotDate || 0).getTime(), value: parseFloat(p.totalValue || "0") }))
                   .filter((p) => Number.isFinite(p.ts) && p.ts > 0)
                   .sort((a, b) => a.ts - b.ts);
                 if (snaps.length < 2) return "The full chart over time";
-                const latest = snaps[snaps.length - 1].value;
                 const cutoff = Date.now() - 30 * 86400000;
-                let past = snaps[0].value;
-                for (const p of snaps) { if (p.ts <= cutoff) past = p.value; else break; }
-                const move = latest - past;
+                const start = snaps.find((p) => p.ts >= cutoff);
+                if (!start || start.value === 0) return "The full chart over time";
+                const move = totalValue - start.value;
+                // Mirror growthInRange's guard: a big "move" that's really just
+                // today's sell re-shuffling isn't growth — hide rather than lie.
+                if (todaysSellTotal > 0 && Math.abs(move - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) return "The full chart over time";
                 if (Math.abs(move) < 1) return "The full chart over time";
                 return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}`;
               })()}
