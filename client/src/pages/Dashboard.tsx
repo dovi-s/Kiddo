@@ -180,7 +180,10 @@ import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
-import { getCulturalSuggestions, TRADITION_LABELS, TRADITION_ICONS, type CulturalBackground, type CulturalTradition } from "@/lib/cultural-calendar";
+// TRADITION_LABELS/ICONS + CulturalTradition dropped with the traditions tile +
+// picker (2026-06-04); getCulturalSuggestions/CulturalBackground stay for the
+// dormant suggestion interleaving (no-op until traditions can be set again).
+import { getCulturalSuggestions, type CulturalBackground } from "@/lib/cultural-calendar";
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
 import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { friendlyHoldingName } from "@/lib/ticker-names";
@@ -1426,9 +1429,7 @@ export default function Dashboard() {
   const [recentGiftForToast, setRecentGiftForToast] = useState<GiftType | null>(null);
   const [showCoverageUpgradeModal, setShowCoverageUpgradeModal] = useState(false);
   const [startingCoverageCheckout, setStartingCoverageCheckout] = useState(false);
-  const [culturalBgPickerOpen, setCulturalBgPickerOpen] = useState(false);
-  const [culturalBgSelections, setCulturalBgSelections] = useState<string[]>([]);
-  const [savingCulturalBg, setSavingCulturalBg] = useState(false);
+  // Cultural-traditions picker state removed 2026-06-04 with its tile + dialog.
   const [kidViewConfigOpen, setKidViewConfigOpen] = useState(false);
   const [kidViewConfigStep, setKidViewConfigStep] = useState<"settings" | "done">("settings");
   const [kidViewEnabled, setKidViewEnabled] = useState(false);
@@ -4481,39 +4482,9 @@ export default function Dashboard() {
     }
   };
 
-  const handleSaveCulturalBg = async () => {
-    if (!activeFundId) return;
-    setSavingCulturalBg(true);
-    try {
-      const newBg = culturalBgSelections.length > 0 ? { traditions: culturalBgSelections } : null;
-      const res = await fetch(`/api/funds/${activeFundId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ culturalBackground: newBg }),
-      });
-      if (!res.ok) throw new Error("Could not save.");
-      const updatedFund = await res.json().catch(() => null);
-      // Optimistically update the funds cache so UI reflects the change immediately
-      queryClient.setQueryData(["/api/funds"], (old: Fund[] | undefined) => {
-        if (!old) return old;
-        return old.map(f => f.id === activeFundId ? { ...f, ...(updatedFund || { culturalBackground: newBg }) } : f);
-      });
-      // Also kick a background refetch to make sure we're fully in sync
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-      setCulturalBgPickerOpen(false);
-      if (culturalBgSelections.length > 0) {
-        const labels = culturalBgSelections.slice(0, 2).map(t => TRADITION_LABELS[t as CulturalTradition]).join(" and ");
-        toast({ title: "Traditions saved", description: `${labels} suggestions are ready.` });
-      } else {
-        toast({ title: "Traditions cleared" });
-      }
-    } catch {
-      toast({ title: "Could not save", variant: "destructive" });
-    } finally {
-      setSavingCulturalBg(false);
-    }
-  };
+  // handleSaveCulturalBg removed 2026-06-04 with the cultural-traditions tile +
+  // picker (founder: config-in-a-content-row). The suggestion engine stays in
+  // lib/cultural-calendar; revive it inside the occasion-create flow if wanted.
 
   const handleSaveKidView = async () => {
     if (!activeFundId) return;
@@ -10260,25 +10231,13 @@ export default function Dashboard() {
                             </button>
                           );
                         })}
-                        {childFirstSug && (
-                          <button type="button" onClick={() => { haptic("light"); setCulturalBgSelections(traditions); setCulturalBgPickerOpen(true); }} style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: traditions.length > 0 ? "1.5px solid rgba(26,61,43,0.25)" : "1.5px dashed rgba(26,61,43,0.25)", overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}>
-                            <div style={{ flex: 1, background: "hsl(143,28%,97%)", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap", padding: "6px 8px" }}>
-                              {traditions.length > 0
-                                ? traditions.slice(0, 4).map(t => <span key={t} style={{ fontSize: 22, lineHeight: 1 }}>{TRADITION_ICONS[t]}</span>)
-                                : <span style={{ fontSize: 30 }}>🌍</span>
-                              }
-                            </div>
-                            <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>{traditions.length > 0 ? "Your traditions" : "Add your traditions"}</p>
-                              {/* One-line guard: at fontSize 9 in a 140px tile, longer
-                                  copy wraps and pushes this tile's panel a row taller
-                                  than its siblings (founder-reported misalignment).
-                                  nowrap+ellipsis makes wrapping structurally impossible. */}
-                              <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{traditions.length > 0 ? `${traditions.length} selected` : "Unlocks milestone ideas"}</p>
-                              <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600 }}>{traditions.length > 0 ? "Edit →" : "Personalize →"}</p>
-                            </div>
-                          </button>
-                        )}
+                        {/* Cultural "Add your traditions" tile removed 2026-06-04
+                            (founder): it was configuration (set your family's
+                            background) masquerading as content in a row of
+                            occasions-to-gift-to, with vague "Unlocks milestone
+                            ideas" copy. The cultural-suggestion engine stays in
+                            code (dormant); if revived, it belongs INSIDE the
+                            occasion-create flow, not as a peer tile here. */}
                         <button type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
@@ -10360,48 +10319,8 @@ export default function Dashboard() {
                         );
                       })}
 
-                      {/* Traditions tile - shows selected icons when set. Hidden
-                          for read-only roles: the picker's save is a fund PATCH
-                          the server 403s for viewer/previous_owner. */}
-                      {!isReadOnlyFund && childFirstSug && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            haptic("light");
-                            setCulturalBgSelections(traditions);
-                            setCulturalBgPickerOpen(true);
-                          }}
-                          style={{
-                            width: 140, minWidth: 140, height: 148, flexShrink: 0,
-                            borderRadius: 18,
-                            border: traditions.length > 0 ? "1.5px solid rgba(26,61,43,0.25)" : "1.5px dashed rgba(26,61,43,0.25)",
-                            overflow: "hidden", cursor: "pointer", background: "white",
-                            display: "flex", flexDirection: "column",
-                            textAlign: "left",
-                          }}
-                        >
-                          <div style={{ flex: 1, background: "hsl(143,28%,97%)", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap", padding: "6px 8px" }}>
-                            {traditions.length > 0
-                              ? traditions.slice(0, 4).map(t => <span key={t} style={{ fontSize: 22, lineHeight: 1 }}>{TRADITION_ICONS[t]}</span>)
-                              : <span style={{ fontSize: 30, lineHeight: 1 }}>🌍</span>
-                            }
-                          </div>
-                          <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                            <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>
-                              {traditions.length > 0 ? "Your traditions" : "Add your traditions"}
-                            </p>
-                            {/* One-line guard — same fix as the empty-state twin above:
-                                wrapping here pushed "Personalize →" below its siblings'
-                                baseline. nowrap+ellipsis + shorter copy. */}
-                            <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {traditions.length > 0 ? `${traditions.length} selected` : "Unlocks milestone ideas"}
-                            </p>
-                            <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600, lineHeight: 1 }}>
-                              {traditions.length > 0 ? "Edit →" : "Personalize →"}
-                            </p>
-                          </div>
-                        </button>
-                      )}
+                      {/* Cultural "traditions" tile removed 2026-06-04 (founder):
+                          config-in-a-content-row. See the empty-state twin above. */}
 
                       {/* Show/hide archived toggle tile */}
                       {archivedEvents.length > 0 && (
@@ -14647,54 +14566,7 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={culturalBgPickerOpen} onOpenChange={open => { if (!open) setCulturalBgPickerOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Your family's traditions</DialogTitle>
-          <div className="p-6 space-y-5">
-            <div>
-              <p className="text-sm font-medium text-primary">Occasions</p>
-              <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">What does your family celebrate?</h2>
-              <p className="mt-2 text-sm text-muted-foreground">We'll suggest the right milestones at the right time. Pick as many as apply.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(TRADITION_LABELS) as CulturalTradition[]).map(t => {
-                const selected = culturalBgSelections.includes(t);
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      haptic("selection");
-                      setCulturalBgSelections(prev =>
-                        prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]
-                      );
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all ${
-                      selected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-muted-foreground/40"
-                    }`}
-                  >
-                    <span className="text-xl leading-none">{TRADITION_ICONS[t]}</span>
-                    <span className="text-sm font-medium text-foreground leading-tight">{TRADITION_LABELS[t]}</span>
-                    {selected && (
-                      <div className="ml-auto w-4 h-4 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                        <Plus size={10} className="text-primary-foreground rotate-45" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setCulturalBgPickerOpen(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={handleSaveCulturalBg} disabled={savingCulturalBg}>
-                {savingCulturalBg ? "Saving..." : "Save traditions"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Cultural-traditions picker dialog removed 2026-06-04 (founder) — see the tile-removal note in the occasions strip. */}
 
       {/* Managed-mix sell warning. Shown before the regular sell sheet when the
           holding is part of the active managed strategy. Nudges toward "Customize mix". */}
