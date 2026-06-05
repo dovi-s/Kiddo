@@ -9781,37 +9781,34 @@ export default function DashboardLab() {
               {(() => {
                 // The identity line (founder-approved 2026-06-05). The title
                 // promises "story"; this is the one sentence of it — count +
-                // first year, both PROVEN by the gift rows (no "every month"
-                // claims the data can't back; "still showing up" only when the
-                // most recent investment is within 45 days, so it's never a
-                // stale flattery). Viewer-keyed like the collapse stat (Claire
-                // sees HER count, Phil his — and previous-owner Phil on a
-                // handed-off fund sees his full era). Hidden until the habit
-                // is real (6+ investments spanning 18+ months) so a new parent
-                // isn't shown "2 investments since 2026" dressed as a streak.
+                // first year, both PROVEN by the gift rows. The BARE FACT
+                // only, deliberately: a "still showing up" flourish was cut
+                // (founder call) — it told the parent what to feel instead of
+                // letting the number do it, and because it was recency-gated
+                // its disappearance after a lapse read as quiet judgment. The
+                // count never judges. Viewer-keyed like the collapse stat
+                // (Claire sees HER count, Phil his — and previous-owner Phil
+                // on a handed-off fund sees his full era). Hidden until the
+                // habit is real (6+ investments spanning 18+ months) so a new
+                // parent isn't shown "2 investments since 2026" dressed as a
+                // streak.
                 const me = String(user?.email || "").trim().toLowerCase();
                 if (!me) return null;
                 let count = 0;
                 let firstTs = Infinity;
-                let lastTs = 0;
                 for (const g of gifts as any[]) {
                   if (String((g as any).senderEmail || "").trim().toLowerCase() !== me) continue;
                   const amt = parseFloat(String((g as any).netAmount || (g as any).amount || "0")) || 0;
                   if (!(amt > 0)) continue;
                   count += 1;
                   const ts = (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0;
-                  if (ts > 0) {
-                    if (ts < firstTs) firstTs = ts;
-                    if (ts > lastTs) lastTs = ts;
-                  }
+                  if (ts > 0 && ts < firstTs) firstTs = ts;
                 }
                 if (count < 6 || !Number.isFinite(firstTs)) return null;
                 if (Date.now() - firstTs < 548 * 86400000) return null; // 18 months
-                const stillShowingUp = lastTs > 0 && Date.now() - lastTs <= 45 * 86400000;
                 return (
                   <p className="mt-1 text-[12.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]" data-testid="text-your-part-identity">
                     {count} investments since {new Date(firstTs).getFullYear()}
-                    {stillShowingUp ? " · still showing up" : ""}
                   </p>
                 );
               })()}
