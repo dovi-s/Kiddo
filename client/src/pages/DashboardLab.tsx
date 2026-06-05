@@ -6712,6 +6712,18 @@ export default function DashboardLab() {
                 new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
               return (
+                <details data-testid="lab-summary-details" style={{ marginTop: 16 }}>
+                  <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "hsl(var(--kiddo-cream))", border: "1px solid hsl(var(--kiddo-evergreen) / 0.14)", borderRadius: "var(--radius-container)" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🌱</span>
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}</span>
+                        <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Gifts, growth, and where it all went. Tap to open.</span>
+                      </span>
+                    </span>
+                    <ChevronRight size={18} style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
+                  </summary>
+                  <div style={{ marginTop: 12 }}>
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -7019,6 +7031,8 @@ export default function DashboardLab() {
                     )}
                   </div>
                 </motion.section>
+                  </div>
+                </details>
               );
             })()}
 
