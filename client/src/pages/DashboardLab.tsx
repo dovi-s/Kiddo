@@ -1530,27 +1530,41 @@ export default function DashboardLab() {
     chartObsRef.current?.disconnect();
     chartObsRef.current = null;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    let isFirst = true;
+    // Replay the wipe via WAAPI directly on the wrapper — NOT a key bump.
+    // The old key-remount re-rendered the entire chart component mid-scroll
+    // (a main-thread hitch, visibly janky on mobile momentum scroll). A
+    // fire-and-forget el.animate() touches no React state, remounts nothing,
+    // and runs compositor-side. Safety holds: a finished/cancelled WAAPI
+    // animation stops applying (fill: none), so the chart always returns to
+    // its natural visible style — it can never stick clipped/blank.
+    //
+    // ARMED gating (the anti-jitter): replay ONLY after the chart has FULLY
+    // left the viewport. A bare threshold re-fired on every 15% crossing —
+    // slow scrolls hovering at the boundary, the collapse's own height
+    // animation, and mobile URL-bar show/hide (viewport resize) each stacked
+    // a fresh wipe onto the running one, snapping the chart hidden/visible
+    // repeatedly ("tweaking out"). Full-exit arming = one wipe per genuine
+    // "scrolled away and came back", and cancel() any in-flight wipe first so
+    // two can never compose. Starts unarmed: the mount draw owns the first
+    // reveal (initial callback can't double-draw on top of it).
+    let armed = false;
+    let anim: Animation | null = null;
     const obs = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      if (isFirst) { isFirst = false; return; } // skip the initial observe callback (mount draw owns that)
-      if (!entry?.isIntersecting) return;
-      // Replay the wipe via WAAPI directly on the wrapper — NOT a key bump.
-      // The old key-remount re-rendered the entire chart component mid-scroll
-      // (a main-thread hitch, visibly janky on mobile momentum scroll). A
-      // fire-and-forget el.animate() touches no React state, remounts nothing,
-      // and runs compositor-side. Safety holds: a finished WAAPI animation
-      // stops applying (fill: none), so the chart always returns to its
-      // natural visible style — it can never stick clipped/blank.
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      if (!entry.isIntersecting) { armed = true; return; } // fully out of view → arm the next replay
+      if (!armed || entry.intersectionRatio < 0.15) return;
+      armed = false;
       if (typeof el.animate !== "function") return; // ancient browser: skip replay, chart stays visible
-      el.animate(
+      anim?.cancel();
+      anim = el.animate(
         [
           { clipPath: "inset(-30% 100% -30% 0%)" },
           { clipPath: "inset(-30% -5% -30% 0%)" },
         ],
         { duration: 850, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
       );
-    }, { threshold: 0.15 });
+    }, { threshold: [0, 0.15] });
     obs.observe(el);
     chartObsRef.current = obs;
   }, []);
