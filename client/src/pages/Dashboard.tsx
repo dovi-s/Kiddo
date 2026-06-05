@@ -180,10 +180,10 @@ import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
-// TRADITION_LABELS/ICONS + CulturalTradition dropped with the traditions tile +
-// picker (2026-06-04); getCulturalSuggestions/CulturalBackground stay for the
-// dormant suggestion interleaving (no-op until traditions can be set again).
-import { getCulturalSuggestions, type CulturalBackground } from "@/lib/cultural-calendar";
+// Cultural-traditions UI + suggestion interleaving fully removed from the
+// production dashboard 2026-06-04 (founder). The engine module
+// (lib/cultural-calendar.ts) is preserved for a proper post-launch home inside
+// the occasion-create flow; the dashboard no longer imports it.
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
 import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { friendlyHoldingName } from "@/lib/ticker-names";
@@ -9846,29 +9846,11 @@ export default function Dashboard() {
                   // For a newborn, the 1st-birthday occasion (above) is the rally.
                 }
 
-                // Cultural traditions - read early so we can interleave
-                const culturalBg = (activeFund as any)?.culturalBackground as CulturalBackground | null | undefined;
-                const traditions = culturalBg?.traditions ?? [];
-
-                // Cultural suggestions feed in. Each cultural suggestion gets a
-                // sortMs derived from its event date (or +Infinity for goals).
-                if (traditions.length > 0) {
-                  const culturalSugs = getCulturalSuggestions({
-                    traditions,
-                    childFirstName: childFirstSug,
-                    childBirthdate: childBirthdate,
-                    childAgeNow,
-                    activeEventNames: activeEvents.map(e => e.name),
-                    nowMs,
-                  });
-                  for (const cs of culturalSugs) {
-                    if (!suggestions.some(s => s.key === cs.key)) {
-                      const csDateStr = cs.prefill?.eventDate;
-                      const csMs = csDateStr ? new Date(csDateStr).getTime() : Number.POSITIVE_INFINITY;
-                      suggestions.push({ ...(cs as SugTile), sortMs: Number.isFinite(csMs) ? csMs : Number.POSITIVE_INFINITY });
-                    }
-                  }
-                }
+                // Cultural-tradition suggestion interleaving removed 2026-06-04
+                // with its tile + picker (founder). The engine lives on in
+                // lib/cultural-calendar.ts for a proper post-launch home INSIDE
+                // the occasion-create flow; it was dead here (no way to set
+                // traditions) so it's no longer wired into the dashboard builder.
 
                 // Driver's License (universal, age 14 to 16). Massive gifting
                 // moment for many families; previously absent. The 13+ block
@@ -9939,8 +9921,8 @@ export default function Dashboard() {
                   // savings_goal rendering path stays dormant for that future use.
                 }
 
-                // Holiday - Oct through Dec (only when no cultural traditions set)
-                if (new Date().getMonth() >= 9 && traditions.length === 0 && !activeEvents.some(e => e.eventType === "holiday")) {
+                // Holiday - Oct through Dec.
+                if (new Date().getMonth() >= 9 && !activeEvents.some(e => e.eventType === "holiday")) {
                   const yr = new Date().getFullYear();
                   const xmas = new Date(yr, 11, 25);
                   const xmasDays = Math.ceil((xmas.getTime() - nowMs) / 86400000);
