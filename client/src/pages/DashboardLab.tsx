@@ -8376,9 +8376,19 @@ export default function DashboardLab() {
                   transition={{ duration: 0.25, delay: 0.0195 }}
                   className="space-y-3"
                 >
-                  <p className="kiddo-section-label">
-                    {isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "People who love them"}
-                  </p>
+                  {/* LAB: family as a HERO MOMENT, not a small label (the
+                      critique). The belonging beat: "N people are building
+                      Luke's future" - the thing a bank can't have. */}
+                  <div style={{ marginBottom: 2 }}>
+                    <p className="font-heading" style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))", margin: 0 }}>
+                      {isOwnerMode
+                        ? `${contributorCount > 0 ? contributorCount + " " : ""}people are building your future`
+                        : `${contributorCount > 0 ? contributorCount + " " : ""}people are building ${childName ? `${childName}'s` : "their"} future`}
+                    </p>
+                    <p style={{ fontSize: 13, color: "rgba(26,23,16,0.5)", margin: "4px 0 0" }}>
+                      {isOwnerMode ? "Everyone who showed up for you." : `Everyone who has shown up for ${childName || "them"}.`}
+                    </p>
+                  </div>
                   <div
                     style={{
                       background: "white",
