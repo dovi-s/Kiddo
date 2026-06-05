@@ -68,8 +68,13 @@ export default function Onboard() {
             {isPersonal ? "Your fund is ready" : childNames.length > 1 ? `${childNames.length} funds created` : `${childNames[0]}'s fund is ready`}
           </h1>
           
+          {/* Honest copy: this 2s is a celebration beat + auto-advance, NOT a
+              data load (the fund is already created; the dashboard fetches its
+              own data after the redirect). Don't imply "setup" work that isn't
+              happening — state the actual action. ("Honesty over theater",
+              CLAUDE.md.) Resolved 2026-06-05. */}
           <p className="text-muted-foreground mb-10 leading-relaxed">
-            Setting up your dashboard...
+            Taking you to your dashboard...
           </p>
 
           {/* Spinner respects prefers-reduced-motion. When users have
