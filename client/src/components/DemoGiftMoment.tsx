@@ -40,8 +40,42 @@ import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
 import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
 
-const SESSION_KEY = "kiddo.demo.giftMoment.shown.v1"; // generic beat: once per session
+const SESSION_GIFTED_KEY = "kiddo.demo.giftMoment.fundsShown.v1"; // fund ids that have shown their gift this session
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
+const SESSION_KEY = "kiddo.demo.giftMoment.genericBeat.v1"; // once-per-session guard for the generic seeded beat (Beat 2)
+
+// Per-fund "already showed its gift this session" tracking (founder catch
+// 2026-06-04: "switched to Alex and don't see the gift"). Was a single
+// once-per-session flag, which let the FIRST gift block every later switch.
+// Now each kid gets their gift on first view. Backed by sessionStorage (so it
+// survives a reload within the tab) AND an in-memory Set (so it still works if
+// sessionStorage is blocked — degrade to "no repeats", never to a crash).
+const giftedInMemory = new Set<string>();
+function hasFundGifted(fundId: string): boolean {
+  const id = String(fundId || "");
+  if (!id) return false;
+  if (giftedInMemory.has(id)) return true;
+  try {
+    const arr = JSON.parse(window.sessionStorage.getItem(SESSION_GIFTED_KEY) || "[]");
+    return Array.isArray(arr) && arr.includes(id);
+  } catch {
+    return false;
+  }
+}
+function markFundGifted(fundId: string): void {
+  const id = String(fundId || "");
+  if (!id) return;
+  giftedInMemory.add(id);
+  try {
+    const arr = JSON.parse(window.sessionStorage.getItem(SESSION_GIFTED_KEY) || "[]");
+    if (Array.isArray(arr) && !arr.includes(id)) {
+      arr.push(id);
+      window.sessionStorage.setItem(SESSION_GIFTED_KEY, JSON.stringify(arr));
+    }
+  } catch {
+    /* in-memory fallback already recorded it */
+  }
+}
 const DELAY_MS = 15_000;          // generic beat fallback — for a prospect who never switches funds
 // Generic beat on a fund-SWITCH. Timed to land the gift as its OWN beat, just
 // AFTER the hero's roll cascade settles — not on top of it. On a switch the
