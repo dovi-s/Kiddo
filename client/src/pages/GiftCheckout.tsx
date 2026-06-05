@@ -515,6 +515,96 @@ export default function GiftCheckout() {
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Gift draft persistence ─────────────────────────────────────────────
+  // Everything the gifter composes lives in React state, which means a page
+  // refresh OR the Stripe-hosted-checkout cancel path (cancel_url lands back
+  // here as a fresh mount) used to wipe the typed message, recorded audio
+  // and uploaded photo. For a one-shot gifter (grandma, mid-card-entry
+  // second thoughts) that loss is a funnel exit at the moment of maximum
+  // intent. Persist a draft to sessionStorage (tab-scoped — dies with the
+  // tab, survives refresh + the same-tab round-trip to Stripe) and restore
+  // it on mount. GiftSuccess clears all drafts once a payment completes.
+  // NEVER persisted: recurringPassword (credential), payError/submitting.
+  const draftKey = `kiddo-gift-draft:${fundSlug || ""}:${eventSlug || ""}`;
+  const DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // stale-tab guard
+  useEffect(() => {
+    // Restore FIRST (declared before the save effect below so the empty
+    // first-mount save pass can't clobber an existing draft before it's
+    // been read).
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d?.v !== 1 || typeof d.ts !== "number" || Date.now() - d.ts > DRAFT_TTL_MS) {
+        sessionStorage.removeItem(draftKey);
+        return;
+      }
+      if (typeof d.selectedAmount === "number" && d.selectedAmount >= 5) setSelectedAmount(d.selectedAmount);
+      if (typeof d.showCustom === "boolean") setShowCustom(d.showCustom);
+      if (typeof d.customAmount === "string") setCustomAmount(d.customAmount);
+      if (d.executionModel === "auto" || d.executionModel === "pick") setExecutionModel(d.executionModel);
+      if (typeof d.selectedStock === "string" && d.selectedStock) setSelectedStock(d.selectedStock);
+      if (typeof d.senderName === "string") setSenderName(d.senderName);
+      if (typeof d.senderEmail === "string") setSenderEmail(d.senderEmail);
+      if (typeof d.isAnonymous === "boolean") setIsAnonymous(d.isAnonymous);
+      if (typeof d.message === "string") setMessage(d.message);
+      if (d.memoryAttachmentMode === "photo" || d.memoryAttachmentMode === "video" || d.memoryAttachmentMode === "audio" || d.memoryAttachmentMode === "none") {
+        setMemoryAttachmentMode(d.memoryAttachmentMode);
+      }
+      if (typeof d.photoUrl === "string") setPhotoUrl(d.photoUrl);
+      if (typeof d.videoUrl === "string") setVideoUrl(d.videoUrl);
+      if (typeof d.audioUrl === "string") setAudioUrl(d.audioUrl);
+      if (typeof d.giftAddOn === "string") setGiftAddOn(d.giftAddOn as GiftAddOnId);
+      if (typeof d.isRecurring === "boolean") setIsRecurring(d.isRecurring);
+      if (d.recurringFrequency === "weekly" || d.recurringFrequency === "monthly" || d.recurringFrequency === "yearly") {
+        setRecurringFrequency(d.recurringFrequency);
+      }
+      if (d.step === "amount" || d.step === "preview" || d.step === "payment") setStep(d.step);
+    } catch {
+      // Malformed/blocked storage — start clean, never break checkout.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  useEffect(() => {
+    // Save pass. Only write once the gifter has actually composed something
+    // (or advanced past the landing) — and if they consciously emptied the
+    // form, drop the draft instead of resurrecting it on refresh.
+    const meaningful =
+      step !== "landing" ||
+      message.trim() !== "" ||
+      senderName.trim() !== "" ||
+      senderEmail.trim() !== "" ||
+      photoUrl !== "" || videoUrl !== "" || audioUrl !== "" ||
+      customAmount.trim() !== "";
+    try {
+      if (!meaningful) {
+        // Safe unconditionally: the restore effect above is declared first,
+        // so on mount it has already READ any existing draft before this
+        // empty-state pass removes it; the post-restore re-render writes it
+        // straight back.
+        sessionStorage.removeItem(draftKey);
+        return;
+      }
+      sessionStorage.setItem(draftKey, JSON.stringify({
+        v: 1,
+        ts: Date.now(),
+        step,
+        selectedAmount, showCustom, customAmount,
+        executionModel, selectedStock,
+        senderName, senderEmail, isAnonymous,
+        message, memoryAttachmentMode, photoUrl, videoUrl, audioUrl,
+        giftAddOn, isRecurring, recurringFrequency,
+      }));
+    } catch {
+      // Storage full/blocked — degrade silently to pre-draft behavior.
+    }
+  }, [
+    draftKey, step, selectedAmount, showCustom, customAmount, executionModel,
+    selectedStock, senderName, senderEmail, isAnonymous, message,
+    memoryAttachmentMode, photoUrl, videoUrl, audioUrl, giftAddOn,
+    isRecurring, recurringFrequency,
+  ]);
+
   const activeAmount = showCustom && customAmount ? parseFloat(customAmount) : selectedAmount;
   const isValidAmount = Number.isFinite(activeAmount) && activeAmount >= 5;
 

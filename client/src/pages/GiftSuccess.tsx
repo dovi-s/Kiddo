@@ -307,6 +307,21 @@ export default function GiftSuccess() {
     trackGiftEvent("visit")
   }, [])
 
+  // The payment completed — drop any composed-gift drafts GiftCheckout
+  // persisted to sessionStorage (refresh / Stripe-cancel recovery), so the
+  // next gift on this tab starts clean instead of resurrecting this one's
+  // message. Prefix scan: a tab holds at most a handful of keys.
+  useEffect(() => {
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i)
+        if (key && key.startsWith("kiddo-gift-draft:")) sessionStorage.removeItem(key)
+      }
+    } catch {
+      // Storage blocked — nothing to clean.
+    }
+  }, [])
+
   useEffect(() => {
     if (!sessionId) return
     let cancelled = false
