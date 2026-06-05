@@ -6344,9 +6344,19 @@ export default function DashboardLab() {
                           // billion-dollar-way framing: a warm "on track"
                           // statement, not a bare number-with-a-far-off-age.
                           const yrsToMaj = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
-                          const heroMonthly = activeAutoInvest ? (parseFloat(String((activeAutoInvest as any).amount || "0")) || 0) : 0;
-                          const atMaj = yrsToMaj > 0.08
-                            ? projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj })
+                          // Use the EXACT canonical at-majority math (same as the
+                          // handoff "On track for $X" + Projection page + worker):
+                          // sum ALL active recurring (parent + gifter-with-sub) via
+                          // sumMonthlyEquivalent, two-phase with contributions
+                          // stopping at majority. Earlier this used a single
+                          // recurring's raw amount, so the hero and handoff numbers
+                          // disagreed on a fund with 2 recurring. Now identical.
+                          const heroMonthly = sumMonthlyEquivalent([
+                            ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                            ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
+                          ]);
+                          const atMaj = (yrsToMaj > 0.08 && totalValue > 0)
+                            ? projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj })
                             : displayHeroProjectedAt65;
                           const heroMajAge = age18Transition?.majorityAge || 18;
                           const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
