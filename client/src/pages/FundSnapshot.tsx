@@ -547,6 +547,11 @@ export default function FundSnapshot() {
                 // matters more than visual chrome. Audit-flagged
                 // 2026-05-26.
                 const hasMeaningfulGain = Math.abs(hgain) > 0.01;
+                // Position weight — the standard brokerage-statement column. An
+                // advisor scans these to see concentration; "<1%" matches the
+                // dashboard's holding-weight format. value ÷ total, no risky
+                // math. 2026-06-05.
+                const pctOfFund = balance > 0 ? (value / balance) * 100 : 0;
                 return (
                   <div key={h.id} className="snapshot-holding">
                     <div className="snapshot-ticker">{h.ticker}</div>
@@ -558,6 +563,11 @@ export default function FundSnapshot() {
                       </div>
                     ) : (
                       <div className="snapshot-holding-gain snapshot-holding-gain--neutral">—</div>
+                    )}
+                    {pctOfFund > 0 && (
+                      <div className="snapshot-holding-pct">
+                        {pctOfFund < 1 ? "<1" : Math.round(pctOfFund)}% of fund
+                      </div>
                     )}
                   </div>
                 );
@@ -947,6 +957,12 @@ export default function FundSnapshot() {
         }
         .snapshot-holding-gain.is-up { color: hsl(143, 47%, 28%); }
         .snapshot-holding-gain.is-down { color: hsl(0, 65%, 42%); }
+        .snapshot-holding-pct {
+          font-size: 10px;
+          color: rgba(26, 23, 16, 0.42);
+          margin-top: 4px;
+          font-variant-numeric: tabular-nums;
+        }
         /* Neutral delta — added 2026-05-26 to standardize the column.
            Holdings with |gain| < $0.01 now render an em-dash placeholder
            instead of leaving the row visually shorter than its neighbors.
