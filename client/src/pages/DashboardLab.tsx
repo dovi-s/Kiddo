@@ -8424,17 +8424,31 @@ export default function DashboardLab() {
                 >
                   {/* LAB: family as a HERO MOMENT, not a small label (the
                       critique). The belonging beat: "N people are building
-                      Luke's future" - the thing a bank can't have. */}
-                  <div style={{ marginBottom: 2 }}>
-                    <p className="font-heading" style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))", margin: 0 }}>
-                      {isOwnerMode
-                        ? `${contributorCount > 0 ? contributorCount + " " : ""}people are building your future`
-                        : `${contributorCount > 0 ? contributorCount + " " : ""}people are building ${childName ? `${childName}'s` : "their"} future`}
-                    </p>
-                    <p style={{ fontSize: 13, color: "rgba(26,23,16,0.5)", margin: "4px 0 0" }}>
-                      {isOwnerMode ? "Everyone who showed up for you." : `Everyone who has shown up for ${childName || "them"}.`}
-                    </p>
-                  </div>
+                      Luke's future" - the thing a bank can't have. BUT calibrate
+                      to honesty: lead with the COUNT only when we can actually
+                      show the people (named-heavy). When most gifters are
+                      anonymous (real-account edge case - e.g. 10 of 14 anon),
+                      "N people are building..." overpromises a face-wall that
+                      isn't there, so lead with a warm growth line and let the
+                      honest "X named, Y anonymous" footer carry the count. */}
+                  {(() => {
+                    const namedCount = gifterRoster.filter(g => g.name !== "Anonymous").length;
+                    const mostlyAnon = namedCount < contributorCount / 2;
+                    const Poss = isOwnerMode ? "Your" : childName ? `${childName}'s` : "Their";
+                    const who = isOwnerMode ? "your" : childName ? `${childName}'s` : "their";
+                    const headline = mostlyAnon
+                      ? `${Poss} future is growing`
+                      : `${contributorCount > 0 ? contributorCount + " " : ""}people are building ${who} future`;
+                    const sub = mostlyAnon
+                      ? (isOwnerMode ? "Gift by gift, from people who love you." : `Gift by gift, from people who love ${childName || "them"}.`)
+                      : (isOwnerMode ? "Everyone who showed up for you." : `Everyone who has shown up for ${childName || "them"}.`);
+                    return (
+                      <div style={{ marginBottom: 2 }}>
+                        <p className="font-heading" style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))", margin: 0 }}>{headline}</p>
+                        <p style={{ fontSize: 13, color: "rgba(26,23,16,0.5)", margin: "4px 0 0" }}>{sub}</p>
+                      </div>
+                    );
+                  })()}
                   <div
                     style={{
                       background: "white",
