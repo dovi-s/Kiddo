@@ -102,6 +102,13 @@ type GifterFundRow = {
     createdAt: string | null;
     ticker: string | null;
     message: string | null;
+    // No single ticker → the money went into the diversified managed mix
+    // (index-fund basket), not cash. Drives the row's "Managed mix" label.
+    managedMix?: boolean;
+    // A recurring auto-invest cycle (parent auto-invest or a gifter schedule);
+    // drives the "↻ Monthly" marker so a long run of identical rows reads as
+    // one habit, not N anonymous gifts.
+    recurring?: boolean;
     thankYou: { message: string; sentAt: string | null } | null;
   }>;
 };
@@ -1262,10 +1269,21 @@ export default function GifterDashboard() {
                             .map((g) => String(g.ticker || "").trim().toUpperCase())
                             .filter(Boolean),
                         )).slice(0, 6);
-                        if (tickers.length === 0) return null;
+                        // Most contributions (recurring auto-invest) go into the
+                        // diversified managed mix, which has no single ticker — so
+                        // without this the strip implied the money bought ONLY the
+                        // few single stocks. Surface "Managed mix" when any did.
+                        const hasManagedMix = (fund.yourGifts || []).some((g) => g.managedMix || !g.ticker);
+                        if (tickers.length === 0 && !hasManagedMix) return null;
                         return (
                           <div className="mt-3 flex flex-wrap items-center gap-1.5" data-testid={`gift-tickers-${fund.fundId}`}>
                             <span className="text-xs text-muted-foreground">Your gifts bought</span>
+                            {hasManagedMix && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
+                                <TrendingUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <span className="text-[11px] font-medium text-foreground/80">Managed mix</span>
+                              </span>
+                            )}
                             {tickers.map((t) => (
                               <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
                                 <StockLogo ticker={t} size={14} fallbackText={false} className="shrink-0" />
@@ -1318,8 +1336,21 @@ export default function GifterDashboard() {
                                             tickers fall back to the symbol. */}
                                         {g.ticker ? <StockLogo ticker={g.ticker} size={22} className="shrink-0" /> : null}
                                         <span className="flex min-w-0 flex-col">
-                                          <span className="truncate font-medium text-foreground">
-                                            {companyName || "Gift"}
+                                          {/* Lead with WHAT the money bought, not a bare
+                                              "Gift". A single-stock pick shows the company;
+                                              everything else went into the diversified
+                                              managed mix (a basket of index funds) — never
+                                              cash — so say so. A recurring auto-invest cycle
+                                              gets a "↻ Monthly" tag so a long run of
+                                              identical rows reads as one habit. */}
+                                          <span className="flex items-center gap-1.5 truncate font-medium text-foreground">
+                                            {companyName || "Managed mix"}
+                                            {g.recurring && (
+                                              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                                <Repeat className="h-2.5 w-2.5" />
+                                                Monthly
+                                              </span>
+                                            )}
                                           </span>
                                           <span className="text-xs text-muted-foreground">{fmtDate(g.createdAt)}</span>
                                         </span>

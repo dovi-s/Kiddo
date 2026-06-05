@@ -5227,7 +5227,10 @@ export async function registerRoutes(
             g.created_at,
             g.selected_ticker,
             g.message,
-            g.sender_name
+            g.sender_name,
+            g.parent_contribution_id,
+            g.recurring_gift_id,
+            g.source
           FROM gifts g
           WHERE LOWER(COALESCE(g.sender_email, '')) = ${email}
           ORDER BY g.created_at DESC
@@ -5406,6 +5409,14 @@ export async function registerRoutes(
             createdAt: string | null;
             ticker: string | null;
             message: string | null;
+            // Did this contribution buy a single stock, or go into the diversified
+            // managed mix? (no ticker = managed mix). Answers the gifter's "what
+            // is this $100 — cash?" — it's invested in a basket of index funds.
+            managedMix: boolean;
+            // A recurring auto-invest cycle (parent auto-invest OR a gifter's
+            // recurring schedule), so the UI can mark the row "↻ Monthly" instead
+            // of rendering 89 identical anonymous rows.
+            recurring: boolean;
             thankYou: { message: string; sentAt: string | null } | null;
           }> = [];
           try {
@@ -5424,12 +5435,18 @@ export async function registerRoutes(
                 }
               }
               yourGifts = myGiftRows.map((r: any) => {
+                const ticker = r.selected_ticker ? String(r.selected_ticker) : null;
+                const recurring = Boolean(
+                  r.parent_contribution_id || r.recurring_gift_id || String(r.source || "") === "recurring_worker",
+                );
                 return {
                   id: String(r.id),
                   amount: Number(r.amount || 0),
                   createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
-                  ticker: r.selected_ticker ? String(r.selected_ticker) : null,
+                  ticker,
                   message: r.message ? String(r.message) : null,
+                  managedMix: !ticker,
+                  recurring,
                   thankYou: thankByGift.get(String(r.id)) || null,
                 };
               });
