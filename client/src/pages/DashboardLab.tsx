@@ -5605,8 +5605,17 @@ export default function DashboardLab() {
               .lab-collapse[open] > summary .lab-chevron { transform: rotate(90deg); }
               @keyframes labReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
               .lab-collapse[open] > div { animation: labReveal .3s cubic-bezier(0.16,1,0.3,1); }
+              /* Tactile press on any tappable surface: lift on hover, spring
+                 in on click. The "satisfying click" the founder loved. */
+              .lab-tap { transition: transform .14s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, filter .2s ease; }
+              .lab-tap:hover { transform: translateY(-1.5px); filter: brightness(1.04); }
+              .lab-tap:active { transform: translateY(0) scale(0.96); }
+              /* Faces gently rise + grow on hover/tap. */
+              .lab-face { transition: transform .2s cubic-bezier(0.16,1,0.3,1); cursor: default; }
+              .lab-face:hover { transform: translateY(-4px) scale(1.06); }
               @media (prefers-reduced-motion: reduce) {
-                .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div { transition: none; animation: none; }
+                .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div,
+                .lab-tap, .lab-face { transition: none !important; animation: none !important; }
               }
             `}</style>
             <motion.section
@@ -6290,7 +6299,7 @@ export default function DashboardLab() {
                           <button
                             onClick={() => { haptic("medium"); handleShareLink(); }}
                             data-testid="button-hero-share-link"
-                            className="kiddo-press"
+                            className="kiddo-press lab-tap"
                             style={{
                               // LAB: confident PRIMARY action (the loop is the
                               // moat) - bigger, with a gold lift-shadow so it
@@ -6338,6 +6347,7 @@ export default function DashboardLab() {
                                 if (activeFundId) setLocation(`/projection/${activeFundId}`);
                               }}
                               data-testid="button-hero-view-fund"
+                              className="lab-tap"
                               style={{
                                 background: "rgba(255,255,255,0.12)",
                                 border: "1px solid rgba(255,255,255,0.22)",
@@ -8537,7 +8547,7 @@ export default function DashboardLab() {
                             type="button"
                             onClick={() => { haptic("selection"); setSelectedGifter(gifter); }}
                             title={tooltipText}
-                            className="kiddo-gifter-avatar"
+                            className="kiddo-gifter-avatar lab-face"
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                           >
                             <div style={{ position: "relative" }}>
