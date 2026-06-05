@@ -6656,6 +6656,21 @@ export default function DashboardLab() {
                           const heroMajAge = age18Transition?.majorityAge || 18;
                           const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
                           const fmtMaj = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(atMaj);
+                          // Birthday-aware beat (founder-approved, 2026-06-05):
+                          // on the child's birthday ONLY, the projection pill
+                          // warms — gold-tinted border + soft glow — and the 🌱
+                          // does one gentle grow-in. Quiet, classy, zero noise
+                          // the other 364 days. Date-only birthdate parses as
+                          // UTC midnight, so compare its UTC month/day against
+                          // the family's LOCAL today.
+                          const isChildBirthdayToday = (() => {
+                            const raw = (activeFund as any)?.recipientBirthdate;
+                            if (!raw) return false;
+                            const d = new Date(String(raw));
+                            if (!Number.isFinite(d.getTime())) return false;
+                            const now = new Date();
+                            return d.getUTCMonth() === now.getMonth() && d.getUTCDate() === now.getDate();
+                          })();
                           return (
                             <button
                               onClick={() => {
@@ -6664,9 +6679,11 @@ export default function DashboardLab() {
                               }}
                               data-testid="button-hero-view-fund"
                               className="lab-tap"
+                              title={isChildBirthdayToday && !isOwnerMode ? `It's ${recipientFirstNameDisplay || "their"} birthday 🎂` : "See the full projection"}
                               style={{
-                                background: "rgba(255,255,255,0.12)",
-                                border: "1px solid rgba(255,255,255,0.22)",
+                                background: isChildBirthdayToday ? "hsl(43, 85%, 50% / 0.16)" : "rgba(255,255,255,0.12)",
+                                border: isChildBirthdayToday ? "1px solid hsl(43, 85%, 60% / 0.55)" : "1px solid rgba(255,255,255,0.22)",
+                                boxShadow: isChildBirthdayToday ? "0 0 18px hsl(43, 85%, 50% / 0.22)" : undefined,
                                 borderRadius: 9999,
                                 padding: "11px 18px",
                                 fontSize: 13,
@@ -6677,10 +6694,23 @@ export default function DashboardLab() {
                                 alignItems: "center",
                                 gap: 7,
                                 maxWidth: "100%",
+                                transition: "background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease",
                               }}
-                              title="See the full projection"
                             >
-                              <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>🌱</span>
+                              {isChildBirthdayToday ? (
+                                // The leaf GROWS in on the birthday — one
+                                // gentle spring from a sprout, then still.
+                                <motion.span
+                                  initial={{ scale: 0.3, rotate: -24, opacity: 0 }}
+                                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                                  transition={{ type: "spring", stiffness: 240, damping: 14, delay: 0.5 }}
+                                  style={{ fontSize: 14, lineHeight: 1, flexShrink: 0, display: "inline-block" }}
+                                >
+                                  🌱
+                                </motion.span>
+                              ) : (
+                                <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>🌱</span>
+                              )}
                               <span style={{ minWidth: 0 }}>On track for <span style={{ fontWeight: 800 }}>{fmtMaj}</span> when {heroChildN} turn{heroChildN === "you" ? "" : "s"} {heroMajAge}</span>
                               <span style={{ opacity: 0.8, flexShrink: 0 }}>→</span>
                             </button>
