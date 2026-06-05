@@ -94,6 +94,18 @@ dashboard, blurred — and literally it was (it's warm behind it). Use a shared
 
 ## Already done (don't redo)
 
+- **Layer 1 — stale-render: ALREADY BUILT** (discovered 2026-06-05). The
+  `dashboard-summary` query already has `initialData: () => readCachedDashboardSummary(activeFundId)`
+  and writes the cache on every success (`DASHBOARD_SUMMARY_CACHE_PREFIX`).
+  `parentContributions` seeds from the summary (`initialData: () => dashboardSummary?.parentContributions`).
+  → **Returning to a fund is already instant from localStorage.** The empty
+  state only hits a genuinely *cold first-ever view* of a fund.
+- **Layer 2 (partial) — prefetch the OTHER funds: SHIPPED** in `DashboardLab.tsx`
+  (`e0f593b`). Once the active fund settles, `requestIdleCallback`-prefetches
+  every other fund's summary into the cache + localStorage → **instant
+  fund-switching**, zero-lag demo switch-beat. Remaining Layer-2 work = prefetch
+  the *active* fund *before arrival* (needs a pre-dashboard moment: lock screen,
+  landing, or hover-intent).
 - **Step 1 — kill the wrong loading-state numbers** (shipped in `DashboardLab.tsx`):
   a `recurringDataReady` / `heroDataReady` gate holds a **calm pulse** instead of a
   *wrong* value while per-fund data loads. Fixed: the hero + handoff "On track for
