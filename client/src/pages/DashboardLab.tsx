@@ -11482,6 +11482,7 @@ export default function DashboardLab() {
                     <motion.button
                       key="letter-cta"
                       type="button"
+                      className="lab-tap"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
