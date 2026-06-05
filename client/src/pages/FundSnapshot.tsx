@@ -595,9 +595,24 @@ export default function FundSnapshot() {
             <div className="snapshot-gifts">
               {gifts.map((g) => {
                 const name = String(g.senderName || "").trim();
-                const isAnon = !name || /^someone who loves/i.test(name) || name.toLowerCase() === "anonymous";
+                // Belt-and-suspenders anonymity: honor the explicit
+                // isAnonymous flag on the gift row (the canonical signal,
+                // same as Dashboard's displayGifterName) IN ADDITION to the
+                // name-pattern inference that predates it.
+                const isAnon = Boolean((g as any).isAnonymous) || !name || /^someone who loves/i.test(name) || name.toLowerCase() === "anonymous";
                 const displayGifter = !showNames || isAnon ? "Anonymous" : name;
                 const initial = displayGifter.slice(0, 1).toUpperCase();
+                // Gifter profile photo (server enriches gift rows with
+                // gifterAvatarUrl when the gifter has an account + photo —
+                // the same faces the Dashboard roster shows). Unlike stock
+                // logos on the holdings table (rejected — see comment
+                // there), faces BELONG on the gift history: it's the human
+                // ledger, not the financial table, and its whole job is
+                // "real people showed up for this kid." A photo IS a name,
+                // so it obeys the showNames toggle and never renders for
+                // anonymous gifts. Monogram stays underneath as the
+                // broken-image / no-photo fallback (print-safe).
+                const avatarUrl = showNames && !isAnon ? String((g as any).gifterAvatarUrl || "").trim() : "";
                 const amount = parseFloat(String(g.netAmount || g.amount || "0"));
                 const date = (g as any).settledAt || g.createdAt;
                 // Suppress the auto-invest boilerplate message from
@@ -612,7 +627,21 @@ export default function FundSnapshot() {
                 const displayMessage = rawMessage && !AUTO_INVEST_MSG_RE.test(rawMessage) ? rawMessage : null;
                 return (
                   <div key={g.id} className="snapshot-gift">
-                    <div className="snapshot-gift-avatar">{initial}</div>
+                    <div className="snapshot-gift-avatar">
+                      {initial}
+                      {/* Eager (no loading="lazy") on purpose: this page's
+                          destiny is window.print(), and Chromium leaves
+                          below-fold lazy images blank in print output.
+                          30px avatars are cheap; load them all. */}
+                      {avatarUrl && (
+                        <img
+                          className="snapshot-gift-avatar-img"
+                          src={avatarUrl}
+                          alt=""
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
+                    </div>
                     <div className="snapshot-gift-body">
                       <p className="snapshot-gift-name">{displayGifter}</p>
                       {displayMessage && showNames && (
@@ -1017,6 +1046,16 @@ export default function FundSnapshot() {
           font-size: 12px;
           font-weight: 800;
           flex-shrink: 0;
+          position: relative;
+          overflow: hidden;
+        }
+        .snapshot-gift-avatar-img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: inherit;
         }
         .snapshot-gift-body { flex: 1; min-width: 0; }
         .snapshot-gift-name {
