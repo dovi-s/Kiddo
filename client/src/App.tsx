@@ -70,6 +70,7 @@ const StoryPage = lazy(() => import("@/pages/StoryPage"));
 const Compare = lazy(() => import("@/pages/Compare"));
 const Demo = lazy(() => import("@/pages/Demo"));
 const P2PDemo = lazy(() => import("@/pages/P2PDemo"));
+const DesignLab = lazy(() => import("@/pages/DesignLab"));
 const Partners = lazy(() => import("@/pages/Partners"));
 const Security = lazy(() => import("@/pages/Security"));
 const Age18 = lazy(() => import("@/pages/Age18"));
@@ -730,6 +731,10 @@ function Router() {
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
           <Route path="/p2p-preview"><P2PDemo /></Route>
+          {/* Dashboard-redesign sandbox (2026-06-04). Self-contained,
+              hardcoded demo numbers, noindex, linked from nowhere — touches
+              nothing live. View at /design-lab. */}
+          <Route path="/design-lab"><DesignLab /></Route>
           <Route path="/get-started"><GetStarted /></Route>
           <Route path="/onboard"><Onboard /></Route>
           <Route path="/activate"><ProtectedRoute><ActivateInvesting /></ProtectedRoute></Route>
