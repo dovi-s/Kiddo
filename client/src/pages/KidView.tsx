@@ -1136,8 +1136,8 @@ export default function KidView() {
                   {noNoteCount >= 3 && (
                     <p className="text-[12px] italic text-muted-foreground/75 mb-3 leading-relaxed">
                       {noNoteCount === cleanedGifts.length
-                        ? `${noNoteCount} ${noNoteCount === 1 ? "person gave" : "people gave"} without leaving a note. They still believed in you.`
-                        : `${noNoteCount} of ${cleanedGifts.length} gave without a note. They still believed in you.`}
+                        ? `${noNoteCount} ${noNoteCount === 1 ? "person gave" : "people gave"} without leaving a note. The gift was the message.`
+                        : `${noNoteCount} of ${cleanedGifts.length} gave without a note. The gift was the message.`}
                     </p>
                   )}
                   <div className="space-y-3">
@@ -1188,7 +1188,7 @@ export default function KidView() {
                               <p className="text-[12px] text-muted-foreground mt-0.5 italic">"{gift.message}"</p>
                             )}
                             {/* When a row has no note, only the aggregate line at the
-                                top carries the "still believed in you" framing. The
+                                top carries the "the gift was the message" framing. The
                                 row itself stays quiet — date + invested status only. */}
                             <p className="text-[10px] text-muted-foreground/50 mt-1">
                               {giftDate ? giftDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}
