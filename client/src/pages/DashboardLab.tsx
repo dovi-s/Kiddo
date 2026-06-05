@@ -117,6 +117,7 @@ import {
   X,
   PieChart,
   HandCoins,
+  Play,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
@@ -1538,10 +1539,26 @@ export default function DashboardLab() {
   // (initial) callback is skipped so it never double-draws on top of the mount
   // draw. Visibility can't regress: it's driven by mount, and a finished WAAPI
   // animation stops applying, so the chart can't stick clipped.
+  // "Watch it grow" journey replay (founder-approved 2026-06-05; affordance
+  // kept QUIET): the ALL chart re-draws slowly (~8s, linear so caption timing
+  // maps to x-position) while caption beats pinned to REAL moments fade
+  // through — where it began, the first gift, threshold crossings, today.
+  // Eight years of love in eight seconds; the Memory Book moat as motion.
+  // The play handler + beats live near trendData (they need it); the wipe
+  // machinery lives in chartScrollRef. These refs bridge the two:
+  // chartWipePlayRef exposes playWipe (with duration/easing overrides)
+  // outward, and cancelJourneyRef lets ANY wipe start cancel a running
+  // journey's caption timers (the wipe itself is cancel()ed inside playWipe).
+  const [journeyCaption, setJourneyCaption] = useState<{ label: string; sub?: string } | null>(null);
+  const [journeyPlaying, setJourneyPlaying] = useState(false);
+  const journeyTimersRef = useRef<number[]>([]);
+  const cancelJourneyRef = useRef<(() => void) | null>(null);
+  const chartWipePlayRef = useRef<((opts?: { duration?: number; easing?: string }) => void) | null>(null);
   const chartObsRef = useRef<IntersectionObserver | null>(null);
   const chartScrollRef = useCallback((el: HTMLDivElement | null) => {
     chartObsRef.current?.disconnect();
     chartObsRef.current = null;
+    chartWipePlayRef.current = null;
     if (!el) return;
     // The wipe is a COMPOSITOR-ONLY counter-transform pair, not clip-path.
     // clip-path animates on the main thread and repaints the chart SVG every
@@ -1566,7 +1583,11 @@ export default function DashboardLab() {
     let movAnim: Animation | null = null;
     let innAnim: Animation | null = null;
     let wipeToken = 0;
-    const playWipe = () => {
+    const playWipe = (opts?: { duration?: number; easing?: string }) => {
+      // ANY wipe start (mount draw, scroll-replay, or a fresh journey) cancels
+      // a running journey's caption timers — captions must never narrate a
+      // wipe that's been replaced.
+      cancelJourneyRef.current?.();
       if (!mover || !inner || typeof mover.animate !== "function") return;
       // Reduced-motion: no wipe at all — the chart's resting state is fully
       // visible (the safety doctrine), so skipping is automatically correct.
@@ -1575,12 +1596,14 @@ export default function DashboardLab() {
       movAnim?.cancel();
       innAnim?.cancel();
       mover.style.overflow = "hidden";
-      const timing: KeyframeAnimationOptions = { duration: 850, easing: "cubic-bezier(0.16, 1, 0.3, 1)" };
+      const timing: KeyframeAnimationOptions = { duration: opts?.duration ?? 850, easing: opts?.easing ?? "cubic-bezier(0.16, 1, 0.3, 1)" };
       movAnim = mover.animate([{ transform: "translateX(-100%)" }, { transform: "translateX(0px)" }], timing);
       innAnim = inner.animate([{ transform: "translateX(100%)" }, { transform: "translateX(0px)" }], timing);
       const release = () => { if (token === wipeToken) mover.style.overflow = ""; };
       Promise.all([movAnim.finished, innAnim.finished]).then(release, release);
     };
+    // Expose for the journey replay (and any future choreography).
+    chartWipePlayRef.current = playWipe;
     // Mount draw — fires on every (re)mount: initial load, collapse reopen.
     playWipe();
     if (typeof IntersectionObserver === "undefined") return;
@@ -4428,6 +4451,73 @@ export default function DashboardLab() {
     if (historyInRange.length === 1) return "single";
     return "waiting";
   }, [usableFundHistory, gifts, chartRange, activeFund?.createdAt]);
+
+  // ── "Watch it grow" journey replay ──────────────────────────────────────
+  // Caption beats from REAL data, ALL range only: where it began, the first
+  // gift (name + amount, reusing trendData's own first-gift event), up to the
+  // three biggest threshold crossings, and today. Beats closer than 6% of the
+  // timeline to their predecessor are dropped (captions never stack); under 3
+  // beats or under 6 points the story isn't worth narrating, so the play
+  // affordance hides. Reduced-motion: no beats → no affordance → no replay.
+  const JOURNEY_MS = 8000;
+  const journeyBeats = useMemo(() => {
+    if (chartRange !== "ALL" || trendData.length < 6) return [];
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return [];
+    const n = trendData.length;
+    const beats: Array<{ frac: number; label: string; sub?: string }> = [];
+    beats.push({ frac: 0, label: "Where it began", sub: trendData[0].label });
+    const firstGiftIdx = trendData.findIndex((p: any) => p.event);
+    if (firstGiftIdx > 0) {
+      const ev: any = (trendData[firstGiftIdx] as any).event;
+      beats.push({ frac: firstGiftIdx / (n - 1), label: ev?.label || "First gift", sub: ev?.detail || undefined });
+    }
+    const thresholds = [1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000];
+    const crossed: Array<{ frac: number; t: number }> = [];
+    for (const t of thresholds) {
+      const idx = trendData.findIndex((p, i) => p.value >= t && (i === 0 || trendData[i - 1].value < t));
+      if (idx > 0) crossed.push({ frac: idx / (n - 1), t });
+    }
+    for (const c of crossed.slice(-3)) {
+      beats.push({ frac: c.frac, label: `Crossed ${c.t >= 1000 ? `$${c.t / 1000}k` : `$${c.t}`}` });
+    }
+    beats.push({
+      frac: 1,
+      label: "Today",
+      sub: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(totalValue),
+    });
+    beats.sort((a, b) => a.frac - b.frac);
+    return beats.filter((b, i, arr) => i === 0 || b.frac === 1 || b.frac - arr[i - 1].frac >= 0.06);
+  }, [chartRange, trendData, totalValue]);
+
+  const cancelJourney = useCallback(() => {
+    journeyTimersRef.current.forEach((t) => window.clearTimeout(t));
+    journeyTimersRef.current = [];
+    setJourneyCaption(null);
+    setJourneyPlaying(false);
+  }, []);
+  useEffect(() => {
+    cancelJourneyRef.current = cancelJourney;
+    return () => { cancelJourneyRef.current = null; cancelJourney(); };
+  }, [cancelJourney]);
+  // A range or fund switch mid-journey must stop the narration — the chart
+  // under the captions is no longer the story they were scheduled against.
+  useEffect(() => { cancelJourney(); }, [chartRange, activeFundId, cancelJourney]);
+
+  const playJourney = () => {
+    if (journeyBeats.length < 3 || !chartWipePlayRef.current) return;
+    haptic("light");
+    // The wipe FIRST (it cancels any prior journey's timers via
+    // cancelJourneyRef), THEN this journey's own caption schedule.
+    chartWipePlayRef.current({ duration: JOURNEY_MS, easing: "linear" });
+    setJourneyPlaying(true);
+    const timers: number[] = journeyBeats.map((b) =>
+      window.setTimeout(() => setJourneyCaption({ label: b.label, sub: b.sub }), Math.round(b.frac * JOURNEY_MS)),
+    );
+    // Let "Today" linger a beat past the draw, then clear.
+    timers.push(window.setTimeout(() => { setJourneyCaption(null); setJourneyPlaying(false); }, JOURNEY_MS + 2400));
+    journeyTimersRef.current = timers;
+  };
 
   const setup = buildSetupProgress({
     fund: activeFund || null,
@@ -7724,6 +7814,23 @@ export default function DashboardLab() {
                         {r}
                       </button>
                     ))}
+                    {/* "Watch it grow" — QUIET journey-replay affordance
+                        (founder approved-but-unsure, so it whispers). ALL
+                        range only, real story only (≥3 beats), hidden under
+                        reduced-motion (beats memo returns []). */}
+                    {chartRange === "ALL" && journeyBeats.length >= 3 && (
+                      <button
+                        type="button"
+                        onClick={playJourney}
+                        disabled={journeyPlaying}
+                        className="ml-1 inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity disabled:opacity-40"
+                        data-testid="button-journey-replay"
+                        title="Replay the whole story"
+                      >
+                        <Play size={11} strokeWidth={2.5} />
+                        Watch it grow
+                      </button>
+                    )}
                   </div>
                 </div>
                 <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
@@ -7781,6 +7888,38 @@ export default function DashboardLab() {
                         </div>
                       );
                     })()}
+                    {/* Journey-replay caption — one floating pill that fades
+                        between beats ("Where it began" → "First gift — $50
+                        from Grandpa" → "Crossed $10k" → "Today"), keyed by
+                        label so each beat cross-fades. pointer-events-none:
+                        the chart stays scrubbable underneath. */}
+                    <AnimatePresence>
+                      {journeyCaption && (
+                        <motion.div
+                          key={journeyCaption.label}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className="pointer-events-none"
+                          style={{ position: "absolute", top: 8, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 11 }}
+                        >
+                          <div style={{
+                            background: "rgba(255,255,255,0.94)",
+                            backdropFilter: "blur(4px)",
+                            border: "1px solid rgba(26,23,16,0.08)",
+                            boxShadow: "0 2px 10px rgba(26,23,16,0.10)",
+                            borderRadius: 9999, padding: "5px 13px", textAlign: "center",
+                            maxWidth: "92%",
+                          }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: "rgb(26,23,16)" }}>{journeyCaption.label}</span>
+                            {journeyCaption.sub && (
+                              <span style={{ fontSize: 11, color: "rgba(26,23,16,0.5)", marginLeft: 6 }}>{journeyCaption.sub}</span>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                   </div>
                   </div>
