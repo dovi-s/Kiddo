@@ -48,7 +48,7 @@ function getChartRangeLabel(range: ChartRange): string {
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -1556,6 +1556,9 @@ export default function DashboardLab() {
     let wipeToken = 0;
     const playWipe = () => {
       if (!mover || !inner || typeof mover.animate !== "function") return;
+      // Reduced-motion: no wipe at all — the chart's resting state is fully
+      // visible (the safety doctrine), so skipping is automatically correct.
+      if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const token = ++wipeToken;
       movAnim?.cancel();
       innAnim?.cancel();
@@ -5308,6 +5311,13 @@ export default function DashboardLab() {
   const isPageLoading = fundsLoading || (!!activeFundId && !heroDataReady && !dashboardSummaryError);
 
   return (
+    // Reduced-motion parity: MotionConfig "user" makes EVERY framer animation
+    // on this page respect the OS prefers-reduced-motion setting (transforms
+    // and layout motion are dropped; safe opacity fades remain). The two
+    // non-framer mechanisms gate themselves: the WAAPI chart wipe checks
+    // matchMedia inside playWipe, and the CSS tile-reveal/pulses are killed
+    // in the reduced-motion media block of the lab <style>.
+    <MotionConfig reducedMotion="user">
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
 
@@ -5868,6 +5878,11 @@ export default function DashboardLab() {
                  blank. No CSS needed for them anymore.) */
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
+                /* Recent-gifter ring pulse + the chart's live-dot ping are CSS
+                   animations (framer's MotionConfig can't reach them). Static
+                   ring/dot remain — only the motion is dropped. */
+                .kiddo-gifter-avatar-pulse { animation: none !important; }
+                .animate-ping { animation: none !important; opacity: 0 !important; }
               }
             `}</style>
             <motion.section
@@ -8794,11 +8809,18 @@ export default function DashboardLab() {
                       // Without this they'd sit alone, fully visible, while
                       // the faces are still hidden pre-scroll.
                       const tileDelay = Math.min(visibleGifters.length, 11) * 0.06;
+                      // Reduced-motion: tiles fade only (no translate/scale),
+                      // matching what MotionConfig does to the framer faces.
+                      const tilesReduceMotion = typeof window !== "undefined"
+                        && typeof window.matchMedia === "function"
+                        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
                       const tileReveal: React.CSSProperties = {
                         opacity: facesInView ? 1 : 0,
-                        transform: facesInView ? "none" : "translateY(12px) scale(0.8)",
+                        transform: facesInView || tilesReduceMotion ? "none" : "translateY(12px) scale(0.8)",
                         transition: facesInView
-                          ? `opacity 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s, transform 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s`
+                          ? (tilesReduceMotion
+                            ? `opacity 0.2s ease ${tileDelay}s`
+                            : `opacity 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s, transform 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s`)
                           : "none",
                       };
                       return (
@@ -15934,5 +15956,6 @@ export default function DashboardLab() {
         }}
       />
     </div>
+    </MotionConfig>
   );
 }
