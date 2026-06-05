@@ -1,9 +1,30 @@
-# Gifter Profile Photos — Spec (PARKED, shovel-ready)
+# Gifter Profile Photos — Spec (PARTIALLY BUILT — see status)
 
-**Status:** Parked, like the IP items. **Do not build now.** Post-launch "Act 2"
-gifter-delight item, gated on the safety controls in §6. Founder greenlit the
-idea + the design 2026-06-05; this is the build-ready writeup for when launch
-clears.
+**Status (updated 2026-06-05, same day):** a parallel session built the
+parent-facing core of this spec before this writeup was discovered (founder
+approved both). Reconciled state:
+
+- **BUILT + runtime-verified (chromium, demo as Jay):** the §4 upload block on
+  `/gifter` (avatar on the hero, add/change/remove, initials fallback,
+  gifter-only self-write via `PATCH /api/user/profile`, removal contract
+  `profileImageUrl: ""` → null); the §3 data model exactly as specced
+  (users record + `gifts.senderEmail → users` enrichment — the server already
+  emits `gifterAvatarUrl` on gift rows); consent caption in the avatar menu
+  ("Families see this photo beside your gifts."); rendering on the
+  parent-facing surfaces — Dashboard roster, gift history, `FundSnapshot.tsx`.
+- **§6.1 moderation: WIRED (same day).** Profile-photo uploads now run through
+  `server/contentScanner.ts` — the same scanner as gift media, same
+  silent-log-and-refuse on a hit (audit + ops alert + generic error), and the
+  same fail-closed-in-prod default. **Profile photos are effectively OFF in
+  production until a real scanner vendor is configured** — which IS the gate
+  behaving as designed.
+- **STILL PARKED (the remaining gate):** §6.2 per-fund parent hide/report
+  override + its table, the shared `<GifterAvatar>` refactor, and — hard rule —
+  **Kid View must NOT render gifter photos until §6.2 ships** (verified
+  2026-06-05: it doesn't today; no child-facing surface consumes
+  `gifterAvatarUrl`).
+
+Original parked framing below, kept for the un-park work breakdown.
 
 **One-liner:** let a *logged-in gifter* add/edit/remove their own profile photo
 from "My Gifts"; it then replaces their initials-circle wherever their avatar

@@ -14458,6 +14458,41 @@ export async function registerRoutes(
         if (profileImageUrl.length > maxProfileImageDataUrlBytes) {
           return res.status(400).json({ error: 'Image too large. Please use an image under 5MB.' });
         }
+        // Content-safety gate (2026-06-05, per GIFTER_AVATAR_SPEC.md's
+        // non-negotiable): profile photos render on family surfaces (gifter
+        // roster, Memory Book bylines, the printed fund snapshot) via the
+        // gifts.senderEmail -> users enrichment, so they go through the SAME
+        // scanner as gift media — strict data-url parse, scan, and on a
+        // positive hit the silent-log-and-refuse pattern (generic error to
+        // the client, audit + ops alert with the real reason). The noop
+        // scanner is fail-closed in prod / fail-open in dev, identical to
+        // the gift-media path: profile photos stay effectively OFF in
+        // production until a real vendor is wired.
+        const parsedPhoto = parseImageDataUrl(profileImageUrl);
+        if (!parsedPhoto) {
+          return res.status(400).json({ error: 'Invalid image format. Please upload a PNG, JPG, WEBP or GIF.' });
+        }
+        const scan = await scanImageBuffer(parsedPhoto.buffer, parsedPhoto.mime);
+        if (!scan.safe) {
+          await writeAudit(req, 'profile_photo_scan_rejected', 'user', userId, {
+            provider: scan.provider,
+            reason: scan.reason,
+            hashMatch: scan.hashMatch,
+            sizeBytes: parsedPhoto.buffer.length,
+            mime: parsedPhoto.mime,
+          });
+          try {
+            await sendOpsAlert({
+              severity: 'critical',
+              title: 'Content scanner rejected a profile photo',
+              message: `Profile photo for user ${userId} rejected by ${scan.provider}. Reason: ${scan.reason || 'unknown'}.`,
+              context: { userId, provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch },
+            });
+          } catch (alertErr) {
+            console.error('[profile] Ops alert failed for scanner-rejected photo:', alertErr);
+          }
+          return res.status(500).json({ error: 'Could not update photo. Please try again later.' });
+        }
       }
 
       // Trusted-contact email validation. Permissive on shape (basic
