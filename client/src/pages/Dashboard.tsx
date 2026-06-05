@@ -135,6 +135,7 @@ import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { CollaboratorInvite, CollaboratorInviteModal } from "@/components/ui/plg-loops";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -1542,7 +1543,14 @@ export default function Dashboard() {
   const [addFromScheduleSheet, setAddFromScheduleSheet] = useState<{ planId: string; amount: string } | null>(null);
   const [addFromScheduleNote, setAddFromScheduleNote] = useState("");
   const [addFromScheduleMedia, setAddFromScheduleMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
-  const [smartNudge, setSmartNudge] = useState<{
+  // Smart-nudge payload. Was a blocking modal (Dialog); now fired as a calm,
+  // non-blocking TOAST that routes to the recurring editor (2026-06-04). The
+  // modal kept covering the hero "value roll" the parent came to see (founder
+  // flagged it twice) AND showed a static $X/$2X projection that the recurring
+  // editor already does LIVE as you change the amount — so the modal was a
+  // redundant, interruptive layer. The toast just hooks attention and hands off
+  // to the editor where the real interactive projection lives.
+  type SmartNudgePayload = {
     scenario: "outperforming" | "consistent" | "milestone";
     returnPct?: number;
     streakMonths?: number;
@@ -1551,14 +1559,10 @@ export default function Dashboard() {
     currentProjection?: number;
     doubledProjection?: number;
     milestoneAmt?: number;
-    // The NEXT milestone above the one just crossed. Used in the
-    // "at your current pace, the next $X arrives in N months" copy
-    // so the number we promise matches the threshold we're projecting
-    // toward, not the one we just hit. Added 2026-05-15 timing audit.
     nextMilestoneAmt?: number;
     monthsAtCurrentRate?: number;
     monthsDoubled?: number;
-  } | null>(null);
+  };
   const [oneTimeModalOpen, setOneTimeModalOpen] = useState(false);
   const [oneTimeStep, setOneTimeStep] = useState<"amount" | "target" | "confirm">("amount");
   const [oneTimeAmount, setOneTimeAmount] = useState("50");
@@ -3665,19 +3669,45 @@ export default function Dashboard() {
     const fundCreated = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : now;
     if (now - fundCreated < 30 * 24 * 60 * 60 * 1000) return;
 
-    // DELAYED FIRE (same founder catch: "the timing makes it that I don't
-    // see the value roll in"). The modal used to open the instant data
-    // settled — exactly when the hero's cached→live count-up plays, so the
-    // parent never saw the roll land. The nudge now waits 8 seconds of
-    // settled dashboard before appearing; the roll (~1.2s) + arrival beats
-    // own the open uncontested. The monthly key is written at SHOW time,
-    // and the effect cleanup cancels a pending timer if deps churn or the
-    // user navigates away mid-wait.
+    // Fired as a NON-BLOCKING TOAST (2026-06-04), not a modal. Still waits 8s
+    // of settled dashboard so the hero's value-roll + arrival beats own the
+    // open uncontested — but because a toast doesn't cover the screen, it can
+    // never eat the roll the way the old modal did (founder flagged that twice).
+    // The toast hooks attention with the encouraging headline and hands off to
+    // the recurring editor via its action, where the LIVE projection updates as
+    // the parent changes the amount. No redundant static $X/$2X math here.
     let nudgeTimer: ReturnType<typeof setTimeout> | null = null;
     const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
-    const fireNudge = (payload: Parameters<typeof setSmartNudge>[0]) => {
+    const fireNudge = (payload: SmartNudgePayload) => {
       nudgeTimer = setTimeout(() => {
-        setSmartNudge(payload);
+        const nudgeChild = recipientFirstNameDisplay || "their fund";
+        const title =
+          payload.scenario === "outperforming"
+            ? `${nudgeChild}'s fund is up ${payload.returnPct}% 🌱`
+            : payload.scenario === "consistent"
+              ? `${payload.streakMonths} months, every cycle 🌱`
+              : payload.milestoneAmt
+                ? `${nudgeChild} just crossed ${formatCurrency(payload.milestoneAmt)} 🌱`
+                : `${nudgeChild}'s fund is growing 🌱`;
+        toast({
+          title,
+          description: "A little more each month keeps compounding for years. Adjust anytime.",
+          duration: 10000, // a soft nudge needs time to read + tap; not the 4.5s default
+          action: (
+            <ToastAction
+              altText="Adjust recurring investment"
+              onClick={() => {
+                haptic("medium");
+                if (payload.doubledAmt) setAutoInvestAmount(String(payload.doubledAmt));
+                setEditingContribId(null);
+                setAutoInvestStep("amount");
+                setAutoInvestModalOpen(true);
+              }}
+            >
+              Adjust recurring
+            </ToastAction>
+          ),
+        });
         safeLocalSet(NUDGE_KEY, String(Date.now()));
       }, 8000);
     };
@@ -15016,212 +15046,9 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Smart nudge modal */}
-      <Dialog open={smartNudge !== null} onOpenChange={(open) => { if (!open) setSmartNudge(null); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Smart nudge</DialogTitle>
-          {smartNudge && (() => {
-            const child = recipientFirstNameDisplay || "The fund";
-            // `her` pronoun + `delta` / `monthIncrease` were used by the
-            // previous comparison-table-shaped variants. Removed 2026-05-13
-            // with the rewrite — the new prose variants don't reference
-            // them. If pronouns become relevant again, grab them from
-            // `childPronouns` inline at the use site.
-            const fmt = (n?: number) => n != null ? `~$${(Math.round(n / 100) * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
-            const fmtAmt = (n?: number) => n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
-            // Per-scenario hero anchor. Without this the modal was a
-            // wall of text with no visual signal of WHICH moment the
-            // nudge celebrates. Eyebrow + headline alone made the
-            // surface read like a conversion-funnel popup instead of
-            // a contextual milestone. Locked palette: evergreen tile
-            // (Apple-Settings-warm rather than gold celebration).
-            // Trophy for milestone, TrendingUp for outperforming,
-            // Heart for consistent-streak (the "showing up" anchor).
-            const HeroIcon = smartNudge.scenario === "milestone"
-              ? Trophy
-              : smartNudge.scenario === "outperforming"
-                ? TrendingUp
-                : Heart;
-            // Current balance line — a reinforcement number the
-            // parent can anchor to. The milestone modal previously
-            // said "Emma just crossed $100" with no other number on
-            // screen; now we also show the actual balance so the
-            // moment connects to reality. Computed at render time
-            // from the live totalValue (not the stale fundHistory
-            // value used to detect the crossing).
-            const balanceLine = totalValue > 0
-              ? `Now at ${fmtAmt(totalValue)}.`
-              : null;
-            return (
-              <div className="p-6 space-y-5">
-                {/* Hero icon anchor. Small evergreen-tinted tile gives
-                    the modal a visual moment without crossing into
-                    "celebration emoji" territory (locked memory: only
-                    🌱 is reserved). Per-scenario icon makes the
-                    surface scannable at a glance — Trophy for a
-                    crossed milestone, TrendingUp for outperforming,
-                    Heart for the consistent-streak anchor. */}
-                <div className="flex items-center justify-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]">
-                    <HeroIcon size={26} strokeWidth={1.8} />
-                  </div>
-                </div>
-                {/* Three scenarios — outperforming / consistent / milestone.
-                    Rewritten 2026-05-13 from the previous comparison-table
-                    register (math panel + 'Double to \$X' CTA + 🌟 emoji
-                    + platitudinal greeting-card lines) toward calm Kiddo
-                    prose. The information is identical; the surface is
-                    no longer fintech-conversion-funnel anatomy.
-                    Key changes:
-                      - No emoji (🌟 violated brand; only 🌱 is reserved)
-                      - No 'The first \$X is the hardest' platitude (also
-                        slightly inaccurate — next \$X comes at the same
-                        contribution pace; compounding adds ~7%/yr only)
-                      - No math-comparison panel (Acorns/Robinhood pattern)
-                      - No 'Double to \$X' aggressive CTA. 'Adjust recurring'
-                        honestly describes what happens (opens the editor)
-                        without pushing a specific increment. */}
-
-                {/* Scenario 1: Outperforming */}
-                {smartNudge.scenario === "outperforming" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {child}'s fund so far
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      Up {smartNudge.returnPct}%.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Past growth isn't a promise, so we project ahead at the 7% long-run average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} is projected to have {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
-                        <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {/* Scenario 2: Consistent streak */}
-                {smartNudge.scenario === "consistent" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Steady
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      {smartNudge.streakMonths} months without a missed cycle.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} projects to {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
-                        <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {/* Scenario 3: Milestone */}
-                {smartNudge.scenario === "milestone" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Milestone
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      {child} just crossed {fmtAmt(smartNudge.milestoneAmt)}.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    {/* Honest projection. Rewritten 2026-05-15:
-                        OLD copy said "the next $500 arrives in N months"
-                        with math = milestoneAmt / monthlyAmt — wrong on
-                        three counts: (1) ignored the current balance,
-                        (2) ignored 7% growth, (3) "the next $500" meant
-                        "another chunk" not "the next milestone."
-                        NEW: nextMilestoneAmt is the literal next
-                        threshold (e.g., $1K after $500), and the months
-                        come from a month-by-month simulation that
-                        starts at current balance, applies 7% net-of-fee
-                        growth, and adds monthly contributions until
-                        the next threshold is reached. nextMilestoneAmt
-                        is undefined if the fund is at the highest
-                        threshold ($100K), in which case we skip the
-                        projection line entirely. */}
-                    {/* Classic React gotcha: {x && <element>} renders
-                        the literal "0" in the DOM if x === 0 (number),
-                        because && returns its left operand when falsy
-                        and React happily renders numbers as text.
-                        Explicit `> 0` guards instead. Reported with a
-                        screenshot 2026-05-15 — Emma's $1,917 fund
-                        showed a stray "0" in the milestone modal
-                        because monthsAtCurrentRate was 0 (fund already
-                        past the next milestone, projection didn't
-                        apply). The trigger-side gate now suppresses
-                        this scenario entirely, but the defensive
-                        boolean checks below remove the footgun. */}
-                    {(smartNudge.nextMilestoneAmt ?? 0) > 0 && (smartNudge.monthsAtCurrentRate ?? 0) > 0 && (
-                      <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                        At your current pace ({fmtAmt(smartNudge.currentMonthlyAmt || 0)}/mo plus 7% historical-average growth), you'd cross {fmtAmt(smartNudge.nextMilestoneAmt)} in about {smartNudge.monthsAtCurrentRate} {smartNudge.monthsAtCurrentRate === 1 ? "month" : "months"}.
-                        {(smartNudge.doubledAmt ?? 0) > 0 && (smartNudge.monthsDoubled ?? 0) > 0 && (
-                          <>
-                            {" "}At {fmtAmt(smartNudge.doubledAmt)}/mo, in about {smartNudge.monthsDoubled} {smartNudge.monthsDoubled === 1 ? "month" : "months"}.
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* CTAs. 'Adjust recurring' replaces 'Double to \$X/month'
-                    — the previous label proposed a 100% increase as the
-                    default ask, which is aggressive even when the math
-                    supports it. The button now honestly describes what
-                    happens (opens the recurring-investment editor with
-                    the doubled amount pre-filled as a suggestion, which
-                    the parent can change). */}
-                <div className="space-y-2">
-                  <Button
-                    className="w-full rounded-xl h-11"
-                    onClick={() => {
-                      haptic("medium");
-                      setSmartNudge(null);
-                      if (smartNudge.doubledAmt) setAutoInvestAmount(String(smartNudge.doubledAmt));
-                      setEditingContribId(null);
-                      setAutoInvestStep("amount");
-                      setAutoInvestModalOpen(true);
-                    }}
-                  >
-                    Adjust recurring
-                  </Button>
-                  <button
-                    type="button"
-                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
-                    onClick={() => { haptic("selection"); setSmartNudge(null); }}
-                  >
-                    Not now
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* Smart nudge is now a non-blocking toast (see fireNudge above), not a
+          modal — it no longer covers the hero value-roll, and the live
+          projection lives in the recurring editor it routes to. 2026-06-04. */}
 
       {/* Recurring list-view action sheet — Edit / Pause-or-Resume / Cancel for the
           tapped row. Cancel uses a two-step within the same dialog (menu → confirm)
