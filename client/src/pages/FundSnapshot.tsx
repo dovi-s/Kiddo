@@ -472,18 +472,28 @@ export default function FundSnapshot() {
         {/* Hero — balance + gain */}
         <div className="snapshot-hero">
           <p className="snapshot-eyebrow">Total balance</p>
+          {/* Print truth: every count-up value renders TWICE — the animated
+              span for the screen, the true final value in a print-only span.
+              window.print() snapshots whatever is currently rendered, and the
+              auto-print timer (600ms) fires while these curves (0.7-1.2s) are
+              still mid-count — without the swap, a PDF can bake in a wrong
+              dollar amount on a document people keep. CSS swap = zero timing
+              assumptions; covers auto-print, the Print button, and Ctrl+P. */}
           <p
             className="snapshot-balance"
             aria-live={balanceAnimating ? "off" : "polite"}
             aria-label={fmt(balance)}
-          >{fmt(animatedBalance)}</p>
+          >
+            <span className="snapshot-anim-value">{fmt(animatedBalance)}</span>
+            <span className="snapshot-true-value">{fmt(balance)}</span>
+          </p>
           {Math.abs(gain) > 0.01 && (
             <p
               className={`snapshot-gain ${isUp ? "is-up" : "is-down"}`}
               aria-live={gainAnimating ? "off" : "polite"}
               aria-label={`${isUp ? "+" : ""}${fmt(gain)} (${isUp ? "+" : ""}${gainPct.toFixed(2)}%) all-time`}
             >
-              {isUp ? "+" : ""}{fmt(animatedGain)} ({isUp ? "+" : ""}{gainPct.toFixed(2)}%) all-time
+              {isUp ? "+" : ""}<span className="snapshot-anim-value">{fmt(animatedGain)}</span><span className="snapshot-true-value">{fmt(gain)}</span> ({isUp ? "+" : ""}{gainPct.toFixed(2)}%) all-time
             </p>
           )}
           {/* The principal put in. The stats strip shows the gift COUNT (134),
@@ -503,7 +513,10 @@ export default function FundSnapshot() {
               className="snapshot-stat-value"
               aria-live={contributorCountAnimating ? "off" : "polite"}
               aria-label={String(stats.contributorCount)}
-            >{Math.round(animatedContributorCount)}</p>
+            >
+              <span className="snapshot-anim-value">{Math.round(animatedContributorCount)}</span>
+              <span className="snapshot-true-value">{stats.contributorCount}</span>
+            </p>
           </div>
           <div className="snapshot-stat">
             <p className="snapshot-stat-label">Gifts received</p>
@@ -511,7 +524,10 @@ export default function FundSnapshot() {
               className="snapshot-stat-value"
               aria-live={giftCountAnimating ? "off" : "polite"}
               aria-label={String(stats.giftCount)}
-            >{Math.round(animatedGiftCount)}</p>
+            >
+              <span className="snapshot-anim-value">{Math.round(animatedGiftCount)}</span>
+              <span className="snapshot-true-value">{stats.giftCount}</span>
+            </p>
           </div>
           <div className="snapshot-stat">
             <p className="snapshot-stat-label">Active since</p>
@@ -524,7 +540,10 @@ export default function FundSnapshot() {
                 className="snapshot-stat-value"
                 aria-live={projectionAt18Animating ? "off" : "polite"}
                 aria-label={fmt(projectionValue)}
-              >{fmt(animatedProjectionAt18)}</p>
+              >
+                <span className="snapshot-anim-value">{fmt(animatedProjectionAt18)}</span>
+                <span className="snapshot-true-value">{fmt(projectionValue)}</span>
+              </p>
             </div>
           )}
         </div>
@@ -1121,12 +1140,20 @@ export default function FundSnapshot() {
           margin-top: 10px;
         }
 
+        /* Print-truth swap: count-up values animate on screen, but the PDF
+           must always carry the true final number (window.print() snapshots
+           mid-animation otherwise — the auto-print timer fires at 600ms
+           while the curves run 0.7-1.2s). */
+        .snapshot-true-value { display: none; }
+
         /* ── Print styles — produce a clean PDF on Cmd-P ─────────── */
         @media print {
           @page { size: letter; margin: 0.45in; }
           html, body, #root { background: #fff !important; }
           .snapshot-root { background: #fff !important; }
           .snapshot-toolbar { display: none !important; }
+          .snapshot-anim-value { display: none !important; }
+          .snapshot-true-value { display: inline !important; }
           .snapshot-page {
             box-shadow: none !important;
             margin: 0 auto !important;
