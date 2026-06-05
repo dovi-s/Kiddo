@@ -43,7 +43,14 @@ import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
 const SESSION_KEY = "kiddo.demo.giftMoment.shown.v1"; // generic beat: once per session
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
 const DELAY_MS = 15_000;          // generic beat fallback — for a prospect who never switches funds
-const SWITCH_DELAY_MS = 2_500;    // generic beat on a fund-SWITCH — after the new fund's balance roll lands
+// Generic beat on a fund-SWITCH. Timed to land the gift as its OWN beat, just
+// AFTER the hero's roll cascade settles — not on top of it. On a switch the
+// balance rolls ~0–1.2s, then the projection rolls ~1.35–2.55s (the deliberate
+// balance→projection stagger). 2.8s drops the gift ~250ms after the projection
+// settles, so the sequence reads balance → projection → gift, one beat at a
+// time (the same one-thing-moving principle as the count-up stagger), instead
+// of the gift coinciding with the projection's final frame at 2.5s.
+const SWITCH_DELAY_MS = 2_800;
 const JUST_SENT_DELAY_MS = 3_000; // loop closure — they came back to feel it; don't make them wait
 
 // Per-child gift that matches the seeded personas, so the ambient beat reads
