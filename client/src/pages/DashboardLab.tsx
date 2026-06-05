@@ -115,6 +115,8 @@ import {
   History,
   ChevronRight,
   X,
+  PieChart,
+  HandCoins,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
@@ -6804,9 +6806,9 @@ export default function DashboardLab() {
 
               return (
                 <details className="lab-collapse" data-testid="lab-summary-details" style={{ marginTop: 16 }}>
-                  <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "hsl(var(--kiddo-cream))", border: "1px solid hsl(var(--kiddo-evergreen) / 0.14)", borderRadius: "var(--radius-container)" }}>
+                  <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🌱</span>
+                      <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Sprout size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
                       <span style={{ minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}</span>
                         <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{computedInvestedGain >= 1 ? `+$${Math.round(computedInvestedGain).toLocaleString("en-US")} grown so far. ` : "Gifts, growth, and where it all went. "}<span className="lab-hint-open">Tap to open</span></span>
@@ -7362,7 +7364,7 @@ export default function DashboardLab() {
             <details className="lab-collapse" data-testid="lab-chart-details" style={{ marginTop: 16 }}>
               <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📊</span>
+                  <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TrendingUp size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}</span>
                     <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{(() => {
@@ -7811,7 +7813,7 @@ export default function DashboardLab() {
                 style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📈</span>
+                  <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PieChart size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}</span>
                     <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} powering the growth. ` : "The mix powering the growth. "}<span className="lab-hint-open">Tap to open</span></span>
@@ -8985,7 +8987,7 @@ export default function DashboardLab() {
             <details className="lab-collapse" data-testid="lab-yourpart-details" style={{ marginTop: 16 }}>
               <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🤲</span>
+                  <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><HandCoins size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>Your part of the story</span>
                     <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{(() => {
