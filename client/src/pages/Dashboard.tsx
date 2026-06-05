@@ -3033,6 +3033,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (giftToastDismissed || !gifts.length) return;
+    // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
+    // (top-center). This bottom-right GiftReceivedToast is the real-product
+    // PLG nudge — firing BOTH meant two different gifts announced at once in
+    // two places ("Manny added $50" top-center + "Phil just gifted $100"
+    // bottom-right). The earlier fix only excluded `demo-` OVERLAY gifts, but
+    // every demo fund also has SEEDED gifts dated today (Phil's monthly
+    // auto-invest), which are real ids and slipped through. Suppress this
+    // toast entirely for demo accounts so the demo shows ONE arrival beat.
+    // (Founder catch 2026-06-04, follow-up.) Real accounts keep the card.
+    if (isDemoAccount) return;
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     // Iterate every recent gift (not just the first) and pick the
     // newest that hasn't already been dismissed. Previously `.find()`
@@ -3042,13 +3052,6 @@ export default function Dashboard() {
     const recent = gifts.find((g) => {
       const createdAt = g.createdAt ? new Date(g.createdAt).getTime() : 0;
       if (createdAt <= oneDayAgo) return false;
-      // Demo OVERLAY gifts never get this card (founder catch 2026-06-04:
-      // "multiple of the same, some bottom right some top center").
-      // DemoGiftMoment already announces the ambient gift with its own
-      // top-center toast at record time, and the hero flash + roll land it
-      // visually — the bottom-right GiftReceivedToast firing for the SAME
-      // overlay gift was the third announcement of one event. Real gifts
-      // (real ids) keep the card.
       if (String(g.id || "").startsWith("demo-")) return false;
       return !isGiftToastDismissed(String(g.id || ""));
     });
@@ -3079,7 +3082,7 @@ export default function Dashboard() {
       // canonical surfacing.
       markGiftToastDismissed(String(recent.id || ""));
     }
-  }, [gifts, giftToastDismissed]);
+  }, [gifts, giftToastDismissed, isDemoAccount]);
 
   // (Removed: the effect that surfaced `pendingGiftNotice`. See note on
   // the deleted state above — the banner pattern was the wrong shape for
