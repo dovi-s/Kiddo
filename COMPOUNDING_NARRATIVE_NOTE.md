@@ -60,6 +60,10 @@ headline is never "10% returns" or "$3.8M."
   lands (a kid looking at money that's theirs). No retirement calculator reaches a
   child; ours can. Direct answer to "why not a free Fidelity UTMA?" Age-aware:
   wonder for the little ones, the real "leave-it-alone" math for teens.
+  *(2026-06-05: this same view is also the kid-pull acquisition artifact — the
+  thing a kid shows a friend, who goes home and asks. See the Kid-Pull section
+  of `GIFTER_TO_PARENT_LOOP.md`. Showability is a design value for this surface;
+  never a kid-facing share mechanic.)*
 - **The handoff (18-21) as the retention mechanism.** The compounding view is the
   decisive don't-cash-out tool ("here's what this becomes if you don't touch it")
   = the revenue-cliff answer made visual. Highest-leverage use, period.

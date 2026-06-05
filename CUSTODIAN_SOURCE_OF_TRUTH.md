@@ -112,3 +112,22 @@ rendered to users. Verified by grep.
 **When the custodian IS locked + wired:** one find/replace of "our broker-dealer
 partner" → "[NAME], LLC (Member FINRA/SIPC)" across customer copy completes it.
 No re-editing churn — that's the whole point of going agnostic now.
+
+## 8. Parked: KYC onboarding UX patterns (for when custody wiring adds real KYC)
+
+Noted 2026-06-05 so future-us doesn't rediscover it. The week the custodian is
+wired, identity verification (ID scan / selfie / manual review) enters the parent
+signup path. The established fintech patterns to apply, in priority order:
+
+1. **Progress indication** — "Step 3 of 7" + an upfront time estimate ("about 10
+   minutes; you'll need a photo ID"). Known to cut KYC abandonment materially.
+2. **Honest async holding states** — when verification goes to manual review,
+   show "we're reviewing — usually within a day, we'll email you," never a
+   spinner implying real-time. (Matches our no-fake-states discipline.)
+3. **Capture-time guidance** — framing/lighting feedback on the ID camera step;
+   a blurry-ID retry loop is the single biggest KYC drop-off.
+4. **Preserve form state through verification errors** — a failed check must
+   never dump the parent back to an empty form (same principle as the gifter
+   checkout draft persistence shipped 2026-06-05).
+5. **Progressive disclosure of terms** — summarized disclosures with expandable
+   detail, not a wall of text. More compliant in practice, because it gets read.
