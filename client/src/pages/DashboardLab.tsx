@@ -5600,11 +5600,10 @@ export default function DashboardLab() {
             >
               <div
                 style={{
-                  // LAB premium depth: a warm gold radial glow (the neobank
-                  // light-source, our warm way) layered over the evergreen
-                  // gradient + a dramatic layered shadow so the card FLOATS off
-                  // the page + an inset top highlight so it reads lit-from-above.
-                  background: "radial-gradient(135% 135% at 88% -18%, rgba(237,193,100,0.20) 0%, rgba(237,193,100,0) 44%), linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
+                  // LAB premium depth (glow removed per founder): a dramatic
+                  // layered shadow so the card FLOATS off the page + an inset
+                  // top highlight so it reads lit-from-above. Clean evergreen.
+                  background: "linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
                   borderRadius: 28,
                   padding: "28px 28px 26px",
                   position: "relative",
