@@ -4647,12 +4647,29 @@ export default function DashboardLab() {
     // (a steep growth year), the narration simply lags the reveal edge a
     // touch and catches up, one calm pill at a time. The tail may run a beat
     // past the draw; "Today" still lands last and lingers.
+    //
+    // CAPTION EXPIRY (founder catch 2026-06-05: "it says Crossed $10k at the
+    // $20k mark"): a caption is true the instant it fires, but the edge keeps
+    // racing — left up for a long gap (10k crossed at 6.3s, Today at 9s), it
+    // reads stale against a line that's moved on. Each caption now clears
+    // after 1.4s UNLESS its successor replaces it sooner; the final beat
+    // keeps the existing linger-then-clear.
     const MIN_CAPTION_GAP = 950;
+    const CAPTION_TTL = 1400;
     let lastAt = -Infinity;
-    const timers: number[] = journeyBeats.map((b) => {
+    const fireAts: number[] = journeyBeats.map((b) => {
       const at = Math.max(Math.round(b.frac * JOURNEY_MS), lastAt + MIN_CAPTION_GAP);
       lastAt = at;
-      return window.setTimeout(() => setJourneyCaption({ label: b.label, sub: b.sub }), at);
+      return at;
+    });
+    const timers: number[] = [];
+    journeyBeats.forEach((b, i) => {
+      timers.push(window.setTimeout(() => setJourneyCaption({ label: b.label, sub: b.sub }), fireAts[i]));
+      const nextAt = i + 1 < fireAts.length ? fireAts[i + 1] : Infinity;
+      const isLast = i === journeyBeats.length - 1;
+      if (!isLast && nextAt - fireAts[i] > CAPTION_TTL) {
+        timers.push(window.setTimeout(() => setJourneyCaption(null), fireAts[i] + CAPTION_TTL));
+      }
     });
     // Let "Today" linger a beat past whichever fired last, then clear.
     timers.push(window.setTimeout(() => { setJourneyCaption(null); setJourneyPlaying(false); }, Math.max(JOURNEY_MS, lastAt) + 2400));
