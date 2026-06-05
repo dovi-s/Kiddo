@@ -6458,9 +6458,13 @@ export default function DashboardLab() {
                         const kidNames = gFunds
                           .map((f) => String(f.childFirstName || f.childName || "").trim().split(/\s+/)[0])
                           .filter(Boolean);
+                        // Name every kid up to three ("Alex, Haley & Luke") —
+                        // hiding exactly ONE name behind "& 1 more" was absurd
+                        // (founder saw it live). Compression starts at four.
                         const kidsLabel = kidNames.length === 1 ? kidNames[0]
                           : kidNames.length === 2 ? `${kidNames[0]} & ${kidNames[1]}`
-                          : kidNames.length > 2 ? `${kidNames[0]}, ${kidNames[1]} & ${kidNames.length - 2} more`
+                          : kidNames.length === 3 ? `${kidNames[0]}, ${kidNames[1]} & ${kidNames[2]}`
+                          : kidNames.length > 3 ? `${kidNames[0]}, ${kidNames[1]} & ${kidNames.length - 2} more`
                           : `${gFunds.length} ${gFunds.length === 1 ? "kid" : "kids"}`;
                         const fmtG = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
                         return (
@@ -11349,7 +11353,13 @@ export default function DashboardLab() {
                       <div style={{ marginBottom: 14 }}>
                         <p style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)", margin: "0 0 4px", lineHeight: 1.35 }}>Every milestone deserves a moment.</p>
                         <p style={{ fontSize: 13, color: "rgba(26,23,16,0.45)", lineHeight: 1.55, margin: 0 }}>
-                          {capFirst(childFirst)}'s birthday coming up? Saving for their first car?
+                          {/* capFirst title-cases EVERY word (it's a name
+                              formatter — "mary jane" → "Mary Jane"), which
+                              turned the no-name fallback into "Your Child's"
+                              (founder saw it on Jay's draft fund). Names keep
+                              capFirst; the fallback phrase caps only its
+                              first letter. */}
+                          {recipientFirstNameDisplay ? capFirst(childFirst) : "Your child"}'s birthday coming up? Saving for their first car?
                         </p>
                       </div>
                       {/* Suggestion tiles (same as normal view) + create tile */}
