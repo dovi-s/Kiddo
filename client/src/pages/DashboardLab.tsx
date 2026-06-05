@@ -139,6 +139,7 @@ import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { CollaboratorInvite, CollaboratorInviteModal } from "@/components/ui/plg-loops";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -183,7 +184,10 @@ import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
-import { getCulturalSuggestions, TRADITION_LABELS, TRADITION_ICONS, type CulturalBackground, type CulturalTradition } from "@/lib/cultural-calendar";
+// Cultural-traditions UI + suggestion interleaving fully removed from the
+// production dashboard 2026-06-04 (founder). The engine module
+// (lib/cultural-calendar.ts) is preserved for a proper post-launch home inside
+// the occasion-create flow; the dashboard no longer imports it.
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
 import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { friendlyHoldingName } from "@/lib/ticker-names";
@@ -1439,9 +1443,7 @@ export default function DashboardLab() {
   const [recentGiftForToast, setRecentGiftForToast] = useState<GiftType | null>(null);
   const [showCoverageUpgradeModal, setShowCoverageUpgradeModal] = useState(false);
   const [startingCoverageCheckout, setStartingCoverageCheckout] = useState(false);
-  const [culturalBgPickerOpen, setCulturalBgPickerOpen] = useState(false);
-  const [culturalBgSelections, setCulturalBgSelections] = useState<string[]>([]);
-  const [savingCulturalBg, setSavingCulturalBg] = useState(false);
+  // Cultural-traditions picker state removed 2026-06-04 with its tile + dialog.
   const [kidViewConfigOpen, setKidViewConfigOpen] = useState(false);
   const [kidViewConfigStep, setKidViewConfigStep] = useState<"settings" | "done">("settings");
   const [kidViewEnabled, setKidViewEnabled] = useState(false);
@@ -1449,7 +1451,12 @@ export default function DashboardLab() {
   const [kidViewPinHint, setKidViewPinHint] = useState("");
   const [savingKidView, setSavingKidView] = useState(false);
   const [disclosureOpen, setDisclosureOpen] = useState<"growth" | "projection" | null>(null);
-  const [chartRange, setChartRange] = useState<ChartRange>("1M");
+  // Default to ALL, not 1M (2026-06-04, founder): Kiddo's value IS the
+  // long-term compounding arc — the chart should open on the whole journey
+  // (started small → weathered the dips → grew), not a near-flat last-month
+  // slice. It also matches the "Growth · All-time" stat shown beside it. A
+  // parent who wants recent detail taps 1W/1M; the default is the story.
+  const [chartRange, setChartRange] = useState<ChartRange>("ALL");
   const [previewFundId, setPreviewFundId] = useState<string>("");
   const [autoInvestModalOpen, setAutoInvestModalOpen] = useState(false);
   const [autoInvestUpgradeOpen, setAutoInvestUpgradeOpen] = useState(false);
@@ -1556,7 +1563,14 @@ export default function DashboardLab() {
   const [addFromScheduleSheet, setAddFromScheduleSheet] = useState<{ planId: string; amount: string } | null>(null);
   const [addFromScheduleNote, setAddFromScheduleNote] = useState("");
   const [addFromScheduleMedia, setAddFromScheduleMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
-  const [smartNudge, setSmartNudge] = useState<{
+  // Smart-nudge payload. Was a blocking modal (Dialog); now fired as a calm,
+  // non-blocking TOAST that routes to the recurring editor (2026-06-04). The
+  // modal kept covering the hero "value roll" the parent came to see (founder
+  // flagged it twice) AND showed a static $X/$2X projection that the recurring
+  // editor already does LIVE as you change the amount — so the modal was a
+  // redundant, interruptive layer. The toast just hooks attention and hands off
+  // to the editor where the real interactive projection lives.
+  type SmartNudgePayload = {
     scenario: "outperforming" | "consistent" | "milestone";
     returnPct?: number;
     streakMonths?: number;
@@ -1565,14 +1579,10 @@ export default function DashboardLab() {
     currentProjection?: number;
     doubledProjection?: number;
     milestoneAmt?: number;
-    // The NEXT milestone above the one just crossed. Used in the
-    // "at your current pace, the next $X arrives in N months" copy
-    // so the number we promise matches the threshold we're projecting
-    // toward, not the one we just hit. Added 2026-05-15 timing audit.
     nextMilestoneAmt?: number;
     monthsAtCurrentRate?: number;
     monthsDoubled?: number;
-  } | null>(null);
+  };
   const [oneTimeModalOpen, setOneTimeModalOpen] = useState(false);
   const [oneTimeStep, setOneTimeStep] = useState<"amount" | "target" | "confirm">("amount");
   const [oneTimeAmount, setOneTimeAmount] = useState("50");
@@ -3639,9 +3649,18 @@ export default function DashboardLab() {
     seedValue: cachedHeroProjectionAt65,
     liveValue: heroProjectedAt65,
     // 1200ms matches the hero balance — both numbers belong to the same
-    // focal hero moment and should ride the same duration ladder rung
+    // focal hero moment and ride the same duration ladder rung
     // (per project_count_up_animation_consistency.md).
     duration: 1200,
+    // STAGGER (2026-06-04, founder UX catch): the balance and the projection
+    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor.
+    // The projection now holds at its value until the hero balance has settled
+    // (1200ms) plus a beat, then rolls — focal number lands first, then the
+    // projection follows. Sequential and intentional. Beat widened 150ms -> 250ms
+    // (1350 -> 1450) on a founder pass: at 150ms the projection trod on the
+    // balance's heels; 250ms lets it read as a deliberate SECOND reveal without
+    // any dead time. Perceptual + tunable — nudge up if it should breathe more.
+    startDelay: 1450,
   });
 
   // Persist the live projection per-fund so the next session seeds the
@@ -3679,19 +3698,45 @@ export default function DashboardLab() {
     const fundCreated = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : now;
     if (now - fundCreated < 30 * 24 * 60 * 60 * 1000) return;
 
-    // DELAYED FIRE (same founder catch: "the timing makes it that I don't
-    // see the value roll in"). The modal used to open the instant data
-    // settled — exactly when the hero's cached→live count-up plays, so the
-    // parent never saw the roll land. The nudge now waits 8 seconds of
-    // settled dashboard before appearing; the roll (~1.2s) + arrival beats
-    // own the open uncontested. The monthly key is written at SHOW time,
-    // and the effect cleanup cancels a pending timer if deps churn or the
-    // user navigates away mid-wait.
+    // Fired as a NON-BLOCKING TOAST (2026-06-04), not a modal. Still waits 8s
+    // of settled dashboard so the hero's value-roll + arrival beats own the
+    // open uncontested — but because a toast doesn't cover the screen, it can
+    // never eat the roll the way the old modal did (founder flagged that twice).
+    // The toast hooks attention with the encouraging headline and hands off to
+    // the recurring editor via its action, where the LIVE projection updates as
+    // the parent changes the amount. No redundant static $X/$2X math here.
     let nudgeTimer: ReturnType<typeof setTimeout> | null = null;
     const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
-    const fireNudge = (payload: Parameters<typeof setSmartNudge>[0]) => {
+    const fireNudge = (payload: SmartNudgePayload) => {
       nudgeTimer = setTimeout(() => {
-        setSmartNudge(payload);
+        const nudgeChild = recipientFirstNameDisplay || "their fund";
+        const title =
+          payload.scenario === "outperforming"
+            ? `${nudgeChild}'s fund is up ${payload.returnPct}% 🌱`
+            : payload.scenario === "consistent"
+              ? `${payload.streakMonths} months, every cycle 🌱`
+              : payload.milestoneAmt
+                ? `${nudgeChild} just crossed ${formatCurrency(payload.milestoneAmt)} 🌱`
+                : `${nudgeChild}'s fund is growing 🌱`;
+        toast({
+          title,
+          description: "A little more each month keeps compounding for years. Adjust anytime.",
+          duration: 10000, // a soft nudge needs time to read + tap; not the 4.5s default
+          action: (
+            <ToastAction
+              altText="Adjust recurring investment"
+              onClick={() => {
+                haptic("medium");
+                if (payload.doubledAmt) setAutoInvestAmount(String(payload.doubledAmt));
+                setEditingContribId(null);
+                setAutoInvestStep("amount");
+                setAutoInvestModalOpen(true);
+              }}
+            >
+              Adjust recurring
+            </ToastAction>
+          ),
+        });
         safeLocalSet(NUDGE_KEY, String(Date.now()));
       }, 8000);
     };
@@ -4459,39 +4504,9 @@ export default function DashboardLab() {
     }
   };
 
-  const handleSaveCulturalBg = async () => {
-    if (!activeFundId) return;
-    setSavingCulturalBg(true);
-    try {
-      const newBg = culturalBgSelections.length > 0 ? { traditions: culturalBgSelections } : null;
-      const res = await fetch(`/api/funds/${activeFundId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ culturalBackground: newBg }),
-      });
-      if (!res.ok) throw new Error("Could not save.");
-      const updatedFund = await res.json().catch(() => null);
-      // Optimistically update the funds cache so UI reflects the change immediately
-      queryClient.setQueryData(["/api/funds"], (old: Fund[] | undefined) => {
-        if (!old) return old;
-        return old.map(f => f.id === activeFundId ? { ...f, ...(updatedFund || { culturalBackground: newBg }) } : f);
-      });
-      // Also kick a background refetch to make sure we're fully in sync
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-      setCulturalBgPickerOpen(false);
-      if (culturalBgSelections.length > 0) {
-        const labels = culturalBgSelections.slice(0, 2).map(t => TRADITION_LABELS[t as CulturalTradition]).join(" and ");
-        toast({ title: "Traditions saved", description: `${labels} suggestions are ready.` });
-      } else {
-        toast({ title: "Traditions cleared" });
-      }
-    } catch {
-      toast({ title: "Could not save", variant: "destructive" });
-    } finally {
-      setSavingCulturalBg(false);
-    }
-  };
+  // handleSaveCulturalBg removed 2026-06-04 with the cultural-traditions tile +
+  // picker (founder: config-in-a-content-row). The suggestion engine stays in
+  // lib/cultural-calendar; revive it inside the occasion-create flow if wanted.
 
   const handleSaveKidView = async () => {
     if (!activeFundId) return;
@@ -5800,8 +5815,20 @@ export default function DashboardLab() {
                       previous fund or a wrong "Ready for the first gift" empty
                       state. Brand-new funds (balance==0) skip this and
                       land directly on the empty hero — that's the correct state
-                      for them and the optimistic create flow. */}
-                  {dashboardSummaryLoading && !dashboardSummary && getFundTotalValue(activeFund) > 0 ? (
+                      for them and the optimistic create flow.
+
+                      DEMO EXCEPTION (2026-06-04, founder: "the main value rolls
+                      in ~6-7s, should come right after the chart"): the skeleton
+                      held the hero blank for the FULL dashboard-summary load —
+                      ~6s on the dev/demo remote DB — because it waits for the
+                      precise holdings-sum. But for demo funds `f.balance`
+                      already EQUALS the holdings market-value sum (verified), so
+                      `invested` falls back to it and the hero can paint the
+                      correct value the moment /api/funds lands (~1s), then roll
+                      to the (identical) fresh value. The skeleton only protects
+                      REAL funds, whose f.balance is a cost-basis-style field
+                      that would flash low then jump — so it stays for them. */}
+                  {dashboardSummaryLoading && !dashboardSummary && !isDemoAccount && getFundTotalValue(activeFund) > 0 ? (
                     <>
                       <div style={{ marginBottom: 10 }} data-testid="hero-loading-skeleton">
                         <div className="animate-pulse rounded-lg" style={{ width: 180, height: 44, background: "rgba(255,255,255,0.10)", marginBottom: 10 }} />
@@ -10042,29 +10069,11 @@ export default function DashboardLab() {
                   // For a newborn, the 1st-birthday occasion (above) is the rally.
                 }
 
-                // Cultural traditions - read early so we can interleave
-                const culturalBg = (activeFund as any)?.culturalBackground as CulturalBackground | null | undefined;
-                const traditions = culturalBg?.traditions ?? [];
-
-                // Cultural suggestions feed in. Each cultural suggestion gets a
-                // sortMs derived from its event date (or +Infinity for goals).
-                if (traditions.length > 0) {
-                  const culturalSugs = getCulturalSuggestions({
-                    traditions,
-                    childFirstName: childFirstSug,
-                    childBirthdate: childBirthdate,
-                    childAgeNow,
-                    activeEventNames: activeEvents.map(e => e.name),
-                    nowMs,
-                  });
-                  for (const cs of culturalSugs) {
-                    if (!suggestions.some(s => s.key === cs.key)) {
-                      const csDateStr = cs.prefill?.eventDate;
-                      const csMs = csDateStr ? new Date(csDateStr).getTime() : Number.POSITIVE_INFINITY;
-                      suggestions.push({ ...(cs as SugTile), sortMs: Number.isFinite(csMs) ? csMs : Number.POSITIVE_INFINITY });
-                    }
-                  }
-                }
+                // Cultural-tradition suggestion interleaving removed 2026-06-04
+                // with its tile + picker (founder). The engine lives on in
+                // lib/cultural-calendar.ts for a proper post-launch home INSIDE
+                // the occasion-create flow; it was dead here (no way to set
+                // traditions) so it's no longer wired into the dashboard builder.
 
                 // Driver's License (universal, age 14 to 16). Massive gifting
                 // moment for many families; previously absent. The 13+ block
@@ -10135,8 +10144,8 @@ export default function DashboardLab() {
                   // savings_goal rendering path stays dormant for that future use.
                 }
 
-                // Holiday - Oct through Dec (only when no cultural traditions set)
-                if (new Date().getMonth() >= 9 && traditions.length === 0 && !activeEvents.some(e => e.eventType === "holiday")) {
+                // Holiday - Oct through Dec.
+                if (new Date().getMonth() >= 9 && !activeEvents.some(e => e.eventType === "holiday")) {
                   const yr = new Date().getFullYear();
                   const xmas = new Date(yr, 11, 25);
                   const xmasDays = Math.ceil((xmas.getTime() - nowMs) / 86400000);
@@ -10432,25 +10441,13 @@ export default function DashboardLab() {
                             </button>
                           );
                         })}
-                        {childFirstSug && (
-                          <button type="button" onClick={() => { haptic("light"); setCulturalBgSelections(traditions); setCulturalBgPickerOpen(true); }} style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: traditions.length > 0 ? "1.5px solid rgba(26,61,43,0.25)" : "1.5px dashed rgba(26,61,43,0.25)", overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}>
-                            <div style={{ flex: 1, background: "hsl(143,28%,97%)", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap", padding: "6px 8px" }}>
-                              {traditions.length > 0
-                                ? traditions.slice(0, 4).map(t => <span key={t} style={{ fontSize: 22, lineHeight: 1 }}>{TRADITION_ICONS[t]}</span>)
-                                : <span style={{ fontSize: 30 }}>🌍</span>
-                              }
-                            </div>
-                            <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>{traditions.length > 0 ? "Your traditions" : "Add your traditions"}</p>
-                              {/* One-line guard: at fontSize 9 in a 140px tile, longer
-                                  copy wraps and pushes this tile's panel a row taller
-                                  than its siblings (founder-reported misalignment).
-                                  nowrap+ellipsis makes wrapping structurally impossible. */}
-                              <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{traditions.length > 0 ? `${traditions.length} selected` : "Unlocks milestone ideas"}</p>
-                              <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600 }}>{traditions.length > 0 ? "Edit →" : "Personalize →"}</p>
-                            </div>
-                          </button>
-                        )}
+                        {/* Cultural "Add your traditions" tile removed 2026-06-04
+                            (founder): it was configuration (set your family's
+                            background) masquerading as content in a row of
+                            occasions-to-gift-to, with vague "Unlocks milestone
+                            ideas" copy. The cultural-suggestion engine stays in
+                            code (dormant); if revived, it belongs INSIDE the
+                            occasion-create flow, not as a peer tile here. */}
                         <button type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
@@ -10532,48 +10529,8 @@ export default function DashboardLab() {
                         );
                       })}
 
-                      {/* Traditions tile - shows selected icons when set. Hidden
-                          for read-only roles: the picker's save is a fund PATCH
-                          the server 403s for viewer/previous_owner. */}
-                      {!isReadOnlyFund && childFirstSug && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            haptic("light");
-                            setCulturalBgSelections(traditions);
-                            setCulturalBgPickerOpen(true);
-                          }}
-                          style={{
-                            width: 140, minWidth: 140, height: 148, flexShrink: 0,
-                            borderRadius: 18,
-                            border: traditions.length > 0 ? "1.5px solid rgba(26,61,43,0.25)" : "1.5px dashed rgba(26,61,43,0.25)",
-                            overflow: "hidden", cursor: "pointer", background: "white",
-                            display: "flex", flexDirection: "column",
-                            textAlign: "left",
-                          }}
-                        >
-                          <div style={{ flex: 1, background: "hsl(143,28%,97%)", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap", padding: "6px 8px" }}>
-                            {traditions.length > 0
-                              ? traditions.slice(0, 4).map(t => <span key={t} style={{ fontSize: 22, lineHeight: 1 }}>{TRADITION_ICONS[t]}</span>)
-                              : <span style={{ fontSize: 30, lineHeight: 1 }}>🌍</span>
-                            }
-                          </div>
-                          <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                            <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>
-                              {traditions.length > 0 ? "Your traditions" : "Add your traditions"}
-                            </p>
-                            {/* One-line guard — same fix as the empty-state twin above:
-                                wrapping here pushed "Personalize →" below its siblings'
-                                baseline. nowrap+ellipsis + shorter copy. */}
-                            <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {traditions.length > 0 ? `${traditions.length} selected` : "Unlocks milestone ideas"}
-                            </p>
-                            <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600, lineHeight: 1 }}>
-                              {traditions.length > 0 ? "Edit →" : "Personalize →"}
-                            </p>
-                          </div>
-                        </button>
-                      )}
+                      {/* Cultural "traditions" tile removed 2026-06-04 (founder):
+                          config-in-a-content-row. See the empty-state twin above. */}
 
                       {/* Show/hide archived toggle tile */}
                       {archivedEvents.length > 0 && (
@@ -14823,54 +14780,7 @@ export default function DashboardLab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={culturalBgPickerOpen} onOpenChange={open => { if (!open) setCulturalBgPickerOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Your family's traditions</DialogTitle>
-          <div className="p-6 space-y-5">
-            <div>
-              <p className="text-sm font-medium text-primary">Occasions</p>
-              <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">What does your family celebrate?</h2>
-              <p className="mt-2 text-sm text-muted-foreground">We'll suggest the right milestones at the right time. Pick as many as apply.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(TRADITION_LABELS) as CulturalTradition[]).map(t => {
-                const selected = culturalBgSelections.includes(t);
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      haptic("selection");
-                      setCulturalBgSelections(prev =>
-                        prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]
-                      );
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all ${
-                      selected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-muted-foreground/40"
-                    }`}
-                  >
-                    <span className="text-xl leading-none">{TRADITION_ICONS[t]}</span>
-                    <span className="text-sm font-medium text-foreground leading-tight">{TRADITION_LABELS[t]}</span>
-                    {selected && (
-                      <div className="ml-auto w-4 h-4 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                        <Plus size={10} className="text-primary-foreground rotate-45" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setCulturalBgPickerOpen(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={handleSaveCulturalBg} disabled={savingCulturalBg}>
-                {savingCulturalBg ? "Saving..." : "Save traditions"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Cultural-traditions picker dialog removed 2026-06-04 (founder) — see the tile-removal note in the occasions strip. */}
 
       {/* Managed-mix sell warning. Shown before the regular sell sheet when the
           holding is part of the active managed strategy. Nudges toward "Customize mix". */}
@@ -15228,212 +15138,9 @@ export default function DashboardLab() {
         )}
       </AnimatePresence>
 
-      {/* Smart nudge modal */}
-      <Dialog open={smartNudge !== null} onOpenChange={(open) => { if (!open) setSmartNudge(null); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Smart nudge</DialogTitle>
-          {smartNudge && (() => {
-            const child = recipientFirstNameDisplay || "The fund";
-            // `her` pronoun + `delta` / `monthIncrease` were used by the
-            // previous comparison-table-shaped variants. Removed 2026-05-13
-            // with the rewrite — the new prose variants don't reference
-            // them. If pronouns become relevant again, grab them from
-            // `childPronouns` inline at the use site.
-            const fmt = (n?: number) => n != null ? `~$${(Math.round(n / 100) * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
-            const fmtAmt = (n?: number) => n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
-            // Per-scenario hero anchor. Without this the modal was a
-            // wall of text with no visual signal of WHICH moment the
-            // nudge celebrates. Eyebrow + headline alone made the
-            // surface read like a conversion-funnel popup instead of
-            // a contextual milestone. Locked palette: evergreen tile
-            // (Apple-Settings-warm rather than gold celebration).
-            // Trophy for milestone, TrendingUp for outperforming,
-            // Heart for consistent-streak (the "showing up" anchor).
-            const HeroIcon = smartNudge.scenario === "milestone"
-              ? Trophy
-              : smartNudge.scenario === "outperforming"
-                ? TrendingUp
-                : Heart;
-            // Current balance line — a reinforcement number the
-            // parent can anchor to. The milestone modal previously
-            // said "Emma just crossed $100" with no other number on
-            // screen; now we also show the actual balance so the
-            // moment connects to reality. Computed at render time
-            // from the live totalValue (not the stale fundHistory
-            // value used to detect the crossing).
-            const balanceLine = totalValue > 0
-              ? `Now at ${fmtAmt(totalValue)}.`
-              : null;
-            return (
-              <div className="p-6 space-y-5">
-                {/* Hero icon anchor. Small evergreen-tinted tile gives
-                    the modal a visual moment without crossing into
-                    "celebration emoji" territory (locked memory: only
-                    🌱 is reserved). Per-scenario icon makes the
-                    surface scannable at a glance — Trophy for a
-                    crossed milestone, TrendingUp for outperforming,
-                    Heart for the consistent-streak anchor. */}
-                <div className="flex items-center justify-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]">
-                    <HeroIcon size={26} strokeWidth={1.8} />
-                  </div>
-                </div>
-                {/* Three scenarios — outperforming / consistent / milestone.
-                    Rewritten 2026-05-13 from the previous comparison-table
-                    register (math panel + 'Double to \$X' CTA + 🌟 emoji
-                    + platitudinal greeting-card lines) toward calm Kiddo
-                    prose. The information is identical; the surface is
-                    no longer fintech-conversion-funnel anatomy.
-                    Key changes:
-                      - No emoji (🌟 violated brand; only 🌱 is reserved)
-                      - No 'The first \$X is the hardest' platitude (also
-                        slightly inaccurate — next \$X comes at the same
-                        contribution pace; compounding adds ~7%/yr only)
-                      - No math-comparison panel (Acorns/Robinhood pattern)
-                      - No 'Double to \$X' aggressive CTA. 'Adjust recurring'
-                        honestly describes what happens (opens the editor)
-                        without pushing a specific increment. */}
-
-                {/* Scenario 1: Outperforming */}
-                {smartNudge.scenario === "outperforming" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {child}'s fund so far
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      Up {smartNudge.returnPct}%.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Past growth isn't a promise, so we project ahead at the 7% long-run average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} is projected to have {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
-                        <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {/* Scenario 2: Consistent streak */}
-                {smartNudge.scenario === "consistent" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Steady
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      {smartNudge.streakMonths} months without a missed cycle.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} projects to {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
-                        <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {/* Scenario 3: Milestone */}
-                {smartNudge.scenario === "milestone" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Milestone
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      {child} just crossed {fmtAmt(smartNudge.milestoneAmt)}.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    {/* Honest projection. Rewritten 2026-05-15:
-                        OLD copy said "the next $500 arrives in N months"
-                        with math = milestoneAmt / monthlyAmt — wrong on
-                        three counts: (1) ignored the current balance,
-                        (2) ignored 7% growth, (3) "the next $500" meant
-                        "another chunk" not "the next milestone."
-                        NEW: nextMilestoneAmt is the literal next
-                        threshold (e.g., $1K after $500), and the months
-                        come from a month-by-month simulation that
-                        starts at current balance, applies 7% net-of-fee
-                        growth, and adds monthly contributions until
-                        the next threshold is reached. nextMilestoneAmt
-                        is undefined if the fund is at the highest
-                        threshold ($100K), in which case we skip the
-                        projection line entirely. */}
-                    {/* Classic React gotcha: {x && <element>} renders
-                        the literal "0" in the DOM if x === 0 (number),
-                        because && returns its left operand when falsy
-                        and React happily renders numbers as text.
-                        Explicit `> 0` guards instead. Reported with a
-                        screenshot 2026-05-15 — Emma's $1,917 fund
-                        showed a stray "0" in the milestone modal
-                        because monthsAtCurrentRate was 0 (fund already
-                        past the next milestone, projection didn't
-                        apply). The trigger-side gate now suppresses
-                        this scenario entirely, but the defensive
-                        boolean checks below remove the footgun. */}
-                    {(smartNudge.nextMilestoneAmt ?? 0) > 0 && (smartNudge.monthsAtCurrentRate ?? 0) > 0 && (
-                      <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                        At your current pace ({fmtAmt(smartNudge.currentMonthlyAmt || 0)}/mo plus 7% historical-average growth), you'd cross {fmtAmt(smartNudge.nextMilestoneAmt)} in about {smartNudge.monthsAtCurrentRate} {smartNudge.monthsAtCurrentRate === 1 ? "month" : "months"}.
-                        {(smartNudge.doubledAmt ?? 0) > 0 && (smartNudge.monthsDoubled ?? 0) > 0 && (
-                          <>
-                            {" "}At {fmtAmt(smartNudge.doubledAmt)}/mo, in about {smartNudge.monthsDoubled} {smartNudge.monthsDoubled === 1 ? "month" : "months"}.
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* CTAs. 'Adjust recurring' replaces 'Double to \$X/month'
-                    — the previous label proposed a 100% increase as the
-                    default ask, which is aggressive even when the math
-                    supports it. The button now honestly describes what
-                    happens (opens the recurring-investment editor with
-                    the doubled amount pre-filled as a suggestion, which
-                    the parent can change). */}
-                <div className="space-y-2">
-                  <Button
-                    className="w-full rounded-xl h-11"
-                    onClick={() => {
-                      haptic("medium");
-                      setSmartNudge(null);
-                      if (smartNudge.doubledAmt) setAutoInvestAmount(String(smartNudge.doubledAmt));
-                      setEditingContribId(null);
-                      setAutoInvestStep("amount");
-                      setAutoInvestModalOpen(true);
-                    }}
-                  >
-                    Adjust recurring
-                  </Button>
-                  <button
-                    type="button"
-                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
-                    onClick={() => { haptic("selection"); setSmartNudge(null); }}
-                  >
-                    Not now
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* Smart nudge is now a non-blocking toast (see fireNudge above), not a
+          modal — it no longer covers the hero value-roll, and the live
+          projection lives in the recurring editor it routes to. 2026-06-04. */}
 
       {/* Recurring list-view action sheet — Edit / Pause-or-Resume / Cancel for the
           tapped row. Cancel uses a two-step within the same dialog (menu → confirm)
