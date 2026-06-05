@@ -7560,7 +7560,17 @@ export default function DashboardLab() {
                           className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="last30-row-growth"
                         >
-                          <span className="text-sm text-muted-foreground">Market growth</span>
+                          {/* Bear-year honesty (2026-06-05, pre-checked since
+                              the demo can't show a down fund): a negative
+                              value under "Market growth" is an oxymoron
+                              ("growth: −$1,200"), so the label flips to
+                              "Market change" — the SAME term the chart's
+                              scrub tooltip already uses for this quantity.
+                              And the tone is calm amber, not alarm red: the
+                              no-greenwashing rule shows the loss plainly,
+                              the love-ledger register refuses to panic over
+                              it (same treatment as the "Now worth" delta). */}
+                          <span className="text-sm text-muted-foreground">{marketGrowth30 >= 0 ? "Market growth" : "Market change"}</span>
                           {/* Chevron signals "navigates to /projection" (the
                               forward-looking "what could this become" page,
                               not a holdings drill-down). Per the locked rule
@@ -7569,7 +7579,7 @@ export default function DashboardLab() {
                               performance-attribution). See project_design_lens_kid_at_18.md
                               and feedback_chart_range_stat_behavior.md. */}
                           <span className="inline-flex items-center gap-1.5">
-                            <span className={`text-sm font-semibold tabular-nums ${marketGrowth30 >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-500"}`}>
+                            <span className={`text-sm font-semibold tabular-nums ${marketGrowth30 >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
                               {fmtRow(marketGrowth30, true)}
                             </span>
                             <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
