@@ -7995,7 +7995,7 @@ export default function DashboardLab() {
                   </div>
                 </div>
                 <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
-                  <div ref={chartScrollRef}>
+                  <div ref={chartScrollRef} style={{ position: "relative" }}>
                   {/* Compositor wipe pair — see chartScrollRef's definition.
                       The MOVER (overflow hidden only while wiping) slides
                       left→right while the INNER counter-slides, so the chart
@@ -8049,11 +8049,18 @@ export default function DashboardLab() {
                         </div>
                       );
                     })()}
+                  </div>
+                  </div>
                     {/* Journey-replay caption — one floating pill that fades
                         between beats ("Where it began" → "First gift — $50
                         from Grandpa" → "Crossed $10k" → "Today"), keyed by
-                        label so each beat cross-fades. pointer-events-none:
-                        the chart stays scrubbable underneath. */}
+                        label so each beat cross-fades. Lives OUTSIDE the wipe
+                        pair (sibling of the mover, founder catch 2026-06-05):
+                        inside it, the mover's overflow clip swallowed early
+                        captions until the reveal edge passed center — the
+                        narration eaten by its own curtain. Out here it floats
+                        above the clip, visible from the first frame.
+                        pointer-events-none: the chart stays scrubbable. */}
                     <AnimatePresence>
                       {journeyCaption && (
                         <motion.div
@@ -8081,8 +8088,6 @@ export default function DashboardLab() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-                  </div>
                   </div>
                 </Suspense>
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
