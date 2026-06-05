@@ -1514,6 +1514,31 @@ export default function DashboardLab() {
   // slice. It also matches the "Growth · All-time" stat shown beside it. A
   // parent who wants recent detail taps 1W/1M; the default is the story.
   const [chartRange, setChartRange] = useState<ChartRange>("ALL");
+  // LAB: chart scroll-replay (the heavy, reliable way). The chart sits inside
+  // the collapse where framer's whileInView never fires (twice clipped it
+  // invisible). So the clip draw-in fires on MOUNT via `animate` (guaranteed
+  // visible - open/close always works), and THIS callback-ref IntersectionObserver
+  // bumps `chartDrawKey` whenever the chart RE-enters view → the motion.div
+  // remounts → `animate` re-draws. A callback ref (not a useInView hook) is the
+  // key: it re-runs on every remount, so it survives the collapse open/close.
+  // The observer's first (initial) callback is skipped so it never double-draws
+  // on top of the mount draw. Visibility can't regress: it's driven by mount,
+  // not by the observer.
+  const [chartDrawKey, setChartDrawKey] = useState(0);
+  const chartObsRef = useRef<IntersectionObserver | null>(null);
+  const chartScrollRef = useCallback((el: HTMLDivElement | null) => {
+    chartObsRef.current?.disconnect();
+    chartObsRef.current = null;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    let isFirst = true;
+    const obs = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (isFirst) { isFirst = false; return; } // skip the initial observe callback (mount draw owns that)
+      if (entry?.isIntersecting) setChartDrawKey((k) => k + 1);
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    chartObsRef.current = obs;
+  }, []);
   const [previewFundId, setPreviewFundId] = useState<string>("");
   const [autoInvestModalOpen, setAutoInvestModalOpen] = useState(false);
   const [autoInvestUpgradeOpen, setAutoInvestUpgradeOpen] = useState(false);
@@ -7474,22 +7499,17 @@ export default function DashboardLab() {
                   </div>
                 </div>
                 <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
+                  <div ref={chartScrollRef}>
                   <motion.div
+                    key={chartDrawKey}
                     className="relative"
-                    // LAB: the trend "draws in" left-to-right (a clip wipe) -
-                    // the honest reveal instead of recharts' point-morph (line
-                    // stays isAnimationActive=false; it renders its TRUE shape
-                    // and the wipe uncovers it). MUST use `animate` (fires on
-                    // mount, unconditionally), NOT whileInView: the chart lives
-                    // inside the collapse's height-animating, lazy-loaded
-                    // content, where framer's in-view observer does NOT fire
-                    // reliably - twice that left the chart permanently clipped-
-                    // invisible. The collapse remounts its content on open, so
-                    // `animate` re-draws every open/close. (Scroll-replay-while-
-                    // open is NOT worth the invisible-chart risk here; visible +
-                    // draws-on-open is the right call for a collapsed chart.)
-                    // Top/bottom insets extended so the wipe never crops the
-                    // hover tooltip.
+                    // LAB: draws in via `animate` ON MOUNT (guaranteed visible -
+                    // open/close always works). The chartScrollRef observer (see
+                    // its def above) bumps chartDrawKey when the chart re-enters
+                    // view → this remounts → `animate` re-draws = scroll-replay,
+                    // WITHOUT risking the blank-chart bug (visibility is
+                    // mount-driven, never observer-driven). Top/bottom insets
+                    // extended so the wipe never crops the hover tooltip.
                     initial={{ clipPath: "inset(-30% 100% -30% 0%)" }}
                     animate={{ clipPath: "inset(-30% -5% -30% 0%)" }}
                     transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
@@ -7538,6 +7558,7 @@ export default function DashboardLab() {
                       );
                     })()}
                   </motion.div>
+                  </div>
                 </Suspense>
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
                   <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
