@@ -11,7 +11,9 @@ export type MonthlyPulseInput = {
   parentFirstName?: string | null;
   childFirstName: string;
   fundTotalUsd: number;
-  changeUsd: number;
+  // null = no 30-day baseline available (young fund / no snapshot): the
+  // change line is OMITTED — we never claim "+$0" out of ignorance.
+  changeUsd: number | null;
   changePct: number | null;
   giftCount30d: number;
   newGifterCount30d: number;
@@ -35,15 +37,16 @@ export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
   const giftLine = giftCount30d === 0
     ? `No gifts last month. The fund quietly compounded what was already there.`
     : `${giftCount30d} gift${giftCount30d === 1 ? "" : "s"} arrived last month${newGifterCount30d > 0 ? `, ${newGifterCount30d} from new gifter${newGifterCount30d === 1 ? "" : "s"}` : ""}.`;
-  const changeLine = changePct != null
-    ? `That's ${fmtSignedUsd(changeUsd)} (${changePct >= 0 ? "+" : ""}${changePct.toFixed(1)}%) from this time last month.`
-    : `That's ${fmtSignedUsd(changeUsd)} from this time last month.`;
+  const changeLine = changeUsd == null
+    ? null
+    : changePct != null
+      ? `That's ${fmtSignedUsd(changeUsd)} (${changePct >= 0 ? "+" : ""}${changePct.toFixed(1)}%) from this time last month.`
+      : `That's ${fmtSignedUsd(changeUsd)} from this time last month.`;
   const intro = [
     greeting,
     ``,
     `${childFirstName}'s fund is at ${fmtUsd(fundTotalUsd)}.`,
-    ``,
-    changeLine,
+    ...(changeLine ? [``, changeLine] : []),
     ``,
     giftLine,
   ].join("\n");
@@ -57,8 +60,7 @@ export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
     greeting,
     ``,
     `${childFirstName}'s fund is at ${fmtUsd(fundTotalUsd)}.`,
-    ``,
-    changeLine,
+    ...(changeLine ? [``, changeLine] : []),
     ``,
     giftLine,
     ``,

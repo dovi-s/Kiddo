@@ -46,6 +46,7 @@ async function tick(log: LogFn): Promise<void> {
       SELECT
         f.id AS fund_id, f.recipient_first_name AS child_first_name,
         f.balance AS balance, f.cash_balance AS cash_balance,
+        f.pending_balance AS pending_balance,
         u.email AS parent_email, u.first_name AS parent_first_name,
         u.email_preferences AS parent_email_preferences
       FROM funds f
@@ -73,14 +74,22 @@ async function tick(log: LogFn): Promise<void> {
     if (state.lastSentByFundMonth[key]) continue;
     // Compute 30-day-old balance via fund_snapshots if present; otherwise
     // skip the change line. Snapshot query is best-effort.
+    // FIXED 2026-06-05 (email-numbers audit): this selected
+    // `balance, cash_balance` — columns fund_snapshots DOESN'T HAVE
+    // (it has total_value / invested_value / cash_value). The query
+    // always threw, the silent catch ate it, prior30Total stayed null,
+    // and every pulse would have read "+$0 from this time last month".
+    // total_value is the same canonical column the dashboard chart and
+    // its "this month" stat read — one fact, one source.
     let prior30Total: number | null = null;
     try {
       const snap = await pool.query(
-        `SELECT balance, cash_balance FROM fund_snapshots WHERE fund_id = $1 AND snapshot_date <= NOW() - INTERVAL '30 days' ORDER BY snapshot_date DESC LIMIT 1`,
+        `SELECT total_value FROM fund_snapshots WHERE fund_id = $1 AND snapshot_date <= NOW() - INTERVAL '30 days' ORDER BY snapshot_date DESC LIMIT 1`,
         [row.fund_id],
       );
       if (snap.rows.length > 0) {
-        prior30Total = parseFloat(snap.rows[0].balance || "0") + parseFloat(snap.rows[0].cash_balance || "0");
+        const v = parseFloat(snap.rows[0].total_value || "0");
+        if (Number.isFinite(v) && v > 0) prior30Total = v;
       }
     } catch { /* fund_snapshots optional */ }
     const giftAgg = await pool.query(
@@ -91,9 +100,14 @@ async function tick(log: LogFn): Promise<void> {
       `SELECT COUNT(*)::int AS new_gifters FROM (SELECT MIN(created_at) AS first_gift, LOWER(sender_email) AS se FROM gifts WHERE fund_id = $1 AND status IN ('processing','settled','completed') GROUP BY LOWER(sender_email)) sub WHERE sub.first_gift > NOW() - INTERVAL '30 days'`,
       [row.fund_id],
     ).catch(() => ({ rows: [{ new_gifters: 0 }] }));
-    const total = parseFloat(row.balance || "0") + parseFloat(row.cash_balance || "0");
-    const changeUsd = prior30Total != null ? total - prior30Total : 0;
-    const changePct = prior30Total != null && prior30Total > 0 ? (changeUsd / prior30Total) * 100 : null;
+    // Same composition as the dashboard hero (invested balance + pending +
+    // cash) so the email's headline number never disagrees with what the
+    // parent sees when they click through — the click IS the product moment.
+    const total = parseFloat(row.balance || "0") + parseFloat(row.cash_balance || "0") + parseFloat(row.pending_balance || "0");
+    // null = "we don't have a 30-day baseline" → the template OMITS the
+    // change line entirely. Never claim "+$0" out of ignorance.
+    const changeUsd = prior30Total != null ? total - prior30Total : null;
+    const changePct = prior30Total != null && prior30Total > 0 && changeUsd != null ? (changeUsd / prior30Total) * 100 : null;
     try {
       await sendEmail(buildMonthlyPulseEmail({
         to: row.parent_email,
