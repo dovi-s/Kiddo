@@ -3629,9 +3629,15 @@ export default function Dashboard() {
     seedValue: cachedHeroProjectionAt65,
     liveValue: heroProjectedAt65,
     // 1200ms matches the hero balance — both numbers belong to the same
-    // focal hero moment and should ride the same duration ladder rung
+    // focal hero moment and ride the same duration ladder rung
     // (per project_count_up_animation_consistency.md).
     duration: 1200,
+    // STAGGER (2026-06-04, founder UX catch): the balance and the projection
+    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor.
+    // The projection now holds at its value until the hero balance has settled
+    // (1200ms) plus a ~150ms beat, then rolls — focal number lands first, then
+    // the projection follows. Sequential and intentional.
+    startDelay: 1350,
   });
 
   // Persist the live projection per-fund so the next session seeds the

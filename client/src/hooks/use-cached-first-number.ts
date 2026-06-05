@@ -7,6 +7,10 @@ type UseCachedFirstNumberOptions = {
   liveValue: number;
   duration?: number;
   minDelta?: number;
+  // Hold at the seed/from value for this many ms before rolling. Used to
+  // STAGGER a secondary number (e.g. the hero projection) so it rolls only
+  // after the focal hero balance has settled, instead of both at once.
+  startDelay?: number;
 };
 
 export function useCachedFirstNumber({
@@ -14,6 +18,7 @@ export function useCachedFirstNumber({
   liveValue,
   duration = MOTION_COUNT_UP_MS,
   minDelta = 0.01,
+  startDelay = 0,
 }: UseCachedFirstNumberOptions) {
   const normalizedSeed = typeof seedValue === "number" && Number.isFinite(seedValue) ? seedValue : null;
   const [cachedValue, setCachedValue] = useState<number | null>(normalizedSeed);
@@ -74,6 +79,7 @@ export function useCachedFirstNumber({
     to: liveValue,
     duration,
     enabled: shouldAnimate,
+    startDelay,
   });
 
   const displayValue = !hasPainted && cachedValue !== null

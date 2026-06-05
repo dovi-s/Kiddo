@@ -29,6 +29,11 @@ export type UseCountUpOptions = {
   duration?: number;
   enabled?: boolean;
   precision?: number;
+  // Hold at `from` for this many ms BEFORE the roll begins. Lets a secondary
+  // number STAGGER after a focal one (e.g. the projection rolling only after
+  // the hero balance has settled) instead of both animating at once and
+  // splitting the eye. Default 0 = roll immediately.
+  startDelay?: number;
 };
 
 export type UseCountUpResult = { value: number; isAnimating: boolean };
@@ -47,6 +52,7 @@ export function useCountUp(
   const enabled = isObjectArg ? targetOrOptions.enabled !== false : true;
   const effectiveDuration = isObjectArg ? targetOrOptions.duration ?? MOTION_COUNT_UP_MS : duration;
   const effectivePrecision = isObjectArg ? targetOrOptions.precision ?? 0 : precision;
+  const effectiveStartDelay = isObjectArg ? targetOrOptions.startDelay ?? 0 : 0;
 
   const initial = fromOpt !== undefined && Number.isFinite(fromOpt) ? fromOpt : target;
   const [display, setDisplay] = useState(initial);
@@ -84,27 +90,45 @@ export function useCountUp(
       return;
     }
 
-    const startedAt = performance.now();
     const factor = effectivePrecision > 0 ? Math.pow(10, effectivePrecision) : 1;
     setIsAnimating(true);
 
-    let frame = requestAnimationFrame(function tick(now) {
-      const t = Math.min(1, (now - startedAt) / effectiveDuration);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      const raw = start + delta * eased;
-      const value = effectivePrecision > 0 ? Math.round(raw * factor) / factor : Math.round(raw);
-      setDisplay(value);
-      if (t < 1) {
-        frame = requestAnimationFrame(tick);
-      } else {
-        setDisplay(target); // ensure final frame lands exactly on target
-        setIsAnimating(false);
-      }
-    });
+    let frame = 0;
+    let delayTimer: ReturnType<typeof setTimeout> | null = null;
 
-    return () => cancelAnimationFrame(frame);
+    const runRoll = () => {
+      const startedAt = performance.now();
+      frame = requestAnimationFrame(function tick(now) {
+        const t = Math.min(1, (now - startedAt) / effectiveDuration);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        const raw = start + delta * eased;
+        const value = effectivePrecision > 0 ? Math.round(raw * factor) / factor : Math.round(raw);
+        setDisplay(value);
+        if (t < 1) {
+          frame = requestAnimationFrame(tick);
+        } else {
+          setDisplay(target); // ensure final frame lands exactly on target
+          setIsAnimating(false);
+        }
+      });
+    };
+
+    if (effectiveStartDelay > 0) {
+      // Hold at `start` (the `from` value) through the delay, then roll — so a
+      // secondary number can follow the focal one in sequence rather than
+      // competing for the eye. isAnimating stays true across the wait so
+      // consumers treat the whole beat as in-progress.
+      delayTimer = setTimeout(runRoll, effectiveStartDelay);
+    } else {
+      runRoll();
+    }
+
+    return () => {
+      if (delayTimer) clearTimeout(delayTimer);
+      if (frame) cancelAnimationFrame(frame);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, effectiveDuration, effectivePrecision, enabled]);
+  }, [target, effectiveDuration, effectivePrecision, enabled, effectiveStartDelay]);
 
   if (isObjectArg) {
     return { value: display, isAnimating };
