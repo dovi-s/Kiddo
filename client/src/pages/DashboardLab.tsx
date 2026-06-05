@@ -5599,13 +5599,17 @@ export default function DashboardLab() {
               transition={{ duration: 0.3 }}
             >
               <div
-                className="shadow-premium-lg"
                 style={{
-                  background: "linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
-                  borderRadius: "var(--radius-container)",
-                  padding: "28px 28px 24px",
+                  // LAB premium depth: a warm gold radial glow (the neobank
+                  // light-source, our warm way) layered over the evergreen
+                  // gradient + a dramatic layered shadow so the card FLOATS off
+                  // the page + an inset top highlight so it reads lit-from-above.
+                  background: "radial-gradient(135% 135% at 88% -18%, rgba(237,193,100,0.20) 0%, rgba(237,193,100,0) 44%), linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
+                  borderRadius: 28,
+                  padding: "28px 28px 26px",
                   position: "relative",
                   overflow: "hidden",
+                  boxShadow: "0 2px 6px rgba(14,37,24,0.10), 0 28px 56px rgba(14,37,24,0.30), inset 0 1px 0 rgba(255,255,255,0.10)",
                 }}
                 data-testid="hero-card"
               >
@@ -6273,15 +6277,19 @@ export default function DashboardLab() {
                             data-testid="button-hero-share-link"
                             className="kiddo-press"
                             style={{
-                              padding: "10px 20px", fontSize: 13,
+                              // LAB: confident PRIMARY action (the loop is the
+                              // moat) - bigger, with a gold lift-shadow so it
+                              // reads as the one thing to do, not a small chip.
+                              padding: "13px 24px", fontSize: 14,
                               background: "hsl(var(--kiddo-gold))", color: "white",
                               border: "none", borderRadius: 9999,
                               fontWeight: 700, cursor: "pointer",
-                              display: "inline-flex", alignItems: "center", gap: 6,
+                              display: "inline-flex", alignItems: "center", gap: 7,
+                              boxShadow: "0 4px 14px hsl(var(--kiddo-gold) / 0.40)",
                             }}
                           >
-                            <Share2 size={13} color="white" />
-                            Share
+                            <Share2 size={15} color="white" />
+                            Share {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} link
                           </button>
                         )}
                         {(() => {
