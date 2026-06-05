@@ -12,9 +12,13 @@
 //      GiftSuccess?demo=1, which stashes what they sent in sessionStorage),
 //      then on returning to the dashboard they feel the parent-side arrival of
 //      the *exact* gift they just sent. They experience both sides of the loop.
-//   2. GENERIC SEEDED BEAT (the ambient one): absent a just-sent gift, ~15s
-//      after they settle on the dashboard, one warm seeded gift arrives so a
-//      passive browser still feels the moment once.
+//   2. GENERIC SEEDED BEAT (the ambient one): absent a just-sent gift, one warm
+//      seeded gift arrives so a passive browser still feels the moment once.
+//      It fires on the prospect's FIRST FUND-SWITCH (~2.5s after the new fund's
+//      balance roll lands) — the "land = the balance rolls in, switch = a gift
+//      rolls in" choreography, which ties the signature moment to engagement
+//      instead of a timer they might miss. A 15s fallback still fires it for a
+//      prospect who never switches (single-fund household, or doesn't explore).
 //
 // Discipline (what keeps it magic, not slop):
 //   • The generic beat fires ONCE per browser session — not a stream of fake
@@ -29,7 +33,7 @@ import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
-import { getActiveFundId } from "@/hooks/use-active-fund";
+import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { capFirst } from "@/lib/format-name";
@@ -38,7 +42,8 @@ import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
 
 const SESSION_KEY = "kiddo.demo.giftMoment.shown.v1"; // generic beat: once per session
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
-const DELAY_MS = 15_000;          // generic beat — after they settle in
+const DELAY_MS = 15_000;          // generic beat fallback — for a prospect who never switches funds
+const SWITCH_DELAY_MS = 2_500;    // generic beat on a fund-SWITCH — after the new fund's balance roll lands
 const JUST_SENT_DELAY_MS = 3_000; // loop closure — they came back to feel it; don't make them wait
 
 // Per-child gift that matches the seeded personas, so the ambient beat reads
@@ -74,6 +79,10 @@ export function DemoGiftMoment() {
     // shown — is exactly how that moment gets silently missed.)
     let fire: (() => void) | null = null;
     let delay = DELAY_MS;
+    // True only for the generic seeded beat (beat 2), which is the one that
+    // re-targets to whatever fund the prospect opens. The loop-closure beat
+    // (beat 1) stays bound to the exact gift they just sent.
+    let isGenericBeat = false;
 
     // --- Beat 1: loop closure. Did the prospect just role-play SENDING a gift?
     // Replay it as the parent-side arrival of the exact gift they sent. The
@@ -132,16 +141,22 @@ export function DemoGiftMoment() {
         return; // sessionStorage blocked → skip rather than risk repeating
       }
 
-      const activeId = getActiveFundId();
-      const fund = (funds.find((f) => f.id === activeId) ?? funds[0]) as any;
-      if (!fund) return;
-      const childRaw = String(fund.recipientFirstName || "");
-      const child = capFirst(childRaw) || "your child";
-      const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
-      const where = TICKER_NAME[g.ticker] || "the diversified mix";
-
+      isGenericBeat = true;
+      // The active fund is resolved at FIRE time (not here), so when the
+      // prospect SWITCHES funds the beat lands a gift on the fund they just
+      // opened — the founder's "land = the balance rolls in, switch = a gift
+      // rolls in" choreography (2026-06-04). A switch shortens the timer (see
+      // the fund-change handler below); the 15s fallback still covers a
+      // prospect who never switches (single-fund household, or doesn't explore).
       fire = () => {
         try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
+        const activeId = getActiveFundId();
+        const fund = (funds.find((f) => f.id === activeId) ?? funds[0]) as any;
+        if (!fund) return;
+        const childRaw = String(fund.recipientFirstName || "");
+        const child = capFirst(childRaw) || "your child";
+        const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
+        const where = TICKER_NAME[g.ticker] || "the diversified mix";
         // Record a REAL session gift (Stage 1 of the demo sandbox), so the
         // ambient beat now genuinely lands a gift_received row in the Activity
         // feed, lights the notification bell, appears in the Memory Book, and
@@ -176,6 +191,16 @@ export function DemoGiftMoment() {
     // returns to a backgrounded tab. So "15s after they settle in" means 15s
     // of them actually looking — never 15s burned against a hidden tab that
     // then marks the once-per-session beat shown having played to no one.
+    // currentDelay starts at the beat's base (3s loop-closure / 15s generic
+    // fallback) and is shortened to SWITCH_DELAY_MS the first time the prospect
+    // changes funds (generic beat only).
+    let currentDelay = delay;
+    let lastFundId = getActiveFundId();
+    // Hard once-per-mount latch: the SESSION_KEY guard runs at setup, not at
+    // fire time, so without this a SECOND fund-switch would re-arm and fire a
+    // second gift. This caps the beat at exactly one arrival, switch or not.
+    let fired = false;
+
     const clear = () => {
       if (timerRef.current != null) {
         window.clearTimeout(timerRef.current);
@@ -183,20 +208,43 @@ export function DemoGiftMoment() {
       }
     };
     const arm = () => {
-      if (timerRef.current != null) return;
+      if (fired || timerRef.current != null) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      timerRef.current = window.setTimeout(() => { timerRef.current = null; fireOnce(); }, delay);
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        if (fired) return;
+        fired = true;
+        fireOnce();
+      }, currentDelay);
     };
     const onVis = () => {
       if (document.visibilityState === "visible") arm();
       else clear(); // tabbed away mid-countdown → reset; re-arms fresh on return
     };
 
+    // Fund-switch handler — the heart of "land = roll, switch = gift". On a
+    // REAL switch (id changed, not the initial fund-set), re-target the generic
+    // beat to the fund just opened and fire it ~2.5s later, after that fund's
+    // balance roll has landed. The id-changed guard means landing only plays
+    // the balance roll; the gift is the reward for exploring. Loop-closure
+    // (beat 1) is exempt — it stays bound to the gift the prospect just sent.
+    const onFundChange = (e: Event) => {
+      if (!isGenericBeat || fired) return;
+      const id = (e as CustomEvent)?.detail?.id ?? getActiveFundId();
+      if (!id || id === lastFundId) return;
+      lastFundId = id;
+      currentDelay = SWITCH_DELAY_MS;
+      clear();
+      arm();
+    };
+
     arm();
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, onFundChange);
     return () => {
       clear();
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, onFundChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDemo, onDashboard, funds.length]);
