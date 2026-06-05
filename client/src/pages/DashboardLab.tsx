@@ -9883,10 +9883,14 @@ export default function DashboardLab() {
             </details>
 
             {/* ===== Occasions ===== */}
+            {/* LAB: rolls in when scrolled into view, replaying every time
+                (whileInView once:false) - consistent with the faces, the
+                "alive as you scroll" feel the founder wanted for the rest. */}
             <motion.section
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.035 }}
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2, margin: "0px 0px -40px 0px" }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
               {/* ── Section header ── */}
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
@@ -11266,10 +11270,13 @@ export default function DashboardLab() {
                 the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
                 extended to all transferred-fund viewers 2026-06-02. */}
             {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
+            {/* LAB: the handoff section rolls in on view too (replaying), so the
+                emotional finale lands as you arrive at it. */}
             <motion.section
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.040 }}
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2, margin: "0px 0px -40px 0px" }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="space-y-3"
             >
               <p className="kiddo-section-label" style={{ textTransform: "none", fontSize: "0.82rem", letterSpacing: "0.01em" }}>
