@@ -2,7 +2,7 @@
 // blind redesign attempts read worse, not better). Pristine baseline =
 // the real dashboard. Next design comes from a tool/designer that can SEE
 // and iterate; I implement it here. Throwaway: delete when done.
-﻿import { Fragment, lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
+﻿import { Fragment, lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback, type ComponentType, type ReactNode } from "react";
 
 function stripHtml(str: string | null | undefined): string {
   if (!str) return "";
@@ -658,6 +658,71 @@ function SkeletonBlock({ className = "" }: { className?: string }) {
       role="status"
       aria-label="Loading…"
     />
+  );
+}
+
+// LAB: a controlled collapse so closing is as smooth as opening (native
+// <details> snaps shut - no exit animation). Same look as the rows it
+// replaces: white card, a BARE evergreen lucide icon (no grey chip),
+// title + glanceable stat, a chevron that rotates. Height + opacity
+// animate BOTH directions via AnimatePresence. Tactile (lab-tap),
+// reduced-motion handled by framer.
+function LabCollapse({
+  icon: Icon,
+  title,
+  stat,
+  marginTop = 16,
+  testid,
+  children,
+}: {
+  icon: ComponentType<{ size?: number; strokeWidth?: number; style?: any }>;
+  title: ReactNode;
+  stat: ReactNode;
+  marginTop?: number;
+  testid?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        data-testid={testid}
+        className="lab-tap"
+        style={{
+          width: "100%", textAlign: "left", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          padding: "16px 18px", background: "#FFFFFF",
+          border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)",
+          boxShadow: "0 1px 2px rgba(26,23,16,0.05)",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <Icon size={20} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))", flexShrink: 0 }} />
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{title}</span>
+            <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{stat}</span>
+          </span>
+        </span>
+        <ChevronRight size={18} style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0, transition: "transform .26s cubic-bezier(0.16,1,0.3,1)", transform: open ? "rotate(90deg)" : "none" }} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="lab-collapse-content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <div style={{ marginTop: 12 }}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -5620,22 +5685,11 @@ export default function DashboardLab() {
           </div>
         ) : (
           <>
-            {/* LAB premium micro-interactions (calm register, never garish):
-                collapse rows lift on hover, press in on click, the chevron
-                rotates as it opens, and the content reveals with a soft slide.
-                Respects prefers-reduced-motion. Scoped to .lab-collapse. */}
+            {/* LAB premium micro-interactions (calm register, never garish).
+                The collapse rows are now the <LabCollapse> component (controlled
+                open+close via framer); only the tactile press (.lab-tap) and the
+                faces cascade live here now. Respects prefers-reduced-motion. */}
             <style>{`
-              .lab-collapse > summary { transition: box-shadow .22s ease, transform .12s ease, border-color .2s ease; }
-              .lab-collapse > summary:hover { box-shadow: 0 6px 20px rgba(26,23,16,0.09); transform: translateY(-1px); border-color: hsl(var(--kiddo-evergreen) / 0.30); }
-              .lab-collapse > summary:active { transform: translateY(0) scale(0.992); }
-              .lab-chevron { transition: transform .26s cubic-bezier(0.16,1,0.3,1); }
-              .lab-collapse[open] > summary .lab-chevron { transform: rotate(90deg); }
-              /* The "Tap to open" hint disappears once the row is open (the
-                 rotated chevron + revealed content already say "open") - so a
-                 collapsed and an open row no longer read identically. */
-              .lab-collapse[open] .lab-hint-open { display: none; }
-              @keyframes labReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-              .lab-collapse[open] > div { animation: labReveal .3s cubic-bezier(0.16,1,0.3,1); }
               /* Tactile press on any tappable surface: lift on hover, spring
                  in on click. The "satisfying click" the founder loved. */
               .lab-tap { transition: transform .14s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, filter .2s ease; }
@@ -5665,7 +5719,6 @@ export default function DashboardLab() {
               .lab-faces-go > *:nth-child(n+8){animation-delay:.47s}
               @keyframes labFaceIn { from { opacity: 0; transform: translateY(10px) scale(0.84); } to { opacity: 1; transform: none; } }
               @media (prefers-reduced-motion: reduce) {
-                .lab-collapse, .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div,
                 .lab-tap, .lab-face, .lab-faces > * { transition: none !important; animation: none !important; }
                 .lab-faces > * { opacity: 1 !important; }
               }
@@ -6805,18 +6858,13 @@ export default function DashboardLab() {
                 new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
               return (
-                <details className="lab-collapse" data-testid="lab-summary-details" style={{ marginTop: 16 }}>
-                  <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Sprout size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
-                      <span style={{ minWidth: 0 }}>
-                        <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}</span>
-                        <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{computedInvestedGain >= 1 ? `+$${Math.round(computedInvestedGain).toLocaleString("en-US")} grown so far. ` : "Gifts, growth, and where it all went. "}<span className="lab-hint-open">Tap to open</span></span>
-                      </span>
-                    </span>
-                    <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
-                  </summary>
-                  <div style={{ marginTop: 12 }}>
+                <LabCollapse
+                  marginTop={16}
+                  testid="lab-summary-details"
+                  icon={Sprout}
+                  title={isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}
+                  stat={computedInvestedGain >= 1 ? `+$${Math.round(computedInvestedGain).toLocaleString("en-US")} grown so far` : "Gifts, growth, and where it all went"}
+                >
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -7124,8 +7172,7 @@ export default function DashboardLab() {
                     )}
                   </div>
                 </motion.section>
-                  </div>
-                </details>
+                </LabCollapse>
               );
             })()}
 
@@ -7357,31 +7404,24 @@ export default function DashboardLab() {
               );
             })()}
 
-            {/* LAB: the growth chart is "brokerage software" (the critique) -
-                collapsed under one tap. The hero sparkline already carries the
-                glanceable "it's growing" signal; the full interactive chart is
-                a tap away for those who want it. */}
-            <details className="lab-collapse" data-testid="lab-chart-details" style={{ marginTop: 16 }}>
-              <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TrendingUp size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{(() => {
-                      if (trendData.length < 2) return "The full chart over time. ";
-                      const latest = trendData[trendData.length - 1].value;
-                      const cutoff = Date.now() - 30 * 86400000;
-                      let past = trendData[0].value;
-                      for (const p of trendData) { if (p.ts <= cutoff) past = p.value; else break; }
-                      const move = latest - past;
-                      if (Math.abs(move) < 1) return "The full chart over time. ";
-                      return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}. `;
-                    })()}<span className="lab-hint-open">Tap to open</span></span>
-                  </span>
-                </span>
-                <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
-              </summary>
-              <div style={{ marginTop: 12 }}>
+            {/* LAB: the growth chart ("brokerage software"), collapsed
+                (smooth open + close). */}
+            <LabCollapse
+              marginTop={16}
+              testid="lab-chart-details"
+              icon={TrendingUp}
+              title={isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}
+              stat={(() => {
+                if (trendData.length < 2) return "The full chart over time";
+                const latest = trendData[trendData.length - 1].value;
+                const cutoff = Date.now() - 30 * 86400000;
+                let past = trendData[0].value;
+                for (const p of trendData) { if (p.ts <= cutoff) past = p.value; else break; }
+                const move = latest - past;
+                if (Math.abs(move) < 1) return "The full chart over time";
+                return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}`;
+              })()}
+            >
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -7609,8 +7649,7 @@ export default function DashboardLab() {
                 )}
               </div>
             </motion.section>
-              </div>
-            </details>
+            </LabCollapse>
 
 
             {/* Age-band strategy nudge. Fires once per band when the child's age crosses
@@ -7803,25 +7842,14 @@ export default function DashboardLab() {
               );
             })()}
 
-            {/* LAB move 3: the portfolio is the ENGINE, collapsed under one
-                tap by default (the critique's most-repeated demand: nobody
-                opens the app to check Luke's Nintendo allocation). Native
-                <details>, no React state, reuses the entire real section. */}
-            <details className="lab-collapse" data-testid="lab-portfolio-details" style={{ marginTop: 16 }}>
-              <summary
-                className="[&::-webkit-details-marker]:hidden"
-                style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><PieChart size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} powering the growth. ` : "The mix powering the growth. "}<span className="lab-hint-open">Tap to open</span></span>
-                  </span>
-                </span>
-                <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
-              </summary>
-              <div style={{ marginTop: 12 }}>
+            {/* LAB: the portfolio ENGINE, collapsed (smooth open + close). */}
+            <LabCollapse
+              marginTop={16}
+              testid="lab-portfolio-details"
+              icon={PieChart}
+              title={recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}
+              stat={holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} powering the growth` : "The mix powering the growth"}
+            >
             <motion.section
               ref={holdingsSectionRef}
               initial={{ opacity: 0, y: 8 }}
@@ -8405,8 +8433,7 @@ export default function DashboardLab() {
                 );
               })()}
             </motion.section>
-              </div>
-            </details>
+            </LabCollapse>
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
@@ -8982,23 +9009,18 @@ export default function DashboardLab() {
               );
             })()}
 
-            {/* LAB: the parent's own recurring + one-time contributions are
-                engine/accounting - collapsed under one tap. */}
-            <details className="lab-collapse" data-testid="lab-yourpart-details" style={{ marginTop: 16 }}>
-              <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 9, background: "hsl(var(--kiddo-evergreen) / 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><HandCoins size={17} strokeWidth={2} style={{ color: "hsl(var(--kiddo-evergreen))" }} /></span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>Your part of the story</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{(() => {
-                      const c = parentContributions.reduce((s, p) => s + (parseFloat(String((p as any).totalContributed || "0")) || 0), 0);
-                      return c >= 1 ? `$${Math.round(c).toLocaleString("en-US")} contributed so far. ` : "Your recurring and one-time gifts. ";
-                    })()}<span className="lab-hint-open">Tap to open</span></span>
-                  </span>
-                </span>
-                <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
-              </summary>
-              <div style={{ marginTop: 12 }}>
+            {/* LAB: the parent's recurring + one-time contributions, collapsed
+                (smooth open + close). */}
+            <LabCollapse
+              marginTop={16}
+              testid="lab-yourpart-details"
+              icon={HandCoins}
+              title="Your part of the story"
+              stat={(() => {
+                const c = parentContributions.reduce((s, p) => s + (parseFloat(String((p as any).totalContributed || "0")) || 0), 0);
+                return c >= 1 ? `$${Math.round(c).toLocaleString("en-US")} contributed so far` : "Your recurring and one-time gifts";
+              })()}
+            >
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -9910,8 +9932,7 @@ export default function DashboardLab() {
               </div>
               </div>
             </motion.section>
-              </div>
-            </details>
+            </LabCollapse>
 
             {/* ===== Occasions ===== */}
             {/* LAB: rolls in when scrolled into view, replaying every time
