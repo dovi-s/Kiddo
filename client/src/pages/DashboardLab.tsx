@@ -48,7 +48,7 @@ function getChartRangeLabel(range: ChartRange): string {
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -1372,6 +1372,11 @@ export default function DashboardLab() {
   const holdingsSectionRef = useRef<HTMLElement | null>(null);
   const carouselPage1Ref = useRef<HTMLDivElement | null>(null);
   const carouselPage2Ref = useRef<HTMLDivElement | null>(null);
+  // LAB: the "Who loves" faces cascade fires when the row enters view (once).
+  // Visible on load -> cascades with the load; below the fold (cards expanded
+  // or lower) -> waits and cascades when scrolled to. Never wasted off-screen.
+  const facesRef = useRef<HTMLDivElement | null>(null);
+  const facesInView = useInView(facesRef, { once: true, margin: "0px 0px -12% 0px" });
   // 2026-05-12: The wrong-shape two-page horizontal-scroll-snap carousel
   // (Page 1 Holdings list + Page 2 donut breakdown + Holdings/Breakdown
   // segmented switcher) was surgically removed. The Holdings LIST itself
@@ -5613,40 +5618,28 @@ export default function DashboardLab() {
               /* Faces gently rise + grow on hover/tap. */
               .lab-face { transition: transform .2s cubic-bezier(0.16,1,0.3,1); cursor: default; }
               .lab-face:hover { transform: translateY(-4px) scale(1.06); }
-              /* Faces cascade in one-by-one. Mount-staggered as the universal
-                 fallback; where the browser supports scroll-driven animation
-                 (Chrome/Edge), they roll in AS you scroll to them (the founder's
-                 ask - the faces were finishing their cascade off-screen). Each
-                 face animates over a slightly later scroll range = a cascade
-                 scrubbed by your scroll. backwards fill so :hover still works. */
-              .lab-faces > * { animation: labFaceIn .5s cubic-bezier(0.16,1,0.3,1) backwards; }
-              .lab-faces > *:nth-child(1){animation-delay:.04s}
-              .lab-faces > *:nth-child(2){animation-delay:.09s}
-              .lab-faces > *:nth-child(3){animation-delay:.14s}
-              .lab-faces > *:nth-child(4){animation-delay:.19s}
-              .lab-faces > *:nth-child(5){animation-delay:.24s}
-              .lab-faces > *:nth-child(6){animation-delay:.29s}
-              .lab-faces > *:nth-child(7){animation-delay:.34s}
-              .lab-faces > *:nth-child(n+8){animation-delay:.39s}
+              /* Faces cascade in one-by-one - triggered when the row enters
+                 view (framer useInView, once). Visible on load -> cascades with
+                 the load; below the fold (cards expanded / lower) -> waits and
+                 cascades when you scroll to it. Faces sit hidden (opacity 0)
+                 until the .lab-faces-go class lands; backwards fill holds each
+                 hidden through its stagger delay; the -go rule supplies the
+                 persistent end-opacity so :hover (transform) still works after. */
+              .lab-faces > * { opacity: 0; }
+              .lab-faces-go > * { opacity: 1; animation: labFaceIn .52s cubic-bezier(0.16,1,0.3,1) backwards; }
+              .lab-faces-go > *:nth-child(1){animation-delay:.05s}
+              .lab-faces-go > *:nth-child(2){animation-delay:.11s}
+              .lab-faces-go > *:nth-child(3){animation-delay:.17s}
+              .lab-faces-go > *:nth-child(4){animation-delay:.23s}
+              .lab-faces-go > *:nth-child(5){animation-delay:.29s}
+              .lab-faces-go > *:nth-child(6){animation-delay:.35s}
+              .lab-faces-go > *:nth-child(7){animation-delay:.41s}
+              .lab-faces-go > *:nth-child(n+8){animation-delay:.47s}
               @keyframes labFaceIn { from { opacity: 0; transform: translateY(10px) scale(0.84); } to { opacity: 1; transform: none; } }
-              @keyframes labScrollIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-              @supports (animation-timeline: view()) {
-                .lab-faces > * { animation-delay: 0s; animation-timeline: view(); }
-                .lab-faces > *:nth-child(1){animation-range: entry 6% entry 32%}
-                .lab-faces > *:nth-child(2){animation-range: entry 11% entry 37%}
-                .lab-faces > *:nth-child(3){animation-range: entry 16% entry 42%}
-                .lab-faces > *:nth-child(4){animation-range: entry 21% entry 47%}
-                .lab-faces > *:nth-child(5){animation-range: entry 26% entry 52%}
-                .lab-faces > *:nth-child(6){animation-range: entry 31% entry 57%}
-                .lab-faces > *:nth-child(7){animation-range: entry 36% entry 62%}
-                .lab-faces > *:nth-child(n+8){animation-range: entry 41% entry 67%}
-                /* The collapse rows roll in too, so the page assembles itself as
-                   you scroll (the coherent roll-in the founder described). */
-                .lab-collapse { animation: labScrollIn 1s linear backwards; animation-timeline: view(); animation-range: entry 3% entry 28%; }
-              }
               @media (prefers-reduced-motion: reduce) {
                 .lab-collapse, .lab-collapse > summary, .lab-chevron, .lab-collapse[open] > div,
                 .lab-tap, .lab-face, .lab-faces > * { transition: none !important; animation: none !important; }
+                .lab-faces > * { opacity: 1 !important; }
               }
             `}</style>
             <motion.section
@@ -8512,7 +8505,7 @@ export default function DashboardLab() {
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
                       return (
-                    <div className="lab-faces" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                    <div ref={facesRef} className={`lab-faces${facesInView ? " lab-faces-go" : ""}`} style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                       {visibleGifters.map(gifter => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
