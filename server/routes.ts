@@ -14447,7 +14447,11 @@ export async function registerRoutes(
       } = body;
       const maxProfileImageDataUrlBytes = 7 * 1024 * 1024;
 
-      if (profileImageUrl != null) {
+      // Empty string = explicit photo REMOVAL (clears to null). Added
+      // 2026-06-05 for the gifter-dashboard avatar editor — until then the
+      // endpoint could set a photo but never delete one (empty string failed
+      // the data-url check, null was ignored as "no change").
+      if (profileImageUrl != null && profileImageUrl !== '') {
         if (typeof profileImageUrl !== 'string' || !profileImageUrl.startsWith('data:image/')) {
           return res.status(400).json({ error: 'Invalid image format. Please upload an image file.' });
         }
@@ -14473,7 +14477,7 @@ export async function registerRoutes(
 
       type UserUpdate = Partial<typeof users.$inferInsert>;
       const updates: UserUpdate = { updatedAt: new Date() };
-      if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl;
+      if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl === '' ? null : profileImageUrl;
       if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
       if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
       if (preferredName !== undefined) updates.preferredName = String(preferredName).trim().slice(0, 50) || null;

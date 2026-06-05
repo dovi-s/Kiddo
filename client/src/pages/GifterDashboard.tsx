@@ -1,10 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Plus, Pause, Play, Pencil, Receipt, ChevronDown } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Plus, Pause, Play, Pencil, Receipt, ChevronDown, Camera, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -241,6 +241,145 @@ function computeGifterAttribution(fund: GifterFundRow): {
     contributionYears: 0,
   });
   return { projected, yearsAhead, majorityAge: fund.majorityAge };
+}
+
+// Max accepted profile photo upload — matches Profile.tsx + the server's
+// data-url validation on PATCH /api/user/profile.
+const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+// The gifter's own profile photo, editable in place on the hero — the gifter
+// dashboard doubles as the gifter's profile (founder, 2026-06-05), mirroring
+// how the child's photo anchors the fund page top-left. The photo set here is
+// the SAME users.profileImageUrl the family's surfaces render: the Dashboard
+// gifter roster, the Memory Book byline, and the printed fund snapshot all
+// enrich gift rows from it. So the motivating frame in the copy is presence
+// ("families see this beside your gifts"), not vanity. Add = tap to pick;
+// edit/remove = tap opens a small menu. Removal PATCHes profileImageUrl: ""
+// (the server's explicit-clear contract).
+function GifterHeroAvatar({ user }: { user: any }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const photoUrl: string | null = user?.profileImageUrl || null;
+  const initial = String(user?.preferredName || user?.firstName || user?.email || "?")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+  const patchPhoto = async (profileImageUrl: string) => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileImageUrl }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        queryClient.setQueryData(["/api/auth/user"], payload);
+        haptic("success");
+        toast(
+          profileImageUrl === ""
+            ? { title: "Photo removed" }
+            : { title: "Photo updated", description: "Families will see this beside your gifts." },
+        );
+      } else {
+        toast({
+          title: "Couldn't update photo",
+          description: payload?.error || "Please try a smaller image.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Couldn't update photo",
+        description: "Check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "That's not an image", description: "Please choose a photo file.", variant: "destructive" });
+      return;
+    }
+    if (file.size > PROFILE_IMAGE_MAX_BYTES) {
+      toast({ title: "Photo too large", description: "Please choose an image under 5MB.", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => patchPhoto(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="relative flex-shrink-0">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          haptic("light");
+          if (photoUrl) setMenuOpen((v) => !v);
+          else fileInputRef.current?.click();
+        }}
+        className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-2 ring-white/25 sm:h-16 sm:w-16"
+        aria-label={photoUrl ? "Change or remove your profile photo" : "Add a profile photo"}
+        data-testid="button-gifter-avatar"
+      >
+        {photoUrl ? (
+          <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="font-heading text-xl font-semibold text-white sm:text-2xl">{initial}</span>
+        )}
+        {busy && (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+          </span>
+        )}
+      </button>
+      {/* Camera badge — the quiet "this is editable" affordance. */}
+      <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold))] text-[hsl(153,48%,11%)] ring-2 ring-[hsl(153,48%,11%)]/40">
+        <Camera className="h-3 w-3" />
+      </span>
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+          <div className="absolute left-0 top-full z-50 mt-2 w-60 rounded-2xl border border-black/5 bg-white p-2 text-foreground shadow-xl">
+            <p className="px-3 pb-1.5 pt-1 text-[11px] leading-snug text-muted-foreground">
+              Families see this photo beside your gifts.
+            </p>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-black/5"
+              onClick={() => { setMenuOpen(false); fileInputRef.current?.click(); }}
+              data-testid="button-gifter-avatar-change"
+            >
+              <Camera className="h-4 w-4 text-muted-foreground" /> Change photo
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              onClick={() => patchPhoto("")}
+              data-testid="button-gifter-avatar-remove"
+            >
+              <Trash2 className="h-4 w-4" /> Remove photo
+            </button>
+          </div>
+        </>
+      )}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
 }
 
 export default function GifterDashboard() {
@@ -768,15 +907,24 @@ export default function GifterDashboard() {
                   the dark hero from reading as a bank statement. */}
               <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[hsl(var(--kiddo-gold)/0.20)] blur-3xl" />
               <div className="relative">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
-                <h1 className="mt-2 font-heading text-3xl font-semibold sm:text-4xl">
-                  Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
-                </h1>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
-                  {savedFundCount > 0
-                    ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}, and what you gave keeps growing for them.`
-                    : "The funds you've gifted to, in one place."}
-                </p>
+                {/* Avatar + greeting row — the gifter's own face anchors the
+                    hero the same way the child's photo anchors the fund page.
+                    The avatar is the add/edit/remove entry point (see
+                    GifterHeroAvatar above). */}
+                <div className="flex items-start gap-4">
+                  {isAuthenticated && <GifterHeroAvatar user={user} />}
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
+                    <h1 className="mt-2 font-heading text-3xl font-semibold sm:text-4xl">
+                      Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
+                    </h1>
+                    <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
+                      {savedFundCount > 0
+                        ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}, and what you gave keeps growing for them.`
+                        : "The funds you've gifted to, in one place."}
+                    </p>
+                  </div>
+                </div>
 
                 <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
                   <div>
