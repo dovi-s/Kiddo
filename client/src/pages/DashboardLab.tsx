@@ -1376,7 +1376,12 @@ export default function DashboardLab() {
   // Visible on load -> cascades with the load; below the fold (cards expanded
   // or lower) -> waits and cascades when scrolled to. Never wasted off-screen.
   const facesRef = useRef<HTMLDivElement | null>(null);
-  const facesInView = useInView(facesRef, { once: true, margin: "0px 0px -12% 0px" });
+  // Positive bottom margin = fire slightly BEFORE the row scrolls into view, so
+  // the faces are already cascading when you reach them (no blank-then-pop). A
+  // negative margin here caused a long blank-white gap (row visible, trigger
+  // not yet met). once:false so the cascade REPLAYS every time the row
+  // re-enters view (founder loves it - don't ration it to first-view only).
+  const facesInView = useInView(facesRef, { once: false, margin: "0px 0px 80px 0px" });
   // 2026-05-12: The wrong-shape two-page horizontal-scroll-snap carousel
   // (Page 1 Holdings list + Page 2 donut breakdown + Holdings/Breakdown
   // segmented switcher) was surgically removed. The Holdings LIST itself
@@ -6775,7 +6780,7 @@ export default function DashboardLab() {
                       <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🌱</span>
                       <span style={{ minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}</span>
-                        <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Gifts, growth, and where it all went. <span className="lab-hint-open">Tap to open</span></span>
+                        <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{computedInvestedGain >= 1 ? `+$${Math.round(computedInvestedGain).toLocaleString("en-US")} grown so far. ` : "Gifts, growth, and where it all went. "}<span className="lab-hint-open">Tap to open</span></span>
                       </span>
                     </span>
                     <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
@@ -7331,7 +7336,16 @@ export default function DashboardLab() {
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📊</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>{isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>The full chart over time. <span className="lab-hint-open">Tap to open</span></span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{(() => {
+                      if (trendData.length < 2) return "The full chart over time. ";
+                      const latest = trendData[trendData.length - 1].value;
+                      const cutoff = Date.now() - 30 * 86400000;
+                      let past = trendData[0].value;
+                      for (const p of trendData) { if (p.ts <= cutoff) past = p.value; else break; }
+                      const move = latest - past;
+                      if (Math.abs(move) < 1) return "The full chart over time. ";
+                      return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}. `;
+                    })()}<span className="lab-hint-open">Tap to open</span></span>
                   </span>
                 </span>
                 <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
@@ -8945,7 +8959,10 @@ export default function DashboardLab() {
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🤲</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>Your part of the story</span>
-                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>Your recurring and one-time gifts. <span className="lab-hint-open">Tap to open</span></span>
+                    <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{(() => {
+                      const c = parentContributions.reduce((s, p) => s + (parseFloat(String((p as any).totalContributed || "0")) || 0), 0);
+                      return c >= 1 ? `$${Math.round(c).toLocaleString("en-US")} contributed so far. ` : "Your recurring and one-time gifts. ";
+                    })()}<span className="lab-hint-open">Tap to open</span></span>
                   </span>
                 </span>
                 <ChevronRight size={18} className="lab-chevron" style={{ color: "rgba(26,23,16,0.4)", flexShrink: 0 }} />
