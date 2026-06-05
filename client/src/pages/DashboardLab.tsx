@@ -6295,11 +6295,19 @@ export default function DashboardLab() {
                           // and animates UP to the new value when fresher data
                           // lands. Acorns-style: never animates downward, never
                           // shows a skeleton, the parent always sees a number.
-                          const formatted = new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                            maximumFractionDigits: 0,
-                          }).format(displayHeroProjectedAt65);
+                          // LAB: lead with the TANGIBLE future, the at-majority
+                          // handoff ("$49,828 when Luke turns 21"), not the
+                          // abstract "$920k at 65". The emotional pull, the
+                          // billion-dollar-way framing: a warm "on track"
+                          // statement, not a bare number-with-a-far-off-age.
+                          const yrsToMaj = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+                          const heroMonthly = activeAutoInvest ? (parseFloat(String((activeAutoInvest as any).amount || "0")) || 0) : 0;
+                          const atMaj = yrsToMaj > 0.08
+                            ? projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj })
+                            : displayHeroProjectedAt65;
+                          const heroMajAge = age18Transition?.majorityAge || 18;
+                          const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
+                          const fmtMaj = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(atMaj);
                           return (
                             <button
                               onClick={() => {
@@ -6308,23 +6316,24 @@ export default function DashboardLab() {
                               }}
                               data-testid="button-hero-view-fund"
                               style={{
-                                background: "rgba(255,255,255,0.14)",
-                                border: "1px solid rgba(255,255,255,0.28)",
+                                background: "rgba(255,255,255,0.12)",
+                                border: "1px solid rgba(255,255,255,0.22)",
                                 borderRadius: 9999,
-                                padding: "10px 18px",
+                                padding: "11px 18px",
                                 fontSize: 13,
-                                fontWeight: 700,
-                                color: "white",
+                                fontWeight: 600,
+                                color: "rgba(255,255,255,0.94)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 6,
+                                gap: 7,
+                                maxWidth: "100%",
                               }}
-                              title={`See ${isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} full potential on the projection page`}
+                              title="See the full projection"
                             >
-                              <span style={{ fontWeight: 800, letterSpacing: "0.01em" }}>{formatted}</span>
-                              <span style={{ opacity: 0.78, fontSize: 11.5, fontWeight: 600 }}>at 65</span>
-                              <span style={{ opacity: 0.85 }}>→</span>
+                              <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>🌱</span>
+                              <span style={{ minWidth: 0 }}>On track for <span style={{ fontWeight: 800 }}>{fmtMaj}</span> when {heroChildN} turn{heroChildN === "you" ? "" : "s"} {heroMajAge}</span>
+                              <span style={{ opacity: 0.8, flexShrink: 0 }}>→</span>
                             </button>
                           );
                         })()}
