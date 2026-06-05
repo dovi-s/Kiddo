@@ -7443,7 +7443,21 @@ export default function DashboardLab() {
                   </div>
                 </div>
                 <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
-                  <div className="relative">
+                  <motion.div
+                    className="relative"
+                    // LAB: the trend "draws in" left-to-right (a clip wipe) -
+                    // the honest reveal we wanted instead of recharts' ugly
+                    // point-morph (which is why the line stays
+                    // isAnimationActive=false; it renders its TRUE shape and the
+                    // wipe uncovers it). whileInView once:false replays on every
+                    // scroll-in, and it re-fires when the collapse opens (the
+                    // content remounts). Top/bottom insets extended so the wipe
+                    // never crops the hover tooltip.
+                    initial={{ clipPath: "inset(-30% 100% -30% 0%)" }}
+                    whileInView={{ clipPath: "inset(-30% -5% -30% 0%)" }}
+                    viewport={{ once: false, amount: 0.4 }}
+                    transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <DashboardTrendChart data={trendData} onScrub={setScrubbedTrendPoint} />
                     {totalValue > 0 && trendData.length > 0 && (() => {
                       // Live dot — sits on the rightmost end of the chart
@@ -7487,7 +7501,7 @@ export default function DashboardLab() {
                         </div>
                       );
                     })()}
-                  </div>
+                  </motion.div>
                 </Suspense>
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
                   <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
