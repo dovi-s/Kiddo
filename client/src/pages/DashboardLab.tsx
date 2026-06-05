@@ -8579,15 +8579,8 @@ export default function DashboardLab() {
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
                       return (
-                    <motion.div
-                      className="lab-faces"
-                      initial="hidden"
-                      whileInView="show"
-                      viewport={{ once: false, amount: 0.3, margin: "0px 0px -20px 0px" }}
-                      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
-                      style={{ display: "flex", flexWrap: "wrap", gap: 16 }}
-                    >
-                      {visibleGifters.map(gifter => {
+                    <div className="lab-faces" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                      {visibleGifters.map((gifter, faceIdx) => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
                         // Show how the family refers to this person ("Dad",
@@ -8654,10 +8647,16 @@ export default function DashboardLab() {
                             onClick={() => { haptic("selection"); setSelectedGifter(gifter); }}
                             title={tooltipText}
                             className="kiddo-gifter-avatar"
-                            variants={{ hidden: { opacity: 0, y: 10, scale: 0.84 }, show: { opacity: 1, y: 0, scale: 1 } }}
-                            whileHover={{ y: -4, scale: 1.06 }}
-                            whileTap={{ scale: 0.95 }}
-                            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                            // whileInView directly on EACH face (not parent
+                            // variant-propagation, which wasn't reaching them) so
+                            // the cascade REPLAYS every time the row re-enters
+                            // view. once:false. Entrance delay is scoped to the
+                            // whileInView transition so hover/tap stay instant.
+                            initial={{ opacity: 0, y: 12, scale: 0.8 }}
+                            whileInView={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.44, delay: faceIdx * 0.06, ease: [0.16, 1, 0.3, 1] } }}
+                            viewport={{ once: false, amount: 0.2, margin: "0px 0px -10px 0px" }}
+                            whileHover={{ y: -4, scale: 1.06, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                            whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                           >
                             <div style={{ position: "relative" }}>
@@ -8921,7 +8920,7 @@ export default function DashboardLab() {
                         </button>
                         );
                       })()}
-                    </motion.div>
+                    </div>
                       );
                     })()}
 
