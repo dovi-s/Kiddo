@@ -41,10 +41,10 @@ export function Toaster() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))]">
                 <Sprout className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
-              <div className="grid min-w-0 flex-1 gap-0.5">
+              <div className="grid min-w-0 flex-1 gap-1">
                 {title && <ToastTitle className="leading-snug">{title}</ToastTitle>}
                 {description && (
-                  <ToastDescription className="text-[hsl(var(--kiddo-ink)/0.62)] opacity-100">{description}</ToastDescription>
+                  <ToastDescription className="text-[hsl(var(--kiddo-ink)/0.62)]">{description}</ToastDescription>
                 )}
               </div>
               {action}
@@ -56,8 +56,12 @@ export function Toaster() {
         // Keep it where dismissal is useful: errors and actionable toasts.
         const showClose = props.variant === "destructive" || Boolean(description) || Boolean(action)
         return (
-          <Toast key={id} duration={props.variant === "destructive" ? 6000 : 4500} {...props}>
-            <div className="grid gap-0.5">
+          // pr-11 only when the close ✕ actually renders, so closeless cards
+          // keep symmetric px-5. gap-1 (was gap-0.5 = 2px) puts honest air
+          // between title and description — the 2px stack was the single
+          // biggest contributor to the crammed read.
+          <Toast key={id} duration={props.variant === "destructive" ? 6000 : 4500} className={showClose ? "pr-11" : undefined} {...props}>
+            <div className="grid min-w-0 gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
                 <ToastDescription>{description}</ToastDescription>

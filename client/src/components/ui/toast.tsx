@@ -14,7 +14,11 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[min(92vw,380px)] flex-col items-stretch gap-2",
+      // 420px desktop width (was 380): the two-line card toasts read cramped —
+      // titles wrapped early and the description collided with the close ✕.
+      // In range with the references: Material snackbars 344-672px, Sonner
+      // (Vercel/Linear) 356px+, Apple banners wider still. 92vw on phones.
+      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[min(92vw,420px)] flex-col items-stretch gap-2",
       className
     )}
     {...props}
@@ -31,9 +35,14 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "w-full justify-between space-x-3 rounded-xl border px-4 py-3 pr-10 shadow-md bg-background text-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
+        // Card geometry (2026-06-05 de-cram pass): px-5/py-4 breathing room
+        // (was px-4/py-3 — founder: "kinda crammed"), rounded-2xl to match the
+        // kiddo card language (the gift variant + app cards already are).
+        // Right padding for the close ✕ is applied by the Toaster only on
+        // toasts that actually SHOW it, so closeless cards stay symmetric.
+        default: "w-full justify-between space-x-3 rounded-2xl border px-5 py-4 shadow-lg bg-background text-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
         destructive:
-          "w-full justify-between space-x-3 rounded-xl border px-4 py-3 pr-10 shadow-md destructive group border-destructive bg-destructive text-destructive-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
+          "w-full justify-between space-x-3 rounded-2xl border px-5 py-4 shadow-lg destructive group border-destructive bg-destructive text-destructive-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
         saved:
           "justify-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground/90 text-background text-xs font-medium shadow-lg backdrop-blur-sm data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
         // The gift-arrival delight beat — the product's emotional peak ("watch
@@ -88,7 +97,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/40 transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-3 top-3 rounded-md p-1 text-foreground/40 transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className
     )}
     toast-close=""
@@ -105,7 +114,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-sm font-semibold", className)}
+    className={cn("text-sm font-semibold leading-snug", className)}
     {...props}
   />
 ))
@@ -117,7 +126,16 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90", className)}
+    // One step smaller + muted vs the title (was same-size text-sm at 90%
+    // opacity — title and body read as one undifferentiated block, the core
+    // of the "crammed" feel). The hierarchy every reference uses: iOS banner
+    // subtitle, Material supporting text, Sonner's muted description. On the
+    // destructive (red) card, muted-foreground would vanish — keep the light
+    // foreground there via the group override.
+    className={cn(
+      "text-[13px] leading-relaxed text-muted-foreground group-[.destructive]:text-destructive-foreground/90",
+      className
+    )}
     {...props}
   />
 ))
