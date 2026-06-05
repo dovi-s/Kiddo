@@ -7284,7 +7284,7 @@ export default function DashboardLab() {
                 collapsed under one tap. The hero sparkline already carries the
                 glanceable "it's growing" signal; the full interactive chart is
                 a tap away for those who want it. */}
-            <details data-testid="lab-chart-details" style={{ marginTop: 4 }}>
+            <details data-testid="lab-chart-details" style={{ marginTop: 16 }}>
               <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📊</span>
@@ -7721,7 +7721,7 @@ export default function DashboardLab() {
                 tap by default (the critique's most-repeated demand: nobody
                 opens the app to check Luke's Nintendo allocation). Native
                 <details>, no React state, reuses the entire real section. */}
-            <details data-testid="lab-portfolio-details" style={{ marginTop: 4 }}>
+            <details data-testid="lab-portfolio-details" style={{ marginTop: 16 }}>
               <summary
                 className="[&::-webkit-details-marker]:hidden"
                 style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}
@@ -8884,7 +8884,7 @@ export default function DashboardLab() {
 
             {/* LAB: the parent's own recurring + one-time contributions are
                 engine/accounting - collapsed under one tap. */}
-            <details data-testid="lab-yourpart-details" style={{ marginTop: 4 }}>
+            <details data-testid="lab-yourpart-details" style={{ marginTop: 16 }}>
               <summary className="[&::-webkit-details-marker]:hidden" style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "16px 18px", background: "#FFFFFF", border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)", boxShadow: "0 1px 2px rgba(26,23,16,0.05)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                   <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>🤲</span>
