@@ -16251,7 +16251,9 @@ export default function DashboardLab() {
                 // was a deeper drilldown than parents wanted; the action
                 // sheet exposes all three management actions in one tap
                 // and matches what the MoreVertical icon already opens.
-                label: "Manage recurring →",
+                // No trailing arrow: opens the in-place action sheet, doesn't
+                // navigate (the page-wide arrow grammar, 2026-06-05).
+                label: "Manage recurring",
                 onClick: () => {
                   closeDetailScope();
                   setListActionConfirmCancel(false);
@@ -16329,26 +16331,36 @@ export default function DashboardLab() {
           if (contributionsSubFilter === "onetime") return !recurring;
           return true;
         });
-        const recurringCount = allContribRows.filter(isRecurringRow).length;
-        const onetimeCount = allContribRows.length - recurringCount;
-        const totalContributed = subFilteredRows.reduce((s, r) => {
-          const n = parseActivityAmount(r.amount);
-          return s + (n != null && n > 0 ? n : 0);
-        }, 0);
-        const avgContrib = subFilteredRows.length > 0 ? totalContributed / subFilteredRows.length : 0;
-        const lastDate = (() => {
-          let latest: Date | null = null;
-          for (const r of subFilteredRows) {
-            const d = parseActivitySafeDate(r.createdAt);
-            if (d && (!latest || d.getTime() > latest.getTime())) latest = d;
-          }
-          return latest;
-        })();
+        // STATS from the COMPLETE gifts array — the exact viewer-keyed rows
+        // the "Your part of the story" stat sums — NOT from the activity
+        // feed, which is WINDOWED to 200 rows (2026-06-05 modal-number
+        // audit): on gift-rich funds the window misses older contributions,
+        // so "Total invested" silently undercounted the very section that
+        // opened this modal, under a subtitle claiming "every dollar". One
+        // fact = one formula. The history LIST below stays the feed's recent
+        // window (conventional for history surfaces); the toggle counts are
+        // gift-derived too, so every NUMBER on this modal is complete-truth
+        // even when the scrollable list is a window.
+        const myGiftRows = (gifts as any[])
+          .map((g) => ({
+            amt: parseFloat(String((g as any).netAmount || (g as any).amount || "0")) || 0,
+            ts: (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0,
+            recurring: !!(g as any).parentContributionId,
+            sender: String((g as any).senderEmail || "").trim().toLowerCase(),
+          }))
+          .filter((g) => g.amt > 0 && !!ownerEmailLowerForFilter && g.sender === ownerEmailLowerForFilter);
+        const statRows = myGiftRows.filter((g) =>
+          contributionsSubFilter === "all" ? true : contributionsSubFilter === "recurring" ? g.recurring : !g.recurring);
+        const recurringCount = myGiftRows.filter((g) => g.recurring).length;
+        const onetimeCount = myGiftRows.length - recurringCount;
+        const totalContributed = statRows.reduce((s, g) => s + g.amt, 0);
+        const avgContrib = statRows.length > 0 ? totalContributed / statRows.length : 0;
+        const lastTs = statRows.reduce((m, g) => Math.max(m, g.ts), 0);
         const stats: DetailStat[] = [
           { label: "Total invested", value: formatCurrency(totalContributed), tone: totalContributed > 0 ? "positive" : "neutral" },
-          { label: "Investments", value: `${subFilteredRows.length}`, tone: "neutral" },
-          { label: "Average", value: subFilteredRows.length > 0 ? formatCurrency(avgContrib) : "Not yet", tone: "neutral" },
-          { label: "Most recent", value: lastDate ? lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
+          { label: "Investments", value: `${statRows.length}`, tone: "neutral" },
+          { label: "Average", value: statRows.length > 0 ? formatCurrency(avgContrib) : "Not yet", tone: "neutral" },
+          { label: "Most recent", value: lastTs > 0 ? new Date(lastTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
         ];
         return (
           <DetailHistoryModal
@@ -16359,7 +16371,7 @@ export default function DashboardLab() {
             summaryStats={stats}
             subToggle={{
               options: [
-                { value: "all", label: "All", count: allContribRows.length },
+                { value: "all", label: "All", count: myGiftRows.length },
                 { value: "recurring", label: "Recurring", count: recurringCount },
                 { value: "onetime", label: "One-time", count: onetimeCount },
               ],
