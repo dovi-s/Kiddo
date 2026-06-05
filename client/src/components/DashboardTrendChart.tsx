@@ -259,6 +259,11 @@ export default function DashboardTrendChart({
             strokeWidth={2.5}
             dot={renderDot}
             activeDot={{ r: 4, fill: "hsl(143, 64%, 41%)" }}
+            // Recharts' default mount animation interpolates every point up
+            // from a flat baseline, so the line briefly reads as a straight
+            // diagonal that "morphs" into the real trend - finicky and off-
+            // brand. Render the true shape immediately instead.
+            isAnimationActive={false}
           />
         </AreaChart>
       </ChartContainer>
