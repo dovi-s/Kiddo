@@ -187,12 +187,20 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
     // Christmas. Grandpa" onto birthday-month gifts.
     const msg = rotate(jayNotes, (a - 1) / 3, off) || undefined;
     const isChristmas = !!msg && msg.startsWith("Merry Christmas");
+    // Jay's FIRST (oldest) gift went into the diversified managed mix —
+    // old-school "don't put it all in one basket" — and his LATER gifts are
+    // his signature GOOGL picks. Gives his gifter dashboard a realistic
+    // "Managed mix · Google" strip instead of a lone Google logo, and is the
+    // one place the managed-mix pill gets exercised on that surface. Keeps the
+    // other gifters' single-stock signatures intact (Gloria→DIS, etc.).
+    // 2026-06-05.
+    const jayManagedMix = a === 1;
     list.push({
       senderName: "Jay Pritchett",
       senderEmail: "jay@dunphyfamily.com",
       amount: 200,
-      selectedTicker: "GOOGL",
-      message: msg,
+      selectedTicker: jayManagedMix ? undefined : "GOOGL",
+      message: jayManagedMix ? "Don't put it all in one basket, kid. Grandpa" : msg,
       createdAt: isChristmas ? onMonth(a, 11, 22) : onMonth(a, birthMonth, 25),
     });
   }
