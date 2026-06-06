@@ -154,6 +154,11 @@ strict = parent-approval (higher friction, max control).
 - **Account-less / anonymous gifters** → no user record → initials (unchanged).
 - **Right to be forgotten / deletion:** removing the photo + account deletion
   must purge it from storage (data-deletion posture).
+- **Demo accounts can't set/edit a photo.** When the upload endpoint is built,
+  add it to `DEMO_BLOCKED_POST_PATTERNS` in `server/demoSandbox.ts` (the demo
+  write-guard) — a demo visitor (as jay@) must not change the shared demo
+  persona's avatar. The same guard already blocks the parent/child photo,
+  profile, and every other persisting edit for demo accounts (added 2026-06-05).
 
 ---
 

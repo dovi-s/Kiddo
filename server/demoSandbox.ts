@@ -69,3 +69,67 @@ export function demoMockCheckoutResponse(returnUrl?: string) {
     message: "This is a demo account. The flow completes without charging a card or moving real money.",
   };
 }
+
+// ── Demo write-guard ─────────────────────────────────────────────────────────
+// A demo VISITOR logs in as a SHARED demo account (phil@/jay@dunphyfamily.com).
+// The money-flow endpoints already self-sandbox (mock responses above). But the
+// REST of the mutation surface would PERSIST to the shared demo and pollute it
+// for the next visitor — or, worst case, LOCK it (2FA enroll, password change)
+// or HIJACK it (email change, account delete). This middleware blocks persisting
+// writes from demo accounts:
+//   - PATCH / PUT / DELETE: blanket-blocked. These are always mutations; no read
+//     or money-flow endpoint uses them.
+//   - POST: blocked only for the known mutation paths below — so read-via-POST,
+//     the money-flow mocks, /auth/login, and /auth/register still pass through.
+// Real (non-demo) users are NEVER affected (gated on req.user.isDemoAccount).
+// Returns 200 with a benign {demo, saved:false} body so the client cleanly
+// no-ops (a refetch shows the unchanged demo) instead of surfacing a scary
+// error. Keep DEMO_BLOCKED_POST_PATTERNS in sync as new persisting POSTs land.
+// Mapped from the full mutation-surface audit, 2026-06-05.
+const DEMO_BLOCKED_POST_PATTERNS: RegExp[] = [
+  // Catastrophic — lock or hijack the shared demo account
+  /^\/api\/user\/change-password$/,
+  /^\/api\/me\/change-email$/,
+  /^\/api\/auth\/2fa(\/|$)/,
+  /^\/api\/account\/delete$/,
+  // Profile / settings
+  /^\/api\/user\/feature-walls\/[^/]+\/dismiss$/,
+  /^\/api\/users\/me\/(roth-interest|earned-income)$/,
+  // Fund + child content
+  /^\/api\/funds\/[^/]+\/child-photo$/,
+  /^\/api\/funds\/[^/]+\/gift-code\/reset$/,
+  /^\/api\/funds\/[^/]+\/memory(\/|$)/, // add + photo/video/audio uploads
+  /^\/api\/memory\/[^/]+\/approve$/,
+  /^\/api\/funds\/[^/]+\/collaborators$/,
+  /^\/api\/funds\/[^/]+\/welcome-complete$/,
+  /^\/api\/funds\/[^/]+\/(snooze|unsnooze)-action$/,
+  // Events / occasions
+  /^\/api\/events$/,
+  /^\/api\/events\/[^/]+\/upload-image$/,
+  // Gifter-side
+  /^\/api\/gifter-account\/funds\/[^/]+\/(follow|unfollow)$/,
+  /^\/api\/gifter-account\/save-fund$/,
+  /^\/api\/gifter-account\/recurring\/[^/]+\/(cancel|pause|resume|update)$/,
+  // Thank-yous + gifter notifications (writes the seeded tray)
+  /^\/api\/funds\/[^/]+\/gifter-notifications\/(remove|memory-share)$/,
+  /^\/api\/funds\/[^/]+\/thank-yous\/[^/]+\/send$/,
+  /^\/api\/funds\/[^/]+\/thank-yous\/bulk-send$/,
+  /^\/api\/funds\/[^/]+\/thank-yous\/generate$/,
+  // Kid View
+  /^\/api\/funds\/[^/]+\/kid-view-link$/,
+];
+
+export function blockDemoMutations(req: any, res: any, next: any) {
+  if (!req.user?.isDemoAccount) return next();
+  const p = String(req.path || "");
+  if (!p.startsWith("/api/")) return next();
+  const method = req.method;
+  const isHardWrite = method === "PATCH" || method === "PUT" || method === "DELETE";
+  const isBlockedPost = method === "POST" && DEMO_BLOCKED_POST_PATTERNS.some((re) => re.test(p));
+  if (!isHardWrite && !isBlockedPost) return next();
+  return res.status(200).json({
+    demo: true,
+    saved: false,
+    message: "You're exploring the demo, so changes aren't saved here. Create your own fund to make it real.",
+  });
+}

@@ -25,7 +25,7 @@ import { looksLikeTestSender } from "@shared/test-content";
 import { autoPauseOwnershipMismatchedContributions } from "./recurringContributionWorker";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
-import { isDemoFund, isDemoUser, demoMockCheckoutResponse } from "./demoSandbox";
+import { isDemoFund, isDemoUser, demoMockCheckoutResponse, blockDemoMutations } from "./demoSandbox";
 import { queueCustodianTransfer, isCustodianAchEnabled } from "./custodianTransfer";
 import {
   type AgeTransitionRecord as SharedAgeTransitionRecord,
@@ -139,6 +139,12 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   startMarketQuoteCacheRefresher();
+
+  // Demo integrity guard — blocks persisting writes from demo-account visitors
+  // so they can't pollute (or lock/hijack) the shared demo for the next visitor.
+  // Mounted before the route handlers; money-flow POSTs self-sandbox and pass
+  // through. Real users are never affected. See server/demoSandbox.ts.
+  app.use(blockDemoMutations);
 
   const INVESTMENT_CONFIG_PATH = path.join(process.cwd(), ".local", "investment-config.json");
   const PERSONAL_FUNDS_WAITLIST_PATH = path.join(process.cwd(), ".local", "personal-fund-waitlist.jsonl");
