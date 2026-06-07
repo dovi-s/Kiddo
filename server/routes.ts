@@ -15475,6 +15475,23 @@ export async function registerRoutes(
         requiresBankConnection: false,
         message: "Reminder saved. We'll email you when it's time to gift again.",
       });
+      // Mark the recurring SETUP in the fund's feed (the fires arrive later as
+      // gift_received; this is the "{gifter} set up a recurring gift" moment that
+      // previously logged nowhere). 2026-06-07.
+      try {
+        const fund = await storage.getFund(fundId);
+        if (fund?.userId) {
+          await storage.createActivity({
+            userId: fund.userId,
+            fundId,
+            type: "gifter_recurring_started",
+            title: "Gifter set up recurring",
+            description: `${senderName || "A gifter"} set up a ${frequency === "yearly" ? "yearly" : "monthly"} recurring gift of $${parseFloat(amount).toFixed(0)}.`,
+          });
+        }
+      } catch (actErr) {
+        console.error("Failed to log gifter_recurring_started activity:", actErr);
+      }
     } catch (error) {
       console.error('Error creating gift reminder:', error);
       res.status(500).json({ error: 'Failed to save reminder' });

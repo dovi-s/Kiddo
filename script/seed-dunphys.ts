@@ -849,6 +849,35 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     createdAt: fundCreatedAt,
   } as any);
 
+  // Account-setup + recurring-lifecycle activities so the demo feed shows the
+  // real lead-in a parent sees (bank linked, identity verified, recurring set
+  // up) — not just gifts. The product logs these in prod; the demo must seed
+  // them too or the feed under-represents a real account. One-time + dated at
+  // setup so they sit quietly at the fund's origin, never flooding the feed.
+  // Seed gap closed 2026-06-07.
+  const setupAt = new Date(fundCreatedAt.getTime() + 12 * 60 * 60 * 1000);
+  await db.insert(activities).values({
+    userId: parentUserId, fundId: fund.id, type: "bank_linked", title: "Bank linked",
+    description: "Linked a bank account to fund this account.", createdAt: setupAt,
+  } as any);
+  await db.insert(activities).values({
+    userId: parentUserId, fundId: fund.id, type: "kyc_approved", title: "Identity verified",
+    description: "Identity verification approved.", createdAt: setupAt,
+  } as any);
+  if (kid.recurring?.amount) {
+    await db.insert(activities).values({
+      userId: parentUserId, fundId: fund.id, type: "auto_invest", title: "Recurring investment",
+      description: `Set up automatic monthly investing of $${kid.recurring.amount}.`, createdAt: setupAt,
+    } as any);
+    if (kid.recurring.status === "paused") {
+      await db.insert(activities).values({
+        userId: parentUserId, fundId: fund.id, type: "recurring_paused", title: "Recurring paused",
+        description: "Monthly investing paused as the fund nears the age-18 handoff.",
+        createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+      } as any);
+    }
+  }
+
   // ── Lived-in lifecycle: PARENT-CHOSEN de-risking + real occasions ──
   // SELF-DIRECTED POSTURE (2026-06-03, founder catch): the product does NOT
   // auto-shift allocations — the old auto glide-path + age-band nudges were
@@ -943,6 +972,13 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       giftCount: isBirthdayOccasion ? birthdayGifts.length : 0,
       giftVolume: isBirthdayOccasion ? birthdayGiftVolume.toFixed(2) : "0.00",
     } as any).returning();
+    // Paired activity for the occasion (seeded as a domain row but never an
+    // activity, so the feed never showed "Occasion"). 2026-06-07.
+    await db.insert(activities).values({
+      userId: parentUserId, fundId: fund.id, type: "event_created", title: "Occasion",
+      description: `Set up ${o.name}.`,
+      createdAt: new Date(fundCreatedAt.getTime() + 36 * 60 * 60 * 1000),
+    } as any);
     if (isBirthdayOccasion && birthdayGifts.length > 0) {
       await db.update(gifts)
         .set({ eventId: insertedEvent.id })
@@ -1504,6 +1540,14 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         // (sub-id rows are excluded), and the status-change endpoints skip
         // the Stripe call for demo_ ids.
         stripeSubscriptionId: `demo_sub_mitchell_${kid.slug}`,
+      } as any);
+      // Mark Mitchell's recurring SETUP in the feed (the yearly fires arrive as
+      // gifts; this is the "set up a recurring gift" moment that previously
+      // logged nowhere). 2026-06-07.
+      await db.insert(activities).values({
+        userId: philId, fundId, type: "gifter_recurring_started", title: "Gifter set up recurring",
+        description: "Mitchell Pritchett set up a yearly recurring gift of $100.",
+        createdAt: new Date(Date.now() - 4 * 365 * 24 * 60 * 60 * 1000),
       } as any);
     }
     console.log(`  recurring (Mitchell): annual birthday on ${KIDS.length} fund(s)`);

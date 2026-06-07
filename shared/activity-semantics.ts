@@ -53,6 +53,7 @@ export const GIFT_TYPES = [
   "large_gift_hold_started",
   "large_gift_hold_released",
   "refund",
+  "gifter_recurring_started",
   "gifter_recurring_paused",
   "gifter_recurring_resumed",
   "gifter_recurring_cancelled",
@@ -182,6 +183,7 @@ export function canonicalLabel(type?: string | null): string | null {
   // Gifter recurring-schedule lifecycle — checked BEFORE the gift group so the
   // specific labels win (see header note: this fixes the reference's dead-code
   // short-circuit that mislabeled these as "Gift received").
+  if (t === "gifter_recurring_started") return "Gifter set up recurring";
   if (t === "gifter_recurring_paused") return "Gifter paused recurring";
   if (t === "gifter_recurring_resumed") return "Gifter resumed recurring";
   if (t === "gifter_recurring_cancelled") return "Gifter cancelled recurring";
