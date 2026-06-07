@@ -89,6 +89,27 @@ exactly how EarlyBird died: capital → growth pressure → paid parent CAC ($20
 ~25-mo payback) → bleed out. The product is already built; the bottleneck is
 distribution + loop proof, not features.
 
+**The pond rule (added 2026-06-06, founder-approved — the Thiel sharpening).**
+Phase 1's growth shape is *total domination of one tiny market*, never a broad
+launch. Every monopoly starts in a market so small nobody else considers it a
+market (PayPal: eBay power-sellers; Facebook: one campus). Ours: **one
+occasion × one dense community** where cash-gifting to kids is already
+cultural and everyone attends everyone's events — a metro's bar/bat-mitzvah
+circuit, a large church's baby-shower network, one big school community.
+Pond-selection criteria: (a) cash gifts to kids are normative, (b) social
+density (the same gifters recur across events), (c) a calendar of upcoming
+occasions to ride. The win metric is NOT user count — it's **% of the
+community's kid-money occasions that default to a Kiddo link** (target:
+effectively all of them) plus funded-k *inside the pond*. A market that small
+is invisible to incumbents (can't move their needle = our protection), and it
+is the one place our honest network-effect candidate ignites: in a dense
+community the gift graph is LOCAL — each family added makes Kiddo more useful
+to the gifters who know them, and the multi-kid gifter dashboard becomes the
+gifter's own ledger. Expansion is concentric and graph-led (gifters in pond A
+have grandkids in pond B), never broadcast. 100% of something tiny beats 1%
+of something huge. **Forbidden under this rule: any "national launch,"
+broad-channel push, or paid acquisition before a first pond is owned.**
+
 **Phase 2 — Buy the regulated core (after funded-k ≥ 1 + one working channel).**
 Raise *strategic* capital — earmarked for the regulated foundation (custody,
 the narrow legal opinion, compliance) and the at-18 / kid-2.0 expansion,
