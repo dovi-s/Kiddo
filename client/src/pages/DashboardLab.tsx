@@ -6408,12 +6408,25 @@ export default function DashboardLab() {
                         {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
                         {/* Status token shows ONLY when it's signal (2026-06-07):
                             "Active" is the assumed default — confirming it is
-                            noise, and dropping it is what frees the row for the
-                            gift count on mobile. Draft (needs setup) and Closed
-                            ARE meaningful, so those still show. */}
-                        {activeFund?.status && activeFund.status !== "active"
-                          ? ` · ${activeFund.status.charAt(0).toUpperCase()}${activeFund.status.slice(1)}`
-                          : ""}
+                            noise (dropping it also freed the row for the gift
+                            count). But Draft (fund isn't live / needs setup) and
+                            Closed ARE meaningful, and rendering them in the same
+                            dim style as the rest buried them (founder: "if
+                            someone's in Draft, do they know?"). So the non-active
+                            token now POPS — gold + bold for Draft (needs your
+                            action), a brighter white for Closed (informational) —
+                            so it reads as a STATE, not metadata. */}
+                        {(() => {
+                          const st = String(activeFund?.status || "active").toLowerCase();
+                          if (!st || st === "active") return null;
+                          const label = st.charAt(0).toUpperCase() + st.slice(1);
+                          const isDraft = st === "draft";
+                          return (
+                            <span style={{ color: isDraft ? "hsl(43, 85%, 68%)" : "rgba(255,255,255,0.78)", fontWeight: 700 }}>
+                              {" · "}{label}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     {(() => {
