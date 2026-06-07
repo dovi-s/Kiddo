@@ -72,13 +72,18 @@ now (months of lead time)**; on a positive hit, the 18 U.S.C. §2258A NCMEC repo
 
 ## Remediation plan (ownership buckets)
 
-**A. Claude can fix now (contained, safety-positive, no product-policy change)** — offer to proceed:
-C3 (report button on media cards, wired to the T&S/escalate queue), C2 (gate video/audio
-uploads on `isContentScanningLive()` → fail-closed), C4 (require email-match/verified +
-idempotency on age-18 claim), H2 (senderName/message validation+redaction), H4 (PIN
-limiter → Postgres, key on token), H5 (purge files on delete/remove), H6/H7 (blocklist
-on all paths), H8 (velocity caps), H9 (text-link scan), M4 (scan transcript text), M5
-(suppress flagged recurring re-injection).
+**A. Claude can fix now (contained, safety-positive, no product-policy change):**
+~~C3, C2, C4~~ — **closed 2026-06-04** (see project_trust_safety_launch_blocker memory:
+b329215 / 6980192 / e4b8408). ~~H2, H4, H5, H6/H7, H8, H9, M4, M5~~ — **closed
+2026-06-05/06 (commit cd5c522):** one shared policy module (`server/giftTextSafety.ts`)
+now enforces name+message contact-info/link rules on ALL five public gifter text paths
+(one-time, recurring, gift-intents, guestbook, post-payment note); blocklist enforced on
+every gift path incl. a blocked-sender cascade that cancels recurring subscriptions;
+per-gifter velocity caps (10 checkout attempts/hr, durable counter) on both checkouts;
+kid-view PIN gate moved to the Postgres limiter keyed on TOKEN (failures-only counting);
+moderation 'remove' purges media bytes (not just DB columns); public-path Whisper
+transcripts dropped on contact-pattern hits; recurring cycles stop re-injecting
+moderated-away messages. Bucket A is now EMPTY.
 
 **B. Founder product/UX decisions** (strong recommendations, your call):
 H1 (flip gifter-moderation default to ON / pending_review), H3 (stop exposing child
