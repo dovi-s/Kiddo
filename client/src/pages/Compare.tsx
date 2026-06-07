@@ -489,7 +489,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
 
 const hubSnapshotRows: HubSnapshotRow[] = [
   { product: "Kiddo", bestFor: "Investment gifting: family gifts that become real investments", giftingLink: "Yes", noAccountGift: "Yes", memoryBook: "Yes" },
-  { product: "Acorns Early", bestFor: "Micro-investing and parent-led saving inside Acorns", giftingLink: "No", noAccountGift: "No", memoryBook: "No" },
+  { product: "Acorns Early", bestFor: "Micro-investing and parent-led saving inside Acorns", giftingLink: "Yes (basic)", noAccountGift: "Yes", memoryBook: "No" },
   { product: "Greenlight", bestFor: "Spending, chores, debit card", giftingLink: "No", noAccountGift: "No", memoryBook: "No" },
   { product: "Stockpile", bestFor: "Gift-card style stock gifting", giftingLink: "Sort of", noAccountGift: "Not cleanly", memoryBook: "No" },
   { product: "529 plan", bestFor: "Education-first tax savings", giftingLink: "Usually awkward", noAccountGift: "No", memoryBook: "No" },
@@ -519,7 +519,11 @@ const fullComparisonRows: FullComparisonRow[] = [
     feature: "Shareable gift link",
     kiddo: "Yes, anyone can give in under a minute",
     earlybird: "Yes (product no longer active)",
-    acornsEarly: "No",
+    // Fact-checked 2026-06-07 against Acorns' own help center: Early Gifts /
+    // Giftlinks DOES exist (per-child link, amount + a message). Previously
+    // "No" — stale. The honest differentiators live in the rows below
+    // (occasions, Memory Book media, stock pick), not in denying the link.
+    acornsEarly: "Yes, a basic link (amount + message)",
     greenlight: "No",
     plan529: "No easy link; awkward workarounds",
     savings: "No",
@@ -529,7 +533,7 @@ const fullComparisonRows: FullComparisonRow[] = [
     feature: "No account needed to give",
     kiddo: "Yes, gifters need only a card",
     earlybird: "Yes (product no longer active)",
-    acornsEarly: "No",
+    acornsEarly: "Yes",
     greenlight: "No",
     plan529: "No",
     savings: "No",
@@ -563,6 +567,35 @@ const fullComparisonRows: FullComparisonRow[] = [
     greenlight: "No",
     plan529: "No",
     savings: "No",
+    kiddoHighlight: true,
+  },
+  {
+    // Acorns' genuine advantage, listed voluntarily — an honest comparison
+    // that names what the other side does well is the only kind worth
+    // publishing. Their terms: 1% match on Early Invest contributions, up
+    // to $7,000/yr, investments must be held 4+ years.
+    feature: "Contribution match",
+    kiddo: "No match. We keep the ongoing fee near zero instead.",
+    earlybird: "No",
+    acornsEarly: "Yes: 1% match up to $7,000/yr (4-year hold)",
+    greenlight: "No",
+    plan529: "Some states offer small matches",
+    savings: "No",
+  },
+  {
+    // The quiet structural difference: opening an Acorns Early account for
+    // someone ELSE's kid requires that child's name, DOB and Social Security
+    // Number (per Acorns' help center) — grandma needs the parents to hand
+    // over their kid's SSN, and the kid ends up fragmented across multiple
+    // custodial accounts with different custodians. Kiddo's model: everyone
+    // gives into the parent's ONE fund; a gifter never touches the SSN.
+    feature: "Give without the child's SSN",
+    kiddo: "Yes. Gifts go into the family's one fund; gifters never need it",
+    earlybird: "Yes (product no longer active)",
+    acornsEarly: "Gift link yes; opening an account for their kid requires the child's SSN",
+    greenlight: "Parents only",
+    plan529: "Opening for someone's child requires beneficiary details",
+    savings: "Varies by bank",
     kiddoHighlight: true,
   },
   {
