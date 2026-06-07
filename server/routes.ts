@@ -23763,6 +23763,21 @@ export async function registerRoutes(
         collaboratorId: row.id,
         role: row.role,
       });
+      // Surface the relationship moment in the fund's Activity feed — not just
+      // the audit log + the one-time dashboard banner. 2026-06-07.
+      try {
+        const accepterName = (req.user as any)?.preferredName || (req.user as any)?.firstName || (req.user as any)?.email || "A co-parent";
+        const childName = fund?.recipientFirstName?.trim();
+        await storage.createActivity({
+          userId: fund?.userId || userId,
+          fundId: row.fundId,
+          type: "collaborator_accepted",
+          title: "Co-parent joined",
+          description: `${accepterName} joined as a co-parent on ${childName ? `${childName}'s` : "the"} fund.`,
+        });
+      } catch (actErr) {
+        console.error("Failed to log collaborator_accepted activity:", actErr);
+      }
     } catch (error) {
       console.error('Error accepting invitation:', error);
       res.status(500).json({ error: 'Failed to accept invitation' });
@@ -25302,6 +25317,18 @@ export async function registerRoutes(
         role,
         reinvite: !!existing,
       });
+      try {
+        const childName = fund?.recipientFirstName?.trim();
+        await storage.createActivity({
+          userId: fund?.userId || (req.user as any).id,
+          fundId: req.params.fundId,
+          type: "collaborator_invited",
+          title: "Co-parent invited",
+          description: `Invited ${rawEmail} to help manage ${childName ? `${childName}'s` : "the"} fund.`,
+        });
+      } catch (actErr) {
+        console.error("Failed to log collaborator_invited activity:", actErr);
+      }
     } catch (error) {
       console.error('Error creating collaborator:', error);
       res.status(500).json({ error: 'Failed to create collaborator' });
@@ -25344,6 +25371,22 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ error: 'Collaborator not found' });
       res.json(updated);
       await writeAudit(req, 'collaborator_updated', 'fund', req.params.fundId, { collaboratorId: req.params.id, update: updateData });
+      // Only log a feed event when the role actually changed (status flips are
+      // routine plumbing, not relationship moments).
+      if (updateData.role) {
+        try {
+          const childName = fund?.recipientFirstName?.trim();
+          await storage.createActivity({
+            userId: fund?.userId || (req.user as any).id,
+            fundId: req.params.fundId,
+            type: "collaborator_role_changed",
+            title: "Co-parent role changed",
+            description: `A co-parent's access on ${childName ? `${childName}'s` : "the"} fund was updated.`,
+          });
+        } catch (actErr) {
+          console.error("Failed to log collaborator_role_changed activity:", actErr);
+        }
+      }
     } catch (error) {
       console.error('Error updating collaborator:', error);
       res.status(500).json({ error: 'Failed to update collaborator' });
@@ -25362,6 +25405,18 @@ export async function registerRoutes(
       await storage.deleteCollaborator(req.params.id, req.params.fundId);
       res.status(204).send();
       await writeAudit(req, 'collaborator_removed', 'fund', req.params.fundId, { collaboratorId: req.params.id });
+      try {
+        const childName = fund?.recipientFirstName?.trim();
+        await storage.createActivity({
+          userId: fund?.userId || (req.user as any).id,
+          fundId: req.params.fundId,
+          type: "collaborator_removed",
+          title: "Co-parent removed",
+          description: `A co-parent was removed from ${childName ? `${childName}'s` : "the"} fund.`,
+        });
+      } catch (actErr) {
+        console.error("Failed to log collaborator_removed activity:", actErr);
+      }
     } catch (error) {
       console.error('Error deleting collaborator:', error);
       res.status(500).json({ error: 'Failed to delete collaborator' });

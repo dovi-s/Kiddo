@@ -111,6 +111,10 @@ export const MILESTONE_TYPES = [
   "successor_custodian_added", "successor_custodian_changed", "successor_custodian_removed",
   "child_profile_updated",
   "majority_state_updated",
+  // Co-parent / collaborator relationship events. Were audit-logged only (never
+  // surfaced in the feed) until 2026-06-07 — a parent's Activity never showed
+  // "Claire joined as a co-parent." Now first-class fund events.
+  "collaborator_invited", "collaborator_accepted", "collaborator_role_changed", "collaborator_removed",
 ];
 
 // `upgrade_*` rows + the stale `monetization_trigger_event` literal are pure
@@ -197,6 +201,12 @@ export function canonicalLabel(type?: string | null): string | null {
   if (t === "parent_contribution") return "Contribution";
   if (t === "parent_contribution_failed") return "Charge failed";
   if (t === "recurring_request") return "Recurring request";
+
+  // Co-parent / collaborator
+  if (t === "collaborator_invited") return "Co-parent invited";
+  if (t === "collaborator_accepted") return "Co-parent joined";
+  if (t === "collaborator_role_changed") return "Co-parent role changed";
+  if (t === "collaborator_removed") return "Co-parent removed";
 
   // Sealed letters + sponsor-Plus
   if (t === "sealed_letter_delivered") return "Sealed letter delivered";

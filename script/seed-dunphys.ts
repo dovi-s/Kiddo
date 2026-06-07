@@ -1420,6 +1420,7 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
       if (fundId === haleyFundId) continue; // transferred to Haley at majority; co-parent access ended
       const isRecent = !recentAssigned;
       recentAssigned = true;
+      const acceptedAt = isRecent ? new Date() : OLD_ACCEPT;
       await db.insert(fundCollaborators).values({
         fundId,
         userId: claireId,
@@ -1431,8 +1432,24 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         // silently downgraded to a read-only viewer AND uncounted as a co-parent.
         role: "co-admin",
         status: "accepted",
-        acceptedAt: isRecent ? new Date() : OLD_ACCEPT,
-        invitedAt: isRecent ? new Date() : OLD_ACCEPT,
+        acceptedAt,
+        invitedAt: acceptedAt,
+      } as any);
+      // Seed the matching ACTIVITY rows so Claire's invite + acceptance show in
+      // the fund's Activity feed. The product logs these as of 2026-06-07; the
+      // demo must seed them too or the feed under-represents a real account.
+      const [fundRow] = await db.select({ name: funds.recipientFirstName }).from(funds).where(eq(funds.id, fundId)).limit(1);
+      const childPoss = fundRow?.name?.trim() ? `${fundRow.name.trim()}'s` : "the";
+      const invitedAt = new Date(acceptedAt.getTime() - 2 * 24 * 60 * 60 * 1000);
+      await db.insert(activities).values({
+        userId: philId, fundId, type: "collaborator_invited", title: "Co-parent invited",
+        description: `Invited claire@dunphyfamily.com to help manage ${childPoss} fund.`,
+        createdAt: invitedAt,
+      } as any);
+      await db.insert(activities).values({
+        userId: philId, fundId, type: "collaborator_accepted", title: "Co-parent joined",
+        description: `Claire joined as a co-parent on ${childPoss} fund.`,
+        createdAt: acceptedAt,
       } as any);
     }
     console.log(`  collaborator: claire@dunphyfamily.com → co-parent on ${seededFundIds.filter((id) => id !== haleyFundId).length} fund(s) (Haley's transferred out)`);
