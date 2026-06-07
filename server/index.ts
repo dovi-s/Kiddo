@@ -361,6 +361,7 @@ app.get("/sitemap.xml", (req, res) => {
     "gifts-for-a-kid-who-has-everything",
     "utma-vs-529-for-family-gifting",
     "earlybird-alternative",
+    "utma-financial-aid-fafsa",
   ];
   for (const slug of BLOG_SLUGS) {
     routes.push({ path: `/blog/${slug}`, changefreq: "monthly", priority: "0.6" });
