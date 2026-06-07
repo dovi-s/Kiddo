@@ -18,7 +18,7 @@ import {
   type GiftAllocation, type InsertGiftAllocation,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, asc } from "drizzle-orm";
+import { eq, desc, and, sql, asc, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getFund(id: string): Promise<Fund | undefined>;
@@ -163,10 +163,15 @@ export class DatabaseStorage implements IStorage {
     // fund appears first. Parents typically care most about the latest
     // handoff (they were just managing it last week); older transfers
     // sink to the bottom.
+    // Excludes revoked windows (2026-06-07, migration 0042): once the adult
+    // owner removes the previous custodian's access, the fund disappears
+    // from the former parent's lists entirely — the same end state as any
+    // account they can't see. The access middleware enforces the same gate
+    // on direct fund-scoped requests.
     return db
       .select()
       .from(funds)
-      .where(eq(funds.previousOwnerId, userId))
+      .where(and(eq(funds.previousOwnerId, userId), isNull(funds.previousOwnerAccessRevokedAt)))
       .orderBy(desc(funds.transferredAt));
   }
 

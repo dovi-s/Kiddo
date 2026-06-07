@@ -2598,7 +2598,13 @@ export async function registerRoutes(
       // are blocked by requireFundMutator (which only passes 'owner'
       // and 'co-admin'). Per FUND_STATES_SPEC.md item 4 and the
       // 2026-05-14 funds.previousOwnerId foundation.
-      if ((fund as any).previousOwnerId === userId) {
+      //
+      // REVOCABLE since 2026-06-07 (migration 0042): the adult owner can
+      // close this window from Settings. Once previousOwnerAccessRevokedAt
+      // is set, the former custodian gets the same 403 as any stranger —
+      // a permanent irrevocable observer on an adult's account was a
+      // coercive-control vector in the estranged-parent case.
+      if ((fund as any).previousOwnerId === userId && !(fund as any).previousOwnerAccessRevokedAt) {
         req.ownedFund = fund;
         req.fundAccessRole = 'previous_owner';
         return next();
@@ -6416,6 +6422,44 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating kid view link:", error);
       res.status(500).json({ error: "Failed to create child view link." });
+    }
+  });
+
+  // Owner-side revocation of the previous custodian's read-only window
+  // (2026-06-07, migration 0042 — founder-approved adult-autonomy fix).
+  // After handoff the former parent keeps view-only access by default;
+  // this lets the now-adult OWNER close that window. Design choices:
+  //   • Owner ONLY (not co-admin — post-handoff funds have no co-admins
+  //     anyway; belt-and-suspenders).
+  //   • One-way from the product: re-granting is a support flow, on
+  //     purpose — an estranged parent must not be able to pressure the
+  //     owner into a casual "turn it back on" toggle.
+  //   • SILENT: the former custodian is NOT notified (same posture as
+  //     social-platform blocking — notifying a controlling parent that
+  //     they've been cut off invites escalation). Their sidebar entry
+  //     simply disappears on next load.
+  //   • previousOwnerId itself is preserved (custodial attribution is
+  //     audit/compliance history); only the access flag flips.
+  app.post('/api/funds/:fundId/revoke-previous-owner-access', isAuthenticated, requireOwnedFundParam, requireFundMutator, async (req: any, res) => {
+    try {
+      const fund: any = req.ownedFund;
+      if (req.fundAccessRole !== 'owner') {
+        return res.status(403).json({ error: 'Only the fund owner can change this.' });
+      }
+      if (!fund.previousOwnerId) {
+        return res.status(400).json({ error: 'This fund has no previous custodian.' });
+      }
+      if (fund.previousOwnerAccessRevokedAt) {
+        return res.json({ ok: true, alreadyRevoked: true });
+      }
+      await storage.updateFund(fund.id, { previousOwnerAccessRevokedAt: new Date() } as any);
+      await writeAudit(req, 'previous_owner_access_revoked', 'fund', fund.id, {
+        previousOwnerId: fund.previousOwnerId,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Error revoking previous-owner access:', error);
+      res.status(500).json({ error: 'Could not update access. Please try again.' });
     }
   });
 

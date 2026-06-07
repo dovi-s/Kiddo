@@ -83,6 +83,16 @@ export const funds = pgTable("funds", {
   // consuming UX is multi-day work and deferred until explicitly
   // pulled in.
   previousOwnerId: varchar("previous_owner_id"),
+  // Owner-side revocation of the previous custodian's read-only window
+  // (2026-06-07, migration 0042). After handoff the former parent keeps
+  // view-only access by default (warm, right for most families) — but the
+  // ADULT owner can close that window: a permanent, irrevocable observer on
+  // an adult's financial account is a coercive-control vector in the
+  // estranged-parent case. A timestamp instead of nulling previousOwnerId so
+  // the custodial attribution record (who managed this kid's money for 18
+  // years) survives revocation. NULL = access active (default behavior
+  // unchanged).
+  previousOwnerAccessRevokedAt: timestamp("previous_owner_access_revoked_at"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks

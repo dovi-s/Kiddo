@@ -26,6 +26,7 @@ import { ChildIdentityCard } from "@/components/ChildIdentityCard";
 import { KidsViewCard } from "@/components/KidsViewCard";
 import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
 import { CoParentAccessCard } from "@/components/CoParentAccessCard";
+import { PreviousCustodianAccessCard } from "@/components/PreviousCustodianAccessCard";
 import { FundDetailsCard } from "@/components/FundDetailsCard";
 import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
 import { LegalDocumentsCard } from "@/components/LegalDocumentsCard";
@@ -115,6 +116,12 @@ export function FundSettingsChildPanel({
           onOpenInviteModal={onOpenInviteModal}
         />
       )}
+      {/* Post-handoff owner's access control — the adult-owner analog of the
+          co-parent card above. The former custodian keeps a view-only window
+          by default; this is where the owner can close it (2026-06-07,
+          migration 0042 — see PreviousCustodianAccessCard for the safety
+          rationale). Renders only while the window is open. */}
+      {fundIsOwnerHeld && <PreviousCustodianAccessCard fund={fund} />}
       {/* Collaborator's own access note — the warm read-only answer to "what
           am I here?" The full CoParentAccessCard is owner-machinery (invite
           button, access list, revoke, plan upsell — every piece 403s or
