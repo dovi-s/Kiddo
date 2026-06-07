@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, ChevronDown, Plus, RefreshCw, Share2, User } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Plus, Share2, User } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT } from "@/hooks/use-active-fund";
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav, isFundSubPage } from "@/lib/page-scope";
@@ -97,17 +97,14 @@ export function AppHeader() {
   // See project_chrome_scope_tiers.md.
   const unreadCount = useBellUnreadCount(shouldSuppressFundChrome(location) ? "all" : "active");
 
-  // Manual refresh affordance. Browser-native pull-to-refresh + SSE +
-  // 30s polling + window-focus refetch already cover most freshness
-  // cases; this is the explicit-control affordance for users who want
-  // to force a sync. Especially useful on installed PWAs where browser
-  // PTR doesn't fire, and on desktop where there's no pull gesture at
-  // all. Invalidates the three queries that matter (funds list,
-  // dashboard-summary for the active fund, activities feed) and shows
-  // a brief 700ms spinner state so the click reads as a real action
-  // even when the network is fast.
+  // queryClient drives the live fund-value read below (and previously a manual
+  // header refresh button, removed 2026-06-07). Freshness is handled without a
+  // manual control — SSE + 30s polling + window-focus refetch — and a manual
+  // "refresh to see if it changed" button cut against the long-horizon, no-
+  // daily-checking design lens (the same reason the balance was pulled from the
+  // header). Mobile browsers keep native pull-to-refresh as a warm-reload escape
+  // hatch; the branded version belongs in the native app's RefreshControl.
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
   // Page scope drives every chrome adjustment below. /funds is
   // household-scoped (Tier 2), /account is user-scoped (Tier 3) —
   // both suppress fund-specific chrome but differ in how the
@@ -127,23 +124,6 @@ export function AppHeader() {
   // doc-block in page-scope.ts. Locked 2026-05-18.
   const isSubPage = isFundSubPage(location);
   const showBackArrow = hideNav || isSubPage;
-  const handleRefresh = useCallback(() => {
-    haptic("selection");
-    setRefreshing(true);
-    const active = getActiveFundId();
-    void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-    if (active) {
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds", active, "dashboard-summary"] });
-    }
-    // On the all-funds overview surface, the household aggregate is
-    // the load-bearing query — invalidate that too so refresh is the
-    // single source of truth for the visible page state.
-    if (isFundsOverview) {
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds-overview"] });
-    }
-    void queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
-    window.setTimeout(() => setRefreshing(false), 700);
-  }, [queryClient, isFundsOverview]);
 
   const { data: funds = [] } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
@@ -529,32 +509,6 @@ export function AppHeader() {
             on a long-horizon product, contrary to the locked design lens
             and feedback_no_ai_slop's anti-streak-gamification rule. */}
         <div className="flex shrink-0 items-center gap-2">
-          {/* Refresh — leftmost in the right-cluster. Explicit user
-              control to force a sync; the SSE + polling + focus-refetch
-              combo means manual refresh is rarely needed, but discovery
-              of "I can force this" matters more on installed PWAs
-              (where browser pull-to-refresh doesn't fire) and on
-              desktop (where there's no pull gesture at all). Disabled
-              briefly while the spinner is showing so a double-tap
-              doesn't queue two invalidations. */}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            // Base + hover both via className. Inline `background` had
-            // been killing the hover affordance per the chrome audit.
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[rgb(237,244,238)] border-[rgb(224,237,227)] transition-colors disabled:opacity-60 hover:bg-[rgb(224,237,227)] focus-visible:bg-[rgb(224,237,227)] focus-visible:outline-none"
-            data-testid="header-refresh"
-            aria-label="Refresh"
-          >
-            <RefreshCw
-              size={15}
-              strokeWidth={1.8}
-              color="#1A3D2B"
-              className={refreshing ? "animate-spin" : ""}
-            />
-          </button>
-
           {/* Bell — second in the mobile right-cluster (situational
               alert, scanned occasionally). Convention: rightmost slot in
               a mobile header is for the durable identity / profile entry
