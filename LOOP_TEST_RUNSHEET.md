@@ -69,6 +69,13 @@ separate and you're completely clean.
 - **Bias to one high-density gifting event:** a baby shower, first birthday,
   christening, bar/bat mitzvah. One event = one kid + many gifters at once = the
   densest possible loop ignition. Run *one* by hand this month.
+- **Pick it with monopoly intent (the pond rule, `COMPANY_STRATEGY.md` Phase 1,
+  2026-06-06):** the event you run by hand should sit inside the COMMUNITY you'd
+  want to own 100% of afterward — same criteria: cash-gifts-to-kids normative,
+  socially dense (the same gifters recur across events), a calendar of upcoming
+  occasions to ride. The test and Phase 1 are ONE motion: you're not just asking
+  "does the loop turn," you're asking "can I own every kid-money occasion in
+  this circle." The question changes who you pick.
 - **Read signal honestly:** friends/family = a **weak "yes"** (they'll humor you)
   but a **strong "no"** (if even your own people won't, that's an answer). The
   signal that can't be faked: it **spreads past your circle** — a gift
