@@ -1260,7 +1260,16 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1A1710", lineHeight: "17px", flex: 1, minWidth: 0 }}>
+                          {/* Line-clamp (2026-06-07, founder density pass): the
+                              title/description had no clamp, so a long server
+                              string (a gift message, a multi-clause sell
+                              description) wrapped to unlimited lines and blew up
+                              the row height unevenly — the row-level "cram." Title
+                              caps at 2 lines, description at 2; short notifications
+                              (the vast majority) are unaffected, only the rare
+                              long one gets a clean "…" cap so every row has a
+                              predictable max height. */}
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1A1710", lineHeight: "17px", flex: 1, minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
                             {activity.title}
                           </p>
                           {isUnread && (
@@ -1268,7 +1277,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                           )}
                         </div>
                         {activity.description && (
-                          <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px", marginTop: 3 }}>
+                          <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px", marginTop: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
                             {activity.description}
                           </p>
                         )}
