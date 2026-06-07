@@ -51,6 +51,40 @@ function checkMemory(key: string, max: number, windowMs: number, now: number): b
   return cur.count <= max;
 }
 
+// Read-only check: is the key ALREADY over its limit, without counting this
+// call as an attempt? For failure-counting flows (the kid-view PIN gate counts
+// only WRONG guesses, never successful unlocks): peek first → 429 if over,
+// then increment via checkRateLimit only on an actual failure. Fails open on
+// DB trouble via the same in-memory fallback.
+export async function peekRateLimit(key: string, max: number, windowMs: number): Promise<boolean> {
+  const now = Date.now();
+  const windowStart = Math.floor(now / windowMs) * windowMs;
+  try {
+    const result = await db.execute(sql`
+      SELECT count FROM rate_limit_counters
+      WHERE key = ${key} AND window_start = ${windowStart}
+    `);
+    const row: any = (result.rows || [])[0];
+    const count = Number(row?.count ?? 0);
+    return count < max;
+  } catch {
+    const cur = memStore.get(key);
+    if (!cur || cur.windowStart !== windowStart) return true;
+    return cur.count < max;
+  }
+}
+
+// Clear a key's window (e.g. a successful PIN unlock wipes the failure count,
+// matching the previous in-memory Map's delete-on-success semantics).
+export async function resetRateLimit(key: string): Promise<void> {
+  try {
+    await db.execute(sql`DELETE FROM rate_limit_counters WHERE key = ${key}`);
+  } catch {
+    // fall through to memory either way
+  }
+  memStore.delete(key);
+}
+
 // Returns true when the request is ALLOWED, false when it should be rate-
 // limited (429). Fails open (returns true) only via the in-memory fallback —
 // i.e. it still enforces per-process limits even when the DB is down.

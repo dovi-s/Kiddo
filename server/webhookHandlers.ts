@@ -2675,6 +2675,37 @@ export class WebhookHandlers {
     const selectedTicker = String(subMetadata.selectedTicker || "");
     const isAnonymousFlag = String(subMetadata.isAnonymous || "0") === "1";
 
+    // T&S blocklist cascade (2026-06-06, sibling of M5 below): a parent/admin
+    // block issued AFTER the subscription was created must stop future cycles
+    // — otherwise a blocked gifter keeps charging money and planting content
+    // into the child's fund every month. Mirrors the closed-fund cascade
+    // above: cancel the subscription, skip this cycle's gift insert. (As with
+    // closed-fund, Stripe already took this cycle's payment — refund is the
+    // same separate operational concern.)
+    if (senderEmail) {
+      try {
+        const blockRows = await db.execute(sql`
+          SELECT id FROM blocked_gifters
+          WHERE unblocked_at IS NULL
+            AND email = ${senderEmail.toLowerCase()}
+            AND (scope = 'global' OR (scope = 'fund' AND fund_id = ${fundId}))
+          LIMIT 1
+        `);
+        if ((blockRows.rows as any[])?.[0]) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            if (stripeSubscriptionId) await stripe.subscriptions.cancel(stripeSubscriptionId);
+          } catch (cancelErr) {
+            console.warn("[Webhook] failed to cancel gifter recurring for blocked sender:", cancelErr);
+          }
+          console.warn(`[Webhook] gifter_recurring charge from BLOCKED sender to fund ${fundId}; sub canceled, charge not processed`);
+          return true;
+        }
+      } catch (blockErr) {
+        console.warn("[Webhook] blocklist check failed on recurring charge (continuing):", blockErr);
+      }
+    }
+
     // Look up the recurring_gifts row by stripe_subscription_id so we can
     // stamp the gift's recurring_gift_id foreign key. Best-effort: if the
     // lookup fails the gift still gets created without the tag, just
@@ -2690,6 +2721,32 @@ export class WebhookHandlers {
       if (rgRow?.id) recurringGiftId = String(rgRow.id);
     } catch (rgErr) {
       console.warn("[Webhook] recurring_gift_id lookup failed:", rgErr);
+    }
+
+    // T&S M5 (2026-06-06): when a parent/admin removed, hid, or escalated a
+    // PRIOR cycle's Memory Book entry from this same subscription, the next
+    // invoice used to re-create the identical message verbatim — moderation
+    // that didn't stick. If any earlier cycle's entry was moderated away,
+    // suppress the message for this and every later cycle (the money still
+    // flows; the gift row just carries no note). Fail-open on lookup error:
+    // a DB blip shouldn't strip a legitimate gifter's note.
+    let cycleMessage = message;
+    if (recurringGiftId && message) {
+      try {
+        const flaggedPrior = await db.execute(sql`
+          SELECT me.id FROM memory_entries me
+          JOIN gifts g ON g.id = me.gift_id
+          WHERE g.recurring_gift_id = ${recurringGiftId}
+            AND me.moderation_status IN ('removed', 'hidden', 'escalated')
+          LIMIT 1
+        `);
+        if ((flaggedPrior.rows as any[])?.[0]) {
+          cycleMessage = "";
+          console.warn(`[Webhook] gifter_recurring message suppressed for sub ${stripeSubscriptionId} (prior cycle's entry was moderated)`);
+        }
+      } catch (modErr) {
+        console.warn("[Webhook] M5 moderation lookback failed (message kept):", modErr);
+      }
     }
 
     // BUG FIX (2026-05-27): credit the fund the amount that ACTUALLY settles,
@@ -2713,7 +2770,7 @@ export class WebhookHandlers {
         stripe_payment_intent_id, recurring_gift_id, created_at
       ) VALUES (
         ${fundId}, ${senderName}, ${senderEmail || null}, ${amountUsd.toFixed(2)},
-        ${recurringNetToFund.toFixed(2)}, 'processing', ${message || null},
+        ${recurringNetToFund.toFixed(2)}, 'processing', ${cycleMessage || null},
         ${selectedTicker || null}, ${executionModel}, ${isAnonymousFlag},
         ${invoice.payment_intent || null}, ${recurringGiftId},
         NOW()

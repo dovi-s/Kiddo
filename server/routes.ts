@@ -42,6 +42,8 @@ import { getMajorityAgeForState, US_STATES, UTMA_DEFAULT_MAJORITY_AGE } from "@s
 import { recordEvent, eventCtxFromReq } from "./analytics";
 import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
 import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
+import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rateLimiter";
+import { senderNameIssue, giftMessageIssue, sanitizeTranscript, isSenderBlocked, SENDER_BLOCKED_RESPONSE } from "./giftTextSafety";
 import { remapOAuthIdentitiesForUser } from "./oauthIdentityStore";
 import { generateTotpSecret, buildOtpauthUri, verifyTotp, generateBackupCodes, hashBackupCodes, findBackupCodeMatch } from "./totp";
 import { deriveActionItemsForUser } from "./actionItems";
@@ -6513,27 +6515,22 @@ export async function registerRoutes(
     }
   });
 
-  // PIN brute-force guard (audit catch 2026-06-04): a 4-digit PIN is ~10k
-  // possibilities and this endpoint previously accepted UNLIMITED attempts —
-  // the PIN gate was security theater for a surface holding a kid's money
-  // story + Memory Book. Sliding window per IP+token: 5 attempts per 15
-  // minutes, counted only on actual PIN failures so a family sharing one
-  // home IP isn't locked out by successful unlocks. In-memory (same
-  // documented limitation class as the other public limiters — see
-  // LOCAL_STATE_TO_POSTGRES_SPEC.md), pruned on growth.
-  const kidViewPinFailures = new Map<string, { count: number; windowStart: number }>();
+  // PIN brute-force guard (audit catch 2026-06-04; hardened 2026-06-06 = T&S
+  // H4): a 4-digit PIN is ~10k possibilities. The first fix used an in-memory
+  // Map keyed on IP+token — two evasion holes the audit named: (1) per-process
+  // state means a multi-instance deploy multiplies the attempt budget by N,
+  // and (2) IP-keying means a VPN/proxy rotation resets the counter at will.
+  // Now: the durable Postgres limiter (rateLimiter.ts), keyed on the TOKEN
+  // alone (the protected resource — rotating IPs doesn't help), counting only
+  // actual PIN FAILURES (peek → verify → increment-on-failure), with a
+  // successful unlock wiping the window so a family re-opening Kid View is
+  // never locked out by its own successes.
   app.post('/api/kid-view/:token/unlock', async (req, res) => {
     try {
-      const pinKey = `${String(req.ip || "unknown")}:${req.params.token}`;
-      const nowMs = Date.now();
+      const pinKey = `kidview-pin:${String(req.params.token || "")}`;
       const PIN_WINDOW_MS = 15 * 60 * 1000;
-      if (kidViewPinFailures.size > 1000) {
-        kidViewPinFailures.forEach((v, k) => {
-          if (nowMs - v.windowStart > PIN_WINDOW_MS) kidViewPinFailures.delete(k);
-        });
-      }
-      const failures = kidViewPinFailures.get(pinKey);
-      if (failures && nowMs - failures.windowStart <= PIN_WINDOW_MS && failures.count >= 5) {
+      const PIN_MAX_FAILURES = 5;
+      if (!(await peekRateLimit(pinKey, PIN_MAX_FAILURES, PIN_WINDOW_MS))) {
         return res.status(429).json({ error: "Too many tries. Wait 15 minutes, then try again." });
       }
       const record = await getKidViewRecordByShareToken(req.params.token);
@@ -6550,12 +6547,10 @@ export async function registerRoutes(
       if (record.pinHash) {
         const ok = await bcrypt.compare(pin, record.pinHash);
         if (!ok) {
-          const prev = kidViewPinFailures.get(pinKey);
-          if (prev && nowMs - prev.windowStart <= PIN_WINDOW_MS) prev.count += 1;
-          else kidViewPinFailures.set(pinKey, { count: 1, windowStart: nowMs });
+          await checkRateLimit(pinKey, PIN_MAX_FAILURES, PIN_WINDOW_MS); // count the failure (durable)
           return res.status(401).json({ error: "That PIN does not match." });
         }
-        kidViewPinFailures.delete(pinKey);
+        await resetRateLimit(pinKey);
       }
       const accessToken = await createKidViewAccessToken(record.fundId, req.params.token);
       res.json({ accessToken });
@@ -12454,23 +12449,18 @@ export async function registerRoutes(
       const trimmedSenderName = typeof senderName === "string" ? senderName.trim() : "";
       const trimmedEmail = typeof senderEmail === "string" ? senderEmail.trim() : "";
 
-      // Trust-safety H2 (senderName slice): block brand/staff impersonation and
-      // contact info smuggled into the NAME field (a name is not a place for a
-      // URL / email / phone / @handle — that's a contact channel to a child).
-      // Deliberately does NOT touch family titles ("Grandma"/"Uncle Bob" are how
-      // real gifters sign), and skips the anonymous path. Message-content
-      // sanitization is a separate, product-gated decision (H1 moderation) and is
-      // intentionally NOT done here.
-      if (!isAnonymous && trimmedSenderName) {
-        const lowerName = trimmedSenderName.toLowerCase();
-        const hasContactInfo = /https?:\/\/|www\.|\S+@\S+\.\S+|@\w{2,}|\d[\d().\s-]{6,}\d/.test(trimmedSenderName);
-        const STAFF_NAMES = new Set(["admin", "administrator", "support", "support team", "customer support", "moderator", "official", "system", "the team", "the kiddo team"]);
-        if (hasContactInfo) {
-          return res.status(400).json({ error: "Please use a real name — links, emails, phone numbers, and @handles aren't allowed in the name." });
-        }
-        if (lowerName.includes("kiddo") || STAFF_NAMES.has(lowerName)) {
-          return res.status(400).json({ error: "That name isn't available. Please sign your gift with your own name." });
-        }
+      // Trust-safety H2/H9 (2026-06-06: inline rules extracted to
+      // server/giftTextSafety.ts and now enforced on EVERY public gift path —
+      // the audit found them on only this one). Name: no contact info /
+      // brand impersonation (family titles like "Grandma" untouched).
+      // Message: no links/shorteners (phishing) and no emails/phones/@handles
+      // (a contact channel from a stranger to a child). This is contact-
+      // pattern matching, NOT content moderation (that's the H1 decision).
+      {
+        const nameIssue = senderNameIssue(trimmedSenderName, !!isAnonymous);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const messageIssue = giftMessageIssue(message);
+        if (messageIssue) return res.status(400).json({ error: messageIssue });
       }
       const hasEmail = trimmedEmail.length > 0;
       const validEmail = !hasEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
@@ -12518,25 +12508,24 @@ export async function registerRoutes(
         });
       }
 
-      // Block-list enforcement. Refuse the gift before payment if the
-      // sender email (lowercased) matches a global or fund-scoped block.
-      // Returns a deliberately vague 403 — we don't want to confirm to a
-      // bad actor that they're specifically blocked, just that they
-      // can't proceed. Admins can audit the block via the T&S queue.
-      if (trimmedEmail) {
-        const emailLower = trimmedEmail.toLowerCase();
-        const blockRows = await db.execute(sql`
-          SELECT id, scope, fund_id FROM blocked_gifters
-          WHERE unblocked_at IS NULL
-            AND email = ${emailLower}
-            AND (scope = 'global' OR (scope = 'fund' AND fund_id = ${fundId}))
-          LIMIT 1
-        `);
-        if (blockRows.rows?.[0]) {
-          return res.status(403).json({
-            error: 'sender_blocked',
-            message: 'This gift cannot be processed. If you believe this is a mistake, contact support@kiddofund.com.',
-          });
+      // Block-list enforcement (shared helper since 2026-06-06 — H6/H7: the
+      // same check now runs on recurring + gift-intents + guestbook too).
+      // Deliberately vague 403 — never confirm to a bad actor that they're
+      // specifically blocked. Admins audit blocks via the T&S queue.
+      if (await isSenderBlocked(trimmedEmail, fundId)) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
+
+      // H8 — payment velocity. Card-testing rings run dozens of small
+      // charges per minute through public checkout forms; a real gifter
+      // doesn't start 10 checkout sessions in an hour (grandma doing all
+      // three grandkids' birthdays is 3). Keyed on sender email when given,
+      // else IP. Durable cross-instance counter (rateLimiter.ts); counts
+      // checkout ATTEMPTS, which is exactly what card-testing generates.
+      {
+        const velocityKey = `gift-velocity:${trimmedEmail ? trimmedEmail.toLowerCase() : `ip:${String(req.ip || "unknown")}`}`;
+        if (!(await checkRateLimit(velocityKey, 10, 60 * 60 * 1000))) {
+          return res.status(429).json({ error: "That's a lot of gifts in a short time. Please wait a bit and try again." });
         }
       }
 
@@ -12756,6 +12745,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Password must be at least 8 characters" });
       }
 
+      // T&S H2/H9 parity with the one-time checkout (2026-06-06): the audit
+      // found name/message validation on the one-time path only — a blocked
+      // sender or smuggled contact info could simply use the recurring form.
+      // Same shared rules, same copy.
+      {
+        const nameIssue = senderNameIssue(trimmedSenderName, !!isAnonymous);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const messageIssue = giftMessageIssue(message);
+        if (messageIssue) return res.status(400).json({ error: messageIssue });
+      }
+
       // Demo-fund sandbox: same pattern as one-time. Mock success.
       if (await isDemoFund(fundId)) {
         return res.json({
@@ -12773,6 +12773,19 @@ export async function registerRoutes(
           error: "fund_closed",
           message: "This fund is no longer accepting gifts.",
         });
+      }
+
+      // T&S H6/H7 + H8 parity with the one-time checkout (2026-06-06): the
+      // blocklist + velocity caps were missing here entirely — a blocked
+      // gifter could route around their block via the recurring form.
+      if (await isSenderBlocked(trimmedEmail, fundId)) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
+      {
+        const velocityKey = `gift-velocity:${trimmedEmail}`;
+        if (!(await checkRateLimit(velocityKey, 10, 60 * 60 * 1000))) {
+          return res.status(429).json({ error: "That's a lot of gifts in a short time. Please wait a bit and try again." });
+        }
       }
 
       // Pricing-v3 fund-tier gate (locked 2026-05-23, see
@@ -13214,6 +13227,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'At least one of note, photoUrl, videoUrl, or audioUrl is required' });
       }
       if (note.length > 1000) return res.status(400).json({ error: 'note too long' });
+      // T&S H9 (2026-06-06): the after-payment note renders in the child's
+      // Memory Book like any other gift message — same shared link/contact
+      // rules as checkout. The TRANSCRIPT is machine-generated (the gifter
+      // didn't type it, may have already left) so it can't be bounced with a
+      // 400 — sanitizeTranscript DROPS it on a contact-pattern hit instead
+      // (M4): the voice clip stays, the risky derived text never renders.
+      {
+        const noteIssue = giftMessageIssue(note);
+        if (noteIssue) return res.status(400).json({ error: noteIssue });
+      }
+      const safeAudioTranscript = sanitizeTranscript(audioTranscript) || '';
 
       const session = await stripeService.getCheckoutSession(sessionId);
       if (!session || session.metadata?.type !== 'gift') {
@@ -13283,7 +13307,7 @@ export async function registerRoutes(
         if (existingAudio) skipped.push('audio');
         else {
           updates.audioUrl = audioUrl;
-          if (audioTranscript) updates.audioTranscript = audioTranscript;
+          if (safeAudioTranscript) updates.audioTranscript = safeAudioTranscript;
         }
       }
 
@@ -15536,8 +15560,16 @@ export async function registerRoutes(
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ error: "That email doesn't look right. It's optional — feel free to leave it blank." });
       }
-      if (/https?:\/\/|www\./i.test(`${name} ${note}`)) {
-        return res.status(400).json({ error: "Links can't go in the Memory Book. Just words, from you to them." });
+      // T&S H2/H9 upgrade (2026-06-06): the original check here caught only
+      // https/www. Now the shared rules — names also reject emails/phones/
+      // @handles/brand-impersonation, notes also reject shorteners + contact
+      // patterns. This text lands UNPAID in a child's Memory Book; it gets at
+      // least the rigor of the paid path.
+      {
+        const nameIssue = senderNameIssue(name);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const noteIssue = giftMessageIssue(note);
+        if (noteIssue) return res.status(400).json({ error: noteIssue });
       }
       const fund = await storage.getFund(fundId);
       if (!fund) return res.status(404).json({ error: "Fund not found" });
@@ -15548,6 +15580,12 @@ export async function registerRoutes(
       // land in the shared Dunphy data (same discipline as demo money flows).
       if (await isDemoFund(fundId)) {
         return res.status(201).json({ ok: true, demo: true, message: "Demo mode. Nothing was saved." });
+      }
+      // T&S H6/H7 (2026-06-06): a blocked gifter could still reach the child's
+      // Memory Book through this free path. Enforce when they left an email
+      // (the no-email anonymous path is covered by the per-IP caps below).
+      if (email && (await isSenderBlocked(email, fundId))) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
       }
       const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown");
       if (!guestbookAllow(`gb:${ip}:${fundId}`, 3, 60 * 60 * 1000) || !guestbookAllow(`gbf:${fundId}`, 60, 24 * 60 * 60 * 1000)) {
@@ -15922,6 +15960,20 @@ export async function registerRoutes(
       if (!trimmedKidFirstName) return res.status(400).json({ error: "The child's first name is required" });
       if (!Number.isFinite(parsedAmount) || parsedAmount < 5) return res.status(400).json({ error: "Amount must be at least $5" });
       if (parsedAmount > 10000) return res.status(400).json({ error: "Amounts over $10,000. Contact us at hello@kiddofund.com" });
+
+      // T&S H2/H9/H6 (2026-06-06): this warm-promise path renders the gifter's
+      // name + message in the PARENT'S email/onboarding — same contact-info and
+      // impersonation rules as checkout, plus global blocklist (no fund exists
+      // yet, so fund-scoped blocks can't apply — pass null).
+      {
+        const nameIssue = senderNameIssue(trimmedGifterName);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const messageIssue = giftMessageIssue(message);
+        if (messageIssue) return res.status(400).json({ error: messageIssue });
+      }
+      if (await isSenderBlocked(trimmedGifterEmail, null)) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
 
       // Anti-spam V1: rate-limit at 5 unique recipient emails per
       // gifter email per 7 days. Cheap defense; tighter abuse
@@ -21787,6 +21839,23 @@ export async function registerRoutes(
               audio_transcript = NULL
           WHERE id = ${id}
         `);
+        // T&S H5 (2026-06-06): nulling the DB columns left the actual files
+        // on disk — content an admin judged bad enough to REMOVE stayed
+        // fetchable by anyone holding the old /uploads URL. Purge the bytes
+        // too (same pattern as the parent-delete + admin-delete handlers).
+        // Best-effort per file: a failed unlink must not abort the
+        // moderation action itself (the DB removal already hides it from
+        // every surface); the audit row's before-snapshot keeps the URLs
+        // for manual cleanup if a purge fails.
+        for (const mediaUrl of [beforeRow.photo_url, beforeRow.video_url, beforeRow.audio_url]) {
+          if (mediaUrl) {
+            try {
+              await deleteMemoryFile(String(mediaUrl));
+            } catch (purgeErr) {
+              console.error('[moderation] media purge failed (URL preserved in audit row):', purgeErr);
+            }
+          }
+        }
       } else {
         await db.execute(sql`
           UPDATE memory_entries
