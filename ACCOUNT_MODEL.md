@@ -297,6 +297,38 @@ platform**, account-to-account, instead of cashing out to an external bank:
 
 ---
 
+## 6c. Large gifts ($2k–$25k+) — DECIDED 2026-06-06
+
+Prompted by Acorns' "Request" beta + the founder's "what about people who want
+to send real money?" The posture, in five lines:
+
+1. **The whale is not the wedge — and that's correct, not a gap.** The loop's
+   math is breadth (gifters-per-fund × conversion); one $25k check adds AUM but
+   zero k. The $25k giver is advised estate-planning money (529 superfunding,
+   trusts) choosing by tax treatment — we don't win that comparison today and
+   shouldn't pretend to compete for it.
+2. **The big check FOLLOWS trust; it doesn't lead.** The realistic arc: $100 at
+   the birthday → watches it land → trusts the rail → $5k year-end check. The
+   wedge earns the whale; no separate whale product. The advisor-grade
+   `FundSnapshot` is already the artifact that moment needs.
+3. **Gifter-never-pays holds even for whales.** The large-gift fee scaffold in
+   `shared/monetization.ts` (`KORA_LARGE_GIFT_*`) stays ZEROED. The AUM meter
+   monetizes a whale better than any transaction fee ($25k at 10bps compounding
+   beats a one-time skim) and keeps the trust anchor clean. Reversal condition:
+   only if at-scale unit economics show large-gift processing/support as a real
+   cost center — and even then prefer raising the rail, never a percentage skim.
+4. **Rails are already right:** ACH at 0.8% capped at $5 (a $25k gift costs ~$5
+   to process vs ~$725 on a card rail — structurally better than Acorns
+   Request's Venmo mechanics). No per-gift cap. Keep it that way.
+5. **What large amounts DO require (clock-gated, not build-now):** custody live
+   + the legal memo before encouraging big checks at all (a $25k gift into the
+   pre-custody holding model is risk, not revenue); and a neutral disclosure
+   near large amounts — above the annual exclusion (~$19k/giver/yr) the GIVER
+   hits Form 709 reporting, and kiddie tax stops being boilerplate at that
+   size. `shared/legal-copy.ts` pattern; counsel-packet adjacent. A concierge
+   path (wire-in, advisor hand-off) is a plausible post-custody feature, not
+   launch scope.
+
 ## 7. Locked-rule ledger (what this doc keeps vs. revises)
 
 **REVISED (this doc):**
@@ -308,6 +340,8 @@ platform**, account-to-account, instead of cashing out to an external bank:
 - AUM applies above-threshold at all stages (not adults-only). (§2a)
 - Parent/adult = one account, two modes. (§4)
 - The self-directed pivot: drop glide path + nudges, keep the fee. (§2b, lawyer-gated)
+- Large gifts: whale-follows-trust, fee scaffold stays zeroed, AUM monetizes,
+  709/kiddie-tax disclosure near big amounts. (§6c)
 
 **DO NOT TOUCH (load-bearing moat — breaking these is the EarlyBird-into-Acorns
 soul-strip):**
