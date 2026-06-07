@@ -162,6 +162,7 @@ import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
+import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
 import { gifterShortName } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
@@ -5990,6 +5991,24 @@ export default function DashboardLab() {
             === 'owner'), which does NOT bleed — so it's the reliable guard.
             The banner is inherently owner-only ("this is YOUR fund"), so this
             is correct-by-construction, not just defensive. */}
+        {/* "While you were away" returning-user digest — quantifies +
+            attributes the gap since the last visit (gifts + growth). Built on
+            the real Dashboard by a parallel session 2026-06-05; pulled into
+            the lab 2026-06-07 during the main-vs-lab drift reconciliation so
+            /design-lab (and the eventual port) doesn't ship without the
+            returning-user catch-up beat. Owner/co-parent funds only — never a
+            read-only previous-owner / viewer surface. */}
+        {!isReadOnlyFund && (
+          <SinceLastVisitDigest
+            fundId={activeFundId}
+            currentValue={rawTotalValue}
+            gifts={gifts as any}
+            isDemoAccount={isDemoAccount}
+            ready={Boolean(dashboardSummary)}
+            subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
+          />
+        )}
+
         <KidAt18WelcomeBanner
           kidClaimedAt={isOwnerMode ? ((dashboardSummary as any)?.kidClaimedAt as string | null | undefined) : null}
           fundId={activeFundId}
