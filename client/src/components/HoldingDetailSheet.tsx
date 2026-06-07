@@ -862,7 +862,13 @@ function HoldingDetailSheetBody({
   return (
     <Sheet open={!!holding} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent side="bottom" className="overflow-y-auto max-h-[92vh]">
-        <SheetTitle className="sr-only">{name} ({ticker}) holding details</SheetTitle>
+        {/* `name` (friendlyHoldingName) already carries a " (TICKER)" suffix
+            for ETFs, so "{name} ({ticker})" rendered "Bonds (BND) (BND)" — a
+            screen reader announced the ticker twice. Strip the suffix first,
+            then append once, so it's always "Bonds (BND) holding details" /
+            "Apple (AAPL) holding details" — ticker present once, never doubled.
+            (2026-06-07, same redundancy fix as the dashboard holding rows.) */}
+        <SheetTitle className="sr-only">{name.replace(new RegExp(`\\s*\\(${ticker}\\)\\s*$`, "i"), "").trim() || name} ({ticker}) holding details</SheetTitle>
         <SheetDescription className="sr-only">
           Position summary, price history, contributors, and actions for {name}.
         </SheetDescription>
@@ -1247,7 +1253,12 @@ function HoldingDetailSheetBody({
             For managed mix the unit of action is the strategy, not the ETF. */}
         {isReadOnly ? null : isManagedMix ? (
           <>
-            <div className="mt-5 flex gap-2.5">
+            {/* Stack full-width on mobile, side-by-side on desktop (2026-06-07,
+                founder "the CTAs are crammed"). "Add to Growth Mix" + "Adjust
+                strategy" are both long labels — at half-width on a phone they
+                cram / wrap. Full-width stacked = roomy labels + bigger tap
+                targets; sm:flex-row restores the pair where there's room. */}
+            <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
               <Button
                 className="flex-1 rounded-2xl gap-2"
                 onClick={() => { haptic("medium"); onClose(); onAddToStrategy?.(); }}
@@ -1277,7 +1288,9 @@ function HoldingDetailSheetBody({
             </p>
           </>
         ) : (
-          <div className="mt-5 flex gap-2.5">
+          // Stack full-width on mobile, side-by-side on desktop — matches the
+          // managed-mix actions above so both holding types feel consistent.
+          <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
             <Button
               className="flex-1 rounded-2xl gap-2"
               onClick={() => { haptic("medium"); onClose(); onAddMore(ticker); }}
