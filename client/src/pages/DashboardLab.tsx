@@ -6302,7 +6302,13 @@ export default function DashboardLab() {
                       avatar's bottom landed within ~6px of the balance's
                       cap-line. 14 gives the balance proper breathing room
                       without separating the two surfaces too far. */}
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
+                  {/* alignItems center (2026-06-07, founder "are these lined
+                      up perfectly?"): was flex-start, which floated the
+                      gift-count pill to the TOP of the row while the avatar +
+                      identity center together — the pill read as sitting higher
+                      than the identity text. Centering aligns all three on one
+                      axis. */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
                       {/* Mobile-only — desktop already carries fund
                           identity in the DesktopSidebar's nav and fund
@@ -6370,7 +6376,13 @@ export default function DashboardLab() {
                           </div>
                         );
                       })()}
-                      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
+                      {/* whiteSpace nowrap (2026-06-07): textOverflow ellipsis
+                          is INERT without it, so a long fund name wrapped to a
+                          ragged second line instead of truncating. nowrap makes
+                          the existing ellipsis intent actually fire — one clean
+                          line, "…" only when genuinely too long. "Luke's Fund ·
+                          UTMA · Active" fits; only outliers truncate. */}
+                      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
                         {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
                         {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
                         {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
