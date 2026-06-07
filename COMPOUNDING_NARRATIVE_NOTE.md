@@ -23,6 +23,19 @@ headline is never "10% returns" or "$3.8M."
 
 ## 🔴 Hard guardrails (do NOT cross)
 
+0. **The horizon peg is 65 — never raise it for headline size.** (2026-06-06,
+   founder noticed Acorns projects to 68.) Every extra year on the endpoint is
+   +7% on the terminal number compounding — 68 vs 65 inflates the headline
+   ~22% for free, which is the same manipulation as the banned 10% rate
+   through a different dial. 65 is the culturally legible retirement idiom
+   (Medicare age, "retire at 65") and deliberately CONSERVATIVE vs both
+   Acorns' 68 and the technically-precise alternative. If the peg ever
+   changes, the only defensible destination is **67** (Social Security FRA
+   for everyone born after 1960 — i.e., every kid we will ever serve),
+   changed for stated accuracy reasons — never 68/69/70 for size. "Why is
+   your number smaller than Acorns'?" is a question we WANT: "we round the
+   horizon down, not up."
+
 1. **7% net of fee, NEVER 10%.** The brainstorm's memorable "rules" are 10%-only
    and do not survive the swap. At Kiddo's 7%:
    | | lump-sum multiplier | $100/mo factor |
