@@ -501,7 +501,7 @@ export default function FundSnapshot() {
               DOLLARS that grew into the balance. Cost basis = the total
               invested. Completes the "$X in → $Y today" story. 2026-06-05. */}
           {costBasis > 0 && (
-            <p className="snapshot-contributed">From {fmt(costBasis)} in gifts</p>
+            <p className="snapshot-contributed">From {fmt(costBasis)} in contributions</p>
           )}
         </div>
 
@@ -519,7 +519,7 @@ export default function FundSnapshot() {
             </p>
           </div>
           <div className="snapshot-stat">
-            <p className="snapshot-stat-label">Gifts received</p>
+            <p className="snapshot-stat-label">Contributions</p>
             <p
               className="snapshot-stat-value"
               aria-live={giftCountAnimating ? "off" : "polite"}
