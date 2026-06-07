@@ -92,6 +92,58 @@ conversation, not its conclusion.
 
 ---
 
+## Signal + first contact: Schwab × Forge (2026-06-07)
+
+Two developments worth logging (NOT a build trigger — the discipline above holds):
+
+**Schwab is acquiring Forge Global.** The largest pre-IPO secondary marketplace
+is being absorbed by a ~$10T retail incumbent, explicitly to "democratize access
+... bring institutional-quality capabilities to a broader investing audience."
+Three reads:
+- **Thesis validation** — "private markets go retail" is now an incumbent bet, in
+  almost our exact words. Hits two of this spec's own "when to come back"
+  triggers (mass-market push + an incumbent entering).
+- **Competitive heads-up, not in our lane** — Schwab+Forge serve ADULT retail.
+  Our angle is private equity AS A GIFT for a child (custodial-wrapped, held to
+  majority, Memory-Book story). They won't build the kid/gift/relationship
+  version; the niche survives because it's the relationship layer, not the market.
+- **Partner candidate, not just a rival** — they hold the two things we lack
+  (inventory + private-share custody). Kiddo as the gift/relationship/custodial
+  layer ON TOP of their rails is "rent the rail, own the relationship" for
+  private markets.
+
+**First inventory contact (precondition #3 progress).** A warm connection on
+Forge's Private Capital Markets desk (Series 7/66, ex pre-IPO-shares platform).
+Use NOW for intel + relationship only — it answers the open questions (inventory
+sourcing, partner-vs-build, which names file Reg A+) from the inside at zero cost.
+Not a deal; years early.
+
+### Build vs. partner — RESOLVED: partner (rent the rail)
+
+Same call as the rest of the stack (Stripe, DriveWealth, Plaid — see CLAUDE.md
+provider boundaries). The inventory + marketplace + private-share custody is a
+capital-intensive, heavily-regulated, relationship-time rail (Forge took 10 years
+and is now Schwab-scale). Building it = becoming Forge = a different, capital-
+heavy company, not the kid-relationship company Kiddo is.
+
+- **Own:** the gift UX, the Memory Book story, the custodial wrapper, the kid-2.0
+  relationship, and the DEMAND (families who want to gift pre-IPO).
+- **Rent, behind a swappable interface:** inventory + execution + private-share
+  custody. Keep it provider-agnostic — multiple marketplaces exist (Forge/Schwab,
+  EquityZen, Hiive; Republic/StartEngine for the Reg A+ mass-market path) so
+  "swap = engineering decision," never lock-in.
+- **Partner choice follows the path:** Reg A+ mass-market (the Kiddo-shaped path)
+  → a hungrier Republic/StartEngine-type, more willing to partner with a
+  distribution channel like us; accredited/marquee inventory → Forge/Schwab.
+- **Disintermediation risk** (partner builds its own gift layer, cuts us out) is
+  real but bounded: we own the customer + brand + the un-portable Memory Book
+  switching cost; the shares are the fungible commodity. The relationship is the
+  moat, not the inventory.
+- **Vertical integration is a year-10+ "if we're huge" option** (the Acorns/
+  Robinhood "own the BD at scale" path), never a now-move.
+
+---
+
 ## The standard model (what Forge does)
 
 For context, here's the conventional secondary-market business
@@ -391,7 +443,7 @@ matters more than the immediate revenue.
 | Does Kiddo lobby for a "knowledge-based" accreditation alternative? | Joining the regulatory conversation could shape the rule in a Kiddo-shaped direction. Long-term brand positioning move. |
 | ~~Can the custodial wrapper hold private equity legally?~~ **RESOLVED 2026-06-07** | **Yes** — a UTMA allows private company shares (broader than UGMA). The live questions are the *offering* side (Reg A+/D, selling to non-accredited) + *custodian infrastructure* (a self-directed custodian, not a standard brokerage), NOT whether the account can hold it. See "Sharpened take." |
 | What's the tax treatment of gifted pre-IPO shares vs cash that becomes pre-IPO shares? | Different gift-tax exposure, different basis tracking. Materially affects the product UX. |
-| Does Kiddo serve as broker-dealer, or partner with one (like DriveWealth)? | Operational + regulatory question. Partnering is faster; owning the rail is higher-margin long-term. |
+| ~~Does Kiddo serve as broker-dealer, or partner with one?~~ **RESOLVED 2026-06-07: partner** | Rent the inventory + marketplace + private-share custody behind a swappable interface; own the gift/relationship/custodial layer. Same call as Stripe/DriveWealth/Plaid. Vertical integration is a year-10+ "if huge" option. See "Signal + first contact: Schwab × Forge." |
 | For Reg A+ shape: which companies actually file Reg A+? | Inventory question. Some sectors (consumer brands, fintech, food) file more often than others (deep tech, biotech). |
 | Brand: is this "Kiddo Secondaries" (sub-product) or "Kiddo Adult Pre-IPO" (Adult-tier premium feature)? | Affects acquisition story + how prominent this gets in the main app. |
 
