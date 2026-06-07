@@ -1407,8 +1407,19 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
   //    any timestamp-based filters.
   const claireId = userIdByEmail.get("claire@dunphyfamily.com");
   if (claireId && seededFundIds.length > 0) {
+    // The co-parent "just accepted" CELEBRATION banner is gated to acceptances
+    // within ~30 days. With acceptedAt = now on every pre-handoff fund, it fired
+    // on BOTH Luke and Alex — the same one-time beat shown twice as you switch
+    // funds. Make exactly ONE acceptance recent (the banner fires once, teaching
+    // the feature) and date the rest back: Claire still co-parents every fund
+    // (access is the collaborator row, not the timestamp), the banner just
+    // doesn't re-fire there. 2026-06-07.
+    let recentAssigned = false;
+    const OLD_ACCEPT = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000);
     for (const fundId of seededFundIds) {
       if (fundId === haleyFundId) continue; // transferred to Haley at majority; co-parent access ended
+      const isRecent = !recentAssigned;
+      recentAssigned = true;
       await db.insert(fundCollaborators).values({
         fundId,
         userId: claireId,
@@ -1420,8 +1431,8 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         // silently downgraded to a read-only viewer AND uncounted as a co-parent.
         role: "co-admin",
         status: "accepted",
-        acceptedAt: new Date(),
-        invitedAt: new Date(),
+        acceptedAt: isRecent ? new Date() : OLD_ACCEPT,
+        invitedAt: isRecent ? new Date() : OLD_ACCEPT,
       } as any);
     }
     console.log(`  collaborator: claire@dunphyfamily.com → co-parent on ${seededFundIds.filter((id) => id !== haleyFundId).length} fund(s) (Haley's transferred out)`);

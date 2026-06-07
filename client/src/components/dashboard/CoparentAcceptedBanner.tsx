@@ -78,7 +78,7 @@ export function CoparentAcceptedBanner({
       open={open}
       onExitComplete={persistDismiss}
       onRequestDismiss={() => setOpen(false)}
-      className="mb-4 rounded-3xl border p-6 shadow-premium-sm md:p-7"
+      className="mb-4 rounded-3xl border p-5 shadow-premium-sm sm:p-6"
       style={{
         borderColor: "hsl(var(--kiddo-evergreen) / 0.32)",
         background:
@@ -106,7 +106,7 @@ export function CoparentAcceptedBanner({
                   : `${coparentFirst} accepted your co-parent invite.`}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {coparentFirst} can now see {childFirst ? `${childFirst}'s` : "the"} fund alongside you. Same data, same dashboard, shared view of the gifts that come in.
+                {coparentFirst} can now see {childFirst ? `${childFirst}'s` : "the"} fund alongside you, with every gift and note as it arrives.
               </p>
             </div>
             <button
