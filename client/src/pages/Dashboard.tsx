@@ -3706,6 +3706,16 @@ export default function Dashboard() {
     const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
     const fireNudge = (payload: SmartNudgePayload) => {
       nudgeTimer = setTimeout(() => {
+        // Claim-before-show dedup (2026-06-07, founder saw the nudge twice):
+        // re-check the 30-day key AT FIRE time and claim it BEFORE toasting. If
+        // two timers are ever pending at once (a transient double-mount), the
+        // first to fire shows the nudge and any other bails. Previously the key
+        // was set AFTER the toast (8s in), leaving a window where a second fire
+        // doubled it. JS is single-threaded, so the first callback fully claims
+        // the slot before the second runs.
+        const prevShown = localStorage.getItem(NUDGE_KEY);
+        if (prevShown && Date.now() - parseInt(prevShown, 10) < 30 * 24 * 60 * 60 * 1000) return;
+        safeLocalSet(NUDGE_KEY, String(Date.now()));
         const nudgeChild = recipientFirstNameDisplay || "their fund";
         const title =
           payload.scenario === "outperforming"
@@ -3734,7 +3744,6 @@ export default function Dashboard() {
             </ToastAction>
           ),
         });
-        safeLocalSet(NUDGE_KEY, String(Date.now()));
       }, 8000);
     };
 
