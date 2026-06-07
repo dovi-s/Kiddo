@@ -95,6 +95,19 @@ Brand partnerships should come after Kora has:
 
 Otherwise the team risks spending time on splashy reach before the product can capture or retain that attention.
 
+### Parked idea: estate-planning / will partnership (noted 2026-06-07)
+
+Acorns Gold bundles a "complimentary will" (a ~$259-value partner product) next
+to their kids' accounts — smart adjacency: the moment a family starts investing
+for a child is exactly the moment they think about wills and guardianship for
+the first time. Kiddo already has the natural hook surfaces: the
+successor-custodian card (who manages the fund if something happens to you) and
+the future beneficiary/TOD designation. A wills-partner integration (Trust &
+Will-style affiliate or bundle) would deepen the trust posture at near-zero
+build cost. POST-LAUNCH, after the consumer product + loop tiers above — parked
+here so it isn't re-derived. Not a build; a BD conversation when partnerships
+unlock.
+
 ## The Real Flywheel
 
 The important logic is:

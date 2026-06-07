@@ -25,6 +25,14 @@ venture-scale business, and we should know that cold. Every competitor that
 took that framing (EarlyBird, UNest, Acorns Early) is dead, stalled, or a
 feature. They all share one structural flaw: **they end at 18.**
 
+*(Precision note, 2026-06-07 — say it exactly, because a sharp investor will
+check: Acorns technically migrates the balance into an adult Acorns Invest
+account at the age of transfer. They keep the ACCOUNT; they never had the
+RELATIONSHIP. Their 18-year-old gets a cold app with a balance — the kid was
+never the user, there's no memory, no history of being loved through it. The
+flaw is relational, not mechanical, and the precise version is the defensible
+one.)*
+
 ## 2. What business we ARE in (the reframe everything hangs on)
 
 At the at-18 handoff we hold something nobody else in this space has:
