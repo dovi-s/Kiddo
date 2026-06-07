@@ -6229,6 +6229,18 @@ export default function DashboardLab() {
               @media (min-width: 640px) {
                 .lab-hero-card { padding: 28px 28px 26px; border-radius: 28px; }
               }
+              /* Hero CTA row (2026-06-07, founder: "this is two rows?"). The
+                 Share button + the projection pill share one flex row. On
+                 desktop they sit side by side; on mobile they can't fit, so
+                 the projection wrapped to a RAGGED second line (short gold
+                 pill, then a long pill alone) that read as "didn't fit," not
+                 "designed." Mobile now stacks them DELIBERATELY: two clean
+                 full-width rows, content centered. Desktop (>=640px) restores
+                 the side-by-side row. */
+              .lab-hero-cta-row { display: flex; flex-direction: column; gap: 10px; }
+              @media (min-width: 640px) {
+                .lab-hero-cta-row { flex-direction: row; flex-wrap: wrap; align-items: center; }
+              }
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
                 /* Recent-gifter ring pulse, the face bloom, and the chart's
@@ -6954,7 +6966,7 @@ export default function DashboardLab() {
                           would invite gifts that go to a fund they no
                           longer control. Cleaner to hide entirely than
                           to leave a 403-bound dead CTA. */}
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
+                      <div className="lab-hero-cta-row">
                         {!isReadOnlyFund && (
                           <button
                             onClick={() => { haptic("medium"); handleShareLink(); }}
@@ -6968,7 +6980,10 @@ export default function DashboardLab() {
                               background: "hsl(var(--kiddo-gold))", color: "white",
                               border: "none", borderRadius: 9999,
                               fontWeight: 700, cursor: "pointer",
-                              display: "inline-flex", alignItems: "center", gap: 7,
+                              // justifyContent centers the icon+label when the
+                              // button stretches full-width in the mobile
+                              // column; no-op at natural width on desktop.
+                              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
                               boxShadow: "0 4px 14px hsl(var(--kiddo-gold) / 0.40)",
                             }}
                           >
@@ -7069,8 +7084,12 @@ export default function DashboardLab() {
                                 fontWeight: 600,
                                 color: "rgba(255,255,255,0.94)",
                                 cursor: "pointer",
+                                // Centers content when the pill stretches
+                                // full-width in the mobile column; no-op at
+                                // natural width on desktop.
                                 display: "inline-flex",
                                 alignItems: "center",
+                                justifyContent: "center",
                                 gap: 7,
                                 maxWidth: "100%",
                                 transition: "background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease",
