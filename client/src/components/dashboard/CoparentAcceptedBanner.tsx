@@ -23,7 +23,7 @@
 
 import { useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const DISMISS_KEY_PREFIX = "kiddo.coparent-accepted-dismissed.";
@@ -100,23 +100,32 @@ export function CoparentAcceptedBanner({
                   Co-parent joined
                 </p>
               </div>
+              {/* Copy tightened for mobile (2026-06-07, founder: "this is
+                  ~5 lines and weird"). Dropped the redundant "to {child}'s
+                  fund" (you're already on that fund) and the long "with every
+                  gift and note as it arrives" tail — the shared-view meaning is
+                  carried by "alongside you." Headline + sub now land in ~3-4
+                  lines instead of ~6. */}
               <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground leading-snug">
-                {childFirst
-                  ? `${coparentFirst} accepted your invite to ${childFirst}'s fund.`
-                  : `${coparentFirst} accepted your co-parent invite.`}
+                {`${coparentFirst} accepted your invite.`}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {coparentFirst} can now see {childFirst ? `${childFirst}'s` : "the"} fund alongside you, with every gift and note as it arrives.
+                {coparentFirst} can see {childFirst ? `${childFirst}'s` : "the"} fund alongside you now.
               </p>
             </div>
+            {/* X icon, not a "Dismiss" text button (2026-06-07): the text stole
+                ~50px from the headline column on mobile, forcing it to wrap an
+                extra line, and an X is the standard affordance for a
+                dismissible card. Swipe-to-dismiss also works (CollapseDismiss-
+                Section onRequestDismiss). */}
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="shrink-0 -mr-1 -mt-1 rounded-full p-1.5 text-muted-foreground/70 hover:text-foreground hover:bg-black/5 transition-colors"
               data-testid="coparent-accepted-dismiss"
               aria-label="Dismiss co-parent acceptance banner"
             >
-              Dismiss
+              <X size={16} />
             </button>
           </div>
     </CollapseDismissSection>
