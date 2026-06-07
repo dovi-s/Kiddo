@@ -6252,12 +6252,16 @@ export default function DashboardLab() {
                  and the gift count sits deliberately on the line below. Desktop
                  (>=640px) restores the single side-by-side row, where there's
                  room for both. */
-              .lab-hero-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 14px; }
-              .lab-hero-meta-id { display: flex; align-items: center; gap: 10px; min-width: 0; width: 100%; }
-              @media (min-width: 640px) {
-                .lab-hero-meta { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
-                .lab-hero-meta-id { flex: 1; width: auto; }
-              }
+              /* Single row at every width (2026-06-07 rev): the identity and
+                 the gift-count now FIT together on mobile because the noise was
+                 cut — "· Active" dropped (it's the default; only Draft/Closed
+                 are signal) and "from" dropped from the count. So no more
+                 mobile column-stack and no mobile-hide; the social-proof count
+                 stays at the top where it lands hardest. flexShrink lets the
+                 identity ellipsis as the absolute last resort on a ~320px
+                 phone, but at real widths both sit comfortably on one line. */
+              .lab-hero-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+              .lab-hero-meta-id { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
                 /* Recent-gifter ring pulse, the face bloom, and the chart's
@@ -6402,7 +6406,14 @@ export default function DashboardLab() {
                       <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
                         {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
                         {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
-                        {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
+                        {/* Status token shows ONLY when it's signal (2026-06-07):
+                            "Active" is the assumed default — confirming it is
+                            noise, and dropping it is what frees the row for the
+                            gift count on mobile. Draft (needs setup) and Closed
+                            ARE meaningful, so those still show. */}
+                        {activeFund?.status && activeFund.status !== "active"
+                          ? ` · ${activeFund.status.charAt(0).toUpperCase()}${activeFund.status.slice(1)}`
+                          : ""}
                       </div>
                     </div>
                     {(() => {
@@ -6411,25 +6422,21 @@ export default function DashboardLab() {
                         return s !== "failed" && s !== "refunded";
                       }).length;
                       return validCount > 0 ? (
-                        // hidden on mobile, inline at >=640px (2026-06-07,
-                        // founder: "still two rows on mobile, can we fix it?").
-                        // The identity + this count can't fit one row on a
-                        // phone, so my prior fix stacked them — which read as
-                        // two rows. Now the count shows only where it fits
-                        // beside the name (desktop); on mobile the identity
-                        // sits ALONE on one clean row and the same count still
-                        // lives in the roster section below ("12 people are
-                        // building Luke's future" + the per-face gift counts),
-                        // so nothing is lost — just de-duplicated off the
-                        // cramped surface.
-                        <span className="rounded-full hidden sm:inline" style={{
+                        // Shown on ALL widths again (2026-06-07 rev, founder
+                        // "was removing it really best?"): it's the strongest
+                        // social-proof stat and belongs at the top. It earns its
+                        // place on mobile now that the row's noise was cut
+                        // ("· Active" + "from"), so identity + count fit one
+                        // line. Don't remove what you love — remove the noise
+                        // crowding it.
+                        <span className="rounded-full" style={{
                           background: "hsl(var(--kiddo-gold) / 0.25)", color: "hsl(var(--kiddo-gold-light))",
                           padding: "2px 9px",
                           fontSize: 10, fontWeight: 700, letterSpacing: "0.02em", flexShrink: 0,
                         }}>
                           {validCount} {validCount === 1 ? "gift" : "gifts"}
                           {contributorCount > 0 && (
-                            <> · from {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
+                            <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
                           )}
                         </span>
                       ) : null;
