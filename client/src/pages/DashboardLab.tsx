@@ -8796,25 +8796,19 @@ export default function DashboardLab() {
                           // add more Apple), not for managed mix tickers (those are
                           // auto-allocated by the strategy, so a user-driven "add more BND"
                           // would just fight the rebalancer).
-                          // First-pick year per ticker (from gift rows'
-                          // selectedTicker). Powers the "· since 2019" context
-                          // on RED chosen rows only (2026-06-05): a bare
-                          // "-10.33%" invites day-trader anxiety on an 18-year
-                          // product; the year reframes a dip as a moment in a
-                          // long story. Green rows don't need consoling, and
-                          // managed-mix rows have no pick attribution — both
-                          // stay clean. (The WHO stays in the holding sheet,
-                          // per the founder: positions aggregate many people's
-                          // picks, and the tap-through already names them.)
-                          const firstPickTsByTicker = new Map<string, number>();
-                          for (const g of gifts as any[]) {
-                            const pickT = String((g as any).selectedTicker || "").trim().toUpperCase();
-                            if (!pickT) continue;
-                            const pickTs = (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0;
-                            if (!(pickTs > 0)) continue;
-                            const prev = firstPickTsByTicker.get(pickT);
-                            if (prev == null || pickTs < prev) firstPickTsByTicker.set(pickT, pickTs);
-                          }
+                          // (The "· since {year}" context on red rows was
+                          // REMOVED 2026-06-07, founder catch — the second
+                          // instance of the same aggregate-misattribution
+                          // error as the killed WHO line: a row's gain % is a
+                          // BLEND across every lot gifted into that ticker
+                          // over the years, so pinning the first-pick year
+                          // onto it read as "down X% since {year}" — a return
+                          // window the blended number doesn't support. The
+                          // per-gift truth (each gift, its date, its own
+                          // now-worth) lives at the correct altitude: the
+                          // holding sheet, one tap in. RULE: holdings rows
+                          // are aggregates — no single-source claims (who
+                          // picked it, when it started) on the row itself.)
                           const renderHoldingRow = (h: HoldingEntry, isChosen = false) => {
                             const hValue   = parseFloat(h.currentValue || "0");
                             const hCost    = parseFloat(h.costBasis    || "0");
@@ -8899,9 +8893,6 @@ export default function DashboardLab() {
                                       {hCost > 0 && Math.abs(hGain) > 0.01 && (
                                         <p className={`text-xs font-semibold tabular-nums ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
                                           {hGain >= 0 ? "+" : ""}{formatCurrency(hGain)} ({hGain >= 0 ? "+" : ""}{hGainPct.toFixed(2)}%)
-                                          {isChosen && hGain < 0 && firstPickTsByTicker.has(ticker) && (
-                                            <span className="font-normal text-muted-foreground/60"> · since {new Date(firstPickTsByTicker.get(ticker)!).getFullYear()}</span>
-                                          )}
                                         </p>
                                       )}
                                     </button>
