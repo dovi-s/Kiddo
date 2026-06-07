@@ -8,7 +8,7 @@ own playbook, that's the *correct* state — don't move early.
 ## The one line that governs all of it
 > Close the `/give-a-gift` money-at-intent leak → custody live → prove Stage 0/1
 > metrics on real traffic → build the `partnerSource` attribution primitive →
-> *then* registries → *then* schools → employers → brands.
+> *then* registries + invitation platforms → *then* schools → employers → brands.
 
 We are at the **front** of that line. Every channel below is blocked on the same
 root cause: **the loop isn't live and proven yet.**
@@ -22,6 +22,7 @@ root cause: **the loop isn't live and proven yet.**
 | **Consumer product** | Stage 0 | `share_to_first_gift_rate ≥ 20%`, `gift_checkout_completion ≥ 15%`, `median_time_to_first_gift ≤ 7d` — **unmeasurable today** (no custody, no live traffic; `/give-a-gift` path leaks) | Partial | — |
 | **Gifter→parent loop** | Stage 1 | `gifter_to_parent_signup_rate ≥ 2%`, loop attribution measurable. k-factor instrument EXISTS + is real (`/api/admin/k-factor`) but has no live traffic to read | Instrument yes, proof no | — |
 | **Registries (Babylist)** | post Stage 1 | The **`partnerSource` attribution primitive — exists in ZERO lines of code** (docs only). Plus custody live + AUM legal memo. Have: gift links + UTM. Lack: any partner-attribution data model, any signed deal | No | No |
+| **Invitations / occasion apps** | post Stage 1 | Embed a gift link at the *invite* moment — reaches the GUESTS (gifters, our customer) directly, *upstream* of any registry. Targets: **Paperless Post** (premium, right demographic, kid-birthdays + showers), **Punchbowl** (kid parties), Partiful (Gen-Z, long game), Evite (volume). Same gates as registries (custody + memo + `partnerSource` + proven loop). Two-phase: organic ride now (a user pastes a gift link into an invite, no deal) → formal embed later | No | No |
 | **Advisers / DriveWealth** | Stage 2 | Consistent trust/compliance copy (done), a partnership one-pager/demo, `intro_to_meeting_rate ≥ 30%`, 3 champions. DriveWealth itself is **scaffold-only** (no real client; per CLAUDE.md) | No | No |
 | **Schools pilot** | Stage 3 | A signed pilot champion, school-specific landing/code flow, cohort reporting, pilot support workflow — **none exist**. Three gates away | No | No |
 | **Employer benefits** | Stage 4 | 1 employer design partner, cohort attribution + reporting, support that absorbs spikes | No | No |
