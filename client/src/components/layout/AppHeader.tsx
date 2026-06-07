@@ -39,6 +39,11 @@ function getPageTitle(location: string): string {
   if (location.startsWith("/event/create")) return "New Event";
   if (location.startsWith("/events")) return "Occasions";
   if (location.startsWith("/dashboard")) return "Home";
+  // /design-lab is the dashboard redesign sandbox — same AppHeader, same
+  // "Home" title, so the lab's chrome matches the real dashboard while it's
+  // being evaluated (2026-06-07, founder noticed the blank title). Harmless
+  // after the port: the route becomes /dashboard, which already maps above.
+  if (location.startsWith("/design-lab")) return "Home";
   if (location.startsWith("/projection")) return "Potential";
   for (const [path, title] of Object.entries(PAGE_TITLES)) {
     if (location === path || location.startsWith(path + "/") || location.startsWith(path + "?")) return title;
