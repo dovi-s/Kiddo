@@ -77,6 +77,7 @@ export function CoparentAcceptedBanner({
     <CollapseDismissSection
       open={open}
       onExitComplete={persistDismiss}
+      onRequestDismiss={() => setOpen(false)}
       className="mb-4 rounded-3xl border p-6 shadow-premium-sm md:p-7"
       style={{
         borderColor: "hsl(var(--kiddo-evergreen) / 0.32)",

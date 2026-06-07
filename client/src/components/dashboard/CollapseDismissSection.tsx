@@ -17,12 +17,22 @@
 // Usage: the caller owns an `open` boolean (starts true; set false on dismiss)
 // and passes the persist callback as onExitComplete.
 
+import { useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { CSSProperties, ReactNode } from "react";
 
 type CollapseDismissSectionProps = {
   open: boolean;
   onExitComplete?: () => void;
+  // When provided, the banner becomes SWIPE-DISMISSABLE (founder call
+  // 2026-06-07): drag it sideways past a distance/velocity threshold and it
+  // flings off in that direction, then the height-collapse closes the gap —
+  // the native card gesture on mobile (works with mouse drag on desktop
+  // too). Short drags spring back elastically. Callers pass the same
+  // `() => setOpen(false)` their Dismiss button uses, so both paths share
+  // one exit + one persistence (onExitComplete). The button stays — it's
+  // the discoverable/a11y path; the swipe is the natural one.
+  onRequestDismiss?: () => void;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -30,22 +40,45 @@ type CollapseDismissSectionProps = {
   [dataAttr: `data-${string}`]: string | boolean | undefined;
 };
 
+const SWIPE_DISTANCE = 110; // px of drag that commits the dismiss
+const SWIPE_VELOCITY = 600; // px/s fling that commits regardless of distance
+
 export function CollapseDismissSection({
   open,
   onExitComplete,
+  onRequestDismiss,
   className,
   style,
   children,
   ...rest
 }: CollapseDismissSectionProps) {
+  // Direction of a committing swipe (−1 left, +1 right, 0 = button dismiss).
+  // A ref, not state: it's read by the exit prop on the very render that
+  // removes the element, and the drag handler sets it synchronously before
+  // calling onRequestDismiss — no re-render needed in between.
+  const swipeDirRef = useRef(0);
   return (
     <AnimatePresence onExitComplete={onExitComplete}>
       {open && (
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
+          drag={onRequestDismiss ? "x" : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.6}
+          onDragEnd={(_e, info) => {
+            if (!onRequestDismiss) return;
+            const commits = Math.abs(info.offset.x) > SWIPE_DISTANCE || Math.abs(info.velocity.x) > SWIPE_VELOCITY;
+            if (!commits) return; // dragConstraints springs it home
+            swipeDirRef.current = (info.offset.x || info.velocity.x) >= 0 ? 1 : -1;
+            onRequestDismiss();
+          }}
           exit={{
             opacity: 0,
+            // Swipe-dismissals fly out in the swiped direction while the
+            // space closes; button dismissals keep the original in-place
+            // fade + collapse (x stays 0).
+            x: swipeDirRef.current === 0 ? 0 : swipeDirRef.current * 480,
             height: 0,
             marginTop: 0,
             marginBottom: 0,
@@ -53,10 +86,12 @@ export function CollapseDismissSection({
             paddingBottom: 0,
             transition: {
               // Space closes smoothly; content fades a touch faster so the
-              // collapse never reads as a squish.
+              // collapse never reads as a squish; the fling leads slightly
+              // so the card is gone before the gap finishes closing.
               duration: 0.32,
               ease: [0.4, 0, 0.2, 1],
               opacity: { duration: 0.18, ease: "easeOut" },
+              x: { duration: 0.26, ease: [0.4, 0, 0.2, 1] },
             },
           }}
           transition={{ duration: 0.35, ease: "easeOut" }}

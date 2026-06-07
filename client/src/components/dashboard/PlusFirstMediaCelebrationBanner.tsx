@@ -63,6 +63,7 @@ export function PlusFirstMediaCelebrationBanner({
     <CollapseDismissSection
       open={open}
       onExitComplete={persistDismiss}
+      onRequestDismiss={() => setOpen(false)}
       className="mb-4 rounded-3xl border p-6 shadow-premium-sm md:p-7"
       style={{
         // Warm gold treatment — distinct from co-parent banner (evergreen)
