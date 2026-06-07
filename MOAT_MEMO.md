@@ -179,6 +179,21 @@ awkward middle (big enough to threaten, small enough to crush). **The job is to
 reach embedded-distribution lock (§2) and a populated-Memory-Book installed base
 (§2) before that window opens.** Speed is part of the moat.
 
+**First observed probe (2026-06-06):** Acorns is A/B-testing a waitlisted
+"Request" feature on *adult* accounts — others send money into your invest
+account, Venmo-mechanics, ~4 months in beta without GA. Exactly the §1
+prediction in motion: the *rail* bolted on, the gifter treated as a wallet
+(no account, no occasion, no memory, no relationship — pay and vanish). It
+VALIDATES the wedge (the biggest micro-investing player testing
+money-from-others-at-gift-moments) without touching the moat. The canned
+answer when "why not the Acorns I already have?" comes up: *Acorns lets
+someone send money. Kiddo gives the person who loves your kid their own
+place — their gifts, what they bought, what it's worth now, their face and
+voice in the kid's Memory Book — free, forever. One is a payment. The other
+is a relationship the family keeps.* Escalation trigger (tracked in memory):
+Request lands on Acorns **Early** with a public link + occasion framing.
+Until then: validation wearing a competitor's logo.
+
 ---
 
 ## 8. The pocket one-liner
