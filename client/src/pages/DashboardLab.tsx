@@ -5998,7 +5998,21 @@ export default function DashboardLab() {
             /design-lab (and the eventual port) doesn't ship without the
             returning-user catch-up beat. Owner/co-parent funds only — never a
             read-only previous-owner / viewer surface. */}
-        {!isReadOnlyFund && (
+        {/* ONE "what's new" beat per load (2026-06-07, founder: "do too many
+            things happen at once?"). The routine "while you were away" digest
+            YIELDS when a rarer, more emotional lifetime-celebration banner is
+            present this load — a co-parent joining or the at-18 handoff is the
+            bigger headline, and stacking the digest under it was two
+            catch-up banners at once. Gated on the celebrations' server signals,
+            both recency-bounded (coparentAcceptance is a 30-day window;
+            kidClaimedAt is server-gated recent), so the digest simply returns
+            on a later visit once they age out — never permanently suppressed.
+            Plus-media isn't included (no recency window → would over-suppress),
+            and it's rare enough to coexist. */}
+        {!isReadOnlyFund
+          && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance)
+          && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt)
+          && (
           <SinceLastVisitDigest
             fundId={activeFundId}
             currentValue={rawTotalValue}
