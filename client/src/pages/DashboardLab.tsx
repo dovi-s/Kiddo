@@ -6198,6 +6198,18 @@ export default function DashboardLab() {
                 100% { box-shadow: 0 0 0 0 hsl(43, 85%, 50% / 0), 0 3px 10px rgba(26,23,16,0.13); transform: scale(1); }
               }
               .kiddo-face-bloom { animation: kiddo-face-bloom 1.15s cubic-bezier(0.16,1,0.3,1) 0.45s 2; }
+              /* Hero card breathing room (2026-06-07, founder: "incredibly
+                 crammed on mobile"). The padding was a FIXED 28px regardless
+                 of viewport — on a 360px phone that ate 56px of width, forcing
+                 the fund-identity row and the gift-count pill into a cramped
+                 fight on one line. Mobile-first: tighter side padding so the
+                 content column is wider, larger radius restraint; the desktop
+                 values (the look the founder already blessed) restore at
+                 >=640px. Only the lab hero opts in via .lab-hero-card. */
+              .lab-hero-card { padding: 22px 18px 20px; border-radius: 24px; }
+              @media (min-width: 640px) {
+                .lab-hero-card { padding: 28px 28px 26px; border-radius: 28px; }
+              }
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
                 /* Recent-gifter ring pulse, the face bloom, and the chart's
@@ -6215,13 +6227,14 @@ export default function DashboardLab() {
               transition={{ duration: 0.3 }}
             >
               <div
+                className="lab-hero-card"
                 style={{
                   // LAB premium depth (glow removed per founder): a dramatic
                   // layered shadow so the card FLOATS off the page + an inset
                   // top highlight so it reads lit-from-above. Clean evergreen.
+                  // padding + borderRadius now live in .lab-hero-card (responsive:
+                  // tighter on mobile, the blessed desktop values at >=640px).
                   background: "linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
-                  borderRadius: 28,
-                  padding: "28px 28px 26px",
                   position: "relative",
                   overflow: "hidden",
                   boxShadow: "0 2px 6px rgba(14,37,24,0.10), 0 28px 56px rgba(14,37,24,0.30), inset 0 1px 0 rgba(255,255,255,0.10)",
@@ -6614,7 +6627,13 @@ export default function DashboardLab() {
                           // LAB move 1: DOMINANT hero. The critique's "willing
                           // to dedicate half the screen to the number." 50 -> 64,
                           // tighter tracking. One object, decisively the king.
-                          fontSize: 64,
+                          // FLUID (2026-06-07, founder "crammed on mobile"): a
+                          // fixed 64px set a 10-glyph balance like "$22,843.39"
+                          // kissing the edges of a narrow phone column. clamp
+                          // scales it down only as the viewport narrows and
+                          // still hits the blessed 64px by ~530px+ — dominant
+                          // everywhere, cramped nowhere, no breakpoint jump.
+                          fontSize: "clamp(3.1rem, 12vw, 64px)",
                           fontWeight: 700,
                           // Gold while EITHER the count-up is running OR a new gift
                           // just arrived. The newGiftFlash window holds the cue lit
