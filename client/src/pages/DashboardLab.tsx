@@ -6241,6 +6241,23 @@ export default function DashboardLab() {
               @media (min-width: 640px) {
                 .lab-hero-cta-row { flex-direction: row; flex-wrap: wrap; align-items: center; }
               }
+              /* Hero meta block (2026-06-07, founder: "is the identity still on
+                 two rows on mobile?"). The fund identity (avatar + "Luke's Fund
+                 · UTMA · Active") and the gift-count pill shared one row. On a
+                 narrow phone they couldn't both fit: the name either wrapped to
+                 two ragged lines (no nowrap) or, with nowrap, truncated and lost
+                 "· Active". Neither is acceptable for the fund's own name. Now
+                 mobile stacks them — the identity gets a FULL-WIDTH row of its
+                 own (so the name fits on one clean line, no wrap, no truncation)
+                 and the gift count sits deliberately on the line below. Desktop
+                 (>=640px) restores the single side-by-side row, where there's
+                 room for both. */
+              .lab-hero-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 14px; }
+              .lab-hero-meta-id { display: flex; align-items: center; gap: 10px; min-width: 0; width: 100%; }
+              @media (min-width: 640px) {
+                .lab-hero-meta { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+                .lab-hero-meta-id { flex: 1; width: auto; }
+              }
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
                 /* Recent-gifter ring pulse, the face bloom, and the chart's
@@ -6308,8 +6325,8 @@ export default function DashboardLab() {
                       identity center together — the pill read as sitting higher
                       than the identity text. Centering aligns all three on one
                       axis. */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                  <div className="lab-hero-meta">
+                    <div className="lab-hero-meta-id">
                       {/* Mobile-only — desktop already carries fund
                           identity in the DesktopSidebar's nav and fund
                           switcher, so a glyph here would be redundant
@@ -6397,7 +6414,10 @@ export default function DashboardLab() {
                         <span className="rounded-full" style={{
                           background: "hsl(var(--kiddo-gold) / 0.25)", color: "hsl(var(--kiddo-gold-light))",
                           padding: "2px 9px",
-                          fontSize: 10, fontWeight: 700, letterSpacing: "0.02em", flexShrink: 0, marginLeft: 8,
+                          // marginLeft dropped 2026-06-07: spacing now comes from
+                          // the .lab-hero-meta gap (column on mobile, row on
+                          // desktop), so a fixed left margin would double it.
+                          fontSize: 10, fontWeight: 700, letterSpacing: "0.02em", flexShrink: 0,
                         }}>
                           {validCount} {validCount === 1 ? "gift" : "gifts"}
                           {contributorCount > 0 && (
