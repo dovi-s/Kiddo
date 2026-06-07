@@ -508,7 +508,7 @@ export default function FundSnapshot() {
         {/* Stats strip */}
         <div className="snapshot-stats">
           <div className="snapshot-stat">
-            <p className="snapshot-stat-label">Gifters</p>
+            <p className="snapshot-stat-label">Contributors</p>
             <p
               className="snapshot-stat-value"
               aria-live={contributorCountAnimating ? "off" : "polite"}
