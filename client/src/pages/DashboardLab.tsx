@@ -6411,12 +6411,20 @@ export default function DashboardLab() {
                         return s !== "failed" && s !== "refunded";
                       }).length;
                       return validCount > 0 ? (
-                        <span className="rounded-full" style={{
+                        // hidden on mobile, inline at >=640px (2026-06-07,
+                        // founder: "still two rows on mobile, can we fix it?").
+                        // The identity + this count can't fit one row on a
+                        // phone, so my prior fix stacked them — which read as
+                        // two rows. Now the count shows only where it fits
+                        // beside the name (desktop); on mobile the identity
+                        // sits ALONE on one clean row and the same count still
+                        // lives in the roster section below ("12 people are
+                        // building Luke's future" + the per-face gift counts),
+                        // so nothing is lost — just de-duplicated off the
+                        // cramped surface.
+                        <span className="rounded-full hidden sm:inline" style={{
                           background: "hsl(var(--kiddo-gold) / 0.25)", color: "hsl(var(--kiddo-gold-light))",
                           padding: "2px 9px",
-                          // marginLeft dropped 2026-06-07: spacing now comes from
-                          // the .lab-hero-meta gap (column on mobile, row on
-                          // desktop), so a fixed left margin would double it.
                           fontSize: 10, fontWeight: 700, letterSpacing: "0.02em", flexShrink: 0,
                         }}>
                           {validCount} {validCount === 1 ? "gift" : "gifts"}
