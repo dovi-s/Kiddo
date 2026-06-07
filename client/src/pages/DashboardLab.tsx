@@ -12593,22 +12593,38 @@ export default function DashboardLab() {
                   haptic("selection");
                   const refCode = `pf-${String(activeFundId || "").slice(0, 12)}`;
                   const url = `${window.location.origin}/?ref=${encodeURIComponent(refCode)}`;
-                  // Fire-and-forget analytics; the share must never wait on it.
-                  try {
-                    void fetch("/api/referral-events", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ refCode, fundId: activeFundId, action: "parent_referral_share", channel: "web" }),
-                    });
-                  } catch { /* analytics only */ }
+                  // Fire-and-forget analytics; the share must never wait on
+                  // it. Fired AFTER a share completes / a copy succeeds — NOT
+                  // on tap (2026-06-07 flow audit): navigator.share rejects on
+                  // dismiss, so counting taps inflated the k-factor panel's
+                  // shares numerator with cancels and made shares→visits read
+                  // worse than reality. Funded-k discipline = honest funnels.
+                  const recordShare = () => {
+                    try {
+                      void fetch("/api/referral-events", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ refCode, fundId: activeFundId, action: "parent_referral_share", channel: "web" }),
+                      });
+                    } catch { /* analytics only */ }
+                  };
                   const shareText = "We started an investment fund for our kid that family and friends gift into. Thought your family might want this too.";
                   if (navigator.share) {
-                    try { await navigator.share({ title: "Kiddo", text: shareText, url }); } catch { /* user dismissed */ }
+                    try {
+                      await navigator.share({ title: "Kiddo", text: shareText, url });
+                      recordShare();
+                    } catch { /* user dismissed — no share happened, no event */ }
                   } else {
                     try {
                       await navigator.clipboard.writeText(`${shareText} ${url}`);
+                      recordShare();
                       toast({ title: "Link copied", description: "Paste it to a parent who'd want this." });
-                    } catch { /* clipboard blocked */ }
+                    } catch {
+                      // Clipboard blocked (permissions / non-secure context).
+                      // Never let the tap be a silent dead end — surface the
+                      // link itself so the parent can copy it by hand.
+                      toast({ title: "Copy this link", description: url });
+                    }
                   }
                 }}
                 className="lab-tap"
