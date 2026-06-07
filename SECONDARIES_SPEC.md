@@ -38,6 +38,60 @@ thinking now so the decision gets made on the merits later.
 
 ---
 
+## Sharpened take (2026-06-07)
+
+Four corrections/sharpenings from a founder review + a quick legal check:
+
+**1. UTMA holding private equity is LEGALLY FINE — open question resolved.**
+A UTMA (unlike UGMA) explicitly allows a broad asset range — real estate, art,
+**private company shares**. So "can the custodial wrapper hold private equity" is
+a **yes**, not a blocker. **Crucial distinction:** that's the *holding* side. The
+real regulatory question was always the *offering* side — how you legally **sell**
+pre-IPO shares to non-accredited families (Reg A+ / Reg D). Holding ≠ offering;
+the search resolves the first, the second still needs counsel. The practical
+constraint on holding is **custodian infrastructure** — standard retail
+brokerages can't custody private shares; you need a self-directed custodian /
+trust company that supports alternative assets. (Reinforces #2.) Minor adjacent
+items: gift-tax reporting (Form 709 over the annual exclusion), kiddie-tax on any
+distributions, valuation/liquidity for the at-majority handoff.
+
+**2. The wall is INVENTORY + CUSTODY, not regulation.** The hardest part isn't
+the rules — it's (a) sourcing actual pre-IPO shares (Forge spent 10 years on
+issuer relationships; we'd start cold) and (b) a custodian that can hold them. And
+the cruel tension: the marquee names that make the story (SpaceX, Anthropic) trade
+as accredited-only Reg D tenders at $25k+ — NOT the $50 mass-market gift the dream
+needs. The "$50 slice of a marquee name for any kid" version sits at the
+intersection of the two hardest constraints and barely exists today.
+
+**3. Timeline: precondition-gated, NOT calendar-gated — and build speed is not the
+gate.** Earlier "year 3-4" framing was wrong to read as a calendar/effort
+estimate. We build fast; that is not the constraint. The gates are things code
+can't accelerate: proving the loop (funded-k≥1 — the *market* decides, not the
+keyboard), public custody live (external/regulatory), inventory relationships (BD
+time), and — for the FULL Adult-tier product — customer scale (market). A **narrow
+pilot** (one Reg A+ name, gift-card shape, inside the existing app) could come
+much sooner than the full product: it's gated by custody-live + one issuer + the
+offering-reg path, NOT by hitting 5,000 Adult-tier customers (precondition #1 is
+for the full product, not a pilot). Discipline still holds: don't pursue any of it
+before the core loop is proven — not because it takes years to build, but because
+it would pull focus from the only thing that matters pre-PMF.
+
+**4. Narrate now, build later.** The highest-ROI use of this idea *today* is as an
+investor/mission narrative, not a build. "Democratized private-market access for a
+generation" (Reg A+, non-accredited, the inequality angle: the rich capture the
+10-100x private run before retail gets in) is a powerful, on-brand story that
+sells the TAM with zero code. Tell it now; build it years out. Optionally start
+narrating the "knowledge-based accreditation" regulatory position early — shapes
+the rule in a Kiddo direction at no build cost.
+
+**Certainty caveat.** None of the above is legal advice; the author is not a
+lawyer. These blockers are a strategic map to verify with counsel + a custodian,
+not settled fact — the UTMA-holding point is exactly a case where a 2-minute check
+refined the assumption. Treat this spec as framing for the eventual counsel
+conversation, not its conclusion.
+
+---
+
 ## The standard model (what Forge does)
 
 For context, here's the conventional secondary-market business
@@ -335,7 +389,7 @@ matters more than the immediate revenue.
 | Question | Why it matters |
 |---|---|
 | Does Kiddo lobby for a "knowledge-based" accreditation alternative? | Joining the regulatory conversation could shape the rule in a Kiddo-shaped direction. Long-term brand positioning move. |
-| Can the custodial wrapper hold private equity legally? | UTMA rules are state-by-state. Most allow it but with restrictions. Legal review required. |
+| ~~Can the custodial wrapper hold private equity legally?~~ **RESOLVED 2026-06-07** | **Yes** — a UTMA allows private company shares (broader than UGMA). The live questions are the *offering* side (Reg A+/D, selling to non-accredited) + *custodian infrastructure* (a self-directed custodian, not a standard brokerage), NOT whether the account can hold it. See "Sharpened take." |
 | What's the tax treatment of gifted pre-IPO shares vs cash that becomes pre-IPO shares? | Different gift-tax exposure, different basis tracking. Materially affects the product UX. |
 | Does Kiddo serve as broker-dealer, or partner with one (like DriveWealth)? | Operational + regulatory question. Partnering is faster; owning the rail is higher-margin long-term. |
 | For Reg A+ shape: which companies actually file Reg A+? | Inventory question. Some sectors (consumer brands, fintech, food) file more often than others (deep tech, biotech). |
