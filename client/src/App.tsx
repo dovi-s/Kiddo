@@ -887,6 +887,14 @@ function App() {
     // back as escapes; the sidebar's nav links aren't urgent during
     // the 2-5 minute flow.
     location === "/get-started" ||
+    // The fund snapshot is a standalone print/PDF page with its OWN chrome
+    // (Back / Options / Print toolbar) and NO sidebar. Without this it fell
+    // through to hideGlobalNav=false, which gave the demo banner the 264px
+    // sidebar offset (md:ml-[264px]) over a page that has no sidebar — a
+    // phantom left gutter that read "as if the menu is there." Hiding global
+    // nav here makes the banner full-width + drops the unused sidebar/mobile
+    // nav. 2026-06-07.
+    (location.startsWith("/fund/") && location.endsWith("/snapshot")) ||
     location === "/feedback/pmf" ||
     location.startsWith("/founder-claim/") ||
     location.startsWith("/kid/") ||
