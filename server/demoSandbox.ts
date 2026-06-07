@@ -130,6 +130,10 @@ export function blockDemoMutations(req: any, res: any, next: any) {
   return res.status(200).json({
     demo: true,
     saved: false,
-    message: "You're exploring the demo, so changes aren't saved here. Create your own fund to make it real.",
+    // Framed to REASSURE, not just block: the feature works — it just doesn't
+    // persist in the shared demo. The client surfaces this as a subtle toast
+    // (see client/src/lib/queryClient.ts) so a blocked edit reads as "demo,"
+    // not "broken."
+    message: "Changes aren't saved here in the demo, but they will be in your own fund.",
   });
 }
