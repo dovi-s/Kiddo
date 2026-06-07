@@ -8923,15 +8923,28 @@ export default function DashboardLab() {
                             // per-row %s now sum to exactly 100% across both sections.
                             const hPct     = investedTotal > 0 ? (hValue / investedTotal) * 100 : 0;
                             const dName    = friendlyHoldingName(h.ticker, h.name);
+                            // Strip the redundant " (TICKER)" the friendly name
+                            // carries (2026-06-07, founder: "long names get an
+                            // ellipsis on mobile"). The StockLogo already shows
+                            // the ticker, so "International Stocks (VXUS)" beside
+                            // a VXUS logo was the ticker twice AND overran the
+                            // row into a "…" on a phone. Brand names (Apple,
+                            // Disney) carry no suffix, so they're unchanged.
+                            const dNameDisplay = dName.replace(new RegExp(`\\s*\\(${String(h.ticker).toUpperCase()}\\)\\s*$`, "i"), "").trim() || dName;
                             const sharesLbl = hShares > 0
                               ? (hShares >= 1 ? hShares.toFixed(2) : hShares.toFixed(4)) + " shares"
                               : null;
                             // Holdings under 0.5% round to 0 with Math.round —
-                            // "0% of your fund" on a real $300 holding reads as
-                            // worthless. Floor the label at "<1%" for any
-                            // positive-but-sub-1% position.
+                            // "0%" on a real $300 holding reads as worthless.
+                            // Floor the label at "<1%" for any positive-but-
+                            // sub-1% position. The "of {child}'s fund" suffix was
+                            // DROPPED 2026-06-07 (founder: the subline wrapped to
+                            // two rows on mobile) — it repeated on every row, and
+                            // under a "What {child} owns" header a bare "%" reads
+                            // unambiguously as percent-of-fund. "7.64 shares · 10%"
+                            // now fits one line.
                             const pctRound = Math.round(hPct);
-                            const pctLbl = hPct > 0 ? `${pctRound < 1 ? "<1" : pctRound}% of ${childPoss}` : null;
+                            const pctLbl = hPct > 0 ? `${pctRound < 1 ? "<1" : pctRound}%` : null;
                             const overlapSide = h._overlapSide;
                             const ticker = h.ticker.toUpperCase();
                             const handleAddMore = () => {
@@ -8960,7 +8973,7 @@ export default function DashboardLab() {
                                     <StockLogo ticker={h.ticker} size={36} />
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-1.5 min-w-0">
-                                        <p className="truncate text-sm font-bold text-foreground">{dName}</p>
+                                        <p className="truncate text-sm font-bold text-foreground">{dNameDisplay}</p>
                                       </div>
                                       <p className="text-xs text-muted-foreground">
                                         {sharesLbl ?? `Part of ${childPoss}`}
