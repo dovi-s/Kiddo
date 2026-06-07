@@ -39,7 +39,10 @@ export function senderNameIssue(rawName: unknown, isAnonymous = false): string |
   if (isAnonymous) return null;
   const name = typeof rawName === "string" ? rawName.trim() : "";
   if (!name) return null; // emptiness is the caller's required-field decision
-  if (CONTACT_INFO_RE.test(name)) {
+  // Both pattern sets apply to names: the contact regex misses protocol-less
+  // shorteners ("bit.ly/free" as a NAME is a phishing name) — caught by the
+  // link rule, found while writing the regression tests 2026-06-06.
+  if (CONTACT_INFO_RE.test(name) || LINK_OR_SHORTENER_RE.test(name)) {
     return "Please use a real name — links, emails, phone numbers, and @handles aren't allowed in the name.";
   }
   const lower = name.toLowerCase();

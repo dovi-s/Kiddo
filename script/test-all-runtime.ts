@@ -21,6 +21,7 @@ const TEST_STEPS = [
   "test:launch-readiness",
   "test:memory-utils",
   "test:gift-draft",
+  "test:gift-text-safety",
   "test:activity-semantics",
   "test:mobile-gifter-logos",
   "test:ui:smoke",
