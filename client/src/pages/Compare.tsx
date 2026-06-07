@@ -617,6 +617,22 @@ const fullComparisonRows: FullComparisonRow[] = [
     savings: "No investment; interest only",
   },
   {
+    // Honest disclosure of UTMA's genuine downside vs a 529 (2026-06-07). A
+    // custodial account is the child's asset, so the FAFSA weighs it harder
+    // than a parent-owned 529 — true of Kiddo too. We name it plainly here
+    // because the aid-conscious parent IS comparing on this page, and the
+    // trust-anchor brand loses only by omitting a known downside. The 529
+    // genuinely wins this row; we win the flexibility tradeoff. Canonical
+    // wording: FINANCIAL_AID_NOTE in shared/legal-copy.ts.
+    feature: "College financial-aid treatment",
+    kiddo: "Counts as the child's asset (up to ~20% on FAFSA); flexible use",
+    earlybird: "Same: child's asset (custodial)",
+    acornsEarly: "Same: child's asset (custodial)",
+    greenlight: "N/A (not an investment account)",
+    plan529: "Parent asset (up to ~5.64%); best for college-aid optimization",
+    savings: "Depends on owner",
+  },
+  {
     feature: "Best for",
     kiddo: "Investment gifting: turning every family occasion into a real investment",
     earlybird: "Gifting, no longer available",

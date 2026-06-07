@@ -33,6 +33,25 @@ export const KIDDIE_TAX_NOTE =
 export const PROJECTION_DISCLAIMER =
   "Assumes a 7% average annual return, net of Kiddo's annual fee ($1/yr per $1,000 invested). Markets vary; returns are never guaranteed.";
 
+// RULE — financial aid: a UTMA/UGMA is the CHILD's asset, so the FAFSA counts
+// it more heavily against need-based aid than a parent-owned asset like a 529
+// (student assets reduce eligibility by up to ~20% of their value; parent
+// assets by up to ~5.64%). This is true of EVERY custodial account, Kiddo
+// included — a known, material downside vs a 529 for families optimizing
+// college aid. We DISCLOSE it rather than dodge it: for the trust-anchor
+// brand, being caught omitting a known downside is the only losing move (added
+// 2026-06-07 after a competitor-weakness review surfaced it as the sharpest
+// honest gap). The counterweight is real and gets said in the same breath:
+// UTMA flexibility (the money can go to ANYTHING that benefits the child, not
+// only tuition) + the gift loop + the Memory Book + ownership at majority —
+// none of which a 529 does. Use FINANCIAL_AID_NOTE verbatim where a neutral
+// standalone line fits; tailored variants must still carry the
+// student-asset-weighed-more fact and the not-just-college counterweight.
+// Rates are inflation/policy-adjustable — keep the "up to ~X%" hedge so a
+// missed update reads as approximate, not wrong.
+export const FINANCIAL_AID_NOTE =
+  "Because this is a custodial account, it counts as the child's own asset on the FAFSA — which can reduce need-based college aid more than a parent-owned 529 (student assets are weighed at up to ~20% of their value, parent assets at up to ~5.64%). The tradeoff is flexibility: unlike a 529, the money can go toward anything that benefits the child, not only tuition. If maximizing need-based college aid is your main goal, weigh a 529 too, or ask a financial-aid advisor.";
+
 // RULE - gift-tax exclusion: the IRS annual gift-tax exclusion changes most
 // years with inflation ($17,000 in 2023, $18,000 in 2024, $19,000 in 2025). It
 // was hardcoded across ~7 surfaces (gift-checkout, education tooltips, Legal,

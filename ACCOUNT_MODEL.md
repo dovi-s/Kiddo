@@ -349,6 +349,13 @@ soul-strip):**
 - Viewing is never gated.
 - No fee on the gift transaction.
 - The Memory Book inherits at majority.
+- **Never a punitive transfer-out / ACATS exit fee.** (Locked 2026-06-07 after
+  a competitor review: Acorns charges $35–50 *per ETF* to leave — a "Hotel
+  California" lock-in via penalty. Our retention is the opposite kind: you stay
+  because leaving means abandoning the Memory Book, never because we fine you.
+  "No hidden fees ever" + an exit penalty is a contradiction that would betray
+  the whole trust positioning. If a downstream custodian charges a pass-through
+  ACATS cost at scale, absorb or disclose it at cost — never markup-as-moat.)
 
 ---
 
