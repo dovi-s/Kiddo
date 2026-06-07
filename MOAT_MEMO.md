@@ -78,6 +78,21 @@ The link is copyable in a sprint. **Making the gifter the hero is not** — beca
 for them, doing it well destroys their own economics. That's the moat: not that
 they *can't* build it, but that it's *irrational* for them to.
 
+**Honesty patch (2026-06-06, founder stress-test "they'll just run ads at
+gifters"):** the paragraph above overclaims the Helmer category. Textbook
+counter-positioning = copying ACTIVELY DAMAGES the incumbent (Blockbuster/late
+fees). Building gifter delight doesn't damage Acorns — it's merely LOW-ROI for
+them. So what we actually hold is **incumbent indifference + a head start**,
+not incumbent self-harm. Implications, stated coldly: (a) the shield holds
+only while the category is unproven or too small to matter; (b) if the loop is
+proven big, an incumbent CAN point ads + product at gifters — and their
+installed base of millions of parents means their loop ignites from a bigger
+fire than ours; (c) at that point it's a race — our accumulated Memory Books,
+gifter relationships, and singular focus vs. their distribution. Winnable and
+genuinely losable. The CAC-asymmetry paragraph below survives this patch
+intact (a paid-growth org still can't profitably serve $200 accounts); the
+"irrational for them" framing does not. Plan on the weaker, truer version.
+
 ### Why that converts to winning: CAC asymmetry
 Early Bird's CEO admitted ~$200+ to acquire a parent, 20–25mo payback, "nonviable."
 If a grandparent brings the parent for ~$0, we can profitably serve customers at
