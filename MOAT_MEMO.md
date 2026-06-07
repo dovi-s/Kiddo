@@ -21,6 +21,37 @@ The honest current state: **today, in code, we are a feature plus a hypothesis
 that it becomes a company.** That is the normal and correct state pre-launch.
 The danger is not being a feature today — it's *stopping* at the feature.
 
+### 0b. The worry triage test (added 2026-06-06 — for every "what if [giant] ships [rail]")
+
+These fears arrive endlessly and all have the same shape: *[Apple/Google/Chase]
++ [seamless money movement] = our product.* Run any of them through three
+questions before spending a day on it:
+
+1. **Does it make the GIFTER the customer?** (Their own surface, identity,
+   reason to return — not a payment confirmation.)
+2. **Does it accumulate per-family memory/relationship** that a family would
+   grieve losing?
+3. **Does it own the at-18 handoff** — the moment the kid becomes the customer?
+
+**Three NOs = it's a rail.** Rails move money; we are not a rail — we *ride*
+rails (Apple Pay is already in our checkout; cheaper/smoother money movement
+HELPS us). Giants build rails because rails scale horizontally; they don't
+build relationship layers for niches, because niches don't move their needle —
+and when they try depth in consumer finance they retreat (Apple/Goldman
+breakup, Apple Pay Later killed). Any YES = take it seriously, reread §7's
+clock, and check the escalation triggers.
+
+**And name the real worry under the worry:** every giant scenario is
+unfalsifiable and infinite; you can generate them forever. Exactly one
+existential question is falsifiable, near-term, and in our control: **does the
+loop turn (funded-k)?** Worry spent on giants is displaced worry about k —
+which has a runsheet, a kill criterion, and a 60-day clock. Every doom branch
+converges on the same action anyway: prove the loop and accumulate Memory
+Books while nobody's looking. (Even the worst branch — a giant ships it after
+we've proven k — most likely ends in *acquisition of the proven loop + gift
+graph*, not death. The path to being worth buying and the path to winning are
+the same path.)
+
 ---
 
 ## 1. The one moat that matters: Counter-Positioning
