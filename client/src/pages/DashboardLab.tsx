@@ -2457,6 +2457,24 @@ export default function DashboardLab() {
   useEffect(() => {
     prevValueRef.current = rawTotalValue;
   }, [rawTotalValue]);
+
+  // DEMO roll, change-based not every-open (2026-06-07, founder approved
+  // "do what's best"). The demo under-seed used to fire on EVERY fund-open
+  // (06bd8bb "maximum showcase"), so wandering back to an unchanged fund
+  // (returning from the kid view / Memory Book / a gifter flow you didn't
+  // complete) re-rolled the SAME number — which reads as a gratuitous loop,
+  // against the calm register. Now the under-seed (the thing that makes the
+  // hero roll) primes a fund ONLY when its value is genuinely new vs the
+  // last value we primed for it THIS session. Result: first sight of each
+  // fund rolls; a gift landing (value changed) rolls — the payoff; an
+  // unchanged return stays calm. Per-fund (not global) so tabbing
+  // Luke→Alex→Luke doesn't re-prime Luke. The SAME boolean gates BOTH the
+  // balance and the at-65 seeds below, so they always roll (or rest)
+  // together — one rolling while the other sits still would read as a glitch.
+  const demoSeedByFundRef = useRef<Record<string, number>>({});
+  const demoShouldPrime = isDemoAccount && !!activeFundId && Number.isFinite(rawTotalValue) && rawTotalValue > 0
+    && (demoSeedByFundRef.current[activeFundId] == null
+        || Math.abs(demoSeedByFundRef.current[activeFundId] - rawTotalValue) > 0.5);
   // Persist the live balance per-fund so the next session seeds the count-up from the last known value.
   // GUARDED on dashboardSummary being resolved (2026-06-04 perfection pass):
   // in the window where the fund row has loaded but the summary (holdings)
@@ -2480,9 +2498,14 @@ export default function DashboardLab() {
     // in the demo now plays the returning-parent moment; the ambient
     // DemoGiftMoment beat separately demos live ARRIVAL. Real accounts:
     // exact live value, untouched.
-    const seedToStore = isDemoAccount ? rawTotalValue * 0.994 : rawTotalValue;
+    // Under-seed (→ roll) only when this fund's value is genuinely new this
+    // session (demoShouldPrime). Otherwise write the TRUE value so a calm
+    // re-view doesn't re-roll, and a real change (gift landing) rolls from
+    // the actual prior value to the new — the clean delta. See demoShouldPrime.
+    const seedToStore = demoShouldPrime ? rawTotalValue * 0.994 : rawTotalValue;
     writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, seedToStore);
-  }, [activeFundId, rawTotalValue, dashboardSummary, isDemoAccount]);
+    if (isDemoAccount && activeFundId) demoSeedByFundRef.current[activeFundId] = rawTotalValue;
+  }, [activeFundId, rawTotalValue, dashboardSummary, isDemoAccount, demoShouldPrime]);
 
   // Per-fund cached seed for the hero's "$X at 65" projection peek. Same
   // Acorns-style pattern as the balance: paint the last known projection
@@ -3960,11 +3983,13 @@ export default function DashboardLab() {
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
-    // Demo under-seed matches the balance write above so the hero and the
-    // at-65 peek roll together — one number rolling while its sibling sits
-    // still would read as a glitch, not a moment.
-    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, isDemoAccount ? heroProjectedAt65 * 0.994 : heroProjectedAt65);
-  }, [activeFundId, heroProjectedAt65, dashboardSummary, isDemoAccount]);
+    // Demo under-seed uses the SAME demoShouldPrime gate as the balance write
+    // above, so the hero balance and the at-65 peek roll together (or rest
+    // together) — one rolling while its sibling sits still would read as a
+    // glitch, not a moment. Change-based now: primes only on a genuinely new
+    // value this session, not every open.
+    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, demoShouldPrime ? heroProjectedAt65 * 0.994 : heroProjectedAt65);
+  }, [activeFundId, heroProjectedAt65, dashboardSummary, isDemoAccount, demoShouldPrime]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
   // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.
