@@ -1061,7 +1061,7 @@ export default function GifterDashboard() {
                             type="button"
                             onClick={() => handlePauseResume(sch, true)}
                             disabled={busy}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
                             data-testid={`hero-pause-recurring-${sch.id}`}
                           >
                             <Pause className="h-3.5 w-3.5" />
@@ -1070,7 +1070,7 @@ export default function GifterDashboard() {
                           <button
                             type="button"
                             onClick={() => (isEditing ? setEditingId(null) : openEditor(sch))}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isEditing ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium transition-colors ${isEditing ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             data-testid={`hero-edit-recurring-${sch.id}`}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -1079,7 +1079,7 @@ export default function GifterDashboard() {
                           <button
                             type="button"
                             onClick={() => handleToggleHistory(sch)}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isHistoryOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium transition-colors ${isHistoryOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             data-testid={`hero-history-recurring-${sch.id}`}
                           >
                             <Receipt className="h-3.5 w-3.5" />
@@ -1090,7 +1090,7 @@ export default function GifterDashboard() {
                             type="button"
                             onClick={() => handleCancelRecurring(sch.id)}
                             disabled={cancellingId === sch.id}
-                            className="ml-auto inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                            className="ml-auto inline-flex items-center rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                             aria-label={`Cancel recurring gift of ${fmtMoney(sch.amount)} ${sch.frequency} to ${sch.fundName}`}
                             data-testid={`hero-cancel-recurring-${sch.id}`}
                           >
@@ -1283,7 +1283,7 @@ export default function GifterDashboard() {
                           type="button"
                           onClick={() => handleCancelRecurring(sch.id)}
                           disabled={cancellingId === sch.id}
-                          className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                          className="inline-flex items-center rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                           data-testid={`cancel-recurring-${sch.id}`}
                         >
                           {cancellingId === sch.id ? "Cancelling…" : "Cancel"}
