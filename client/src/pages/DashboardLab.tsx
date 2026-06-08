@@ -123,6 +123,7 @@ import {
   CalendarClock,
   History,
   ChevronRight,
+  ChevronDown,
   X,
   PieChart,
   HandCoins,
@@ -757,29 +758,25 @@ function LabCollapse({
             <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{stat}</span>
           </span>
         </span>
-        {/* Open/close indicator: a custom ＋ → − morph (replaces the rotating
-            chevron). CLOSED = ＋ (muted ink, "tap to expand"); OPEN = − (evergreen,
-            "tap to collapse") — the color shift echoes the open-state tint so the
-            indicator reads ACTIVE when the section is. The vertical stroke does a
-            quarter-turn onto the horizontal one (fill-box center origin, so it
-            pivots on its own center and lands exactly on the minus), with the SAME
-            expo easing as the rest of the lab's motion. Custom SVG (no Lottie),
-            rounded caps, 2px to match the icon-stroke scale. Accordion-correct
-            cousin of the hamburger→X morph — right meaning (expand/collapse), not
-            a nav toggle. */}
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 18 18"
-          aria-hidden="true"
-          style={{ flexShrink: 0, color: open ? "hsl(var(--kiddo-evergreen))" : "rgba(26,23,16,0.4)", transition: "color .26s cubic-bezier(0.16,1,0.3,1)" }}
-        >
-          <line x1="4" y1="9" x2="14" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <line
-            x1="9" y1="4" x2="9" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-            style={{ transformBox: "fill-box", transformOrigin: "center", transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform .26s cubic-bezier(0.16,1,0.3,1)" }}
-          />
-        </svg>
+        {/* Open/close indicator: a chevron that flips ▼ (closed, "expand") → ▲
+            (open, "collapse") and shifts muted-ink → evergreen as it opens, so it
+            reads ACTIVE in sync with the open-state tint + border. Same expo easing
+            as the rest of the lab's motion. Chevron (NOT ＋/−) on purpose: "+"
+            means ADD / create everywhere else in the app (＋ New occasion, Add an
+            investment, add a fund), so a "+" here would misread as "add to this
+            section" — worst on the sections that actually have add-actions inside.
+            A chevron only ever means expand/collapse. The craft is in the motion +
+            the activation, not a novel symbol. */}
+        <ChevronDown
+          size={18}
+          aria-hidden
+          style={{
+            flexShrink: 0,
+            color: open ? "hsl(var(--kiddo-evergreen))" : "rgba(26,23,16,0.4)",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform .26s cubic-bezier(0.16,1,0.3,1), color .26s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
