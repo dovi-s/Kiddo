@@ -12,6 +12,7 @@ import { RealtimeProvider } from "@/lib/realtime-context";
 import { Toaster } from "@/components/ui/toaster";
 import { DemoGiftMoment } from "@/components/DemoGiftMoment";
 import { DemoActionMoment } from "@/components/DemoActionMoment";
+import { IdleLogout } from "@/components/IdleLogout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -956,6 +957,10 @@ function App() {
                   fund" toast instead of a sandbox dead-end. Demo-only, no-op
                   otherwise. Listens for `kiddo:demo-action`. */}
               <DemoActionMoment />
+              {/* Idle auto-logout for signed-in (non-demo) users — warns with a
+                  countdown then signs out on a left-open / shared device. Self-
+                  gates on auth + demo; no-op otherwise. */}
+              <IdleLogout />
               {!hideGlobalNav && <DesktopSidebar />}
               {/* Demo banner lives at the shell (not inside Router) so its
                   desktop left-offset can mirror the sidebar's presence via the
