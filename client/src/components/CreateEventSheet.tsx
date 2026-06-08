@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, ChevronRight, Loader2, ImagePlus, Trash2, Copy, Check, Share2, User, Lock,
+  ChevronRight, Loader2, ImagePlus, Trash2, Copy, Check, Share2, User, Lock,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export interface EditEventData {
@@ -705,10 +706,7 @@ export function CreateEventSheet({
               {hdr.sub && <p style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{hdr.sub}</p>}
             </div>
           </div>
-          <button type="button" onClick={handleClose} aria-label="Close event editor"
-            style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(26,23,16,0.08)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <X size={14} color="rgba(26,23,16,0.5)" />
-          </button>
+          <ModalCloseButton onClick={handleClose} label="Close event editor" />
         </div>
 
         <AnimatePresence mode="wait">

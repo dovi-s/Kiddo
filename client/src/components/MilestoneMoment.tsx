@@ -8,7 +8,8 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 // but the locked rule is the Kora brand sprout 🌱, not generic sparkles.
 // Per feedback_iconography_consistency.md: "Sprout (brand) — reserved for the
 // Kora brand mark + first-gift confirmation."
-import { Share2, Sprout, X, Download, Loader2 } from "lucide-react";
+import { Share2, Sprout, Download, Loader2 } from "lucide-react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { haptic } from "@/lib/haptics";
 import {
   MONEY_CROSS_COPY,
@@ -215,14 +216,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={dismiss}
-            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-            aria-label="Dismiss milestone"
-          >
-            <X size={16} />
-          </button>
+          <ModalCloseButton onClick={dismiss} label="Dismiss milestone" className="absolute right-3 top-3" />
 
           <div className="flex items-start gap-3">
             <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.15)]">
@@ -279,14 +273,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md rounded-3xl bg-background p-4 shadow-2xl"
           >
-            <button
-              type="button"
-              onClick={() => setShareOpen(false)}
-              aria-label="Close share view"
-              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-muted-foreground hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
+            <ModalCloseButton onClick={() => setShareOpen(false)} label="Close share view" className="absolute right-3 top-3 z-10" />
 
             <div ref={shareCardRef}>
               <MilestoneShareCard threshold={milestone} recipientName={recipientName} giftCount={giftCount} peopleCount={peopleCount} />

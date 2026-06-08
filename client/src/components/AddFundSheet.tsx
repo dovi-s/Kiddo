@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, Heart, Check, Plus, Trash2, ArrowRight, Zap, Calendar as CalendarIcon } from "lucide-react";
+import { Users, Heart, Check, Plus, Trash2, ArrowRight, Zap, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -301,14 +302,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                 <h2 className="text-lg font-semibold text-foreground">
                   {step === "choose" ? "Add a new fund" : step === "creating" ? "Creating..." : step === "success" ? "All set" : step === "upgrade-family" ? "Upgrade to add more" : step === "culture" ? "Cultural milestones" : "Add a child's fund"}
                 </h2>
-                <button
-                  onClick={handleClose}
-                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="button-close-add-fund"
-                  aria-label="Close add fund dialog"
-                >
-                  <X size={16} />
-                </button>
+                <ModalCloseButton onClick={handleClose} label="Close add fund dialog" testId="button-close-add-fund" />
               </div>
               <div className="h-px bg-border/50 mx-5" />
             </div>

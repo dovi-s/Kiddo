@@ -20,7 +20,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { haptic } from "@/lib/haptics";
@@ -196,14 +197,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                     {data?.totalCount === 1 ? "1 gifter" : `${data?.totalCount ?? "..."} gifters`}
                   </h2>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="button-close-gifters-sheet"
-                  aria-label="Close gifters sheet"
-                >
-                  <X size={16} />
-                </button>
+                <ModalCloseButton onClick={onClose} label="Close gifters sheet" testId="button-close-gifters-sheet" />
               </div>
               <div className="h-px bg-border/50 mx-5" />
             </div>

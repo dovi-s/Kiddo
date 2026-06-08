@@ -12,13 +12,13 @@ import {
   CreditCard,
   QrCode,
   Sprout,
-  X,
   ChevronDown,
   Calendar,
   Gift
 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 
 const canShare = typeof navigator !== "undefined" && "share" in navigator;
 
@@ -122,12 +122,7 @@ export function ShareKit({
               <DialogTitle className="font-semibold text-foreground">Share {recipientName}'s Fund</DialogTitle>
               <p className="text-sm text-muted-foreground mt-0.5">Invite friends and family to contribute</p>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X size={20} />
-            </button>
+            <ModalCloseButton onClick={onClose} label={`Close ${recipientName}'s share sheet`} className="-mr-2" />
           </div>
         </div>
 

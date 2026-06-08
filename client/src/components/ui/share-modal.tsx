@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, Check, Printer, Download, X, Link, Mail, ArrowLeft, Share2, Hash } from "lucide-react";
+import { Copy, Check, Printer, Download, Link, Mail, ArrowLeft, Share2, Hash } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 
@@ -746,7 +747,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
           mobile width". md:max-w-md bumps to 448px on tablet/desktop
           where there's room; mobile keeps the tighter 384 footprint. */}
       <DialogContent className="max-w-sm md:max-w-md p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
-        <DialogTitle className="sr-only">Share {recipientName}'s gift link</DialogTitle>
+        <DialogTitle className="sr-only">{recipientIsOwner ? "Share your gift link" : recipientName ? `Share ${recipientName}'s gift link` : "Share gift link"}</DialogTitle>
 
         {/* Header */}
         <div style={{
@@ -766,28 +767,20 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
             )}
             <div>
               <p style={{ fontSize: 14, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.2 }}>
-                {view === "email" ? `Email invite` : `Share`}
+                {view === "email"
+                  ? `Email invite`
+                  : recipientIsOwner
+                    ? `Share your gift link`
+                    : recipientName
+                      ? `Share ${recipientName}'s gift link`
+                      : `Share gift link`}
               </p>
               <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 2 }}>
                 {view === "email" ? "Pre-written. Warm. Edit anything." : "Choose how you'd like to share"}
               </p>
             </div>
           </div>
-          {/* 44px tap target (the codebase touch-target standard) while the
-              visible chip stays the 28px circle: the hit area is the transparent
-              button, the circle is the inner span. margin:-8 keeps the circle in
-              its original spot so layout/footprint is unchanged. aria-label added
-              (the bare X had no accessible name). */}
-          <button
-            type="button"
-            onClick={() => { haptic("selection"); onClose(); }}
-            aria-label="Close"
-            style={{ width: 44, height: 44, margin: -8, padding: 0, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-          >
-            <span style={{ width: 28, height: 28, borderRadius: 999, background: "rgb(243,240,236)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <X size={14} color="rgb(100,92,86)" />
-            </span>
-          </button>
+          <ModalCloseButton onClick={onClose} label="Close" />
         </div>
 
         {/* Scrollable body */}
