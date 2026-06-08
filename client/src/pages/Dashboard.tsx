@@ -7248,7 +7248,15 @@ export default function Dashboard() {
                     ? (occasionDays === 0 ? "Today" : occasionDays === 1 ? "Tomorrow" : `in ${occasionDays}d`)
                     : (() => {
                         const raw = String(activeOccasion.name || "Occasion").trim();
-                        return raw.length > 10 ? `${raw.slice(0, 9)}…` : raw;
+                        // Drop the redundant "{child}'s " prefix — this tile already
+                        // lives on that child's dashboard, so "Luke's Birthday" both
+                        // repeated the name AND got hard-sliced mid-word to "Luke's
+                        // Bi…". Stripping it leaves the actual occasion ("Birthday"),
+                        // which fits clean; only genuinely long custom names still
+                        // truncate, at a roomier threshold. 2026-06-08.
+                        const prefix = `${childFirst}'s `;
+                        const name = raw.toLowerCase().startsWith(prefix.toLowerCase()) ? raw.slice(prefix.length) : raw;
+                        return name.length > 14 ? `${name.slice(0, 13)}…` : name;
                       })())
                 : "New occasion";
               const occasionIsImminent = activeOccasion && occasionDays !== null && occasionDays <= 30;
