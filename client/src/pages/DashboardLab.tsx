@@ -2247,6 +2247,20 @@ export default function DashboardLab() {
   const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
+  // Publish the resolved active fund to the shared store on mount so the chrome
+  // (AppHeader fund-switcher + sidebar) HIGHLIGHTS the fund the dashboard is
+  // actually showing. On a fresh load selectedFundId falls back to funds[0] but
+  // nothing was ever written to the store, so the switcher read the active fund
+  // as un-highlighted until the user clicked it (the click — selectFund — was
+  // the only thing calling setActiveFundId). Writing it here syncs the source of
+  // truth so the highlight is correct on first paint. Guarded so it only fires
+  // when the store is out of sync — no loop with the change-event listener.
+  useEffect(() => {
+    if (!activeFundId) return;
+    if (getActiveFundId() === activeFundId) return;
+    setActiveFundId(activeFundId);
+  }, [activeFundId]);
+
   // Idle-time prefetch of next-likely pages — relocated here from
   // earlier in the function body 2026-05-21 so it can gate on the
   // validated activeFundId. The parent on Dashboard will probably
