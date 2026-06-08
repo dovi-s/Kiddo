@@ -120,6 +120,7 @@ const ACCOUNTS = [
     lastName: "Dunphy",
     preferredName: "Dad",
     role: "parent" as const,
+    profileImageUrl: "https://pyxis.nymag.com/v1/imgs/1a5/a8b/1a2353ae4dfaf73880973701a654c5fdb8-ty-burrell-modern-family.rsquare.w330.jpg",
   },
   {
     email: "claire@dunphyfamily.com",
@@ -127,12 +128,13 @@ const ACCOUNTS = [
     lastName: "Dunphy",
     preferredName: "Mom",
     role: "co-parent" as const,
+    profileImageUrl: "https://arianadickson.wordpress.com/wp-content/uploads/2014/04/webct_upload_applet.jpg",
   },
   { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const, profileImageUrl: "https://openpsychometrics.org/tests/characters/test-resources/pics/MF/1.jpg" },
   { email: "gloria@dunphyfamily.com",   firstName: "Gloria",   lastName: "Pritchett", preferredName: "Gloria",   role: "gifter" as const },
   { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const },
-  { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const },
-  { email: "manny@dunphyfamily.com",    firstName: "Manny",    lastName: "Delgado",   preferredName: "Manny",    role: "gifter" as const },
+  { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const, profileImageUrl: "https://medias.spotern.com/spots/w640/162/162897-1537345352.jpg" },
+  { email: "manny@dunphyfamily.com",    firstName: "Manny",    lastName: "Delgado",   preferredName: "Manny",    role: "gifter" as const, profileImageUrl: "https://cdn1.edgedatg.com/aws/v2/abc/ModernFamily/person/737059/0742ee201d7c06d751852e65200c9750/362x362-Q90_0742ee201d7c06d751852e65200c9750.jpg" },
   // Haley is the graduated adult: past CA majority (21), her fund is transferred
   // to her below (step 3b). The "graduate" role gives her approved KYC in
   // upsertUser — she owns a live individual investing account now, not a
@@ -199,7 +201,7 @@ const KIDS = [
   },
   {
     firstName: "Luke",
-    childPhotoUrl: "https://i.pinimg.com/564x/83/02/b3/8302b38f81211251f8c392180e781771.jpg",
+    childPhotoUrl: "https://static0.srcdn.com/wordpress/wp-content/uploads/2023/02/luke-smiling-in-season-11-of-modern-family.jpg",
     lastName: "Dunphy",
     pronoun: "he" as const,
     majorityAge: 21,
