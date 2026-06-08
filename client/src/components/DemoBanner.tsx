@@ -97,15 +97,16 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 text-xs sm:text-sm">
         <p className="leading-snug text-[hsl(var(--kiddo-evergreen))]">
-          {/* Copy trimmed for mobile (2026-06-07, founder "crammed, lots of
-              text"). The always-shown part carries the essentials — it's a
-              demo, the numbers are illustrative and reset. The reassurance
-              clause ("Real funds work the same way") is the most expendable on
-              a thin sticky bar, so it's desktop-only (hidden sm:inline) — the
-              fuller version the founder liked survives where there's room. */}
+          {/* ONE concise line at every width (2026-06-07 rev). The earlier
+              version hid "Real funds work the same way" only on mobile
+              (hidden sm:inline) — but viewport-conditional copy is fragile and
+              confusing (the bar said different things at different widths). A
+              sticky bar wants one consistent, scannable message; the dropped
+              clause was the most expendable (a demo already implies it). Kept
+              the one genuinely useful caveat: the amounts reset. */}
           <span className="font-semibold">You're in the Dunphy demo.</span>{" "}
           <span className="text-[hsl(var(--kiddo-evergreen))/0.85]">
-            The amounts are illustrative and reset periodically.<span className="hidden sm:inline"> Real funds work the same way.</span>
+            The amounts are illustrative and reset periodically.
           </span>{" "}
           <Link
             href="/get-started"
