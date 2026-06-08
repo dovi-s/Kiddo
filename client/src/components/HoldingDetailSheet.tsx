@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { haptic } from "@/lib/haptics";
 import { friendlyHoldingName } from "@/lib/ticker-names";
+import { gifterIdentityKey } from "@/lib/gifter-name";
 import { getEtfHoldings } from "@/lib/etf-holdings";
 import { useCountUp } from "@/hooks/use-count-up";
 import type { Holding, Gift } from "@shared/schema";
@@ -664,7 +665,7 @@ function HoldingDetailSheetBody({
   type ThankYouState = "sent" | "partial" | "draft" | "missing" | "self" | "anonymous";
   const ownerEmailLower = String(ownerEmail || "").trim().toLowerCase();
 
-  const uniqueMap = new Map<string, { name: string; total: number; costBasisSlice: number; count: number; date?: string | null; giftId?: string; mostRecentGiftId?: string; mostRecentGiftDate?: number; message?: string | null; isRecurring: boolean; sentCount: number; draftCount: number; missingCount: number; isAnonymous: boolean; isOwner: boolean }>();
+  const uniqueMap = new Map<string, { id: string; name: string; total: number; costBasisSlice: number; count: number; date?: string | null; giftId?: string; mostRecentGiftId?: string; mostRecentGiftDate?: number; message?: string | null; isRecurring: boolean; sentCount: number; draftCount: number; missingCount: number; isAnonymous: boolean; isOwner: boolean }>();
 
   // Helper to fold a single gift into its sender's bucket, including thank-you accounting.
   const accumulateGift = (
@@ -672,38 +673,41 @@ function HoldingDetailSheetBody({
     amt: number,
     basisSlice: number,
   ) => {
-    // KNOWN: this contributor list groups by display NAME, so the same person
-    // signing different names ("Gloria Pritchett" / "Grandma") shows as multiple
-    // contributors — same root issue fixed on the Dashboard roster 2026-06-08
-    // via gifterIdentityKey (@/lib/gifter-name). DEFERRED here: this surface
-    // keys TWO coupled maps (uniqueMap + giftDetailsByContributor) on this value
-    // AND sets `name: key`, so a clean re-key must change both in lockstep + pull
-    // the display name out separately. Helper is ready; do it as its own pass
-    // with a seeded name-variant case to verify (the demo's names are all
-    // consistent, so a re-key can't be visually confirmed here).
-    const key = displayGifterName(gift.senderName, (gift as any).isAnonymous);
+    // Group by stable IDENTITY (email-when-present), not display name — so one
+    // person signing different names ("Gloria Pritchett" once, "Grandma" next)
+    // is ONE contributor, and two different people who share a name stay
+    // separate. Same root fix as the Dashboard roster (gifterIdentityKey,
+    // 2026-06-08). BOTH this map and giftDetailsByContributor key on idKey so
+    // the render's detail lookup (by c.id) stays aligned; the DISPLAYED name
+    // resolves to the most-recent gift's name below.
+    const displayName = displayGifterName(gift.senderName, (gift as any).isAnonymous);
+    const idKey = gifterIdentityKey(gift.senderName, (gift as any).senderEmail, (gift as any).isAnonymous);
     const giftDate = (gift as any).settledAt || (gift as any).createdAt || null;
     const giftDateMs = giftDate ? new Date(String(giftDate)).getTime() : 0;
     const giftIsRecurring = !!(gift as any).parentContributionId;
     const giftEmailLower = String((gift as any).senderEmail || "").trim().toLowerCase();
-    const isAnon = key === "Anonymous" || !giftEmailLower;
+    // Thank-you anonymity is SEPARATE from grouping: a gift with no email can't
+    // be thanked, but a named no-email gifter ("The Johnsons", cash) still gets
+    // its own bucket via idKey. Only true-anonymous collapses to one row.
+    const isAnon = displayName === "Anonymous" || !giftEmailLower;
     const isOwnerGift = !!ownerEmailLower && giftEmailLower === ownerEmailLower;
     const ty = gift.id ? thankYousByGiftId?.get(String(gift.id)) : null;
     const tyStatus = String(ty?.status || "").toLowerCase();
     const isSent = tyStatus === "sent";
     const isDraft = !!ty && !isSent;
-    const ex = uniqueMap.get(key);
+    const ex = uniqueMap.get(idKey);
     if (ex) {
       ex.total += amt; ex.costBasisSlice += basisSlice; ex.count += 1;
       ex.date = undefined; ex.giftId = undefined; ex.message = undefined;
-      // Track the most recent gift's ID per contributor — used as the
-      // deep-link target when navigating to Memory Book. For multi-gift
-      // contributors (especially Anonymous, who can't be filtered by name),
-      // landing on the most recent gift's entry is more useful than dumping
-      // the user into the unfiltered timeline.
-      if (giftDateMs > (ex.mostRecentGiftDate || 0) && gift.id) {
-        ex.mostRecentGiftId = gift.id;
+      // Track the most recent gift per contributor — drives BOTH the displayed
+      // name (most-recent self-identification, for an email-collapsed gifter)
+      // and the Memory Book deep-link target. For multi-gift contributors
+      // (especially Anonymous), landing on the most recent gift's entry is more
+      // useful than dumping the user into the unfiltered timeline.
+      if (giftDateMs > (ex.mostRecentGiftDate || 0)) {
         ex.mostRecentGiftDate = giftDateMs;
+        ex.name = displayName;
+        if (gift.id) ex.mostRecentGiftId = gift.id;
       }
       if (giftIsRecurring) ex.isRecurring = true;
       if (isAnon) ex.isAnonymous = true;
@@ -714,8 +718,9 @@ function HoldingDetailSheetBody({
         else ex.missingCount += 1;
       }
     } else {
-      uniqueMap.set(key, {
-        name: key,
+      uniqueMap.set(idKey, {
+        id: idKey,
+        name: displayName,
         total: amt,
         costBasisSlice: basisSlice,
         count: 1,
@@ -830,7 +835,10 @@ function HoldingDetailSheetBody({
       const pct = original > 0 ? (delta / original) * 100 : 0;
       const giftIdStr = gift.id ? String(gift.id) : null;
       const giftDate = (gift as any).settledAt || (gift as any).createdAt || null;
-      const senderKey = displayGifterName(gift.senderName, (gift as any).isAnonymous);
+      // Keyed by the SAME identity as uniqueMap (gifterIdentityKey), so the
+      // contributor row's c.id lookup below finds its detail rows even when the
+      // person used different names across gifts.
+      const senderKey = gifterIdentityKey(gift.senderName, (gift as any).senderEmail, (gift as any).isAnonymous);
       // React key MUST be the allocation row's PK, not the gift's PK.
       // A single gift can produce multiple gift_allocations rows for the
       // same ticker (managed-mix splits, rebalance top-ups, partial
@@ -1135,7 +1143,7 @@ function HoldingDetailSheetBody({
                 //      goes somewhere useful when tapped.
                 const singleGiftId = c.count === 1 ? c.giftId : null;
                 const isMultiGift = c.count > 1;
-                const detailRows = isMultiGift ? (giftDetailsByContributor.get(c.name) || []) : [];
+                const detailRows = isMultiGift ? (giftDetailsByContributor.get(c.id) || []) : [];
                 const visibleDetailRows = detailRows.slice(0, 5);
                 const canExpandInline = isMultiGift && detailRows.length > 0;
                 const isExpanded = canExpandInline && expandedContributorName === c.name;
