@@ -180,7 +180,14 @@ export function MobileNav() {
       className="mobile-nav-shell fixed inset-x-3 bottom-3 z-50 md:hidden"
     >
       <div
-        className="grid items-center gap-1 px-2 py-2.5"
+        /* py-1.5, not py-2.5 (2026-06-07): the grid AND each tab both carried
+           vertical padding (grid py-2.5 + item py-2 = ~18px), which doubled up
+           into too much dead space above the icons / below the labels — the pill
+           read taller than it needed to. The per-item py-2 stays (it's the tap
+           target + active-pill sizing); only the redundant outer padding is
+           trimmed, so the rail hugs the icons+labels. The content-to-nav gap
+           was never the issue (page pb-24 ≈ an 8px gap to the rail). */
+        className="grid items-center gap-1 px-2 py-1.5"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
