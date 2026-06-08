@@ -724,17 +724,26 @@ function LabCollapse({
         style={{
           width: "100%", textAlign: "left", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-          padding: "16px 18px", background: "#FFFFFF",
-          border: "1px solid hsl(var(--kiddo-border))",
-          // Structural open-state (2026-06-07, founder-approved). Signal
-          // open/closed with DEPTH + SHAPE, not a color highlight (which reads
-          // "selected" and is decoration — against the lab's subtract ethos):
-          //   CLOSED → fully rounded + a soft shadow = a floating pill, "tap me".
-          //   OPEN   → bottom corners square + shadow gone = a settled "lid"
-          //            the content spills out of, flush to the panel below.
-          // The chevron reinforces; the gap to the content shrinks (below) so
-          // the open section reads as one connected unit, not a header plus a
-          // separate floating card. box-shadow transition rides .lab-tap.
+          padding: "16px 18px",
+          // Open/closed state (2026-06-07, founder-approved; tuned after a
+          // second look flagged the open state read QUIETER than closed — and
+          // open is where the action is, so it must be the more present one).
+          //   CLOSED → white + fully rounded + a soft shadow = a floating pill,
+          //            "I'm a control, tap me."
+          //   OPEN   → a whisper of warm evergreen tint + a hair-stronger
+          //            evergreen border + bottom corners squared + shadow gone =
+          //            "I'm active, and the content below belongs to me." The
+          //            tint is the POSITIVE active signal (not just the absence
+          //            of shadow, which alone can read as flat/disabled); the
+          //            squared bottom + tight gap (below) make it a lid the
+          //            content spills from. This is the reserved "final 5% tint"
+          //            from the structural pass — earned now that structure
+          //            alone left open too recessive. Kept a whisper so it
+          //            reads "expanded group," never "selected row."
+          background: open ? "hsl(var(--kiddo-evergreen) / 0.05)" : "#FFFFFF",
+          border: open
+            ? "1px solid hsl(var(--kiddo-evergreen) / 0.22)"
+            : "1px solid hsl(var(--kiddo-border))",
           borderRadius: open
             ? "var(--radius-container) var(--radius-container) 0 0"
             : "var(--radius-container)",
