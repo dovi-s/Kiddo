@@ -95,39 +95,34 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
       role="status"
       aria-live="polite"
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 text-xs sm:text-sm">
+      {/* Mobile: STACK — message on its own full-width row, the actions
+          (Create / Exit / dismiss) on a second row. The earlier all-widths
+          flex-row kept the actions BESIDE the message, squeezing the text into
+          a narrow column that wrapped to ~3 lines on a phone. flex-col fixes
+          that; sm: restores the single desktop row. Copy also tightened
+          ("The amounts are illustrative and" → just "Amounts") and the CTA
+          shortened to "Create your own →". 2026-06-07. */}
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:text-sm">
         <p className="leading-snug text-[hsl(var(--kiddo-evergreen))]">
-          {/* ONE concise line at every width (2026-06-07 rev). The earlier
-              version hid "Real funds work the same way" only on mobile
-              (hidden sm:inline) — but viewport-conditional copy is fragile and
-              confusing (the bar said different things at different widths). A
-              sticky bar wants one consistent, scannable message; the dropped
-              clause was the most expendable (a demo already implies it). Kept
-              the one genuinely useful caveat: the amounts reset. */}
           <span className="font-semibold">You're in the Dunphy demo.</span>{" "}
-          <span className="text-[hsl(var(--kiddo-evergreen))/0.85]">
-            The amounts are illustrative and reset periodically.
-          </span>{" "}
+          Amounts reset periodically.
+        </p>
+        <div className="flex shrink-0 items-center gap-3">
           <Link
             href="/get-started"
-            className="font-semibold underline underline-offset-2 hover:opacity-80"
+            className="whitespace-nowrap font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2 hover:opacity-80"
             data-testid="demo-banner-create-cta"
           >
-            Create your own fund →
+            Create your own →
           </Link>
-        </p>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {/* Explicit door out of the demo. A prospective user who wandered
-              into the seeded dashboard expects "home/back" to return them to
-              the marketing site, but in-app "Home" correctly means their
-              dashboard. This labeled control resolves that: logout() clears the
-              illustrative session and full-page-navigates to "/" (the real
-              homepage) as a fresh, logged-out visitor. Founder call 2026-06-01. */}
+          {/* Explicit door out of the demo. logout() clears the illustrative
+              session and full-page-navigates to "/" (the real homepage) as a
+              fresh, logged-out visitor. Founder call 2026-06-01. */}
           <button
             type="button"
             onClick={() => logout()}
             disabled={isLoggingOut}
-            className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.35)] px-3 py-1 font-semibold text-[hsl(var(--kiddo-evergreen))] transition-opacity hover:opacity-80 disabled:opacity-50"
+            className="whitespace-nowrap rounded-full border border-[hsl(var(--kiddo-evergreen)/0.35)] px-3 py-1 font-semibold text-[hsl(var(--kiddo-evergreen))] transition-opacity hover:opacity-80 disabled:opacity-50"
             data-testid="demo-banner-exit"
           >
             {isLoggingOut ? "Exiting…" : "Exit demo"}
@@ -135,7 +130,7 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
           <button
             type="button"
             onClick={handleDismiss}
-            className="rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-70 transition-opacity hover:opacity-100"
+            className="ml-auto rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-70 transition-opacity hover:opacity-100 sm:ml-0"
             aria-label="Dismiss demo banner"
             data-testid="demo-banner-dismiss"
           >
