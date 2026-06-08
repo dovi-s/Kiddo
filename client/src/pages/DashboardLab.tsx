@@ -11470,8 +11470,21 @@ export default function DashboardLab() {
                       {/* ── Bottom info ── */}
                       <div style={{ padding: "8px 10px 9px", background: "white", flexShrink: 0 }}>
                         <p style={{ fontSize: 11, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25,
-                          display: "-webkit-box", WebkitLineClamp: tileDateLabel ? 1 : 2, WebkitBoxOrient: "vertical" as const,
-                          overflow: "hidden", marginBottom: 2 }}>
+                          // 2 lines ALWAYS (2026-06-07, founder "names will be
+                          // long"): was 1 line when a date was present, which
+                          // truncated moderate names. The tile is column-flex
+                          // (photo flex:1, info flexShrink:0), so a 2-line name
+                          // just gives the photo a touch less height — no
+                          // overflow. Combined with the prefix-strip, almost
+                          // every name fits; only a genuinely huge custom name
+                          // clamps at 2 lines (and the tile taps to full detail).
+                          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+                          overflow: "hidden", marginBottom: 2 }}
+                          // title = full untrimmed name, so the ellipsis on a
+                          // genuinely-long custom name is never a dead end:
+                          // hover reveals it on desktop, tapping the tile opens
+                          // the detail with the full name on any device.
+                          title={event.name}>
                           {stripChildPossessivePrefix(event.name, recipientFirstNameDisplay)}
                         </p>
                         {tileDateLabel && (
