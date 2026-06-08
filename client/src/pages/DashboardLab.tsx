@@ -707,8 +707,20 @@ function LabCollapse({
           width: "100%", textAlign: "left", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
           padding: "16px 18px", background: "#FFFFFF",
-          border: "1px solid hsl(var(--kiddo-border))", borderRadius: "var(--radius-container)",
-          boxShadow: "0 1px 2px rgba(26,23,16,0.05)",
+          border: "1px solid hsl(var(--kiddo-border))",
+          // Structural open-state (2026-06-07, founder-approved). Signal
+          // open/closed with DEPTH + SHAPE, not a color highlight (which reads
+          // "selected" and is decoration — against the lab's subtract ethos):
+          //   CLOSED → fully rounded + a soft shadow = a floating pill, "tap me".
+          //   OPEN   → bottom corners square + shadow gone = a settled "lid"
+          //            the content spills out of, flush to the panel below.
+          // The chevron reinforces; the gap to the content shrinks (below) so
+          // the open section reads as one connected unit, not a header plus a
+          // separate floating card. box-shadow transition rides .lab-tap.
+          borderRadius: open
+            ? "var(--radius-container) var(--radius-container) 0 0"
+            : "var(--radius-container)",
+          boxShadow: open ? "none" : "0 1px 2px rgba(26,23,16,0.05)",
         }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
@@ -730,7 +742,12 @@ function LabCollapse({
             transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
             style={{ overflow: "hidden" }}
           >
-            <div style={{ marginTop: 12 }}>{children}</div>
+            {/* Gap shrunk 12 → 6 (2026-06-07): the content now hugs the open
+                header's squared, shadowless bottom edge so the section reads as
+                ONE connected unit — the structural "open" signal. Not 0,
+                because the content blocks carry their own card styling and a
+                hair of breathing room keeps two borders from kissing. */}
+            <div style={{ marginTop: 6 }}>{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
