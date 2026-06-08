@@ -6314,16 +6314,20 @@ export default function DashboardLab() {
                  and the gift count sits deliberately on the line below. Desktop
                  (>=640px) restores the single side-by-side row, where there's
                  room for both. */
-              /* Single row at every width (2026-06-07 rev): the identity and
-                 the gift-count now FIT together on mobile because the noise was
-                 cut — "· Active" dropped (it's the default; only Draft/Closed
-                 are signal) and "from" dropped from the count. So no more
-                 mobile column-stack and no mobile-hide; the social-proof count
-                 stays at the top where it lands hardest. flexShrink lets the
-                 identity ellipsis as the absolute last resort on a ~320px
-                 phone, but at real widths both sit comfortably on one line. */
-              .lab-hero-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-              .lab-hero-meta-id { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+              /* TITLE / SUBTITLE, the arrangement that ends the cycling
+                 (2026-06-07 final). The identity ("Luke's Fund · UTMA") and
+                 the gift-count can't share one phone row without the account
+                 TYPE truncating to make room for the count — and the type is
+                 identity-critical, the count supplementary, so UTMA must never
+                 be the thing sacrificed. So: avatar + a text column; the
+                 identity is the title line (full width of the column → "·
+                 UTMA" never truncates), the gift-count is a quiet muted
+                 subtitle beneath it (plain text, not a pill). Standard
+                 contact-card pattern: shows everything, truncates nothing, at
+                 every width. .lab-hero-meta is the avatar+column row;
+                 .lab-hero-meta-col is the text column. */
+              .lab-hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+              .lab-hero-meta-col { min-width: 0; flex: 1; }
               @media (prefers-reduced-motion: reduce) {
                 .lab-tap { transition: none !important; animation: none !important; }
                 /* Recent-gifter ring pulse, the face bloom, and the chart's
@@ -6392,7 +6396,6 @@ export default function DashboardLab() {
                       than the identity text. Centering aligns all three on one
                       axis. */}
                   <div className="lab-hero-meta">
-                    <div className="lab-hero-meta-id">
                       {/* Mobile-only — desktop already carries fund
                           identity in the DesktopSidebar's nav and fund
                           switcher, so a glyph here would be redundant
@@ -6459,12 +6462,14 @@ export default function DashboardLab() {
                           </div>
                         );
                       })()}
+                      <div className="lab-hero-meta-col">
                       {/* whiteSpace nowrap (2026-06-07): textOverflow ellipsis
                           is INERT without it, so a long fund name wrapped to a
                           ragged second line instead of truncating. nowrap makes
                           the existing ellipsis intent actually fire — one clean
-                          line, "…" only when genuinely too long. "Luke's Fund ·
-                          UTMA · Active" fits; only outliers truncate. */}
+                          line, "…" only when the fund NAME itself is genuinely
+                          long. "· UTMA" sits on the title line at full column
+                          width now, so the account type is never the casualty. */}
                       <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
                         {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
                         {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
@@ -6490,32 +6495,28 @@ export default function DashboardLab() {
                           );
                         })()}
                       </div>
-                    </div>
-                    {(() => {
-                      const validCount = gifts.filter(g => {
-                        const s = String(g.status || "").toLowerCase();
-                        return s !== "failed" && s !== "refunded";
-                      }).length;
-                      return validCount > 0 ? (
-                        // Shown on ALL widths again (2026-06-07 rev, founder
-                        // "was removing it really best?"): it's the strongest
-                        // social-proof stat and belongs at the top. It earns its
-                        // place on mobile now that the row's noise was cut
-                        // ("· Active" + "from"), so identity + count fit one
-                        // line. Don't remove what you love — remove the noise
-                        // crowding it.
-                        <span className="rounded-full" style={{
-                          background: "hsl(var(--kiddo-gold) / 0.25)", color: "hsl(var(--kiddo-gold-light))",
-                          padding: "2px 9px",
-                          fontSize: 10, fontWeight: 700, letterSpacing: "0.02em", flexShrink: 0,
-                        }}>
-                          {validCount} {validCount === 1 ? "gift" : "gifts"}
-                          {contributorCount > 0 && (
-                            <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
-                          )}
-                        </span>
-                      ) : null;
-                    })()}
+                      {/* Gift-count SUBTITLE beneath the identity (2026-06-07
+                          final): the strongest social-proof stat, kept at the
+                          top — but as a quiet muted line, not a gold pill, so
+                          it never competes with the title for the row and the
+                          account type above it never truncates to make room.
+                          Aligns under the name (inside the text column), shows
+                          on every width. */}
+                      {(() => {
+                        const validCount = gifts.filter(g => {
+                          const s = String(g.status || "").toLowerCase();
+                          return s !== "failed" && s !== "refunded";
+                        }).length;
+                        return validCount > 0 ? (
+                          <p style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-gold-light))", marginTop: 2, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }}>
+                            {validCount} {validCount === 1 ? "gift" : "gifts"}
+                            {contributorCount > 0 && (
+                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
+                            )}
+                          </p>
+                        ) : null;
+                      })()}
+                      </div>
                   </div>
 
                   {/* Fund-switch skeleton: when dashboard-summary is loading AND
@@ -10067,9 +10068,18 @@ export default function DashboardLab() {
                 }
                 if (count < 6 || !Number.isFinite(firstTs)) return null;
                 if (Date.now() - firstTs < 548 * 86400000) return null; // 18 months
+                // DURATION, not a year (2026-06-07, founder catch): "since 2018"
+                // sat near the fund-so-far "Nov 5, 2017 → today" and read as a
+                // mismatch (the fund predates the viewer's first gift — a real
+                // but double-take-inducing fact). A duration keeps the
+                // long-term-consistency weight with no specific year to clash,
+                // and reads warmer. floor() so "over N years" is never an
+                // overstatement; "over a year" for the just-past-18-months case.
+                const yearsSpan = Math.floor((Date.now() - firstTs) / (365.25 * 86400000));
+                const spanLabel = yearsSpan >= 2 ? `over ${yearsSpan} years` : "over a year";
                 return (
                   <p className="mt-1 text-[12.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]" data-testid="text-your-part-identity">
-                    {count} investments since {new Date(firstTs).getFullYear()}
+                    {count} investments {spanLabel}
                   </p>
                 );
               })()}
