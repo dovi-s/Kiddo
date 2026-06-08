@@ -624,7 +624,7 @@ export default function GiftSuccess() {
       })
       if (res.ok) {
         haptic("success")
-        toast({ title: "Reminder saved", description: `We'll email ${reminderEmail} when it's time to gift ${fundName} again.` })
+        toast({ title: "Reminder saved", description: `We'll remind you when it's time to gift ${fundName} again.` })
         trackGiftEvent("cta_click", { target: "gift_reminder_confirmed", amount: recurringAmount, frequency }, "gift_success_reminder")
         try { safeLocalSet("kora:dismissed:reminder-nudge", "1"); } catch {}
         setRecurringModalOpen(false)
@@ -814,7 +814,7 @@ export default function GiftSuccess() {
       // Popup blocker. The clipboard fallback is now the user's only path.
       toast({
         title: `${fundName}'s link copied`,
-        description: "Paste it into your browser to bookmark or save to home screen.",
+        description: "Paste it in your browser to bookmark it.",
       })
       return
     }
@@ -822,7 +822,7 @@ export default function GiftSuccess() {
     if (isMobileDevice) {
       toast({
         title: `${fundName}'s link is open`,
-        description: "Tap your browser's share button → Add to Home Screen on the new tab.",
+        description: "Tap Share, then Add to Home Screen.",
       })
     } else {
       const isMac = typeof navigator !== "undefined" && (navigator.platform?.toLowerCase().includes("mac") || navigator.userAgent.toLowerCase().includes("mac"))
@@ -865,7 +865,7 @@ export default function GiftSuccess() {
               Demo gift. No card was charged.
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--kiddo-evergreen))]/85">
-              You're in the Dunphy demo. Everything below is illustrative, and balances reset periodically.{" "}
+              Everything below is illustrative and resets periodically.{" "}
               <Link href="/get-started" className="font-semibold underline underline-offset-2">
                 Create a real fund →
               </Link>
@@ -1103,7 +1103,7 @@ export default function GiftSuccess() {
             <div className="inline-flex flex-col items-center rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-5 py-3 max-w-md">
               <p className="text-sm font-semibold text-foreground">Sent anonymously.</p>
               <p className="mt-1 text-xs text-muted-foreground text-center leading-relaxed">
-                {childFirstName ? `${childFirstName}'s` : "The"} family sees the gift and the amount, but not your name. It shows as &quot;Anonymous&quot; in the Memory Book and everywhere gifters are listed.
+                {childFirstName ? `${childFirstName}'s` : "The"} family sees the gift, not your name. You'll show as &quot;Anonymous&quot; everywhere.
               </p>
             </div>
           </motion.div>

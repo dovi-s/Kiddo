@@ -660,7 +660,7 @@ export default function GifterDashboard() {
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
       haptic("success");
-      toast({ title: "Recurring updated", description: `Now ${fmtMoney(amountNum)} ${editFrequency} to ${sch.fundName}. New terms apply next cycle.` });
+      toast({ title: "Recurring updated", description: `Now ${fmtMoney(amountNum)} ${editFrequency} to ${sch.fundName}, starting next cycle.` });
       setEditingId(null);
       refreshRecurring();
     } catch (err) {

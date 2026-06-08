@@ -162,7 +162,7 @@ export default function EventCreate() {
     if (file.size > MAX_BYTES) {
       toast({
         title: "Image too large",
-        description: "Cover photos need to be 10 MB or smaller. Pick a smaller image or compress this one first.",
+        description: "Cover photos must be 10 MB or smaller.",
         variant: "destructive",
       });
       return;

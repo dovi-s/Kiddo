@@ -776,7 +776,7 @@ function SsnCollectionNudge({
       toast({
         title: `${childFirst}'s SSN saved`,
         description: hasMultipleFunds
-          ? `Locked in for ${childFirst}'s UTMA account. Each child's account stays separate, and the IRS issues 1099s per account.`
+          ? `Locked in for ${childFirst}'s UTMA. Each child's account and 1099 stay separate.`
           : `Locked in for tax reporting. We don't store the full digits at rest.`,
       });
       setSsn("");
@@ -3727,7 +3727,7 @@ export default function Dashboard() {
                 : `${nudgeChild}'s fund is growing 🌱`;
         toast({
           title,
-          description: "A little more each month keeps compounding for years. Adjust anytime.",
+          description: "A little more each month compounds for years.",
           duration: 10000, // a soft nudge needs time to read + tap; not the 4.5s default
           action: (
             <ToastAction

@@ -94,7 +94,7 @@ export function PlusFirstMediaCelebrationBanner({
             Your first photo is on the timeline.
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Every photo, voice memo, and video you add lives here for the long run. The kid who eventually opens this Memory Book sees what you saw, in the moment you saw it.
+            Every photo and video you add stays for the kid who opens this one day, exactly as you saw it.
           </p>
         </div>
         <button

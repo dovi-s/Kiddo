@@ -28,8 +28,9 @@ type DemoActionDetail = { action: string; amount?: string | number; childName?: 
 const COPY: Record<string, (amt: string, child: string) => { title: string; description: string }> = {
   recurring: (amt, child) => ({
     title: `${amt ? `$${amt}/mo for ${child}` : "Recurring set up"} 🌱`,
-    description:
-      "This won't save here (the demo resets for each visitor), but that's exactly how you'd set it up for real.",
+    // Mobile-tight: one short clause, no parenthetical (the old 111-char,
+    // two-clause body wrapped ~4 lines on a phone). 2026-06-07.
+    description: "Won't save in the demo, but that's exactly how the real one works.",
   }),
   // Future: one_time, sell, buy, gift — add a builder + dispatch from its handler.
 };
@@ -55,7 +56,7 @@ export function DemoActionMoment() {
         toast({
           title,
           description,
-          duration: 11000, // a conversion beat needs time to read both lines + decide
+          duration: 8000, // a conversion beat, now one tight line + the CTA
           action: (
             <ToastAction
               altText="Start your own fund"

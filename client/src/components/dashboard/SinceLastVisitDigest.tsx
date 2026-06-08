@@ -25,6 +25,7 @@
 // login), so the beat is demonstrable. Dismissible via CollapseDismissSection.
 
 import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
@@ -249,11 +250,11 @@ export function SinceLastVisitDigest({
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 -mr-1 -mt-1 rounded-full p-1.5 text-muted-foreground/70 hover:text-foreground hover:bg-black/5 transition-colors"
           data-testid="since-last-visit-dismiss"
           aria-label="Dismiss the since-you-were-away summary"
         >
-          Dismiss
+          <X size={16} />
         </button>
       </div>
     </CollapseDismissSection>

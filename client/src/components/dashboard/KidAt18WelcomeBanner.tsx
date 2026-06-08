@@ -108,16 +108,16 @@ export function KidAt18WelcomeBanner({
           carries the separation. */}
       <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
         <li>
-          <span className="font-semibold text-foreground">Nothing was sold.</span> The investments stay exactly where they are. You decide what happens next: hold, sell, or reinvest.
+          <span className="font-semibold text-foreground">Nothing was sold.</span> Hold, sell, or reinvest. Your call now.
         </li>
         <li>
-          <span className="font-semibold text-foreground">The Memory Book is yours.</span> Every note, photo, voice memo, and the letter from your parent. Yours to read whenever.
+          <span className="font-semibold text-foreground">The Memory Book is yours.</span> Every note, photo, and the letter from your parent.
         </li>
         <li>
-          <span className="font-semibold text-foreground">It's a custodial brokerage account.</span> There can be tax to consider the year you take ownership. Talk to a CPA before any big changes.
+          <span className="font-semibold text-foreground">It's a custodial brokerage account.</span> Tax may apply the year you take over, so ask a CPA before big moves.
         </li>
         <li>
-          <span className="font-semibold text-foreground">This was your parent's view.</span> Same numbers, the same fund. It's fully yours to run now.
+          <span className="font-semibold text-foreground">This was your parent's view.</span> Same fund, fully yours now.
         </li>
       </ul>
       {/* Link to the year-by-year retrospective. The kid's first
