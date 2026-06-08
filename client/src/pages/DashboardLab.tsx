@@ -6578,20 +6578,18 @@ export default function DashboardLab() {
                           );
                         })()}
                       </div>
-                      {/* Gift-count SUBTITLE beneath the identity (2026-06-07
-                          final): the strongest social-proof stat, kept at the
-                          top — but as a quiet muted line, not a gold pill, so
-                          it never competes with the title for the row and the
-                          account type above it never truncates to make room.
-                          Aligns under the name (inside the text column), shows
-                          on every width. */}
+                      {/* Gift-count — MOBILE: a quiet subtitle beneath the
+                          identity (no room to sit beside it without truncating
+                          the account type). sm:hidden so it's mobile-only; the
+                          desktop copy sits on the right of the row (below). Same
+                          content, responsive POSITION — not conditional copy. */}
                       {(() => {
                         const validCount = gifts.filter(g => {
                           const s = String(g.status || "").toLowerCase();
                           return s !== "failed" && s !== "refunded";
                         }).length;
                         return validCount > 0 ? (
-                          <p style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-gold-light))", marginTop: 2, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }}>
+                          <p className="sm:hidden" style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-gold-light))", marginTop: 2, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }}>
                             {validCount} {validCount === 1 ? "gift" : "gifts"}
                             {contributorCount > 0 && (
                               <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
@@ -6600,6 +6598,25 @@ export default function DashboardLab() {
                         ) : null;
                       })()}
                       </div>
+                      {/* Gift-count — DESKTOP (>=640px): on the RIGHT of the row,
+                          where the wide hero has the space to balance label-left /
+                          stat-right (stacking it below would leave the right side
+                          empty and the count looking lost). hidden sm:block; the
+                          column is flex:1 so this is pushed to the edge. */}
+                      {(() => {
+                        const validCount = gifts.filter(g => {
+                          const s = String(g.status || "").toLowerCase();
+                          return s !== "failed" && s !== "refunded";
+                        }).length;
+                        return validCount > 0 ? (
+                          <p className="hidden sm:block" style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-gold-light))", whiteSpace: "nowrap" as const }}>
+                            {validCount} {validCount === 1 ? "gift" : "gifts"}
+                            {contributorCount > 0 && (
+                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
+                            )}
+                          </p>
+                        ) : null;
+                      })()}
                   </div>
 
                   {/* Fund-switch skeleton: when dashboard-summary is loading AND
