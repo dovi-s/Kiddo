@@ -42,9 +42,11 @@ import { ToastAction } from "@/components/ui/toast";
 import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
 import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
+import { markNotificationsRead } from "@/components/NotificationsPanel";
 
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
 const SESSION_KEY = "kiddo.demo.giftMoment.genericBeat.v1"; // generic beat: once per session (a fresh / incognito session resets it)
+const CAUGHT_UP_KEY = "kiddo.demo.caughtUp.v1";        // demo opens caught-up: once per session
 
 // Generic beat on a fund-SWITCH. Timed to land the gift as its OWN beat, just
 // AFTER the hero's roll cascade settles — not on top of it. On a switch the
@@ -83,6 +85,29 @@ export function DemoGiftMoment() {
   const timerRef = useRef<number | null>(null);
 
   const isDemo = Boolean((user as any)?.isDemoAccount);
+
+  // Demo opens CAUGHT UP. A fresh viewer has no notification read-state, so every
+  // seeded activity (8 years of gifts) counts as unread and the bell + Activity
+  // badges open at "9+/9+" — anxiety, not delight, on the conversion surface, and
+  // incoherent for someone who just arrived. Stamp the seeded backlog as read
+  // ONCE per session so the badges open calm (0). The single FRESH beat is then
+  // the live gift THIS component lands below — the badge ticks 0→1 as the gift
+  // visibly arrives ("I'm current… oh, one new gift"), surfaced by the
+  // since-last-visit digest. Fires before the gift beat (synchronous on mount vs
+  // the ~2.8s+ timer), so the live gift lands AFTER the stamp and counts as the
+  // one unread. Once-per-session so we never re-read that fresh gift; a fresh /
+  // incognito session re-experiences it clean. Real accounts untouched
+  // (isDemo-gated). 2026-06-08.
+  useEffect(() => {
+    if (!isDemo || typeof window === "undefined") return;
+    try {
+      if (window.sessionStorage.getItem(CAUGHT_UP_KEY)) return;
+      markNotificationsRead();
+      window.sessionStorage.setItem(CAUGHT_UP_KEY, "1");
+    } catch {
+      // sessionStorage blocked → skip; badges just open as before (no worse).
+    }
+  }, [isDemo]);
   // Includes /design-lab so the redesign surface gets the same live-gift beat as
   // /dashboard (it's being groomed to replace it). Without this, /design-lab had
   // no "watch it land" moment AND no gift-triggered hero roll. The only navigate()
