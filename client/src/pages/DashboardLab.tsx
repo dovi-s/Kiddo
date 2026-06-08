@@ -685,6 +685,7 @@ function LabCollapse({
   stat,
   marginTop = 16,
   testid,
+  openKey,
   children,
 }: {
   icon: ComponentType<{ size?: number; strokeWidth?: number; style?: any }>;
@@ -692,9 +693,26 @@ function LabCollapse({
   stat: ReactNode;
   marginTop?: number;
   testid?: string;
+  // When set, this collapse opens itself on a "kiddo:lab-collapse-open" event
+  // whose detail.key matches — so a jump-link elsewhere (e.g. the fund-so-far
+  // "recurring" row) can OPEN this section before scrolling to a target inside
+  // it. Without this, a closed collapse removes its content from the DOM
+  // (AnimatePresence), so the scroll had nothing to land on (founder: "the
+  // jump links don't work unless I manually open the dropdown first").
+  openKey?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!openKey) return;
+    // `e: any` — `Event` in this module is the Drizzle occasion type, not the
+    // DOM Event, so the DOM typing would collide. detail.key is the contract.
+    const handler = (e: any) => {
+      if (e?.detail?.key === openKey) setOpen(true);
+    };
+    window.addEventListener("kiddo:lab-collapse-open", handler as EventListener);
+    return () => window.removeEventListener("kiddo:lab-collapse-open", handler as EventListener);
+  }, [openKey]);
   return (
     <div style={{ marginTop }}>
       <button
@@ -1459,6 +1477,22 @@ export default function DashboardLab() {
       onetime: "card-one-time-contribution-v2",
       cash: "button-invest-cash",
     };
+    // OPEN the collapse that holds the target before scrolling — a closed
+    // LabCollapse removes its content from the DOM, so the scroll had nothing
+    // to land on (founder: jump links did nothing unless the dropdown was
+    // already open). recurring + one-time live in the "Your part" collapse;
+    // cash lives in the "fund so far" collapse (same one the links sit in, so
+    // it's already open — dispatching is harmless/idempotent). scrollToTestId
+    // polls for up to 6s, so the just-mounted target is caught the moment the
+    // section expands; open + smooth-scroll run together and read as one move.
+    const openKeyByTarget: Record<typeof target, string> = {
+      recurring: "yourpart",
+      onetime: "yourpart",
+      cash: "summary",
+    };
+    try {
+      window.dispatchEvent(new CustomEvent("kiddo:lab-collapse-open", { detail: { key: openKeyByTarget[target] } }));
+    } catch { /* event dispatch best-effort */ }
     haptic("selection");
     setSummaryHaloTarget(target);
     const cancel = scrollToTestId(testIdByTarget[target], {
@@ -7643,6 +7677,7 @@ export default function DashboardLab() {
                 <LabCollapse
                   marginTop={16}
                   testid="lab-summary-details"
+                  openKey="summary"
                   icon={Sprout}
                   title={isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}
                   // The closed-state stat is the summary OF this sheet, so it
@@ -10006,6 +10041,7 @@ export default function DashboardLab() {
             <LabCollapse
               marginTop={16}
               testid="lab-yourpart-details"
+              openKey="yourpart"
               icon={HandCoins}
               title="Your part of the story"
               stat={(() => {
