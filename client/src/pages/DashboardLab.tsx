@@ -46,28 +46,14 @@ function getChartRangeLabel(range: ChartRange): string {
   }
 }
 
-// Occasion names are auto-generated as "{Child}'s Birthday" / "{Child}'s 14th
-// Birthday" / "{Child}'s Driver's License". On the child's OWN dashboard
-// (under a "{Child}'s Occasions" header) that possessive prefix is redundant —
-// and it's exactly what overran the 140px tile into "Luke's Bi…". Strip a
-// leading "{child}'s " for TILE DISPLAY only (the stored event keeps its full
-// name) so "14th Birthday" fits clean. Handles both ASCII and curly
-// apostrophes; only strips when something remains; genuinely-long custom names
-// ("Trip to Japan 2027") have no prefix to cut and keep the graceful clamp.
+// Occasion-name display note: a strip-the-"{child}'s"-prefix experiment on the
+// occasion tiles was REVERTED 2026-06-07 — it made the tile say "Birthday"
+// while the quick link / gifter page / detail still said "Luke's Birthday"
+// (same occasion, two names — founder caught it). Full name everywhere now;
+// the tile's 2-line clamp + title tooltip handle length.
 // (2026-06-07, founder: long occasion names truncate.)
-function stripChildPossessivePrefix(name: string, childFirst?: string | null): string {
-  const child = String(childFirst || "").trim();
-  const raw = String(name || "");
-  if (!child) return raw;
-  for (const apos of ["'", "’"]) {
-    const prefix = `${child}${apos}s `;
-    if (raw.toLowerCase().startsWith(prefix.toLowerCase())) {
-      const stripped = raw.slice(prefix.length).trim();
-      return stripped.length > 0 ? stripped : raw;
-    }
-  }
-  return raw;
-}
+// (removed 2026-06-07 — see note above; full name everywhere, clamp + tooltip
+// handle length.)
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11490,12 +11476,17 @@ export default function DashboardLab() {
                           // clamps at 2 lines (and the tile taps to full detail).
                           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
                           overflow: "hidden", marginBottom: 2 }}
-                          // title = full untrimmed name, so the ellipsis on a
-                          // genuinely-long custom name is never a dead end:
-                          // hover reveals it on desktop, tapping the tile opens
-                          // the detail with the full name on any device.
+                          // FULL name, not stripped (2026-06-07 revert): a
+                          // strip-the-"Luke's" experiment made the tile say
+                          // "Birthday" while the quick link / gifter page /
+                          // detail still said "Luke's Birthday" — same occasion,
+                          // two names (founder caught it). Consistency wins; the
+                          // 2-line clamp already makes "Luke's Birthday" fit, so
+                          // the strip wasn't even needed. title = full name so a
+                          // genuinely-long custom name's ellipsis is recoverable
+                          // on hover (and tap opens the full detail).
                           title={event.name}>
-                          {stripChildPossessivePrefix(event.name, recipientFirstNameDisplay)}
+                          {event.name}
                         </p>
                         {tileDateLabel && (
                           <p style={{ fontSize: 9, color: "rgba(26,23,16,0.42)", lineHeight: 1.2, marginBottom: 4, fontWeight: 500 }}>
@@ -11596,7 +11587,7 @@ export default function DashboardLab() {
                                 <span style={{ fontSize: 38, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{sug.emoji || theme.emoji}</span>
                               </div>
                               <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                                <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>{stripChildPossessivePrefix(sug.name, recipientFirstNameDisplay)}</p>
+                                <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }} title={sug.name}>{sug.name}</p>
                                 <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>{sug.sub}</p>
                                 <p style={{ fontSize: 9, color: theme.inkColor, fontWeight: 600 }}>Tap to create</p>
                               </div>
@@ -11676,8 +11667,8 @@ export default function DashboardLab() {
                             </div>
                             {/* Bottom info */}
                             <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>
-                                {stripChildPossessivePrefix(sug.name, recipientFirstNameDisplay)}
+                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }} title={sug.name}>
+                                {sug.name}
                               </p>
                               <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>
                                 {sug.prefill.goalAmount
