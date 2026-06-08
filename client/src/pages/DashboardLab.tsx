@@ -4548,31 +4548,19 @@ export default function DashboardLab() {
       : prefiltered;
 
     if (filtered.length >= 2) {
-      const earliestGift = [...gifts].sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
-      const firstGiftSender = earliestGift ? displayGifterName(earliestGift.senderName, (earliestGift as any).isAnonymous) : null;
-      const firstGiftAmount = earliestGift ? parseFloat(earliestGift.netAmount || earliestGift.amount || "0") : 0;
-      let firstNonZeroFound = false;
-      // Chart markers are deliberately limited to the ONE origin beat — the
-      // first gift ("$50 from Grandpa"). Money-milestone dots ("Passed $1,000")
-      // were removed 2026-06-01 (founder call): on a young fund the line is
-      // mostly accumulated deposits, so a "Passed $X" pin celebrates "enough
-      // people gave," dressed as growth — gamified, not identity. The milestone
-      // CELEBRATION still fires on the smart-nudge card (MONEY_CROSS_THRESHOLDS
-      // is still used there); it just isn't pinned to the line. Clean line + one
-      // origin dot — the brand moment ("watch it land"), nothing else.
-      const rows = filtered.map((p) => {
-        const isFirstNonZero = !firstNonZeroFound && p.value > 0;
-        if (isFirstNonZero) firstNonZeroFound = true;
-        return {
-          ts: p.ts,
-          label: formatLabel(p.date),
-          principal: p.principal,
-          value: p.value,
-          event: isFirstNonZero
-            ? { label: "First gift", detail: firstGiftSender && firstGiftAmount > 0 ? `${formatCurrency(firstGiftAmount)} from ${firstGiftSender}` : "" }
-            : undefined,
-        };
-      });
+      // No chart dots. The origin "first gift" dot was removed 2026-06-08
+      // (founder call): it sat at the line's liftoff — i.e. it marked where the
+      // line already obviously begins — so at rest it was redundant. The origin
+      // STORY ("$X from {name}") still plays as a caption in the "Watch it grow"
+      // journey (journeyBeats builds "The first gift" straight from `gifts`),
+      // where it adds what the line can't. (Money-milestone dots were already
+      // dropped 2026-06-01; this clears the last one for a clean line.)
+      const rows = filtered.map((p) => ({
+        ts: p.ts,
+        label: formatLabel(p.date),
+        principal: p.principal,
+        value: p.value,
+      }));
       return addZeroBaseline(rows as Parameters<typeof addZeroBaseline>[0]);
     }
 
@@ -4593,21 +4581,14 @@ export default function DashboardLab() {
       const baselineRow = Number.isFinite(baselineTs) && baselineTs < filteredGiftPoints[0].ts
         ? [{ ts: baselineTs, label: formatLabel(new Date(baselineTs)), principal: 0, value: 0, event: undefined }]
         : [];
-      const giftRows = filteredGiftPoints.map((g, i) => {
+      const giftRows = filteredGiftPoints.map((g) => {
         cumulative += g.net;
         const val = Math.min(cumulative, principalBasis > 0 ? principalBasis : totalValue);
-        const senderLabel = displayGifterName(g.senderName, (g as any).isAnonymous);
         return {
           ts: g.ts,
           label: formatLabel(new Date(g.ts)),
           principal: val,
           value: val,
-          // Only the origin beat gets a dot — matches the snapshot path above.
-          // Per-gift "Gift" dots were dropped 2026-06-01 to keep one clean
-          // origin marker instead of a dot per contribution.
-          event: i === 0
-            ? { label: "First gift", detail: `${formatCurrency(g.net)} from ${senderLabel}` }
-            : undefined,
         };
       });
       return [...baselineRow, ...giftRows];
