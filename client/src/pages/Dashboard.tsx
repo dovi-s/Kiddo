@@ -1099,6 +1099,18 @@ function getGiftDisplayAmountForTransaction(transaction: DashboardTransaction, g
   return Number.isFinite(netAmount) ? netAmount : parseFloat(transaction.amount || "0");
 }
 
+// Smart-nudge session guard — MODULE scope on purpose (2026-06-07). The
+// nudge's dedup used to lean entirely on a localStorage key; when storage
+// silently no-ops (private mode, blocked storage, or a demo that resets it),
+// the claim never lands and EVERY pending timer toasts — the "3 at once" bug.
+// A module-level flag is claimed synchronously by the first timer to fire and
+// is immune to storage failures AND to multiple Dashboard mounts in one tab
+// (a useRef would reset per-mount; this survives the whole session). It's the
+// in-memory FIRST line of dedup; the 30-day localStorage key remains the
+// cross-session backstop. Resets only on a full page reload, which is the
+// correct "once per session" contract.
+let smartNudgeShownThisSession = false;
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -3697,6 +3709,15 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeFundId || !hasAutoInvestAccess || !activeAutoInvest || fundHistory.length < 2) return;
     if (isReadOnlyFund) return;
+    // Never on the demo (2026-06-07). The nudge's CTA is "adjust YOUR
+    // recurring" — a real-parent control a Dunphy-demo visitor can't
+    // meaningfully perform, and a self-promoting popup is noise on the
+    // conversion surface even when it fires exactly once. (Also the demo is
+    // where the storage-dedup was failing and producing the 3-at-once.)
+    if (isDemoAccount) return;
+    // In-memory dedup: once shown this session, never schedule again. This is
+    // the storage-independent guard; see smartNudgeShownThisSession above.
+    if (smartNudgeShownThisSession) return;
     // GLOBAL monthly key, not per-fund (founder catch 2026-06-04: "I keep
     // getting it, 3 times on the same page"). The old per-fund key meant a
     // Family parent tabbing Luke → Alex → Haley got THREE modals back to
@@ -3722,15 +3743,17 @@ export default function Dashboard() {
     const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
     const fireNudge = (payload: SmartNudgePayload) => {
       nudgeTimer = setTimeout(() => {
-        // Claim-before-show dedup (2026-06-07, founder saw the nudge twice):
-        // re-check the 30-day key AT FIRE time and claim it BEFORE toasting. If
-        // two timers are ever pending at once (a transient double-mount), the
-        // first to fire shows the nudge and any other bails. Previously the key
-        // was set AFTER the toast (8s in), leaving a window where a second fire
-        // doubled it. JS is single-threaded, so the first callback fully claims
-        // the slot before the second runs.
+        // Claim-before-show dedup. The IN-MEMORY flag is the primary guard
+        // (2026-06-07, "3 at once"): claimed synchronously before the toast, so
+        // if multiple timers are pending (storage no-op'd the localStorage
+        // claim, or multiple mounts), the first to fire shows it and the rest
+        // bail — regardless of whether storage works. JS is single-threaded, so
+        // the first callback fully claims the slot before the next runs. The
+        // localStorage key stays as the 30-day cross-session backstop.
+        if (smartNudgeShownThisSession) return;
         const prevShown = localStorage.getItem(NUDGE_KEY);
         if (prevShown && Date.now() - parseInt(prevShown, 10) < 30 * 24 * 60 * 60 * 1000) return;
+        smartNudgeShownThisSession = true;
         safeLocalSet(NUDGE_KEY, String(Date.now()));
         const nudgeChild = recipientFirstNameDisplay || "their fund";
         const title =
@@ -3903,7 +3926,7 @@ export default function Dashboard() {
       });
       return cancelNudgeTimer;
     }
-  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
+  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund, isDemoAccount]);
 
   const cashContext: CashContext = (() => {
     if (activeFund?.status !== "active") return "kyc_pending";
