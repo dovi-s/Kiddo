@@ -33,7 +33,11 @@ export function GlobalShareModal() {
   // Dashboard owns the share UX. Off-dashboard, this global instance
   // is the canonical handler.
   const [location] = useLocation();
-  const isOnDashboard = location.startsWith("/dashboard");
+  // /design-lab is the dashboard redesign fork and mounts its OWN share modal
+  // + listener, exactly like /dashboard — so it must be treated the same here,
+  // or BOTH this global modal and the lab's open on one event (founder: "I have
+  // to X out twice"). Covered for the port too (route becomes /dashboard).
+  const isOnDashboard = location.startsWith("/dashboard") || location.startsWith("/design-lab");
   const [open, setOpen] = useState(false);
   // Re-resolve the active fund id every time the modal opens. Keeps the
   // share data accurate when the parent has switched funds via the sidebar

@@ -266,9 +266,13 @@ export function MobileNav() {
                   // "a drop more even"): the shell has NO overflow:hidden, so at
                   // -8px the gold pill cleanly pokes ~4px ABOVE the rail's top
                   // edge — the FAB-breaking-the-bar look — without clipping.
-                  // Touch target follows the lift; touch-target class still
-                  // guarantees a 44px+ tappable area.
-                  transform: "translateY(-8px)",
+                  // Lift via `top`, NOT `transform` (founder: "the button keeps
+                  // lowering back down"): the cell is position:relative, and
+                  // whileTap={{ scale }} owns the transform — an inline
+                  // translateY would get clobbered by the tap animation and the
+                  // pill would sink back to the rail. `top` is untouched by the
+                  // scale, so the lift holds. touch-target keeps the 44px area.
+                  top: -8,
                 } : undefined}
                 data-testid={`nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
