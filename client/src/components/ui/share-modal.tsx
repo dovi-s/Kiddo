@@ -746,8 +746,11 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
           available px reads as "default tablet width" not "intentional
           mobile width". md:max-w-md bumps to 448px on tablet/desktop
           where there's room; mobile keeps the tighter 384 footprint. */}
-      <DialogContent className="max-w-sm md:max-w-md p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="p-0 gap-0 overflow-hidden sm:max-w-md" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{recipientIsOwner ? "Share your gift link" : recipientName ? `Share ${recipientName}'s gift link` : "Share gift link"}</DialogTitle>
+        {/* Mobile grab-handle — the native bottom-sheet affordance. Hidden on
+            desktop (centered modal). Decorative; flex-shrink-0 so it stays put. */}
+        <div aria-hidden className="sm:hidden" style={{ flexShrink: 0, margin: "8px auto 2px", width: 36, height: 4, borderRadius: 999, background: "rgba(26,23,16,0.15)" }} />
 
         {/* Header */}
         <div style={{
@@ -783,8 +786,10 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
           <ModalCloseButton onClick={onClose} label="Close" />
         </div>
 
-        {/* Scrollable body */}
-        <div style={{ overflowY: "auto", maxHeight: "calc(88vh - 68px)" }}>
+        {/* Scrollable body — flex-1 + minHeight:0 so it fills the flex-col sheet
+            and scrolls (instead of a fixed maxHeight, which broke scroll reach to
+            the bottom section under the bottom-sheet anchor). */}
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
           <AnimatePresence mode="wait">
             {view === "main" ? (
               <motion.div
