@@ -773,12 +773,20 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
               </p>
             </div>
           </div>
+          {/* 44px tap target (the codebase touch-target standard) while the
+              visible chip stays the 28px circle: the hit area is the transparent
+              button, the circle is the inner span. margin:-8 keeps the circle in
+              its original spot so layout/footprint is unchanged. aria-label added
+              (the bare X had no accessible name). */}
           <button
             type="button"
-            onClick={onClose}
-            style={{ width: 28, height: 28, borderRadius: 999, border: "none", background: "rgb(243,240,236)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            onClick={() => { haptic("selection"); onClose(); }}
+            aria-label="Close"
+            style={{ width: 44, height: 44, margin: -8, padding: 0, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >
-            <X size={14} color="rgb(100,92,86)" />
+            <span style={{ width: 28, height: 28, borderRadius: 999, background: "rgb(243,240,236)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={14} color="rgb(100,92,86)" />
+            </span>
           </button>
         </div>
 
