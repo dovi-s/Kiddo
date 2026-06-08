@@ -306,11 +306,16 @@ export function MobileNav() {
                   />
                 )}
                 <div className="relative">
+                  {/* App icon stroke scale: 2.0 resting / 2.5 active — matches the
+                      LabCollapse section icons so the nav reads as the same hand
+                      (resting was a thinner 1.8, which is what made nav icons feel
+                      "different" from the crisp section icons). Color stays role-based
+                      (muted inactive / primary active / ink-gold Share). */}
                   <Icon
                     className={`w-[22px] h-[22px] transition-colors duration-150 ${
                       isShare ? "text-[hsl(var(--kora-ink))]" : isActive ? "text-primary" : "text-muted-foreground"
                     }`}
-                    strokeWidth={isActive || isShare ? 2.5 : 1.8}
+                    strokeWidth={isActive || isShare ? 2.5 : 2.0}
                   />
                   {showUnreadDot && (
                     <span

@@ -714,7 +714,9 @@ export function DesktopSidebar() {
                 }`}
                 data-testid={`sidebar-nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
-                <Icon size={17} strokeWidth={item.isActive ? 2.2 : 1.8} />
+                {/* App icon stroke scale: 2.0 resting / 2.5 active (matches the
+                    LabCollapse section icons + the mobile nav). Was 1.8/2.2. */}
+                <Icon size={17} strokeWidth={item.isActive ? 2.5 : 2.0} />
                 <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
                 {showDot && (
                   <span

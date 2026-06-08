@@ -338,7 +338,7 @@ export function AppHeader() {
               data-testid="header-back-to-home"
               aria-label={backLabel}
             >
-              <ArrowLeft size={17} strokeWidth={2.2} />
+              <ArrowLeft size={17} strokeWidth={2} />
             </button>
           )}
           <h1
