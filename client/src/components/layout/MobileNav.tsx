@@ -262,11 +262,13 @@ export function MobileNav() {
                   // visual-hierarchy lever Cash App's $ button uses, just dialed
                   // restrained — no extra size, no scale tricks, just lift. The
                   // other tabs stay flat on the rail; Share is the one thing
-                  // that protrudes. Lift bumped -3px → -6px (2026-06-07,
-                  // founder: "elevate it a drop more") so the float is clearly
-                  // legible, not subliminal. Touch target follows the lift;
-                  // touch-target class still guarantees a 44px+ tappable area.
-                  transform: "translateY(-6px)",
+                  // that protrudes. Lift -3 → -6 → -8px (2026-06-07, founder:
+                  // "a drop more even"): the shell has NO overflow:hidden, so at
+                  // -8px the gold pill cleanly pokes ~4px ABOVE the rail's top
+                  // edge — the FAB-breaking-the-bar look — without clipping.
+                  // Touch target follows the lift; touch-target class still
+                  // guarantees a 44px+ tappable area.
+                  transform: "translateY(-8px)",
                 } : undefined}
                 data-testid={`nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
@@ -280,7 +282,9 @@ export function MobileNav() {
                     aria-hidden
                     className="absolute inset-0 rounded-2xl bg-[hsl(var(--kora-gold))]"
                     style={{
-                      boxShadow: "0 4px 12px -2px rgba(184,121,26,0.35), 0 2px 4px rgba(184,121,26,0.18)",
+                      // Deeper shadow to match the higher -8px lift — a thing
+                      // floating higher casts a larger, softer shadow.
+                      boxShadow: "0 8px 18px -3px rgba(184,121,26,0.42), 0 3px 6px rgba(184,121,26,0.20)",
                     }}
                   />
                 )}
