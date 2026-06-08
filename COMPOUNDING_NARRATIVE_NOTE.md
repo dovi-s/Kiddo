@@ -66,6 +66,22 @@ headline is never "10% returns" or "$3.8M."
    retirement: ~$Y (a 65-yr hypothetical)." The second number IS the born-invested
    / kid-2.0 story; honesty and strategy point the same way. Never headline the
    35/65-yr shock as if it were the 18-yr reality.
+6. **The doubling device — YES at ~10-year cadence, NEVER "every 7 years."**
+   (Added 2026-06-07; founder asked about the "SPY doubles every 7 years" frame.)
+   Rule of 72: "doubles every 7 years" = 72/7 ≈ **10.3%** — it silently imports
+   the 10% banned in #1. At our locked 7% net, money roughly **doubles about
+   every 10 years** (72/6.9 ≈ 10.4). The doubling FRAME is the single most
+   intuitive way to feel compounding and is encouraged — at the honest cadence
+   ("left invested, it doubles itself roughly every decade — the gift at 5 can
+   double before they're 15, and again by their mid-20s"). The "7-year" number
+   is forbidden on EVERY surface: it's not just optimistic, it contradicts the
+   one-conservative-number-everywhere discipline (projection disclaimer, at-65
+   hero, snapshot, horizon peg all = 7%), and a visible seam between surfaces is
+   the exact dial-manipulation guardrail #0 warns about. Literal S&P history
+   (~10% / ~7-yr doubling, gross/nominal/pre-fee/dividends-reinvested) is true
+   as PAST market fact but must never sit next to a projection of THEIR fund —
+   it reads as a forward promise and re-breaks the one-number rule; prefer not
+   citing it at all. Plan and project at 7%; never headline market history at 10%.
 
 ## The two strategic unlocks the brainstorm misses (the real value)
 
@@ -92,6 +108,9 @@ handoff.
   existing helper today.
 - **"Slow, then fast"** — framed honestly: the first stretch is the quiet
   foundation; the magic needs a lifetime, which is why keeping it past 18 matters.
+- **The doubling device (~every 10 years, 7% net)** — the most intuitive way to
+  feel compounding; pairs naturally with "slow then fast." Honest cadence only;
+  see guardrail #6 (never the 10%-implied "every 7 years").
 - **Gift-impact count-up** — animate to the 18-yr number; lifetime as optional
   "the long game" reveal.
 - **Ticker-abstract projection lane** ("historical market average," not "VTI")
