@@ -256,16 +256,17 @@ export function MobileNav() {
                 }}
                 className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-1.5 py-1 touch-target"
                 style={isShare ? {
-                  // Elevate the Share cell ~3px above the rail line +
-                  // give the gold pill a softly stronger drop-shadow so
-                  // it reads as "physically floating above the other
-                  // tabs." Same visual-hierarchy lever Cash App's $
-                  // button uses, just dialed restrained — no extra size,
-                  // no scale tricks, just lift. The other tabs stay flat
-                  // on the rail; Share is the one thing that protrudes.
-                  // Touch target follows the lift; still 44px+ tappable
-                  // area, just centered slightly higher.
-                  transform: "translateY(-3px)",
+                  // Elevate the Share cell above the rail line + give the gold
+                  // pill a softly stronger drop-shadow so it reads as
+                  // "physically floating above the other tabs." Same
+                  // visual-hierarchy lever Cash App's $ button uses, just dialed
+                  // restrained — no extra size, no scale tricks, just lift. The
+                  // other tabs stay flat on the rail; Share is the one thing
+                  // that protrudes. Lift bumped -3px → -6px (2026-06-07,
+                  // founder: "elevate it a drop more") so the float is clearly
+                  // legible, not subliminal. Touch target follows the lift;
+                  // touch-target class still guarantees a 44px+ tappable area.
+                  transform: "translateY(-6px)",
                 } : undefined}
                 data-testid={`nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
