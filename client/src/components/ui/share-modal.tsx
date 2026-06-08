@@ -746,11 +746,8 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
           available px reads as "default tablet width" not "intentional
           mobile width". md:max-w-md bumps to 448px on tablet/desktop
           where there's room; mobile keeps the tighter 384 footprint. */}
-      <DialogContent sheet className="p-0 gap-0 overflow-hidden sm:max-w-md" aria-describedby={undefined}>
+      <DialogContent className="max-w-sm md:max-w-md p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{recipientIsOwner ? "Share your gift link" : recipientName ? `Share ${recipientName}'s gift link` : "Share gift link"}</DialogTitle>
-        {/* Mobile grab-handle — the native bottom-sheet affordance. Hidden on
-            desktop where the modal is centered. Decorative. */}
-        <div aria-hidden className="sm:hidden mx-auto mt-2 mb-0.5 h-1 w-9 shrink-0 rounded-full bg-black/15" />
 
         {/* Header */}
         <div style={{
