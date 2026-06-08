@@ -702,15 +702,7 @@ function LabCollapse({
   openKey?: string;
   children: ReactNode;
 }) {
-  // THROWAWAY PREVIEW FLAG (2026-06-07). Flip to true to start every section
-  // OPEN so the founder can run the "story vs wall" scroll test before we
-  // commit to the chapters rebuild. This is NOT the final design — open
-  // accordions with chevrons are deliberately the "worst middle ground"; the
-  // real direction (if the test passes) is open chapters with NO chevrons +
-  // inline "Show more" on long sections. Set back to false to restore the
-  // shipped collapse behavior.
-  const LAB_COLLAPSE_PREVIEW_ALL_OPEN = true;
-  const [open, setOpen] = useState(LAB_COLLAPSE_PREVIEW_ALL_OPEN);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!openKey) return;
     // `e: any` — `Event` in this module is the Drizzle occasion type, not the
