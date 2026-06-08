@@ -1027,7 +1027,7 @@ export default function KidView() {
               )}
               {(content.unlockedAtMajorityCount ?? 0) > 0 && (
                 <p className="mt-2 text-xs italic text-[hsl(var(--kiddo-gold-ink))]/85">
-                  ✨ {content.unlockedAtMajorityCount} {content.unlockedAtMajorityCount === 1 ? "memory was saved" : "memories were saved"} specifically for today. Look for the gold marker as you scroll.
+                  {content.unlockedAtMajorityCount} {content.unlockedAtMajorityCount === 1 ? "memory was saved" : "memories were saved"} specifically for today. Look for the gold marker as you scroll.
                 </p>
               )}
               {/* Claim-account scaffold. Currently visits a placeholder
@@ -1251,7 +1251,7 @@ export default function KidView() {
                       >
                         {isUnlockedAt18 && (
                           <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
-                            ✨ Saved for today
+                            Saved for today
                           </p>
                         )}
                       {/* Memory Book inversion in Kid View: when there's a real

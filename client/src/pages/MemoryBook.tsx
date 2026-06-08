@@ -3165,9 +3165,9 @@ export default function MemoryBook() {
                         ? new Date(evt.eventDate).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })
                         : null;
                       const typeEmoji: Record<string, string> = {
-                        birthday: "🎂", graduation: "🎓", holiday: "🎄", baby_shower: "🍼", just_because: "💚", custom: "✨"
+                        birthday: "🎂", graduation: "🎓", holiday: "🎉", baby_shower: "🍼", just_because: "💚", custom: "🎁"
                       };
-                      const emoji = typeEmoji[evt.eventType || ""] ?? "✨";
+                      const emoji = typeEmoji[evt.eventType || ""] ?? "🎉";
                       return (
                         <button
                           key={evt.id}
@@ -3289,7 +3289,7 @@ export default function MemoryBook() {
                                       boxShadow: "0 2px 8px rgba(184,121,26,0.28)",
                                       letterSpacing: "-0.02em",
                                     }}>
-                                      {(childName || "").charAt(0).toUpperCase() || "✨"}
+                                      {(childName || "").charAt(0).toUpperCase() || "?"}
                                     </div>
                                   )
                                 ) : (
@@ -4772,7 +4772,7 @@ export default function MemoryBook() {
                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
                                     style={{ background: "hsl(var(--kiddo-evergreen)/0.12)", color: "hsl(var(--kiddo-evergreen))" }}
                                   >
-                                    ✨
+                                    💚
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">

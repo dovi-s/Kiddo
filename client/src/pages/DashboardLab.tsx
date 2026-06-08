@@ -484,10 +484,10 @@ function mixIdentityFor(childFirstName?: string | null, ownerMode = false): stri
 const EVENT_TYPE_EMOJI: Record<string, string> = {
   birthday:         "🎂",
   graduation:       "🎓",
-  holiday:          "🎄",
+  holiday:          "🎉",
   christmas:        "🎄",
   hanukkah:         "🕎",
-  religious_holiday: "✡️",
+  religious_holiday: "🙏",
   baby:             "🍼",
   baby_shower:      "🍼",
   wedding:          "💍",
@@ -499,7 +499,7 @@ const EVENT_TYPE_EMOJI: Record<string, string> = {
   trip:             "✈️",
   business:         "💼",
   emergency:        "🛡️",
-  custom:           "✨",
+  custom:           "🎁",
   just_because:     "💚",
 };
 function eventEmoji(eventType: string | null | undefined): string {
@@ -11517,9 +11517,9 @@ export default function DashboardLab() {
                   car: "🚗 Open for gifts",
                   graduation: "🎓 Open for gifts",
                   birthday: "🎂 Open for gifts",
-                  holiday: "🎄 Open for gifts",
+                  holiday: "🎉 Open for gifts",
                   baby_shower: "🍼 Welcome to the world",
-                  religious_holiday: "✡️ Open for gifts",
+                  religious_holiday: "🙏 Open for gifts",
                   just_because: "💛 Start the story",
                 };
                 const emptyStateByName = (eventName: string): string | null => {
@@ -11528,7 +11528,7 @@ export default function DashboardLab() {
                   if (n.includes("college") || n.includes("school")) return "📚 Open for gifts";
                   if (n.includes("graduation")) return "🎓 Open for gifts";
                   if (n.includes("hanukkah")) return "🕎 Open for gifts";
-                  if (n.includes("christmas") || n.includes("holiday")) return "🎄 Open for gifts";
+                  if (n.includes("christmas") || n.includes("holiday")) return "🎉 Open for gifts";
                   if (n.includes("birthday")) return "🎂 Open for gifts";
                   if (n.includes("trip") || n.includes("travel")) return "🌍 Open for gifts";
                   return null;

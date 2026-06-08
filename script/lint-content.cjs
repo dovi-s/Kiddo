@@ -374,6 +374,17 @@ const BANNED_ICONS = ["Sparkles", "SparkleBurst", "Wand2"];
         });
       }
     }
+    // The ✨ sparkle EMOJI is the same banned AI-slop tell as the Sparkles
+    // lucide icon, but the identifier ban above misses the raw glyph — it had
+    // crept into the occasion-emoji maps + KidView copy. codeOnly has comments
+    // stripped, so in-code notes that mention ✨ don't trip this.
+    if (codeOnly.includes("✨")) {
+      allIssues.push({
+        file: full,
+        issue: `Sparkle emoji (✨) — same banned AI-slop tell as the Sparkles icon (feedback_iconography_consistency.md). Use a semantic emoji (🎁 custom, 🎉 generic) or drop it.`,
+        excerpt: "(✨ found in non-comment code)",
+      });
+    }
   }
 })("client/src");
 

@@ -56,11 +56,11 @@ const GIFTING_TYPES = [
   // inconsistent, default-y mix against the warm brand. The emoji carries the
   // identity; the tile chrome stays consistent (matches the card placeholders).
   { id: "birthday",     label: "Birthday",     emoji: "🎂" },
-  { id: "holiday",      label: "Holiday",       emoji: "🎄" },
+  { id: "holiday",      label: "Holiday",       emoji: "🎉" },
   { id: "graduation",   label: "Graduation",    emoji: "🎓" },
   { id: "baby_shower",  label: "Baby Shower",   emoji: "🍼" },
   { id: "just_because", label: "Just Because",  emoji: "💚" },
-  { id: "custom",       label: "Custom",        emoji: "✨" },
+  { id: "custom",       label: "Custom",        emoji: "🎁" },
 ];
 
 const GOAL_TYPES = [
@@ -70,7 +70,7 @@ const GOAL_TYPES = [
   { id: "travel",    label: "Gap year",       emoji: "✈️", desc: "A trip. A year. A memory." },
   { id: "business",  label: "Business",       emoji: "💼", desc: "Seed capital for something real." },
   { id: "emergency", label: "Emergency fund", emoji: "🛡️", desc: "The safety net that changes everything." },
-  { id: "custom",    label: "Custom goal",    emoji: "✨", desc: "Something specific to them." },
+  { id: "custom",    label: "Custom goal",    emoji: "🎁", desc: "Something specific to them." },
 ];
 
 const GIFTING_GOAL_PRESETS = [

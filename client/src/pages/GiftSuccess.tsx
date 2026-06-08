@@ -61,7 +61,7 @@ const COMPANY_INFO: Record<string, { name: string }> = {
 const EVENT_TYPE_EMOJI: Record<string, string> = {
   birthday: "🎂",
   graduation: "🎓",
-  holiday: "🎄",
+  holiday: "🎉",
   christmas: "🎄",
   hanukkah: "🕎",
   baby: "🍼",
@@ -75,7 +75,7 @@ const EVENT_TYPE_EMOJI: Record<string, string> = {
   trip: "✈️",
   business: "💼",
   emergency: "🛡️",
-  custom: "✨",
+  custom: "🎁",
   just_because: "💚",
 }
 

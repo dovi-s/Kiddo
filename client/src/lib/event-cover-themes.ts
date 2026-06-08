@@ -49,11 +49,11 @@ const WARM_COVER: Omit<EventCoverTheme, "emoji"> = {
 // The emoji is the only per-type identity now. Keep every key that used to
 // resolve to a theme so no occasion loses its emoji. (event types + savings
 // goals + cultural traditions, all flattened into one lookup namespace.)
-const FALLBACK_EMOJI = "✨";
+const FALLBACK_EMOJI = "🎉";
 const EVENT_EMOJI: Record<string, string> = {
   // Event types (CreateEventSheet's EVENT_TYPES).
   birthday: "🎂",
-  holiday: "🎄",
+  holiday: "🎉",
   graduation: "🎓",
   baby_shower: "🍼",
   just_because: "💚",
@@ -85,7 +85,7 @@ const EVENT_EMOJI: Record<string, string> = {
   lunar_new_year: "🏮",
   juneteenth: "🕯️",
   kwanzaa: "🕯️",
-  custom: FALLBACK_EMOJI,
+  custom: "🎁",
 };
 
 // Emoji lookup priority (same specificity order as before the unify):
