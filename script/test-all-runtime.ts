@@ -22,6 +22,7 @@ const TEST_STEPS = [
   "test:memory-utils",
   "test:gift-draft",
   "test:gift-text-safety",
+  "test:gifter-identity",
   "test:activity-semantics",
   "test:mobile-gifter-logos",
   "test:ui:smoke",

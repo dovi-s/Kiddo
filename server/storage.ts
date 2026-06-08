@@ -298,7 +298,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createGift(gift: InsertGift): Promise<Gift> {
-    const [created] = await db.insert(gifts).values(gift).returning();
+    // Normalize sender_email at the single store chokepoint (trim + lowercase)
+    // so the DB is one clean source of truth for gifter identity. The one-time
+    // checkout trims but doesn't lowercase; the recurring path lowercases — this
+    // unifies them for EVERY create path (one-time, recurring, cash, demo). Every
+    // email-keyed read already lowercases, so this only removes latent drift and
+    // makes the email-based dedup (gifterIdentityKey) reliable. 2026-06-08.
+    const normalizedEmail = gift.senderEmail
+      ? String(gift.senderEmail).trim().toLowerCase() || null
+      : gift.senderEmail ?? null;
+    const [created] = await db.insert(gifts).values({ ...gift, senderEmail: normalizedEmail }).returning();
     return created;
   }
 

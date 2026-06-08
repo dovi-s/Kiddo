@@ -30,6 +30,41 @@ export const WEAK_NAME_LEADERS = new Set([
 
 const cleanToken = (w: string): string => w.toLowerCase().replace(/[.,]/g, "");
 
+/**
+ * Stable IDENTITY key for grouping a gifter across surfaces (the "who loves
+ * {kid}" roster, the holding-detail contributor list). Keyed by EMAIL when we
+ * have one, so the same person signing different names ("Gloria Pritchett" once,
+ * "Grandma" the next) collapses to ONE gifter — and two different people who
+ * happen to share a name (different emails) stay separate. Before this, those
+ * surfaces grouped by NAME, which fragmented one person into several rows and
+ * over-counted "N people gave" (founder catch 2026-06-08).
+ *
+ * Rules, chosen to preserve every existing grouping EXCEPT the two bugs above:
+ *  - Anonymous (flag / empty / "Anonymous" / "Someone who loves…") → one shared
+ *    "anon" bucket, matching the roster's prior behavior (a kid sees "Anonymous",
+ *    not N variants). Anonymous is NEVER email-keyed even if an email exists.
+ *  - Named + email → "e:<lowercased email>" (the dedup fix; also case/whitespace
+ *    robust, which is why gifts should store a normalized email — see
+ *    storage.createGift).
+ *  - Named, no email (manual/cash gifts) → "n:<lowercased name>" (UNCHANGED
+ *    grouping — same as the old name key, just prefixed).
+ *
+ * This decides IDENTITY only. The DISPLAYED name is the caller's job (resolve to
+ * the most-recent gift's name, with the account's preferredName overriding).
+ */
+export function gifterIdentityKey(
+  senderName?: string | null,
+  senderEmail?: string | null,
+  isAnonymous?: boolean,
+): string {
+  const n = String(senderName || "").trim();
+  const isAnon =
+    isAnonymous === true || !n || /^someone who loves/i.test(n) || n.toLowerCase() === "anonymous";
+  if (isAnon) return "anon";
+  const email = String(senderEmail || "").trim().toLowerCase();
+  return email ? `e:${email}` : `n:${n.toLowerCase()}`;
+}
+
 export function gifterShortName(name?: string | null): string {
   const trimmed = String(name || "").trim();
   if (!trimmed) return trimmed;

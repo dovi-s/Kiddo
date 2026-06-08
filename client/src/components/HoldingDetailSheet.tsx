@@ -672,6 +672,15 @@ function HoldingDetailSheetBody({
     amt: number,
     basisSlice: number,
   ) => {
+    // KNOWN: this contributor list groups by display NAME, so the same person
+    // signing different names ("Gloria Pritchett" / "Grandma") shows as multiple
+    // contributors — same root issue fixed on the Dashboard roster 2026-06-08
+    // via gifterIdentityKey (@/lib/gifter-name). DEFERRED here: this surface
+    // keys TWO coupled maps (uniqueMap + giftDetailsByContributor) on this value
+    // AND sets `name: key`, so a clean re-key must change both in lockstep + pull
+    // the display name out separately. Helper is ready; do it as its own pass
+    // with a seeded name-variant case to verify (the demo's names are all
+    // consistent, so a re-key can't be visually confirmed here).
     const key = displayGifterName(gift.senderName, (gift as any).isAnonymous);
     const giftDate = (gift as any).settledAt || (gift as any).createdAt || null;
     const giftDateMs = giftDate ? new Date(String(giftDate)).getTime() : 0;
