@@ -202,7 +202,7 @@ import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 // (lib/cultural-calendar.ts) is preserved for a proper post-launch home inside
 // the occasion-create flow; the dashboard no longer imports it.
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
-import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoLiveGift, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { publishFundLiveValue } from "@/lib/fund-live-value";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 // Dead-import audit 2026-05-25: QRCodeSVG was previously imported here
@@ -5423,6 +5423,40 @@ export default function DashboardLab() {
   const handleStartOneTimeContribution = async () => {
     const amt = parseFloat(oneTimeAmount);
     if (isNaN(amt) || amt < 5 || !activeFundId) return;
+    // DEMO: land it client-side instead of hitting the real checkout/redirect
+    // (2026-06-07). Gifts (GiftSuccess) and recurring already record a
+    // sessionStorage overlay so the prospect SEES their action land; the
+    // dashboard one-time was the one path that didn't — it went to the mocked
+    // gift checkout and the contribution never visibly arrived. Now it records
+    // a demo live gift (sender = the parent), so the hero balance rolls, "What
+    // {child} owns" updates, and — because the overlay carries `message` — the
+    // note even appears in the Memory Book. executionModel routes it to a
+    // holding (auto/pick) or cash, same as a real contribution. Session-scoped,
+    // never persisted, evaporates on tab close. Then fire the same conversion
+    // beat recurring uses. No real memory POST, no real Stripe.
+    if (isDemoAccount) {
+      const parentName = (user as any)?.preferredName?.trim()
+        || [user?.firstName, user?.lastName].filter(Boolean).join(" ")
+        || (isOwnerMode ? "You" : "A parent");
+      recordDemoLiveGift({
+        fundId: String(activeFundId),
+        senderName: parentName,
+        amount: String(amt),
+        executionModel: oneTimeExecutionModel,
+        ticker: oneTimeExecutionModel === "pick" && oneTimeTicker ? oneTimeTicker : undefined,
+        message: oneTimeMemoryNote.trim() || undefined,
+      });
+      haptic("success");
+      try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "onetime", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
+      // Close + reset the modal (mirrors the dialog's own onOpenChange reset).
+      setOneTimeModalOpen(false);
+      setOneTimeStep("amount");
+      setOneTimePaymentMethod("apple_pay");
+      setOneTimeMemoryNote("");
+      setOneTimeNoteSaved(false);
+      setOneTimeMedia(EMPTY_MEMORY_MEDIA);
+      return;
+    }
     setStartingOneTime(true);
     haptic("medium");
     try {
