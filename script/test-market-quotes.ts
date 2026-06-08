@@ -2,7 +2,7 @@
 import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from "node:child_process";
 
 const baseUrl = process.env.MARKET_QUOTES_BASE_URL || "http://127.0.0.1:5000";
-const HEALTH_TIMEOUT_MS = 90_000;
+const HEALTH_TIMEOUT_MS = 180_000; // remote dev DB cold start exceeds 90s; warm reuse short-circuits
 const HEALTH_POLL_MS = 1_000;
 
 type QuoteRow = {

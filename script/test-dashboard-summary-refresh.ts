@@ -3,13 +3,21 @@ import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from "node:chi
 import bcrypt from "bcryptjs";
 import { request, type APIRequestContext } from "playwright";
 import { db, pool } from "../server/db";
+import { storage } from "../server/storage";
 import { users } from "../shared/models/auth";
 import { funds as fundsTable, subscriptions } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
 const baseUrl = process.env.DASHBOARD_SUMMARY_BASE_URL || "http://127.0.0.1:5000";
-const HEALTH_TIMEOUT_MS = 90_000;
+// Cold start on a remote dev DB routinely exceeds 90s (every round-trip ~100ms,
+// ~20 workers boot). 180s avoids a false "timed out waiting for health" before
+// the server is actually up. 2026-06-08.
+const HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_POLL_MS = 1_000;
+// Set as soon as the run's fund is created, so main()'s finally can cascade-
+// delete it even if an assertion throws — no accumulation under the fixed QA
+// user across runs (isolation hardening, 2026-06-08).
+let createdFundId: string | null = null;
 
 function spawnNpm(args: string[], options: SpawnOptions): ChildProcess {
   if (process.platform === "win32") {
@@ -170,6 +178,7 @@ async function runChecks(api: APIRequestContext) {
     `fund create failed: ${fundCreate.status()} ${await fundCreate.text()}`,
   );
   const fund = await fundCreate.json();
+  createdFundId = fund.id;
 
   const processingGiftCreate = await api.post(`${baseUrl}/api/public/gifts`, {
     data: {
@@ -215,8 +224,17 @@ async function runChecks(api: APIRequestContext) {
   const beforeSummaryResponse = await api.get(`${baseUrl}/api/funds/${fund.id}/dashboard-summary`);
   assert(beforeSummaryResponse.status() === 200, `dashboard summary before refresh failed: ${beforeSummaryResponse.status()}`);
   const beforeSummary = await beforeSummaryResponse.json();
+  const hasSpotHolding = (summary: any) =>
+    (summary.holdings || []).some((h: any) =>
+      String(h.ticker || h.symbol || h.name || "").toUpperCase().includes("SPOT"));
   assert(Array.isArray(beforeSummary.holdings), "dashboard summary should include holdings array");
-  assert(beforeSummary.holdings.length === 0, "processing-only fund should have no holdings before investment");
+  // The SPOT investment must NOT exist yet — that's the refresh semantic under
+  // test. Scoped to SPOT (the ticker this test invests) rather than "zero
+  // holdings of any kind": the fixed QA user on a shared dev DB (+ parallel test
+  // runs) could otherwise carry an incidental holding that fails an unrelated
+  // assertion — the source of this test's flakiness on a long-running server.
+  // 2026-06-08.
+  assert(!hasSpotHolding(beforeSummary), "SPOT holding should not exist before investment");
   assert(
     Array.isArray(beforeSummary.gifts) &&
       beforeSummary.gifts.some((gift: any) => String(gift.id) === String(processingGift.id) && String(gift.status).toLowerCase() === "processing"),
@@ -234,11 +252,7 @@ async function runChecks(api: APIRequestContext) {
   const afterSummaryResponse = await api.get(`${baseUrl}/api/funds/${fund.id}/dashboard-summary`);
   assert(afterSummaryResponse.status() === 200, `dashboard summary after refresh failed: ${afterSummaryResponse.status()}`);
   const afterSummary = await afterSummaryResponse.json();
-  const spotHolding = (afterSummary.holdings || []).find((holding: any) => {
-    const symbol = String(holding.ticker || holding.symbol || holding.name || "").toUpperCase();
-    return symbol.includes("SPOT");
-  });
-  assert(spotHolding, "dashboard summary should include a SPOT holding after auto-invest refresh");
+  assert(hasSpotHolding(afterSummary), "dashboard summary should include a SPOT holding after auto-invest refresh");
   assert(
     Array.isArray(afterSummary.transactions) &&
       afterSummary.transactions.length >= (beforeSummary.transactions?.length || 0),
@@ -270,6 +284,13 @@ async function main() {
     await runChecks(api);
   } finally {
     await api?.dispose();
+    // Cascade-delete the run's fund (gifts, holdings, allocations, activities,
+    // events, …) so nothing accumulates under the fixed QA user between runs.
+    if (createdFundId) {
+      await storage
+        .deleteFundCascade(createdFundId)
+        .catch((e) => console.warn("[cleanup] deleteFundCascade failed:", (e as any)?.message || e));
+    }
     if (server?.pid) killProcessTree(server.pid);
     await pool.end().catch(() => null);
   }
