@@ -5515,7 +5515,17 @@ export default function Dashboard() {
         {/* "While you were away" returning-user digest — quantifies + attributes
             the gap since the last visit (gifts + growth). Owner/co-parent funds
             only (not a read-only previous-owner / viewer surface). 2026-06-05. */}
-        {!isReadOnlyFund && (
+        {/* Banner coordination (mirrors DashboardLab): the "while you were away"
+            digest is the highest-frequency top banner (every return visit), so it
+            DEFERS to a live event-driven banner — a co-parent acceptance or the
+            at-18 welcome — instead of stacking on top of it. Without this the
+            digest and "Claire accepted co-parent" rendered together. Plus-media is
+            intentionally NOT included (no recency window → would over-suppress; it's
+            rare enough to coexist). 2026-06-07. */}
+        {!isReadOnlyFund
+          && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance)
+          && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt)
+          && (
           <SinceLastVisitDigest
             fundId={activeFundId}
             currentValue={rawTotalValue}

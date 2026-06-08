@@ -73,7 +73,11 @@ export function DemoGiftMoment() {
   const timerRef = useRef<number | null>(null);
 
   const isDemo = Boolean((user as any)?.isDemoAccount);
-  const onDashboard = location === "/dashboard" || location === "/";
+  // Includes /design-lab so the redesign surface gets the same live-gift beat as
+  // /dashboard (it's being groomed to replace it). Without this, /design-lab had
+  // no "watch it land" moment AND no gift-triggered hero roll. The only navigate()
+  // is on a toast tap, so firing here never yanks the viewer off the page.
+  const onDashboard = location === "/dashboard" || location === "/" || location === "/design-lab";
 
   useEffect(() => {
     if (!isDemo || !onDashboard) return;

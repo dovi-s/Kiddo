@@ -88,6 +88,7 @@ export function isMarketingRoute(path: string): boolean {
 // When you add a new authenticated app page, add its path here.
 const APP_SURFACE_EXACT = new Set<string>([
   "/dashboard",
+  "/design-lab", // redesign fork of /dashboard — same demo chrome (banner, etc.)
   "/activity",
   "/events",
   "/event/create",
