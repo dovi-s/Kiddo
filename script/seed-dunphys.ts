@@ -131,8 +131,8 @@ const ACCOUNTS = [
     profileImageUrl: "https://arianadickson.wordpress.com/wp-content/uploads/2014/04/webct_upload_applet.jpg",
   },
   { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const, profileImageUrl: "https://openpsychometrics.org/tests/characters/test-resources/pics/MF/1.jpg" },
-  { email: "gloria@dunphyfamily.com",   firstName: "Gloria",   lastName: "Pritchett", preferredName: "Gloria",   role: "gifter" as const },
-  { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const },
+  { email: "gloria@dunphyfamily.com",   firstName: "Gloria",   lastName: "Pritchett", preferredName: "Gloria",   role: "gifter" as const, profileImageUrl: "https://static0.srcdn.com/wordpress/wp-content/uploads/2018/11/Modern-Family-Gloria.jpg?q=50&fit=crop&w=825&dpr=1.5" },
+  { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const, profileImageUrl: "https://i.ytimg.com/vi/hVvQTyeLyp0/maxresdefault.jpg" },
   { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const, profileImageUrl: "https://medias.spotern.com/spots/w640/162/162897-1537345352.jpg" },
   { email: "manny@dunphyfamily.com",    firstName: "Manny",    lastName: "Delgado",   preferredName: "Manny",    role: "gifter" as const, profileImageUrl: "https://cdn1.edgedatg.com/aws/v2/abc/ModernFamily/person/737059/0742ee201d7c06d751852e65200c9750/362x362-Q90_0742ee201d7c06d751852e65200c9750.jpg" },
   // Haley is the graduated adult: past CA majority (21), her fund is transferred
@@ -140,7 +140,7 @@ const ACCOUNTS = [
   // upsertUser — she owns a live individual investing account now, not a
   // parent-custodial one. Logging in as her renders the REAL post-handoff adult
   // experience (the demo is the real app, not a mock view).
-  { email: "haley@dunphyfamily.com",    firstName: "Haley",    lastName: "Dunphy",    preferredName: "Haley",    role: "graduate" as const },
+  { email: "haley@dunphyfamily.com",    firstName: "Haley",    lastName: "Dunphy",    preferredName: "Haley",    role: "graduate" as const, profileImageUrl: "https://cdn.mos.cms.futurecdn.net/RYvAQd4QgRDhP3qKVPEvNK.jpg" },
 ];
 
 // Three Dunphy kids. Ages locked relative to today so the demo always
@@ -166,6 +166,7 @@ function birthdateForAge(years: number, monthsBack = 0): string {
 const KIDS = [
   {
     firstName: "Haley",
+    childPhotoUrl: "https://cdn.mos.cms.futurecdn.net/RYvAQd4QgRDhP3qKVPEvNK.jpg",
     lastName: "Dunphy",
     pronoun: "she" as const,
     majorityAge: 21,
@@ -182,6 +183,7 @@ const KIDS = [
   },
   {
     firstName: "Alex",
+    childPhotoUrl: "https://i.pinimg.com/474x/c8/51/f7/c851f724bd9afecb195095d5c44220b2.jpg",
     lastName: "Dunphy",
     pronoun: "she" as const,
     majorityAge: 21,
