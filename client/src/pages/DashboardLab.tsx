@@ -124,6 +124,7 @@ import {
   History,
   ChevronRight,
   ChevronDown,
+  Mail,
   X,
   PieChart,
   HandCoins,
@@ -12885,13 +12886,16 @@ export default function DashboardLab() {
                     >
                       <div style={{
                         width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-                        background: parentLetter ? "rgba(26,61,43,0.1)" : "hsl(43,85%,95%)",
+                        background: "hsl(var(--kiddo-evergreen) / 0.1)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
-                          <rect x="2" y="4" width="16" height="12" rx="2" stroke={parentLetter ? "hsl(143,47%,28%)" : "hsl(43,72%,40%)"} strokeWidth="1.5"/>
-                          <path d="M2 7l8 5 8-5" stroke={parentLetter ? "hsl(143,47%,28%)" : "hsl(43,72%,40%)"} strokeWidth="1.5" strokeLinecap="round"/>
-                        </svg>
+                        {/* lucide Mail @2 — was a custom 1.5-stroke envelope, off the icon
+                            system + scale (same fix as the bell). Evergreen in BOTH states:
+                            gold removed to keep it reserved for the Share/primary action
+                            (this screen already spends gold on Share + the "on track" pill;
+                            a gold letter card would over-use it). State reads from the copy +
+                            pill ("Start writing" vs "Edit"), not color. */}
+                        <Mail size={18} strokeWidth={2} aria-hidden style={{ color: "hsl(var(--kiddo-evergreen))" }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {parentLetter ? (() => {
@@ -12923,8 +12927,8 @@ export default function DashboardLab() {
                       </div>
                       <div style={{
                         fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-                        color: parentLetter ? "hsl(143,47%,28%)" : "hsl(43,72%,38%)",
-                        background: parentLetter ? "rgba(26,61,43,0.08)" : "hsl(43,85%,94%)",
+                        color: "hsl(var(--kiddo-evergreen))",
+                        background: "hsl(var(--kiddo-evergreen) / 0.08)",
                         padding: "5px 11px", borderRadius: 20,
                       }}>
                         {parentLetter ? "Edit" : "Start writing"}
@@ -12950,9 +12954,7 @@ export default function DashboardLab() {
                     <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(26,23,16)" }}>What happens when {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} turns` : `${childPronouns.subject} turn${childPronouns.singular ? "s" : ""}`} {majorityAge}?</p>
                     <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>How the fund transfers, what {recipientFirstNameDisplay || childPronouns.subject} see{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} first.</p>
                   </div>
-                  <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M7 4l6 6-6 6" stroke="rgba(26,23,16,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <ChevronRight size={16} aria-hidden style={{ flexShrink: 0, color: "rgba(26,23,16,0.3)" }} />
                 </button>
               </motion.div>
             </motion.section>
