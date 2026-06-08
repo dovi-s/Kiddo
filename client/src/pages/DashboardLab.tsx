@@ -2501,6 +2501,18 @@ export default function DashboardLab() {
     duration: 1200,
   });
 
+  // Hero balance never overflows on mobile (2026-06-07, founder: "will it fit
+  // at millions?"). formatCurrency always shows cents, so a 7-figure value
+  // ("$1,234,567.89", ~13 glyphs) would blow past a phone column at the clamp's
+  // mobile size. Drop the cents at scale (>= $100k): on a six/seven-figure
+  // balance cents are noise anyway, and "$1,234,568" (~10 glyphs) fits. Small
+  // balances keep cents (the count-up's charm). A count-up crossing $100k flips
+  // the format once — harmless. The projection pills already use no-cents.
+  const formatHeroBalance = (v: number) =>
+    Math.abs(v) >= 100000
+      ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v)
+      : formatCurrency(v);
+
   // (The old presentational "demo gift landed" hero-roll signal was retired in
   // the demo-sandbox work: a recorded demo gift now lands in a holding, so the
   // hero rolls off the REAL number via the count-up. No `kiddo:demo-gift-landed`
@@ -6906,8 +6918,8 @@ export default function DashboardLab() {
                         aria-live={isScrubbing || balanceAnimating ? "off" : "polite"}
                       >
                         {isScrubbing
-                          ? formatCurrency(scrubbedTrendPoint!.value)
-                          : formatCurrency(displayHeroBalance)}
+                          ? formatHeroBalance(scrubbedTrendPoint!.value)
+                          : formatHeroBalance(displayHeroBalance)}
                       </motion.div>
 
                       {/* LAB: hero growth sparkline REMOVED. It used
