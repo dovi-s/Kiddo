@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, ChevronDown, Plus, Share2, User } from "lucide-react";
+import { ArrowLeft, Bell, Check, ChevronDown, Plus, Share2, User } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT } from "@/hooks/use-active-fund";
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav, isFundSubPage } from "@/lib/page-scope";
@@ -531,10 +531,10 @@ export function AppHeader() {
             data-testid="header-bell"
             aria-label="Notifications"
           >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2a6 6 0 00-6 6v3l-1.5 2.5h15L16 11V8a6 6 0 00-6-6z" stroke="#1A3D2B" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-              <path d="M8 16a2 2 0 004 0" stroke="#1A3D2B" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
+            {/* lucide Bell on the app icon scale (size 16, stroke 2, evergreen).
+                Replaced a custom hand-drawn SVG bell at strokeWidth 1.4 that read
+                thinner/lighter than the rest of the lucide system next to it. */}
+            <Bell size={16} strokeWidth={2} style={{ color: "rgb(26,61,43)" }} />
             {unreadCount > 0 && (
               <div
                 className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white px-0.5 text-[9px] font-black text-white"
