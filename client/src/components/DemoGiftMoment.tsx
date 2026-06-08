@@ -55,6 +55,16 @@ const SESSION_KEY = "kiddo.demo.giftMoment.genericBeat.v1"; // generic beat: onc
 const SWITCH_DELAY_MS = 2_800;
 const JUST_SENT_DELAY_MS = 3_000; // loop closure — they came back to feel it; don't make them wait
 
+// Dwell fallback for the generic beat. The beat is normally switch-triggered,
+// but a prospect who explores ONE fund and never switches would otherwise never
+// see the signature "watch it land" moment. After ~25s of ACTIVE (tab-visible)
+// dwell with no switch, let the gift arrive on the current fund. 25s is past the
+// opening roll/digest crush (~4s) so it reads as unprompted, yet short enough to
+// catch a typical demo session before the prospect leaves (60–120s would fire
+// into an empty room for most). Resets — not accumulates — if the tab hides.
+const DWELL_DELAY_MS = 25_000;
+const DWELL_SETTLE_MS = 500; // small beat after dwell elapses (no fresh roll to wait on, unlike a switch)
+
 // Per-child gift that matches the seeded personas, so the ambient beat reads
 // real ("Gloria added $75 to Haley"). Falls back to a generic warm gifter.
 const DEMO_GIFTS: Record<string, { sender: string; amount: string; ticker: string }> = {
@@ -209,6 +219,7 @@ export function DemoGiftMoment() {
     // real fund-switch has happened. Beat 1 (loop-closure) is unaffected — it
     // arms on landing as usual.
     let switchArmed = false;
+    let dwellTimer: number | null = null;
 
     const clear = () => {
       if (timerRef.current != null) {
@@ -227,9 +238,29 @@ export function DemoGiftMoment() {
         fireOnce();
       }, currentDelay);
     };
+    const clearDwell = () => {
+      if (dwellTimer != null) { window.clearTimeout(dwellTimer); dwellTimer = null; }
+    };
+    // No-switch dwell fallback (generic beat only): flip the same `switchArmed`
+    // gate the switch handler uses after ~25s of visible dwell, then fire
+    // promptly. Whichever happens first — a switch or the dwell — wins, and
+    // once-per-session still holds (fireOnce sets SESSION_KEY). Unlike a switch,
+    // this can land on the LANDING fund; that's intended (25s in is well past the
+    // opening crush, so it reads as "a gift just arrived," not "my click did it").
+    const armDwell = () => {
+      if (!isGenericBeat || switchArmed || fired || dwellTimer != null) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      dwellTimer = window.setTimeout(() => {
+        dwellTimer = null;
+        if (fired || switchArmed) return;
+        switchArmed = true;
+        currentDelay = DWELL_SETTLE_MS;
+        arm();
+      }, DWELL_DELAY_MS);
+    };
     const onVis = () => {
-      if (document.visibilityState === "visible") arm();
-      else clear(); // tabbed away mid-countdown → reset; re-arms fresh on return
+      if (document.visibilityState === "visible") { arm(); armDwell(); }
+      else { clear(); clearDwell(); } // tabbed away mid-countdown → reset; re-arms fresh on return
     };
 
     // Fund-switch handler — the heart of "land = roll, switch = gift". On a REAL
@@ -245,15 +276,18 @@ export function DemoGiftMoment() {
       lastFundId = id;
       switchArmed = true; // a real switch happened — the gift may now land
       currentDelay = SWITCH_DELAY_MS;
+      clearDwell(); // a switch takes over from the dwell fallback
       clear();
       arm();
     };
 
     arm(); // no-op for the generic beat until a switch; arms beat 1 on landing
+    armDwell(); // start the no-switch dwell fallback for the generic beat
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, onFundChange);
     return () => {
       clear();
+      clearDwell();
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, onFundChange);
     };
