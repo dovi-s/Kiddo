@@ -180,14 +180,14 @@ export function MobileNav() {
       className="mobile-nav-shell fixed inset-x-3 bottom-3 z-50 md:hidden"
     >
       <div
-        /* py-1.5, not py-2.5 (2026-06-07): the grid AND each tab both carried
-           vertical padding (grid py-2.5 + item py-2 = ~18px), which doubled up
-           into too much dead space above the icons / below the labels — the pill
-           read taller than it needed to. The per-item py-2 stays (it's the tap
-           target + active-pill sizing); only the redundant outer padding is
-           trimmed, so the rail hugs the icons+labels. The content-to-nav gap
-           was never the issue (page pb-24 ≈ an 8px gap to the rail). */
-        className="grid items-center gap-1 px-2 py-1.5"
+        /* py-1 (2026-06-07): the grid AND each tab both carried vertical
+           padding (originally grid py-2.5 + item py-2 = ~18px each side),
+           doubling into too much dead space above the icons / below the labels.
+           Trimmed the grid to py-1 here AND each tab to py-1 (below); the
+           `touch-target` class keeps every tab ≥44px tappable regardless, so
+           the rail hugs the icons+labels without shrinking the hit area. The
+           content-to-nav gap was never the issue (page pb-24 ≈ an 8px gap). */
+        className="grid items-center gap-1 px-2 py-1"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -254,7 +254,7 @@ export function MobileNav() {
                     handleNavTouch(item.href, activeFund?.id);
                   }
                 }}
-                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-1.5 py-2 touch-target"
+                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-1.5 py-1 touch-target"
                 style={isShare ? {
                   // Elevate the Share cell ~3px above the rail line +
                   // give the gold pill a softly stronger drop-shadow so
