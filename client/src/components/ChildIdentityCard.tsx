@@ -70,7 +70,14 @@ export function ChildIdentityCard({
           body: JSON.stringify({ dataUrl: reader.result }),
         });
         const payload = await res.json().catch(() => ({}));
-        if (res.ok) {
+        // Demo sandbox returns 200 + {saved:false} WITHOUT persisting (a shared
+        // demo account can't keep one visitor's uploaded child photo — privacy /
+        // COPPA). Tell the truth instead of a false "Photo updated" that writes
+        // an undefined url and then vanishes on refetch. Real funds return
+        // {url}, no `saved` field, so they take the success branch.
+        if (res.ok && payload?.saved === false) {
+          toast({ title: "Not saved in the demo", description: payload?.message || "Changes aren't saved in the demo, but they will be in your own fund." });
+        } else if (res.ok) {
           queryClient.setQueryData(["/api/funds"], (old: any[]) =>
             (old || []).map((f: any) => f.id === fund.id ? { ...f, childPhotoUrl: payload.url } : f),
           );
@@ -100,14 +107,19 @@ export function ChildIdentityCard({
         method: "DELETE",
         credentials: "include",
       });
-      if (res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      // Same demo-sandbox honesty as the upload: a DELETE is a hard write, so
+      // the demo returns 200 + {saved:false} without persisting. Don't claim
+      // "Photo removed" when nothing changed.
+      if (res.ok && payload?.saved === false) {
+        toast({ title: "Not saved in the demo", description: payload?.message || "Changes aren't saved in the demo, but they will be in your own fund." });
+      } else if (res.ok) {
         queryClient.setQueryData(["/api/funds"], (old: any[]) =>
           (old || []).map((f: any) => f.id === fund.id ? { ...f, childPhotoUrl: null } : f),
         );
         haptic("success");
         toast({ title: "Photo removed" });
       } else {
-        const payload = await res.json().catch(() => ({}));
         toast({ title: "Could not remove photo", description: payload?.error || "Please try again.", variant: "destructive" });
       }
     } catch {
