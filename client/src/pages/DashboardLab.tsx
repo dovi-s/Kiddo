@@ -2513,6 +2513,20 @@ export default function DashboardLab() {
       ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v)
       : formatCurrency(v);
 
+  // Length-aware hero font (2026-06-07): the clamp handles WIDTH, but a very
+  // long number needs a smaller ceiling so it fits even on a 320px phone.
+  // Sized off the LIVE/destination value's length (not the animating value) so
+  // the font is stable through the whole count-up — it never resizes mid-roll
+  // (intermediate count-up values are shorter, so they fit the final size).
+  // Realistic seven figures get the comfortable middle tier; eight/nine figures
+  // (fantasy for a kid's fund, but now bulletproof) get the smallest.
+  const heroBalanceFontSize = (() => {
+    const len = formatHeroBalance(rawTotalValue).length;
+    if (len >= 12) return "clamp(2.3rem, 9.5vw, 54px)"; // $100M+
+    if (len >= 10) return "clamp(2.7rem, 11vw, 60px)";  // $1M–$99M
+    return "clamp(3.1rem, 12vw, 64px)";                  // up to $999,999
+  })();
+
   // (The old presentational "demo gift landed" hero-roll signal was retired in
   // the demo-sandbox work: a recorded demo gift now lands in a holding, so the
   // hero rolls off the REAL number via the count-up. No `kiddo:demo-gift-landed`
@@ -6893,13 +6907,13 @@ export default function DashboardLab() {
                           // LAB move 1: DOMINANT hero. The critique's "willing
                           // to dedicate half the screen to the number." 50 -> 64,
                           // tighter tracking. One object, decisively the king.
-                          // FLUID (2026-06-07, founder "crammed on mobile"): a
-                          // fixed 64px set a 10-glyph balance like "$22,843.39"
-                          // kissing the edges of a narrow phone column. clamp
-                          // scales it down only as the viewport narrows and
-                          // still hits the blessed 64px by ~530px+ — dominant
-                          // everywhere, cramped nowhere, no breakpoint jump.
-                          fontSize: "clamp(3.1rem, 12vw, 64px)",
+                          // FLUID + length-aware (2026-06-07): clamp scales by
+                          // viewport WIDTH (dominant on desktop, never cramped on
+                          // mobile, no breakpoint jump); heroBalanceFontSize
+                          // lowers the ceiling for long numbers (millions+) so
+                          // they fit even a 320px phone. Sized off the live value
+                          // so it's stable through the count-up. See its def.
+                          fontSize: heroBalanceFontSize,
                           fontWeight: 700,
                           // Gold while EITHER the count-up is running OR a new gift
                           // just arrived. The newGiftFlash window holds the cue lit
