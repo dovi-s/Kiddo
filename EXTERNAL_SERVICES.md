@@ -33,8 +33,8 @@ before a real launch are flagged Tier 1.
 | **Sentry** | Server error tracking + the ops-alert path. Silent (no-op) without a DSN. | `SENTRY_DSN` | ❌ | sentry.io |
 | **PostHog** | Product analytics + the k-factor / growth-loop measurement (the core "is there a business" metric). | `POSTHOG_API_KEY`, `POSTHOG_HOST` | ❌ | posthog.com |
 | **Plaid** | Bank linking / ACH funding (cheaper than card for large gifts). Keep behind the service layer (CLAUDE.md). Card payments via Stripe work without it. | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` | ❌ | plaid.com |
-| **Google OAuth** | "Sign in with Google." Email/password works without it. | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ❌ | console.cloud.google.com |
-| **Apple OAuth** | "Sign in with Apple" (required by Apple if you ship other social logins in the iOS app). | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`, `APPLE_TEAM_ID`, `APPLE_APP_ID_PREFIX` | ❌ | developer.apple.com |
+| **Google OAuth** | "Sign in with Google." **Code is wired** (Login.tsx + `/api/auth/oauth/google` + `/api/auth/providers`); the buttons auto-render once keys are set — purely a config/keys task, not a build. Email/password works without it. Low-friction win for the grandparent demographic; decide for launch. | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ❌ | console.cloud.google.com |
+| **Apple OAuth** | "Sign in with Apple" (required by Apple if you ship other social logins in the iOS app). **Code wired** like Google above — keys only, auto-renders when set. | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`, `APPLE_TEAM_ID`, `APPLE_APP_ID_PREFIX` | ❌ | developer.apple.com |
 | **WebAuthn / Passkeys** | Passkey login. Config, not a paid key; set to the prod domain. | `WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN` | ❌ | n/a (set to your domain) |
 | **Content scanner (PhotoDNA / moderation)** | CSAM + abuse scanning on uploaded media. Strongly wanted BEFORE public photo/voice uploads (safety + legal). | `CONTENT_SCANNER` | ❌ | Microsoft PhotoDNA / a moderation provider |
 
