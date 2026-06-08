@@ -192,7 +192,13 @@ export default function Login() {
                 <Logo size="lg" showWordmark={true} linkTo="/" />
               </div>
               <h1 className="text-3xl font-semibold text-foreground">Welcome back</h1>
-              <p className="text-base text-muted-foreground">Your child's future is growing.</p>
+              {/* Role-neutral by design (2026-06-07): login is the shared entry
+                  for parents AND gifters, and pre-auth we don't know which. The
+                  old "Your child's future is growing" assumed parent — wrong for
+                  a grandparent signing into their gifter dashboard (no "child"
+                  in the app). This line is true for both and echoes the locked
+                  relational doorway language ("for someone you love"). */}
+              <p className="text-base text-muted-foreground">The future you're growing for someone you love.</p>
             </div>
           </div>
 
