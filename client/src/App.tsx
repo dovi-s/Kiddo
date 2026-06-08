@@ -514,9 +514,17 @@ function MarketingLoadingFallback() {
   return <div className="min-h-screen bg-background" aria-hidden="true" />;
 }
 
-function RouteSkeletonFallback() {
+function RouteSkeletonFallback({ sidebarOffset = false }: { sidebarOffset?: boolean }) {
+  // Offset for the fixed 264px DesktopSidebar when it's present (2026-06-07,
+  // founder catch: "the left panel covers the skeleton"). The global sidebar
+  // (App.tsx) paints OUTSIDE the Suspense boundary, so this lazy-chunk fallback
+  // must mirror the same md:ml-[264px] offset every real authed page uses, or
+  // its left edge renders under the menu. sidebarOffset is driven by the
+  // shell's hideGlobalNav (single source of truth) so routes that hide the
+  // sidebar (gifter / my-gifts / admin / kid / snapshot) don't get a phantom
+  // left gutter.
   return (
-    <div className="min-h-[60vh] px-4 py-8 animate-pulse" aria-hidden="true">
+    <div className={`min-h-[60vh] px-4 py-8 animate-pulse ${sidebarOffset ? "md:ml-[264px]" : ""}`} aria-hidden="true">
       <div className="mx-auto max-w-2xl space-y-4">
         <div className="h-8 w-48 rounded-lg bg-muted/60" />
         <div className="h-4 w-72 rounded bg-muted/40" />
@@ -596,7 +604,7 @@ function prefetchCriticalRoutes() {
   });
 }
 
-function RouteLoadingFallback() {
+function RouteLoadingFallback({ sidebarOffset = false }: { sidebarOffset?: boolean }) {
   const [location] = useLocation();
   const pathname = normalizePath(location);
   const isPublicExperience =
@@ -609,7 +617,7 @@ function RouteLoadingFallback() {
     return <MarketingLoadingFallback />;
   }
 
-  return <RouteSkeletonFallback />;
+  return <RouteSkeletonFallback sidebarOffset={sidebarOffset} />;
 }
 
 function getRedirectTarget() {
@@ -711,7 +719,7 @@ function RouteFader({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Router() {
+function Router({ showSidebar = false }: { showSidebar?: boolean }) {
   return (
     <>
       <ScrollToTop />
@@ -720,7 +728,10 @@ function Router() {
           focus here without making the wrapper itself part of the tab
           sequence. Audit 2026-05-25. */}
       <main id="main-content" tabIndex={-1} className="outline-none">
-      <Suspense fallback={<RouteLoadingFallback />}>
+      {/* sidebarOffset mirrors the shell's sidebar presence so the lazy-load
+          skeleton clears the fixed DesktopSidebar instead of rendering under
+          it (2026-06-07). */}
+      <Suspense fallback={<RouteLoadingFallback sidebarOffset={showSidebar} />}>
         <RouteFader>
         <Switch>
           <Route path="/"><Home /></Route>
@@ -969,7 +980,7 @@ function App() {
                   at equal z-50). Offset only when the sidebar renders; full-
                   width on /admin, /gifter, /my-gifts, /kid/*, and on mobile. */}
               <DemoBanner sidebarOffset={!hideGlobalNav} />
-              <Router />
+              <Router showSidebar={!hideGlobalNav} />
               {!hideGlobalNav && <MobileNav />}
               {/* Global share modal — listens for `kiddo:open-share-modal`
                   events from any surface (e.g., the sidebar's Share quick
