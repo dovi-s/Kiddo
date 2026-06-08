@@ -7857,12 +7857,11 @@ export default function DashboardLab() {
                       boxShadow: "0 1px 3px rgba(26,67,50,0.06), 0 4px 12px rgba(26,67,50,0.04)",
                     }}
                   >
-                    <div className="flex items-baseline justify-between mb-4">
-                      {/* Always "fund so far" — lifetime view permanently
-                          (was "last 30 days" once fund crossed 30 days). */}
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                        {isOwnerMode ? "Your" : childPossess} fund so far <span aria-hidden>🌱</span>
-                      </p>
+                    {/* Inner "{child} fund so far 🌱" title removed — it duplicated
+                        the LabCollapse header right above (4th instance of the same
+                        echo as growth/holdings/your-part). The date-range line stays:
+                        it's the unique part, labeling this breakdown's lifespan. */}
+                    <div className="flex items-baseline justify-start mb-4">
                       <p className="text-[10px] text-muted-foreground/60">
                         {/* Year ALWAYS shown 2026-05-23 — was conditionally
                             hidden when fund age < 365d on the theory that
