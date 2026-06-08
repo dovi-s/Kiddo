@@ -89,6 +89,25 @@ export function markNotificationsRead(latestActivityTime?: number): void {
   }
 }
 
+// Seed an ABSOLUTE lastReadAt (no max(now) clamp). Demo-only use: open the demo
+// "caught up as of N days ago" so the bell shows only the genuinely-recent
+// activity (the same window the SinceLastVisitDigest summarizes) instead of the
+// full worn backlog (which reads "9+") OR an empty bell. Everything older than
+// `ts` reads as seen; the recent gifts / co-parent-joined / occasion items stay
+// unread — true to the worn account. 2026-06-08.
+export function markNotificationsReadAsOf(ts: number): void {
+  if (typeof window === "undefined") return;
+  if (!Number.isFinite(ts)) return;
+  try {
+    safeLocalSet(NOTIF_LAST_READ_KEY, String(Math.floor(ts)));
+    saveReadIds(new Set());
+    saveUnreadIds(new Set());
+    broadcastReadStateChange();
+  } catch {
+    // non-fatal — see markNotificationsRead.
+  }
+}
+
 // Shared subscriber hook — reads lastReadAt + readIds from localStorage
 // on mount, refreshes whenever the broadcast event fires. Single source
 // of truth across the bell badge, the activity-tab dot, and the panel.

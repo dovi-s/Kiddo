@@ -33,7 +33,7 @@ const LASTSEEN_PREFIX = "kiddo.fund.lastSeen.v1:";
 const DEMO_SHOWN_KEY = "kiddo.demo.awayDigest.shown.v1";
 const MIN_AWAY_MS = 24 * 60 * 60 * 1000; // a real "while you were away", not a same-day re-check
 const NOTEWORTHY_MOVE_FRAC = 0.005; // or a >0.5% balance move counts even without a gift
-const DEMO_AWAY_MS = 6 * 24 * 60 * 60 * 1000; // demo: pretend "6 days ago"
+export const DEMO_AWAY_MS = 6 * 24 * 60 * 60 * 1000; // demo: pretend "6 days ago" (also drives the bell's demo catch-up window — see DemoGiftMoment)
 const DEMO_SYNTH_GROWTH_RATE = 0.008; // demo: ~0.8% synthetic growth over the gap
 
 type LastSeen = { value: number; ts: number };

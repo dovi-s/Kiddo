@@ -42,11 +42,12 @@ import { ToastAction } from "@/components/ui/toast";
 import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
 import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
-import { markNotificationsRead } from "@/components/NotificationsPanel";
+import { markNotificationsReadAsOf } from "@/components/NotificationsPanel";
+import { DEMO_AWAY_MS } from "@/components/dashboard/SinceLastVisitDigest";
 
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
 const SESSION_KEY = "kiddo.demo.giftMoment.genericBeat.v1"; // generic beat: once per session (a fresh / incognito session resets it)
-const CAUGHT_UP_KEY = "kiddo.demo.caughtUp.v1";        // demo opens caught-up: once per session
+const CAUGHT_UP_KEY = "kiddo.demo.caughtUp.v2";        // demo opens caught-up-as-of-the-digest-window: once per session
 
 // Generic beat on a fund-SWITCH. Timed to land the gift as its OWN beat, just
 // AFTER the hero's roll cascade settles — not on top of it. On a switch the
@@ -86,23 +87,25 @@ export function DemoGiftMoment() {
 
   const isDemo = Boolean((user as any)?.isDemoAccount);
 
-  // Demo opens CAUGHT UP. A fresh viewer has no notification read-state, so every
-  // seeded activity (8 years of gifts) counts as unread and the bell + Activity
-  // badges open at "9+/9+" — anxiety, not delight, on the conversion surface, and
-  // incoherent for someone who just arrived. Stamp the seeded backlog as read
-  // ONCE per session so the badges open calm (0). The single FRESH beat is then
-  // the live gift THIS component lands below — the badge ticks 0→1 as the gift
-  // visibly arrives ("I'm current… oh, one new gift"), surfaced by the
-  // since-last-visit digest. Fires before the gift beat (synchronous on mount vs
-  // the ~2.8s+ timer), so the live gift lands AFTER the stamp and counts as the
-  // one unread. Once-per-session so we never re-read that fresh gift; a fresh /
-  // incognito session re-experiences it clean. Real accounts untouched
-  // (isDemo-gated). 2026-06-08.
+  // Demo opens CAUGHT UP — but NOT empty. A fresh viewer has no notification
+  // read-state, so all 8 years of seeded activity count as unread and the bell +
+  // Activity badges open at "9+/9+" — anxiety on the conversion surface. But a
+  // worn, active account shouldn't open with a DEAD bell either: there should be
+  // a genuine, account-true notification waiting — a recent gift, a co-parent who
+  // just joined, an upcoming occasion (founder 2026-06-08). So instead of marking
+  // EVERYTHING read, we stamp "caught up as of the digest's window" (~6 days):
+  // the years-old backlog reads as seen, while the genuinely-recent items — the
+  // SAME ones the SinceLastVisitDigest summarizes (e.g. Luke: a gift from Manny;
+  // Alex: a gift from Jay + "Co-parent joined") — stay unread. Bounded (~1–2 per
+  // fund after the bell's noise filter), true to each worn fund, and the live gift
+  // THIS component lands below adds to it. Once-per-session so reading them sticks;
+  // a fresh / incognito session re-experiences it. Real accounts untouched
+  // (isDemo-gated).
   useEffect(() => {
     if (!isDemo || typeof window === "undefined") return;
     try {
       if (window.sessionStorage.getItem(CAUGHT_UP_KEY)) return;
-      markNotificationsRead();
+      markNotificationsReadAsOf(Date.now() - DEMO_AWAY_MS);
       window.sessionStorage.setItem(CAUGHT_UP_KEY, "1");
     } catch {
       // sessionStorage blocked → skip; badges just open as before (no worse).
