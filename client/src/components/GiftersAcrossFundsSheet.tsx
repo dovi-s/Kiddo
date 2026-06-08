@@ -314,7 +314,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                               className="shrink-0 mt-1 text-muted-foreground"
                               aria-hidden
                             >
-                              <ChevronDown size={14} strokeWidth={2.2} />
+                              <ChevronDown size={14} strokeWidth={2} />
                             </motion.span>
                           </div>
                         </button>

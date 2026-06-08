@@ -443,7 +443,7 @@ export default function FoundingMembers() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold))]/15 text-[hsl(var(--kiddo-gold-ink))]">
-                        <Heart size={16} strokeWidth={1.8} />
+                        <Heart size={16} strokeWidth={2} />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-foreground">Or gift a Founder slot to someone you love</p>

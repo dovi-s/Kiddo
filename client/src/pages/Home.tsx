@@ -266,7 +266,7 @@ function ProductBento() {
                 data-testid={`bento-tile-${tile.title.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                  <tile.icon className="h-5 w-5 text-primary" strokeWidth={1.8} />
+                  <tile.icon className="h-5 w-5 text-primary" strokeWidth={2} />
                 </div>
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/70">{tile.eyebrow}</p>
                 <h3 className="mt-1 font-heading text-lg font-semibold text-foreground">{tile.title}</h3>
@@ -290,7 +290,7 @@ function ProductBento() {
             <>
               <DialogHeader>
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <openTile.icon className="h-6 w-6 text-primary" strokeWidth={1.8} />
+                  <openTile.icon className="h-6 w-6 text-primary" strokeWidth={2} />
                 </div>
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/70">{openTile.eyebrow}</p>
                 <DialogTitle className="font-heading text-2xl font-bold tracking-normal text-foreground">

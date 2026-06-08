@@ -240,7 +240,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground mt-0.5">
-                      <Calendar size={14} strokeWidth={1.8} />
+                      <Calendar size={14} strokeWidth={2} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-foreground">
@@ -317,7 +317,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
               >
                 <div className="flex items-start gap-3">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
-                    <Calendar size={14} strokeWidth={1.8} />
+                    <Calendar size={14} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground">

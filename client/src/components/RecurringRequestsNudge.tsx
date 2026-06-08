@@ -147,7 +147,7 @@ export function RecurringRequestsNudge({
       >
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <BellRing size={16} strokeWidth={1.8} />
+            <BellRing size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground" data-testid="recurring-requests-headline">

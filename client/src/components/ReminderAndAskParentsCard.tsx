@@ -160,7 +160,7 @@ export function ReminderAndAskParentsCard({
         >
           <div className="flex items-start gap-3">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Bell size={14} strokeWidth={1.8} />
+              <Bell size={14} strokeWidth={2} />
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Remind me to give again</p>

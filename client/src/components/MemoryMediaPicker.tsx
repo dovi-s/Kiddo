@@ -274,7 +274,7 @@ export function MemoryMediaPicker({
               explicitly asked to learn more. */}
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <Camera size={16} className="text-primary" strokeWidth={1.8} />
+              <Camera size={16} className="text-primary" strokeWidth={2} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">

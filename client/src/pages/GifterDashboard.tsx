@@ -1009,7 +1009,7 @@ export default function GifterDashboard() {
             >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen))] text-white">
-                  <Repeat size={18} strokeWidth={1.8} />
+                  <Repeat size={18} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="font-heading text-xl font-semibold text-foreground">
@@ -1306,7 +1306,7 @@ export default function GifterDashboard() {
               <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-sponsorships">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                    <Crown size={18} strokeWidth={1.8} />
+                    <Crown size={18} strokeWidth={2} />
                   </div>
                   <div>
                     <h2 className="font-heading text-2xl font-semibold text-foreground">Sponsorships you've given</h2>
@@ -1377,7 +1377,7 @@ export default function GifterDashboard() {
               <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-founder-gifts">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                    <Crown size={18} strokeWidth={1.8} />
+                    <Crown size={18} strokeWidth={2} />
                   </div>
                   <div>
                     <h2 className="font-heading text-2xl font-semibold text-foreground">Founder slots you've gifted</h2>

@@ -94,7 +94,7 @@ export function SponsorPlusCard({
           data-testid="sponsor-plus-already-covered"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Crown size={16} strokeWidth={1.8} />
+            <Crown size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -164,7 +164,7 @@ export function SponsorPlusCard({
       <div className="rounded-2xl border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8 p-5">
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold))] text-white">
-            <Crown size={16} strokeWidth={1.8} />
+            <Crown size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">

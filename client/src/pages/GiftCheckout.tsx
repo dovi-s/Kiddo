@@ -2603,7 +2603,7 @@ export default function GiftCheckout() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))] text-white">
-                      <Repeat size={16} strokeWidth={1.8} />
+                      <Repeat size={16} strokeWidth={2} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">
