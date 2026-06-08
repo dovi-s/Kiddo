@@ -412,8 +412,8 @@ export default function FundSnapshot() {
             </summary>
             <div className="snapshot-options-panel">
               <p className="snapshot-options-label">What to include</p>
-              <label><input type="checkbox" checked={showGifts} onChange={(e) => setShowGifts(e.target.checked)} /> Gift history</label>
-              <label><input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} disabled={!showGifts} /> Gifter names</label>
+              <label><input type="checkbox" checked={showGifts} onChange={(e) => setShowGifts(e.target.checked)} /> Contribution history</label>
+              <label><input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} disabled={!showGifts} /> Contributor names</label>
               <label><input type="checkbox" checked={showProjection} onChange={(e) => setShowProjection(e.target.checked)} /> Projection at {fundMajorityAge}</label>
               <label><input type="checkbox" checked={exactAmounts} onChange={(e) => setExactAmounts(e.target.checked)} /> Exact amounts (vs rounded)</label>
               {/* Disabled when the fund has no recipientLastName on file —
@@ -607,10 +607,17 @@ export default function FundSnapshot() {
           </div>
         )}
 
-        {/* Gift history */}
+        {/* Contribution history — every inflow (gifts from others AND the
+            parent's own contributions), matching the "Contributions /
+            Contributors" stats above. Renamed from "Gift history" 2026-06-07
+            to close the last seam in the gifts-vs-contributions reconciliation:
+            the stats already speak the honest superset ("contribution" = any
+            inflow; a gift is one kind), so the section that lists those same
+            rows must too — otherwise "Gift history" sits over rows that include
+            Dad's auto-invest, which aren't gifts. */}
         {showGifts && gifts.length > 0 && (
           <div className="snapshot-section">
-            <p className="snapshot-section-label">Gift history</p>
+            <p className="snapshot-section-label">Contribution history</p>
             <div className="snapshot-gifts">
               {gifts.map((g) => {
                 const name = String(g.senderName || "").trim();
