@@ -6476,23 +6476,26 @@ export default function DashboardLab() {
                       <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
                         {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
                         {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
-                        {/* Status token shows ONLY when it's signal (2026-06-07):
-                            "Active" is the assumed default — confirming it is
-                            noise (dropping it also freed the row for the gift
-                            count). But Draft (fund isn't live / needs setup) and
-                            Closed ARE meaningful, and rendering them in the same
-                            dim style as the rest buried them (founder: "if
-                            someone's in Draft, do they know?"). So the non-active
-                            token now POPS — gold + bold for Draft (needs your
-                            action), a brighter white for Closed (informational) —
-                            so it reads as a STATE, not metadata. */}
+                        {/* Status token — emphasis scales with importance
+                            (2026-06-07). "Active" is BACK (founder: the
+                            title/subtitle restructure reopened the space, and it
+                            now matches the AppHeader's "UTMA · Active" so the
+                            same fund reads the same in both places) — but DIM,
+                            same muted weight as "· UTMA", because it's the
+                            assumed default: present for completeness, not
+                            shouting. Draft (fund isn't live / needs setup) and
+                            Closed POP — gold+bold for Draft (needs your action),
+                            brighter white for Closed (informational) — so the
+                            exception reads as a STATE, the default as metadata. */}
                         {(() => {
                           const st = String(activeFund?.status || "active").toLowerCase();
-                          if (!st || st === "active") return null;
+                          if (!st) return null;
                           const label = st.charAt(0).toUpperCase() + st.slice(1);
+                          const isActive = st === "active";
                           const isDraft = st === "draft";
+                          const color = isActive ? "rgba(255,255,255,0.5)" : isDraft ? "hsl(43, 85%, 68%)" : "rgba(255,255,255,0.78)";
                           return (
-                            <span style={{ color: isDraft ? "hsl(43, 85%, 68%)" : "rgba(255,255,255,0.78)", fontWeight: 700 }}>
+                            <span style={{ color, fontWeight: isActive ? 500 : 700 }}>
                               {" · "}{label}
                             </span>
                           );
