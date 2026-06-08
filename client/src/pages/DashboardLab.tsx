@@ -9400,7 +9400,7 @@ export default function DashboardLab() {
                                                 initial={{ opacity: 0, scale: 0.92, x: 6 }}
                                                 animate={{ opacity: 1, scale: 1, x: 0 }}
                                                 exit={{ opacity: 0, scale: 0.92, x: 6 }}
-                                                transition={{ duration: 0.14, ease: "easeOut" }}
+                                                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                                                 className="flex items-center gap-1.5"
                                               >
                                                 <button
@@ -9427,7 +9427,7 @@ export default function DashboardLab() {
                                             aria-label="Add investment"
                                           >
                                             Add an investment
-                                            <Plus size={10} className={`transition-transform ${investPickerOpen ? "rotate-45" : ""}`} />
+                                            <Plus size={10} className={`transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${investPickerOpen ? "rotate-45" : ""}`} />
                                           </button>
                                         </div>
                                       )}
