@@ -7083,6 +7083,12 @@ export default function DashboardLab() {
                                 const amt = parseFloat(String(g?.amount || "0"));
                                 const netAmt = parseFloat(String(g?.netAmount || "0"));
                                 const investedAmt = netAmt > 0 ? netAmt : amt;
+                                // Drop cents on a round gift ("$100" not "$100.00")
+                                // 2026-06-07: .00 is noise and helps the line fit
+                                // one row on mobile; non-round gifts keep cents.
+                                const amtLabel = Number.isInteger(amt)
+                                  ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amt)
+                                  : formatCurrency(amt);
                                 const giftEventName = g?.eventId
                                   ? (events.find(e => e.id === g.eventId)?.name ?? null)
                                   : null;
@@ -7130,9 +7136,18 @@ export default function DashboardLab() {
                                       {onThisDay ? (Number((g as any)?.__daysOff || 0) > 0 ? "From the Memory Book" : "On this day") : heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
                                     </p>
                                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
+                                      {/* "to {child}'s future" trailing clause dropped
+                                          2026-06-07 (founder: "must fit one row on
+                                          mobile"): with it the sentence wrapped on a
+                                          phone for any normal name; without it the line
+                                          is just the fact ("Phil added $100.") and always
+                                          fits. The warmth stays in the eyebrow ("Latest
+                                          gift"), the "Went into …" destination below, and
+                                          the gold-flash moment; "future" lives all over
+                                          the rest of the hero. */}
                                       {onThisDay
-                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${formatCurrency(amt)} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago ${Number((g as any)?.__daysOff || 0) > 0 ? "this week" : "today"}.`
-                                        : `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added ${formatCurrency(amt)} to ${isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.`}
+                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${amtLabel} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago ${Number((g as any)?.__daysOff || 0) > 0 ? "this week" : "today"}.`
+                                        : `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added ${amtLabel}.`}
                                     </p>
                                     {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /
                                         🌱 Settling / No thanks yet) intentionally dropped from the
