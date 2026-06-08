@@ -533,7 +533,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Move {holding.ticker} to cash</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -779,7 +779,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Taking money out</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -1012,7 +1012,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Link Bank Account</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -5543,7 +5543,7 @@ const [editFundName, setEditFundName] = useState("");
       </Dialog>
 
       <Dialog open={editFundOpen} onOpenChange={(o) => { if (!o) setEditFundOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
           {(() => {
             // Title + subtitle adapt to who the fund belongs to. UTMA funds
             // get the child's name in the heading because this surface is

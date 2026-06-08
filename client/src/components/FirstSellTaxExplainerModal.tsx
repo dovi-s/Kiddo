@@ -58,7 +58,7 @@ export function FirstSellTaxExplainerModal({ payload, busy, onConfirm, onCancel 
 
   return (
     <Dialog open={!!payload} onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-2">
             <Receipt size={14} className="text-primary" />

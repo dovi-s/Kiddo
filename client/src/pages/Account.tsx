@@ -125,7 +125,7 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
         value={newEmail}
         onChange={(e) => setNewEmail(e.target.value)}
         placeholder="you@example.com"
-        className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="h-10 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         data-testid="input-new-email"
       />
       <p className="text-[11px] leading-snug text-muted-foreground">
@@ -1065,7 +1065,7 @@ export default function Account() {
                           value={nameValue}
                           onChange={e => setNameValue(e.target.value)}
                           onKeyDown={e => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setEditingName(false); }}
-                          className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                           autoFocus
                           data-testid="input-profile-name"
                         />
@@ -1136,7 +1136,7 @@ export default function Account() {
                     value={preferredName}
                     onChange={(e) => setPreferredName(e.target.value.slice(0, 50))}
                     placeholder={isNonParentOwner ? "Your name or nickname…" : "Dad, Mom, Papa, Mama…"}
-                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     data-testid="input-preferred-name"
                   />
                   <p className="mt-1.5 text-[11px] text-muted-foreground">

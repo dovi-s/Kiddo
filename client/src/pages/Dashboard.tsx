@@ -13282,7 +13282,7 @@ export default function Dashboard() {
         open={!!addFromScheduleSheet}
         onOpenChange={(v) => { if (!v && !contributingNow) setAddFromScheduleSheet(null); }}
       >
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add to fund</DialogTitle>
           <div className="p-6 space-y-5">
             <div className="space-y-1">
@@ -13608,7 +13608,7 @@ export default function Dashboard() {
           7% = $Y at 18) so the parent sees what Plus actually unlocks for
           their fund, not generic feature copy. */}
       <Dialog open={autoInvestUpgradeOpen} onOpenChange={(open) => { if (!open) setAutoInvestUpgradeOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
             const child = recipientFirstNameDisplay || "your child";
@@ -14446,7 +14446,7 @@ export default function Dashboard() {
       </Dialog>
 
       <Dialog open={kidViewConfigOpen} onOpenChange={(o) => { if (!o) { setKidViewConfigOpen(false); setKidViewConfigStep("settings"); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Kid View settings</DialogTitle>
 
           {kidViewConfigStep === "settings" ? (
@@ -14527,8 +14527,9 @@ export default function Dashboard() {
                     </div>
                     {/* Show ALL suggestions, not just the first 3 — a teen
                         flooding her parent with picks deserves visibility,
-                        not silent truncation. Long lists scroll naturally
-                        inside the modal. */}
+                        not silent truncation. The DialogContent now scrolls
+                        (max-h-[90dvh] overflow-y-auto), so long lists stay
+                        reachable inside the modal. */}
                     {enriched.map((suggestion: any) => {
                       const status = suggestion.effectiveStatus;
                       const statusPill = status === "approved"

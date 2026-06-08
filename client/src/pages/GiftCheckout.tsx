@@ -392,7 +392,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         aria-label="Your name"
         autoComplete="name"
         maxLength={80}
-        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm outline-none focus:border-primary"
         data-testid="input-guestbook-name"
       />
       <textarea
@@ -402,7 +402,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         aria-label={`Your note for ${childName}`}
         rows={3}
         maxLength={500}
-        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-base sm:text-sm outline-none focus:border-primary resize-none"
         data-testid="textarea-guestbook-note"
       />
       <input
@@ -413,7 +413,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         aria-label="Email (optional)"
         autoComplete="email"
         maxLength={254}
-        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm outline-none focus:border-primary"
         data-testid="input-guestbook-email"
       />
       {/* The email field's honest job — without a stated purpose an optional
@@ -1829,7 +1829,7 @@ export default function GiftCheckout() {
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder={currentOccasion.notePlaceholder}
                       rows={2}
-                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm resize-none outline-none focus:border-[hsl(var(--kiddo-evergreen))] placeholder:text-muted-foreground"
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base sm:text-sm resize-none outline-none focus:border-[hsl(var(--kiddo-evergreen))] placeholder:text-muted-foreground"
                     />
                     <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount} onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_occasion_start", { destination: "preview_step", amount: activeAmount }); setStep("preview"); }} data-testid="button-start-gift">
                       {currentOccasion.emoji} Give ${isValidAmount ? activeAmount.toFixed(2) : "..."} to {recipientName}
@@ -2403,7 +2403,7 @@ export default function GiftCheckout() {
                           placeholder="At least 8 characters"
                           minLength={8}
                           autoComplete="new-password"
-                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-base sm:text-sm"
                           data-testid="input-recurring-password"
                         />
                       </div>
@@ -2830,7 +2830,7 @@ export default function GiftCheckout() {
                           value={senderName}
                           onChange={(e) => setSenderName(e.target.value)}
                           placeholder="Grandma, Uncle Marcus, Sarah..."
-                          className="mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                          className="mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                           data-testid="input-sender-name"
                         />
                         {/* Honest disclosure: the previous copy claimed
@@ -2868,7 +2868,7 @@ export default function GiftCheckout() {
                       placeholder="you@example.com"
                       type="email"
                       required={isRecurring}
-                      className="mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                      className="mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                       data-testid="input-sender-email"
                     />
                     {isRecurring && (

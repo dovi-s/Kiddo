@@ -845,20 +845,20 @@ export default function GifterDashboard() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                 />
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                 />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                 />
               </div>
               <div className="mt-4 grid gap-3">
@@ -1113,7 +1113,7 @@ export default function GifterDashboard() {
                                     inputMode="decimal"
                                     value={editAmount}
                                     onChange={(e) => setEditAmount(e.target.value)}
-                                    className="h-10 w-full bg-transparent px-1 text-sm tabular-nums outline-none"
+                                    className="h-10 w-full bg-transparent px-1 text-base sm:text-sm tabular-nums outline-none"
                                     data-testid={`hero-edit-amount-${sch.id}`}
                                   />
                                 </div>

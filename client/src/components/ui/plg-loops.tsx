@@ -427,7 +427,7 @@ export function CollaboratorInviteModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-card p-0 gap-0 border border-border/50 shadow-premium-lg" aria-describedby={undefined}>
+      <DialogContent className="max-w-md bg-card p-0 gap-0 border border-border/50 shadow-premium-lg max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <div className="p-5 border-b border-border/50">
           <DialogTitle className="font-heading font-semibold text-foreground">Invite to {fundName}</DialogTitle>
           <p className="text-sm text-muted-foreground mt-0.5">
