@@ -9039,6 +9039,20 @@ export async function registerRoutes(
         });
       }
 
+      // KNOWN GAP — attribution doesn't follow proceeds into cash (deferred,
+      // 2026-06-08). On a sell, the proceeds land in fund cash (below) but the
+      // gift→ticker allocations are deleted (full) or scaled down (partial), so
+      // that value is no longer attributed to the gifts that funded it. Effect:
+      // a partial sell makes a contributor's "worth now" shrink, and a full sell
+      // erases the "what your gift grew to" mapping — even though the value is
+      // sitting in cash. The gift RECORD + Memory Book survive (the contribution
+      // is remembered); only the live worth-attribution is lost. Mostly invisible
+      // today: pre-custody selling is simulated + rare (buy-and-hold product).
+      // The real fix is a gift→cash allocation so proceeds stay attributed, but
+      // it's a data-model change across the allocation system + every attribution
+      // surface — earns its lines once custody makes sells real, not before. See
+      // project_sell_attribution_gap. DON'T treat the shrink/erase as a bug until
+      // then; it's the documented, accepted trade.
       if (remainingShares <= 0.0001) {
         await storage.deleteHolding(holdingId);
         // Holding is gone. Drop its allocation rows so per-gift attribution doesn't
