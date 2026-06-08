@@ -45,6 +45,29 @@ function getChartRangeLabel(range: ChartRange): string {
     case "5Y": return "Past 5 years";
   }
 }
+
+// Occasion names are auto-generated as "{Child}'s Birthday" / "{Child}'s 14th
+// Birthday" / "{Child}'s Driver's License". On the child's OWN dashboard
+// (under a "{Child}'s Occasions" header) that possessive prefix is redundant —
+// and it's exactly what overran the 140px tile into "Luke's Bi…". Strip a
+// leading "{child}'s " for TILE DISPLAY only (the stored event keeps its full
+// name) so "14th Birthday" fits clean. Handles both ASCII and curly
+// apostrophes; only strips when something remains; genuinely-long custom names
+// ("Trip to Japan 2027") have no prefix to cut and keep the graceful clamp.
+// (2026-06-07, founder: long occasion names truncate.)
+function stripChildPossessivePrefix(name: string, childFirst?: string | null): string {
+  const child = String(childFirst || "").trim();
+  const raw = String(name || "");
+  if (!child) return raw;
+  for (const apos of ["'", "’"]) {
+    const prefix = `${child}${apos}s `;
+    if (raw.toLowerCase().startsWith(prefix.toLowerCase())) {
+      const stripped = raw.slice(prefix.length).trim();
+      return stripped.length > 0 ? stripped : raw;
+    }
+  }
+  return raw;
+}
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11449,7 +11472,7 @@ export default function DashboardLab() {
                         <p style={{ fontSize: 11, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25,
                           display: "-webkit-box", WebkitLineClamp: tileDateLabel ? 1 : 2, WebkitBoxOrient: "vertical" as const,
                           overflow: "hidden", marginBottom: 2 }}>
-                          {event.name}
+                          {stripChildPossessivePrefix(event.name, recipientFirstNameDisplay)}
                         </p>
                         {tileDateLabel && (
                           <p style={{ fontSize: 9, color: "rgba(26,23,16,0.42)", lineHeight: 1.2, marginBottom: 4, fontWeight: 500 }}>
@@ -11550,7 +11573,7 @@ export default function DashboardLab() {
                                 <span style={{ fontSize: 38, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{sug.emoji || theme.emoji}</span>
                               </div>
                               <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                                <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>{sug.name}</p>
+                                <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>{stripChildPossessivePrefix(sug.name, recipientFirstNameDisplay)}</p>
                                 <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>{sug.sub}</p>
                                 <p style={{ fontSize: 9, color: theme.inkColor, fontWeight: 600 }}>Tap to create</p>
                               </div>
@@ -11631,7 +11654,7 @@ export default function DashboardLab() {
                             {/* Bottom info */}
                             <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
                               <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>
-                                {sug.name}
+                                {stripChildPossessivePrefix(sug.name, recipientFirstNameDisplay)}
                               </p>
                               <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>
                                 {sug.prefill.goalAmount
