@@ -8435,10 +8435,10 @@ export default function DashboardLab() {
               transition={{ duration: 0.25, delay: 0.012 }}
             >
               <div className="kiddo-card overflow-hidden p-0">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
-                  <h3 className="text-sm font-bold text-muted-foreground">
-                    {isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Fund growth"}
-                  </h3>
+                {/* Inner "{child}'s growth" title removed — it duplicated the
+                    LabCollapse header right above. The open header IS the section
+                    title; the chart opens straight into its range controls. */}
+                <div className="flex flex-wrap items-center justify-start gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
                   <div className="flex flex-wrap items-center gap-1">
                     {(["1W", "1M", "YTD", "1Y", "5Y", "ALL"] as const).map((r) => (
                       <button
@@ -8930,11 +8930,8 @@ export default function DashboardLab() {
               transition={{ duration: 0.25, delay: 0.018 }}
               className="space-y-3"
             >
-              <div className="flex items-center justify-between">
-                <p className="kiddo-section-label" data-testid="text-holdings-title">
-                  {isOwnerMode ? "What you own" : recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "What the fund owns"}
-                </p>
-              </div>
+              {/* Inner "What {child} owns" title removed — duplicated the
+                  LabCollapse header above. The open header is the section title. */}
               {holdingsLoading ? (
                 <div className="space-y-3">
                   <SkeletonBlock className="h-16 w-full" />
@@ -10191,7 +10188,13 @@ export default function DashboardLab() {
               testid="lab-yourpart-details"
               openKey="yourpart"
               icon={HandCoins}
-              title="Your part of the story"
+              // Title carries the warmer NAMED wording (promoted up from the
+              // inner section title, which was a duplicate and is now removed).
+              title={isOwnerMode
+                ? "Invest in your fund"
+                : recipientFirstNameDisplay
+                  ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
+                  : "Your part of their story"}
               stat={(() => {
                 // Sum the viewer's OWN gift rows (recurring-linked + one-time),
                 // the same rows the fund-so-far sheet buckets into "Your
@@ -10223,13 +10226,8 @@ export default function DashboardLab() {
                   keeping "your" as the subject so the parent knows this section
                   belongs to them. "Story" is intentional: these contributions get
                   stamped into the Memory Book as love letters, not just transactions. */}
-              <p className="kiddo-section-label" data-testid="text-your-part-title">
-                {isOwnerMode
-                  ? "Invest in your fund"
-                  : recipientFirstNameDisplay
-                    ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
-                    : "Your part of their story"}
-              </p>
+              {/* Title moved UP to the LabCollapse header (was duplicated here).
+                  The "89 investments" identity line below is the unique part. */}
               {(() => {
                 // The identity line (founder-approved 2026-06-05). The title
                 // promises "story"; this is the one sentence of it — count +
