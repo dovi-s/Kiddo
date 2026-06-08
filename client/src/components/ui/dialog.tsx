@@ -45,8 +45,8 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 //     PersonalFundWaitlistModal.tsx (had both — the bug).
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, style, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { sheet?: boolean }
+>(({ className, children, style, sheet = false, ...props }, ref) => {
   React.useEffect(() => {
     haptic('light')
   }, [])
@@ -62,7 +62,13 @@ const DialogContent = React.forwardRef<
         // curve. Merged so a consumer's style still wins.
         style={{ animationTimingFunction: "cubic-bezier(0.16,1,0.3,1)", ...style }}
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-5 border-0 bg-background p-6 shadow-premium-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl",
+          sheet
+            // Sheet variant: bottom-anchored slide-up on mobile (the native
+            // iOS-sheet feel), centered zoom on desktop. Opt in via `sheet`. The
+            // inline outExpo easing above drives the slide too. The consumer
+            // manages its own inner scroll (ShareModal's body self-scrolls).
+            ? "fixed inset-x-0 bottom-0 z-50 grid w-full max-h-[94vh] gap-5 border-0 bg-background p-6 shadow-premium-lg rounded-t-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-[100%] data-[state=closed]:slide-out-to-bottom-[100%] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:duration-200 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
+            : "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-5 border-0 bg-background p-6 shadow-premium-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl",
           className
         )}
         {...props}
