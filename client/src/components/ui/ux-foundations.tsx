@@ -131,21 +131,46 @@ export function SetupProgressNudge({
 }
 
 export function TrustMicroStrip() {
+  // Single source for the three claims so the mobile (stacked) and desktop
+  // (one inline row) layouts can't drift. Wording is locked custody-honesty /
+  // brand copy: kept verbatim in BOTH layouts, never trimmed to fit.
+  const sipc = "SIPC up to $500,000";
+  const brokerDealer = "Our broker-dealer partner · Member FINRA/SIPC";
+  const noFees = "No hidden charges. Ever.";
   return (
     <section
       className="kiddo-card px-4 py-3"
       data-testid="card-trust-micro-strip"
     >
-      <div className="flex flex-wrap items-center justify-center gap-3 text-center text-xs text-muted-foreground">
+      {/* Desktop (>=640px): the original single inline row with dot separators. */}
+      <div className="hidden flex-wrap items-center justify-center gap-3 text-center text-xs text-muted-foreground sm:flex">
         <span className="inline-flex items-center gap-1.5">
           <Shield size={13} className="text-[hsl(var(--kiddo-evergreen))]" />
-          SIPC up to $500,000
+          {sipc}
         </span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-        <span>Our broker-dealer partner · Member FINRA/SIPC</span>
+        <span>{brokerDealer}</span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-        <span>No hidden charges. Ever.</span>
+        <span>{noFees}</span>
       </div>
+
+      {/* Mobile (<640px): the inline row used to wrap into THREE ragged lines
+          with orphan dots floating at row edges. Now two deliberate centered
+          rows and NO dots to orphan: the two short reassurances share the top
+          row (and degrade to two clean centered lines on a 320px SE without
+          ever breaking), and the long broker-dealer line gets its own row.
+          All copy kept verbatim; only the layout changed. */}
+      <div className="flex flex-col items-center gap-1 text-center text-[11px] leading-snug text-muted-foreground sm:hidden">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
+          <span className="inline-flex items-center gap-1.5">
+            <Shield size={12} className="text-[hsl(var(--kiddo-evergreen))]" />
+            {sipc}
+          </span>
+          <span>{noFees}</span>
+        </div>
+        <span>{brokerDealer}</span>
+      </div>
+
       <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/55">
         Kiddo's only ongoing fee is $1/year per $1,000 invested, charged on invested assets only. When investing is live, eligible securities are then protected up to $500,000 against broker-dealer failure. Not a protection against market losses.{" "}
         <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-muted-foreground">sipc.org</a>

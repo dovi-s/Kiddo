@@ -3745,7 +3745,24 @@ export default function DashboardLab() {
   // copy of the gift row keeps its REAL id, so the existing tap-through
   // deep link (/memory/:fundId?gift=ID) works unchanged.
   const heroCards = useMemo(() => {
-    if (!onThisDayCard) return recentGiftsFeed;
+    // The display strip is a PARADE of the distinct people who showed up, not a
+    // raw newest-first dump. Dedup by sender (each person's most-recent gift
+    // only), cap 5 — otherwise a parent's repeating recurring deposit, or any
+    // one prolific gifter, fills all 5 cards with the same "X added $Y" line and
+    // the strip reads as an echo. General, NOT demo-specific: any fund where one
+    // source gives often gets a varied strip of different people. Index 0 stays
+    // the genuine latest gift, so the new-gift arrival cue + "Latest gift"
+    // eyebrow (both keyed off recentGiftsFeed[0]) are unaffected.
+    const seen = new Set<string>();
+    const deduped: typeof recentGiftsFeed = [];
+    for (const g of recentGiftsFeed) {
+      const key = String((g as any).senderEmail || g.senderName || g.id).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(g);
+      if (deduped.length >= 5) break;
+    }
+    if (!onThisDayCard) return deduped;
     const flagged = {
       ...onThisDayCard.gift,
       __onThisDay: true,
@@ -3758,10 +3775,10 @@ export default function DashboardLab() {
     // index 1 would crown the SECOND-newest gift with the "Latest gift"
     // eyebrow. Flag it in place at index 0 instead — it's both the latest
     // and the anniversary, and the "On this day" telling wins.
-    if (recentGiftsFeed[0]?.id === onThisDayCard.gift.id) {
-      return [flagged, ...recentGiftsFeed.slice(1)] as typeof recentGiftsFeed;
+    if (deduped[0]?.id === onThisDayCard.gift.id) {
+      return [flagged, ...deduped.slice(1)] as typeof recentGiftsFeed;
     }
-    const rest = recentGiftsFeed.filter((g) => g.id !== onThisDayCard.gift.id);
+    const rest = deduped.filter((g) => g.id !== onThisDayCard.gift.id);
     return [rest[0], flagged, ...rest.slice(1)].filter(Boolean) as typeof recentGiftsFeed;
   }, [recentGiftsFeed, onThisDayCard]);
 
@@ -6297,6 +6314,11 @@ export default function DashboardLab() {
           currentValue={rawTotalValue}
           previousValue={prevValueRef.current}
           recipientName={recipientFirstNameDisplay}
+          giftCount={gifts.filter((g) => {
+            const s = String(g.status || "").toLowerCase();
+            return s !== "failed" && s !== "refunded";
+          }).length}
+          peopleCount={contributorCount}
         />
 
         {/* Closed-fund banner — calm, action-bearing. Renders when the
@@ -6604,45 +6626,13 @@ export default function DashboardLab() {
                           );
                         })()}
                       </div>
-                      {/* Gift-count — MOBILE: a quiet subtitle beneath the
-                          identity (no room to sit beside it without truncating
-                          the account type). sm:hidden so it's mobile-only; the
-                          desktop copy sits on the right of the row (below). Same
-                          content, responsive POSITION — not conditional copy. */}
-                      {(() => {
-                        const validCount = gifts.filter(g => {
-                          const s = String(g.status || "").toLowerCase();
-                          return s !== "failed" && s !== "refunded";
-                        }).length;
-                        return validCount > 0 ? (
-                          <p className="sm:hidden" style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-gold-light))", marginTop: 2, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }}>
-                            {validCount} {validCount === 1 ? "gift" : "gifts"}
-                            {contributorCount > 0 && (
-                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
-                            )}
-                          </p>
-                        ) : null;
-                      })()}
+                      {/* Gift-count stat MOVED out of the identity row and
+                          promoted to the balance's caption below: it was Kiddo's
+                          biggest structural advantage (the value is PEOPLED)
+                          rendered as the smallest thing in the hero. Both
+                          responsive variants removed; one elevated caption now
+                          lives directly under the number. */}
                       </div>
-                      {/* Gift-count — DESKTOP (>=640px): on the RIGHT of the row,
-                          where the wide hero has the space to balance label-left /
-                          stat-right (stacking it below would leave the right side
-                          empty and the count looking lost). hidden sm:block; the
-                          column is flex:1 so this is pushed to the edge. */}
-                      {(() => {
-                        const validCount = gifts.filter(g => {
-                          const s = String(g.status || "").toLowerCase();
-                          return s !== "failed" && s !== "refunded";
-                        }).length;
-                        return validCount > 0 ? (
-                          <p className="hidden sm:block" style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-gold-light))", whiteSpace: "nowrap" as const }}>
-                            {validCount} {validCount === 1 ? "gift" : "gifts"}
-                            {contributorCount > 0 && (
-                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
-                            )}
-                          </p>
-                        ) : null;
-                      })()}
                   </div>
 
                   {/* Fund-switch skeleton: when dashboard-summary is loading AND
@@ -6936,6 +6926,37 @@ export default function DashboardLab() {
                           : formatHeroBalance(displayHeroBalance)}
                       </motion.div>
 
+                      {/* Social-proof caption — the balance's attribution. Pairs
+                          the number with WHO built it, which is Kiddo's structural
+                          edge over every "me + my money" app: the value is
+                          PEOPLED. Promoted here from a quiet 11.5px line buried in
+                          the identity row (both responsive variants removed) so
+                          anchor #1 reads "$X, built by real people," not a figure
+                          with a footnote. Tight top gap so it reads as the
+                          number's caption, NOT a competing block, consistent with
+                          the two-anchors-plus-whisper hero. Same copy as before;
+                          only weight + position upgraded. Hidden while scrubbing
+                          (a historical value has no "today" roster) and on empty
+                          funds (validCount 0). */}
+                      {!isScrubbing && (() => {
+                        const validCount = gifts.filter(g => {
+                          const s = String(g.status || "").toLowerCase();
+                          return s !== "failed" && s !== "refunded";
+                        }).length;
+                        if (validCount <= 0) return null;
+                        return (
+                          <p
+                            style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-gold-light))", letterSpacing: "0.01em", marginTop: 2, marginBottom: 16 }}
+                            data-testid="text-hero-social-proof"
+                          >
+                            {validCount} {validCount === 1 ? "gift" : "gifts"}
+                            {contributorCount > 0 && (
+                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
+                            )}
+                          </p>
+                        );
+                      })()}
+
                       {/* LAB: hero growth sparkline REMOVED. It used
                           preserveAspectRatio="none" to fill width, which stretched
                           the end-dot into an ellipse and distorted the curve. It
@@ -7029,7 +7050,10 @@ export default function DashboardLab() {
                         const cardKey = heroCards[heroGiftIdx]?.id ?? `idx-${heroGiftIdx}`;
                         const cardIsFlashing = newGiftFlash && heroGiftIdx === 0;
                         return (
-                        <div style={{ marginBottom: 20 }}>
+                        // marginTop gives the now-borderless gift line a clear beat of
+                        // air above so it reads as its own quiet moment between the two
+                        // anchors (rhythm), not a row stacked tight under the balance.
+                        <div style={{ marginTop: 10, marginBottom: 20 }}>
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={cardKey}
@@ -7060,12 +7084,27 @@ export default function DashboardLab() {
                                 }
                               }}
                               style={{
-                                background: cardIsFlashing ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                                // Gift-as-LINE (2026-06-07): at rest the recent gift is a
+                                // flush whisper between the two hero anchors (Today's $X
+                                // above, "$X at 65" below) — no fill, no border, no box. The
+                                // hero used to read as THREE competing blocks because this
+                                // was the ONLY filled+bordered container in the green field;
+                                // dropping the box lets the two money anchors be the stars
+                                // and this be the quiet story between them. On a NEW gift
+                                // (cardIsFlashing) the founder-tuned moment is preserved: it
+                                // blooms into the gold-edged card + glow for the ~3.8s flash
+                                // window, then settles back to a line. Padding is constant
+                                // and the -10 horizontal bleed cancels it, so the text stays
+                                // flush-left with the balance and NOTHING shifts when it
+                                // blooms/settles — only bg / border / shadow cross-fade.
+                                background: cardIsFlashing ? "rgba(255,255,255,0.12)" : "transparent",
                                 borderRadius: 16,
-                                padding: "11px 14px",
+                                padding: "8px 10px",
+                                marginLeft: -10,
+                                marginRight: -10,
                                 border: cardIsFlashing
                                   ? "1px solid hsl(var(--kiddo-gold-light) / 0.55)"
-                                  : "1px solid rgba(255,255,255,0.1)",
+                                  : "1px solid transparent",
                                 boxShadow: cardIsFlashing
                                   ? "0 0 22px hsl(var(--kiddo-gold) / 0.30)"
                                   : "none",
@@ -7173,23 +7212,31 @@ export default function DashboardLab() {
                                           Now worth ~{formatCurrency(otdNowWorth)}
                                           {holdingName ? ` · ${holdingName}` : ""}
                                         </p>
-                                      ) : destinationName ? (
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
-                                          {/* Dollar amount intentionally dropped here — the gift
-                                              narrative line above (e.g. "Dovi added $100 to Emma's
-                                              future") already shows the amount. Repeating it within
-                                              30px is the duplication that makes this section read
-                                              "crammed." This line carries the destination only. */}
-                                          {destinationPrefix}{destinationName}
-                                          {giftEventName ? ` · ${giftEventName}` : ""}
+                                      ) : g?.message ? (
+                                        // The WORDS first. A gift's actual message ("because
+                                        // magic is always a good investment") is the human,
+                                        // per-gift-VARIED content — promoted ABOVE the
+                                        // destination so the strip reads as people who showed
+                                        // up, not the same "Went into the mix" on every card.
+                                        // The destination is true of nearly every gift, so it
+                                        // was the least-distinguishing thing leading. One line,
+                                        // truncated.
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontStyle: "italic", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                                          "{g.message}"
                                         </p>
                                       ) : giftEventName ? (
+                                        // Then the occasion ("Luke's Birthday") — still
+                                        // specific to this gift.
                                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
                                           {giftEventName}
                                         </p>
-                                      ) : g?.message ? (
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                                          "{g.message}"
+                                      ) : destinationName ? (
+                                        // LAST resort: the destination. True of nearly every
+                                        // gift, so only shown when there's no message and no
+                                        // occasion to say instead. Dollar amount intentionally
+                                        // dropped (the narrative line above already shows it).
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
+                                          {destinationPrefix}{destinationName}
                                         </p>
                                       ) : null}
                                     </div>
@@ -7198,9 +7245,9 @@ export default function DashboardLab() {
                               })()}
                             </motion.div>
                           </AnimatePresence>
-                          {recentGiftsFeed.length > 1 && (
+                          {heroCards.length > 1 && (
                             <div style={{ display: "flex", gap: 5, marginTop: 8, justifyContent: "center" }}>
-                              {recentGiftsFeed.slice(0, 5).map((_, dotIdx) => (
+                              {heroCards.slice(0, 5).map((_, dotIdx) => (
                                 <button
                                   key={`dot-${dotIdx}`}
                                   type="button"

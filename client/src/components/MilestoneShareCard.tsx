@@ -18,13 +18,21 @@ import { MONEY_CROSS_COPY, formatMilestone } from "@shared/milestones";
 export interface MilestoneShareCardProps {
   threshold: number;
   recipientName?: string | null;
+  // Optional social proof. When provided, the card carries the PEOPLED
+  // dimension (who built it) alongside the dollar milestone — Kiddo's
+  // structural edge over every "me + my money" milestone card: this isn't
+  // "look how much," it's "look what we built together." Callers without the
+  // counts simply omit them and the line doesn't render (no behavior change).
+  giftCount?: number;
+  peopleCount?: number;
 }
 
-export function MilestoneShareCard({ threshold, recipientName }: MilestoneShareCardProps) {
+export function MilestoneShareCard({ threshold, recipientName, giftCount, peopleCount }: MilestoneShareCardProps) {
   const copy = MONEY_CROSS_COPY[threshold];
   const childName = (recipientName && recipientName.trim()) || "this fund";
   const emotionalLine = copy?.emotionalLine || "";
   const fullAmount = formatMilestone(threshold);
+  const hasSocialProof = !!giftCount && giftCount > 0 && !!peopleCount && peopleCount > 0;
 
   return (
     <div
@@ -62,6 +70,18 @@ export function MilestoneShareCard({ threshold, recipientName }: MilestoneShareC
         </p>
         {emotionalLine && (
           <p className="text-sm leading-relaxed text-muted-foreground">{emotionalLine}</p>
+        )}
+        {/* The communal line — what turns this from a wealth-flex into the
+            Kiddo story. The number is the parent's; the milestone belongs to
+            everyone who showed up. Sits just under the emotional anchor so the
+            shared image reads "crossed $X ... built by N people across M gifts." */}
+        {hasSocialProof && (
+          <p
+            className="text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))]"
+            data-testid="milestone-share-social-proof"
+          >
+            Built by {peopleCount} {peopleCount === 1 ? "person" : "people"} across {giftCount} {giftCount === 1 ? "gift" : "gifts"}
+          </p>
         )}
       </div>
 

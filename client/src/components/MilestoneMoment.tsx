@@ -60,10 +60,15 @@ interface MilestoneMomentProps {
   // crossed"). NOTE: the shareable card stays third-person ("Haley's fund") on
   // purpose — it's an outbound image whose audience is other people.
   isOwnerMode?: boolean;
+  // Social proof for the shareable card (optional). Threaded straight through
+  // to MilestoneShareCard so the outbound image leads with the peopled story,
+  // not just the dollar figure. The on-screen moment is unaffected.
+  giftCount?: number;
+  peopleCount?: number;
   onDismiss?: () => void;
 }
 
-export function MilestoneMoment({ currentValue, previousValue, recipientName, isOwnerMode = false, onDismiss }: MilestoneMomentProps) {
+export function MilestoneMoment({ currentValue, previousValue, recipientName, isOwnerMode = false, giftCount, peopleCount, onDismiss }: MilestoneMomentProps) {
   const [milestone, setMilestone] = useState<number | null>(null);
   const [visible, setVisible] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -284,7 +289,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
             </button>
 
             <div ref={shareCardRef}>
-              <MilestoneShareCard threshold={milestone} recipientName={recipientName} />
+              <MilestoneShareCard threshold={milestone} recipientName={recipientName} giftCount={giftCount} peopleCount={peopleCount} />
             </div>
 
             <div className="mt-4 space-y-2">
