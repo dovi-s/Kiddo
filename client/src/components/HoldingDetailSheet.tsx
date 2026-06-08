@@ -81,7 +81,7 @@ const CHART_RANGES: ChartRange[] = ["1D", "1W", "1M", "1Y", "ALL"];
 // historical price point. Multiple gifts on the same chart point merge
 // into one marker (count > 1) so dots don't overlap visually.
 type BuyMarker = {
-  x: string;       // matches PricePoint.date (the categorical x-axis value)
+  x: number;       // PricePoint.ts — the NUMERIC x-axis value (timestamp)
   y: number;       // price at that point (so the dot sits on the line)
   count: number;   // how many gifts collapsed into this marker
 };
@@ -126,7 +126,14 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
   const isUp = data.length >= 2 && data[data.length - 1].value >= data[0].value;
   const color = isUp ? "#16a34a" : "#dc2626";
   const stride = Math.max(1, Math.floor((data.length || 1) / 5));
-  const ticks = data.filter((_, i) => i % stride === 0 || i === data.length - 1).map((d) => d.date);
+  // Ticks + dots are positioned on the NUMERIC ts (a real time axis), not the
+  // date STRING (2026-06-08). The string axis was categorical, and coarse
+  // ranges (ALL) repeat labels — Yahoo's ALL series ends "...Mar 2026, Jun
+  // 2026, Jun 2026" — which poisoned the category scale so EVERY gold gift-dot
+  // silently dropped (ifOverflow hidden) on ALL while the legend still
+  // promised them. Numeric positioning is immune to duplicate/coarse labels.
+  const ticks = data.filter((_, i) => i % stride === 0 || i === data.length - 1).map((d) => d.ts);
+  const tsToLabel = new Map(data.map((d) => [d.ts, d.date]));
 
   // Buy markers — for each gift to this ticker, find the closest chart
   // point by timestamp and stack on its x. Filtered down to settled +
@@ -157,7 +164,10 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
       : Number.POSITIVE_INFINITY;
     const tolerance = ms_per_interval * 4;
 
-    const grouped = new Map<string, BuyMarker>();
+    // Group by the matched point's ts (a stable unique key per chart point —
+    // date strings can repeat on coarse ranges, which previously merged
+    // distinct points and broke positioning).
+    const grouped = new Map<number, BuyMarker>();
     for (const gift of matched) {
       const giftTs = gift.createdAt ? new Date(gift.createdAt).getTime() : 0;
       if (!giftTs) continue;
@@ -172,12 +182,12 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
         }
       }
       if (closestDelta > tolerance) continue;
-      const existing = grouped.get(closest.date);
+      const existing = grouped.get(closest.ts);
       if (existing) {
         existing.count += 1;
       } else {
-        grouped.set(closest.date, {
-          x: closest.date,
+        grouped.set(closest.ts, {
+          x: closest.ts,
           y: closest.value,
           count: 1,
         });
@@ -230,8 +240,11 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
                 </linearGradient>
               </defs>
               <XAxis
-                dataKey="date"
+                dataKey="ts"
+                type="number"
+                domain={["dataMin", "dataMax"]}
                 ticks={ticks}
+                tickFormatter={(ts) => tsToLabel.get(Number(ts)) ?? ""}
                 tick={{ fontSize: 10, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
