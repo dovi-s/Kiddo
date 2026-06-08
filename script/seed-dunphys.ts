@@ -128,7 +128,7 @@ const ACCOUNTS = [
     preferredName: "Mom",
     role: "co-parent" as const,
   },
-  { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const },
+  { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const, profileImageUrl: "https://openpsychometrics.org/tests/characters/test-resources/pics/MF/1.jpg" },
   { email: "gloria@dunphyfamily.com",   firstName: "Gloria",   lastName: "Pritchett", preferredName: "Gloria",   role: "gifter" as const },
   { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const },
   { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const },
@@ -199,6 +199,7 @@ const KIDS = [
   },
   {
     firstName: "Luke",
+    childPhotoUrl: "https://i.pinimg.com/564x/83/02/b3/8302b38f81211251f8c392180e781771.jpg",
     lastName: "Dunphy",
     pronoun: "he" as const,
     majorityAge: 21,
@@ -231,6 +232,7 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
       firstName: account.firstName,
       lastName: account.lastName,
       preferredName: account.preferredName,
+      profileImageUrl: (account as any).profileImageUrl ?? null,
       kycStatus,
     }).where(eq(users.id, existing.id));
     return existing.id;
@@ -241,6 +243,7 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
     firstName: account.firstName,
     lastName: account.lastName,
     preferredName: account.preferredName,
+    profileImageUrl: (account as any).profileImageUrl ?? null,
     passwordHash,
     isDemoAccount: true,
     kycStatus,
@@ -427,6 +430,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     createdAt: fundCreatedAt,
     recipientFirstName: kid.firstName,
     recipientLastName: kid.lastName,
+    childPhotoUrl: (kid as any).childPhotoUrl ?? null,
     // recipientBirthdate is a timestamp column in shared/schema.ts —
     // Drizzle's PgTimestamp.mapToDriverValue calls .toISOString() on
     // the value, so a raw "YYYY-MM-DD" string crashes the insert.
