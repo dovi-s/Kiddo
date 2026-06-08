@@ -1,4 +1,3 @@
-import type React from "react";
 import { Link } from "wouter";
 import koraMarkImg from "../../assets/kiddo-logo-cropped.png";
 
@@ -8,14 +7,6 @@ interface LogoProps {
   className?: string;
   linkTo?: string | null;
 }
-
-const SHIMMER_STYLE: React.CSSProperties = {
-  backgroundImage: "linear-gradient(135deg, #1a3d2b 0%, #b8791a 100%)",
-  backgroundClip: "text",
-  WebkitBackgroundClip: "text",
-  color: "transparent",
-  WebkitTextFillColor: "transparent",
-};
 
 export function Logo({ size = "md", showWordmark = true, className = "", linkTo = "/" }: LogoProps) {
   const sizes = {
@@ -43,10 +34,17 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
         aria-hidden="true"
         className={`${s.icon} object-contain`}
       />
+      {/* Canonical wordmark: solid evergreen, Bricolage (font-heading), bold,
+          tight tracking — matches the DesktopSidebar lockup so "Kiddo" reads the
+          SAME everywhere. The old evergreen->gold gradient (SHIMMER_STYLE) was
+          removed: it drifted from the locked no-gradient-bleeds rule, rendered
+          muddy on non-white, and silently overrode consumers (e.g. GiftCheckout)
+          that were already asking for solid evergreen. Color is forced here so
+          the name is ONE color on every surface (nav, footer, auth, claim, etc.,
+          all light backgrounds). The K mark is intentionally left untouched. */}
       {showWordmark && (
         <span
-          className={`font-serif font-semibold ${s.text} tracking-[0.01em]`}
-          style={SHIMMER_STYLE}
+          className={`font-heading font-bold ${s.text} tracking-[-0.01em] text-[hsl(var(--kiddo-evergreen))]`}
         >
           Kiddo
         </span>

@@ -704,7 +704,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     .code-line strong { color: #111827; font-weight: 700; letter-spacing: 0.08em; }
     .divider { width: 48px; height: 2px; background: #e5e7eb; border-radius: 2px; }
     .footer { padding: 24px 40px; border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .footer-logo { font-size: 15px; font-weight: 700; color: #111827; }
+    .footer-logo { font-size: 15px; font-weight: 700; color: #1a3d2b; }
     .footer-tag { font-size: 11px; color: #9ca3af; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { width: 100%; min-height: 100vh; } }
   </style>
