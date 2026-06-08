@@ -31,13 +31,29 @@ function looksLikeFundName(name: string): boolean {
 /**
  * Returns the display name for a holding.
  *
- * ETFs → "Plain English (TICKER)"   e.g. "Total Market Stocks (VTI)"
- * Stocks → clean name               e.g. "Disney", "Apple"
+ * ETFs → plain English ONLY          e.g. "Total Market Stocks"
+ * Stocks → clean name                e.g. "Disney", "Apple"
+ *
+ * The ticker is deliberately NOT appended to the ETF name (2026-06-08):
+ *  1. Vendor-neutrality. The asset-class name aliases multiple vendors'
+ *     equivalents (VTI/SCHB/ITOT all → "Total Market Stocks") on purpose.
+ *     Appending "(VTI)" re-binds the copy to a single vendor (Vanguard)
+ *     before custody + the underlying ETFs are locked — the same
+ *     entity-agnostic discipline as CUSTODIAN_SOURCE_OF_TRUTH. If the
+ *     custodian holds ITOT/SCHB instead, "(VTI)" would be wrong; the
+ *     friendly name already covers that.
+ *  2. Redundancy + friendliness. Surfaces render the bare ticker as its own
+ *     element (the holding-row chip, the holding-detail header, the snapshot
+ *     ticker column), so "(VTI)" inside the prose was a duplicate AND jargon a
+ *     grandparent doesn't parse. Verifiability for advisors is preserved by
+ *     those standalone ticker elements — we only drop it from the warm name.
+ * Stocks keep no ticker here either (they already return a clean "Apple"),
+ * and a company IS its ticker — AAPL shows via the same standalone chip.
  */
 export function friendlyHoldingName(ticker: string, dbName?: string | null): string {
   const t = ticker.toUpperCase();
   const friendly = ETF_FRIENDLY[t];
-  if (friendly) return `${friendly} (${t})`;
+  if (friendly) return friendly;
 
   // Fall through to the DB name, cleaned up
   const raw = String(dbName || "").replace(/\s+stock$/i, "").trim();
