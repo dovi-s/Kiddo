@@ -216,6 +216,7 @@ import { friendlyHoldingName } from "@/lib/ticker-names";
 const DashboardTrendChart = lazy(() => import("@/components/DashboardTrendChart"));
 import type { DashboardTrendPoint } from "@/components/DashboardTrendChart";
 import { trendYDomain } from "@/lib/trend-domain";
+import { TrendChartSkeleton } from "@/components/TrendChartSkeleton";
 const HoldingDetailSheet = lazy(() =>
   import("@/components/HoldingDetailSheet").then((module) => ({ default: module.HoldingDetailSheet })),
 );
@@ -2278,6 +2279,9 @@ export default function DashboardLab() {
     const cancel = onIdle(() => {
       prefetchMemoryBook(queryClient, activeFundId);
       prefetchActivity(queryClient, 50);
+      // Warm the lazy Recharts chunk during idle so the trend chart paints from
+      // cache the instant its data is ready (no "blank box, then it rolls in").
+      void import("@/components/DashboardTrendChart");
     });
     return cancel;
   }, [activeFundId, queryClient]);
@@ -8484,7 +8488,7 @@ export default function DashboardLab() {
                     )}
                   </div>
                 </div>
-                <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
+                <Suspense fallback={<TrendChartSkeleton />}>
                   <div ref={chartScrollRef} style={{ position: "relative" }}>
                   {/* Compositor wipe pair — see chartScrollRef's definition.
                       The MOVER (overflow hidden only while wiping) slides
@@ -12701,6 +12705,21 @@ export default function DashboardLab() {
                         // years are pure compound.
                         const projectedLongHorizon = projectAt(yearsToMajority + 12, yearsToMajority);
                         const showLongHorizon = age18Transition.daysUntil18 > 0 && projectedLongHorizon > projectedAtMajority * 1.5;
+                        // Near-majority emphasis flip. When less than ~10% of growth is
+                        // left before the handoff (e.g. a kid turning 21 in weeks projects
+                        // to ~today's balance), leading with the at-majority number both
+                        // undersells AND quietly reinforces the cliff framing we reject
+                        // (the handoff is the prize, not the finish line; the card title
+                        // above already states "turns {majority} on {date}"). So once the
+                        // at-majority number goes flat, the KEEP-GROWING horizon becomes the
+                        // hero and the at-majority number steps back to a grounded second
+                        // line. Far from majority it stays the hero (real growth, the
+                        // milestone everyone knows). Self-calibrating on the actual number,
+                        // not a year cutoff, so a fund whose heavy recurring contributions
+                        // still grow it meaningfully by majority correctly keeps the lead.
+                        // Mirrors the Projection page, which never anchors a near-grown kid
+                        // to majority (MIN_DEFAULT_HORIZON_YEARS).
+                        const nearMajority = age18Transition.daysUntil18 > 0 && projectedAtMajority < totalValue * 1.1;
                         // Subject for the "turns N" / "lets it keep growing" lines.
                         // Names always take singular verb agreement regardless of
                         // pronoun (Em turns 18, not Em turn 18). Pronoun fallback
@@ -12713,7 +12732,11 @@ export default function DashboardLab() {
                           <>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
                               <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.55)", fontStyle: "italic" }}>
-                                On track for {fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱
+                                {nearMajority ? (
+                                  <>On track for ~{fmtUSD0(Math.round(projectedLongHorizon))} if {childSubject} keep{childIsSingular ? "s" : ""} it growing to {beyondAge} 🌱</>
+                                ) : (
+                                  <>On track for {fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱</>
+                                )}
                               </p>
                               <button
                                 type="button"
@@ -12724,11 +12747,15 @@ export default function DashboardLab() {
                                 <Info size={11} />
                               </button>
                             </div>
-                            {showLongHorizon && (
+                            {nearMajority ? (
+                              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", marginTop: 4, fontStyle: "italic" }}>
+                                ~{fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} take{childIsSingular ? "s" : ""} ownership at {age18Transition.majorityAge}, then it keeps compounding.
+                              </p>
+                            ) : (showLongHorizon && (
                               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", marginTop: 4, fontStyle: "italic" }}>
                                 If {childSubject} let{childIsSingular ? "s" : ""} it keep growing to {beyondAge} → ~{fmtUSD0(Math.round(projectedLongHorizon))}.
                               </p>
-                            )}
+                            ))}
                           </>
                         );
                       })()}
@@ -15027,6 +15054,7 @@ export default function DashboardLab() {
         fundName={recipientFirstNameDisplay || activeFund?.name}
         fundSlug={(activeFund as any)?.slug}
         childPhotoUrl={(activeFund as any)?.childPhotoUrl || undefined}
+        childBirthdate={(activeFund as any)?.recipientBirthdate || undefined}
         investPrefs={dashboardSummary?.investmentPreferences || undefined}
         editEvent={editEventTarget}
         isOwnerMode={isOwnerMode}
