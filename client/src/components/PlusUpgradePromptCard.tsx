@@ -149,6 +149,13 @@ export function PlusUpgradePromptCard({
       <CollapseDismissSection
         open={open}
         onExitComplete={persistDismiss}
+        // Swipe-to-dismiss, same as every other dashboard banner. This is a
+        // conversion card, so "should an upgrade nudge resist dismissal?" is a
+        // fair question — but a card that won't swipe when everything else does
+        // reads as a friction-trap, and this trust-anchor brand avoids
+        // manipulative monetization. Wired to the SAME persisted dismiss as the
+        // "Not now" button (setOpen(false) -> onExitComplete persists it).
+        onRequestDismiss={() => setOpen(false)}
         className="rounded-2xl border border-primary/20 bg-primary/5 p-4"
         data-testid={`plus-upgrade-prompt-${kind}`}
       >
