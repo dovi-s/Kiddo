@@ -19,20 +19,23 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   // Warm the dev server (first hit can trigger a slow Vite dep-optimize).
   await context.request.get(`${baseUrl}/api/health`, { timeout: 120000 }).catch(() => {});
-  await context.request.post(`${baseUrl}/api/auth/login`, {
+  const loginRes = await context.request.post(`${baseUrl}/api/auth/login`, {
     data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" },
     timeout: 120000,
   });
+  console.log(`login HTTP ${loginRes.status()} — ${(await loginRes.text()).slice(0, 120)}`);
 
   // Resolve Luke's fund id from the API (the page route is /projection/:fundId).
   const fundsRes = await context.request.get(`${baseUrl}/api/funds`, { timeout: 120000 });
   const raw = await fundsRes.json();
   const funds: any[] = Array.isArray(raw) ? raw : (raw?.funds || raw?.data || raw?.items || []);
   if (!funds.length) console.log("funds payload keys:", Object.keys(raw || {}));
-  const luke = funds.find((f) => /luke/i.test(f?.recipientFirstName || f?.name || "")) || funds[0];
-  if (!luke) { console.log("NO FUNDS — is the demo seeded?"); await browser.close(); return; }
-  const fundId = luke.id;
-  console.log(`fund: ${luke.recipientFirstName || luke.name} (${fundId})`);
+  // Alex = the near-handoff kid (1 month from 21) — the case where the
+  // contribution cap matters most and the Change-sheet wording was misleading.
+  const target = funds.find((f) => /alex/i.test(f?.recipientFirstName || f?.name || "")) || funds[0];
+  if (!target) { console.log("NO FUNDS — is the demo seeded?"); await browser.close(); return; }
+  const fundId = target.id;
+  console.log(`fund: ${target.recipientFirstName || target.name} (${fundId})`);
 
   const page = await context.newPage();
   page.setDefaultTimeout(120000);
@@ -52,6 +55,16 @@ async function main() {
   await page.waitForSelector('[data-testid="text-projection-value"]', { timeout: 60000 });
   await page.waitForTimeout(1500); // let the entrance + count-up settle
   await page.screenshot({ path: path.join(outDir, "desktop-default.png"), fullPage: true });
+
+  // ---- Change-monthly sheet — the surface that was missing the cap caveat.
+  // Select $50/mo (the user's scenario) so the caveat condition (monthly>0) fires.
+  await page.locator('[data-testid="button-change-monthly"]').click();
+  await page.waitForTimeout(500);
+  await page.locator('[data-testid="preset-monthly-50"]').click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(outDir, "desktop-change-sheet.png") });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
 
   // Read the headline + target-dot position, slide one notch, re-read — proves
   // the dot/label endpoint moved (the glide is the tween between these).
@@ -73,9 +86,9 @@ async function main() {
     console.log("NOTE: could not measure the target dot bbox");
   }
 
-  // ---- Mobile single-column.
-  const mctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await mctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  // ---- Mobile single-column. Reuse the desktop session (storageState) so we
+  // only log in ONCE per run — a second login per run trips the rate-limiter.
+  const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: await context.storageState() });
   const mpage = await mctx.newPage();
   mpage.setDefaultTimeout(120000);
   await mpage.goto(`${baseUrl}/projection/${fundId}`, { waitUntil: "domcontentloaded", timeout: 120000 });

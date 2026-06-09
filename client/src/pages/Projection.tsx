@@ -1060,6 +1060,19 @@ ${shareUrl}`;
                   </p>
                 );
               })()}
+              {/* Two-phase cap — the sheet was the one surface that dropped it.
+                  The hero says "$X/mo through {child}'s {ordinal} birthday, then
+                  market growth alone"; without the same line here, "$50/mo · age
+                  40" + the daily/weekly cadence read as if the contribution runs
+                  the whole way (badly so for a kid near handoff, where only a
+                  month or two of it ever invests). Mirrors the hero's exact
+                  framing + the same isUtma && targetAge>majorityAge test, so the
+                  truth sits right above the number it qualifies. */}
+              {pendingMonthly > 0 && isUtma && targetAge > majorityAge && (
+                <p className="text-[10.5px] text-muted-foreground mt-1 leading-relaxed">
+                  Flows through {childName}'s {majorityOrdinal} birthday, then market growth alone.
+                </p>
+              )}
               <p className="font-heading text-2xl font-bold text-foreground tabular-nums mt-1">
                 {fmtMoney(pendingPreview)}
               </p>
