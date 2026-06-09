@@ -249,7 +249,12 @@ export function ProjectionTrajectoryChart({
         />
 
         {/* Target dot — bigger (r=7 vs 6 in v1) so the focal point
-            actually reads as the focal point on mobile-sized charts. */}
+            actually reads as the focal point on mobile-sized charts.
+            (No position animation: the chart auto-rescales so the target
+            point is always the curve's top-right anchor — max age =
+            rightmost, max value = topmost — so its pixel position is
+            constant across slider values. A "glide" here verifiably moved
+            0px, so it stays a clean mount-only scale-in.) */}
         <motion.circle
           cx={drawnArea.targetX}
           cy={drawnArea.targetY}

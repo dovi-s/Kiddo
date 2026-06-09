@@ -337,8 +337,17 @@ export default function Projection() {
       const value = projectFund(totalValue, monthly, rate.rate, years, contribYears);
       pts.push({ age, value });
     }
+    // Pin the final point to the EXACT hero projection. The integer-age loop
+    // above draws the curve's SHAPE, but its last point lands on ceil(targetAge)
+    // measured from floor(currentAge) — slightly MORE compounding than the
+    // hero's fractional (targetAge − currentAge) horizon. That made the chart's
+    // peak label read ~$5K above the headline (e.g. "$137K" vs $131,855). The
+    // endpoint is the truth: overwrite it so the curve ends ON the big number.
+    if (pts.length > 0) {
+      pts[pts.length - 1] = { age: Math.round(targetAge), value: projected };
+    }
     return pts;
-  }, [currentAge, targetAge, totalValue, monthly, rate.rate, isUtma, yearsTo18]);
+  }, [currentAge, targetAge, totalValue, monthly, rate.rate, isUtma, yearsTo18, projected]);
 
   // All three rates' projections, so the hero can show the band as a
   // calm subtitle without forcing the parent to chip-tap through each.
@@ -365,6 +374,16 @@ export default function Projection() {
     [totalValue, monthly, contributionYearsCap],
   );
   const marketAdded = Math.max(0, projected - totalContributed);
+
+  // Count-up the headline AND the breakdown together, so a slider drag moves
+  // the whole hero as one living object — previously only the big number
+  // rolled while "Money in" / "Market added" hard-snapped beside it. These
+  // live ABOVE the early return so the hook call order stays stable
+  // (rules-of-hooks) regardless of activeFund. The shared useCountUp honors
+  // reduced-motion and never rolls downward (losses snap — brand rule).
+  const projectedDisplay = useCountUp(projected);
+  const moneyInDisplay = useCountUp(totalContributed);
+  const marketAddedDisplay = useCountUp(marketAdded);
 
   // Pending preview (used inside the change sheet so the parent can see what tapping a
   // preset would do at the slider's current age before committing).
@@ -448,18 +467,31 @@ ${shareUrl}`;
   };
 
   if (!activeFund) {
+    // Skeleton in the page's own shape (not a bare text line) — matches the
+    // pulse-gate loading discipline used across the app: muted blocks that
+    // mirror title → hero → chart → monthly lever → rate row, so the layout
+    // doesn't jump when the real content swaps in.
     return (
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
         <AppHeader />
-        <div className="kiddo-canvas px-4 py-6 max-w-lg">
-          <p className="text-sm text-muted-foreground">Loading projection…</p>
+        <div
+          className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg"
+          aria-busy="true"
+          aria-label="Loading projection"
+        >
+          <div className="space-y-2">
+            <div className="h-7 w-44 rounded-lg bg-muted animate-pulse" />
+            <div className="h-4 w-64 rounded bg-muted/70 animate-pulse" />
+          </div>
+          <div className="h-64 rounded-3xl bg-muted animate-pulse" />
+          <div className="h-44 rounded-2xl bg-muted/80 animate-pulse" />
+          <div className="h-16 rounded-2xl bg-muted/70 animate-pulse" />
+          <div className="h-20 rounded-2xl bg-muted/70 animate-pulse" />
         </div>
       </div>
     );
   }
 
-  // Smoothly animate the projected number on every slider/lever change.
-  const projectedDisplay = useCountUp(projected);
   // Filled portion of the slider track for the gradient. With N stops, slot i fills
   // i/(N-1) of the track. Single-stop case renders fully filled.
   const sliderFillPct = visibleMilestones.length > 1
@@ -469,7 +501,7 @@ ${shareUrl}`;
   return (
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
-      <div className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg">
+      <div className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg md:max-w-4xl">
         {/* Inline Back button REMOVED 2026-05-20. The AppHeader now
             renders a mobile Back arrow on every fund sub-page (Age18Plan,
             Projection, Tax Documents) via the isFundSubPage() helper
@@ -497,6 +529,14 @@ ${shareUrl}`;
             Drag the age slider to explore projected values. The number updates as you move.
           </p>
         </div>
+
+        {/* Desktop: two columns — hero (number + slider) on the left, the
+            chart + levers + share on the right — so the page reads as
+            designed-for-desktop instead of a phone column stretched wide.
+            Mobile keeps a single stack in the SAME order via flex-col gap-6,
+            so the responsive change is additive (mobile is unchanged). */}
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-[1.05fr_0.95fr] md:gap-7 md:items-start">
+          <div className="flex flex-col gap-6 md:min-w-0">
 
         {/* HERO: today + slider + projected number + breakdown + tagline */}
         <motion.section
@@ -697,12 +737,12 @@ ${shareUrl}`;
                   contributions) is a misattribution here. Personal/self-
                   funded accounts keep the warm "You added". */}
               <p className="text-sm text-white/80">{isUtma ? "Money in" : "You added"}</p>
-              <p className="text-sm font-bold tabular-nums text-white">{fmtMoney(totalContributed)}</p>
+              <p className="text-sm font-bold tabular-nums text-white">{fmtMoney(moneyInDisplay)}</p>
             </div>
             <div className="flex items-baseline justify-between">
               <p className="text-sm text-white/80">Market added</p>
               <p className="text-sm font-bold tabular-nums text-[hsl(143,55%,72%)]">
-                +{fmtMoney(marketAdded)}
+                +{fmtMoney(marketAddedDisplay)}
               </p>
             </div>
           </div>
@@ -716,6 +756,9 @@ ${shareUrl}`;
               already lands the message; the italic line was rhetorical-
               marketing-voice noise on a calm product surface. */}
         </motion.section>
+          </div>{/* /left column (hero) */}
+
+          <div className="flex flex-col gap-6 md:min-w-0">
 
         {/* Growth trajectory chart — visual axis for the slider+text
             projection above. The slider drags = the target dot on
@@ -841,6 +884,8 @@ ${shareUrl}`;
           <Share2 size={16} />
           Share {isOwnerMode ? "your" : possessive} potential 🎁
         </button>
+          </div>{/* /right column (chart + levers + share) */}
+        </div>{/* /two-column wrapper */}
 
         {/* Disclaimer. Honest about the model: contributions stop at 18 for UTMAs
             (which matches the math), continuous for personal accounts. No em-dashes
