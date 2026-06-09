@@ -42,13 +42,24 @@ async function main() {
   await page.waitForSelector(HERO, { timeout: 90000 });
   const t0 = Date.now();
   console.log("hero present (data-ready) — t0 anchored");
-  for (const ms of [400, 1500, 2900, 3600, 4800]) {
-    const wait = ms - (Date.now() - t0);
-    if (wait > 0) await page.waitForTimeout(wait);
-    const digestVisible = await page.locator(DIGEST).isVisible().catch(() => false);
-    console.log(`t0+${ms}ms  digestVisible=${digestVisible}`);
-    await page.screenshot({ path: path.join(outDir, `t${ms}.png`) });
+  // Pre-reveal shot (hero settled, no digest).
+  await page.waitForTimeout(Math.max(0, 1500 - (Date.now() - t0)));
+  console.log(`t0+1500ms  digestVisible=${await page.locator(DIGEST).isVisible().catch(() => false)}`);
+  await page.screenshot({ path: path.join(outDir, "t1500-pre.png") });
+
+  // Wait for the digest to appear, then SAMPLE its height rapidly: growing
+  // heights prove the height-grow entrance animates; a constant height = it
+  // snapped.
+  await page.waitForSelector(DIGEST, { state: "visible", timeout: 10000 });
+  const heights: number[] = [];
+  for (let i = 0; i < 14; i++) {
+    const box = await page.locator(DIGEST).boundingBox().catch(() => null);
+    heights.push(box ? Math.round(box.height) : -1);
+    if (i === 2) await page.screenshot({ path: path.join(outDir, "t-midgrow.png") });
+    await page.waitForTimeout(40);
   }
+  console.log("digest height @40ms steps:", heights.join(" "));
+  await page.screenshot({ path: path.join(outDir, "t-settled.png") });
   await browser.close();
   console.log(`screenshots: ${outDir}`);
 }

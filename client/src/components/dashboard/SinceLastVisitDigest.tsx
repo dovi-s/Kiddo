@@ -251,6 +251,10 @@ export function SinceLastVisitDigest({
   return (
     <CollapseDismissSection
       open={!dismissed}
+      // Grow in (height 0 -> auto) rather than snap: the digest reveals AFTER
+      // the hero roll settles and sits above it, so a height-grow eases the hero
+      // down instead of shoving it a card-height at once.
+      enterCollapsed
       // Swipe-to-dismiss, same gesture as CoparentAcceptedBanner (the X button
       // stays as the discoverable/a11y path). This banner looked dismissible but
       // wasn't swipeable — the infra was already here, just the callback wasn't

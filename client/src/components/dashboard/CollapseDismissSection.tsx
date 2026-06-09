@@ -33,6 +33,14 @@ type CollapseDismissSectionProps = {
   // one exit + one persistence (onExitComplete). The button stays — it's
   // the discoverable/a11y path; the swipe is the natural one.
   onRequestDismiss?: () => void;
+  // When true, the banner GROWS in (height 0 -> auto) instead of the default
+  // fade + slide. Use it when the banner reveals AFTER the surrounding content
+  // has already settled (e.g. the since-last-visit digest, held until the hero
+  // roll cascade finishes) — the height-grow opens the space smoothly so the
+  // content below EASES down instead of snapping by a card-height. Default
+  // banners appear during the initial paint (nothing to push), so they keep the
+  // lighter fade + slide. The exit is identical either way (collapse).
+  enterCollapsed?: boolean;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -47,6 +55,7 @@ export function CollapseDismissSection({
   open,
   onExitComplete,
   onRequestDismiss,
+  enterCollapsed,
   className,
   style,
   children,
@@ -61,8 +70,8 @@ export function CollapseDismissSection({
     <AnimatePresence onExitComplete={onExitComplete}>
       {open && (
         <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={enterCollapsed ? { opacity: 0, height: 0 } : { opacity: 0, y: 12 }}
+          animate={enterCollapsed ? { opacity: 1, height: "auto" } : { opacity: 1, y: 0 }}
           drag={onRequestDismiss ? "x" : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.6}
