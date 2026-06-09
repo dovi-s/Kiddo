@@ -203,17 +203,19 @@ export function SinceLastVisitDigest({
     };
   }, [ready, isDemoAccount, demoAlreadyShown, lastSeen, currentValue, gifts]);
 
-  // Hold the digest behind the hero roll cascade (see DIGEST_REVEAL_DELAY_MS).
-  // DEMO ONLY — that's the surface where the "all at once" crush was reported
-  // and the one we can tune against the seeded choreography. Real returning-
-  // visitor behavior is left exactly as shipped (digest reveals immediately).
+  // Hold the digest behind the hero roll cascade (see DIGEST_REVEAL_DELAY_MS) so
+  // the landing reads as a sequence (balance + projection roll in -> THEN "while
+  // you were away") instead of landing on top of the roll. Applies EVERYWHERE,
+  // not just the demo: a real returning visitor with a noteworthy move also
+  // watches the hero roll, and the digest is a "welcome back" recap that belongs
+  // after it settles. The digest only renders on a meaningful return (24h+ and a
+  // noteworthy delta), so the ~2.9s settle-beat never gates a non-event.
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
     if (!digest) return;
-    if (!isDemoAccount) { setRevealed(true); return; }
     const t = window.setTimeout(() => setRevealed(true), DIGEST_REVEAL_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [digest, isDemoAccount]);
+  }, [digest]);
 
   // Latch the demo once-per-session flag only once it's ACTUALLY shown (after
   // the reveal hold) — so a prospect who leaves during the hold still gets the
