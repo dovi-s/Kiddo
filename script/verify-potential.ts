@@ -30,9 +30,10 @@ async function main() {
   const raw = await fundsRes.json();
   const funds: any[] = Array.isArray(raw) ? raw : (raw?.funds || raw?.data || raw?.items || []);
   if (!funds.length) console.log("funds payload keys:", Object.keys(raw || {}));
-  // Alex = the near-handoff kid (1 month from 21) — the case where the
-  // contribution cap matters most and the Change-sheet wording was misleading.
-  const target = funds.find((f) => /alex/i.test(f?.recipientFirstName || f?.name || "")) || funds[0];
+  // Pick the fund by name (arg, default Alex — the near-handoff kid where the
+  // contribution cap matters most; pass "luke" for the long-horizon case).
+  const want = process.argv[2] || "alex";
+  const target = funds.find((f) => new RegExp(want, "i").test(f?.recipientFirstName || f?.name || "")) || funds[0];
   if (!target) { console.log("NO FUNDS — is the demo seeded?"); await browser.close(); return; }
   const fundId = target.id;
   console.log(`fund: ${target.recipientFirstName || target.name} (${fundId})`);
@@ -57,7 +58,7 @@ async function main() {
   await page.screenshot({ path: path.join(outDir, "desktop-default.png"), fullPage: true });
 
   // ---- Change-monthly sheet — the surface that was missing the cap caveat.
-  // Select $50/mo (the user's scenario) so the caveat condition (monthly>0) fires.
+  // Select $50/mo so the caveat (monthly>0) fires, and shoot the sheet.
   await page.locator('[data-testid="button-change-monthly"]').click();
   await page.waitForTimeout(500);
   await page.locator('[data-testid="preset-monthly-50"]').click();

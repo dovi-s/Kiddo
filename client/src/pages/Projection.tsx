@@ -806,14 +806,22 @@ ${shareUrl}`;
               {fmtMoney(monthly)}<span className="text-xs font-normal text-muted-foreground">/mo</span>
             </p>
             {monthly > 0 && isUtma && yearsTo18 > 0 && (() => {
-              // Months remaining until 18, rounded honest.
+              // How long the parent's monthly actually flows (contributions stop
+              // at majority). Months read great when the runway is SHORT and
+              // urgent ("1 month until Alex turns 21"), but "89 months" is
+              // unparseable — past ~2 years a parent thinks in years. So: months
+              // under 2 years, rounded years beyond. (The branch here used to be
+              // named yearsLeftDisplay but emitted months in both cases.)
               const monthsLeft = Math.max(0, Math.round(yearsTo18 * 12));
-              const yearsLeftDisplay = yearsTo18 >= 1
-                ? `${monthsLeft} months until ${childName} turns ${majorityAge}`
-                : `${monthsLeft === 1 ? "1 month" : `${monthsLeft} months`} until ${childName} turns ${majorityAge}`;
+              const left =
+                monthsLeft < 1 ? "less than a month"
+                  : monthsLeft === 1 ? "1 month"
+                    : monthsLeft < 24 ? `${monthsLeft} months`
+                      : monthsLeft % 12 === 0 ? `${monthsLeft / 12} years`
+                        : `about ${Math.round(monthsLeft / 12)} years`;
               return (
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {yearsLeftDisplay}
+                  {left} until {childName} turns {majorityAge}
                 </p>
               );
             })()}
