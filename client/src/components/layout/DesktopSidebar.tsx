@@ -296,7 +296,14 @@ export function DesktopSidebar() {
       // to /settings, /activity, /memory — those have their own
       // sidebar items with their own isActive matchers, so the
       // dashboard item doesn't need to mirror them.
-      isActive: location === "/dashboard" || location.startsWith("/dashboard?") || location.startsWith("/dashboard/"),
+      // /design-lab is the dashboard FORK (being groomed to replace /dashboard),
+      // so it's a "home" surface too: landing there should highlight this item
+      // on load (you ARE on the kid's dashboard), and tapping it scroll-to-tops
+      // the lab like home does — tapActiveNavScrollToTop ignores the href and
+      // acts on the current page, so this never yanks you off the lab.
+      isActive:
+        location === "/dashboard" || location.startsWith("/dashboard?") || location.startsWith("/dashboard/") ||
+        location === "/design-lab" || location.startsWith("/design-lab?") || location.startsWith("/design-lab/"),
     },
     {
       href: memoryBookHref,
