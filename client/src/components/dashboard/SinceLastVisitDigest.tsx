@@ -35,6 +35,14 @@ const MIN_AWAY_MS = 24 * 60 * 60 * 1000; // a real "while you were away", not a 
 const NOTEWORTHY_MOVE_FRAC = 0.005; // or a >0.5% balance move counts even without a gift
 export const DEMO_AWAY_MS = 6 * 24 * 60 * 60 * 1000; // demo: pretend "6 days ago" (also drives the bell's demo catch-up window — see DemoGiftMoment)
 const DEMO_SYNTH_GROWTH_RATE = 0.008; // demo: ~0.8% synthetic growth over the gap
+// Hold the digest until the hero count-up cascade has settled, so the landing
+// reads as a SEQUENCE (balance + projection roll in → THEN "while you were
+// away") instead of everything arriving at once. The balance rolls ~0–1.2s and
+// the projection ~1.45–2.65s after the data lands; ~2.9s drops the digest just
+// after, mirroring the gift-beat timing (DemoGiftMoment SWITCH_DELAY_MS). Both
+// the roll and this reveal are anchored to the same data-ready signal, so on a
+// slow load they stay sequenced no matter how late the data arrives.
+const DIGEST_REVEAL_DELAY_MS = 2_900;
 
 type LastSeen = { value: number; ts: number };
 
@@ -195,18 +203,33 @@ export function SinceLastVisitDigest({
     };
   }, [ready, isDemoAccount, demoAlreadyShown, lastSeen, currentValue, gifts]);
 
-  // Latch the demo once-per-session flag once it's actually showing.
+  // Hold the digest behind the hero roll cascade (see DIGEST_REVEAL_DELAY_MS).
+  // DEMO ONLY — that's the surface where the "all at once" crush was reported
+  // and the one we can tune against the seeded choreography. Real returning-
+  // visitor behavior is left exactly as shipped (digest reveals immediately).
+  const [revealed, setRevealed] = useState(false);
   useEffect(() => {
-    if (isDemoAccount && digest) {
+    if (!digest) return;
+    if (!isDemoAccount) { setRevealed(true); return; }
+    const t = window.setTimeout(() => setRevealed(true), DIGEST_REVEAL_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [digest, isDemoAccount]);
+
+  // Latch the demo once-per-session flag only once it's ACTUALLY shown (after
+  // the reveal hold) — so a prospect who leaves during the hold still gets the
+  // digest next visit instead of burning the once-per-session flag on a card
+  // they never saw.
+  useEffect(() => {
+    if (isDemoAccount && digest && revealed) {
       try {
         window.sessionStorage.setItem(DEMO_SHOWN_KEY, "1");
       } catch {
         /* ignore */
       }
     }
-  }, [isDemoAccount, digest]);
+  }, [isDemoAccount, digest, revealed]);
 
-  if (!digest) return null;
+  if (!digest || !revealed) return null;
 
   const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
   const parts: string[] = [];
@@ -226,6 +249,11 @@ export function SinceLastVisitDigest({
   return (
     <CollapseDismissSection
       open={!dismissed}
+      // Swipe-to-dismiss, same gesture as CoparentAcceptedBanner (the X button
+      // stays as the discoverable/a11y path). This banner looked dismissible but
+      // wasn't swipeable — the infra was already here, just the callback wasn't
+      // passed.
+      onRequestDismiss={() => setDismissed(true)}
       className="mb-4 rounded-3xl border p-5 shadow-premium-sm sm:p-6"
       style={{
         borderColor: "hsl(var(--kiddo-evergreen) / 0.28)",
