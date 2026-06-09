@@ -2247,18 +2247,20 @@ export default function DashboardLab() {
   const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
-  // Publish the resolved active fund to the shared store on mount so the chrome
-  // (AppHeader fund-switcher + sidebar) HIGHLIGHTS the fund the dashboard is
-  // actually showing. On a fresh load selectedFundId falls back to funds[0] but
-  // nothing was ever written to the store, so the switcher read the active fund
-  // as un-highlighted until the user clicked it (the click — selectFund — was
-  // the only thing calling setActiveFundId). Writing it here syncs the source of
-  // truth so the highlight is correct on first paint. Guarded so it only fires
-  // when the store is out of sync — no loop with the change-event listener.
+  // Replicate a fund "click" once on first load. On a fresh load the active fund
+  // is RESOLVED (funds[0] fallback, its dashboard shows) but never SELECTED — the
+  // URL ?fund=, the shared store, and selectedFundId were all empty — so the
+  // chrome menu (header switcher + sidebar + mobile) showed NOTHING highlighted
+  // until the user manually clicked a fund. A click runs selectFund, which is the
+  // only thing that sets all three. Do it here so the active fund highlights on
+  // first paint, matching the post-click state. Once-only via the ref.
+  const didInitialSelectRef = useRef(false);
   useEffect(() => {
-    if (!activeFundId) return;
-    if (getActiveFundId() === activeFundId) return;
-    setActiveFundId(activeFundId);
+    if (didInitialSelectRef.current || !activeFundId) return;
+    didInitialSelectRef.current = true;
+    const paramFund = new URLSearchParams(window.location.search).get("fund");
+    if (paramFund === activeFundId && getActiveFundId() === activeFundId) return;
+    selectFund(activeFundId);
   }, [activeFundId]);
 
   // Idle-time prefetch of next-likely pages — relocated here from
