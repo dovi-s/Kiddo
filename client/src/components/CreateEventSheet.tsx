@@ -7,6 +7,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { haptic } from "@/lib/haptics";
+import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 import { toast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
@@ -518,12 +519,12 @@ export function CreateEventSheet({
     : fundSlug ? `${window.location.origin}/${fundSlug}` : "";
 
   const investLabel = (() => {
-    if (!investPrefs) return "Managed growth mix";
+    if (!investPrefs) return STRATEGY_LABEL.growth;
     if (investPrefs.defaultMode === "stock" && investPrefs.defaultTicker) return investPrefs.defaultTicker;
     if (investPrefs.defaultMode === "cash") return "Held as cash";
-    if (investPrefs.managedStrategy === "balanced") return "Balanced portfolio";
-    if (investPrefs.managedStrategy === "conservative") return "Conservative portfolio";
-    return "Growth index portfolio";
+    // Canonical names (lib/strategy.ts) so the occasion preview matches Settings
+    // ("Growth Mix", not "Growth index portfolio" — "Mix" is load-bearing).
+    return STRATEGY_LABEL[investPrefs.managedStrategy as StrategyKey] ?? STRATEGY_LABEL.growth;
   })();
 
   // In edit mode the sheet opens directly on details/goal-details — back from

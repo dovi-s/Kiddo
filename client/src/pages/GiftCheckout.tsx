@@ -23,6 +23,7 @@ import { buildGiftDraftKey, isMeaningfulGiftDraft, parseGiftDraft, serializeGift
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
 import { FEATURED_STOCK_PICKS as CANON_FEATURED_STOCK_PICKS, ADDITIONAL_STOCK_PICKS as CANON_ADDITIONAL_STOCK_PICKS } from "@shared/stock-picks";
 import { projectFundValue } from "@shared/projection";
+import { investingLiveCopy } from "@shared/legal-copy";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { ReminderAndAskParentsCard } from "@/components/ReminderAndAskParentsCard";
 import { SponsorPlusCard } from "@/components/SponsorPlusCard";
@@ -2478,8 +2479,14 @@ export default function GiftCheckout() {
                       : effectiveExecutionModel === "family"
                         ? "This gift lands in the fund for the family to invest later."
                         : familyDefaultMode === "stock"
-                          ? `This gift follows the family's current choice: ${familyDefaultStock.name}.`
-                          : `This gift follows the family's plan. Once investing is live, it buys real stocks in the child's name.`}
+                          ? investingLiveCopy(
+                              `This gift follows the family's current choice: ${familyDefaultStock.name}. It buys real shares in the child's name.`,
+                              `This gift follows the family's current choice: ${familyDefaultStock.name}. Once investing is live, it buys real shares in the child's name.`,
+                            )
+                          : investingLiveCopy(
+                              "This gift follows the family's plan. It buys real stocks in the child's name.",
+                              "This gift follows the family's plan. Once investing is live, it buys real stocks in the child's name.",
+                            )}
                   </p>
                   {activeAmount > 0 && (effectiveExecutionModel === "pick" || familyDefaultMode === "stock") && (() => {
                     const stock = effectiveExecutionModel === "pick"
@@ -2490,7 +2497,7 @@ export default function GiftCheckout() {
                     const sharesStr = shares >= 1 ? shares.toFixed(2) : shares.toFixed(4);
                     return (
                       <p className="mt-2 text-xs text-muted-foreground" data-testid="text-preview-share-estimate">
-                        ${activeAmount.toFixed(0)} buys approximately <span className="font-semibold text-foreground">{sharesStr} shares</span> of {stock.name} at an estimated price of ${stock.price.toLocaleString()}/share. Final shares are confirmed when the trade executes.{usingFallbackPrices ? " Prices shown are reference estimates." : ""}
+                        ${activeAmount.toFixed(0)} buys approximately <span className="font-semibold text-foreground">{sharesStr} shares</span> of {stock.name} at an estimated price of ${stock.price.toLocaleString()}/share. {investingLiveCopy("Final shares are confirmed when the trade executes.", "Once investing is live, final shares are confirmed when the trade executes.")}{usingFallbackPrices ? " Prices shown are reference estimates." : ""}
                       </p>
                     );
                   })()}

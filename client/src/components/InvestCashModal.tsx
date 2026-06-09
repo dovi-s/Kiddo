@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { recordDemoBuy } from "@/lib/demo-live-gifts";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
+import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 
 // Derived from the canonical universe (shared/stock-picks.ts) — the cash-invest
 // picker (adult / owner-mode) now reads the SAME list as the gift page, parent
@@ -30,9 +31,11 @@ function getDefaultLabel(prefs: any): string {
     return stock ? `${stock.name} (${stock.ticker})` : (prefs.defaultTicker || "Fund default");
   }
   if (prefs.defaultMode === "cash") return "Hold as cash";
-  const strategy = prefs.managedStrategy;
-  if (strategy === "balanced") return "Balanced portfolio";
-  return "Growth index portfolio";
+  // Canonical strategy names (lib/strategy.ts) — "Mix" is load-bearing so
+  // "Growth" the strategy never reads as "Growth" the gain. Was hand-typed as
+  // "Growth index portfolio" / "Balanced portfolio" here, which also silently
+  // mislabeled the conservative tier as growth.
+  return STRATEGY_LABEL[prefs.managedStrategy as StrategyKey] ?? STRATEGY_LABEL.growth;
 }
 
 function isMarketOpen(): boolean {

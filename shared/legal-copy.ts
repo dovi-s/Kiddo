@@ -75,3 +75,46 @@ export const KIDDIE_TAX_UNEARNED_THRESHOLD_LABEL = "$2,700";
 //                   gifterYearEndSummary.
 //   kiddie threshold: education.tsx, FAQ, Legal, gifterNotificationWorker.
 //   lifetime exemption ($13.99M 2025): education.tsx only (single source today).
+
+// RULE — investing-live state: investing is NOT live yet (no custodian wired;
+// holdings are a local simulation and the AUM fee is display-only). So EVERY
+// customer-facing claim about buying/holding securities, SIPC coverage, and
+// broker-dealer-issued tax forms is HEDGED with "once/when investing is live".
+// This hedge is the most pervasive piece of custody copy in the product
+// (~30 files, ~50 sentences) and has been swept + CI-guarded.
+//
+// There is deliberately NO boolean threaded through all 50 of those sentences:
+// the "live" wording depends on the real custodian's name/terms (vendor not yet
+// picked), and the flip is a counsel-reviewed event, not a silent toggle — so
+// pre-writing 50 live variants now would be speculative and could become false
+// claims the moment someone flipped a switch without re-reading them.
+//
+// INSTEAD, the atomic-flip hygiene is two-part:
+//   (1) NEW hedged copy whose live wording is custodian-AGNOSTIC (app-flow
+//       mechanics, not SIPC/broker/tax legal copy) should gate on
+//       `investingLiveCopy()` so it flips with the constant below.
+//   (2) The FLIP CHECKLIST enumerates every existing surface to RE-READ (not
+//       blindly find/replace) against the real custodian's terms when custody
+//       goes live. Flipping = set INVESTING_LIVE = true AND walk the checklist.
+export const INVESTING_LIVE = false;
+
+// Paved path for (1). Use for new hedged, custodian-agnostic copy so it joins
+// the atomic flip instead of hand-typing the phrase (hand-typing is exactly how
+// the existing sentences drifted apart in wording).
+export function investingLiveCopy(liveText: string, pendingText: string): string {
+  return INVESTING_LIVE ? liveText : pendingText;
+}
+
+// FLIP CHECKLIST — surfaces that hand-encode the "once/when investing is live"
+// hedge today. When INVESTING_LIVE flips true, RE-READ each against the real
+// custodian's name + terms (do not just delete the phrase):
+//   client: App, About, UtmaByState, TaxDocuments, TaxDocsExplainer, Security,
+//     GiftCheckout (SIPC/large-gift lines — the "Where this gift goes" + share
+//     estimate already route through investingLiveCopy), FundSnapshot, FAQ,
+//     Pricing, Login, Legal, CalculatorAt18, HowItWorks, Home, GiftSuccess,
+//     Claim, Account, Footer, ui/education, ui/ux-foundations.
+//   mobile: GiftTab, GifterFlowScreen, DashboardScreen.
+//   server: gifterNotificationWorker, templates/baseTemplate, templates/giftReceived,
+//     templates/largeGiftAlert, templates/taxSeasonPrep, routes.ts (KYC
+//     "before investing goes live" message).
+//   shared/packages: packages/content/src/index.ts.
