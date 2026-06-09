@@ -669,7 +669,7 @@ ${shareUrl}`;
                   set (18/21 are; 19/20 aren't, so the caption hides for those
                   rare states — same edge case as the dot itself). */}
               {isUtma && visibleMilestones.includes(majorityAge as any) && (
-                <p className="text-[10px] italic text-white/55 mt-1 text-center">
+                <p className="text-[10px] italic text-white/55 mt-1 text-center text-balance">
                   {childName} takes control at {majorityAge} · what grows past then is pure market compound
                 </p>
               )}
@@ -715,7 +715,7 @@ ${shareUrl}`;
                 continued for 47 years (which would be incorrect for UTMA);
                 this surfaces the actual model in one quiet sentence. */}
             {monthly > 0 && targetAge > currentAge && contributionYearsCap > 0 && (
-              <p className="text-xs italic text-white/65 mt-2 leading-relaxed">
+              <p className="text-xs italic text-white/65 mt-2 leading-relaxed text-balance">
                 {isUtma
                   ? targetAge <= majorityAge
                     ? <>Assumes {fmtMoney(monthly)}/mo through {childName}'s {majorityOrdinal} birthday.</>
@@ -898,7 +898,7 @@ ${shareUrl}`;
         {/* Disclaimer. Honest about the model: contributions stop at 18 for UTMAs
             (which matches the math), continuous for personal accounts. No em-dashes
             per the locked copy rule. */}
-        <p className="text-[10.5px] text-muted-foreground/80 leading-relaxed text-center px-2">
+        <p className="text-[10.5px] text-muted-foreground/80 leading-relaxed text-center px-2 text-pretty">
           For illustrative purposes only. Based on long-term historical market averages, not guaranteed.{" "}
           {isOwnerMode
             // Post-handoff OWNER: isUtma is false for them (a transferred fund is an
@@ -1077,7 +1077,7 @@ ${shareUrl}`;
                   framing + the same isUtma && targetAge>majorityAge test, so the
                   truth sits right above the number it qualifies. */}
               {pendingMonthly > 0 && isUtma && targetAge > majorityAge && (
-                <p className="text-[10.5px] text-muted-foreground mt-1 leading-relaxed">
+                <p className="text-[10.5px] text-muted-foreground mt-1 leading-relaxed text-balance">
                   Flows through {childName}'s {majorityOrdinal} birthday, then market growth alone.
                 </p>
               )}
