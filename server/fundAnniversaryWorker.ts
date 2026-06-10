@@ -13,6 +13,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildFundAnniversaryEmail } from "./templates/fundAnniversary";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "fund-anniversary-worker";
@@ -125,6 +126,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildFundAnniversaryEmail({
         to: row.parentEmail,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parentEmail, "anniversary"),
         parentFirstName: row.parentFirstName,
         childFirstName: row.childFirstName,
         fundAgeYears,

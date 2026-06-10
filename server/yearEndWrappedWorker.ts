@@ -9,6 +9,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildYearEndWrappedEmail } from "./templates/yearEndWrapped";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "wrapped-worker";
@@ -112,6 +113,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildYearEndWrappedEmail({
         to: row.parent_email,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "wrapped"),
         parentFirstName: row.parent_first_name,
         childFirstName: row.child_first_name,
         year,

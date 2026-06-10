@@ -15,6 +15,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildHolidayWarmthEmail } from "./templates/holidayWarmth";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "holiday-warmth-worker";
@@ -112,6 +113,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildHolidayWarmthEmail({
         to: row.parent_email,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "motherFathersDay"),
         parentFirstName: row.parent_first_name,
         childFirstName: row.child_first_name,
         fundTotalUsd: total,

@@ -58,13 +58,13 @@ export function buildGifterMagicLinkEmail(input: GifterMagicLinkInput): EmailMes
       ? `Your recurring gift of $${giftSummary.amount.toFixed(2)} in ${giftSummary.ticker} to ${giftSummary.fundName} is set up and will run on the schedule you chose.`
       : `Your recurring gift is set up and will run on the schedule you chose.`;
     intro = `${greeting} ${giftLine} Tap the button below to open your dashboard. You'll see every gift you've sent, manage the schedule, or pause it any time. The link is good for the next 15 minutes; we'll email you a fresh one whenever you need to sign in.`;
-    postscript = "We don't ask for passwords. Every time you want to manage your gifts, click the link in any Kiddo email or request a new one from the sign-in page.";
+    postscript = "We don't ask for passwords. Every time you want to manage your gifts, click the link in any Kiddo email or request a new one from the sign-in page. We'll never ask you to forward or share a sign-in link, even if someone says they're from Kiddo.";
   } else {
     heading = "Your sign-in link";
     subject = "Your Kiddo sign-in link";
     cta = "Sign in to Kiddo";
     intro = `${greeting} Tap the button below to sign in to your gifter dashboard. The link is good for the next 15 minutes. If you didn't request this, ignore this email. Your account stays safe.`;
-    postscript = "We don't ask for passwords on gifter accounts. Every sign-in goes through a fresh link like this one.";
+    postscript = "We don't ask for passwords on gifter accounts. Every sign-in goes through a fresh link like this one. Keep it to yourself; we'll never ask you to forward or share a sign-in link, even if someone says they're from Kiddo.";
   }
 
   const { html } = renderKiddoEmail({

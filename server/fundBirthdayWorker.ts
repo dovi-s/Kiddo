@@ -23,6 +23,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildFundBirthdayEmail } from "./templates/fundBirthday";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "fund-birthday-worker";
@@ -180,6 +181,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildFundBirthdayEmail({
         to: row.parentEmail,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parentEmail, "birthday"),
         parentFirstName: row.parentFirstName,
         childFirstName: row.childFirstName,
         childAge,

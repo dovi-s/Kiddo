@@ -18,6 +18,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildVolatilityReassuranceEmail } from "./templates/volatilityReassurance";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "volatility-worker";
@@ -115,6 +116,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildVolatilityReassuranceEmail({
         to: row.parent_email,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "volatility"),
         parentFirstName: row.parent_first_name,
         childFirstName: row.child_first_name,
         yearsToMajority: yrsToMaj,

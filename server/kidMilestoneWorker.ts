@@ -17,6 +17,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildKidMilestoneEmail } from "./templates/kidMilestone";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "kid-milestone-worker";
@@ -131,6 +132,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildKidMilestoneEmail({
         to: row.parentEmail,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parentEmail, "milestones"),
         parentFirstName: row.parentFirstName,
         childFirstName: row.childFirstName,
         age,

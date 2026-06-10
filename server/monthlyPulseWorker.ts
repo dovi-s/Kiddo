@@ -8,6 +8,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildMonthlyPulseEmail } from "./templates/monthlyPulse";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "monthly-pulse-worker";
@@ -111,6 +112,7 @@ async function tick(log: LogFn): Promise<void> {
     try {
       await sendEmail(buildMonthlyPulseEmail({
         to: row.parent_email,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "monthlyPulse"),
         parentFirstName: row.parent_first_name,
         childFirstName: row.child_first_name,
         fundTotalUsd: total,

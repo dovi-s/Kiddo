@@ -43,6 +43,7 @@ import { recordEvent, eventCtxFromReq } from "./analytics";
 import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
 import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
 import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rateLimiter";
+import { verifyEmailUnsubscribeSignature } from "./emailUnsubscribeToken";
 import { senderNameIssue, giftMessageIssue, sanitizeTranscript, isSenderBlocked, SENDER_BLOCKED_RESPONSE } from "./giftTextSafety";
 import { remapOAuthIdentitiesForUser } from "./oauthIdentityStore";
 import { generateTotpSecret, buildOtpauthUri, verifyTotp, generateBackupCodes, hashBackupCodes, findBackupCodeMatch } from "./totp";
@@ -1544,6 +1545,52 @@ export async function registerRoutes(
       console.error("Error reading stock requests:", error);
       return res.status(500).json({ error: "Failed to load stock requests." });
     }
+  });
+
+  // ── Parent promotional email unsubscribe ────────────────────────────────
+  // One-click (RFC 8058) + the in-body link target for PARENT promotional
+  // emails (monthly pulse, birthday, anniversary, milestones, holiday warmth,
+  // year-end Wrapped, tax-prep, volatility). Verifies the HMAC signature from
+  // emailUnsubscribeToken, then flips the matching key in users.email_preferences
+  // to false (the same JSONB map workers gate on via isCategoryEnabled).
+  // REQUIRED/transactional categories ignore that map, so this can NEVER suppress
+  // a password reset, verification, or gift receipt. Idempotent; reports ok even
+  // for a non-user email so it never leaks who has an account.
+  const PARENT_UNSUB_CATEGORIES = new Set([
+    "anniversary", "birthday", "milestones", "monthlyPulse",
+    "taxPrep", "wrapped", "volatility", "motherFathersDay",
+  ]);
+  async function applyEmailUnsubscribe(emailRaw: string, catRaw: string, sig: string): Promise<boolean> {
+    const email = String(emailRaw || "").trim().toLowerCase();
+    const cat = String(catRaw || "").trim();
+    if (!email || !PARENT_UNSUB_CATEGORIES.has(cat)) return false;
+    if (!verifyEmailUnsubscribeSignature(email, cat, sig)) return false;
+    await db.execute(sql`
+      UPDATE users
+      SET email_preferences = COALESCE(email_preferences, '{}'::jsonb) || jsonb_build_object(${cat}::text, false)
+      WHERE LOWER(email) = ${email}
+    `);
+    return true;
+  }
+  function unsubscribeResultPage(ok: boolean): string {
+    const body = ok
+      ? `<h1>You're unsubscribed</h1><p>You won't get these updates anymore. You can change this any time in your Kiddo email settings.</p>`
+      : `<h1>This link didn't work</h1><p>It may be expired or incomplete. You can manage your email settings from inside Kiddo instead.</p>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kiddo email settings</title><style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#F9F7F3;color:#1A1710;margin:0;padding:48px 16px;text-align:center}.card{max-width:460px;margin:0 auto;background:#fff;border:1px solid rgba(26,23,16,.1);border-radius:20px;padding:32px 28px}h1{font-family:Georgia,serif;font-size:22px;margin:0 0 12px}p{font-size:14px;line-height:1.6;color:rgba(26,23,16,.6)}.b{font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1B4332;margin-bottom:16px}</style></head><body><div class="card"><div class="b">Kiddo</div>${body}</div></body></html>`;
+  }
+  // GET — the in-body "unsubscribe" link a parent clicks. Renders a confirmation.
+  app.get("/api/email/unsubscribe", async (req, res) => {
+    const ok = await applyEmailUnsubscribe(String(req.query.e || ""), String(req.query.cat || ""), String(req.query.sig || "")).catch(() => false);
+    res.status(ok ? 200 : 400).type("html").send(unsubscribeResultPage(ok));
+  });
+  // POST — RFC 8058 one-click (Gmail/Yahoo hit this directly; no page needed).
+  app.post("/api/email/unsubscribe", async (req, res) => {
+    const ok = await applyEmailUnsubscribe(
+      String(req.query.e || (req.body && req.body.e) || ""),
+      String(req.query.cat || (req.body && req.body.cat) || ""),
+      String(req.query.sig || (req.body && req.body.sig) || ""),
+    ).catch(() => false);
+    res.status(ok ? 200 : 400).json({ ok });
   });
 
   // Admin view: aggregated PMF survey responses with the 40% Sean
@@ -6928,13 +6975,30 @@ export async function registerRoutes(
         // badge. The entries array has already been filtered for parent_only
         // and (when not adult) kid_at_18 above; what reaches here is what
         // the kid is allowed to see.
-        memories: entries
-          .filter((e) => e.type !== "parent_letter" && e.type !== "sealed_letter")
-          .slice(0, ageInfo.phase === "teen" ? 8 : 3)
+        // The kid's WHOLE Memory Book — no cap. It's their own history and the
+        // emotional moat ("the account my grandmother started for me"); a kid
+        // should never be locked out of notes left FOR them, and the abundance is
+        // the point. Human notes (gift messages + parent notes) sort FIRST so an
+        // auto "crossed $X" milestone can never crowd a grandmother's note out of
+        // the top; newest first within each group. The client paginates the
+        // display (a generous default + "see all"), so the full book is a one-time
+        // payload, not a render problem.
+        memories: [...entries]
+          .filter((e: any) => e.type !== "parent_letter" && e.type !== "sealed_letter")
+          .sort((a: any, b: any) => {
+            const ah = (a.type === "gift_message" || a.type === "parent_note") ? 0 : 1;
+            const bh = (b.type === "gift_message" || b.type === "parent_note") ? 0 : 1;
+            if (ah !== bh) return ah - bh;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          })
           .map((e: any) => ({
             ...e,
             visibility: String(e.visibility || "kid_now"),
           })),
+        // Count of human notes (gift messages + parent notes) — drives the kid's
+        // "N notes from people who love you" line, the single number that conveys
+        // the moat better than any list. Excludes auto milestones (not from a person).
+        memoryNoteCount: entries.filter((e: any) => e.type === "gift_message" || e.type === "parent_note").length,
         // Count of entries that were specifically reserved for the at-18
         // reveal and just became visible (visibility='kid_at_18'). Drives
         // the "N things were saved specifically for today" line in the
@@ -24325,16 +24389,39 @@ export async function registerRoutes(
       // funds without snapshots simply don't contribute to the sum.
       let aggregateHistory: Array<{ date: string; total: number }> = [];
       try {
+        // Carry-forward household aggregate, FIXED 2026-06-10. The prior query
+        // SUM'd only the snapshots that EXISTED on each day, so any day a fund
+        // was missing its snapshot undercounted the whole household — full-
+        // coverage days spiked up, partial days dipped down, producing a fake
+        // "sharp rise then crash" that contradicted the (already-corrected)
+        // +$X callout. Now each day sums EACH fund's most-recent snapshot
+        // on-or-before that day, so the shape reflects real value movement, not
+        // snapshot coverage. A fund with no snapshot yet contributes nothing.
         const histRes = await db.execute(sql`
+          WITH days AS (
+            SELECT generate_series(
+              DATE_TRUNC('day', NOW() - INTERVAL '29 days'),
+              DATE_TRUNC('day', NOW()),
+              INTERVAL '1 day'
+            ) AS day
+          ),
+          hh_funds AS (
+            SELECT DISTINCT fund_id FROM fund_snapshots WHERE fund_id IN (${fundIdsSql})
+          )
           SELECT
-            DATE_TRUNC('day', snapshot_date) AS day,
-            SUM(CAST(total_value AS numeric))::numeric AS total
-          FROM fund_snapshots
-          WHERE fund_id IN (${fundIdsSql})
-            AND snapshot_date >= NOW() - INTERVAL '30 days'
-          GROUP BY DATE_TRUNC('day', snapshot_date)
-          ORDER BY day ASC
-          LIMIT 31
+            d.day AS day,
+            COALESCE(SUM((
+              SELECT CAST(s.total_value AS numeric)
+              FROM fund_snapshots s
+              WHERE s.fund_id = f.fund_id
+                AND s.snapshot_date < d.day + INTERVAL '1 day'
+              ORDER BY s.snapshot_date DESC
+              LIMIT 1
+            )), 0) AS total
+          FROM days d
+          CROSS JOIN hh_funds f
+          GROUP BY d.day
+          ORDER BY d.day ASC
         `);
         aggregateHistory = ((histRes.rows as any[]) || []).map((r) => ({
           date: new Date(r.day).toISOString().slice(0, 10),
