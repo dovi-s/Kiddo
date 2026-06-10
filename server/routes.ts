@@ -6642,9 +6642,25 @@ export async function registerRoutes(
       const fundHoldings = await storage.getHoldingsByFund(fund.id);
       const fundEvents = await storage.getEventsByFund(fund.id);
       const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
-      const totalContributed = fundGifts
-        .filter((g: any) => ["processing", "invested", "settled", "host_hold"].includes(String(g.status || "").toLowerCase()))
+      const realGifts = fundGifts
+        .filter((g: any) => ["processing", "invested", "settled", "host_hold"].includes(String(g.status || "").toLowerCase()));
+      const totalContributed = realGifts
         .reduce((sum: number, g: any) => sum + parseFloat(g.netAmount || g.amount || "0"), 0);
+      // Lifetime aggregate counts over ALL real gifts. The `gifts` array below
+      // is capped to a recent display window (12 / 5), so the kid's hero stats
+      // ("gifts received" / "people gave") MUST come from here instead — else a
+      // richly-funded fund (e.g. 134 gifts from 12 people) renders as "12 gifts
+      // / 4 people", undercounting the whole community and contradicting both
+      // the contributed total and the Memory Book authors. noNote feeds the
+      // "the gift was the message" framing.
+      const giftStats = {
+        total: realGifts.length,
+        gifters: new Set(realGifts.map((g: any) => g.senderName)).size,
+        noNote: realGifts.filter((g: any) => {
+          const m = String(g.message || "").trim();
+          return !m || /^auto-invest contribution to /i.test(m);
+        }).length,
+      };
 
       // Community compounding chart data. The single most-powerful
       // visualization Kiddo can render: each gifter's cumulative
@@ -6769,6 +6785,9 @@ export async function registerRoutes(
         age: ageInfo.age,
         monthsUntil18: ageInfo.monthsUntil18,
         daysUntil18: ageInfo.daysUntil18,
+        // Lifetime counts (all gifts) — the `gifts` array below is only the
+        // recent display window, so the hero stats read these instead.
+        giftStats,
         gifts: fundGifts.slice(0, ageInfo.phase === "teen" ? 12 : 5).map((gift) => {
           // Suppress the auto-invest boilerplate message ("Auto-invest
           // contribution to Emma's Fund") at the API boundary. The
@@ -24089,7 +24108,15 @@ export async function registerRoutes(
           FROM gifts
           WHERE fund_id IN (${fundIdsSql})
             AND created_at >= ${thirtyDaysAgo.toISOString()}
-            AND status NOT IN ('failed', 'refunded', 'canceled')
+            AND status NOT IN ('failed', 'refunded', 'canceled', 'pending')
+            -- "Gifts from people" must mean gifts from OTHERS. The parent's own
+            -- contributions (auto-invest fires + one-time adds) are gift rows
+            -- under the parent's email; without this clause they were summed in,
+            -- so "$X from people" DOUBLE-COUNTED the parent's "You added $Y" and
+            -- failed to reconcile with the per-fund "in gifts" inflow (which
+            -- already excludes the parent). Mirror that query's sender filter +
+            -- its 'pending' exclusion so the header and the per-fund cards agree.
+            AND (sender_email IS NULL OR LOWER(sender_email) != LOWER(${String((req.user as any)?.email || '')}))
         `);
         giftStats = (giftStatsRow.rows?.[0] as any) || {};
       } catch (err) {
