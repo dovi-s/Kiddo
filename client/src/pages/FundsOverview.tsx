@@ -562,9 +562,9 @@ export default function FundsOverview() {
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
           <div className="rounded-3xl bg-card border border-border p-6">
-            <div className="h-3 w-20 rounded bg-muted/50 mb-4" />
-            <div className="h-10 w-48 rounded bg-muted/50 mb-6" />
-            <div className="space-y-3">
+            <div className="h-3 w-20 rounded bg-muted/50 mb-4 animate-pulse" />
+            <div className="h-10 w-48 rounded bg-muted/50 mb-6 animate-pulse" />
+            <div className="space-y-3 animate-pulse">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex items-center justify-between rounded-2xl border border-border bg-background p-4">
                   <div className="flex items-center gap-3">
@@ -776,6 +776,13 @@ export default function FundsOverview() {
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.35, ease: "easeOut", delay: 0.18 + i * 0.08 }}
+                  // Calm hover-lift on the primary CTA (open a fund): a 2px rise
+                  // + a soft tap-press, with the signature easing — enough to feel
+                  // alive/clickable without the lab's playful bounce. Per-state
+                  // transitions so hover stays snappy (the entrance delay above
+                  // must NOT bleed into the hover, or it lags before lifting).
+                  whileHover={{ y: -2, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                  whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
                   className={`relative w-full flex items-center justify-between gap-3 rounded-2xl border bg-card p-4 text-left transition-colors ${
                     isTransferred
                       ? "opacity-70 border-[hsl(var(--kiddo-border))]"
