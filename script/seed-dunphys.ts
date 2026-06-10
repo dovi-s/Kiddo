@@ -133,7 +133,7 @@ const ACCOUNTS = [
   { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const, profileImageUrl: "https://openpsychometrics.org/tests/characters/test-resources/pics/MF/1.jpg" },
   { email: "gloria@dunphyfamily.com",   firstName: "Gloria",   lastName: "Pritchett", preferredName: "Gloria",   role: "gifter" as const, profileImageUrl: "https://static0.srcdn.com/wordpress/wp-content/uploads/2018/11/Modern-Family-Gloria.jpg?q=50&fit=crop&w=825&dpr=1.5" },
   { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const, profileImageUrl: "https://i.ytimg.com/vi/hVvQTyeLyp0/maxresdefault.jpg" },
-  { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const, profileImageUrl: "https://medias.spotern.com/spots/w640/162/162897-1537345352.jpg" },
+  { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const, profileImageUrl: "https://tvovermind.com/wp-content/uploads/2022/01/Cam-Tucker-750x402.jpg" },
   { email: "manny@dunphyfamily.com",    firstName: "Manny",    lastName: "Delgado",   preferredName: "Manny",    role: "gifter" as const, profileImageUrl: "https://cdn1.edgedatg.com/aws/v2/abc/ModernFamily/person/737059/0742ee201d7c06d751852e65200c9750/362x362-Q90_0742ee201d7c06d751852e65200c9750.jpg" },
   // Haley is the graduated adult: past CA majority (21), her fund is transferred
   // to her below (step 3b). The "graduate" role gives her approved KYC in
@@ -1363,10 +1363,22 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
   const haleyFundId = seededFundIds[0]; // KIDS[0] is Haley (age 21, past CA majority)
   const haleyUserId = userIdByEmail.get("haley@dunphyfamily.com");
   if (haleyUserId && haleyFundId) {
+    // Haley graduated ~1 year ago ("22, a year past majority"), so stamp the
+    // handoff a year back — not at seed-time — and freeze valueAtTransfer to
+    // roughly her value THEN (~91% of today's). This makes Phil's previous-owner
+    // KEEPSAKE honest AND demonstrable: "handed off at $X a year ago", distinct
+    // from her live balance now. A same-day handoff would make keepsake == live
+    // and the freeze invisible.
+    const [haleyBalRow] = await db.select({ balance: funds.balance }).from(funds).where(eq(funds.id, haleyFundId));
+    const haleyBalNum = parseFloat(haleyBalRow?.balance || "0");
+    const haleyHandoffValue = haleyBalNum > 0 ? (haleyBalNum * 0.91).toFixed(2) : null;
     const transferredAt = new Date();
+    transferredAt.setFullYear(transferredAt.getFullYear() - 1);
     await db.update(funds).set({
       userId: haleyUserId,
       previousOwnerId: philId,
+      // Frozen handoff keepsake value for the previous-owner view (see column).
+      valueAtTransfer: haleyHandoffValue,
       // Mirror the real /complete handoff (routes.ts ~7503): a UTMA terminates
       // at majority and becomes the owner's own individual account. Without
       // these the demo fund stayed accountType "utma" + recipientRelation null,
