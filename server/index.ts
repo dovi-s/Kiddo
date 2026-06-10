@@ -119,7 +119,15 @@ function buildContentSecurityPolicy() {
 
   if (!isProd) {
     scriptSrc.push("'unsafe-eval'");
-    connectSrc.push("ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*");
+    // Dev-only: allow local device-frame preview tools (Responsively App, and
+    // similar) to inject their browser-sync client, which loads from a local
+    // https://localhost:<port> origin (the port varies per session) and opens
+    // a socket back to it for cross-device mirroring + live reload. Without
+    // localhost in script-src, the browser-sync-client.js is refused (it was
+    // only in connect-src before). Production never gets any of this — gated on
+    // !isProd, same as the vscode-webview frame-ancestors accommodation below.
+    scriptSrc.push("http://localhost:*", "https://localhost:*", "http://127.0.0.1:*", "https://127.0.0.1:*");
+    connectSrc.push("ws:", "wss:", "http://localhost:*", "https://localhost:*", "http://127.0.0.1:*", "https://127.0.0.1:*");
   }
 
   // Dev-only: allow the app to be embedded in the VS Code "Mobile Preview"
@@ -683,6 +691,15 @@ const rateLimitRules: RateLimitRule[] = [
   // digits) and mint an access token that drives a permanent custodial
   // ownership transfer at majority. Cap unlock attempts hard.
   { name: "kid-view-unlock", methods: ["POST"], match: /^\/api\/kid-view\/[^/]+\/unlock$/, max: 8, windowMs: 15 * 60 * 1000 },
+  // Public gift-fund fetch: the slug is a guessable child-name (slugify(name),
+  // no token — see routes.ts:7186) and the response carries the child's first
+  // name + photo. noindex blocks search discovery but NOT enumeration; the
+  // limiter keys per-IP across the whole rule (not per-slug), so one source
+  // can't sweep the slug space to harvest kids. Tuned GENEROUS on purpose — this
+  // is the gifter conversion surface, and a false 429 is a lost gift — but still
+  // far below a dictionary sweep. (Guessing ONE known name is a single request;
+  // that targeted case is the photo-gating decision held for counsel, not this.)
+  { name: "public-fund-view", methods: ["GET"], match: /^\/api\/public\/funds\/[^/]+$/, max: 60, windowMs: 10 * 60 * 1000 },
 ];
 
 // Durable (cross-instance) rate limiter — see server/rateLimiter.ts. Backed by
