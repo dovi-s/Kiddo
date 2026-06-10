@@ -3556,9 +3556,14 @@ export default function MemoryBook() {
                           ? `${firstName} (${ownerPreferredName})`
                           : firstName;
                       return (
-                        <button
+                        <motion.button
                           key={gifter.name}
                           type="button"
+                          // Hover-lift + tap-press so the roster faces feel clickable
+                          // like the rest of the app (they filter the entries on tap).
+                          // Signature easing; reduced-motion handled globally.
+                          whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                          whileTap={{ scale: 0.96, transition: { duration: 0.1 } }}
                           onClick={() => setGifterFilter(isActive ? null : gifter.name)}
                           // Native title = the long-name escape hatch. The label
                           // truncates at 64px (deliberate: a roster of tiles must
@@ -3603,7 +3608,7 @@ export default function MemoryBook() {
                               ? `${gifter.giftCount} gifts`
                               : gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}
                           </p>
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>
