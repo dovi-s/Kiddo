@@ -8407,7 +8407,15 @@ export default function DashboardLab() {
                     ? (occasionDays === 0 ? "Today" : occasionDays === 1 ? "Tomorrow" : `in ${occasionDays}d`)
                     : (() => {
                         const raw = String(activeOccasion.name || "Occasion").trim();
-                        return raw.length > 10 ? `${raw.slice(0, 9)}…` : raw;
+                        // Keep the FULL name (no "{child}'s" strip — founder call);
+                        // just never cut mid-word. "Luke's Birthday" (the common
+                        // case) now fits; only a longer name truncates, and only at
+                        // a word boundary, so it's recoverable not "Luke's Bi…".
+                        // (Exact pill width may want a founder eye on a long name.)
+                        if (raw.length <= 18) return raw;
+                        const cut = raw.slice(0, 18);
+                        const sp = cut.lastIndexOf(" ");
+                        return `${(sp > 6 ? cut.slice(0, sp) : cut).trim()}…`;
                       })())
                 : "New occasion";
               const occasionIsImminent = activeOccasion && occasionDays !== null && occasionDays <= 30;
