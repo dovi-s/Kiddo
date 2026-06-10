@@ -4447,7 +4447,7 @@ const [editFundName, setEditFundName] = useState("");
                     <span className="text-sm font-semibold text-foreground">Link only · Private</span>
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                    Only people you share the link with can reach this fund. {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "It is never publicly searchable." : "Funds for children are never publicly searchable."}
+                    {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "This fund is never listed or publicly searchable." : "Funds for children are never listed or publicly searchable."} Anyone with its link can reach it, so share the link only with people you trust.
                   </p>
                 </div>
               </div>

@@ -35,7 +35,7 @@ const parentSteps = [
   {
     icon: QrCode,
     title: "Step 3: Get your gift link.",
-    body: "Kiddo generates a private, shareable link, QR code, and fund code for your child's fund. This is what you share with family and friends. It is not public. It is not searchable. Only people you share it with can access it.",
+    body: "Kiddo generates a private, shareable link, QR code, and fund code for your child's fund. This is what you share with family and friends. It is not public and not searchable. Anyone with the link can use it to gift, so share it with the people you want to invite.",
   },
   {
     icon: MousePointerClick,
