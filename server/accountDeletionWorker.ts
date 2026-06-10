@@ -49,6 +49,14 @@
 //     authorName='Former gifter', authorPhotoUrl=null. Content +
 //     media preserved per the kid-at-18 retention principle.
 //
+//   • (CLOSED 2026-06-09) Analytics-event PII. analytics_events rows
+//     retained raw ip_address / user_agent / session_id / props after a
+//     user was scrubbed (the user-row anonymization didn't reach this
+//     table). This worker now nulls those identifiers for the deleted
+//     user while preserving the aggregate funnel signal (event_name,
+//     fund_id, occurred_at). Surfaced by the 2026-06-09 data-privacy
+//     audit (DATA_PRIVACY_AUDIT_2026-06-09.md, finding C2/#8/#30).
+//
 //   • Plaid /item/remove. bank_accounts.providerItemId DOES exist
 //     (populated by the /api/plaid/exchange-public-token route), but
 //     Plaid's /item/remove endpoint requires the access_token, NOT
@@ -79,7 +87,7 @@
 
 import { db } from "./db";
 import { eq, and, isNull, lt, sql } from "drizzle-orm";
-import { users, subscriptions, fundMemberships, transactions, auditLogs, memoryEntries, funds, gifts } from "@shared/schema";
+import { users, subscriptions, fundMemberships, transactions, auditLogs, memoryEntries, funds, gifts, analyticsEvents } from "@shared/schema";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "account-deletion-worker";
@@ -256,6 +264,30 @@ async function scrubSsnOnOwnedFunds(userId: string): Promise<number> {
 }
 
 /**
+ * Scrub raw identifiers from this user's analytics events. The aggregate
+ * funnel signal (event_name, fund_id, occurred_at) is preserved so post-
+ * deletion conversion metrics stay accurate, but the per-event PII —
+ * ip_address, user_agent, session_id, and the free-form props blob (which
+ * some recordEvent call sites populate with email) — is nulled. user_id is
+ * intentionally LEFT in place: it's a foreign key to the now-anonymized
+ * users row (same principle as audit logs / tax records), so it carries no
+ * recoverable identity once scrubUserRow has run.
+ */
+async function scrubAnalyticsEventsPii(userId: string): Promise<number> {
+  const result = await db
+    .update(analyticsEvents)
+    .set({
+      ipAddress: null,
+      userAgent: null,
+      sessionId: null,
+      props: null,
+    })
+    .where(eq(analyticsEvents.userId, userId))
+    .returning({ id: analyticsEvents.id });
+  return result.length;
+}
+
+/**
  * Apply the in-DB PII scrub for a single user. Anonymizes the user
  * row + stamps pii_scrubbed_at so the worker won't re-process. Each
  * field is set to a stable, non-PII placeholder; the email gets the
@@ -328,6 +360,7 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
   // failure re-queues the user (pii_scrubbed_at is stamped last).
   let giftsAnonymized = 0;
   let fundsSsnScrubbed = 0;
+  let analyticsScrubbed = 0;
   try {
     giftsAnonymized = await anonymizeGiftsSentBy(userId);
   } catch (err: any) {
@@ -337,6 +370,11 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
     fundsSsnScrubbed = await scrubSsnOnOwnedFunds(userId);
   } catch (err: any) {
     log(`Fund SSN scrub failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
+  }
+  try {
+    analyticsScrubbed = await scrubAnalyticsEventsPii(userId);
+  } catch (err: any) {
+    log(`Analytics PII scrub failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
   }
   try {
     await scrubUserRow(userId);
@@ -356,6 +394,7 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
         memoryEntriesAnonymized: result.memoryEntriesAnonymized,
         giftsAnonymized,
         fundsSsnScrubbed,
+        analyticsScrubbed,
         scrubbedAt: new Date().toISOString(),
       }),
       ipAddress: null,

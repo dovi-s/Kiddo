@@ -4338,7 +4338,10 @@ export async function registerRoutes(
           name: fund?.name,
           slug: fund?.slug,
           recipientFirstName: fund?.recipientFirstName,
-          childPhotoUrl: fund?.childPhotoUrl || null,
+          // childPhotoUrl intentionally NOT exposed on this PUBLIC endpoint —
+          // see the gating note on /api/public/funds/:slug. Public minor pages
+          // show first name only; authenticated surfaces keep the photo.
+          // Gated 2026-06-09 (data-privacy audit C1).
           accountType: fund?.accountType,
           investmentStrategy: fund?.investmentStrategy,
           status: fund?.status,
@@ -7437,7 +7440,14 @@ export async function registerRoutes(
           name: fund.name,
           slug: fund.slug,
           recipientFirstName: fund.recipientFirstName,
-          childPhotoUrl: fund.childPhotoUrl || null,
+          // childPhotoUrl intentionally NOT exposed on this PUBLIC endpoint.
+          // A child's photo is COPPA "personal information," and our privacy
+          // policy promises public-facing minor pages show "only the child's
+          // first name." Keeping the face off an unauthenticated, forwardable
+          // link makes that promise true and removes the deception risk.
+          // Authenticated parent/co-admin surfaces still resolve the photo.
+          // Gated 2026-06-09 (data-privacy audit C1). To reverse, restore the
+          // field AND update the privacy-policy copy, with counsel sign-off.
           accountType: fund.accountType,
           investmentStrategy: fund.investmentStrategy,
           status: fund.status,
@@ -13412,11 +13422,12 @@ export async function registerRoutes(
         eventSlug: eventForSlug?.slug || null,
         event: eventBlock,
         fundName: fund?.recipientFirstName || fund?.name || null,
-        // The kid's photo anchors the gifter's success moment (who did I
-        // give to?). Already public on the gift page the gifter came
-        // from, so this adds no new exposure. Null when the family hasn't
-        // uploaded one — the page falls back to the sprout treatment.
-        childPhotoUrl: fund?.childPhotoUrl || null,
+        // childPhotoUrl intentionally NOT exposed on this unauthenticated
+        // post-payment summary. The prior rationale ("already public on the
+        // gift page") no longer holds now that the gift page itself is gated
+        // (see /api/public/funds/:slug). The success page falls back to the
+        // sprout treatment when null. Gated 2026-06-09 (data-privacy audit C1).
+        childPhotoUrl: null,
         amount: gift?.amount || metadata.baseAmount || metadata.amount || metadata.netToFund || null,
         senderName: gift?.senderName || metadata.senderName || null,
         senderEmail: gift?.senderEmail || metadata.senderEmail || null,

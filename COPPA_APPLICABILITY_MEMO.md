@@ -157,6 +157,23 @@ That is a 15-minute add to the existing engagement, folded into packet Part 5.
 
 ---
 
+## Audit corroboration (2026-06-09)
+
+A 179-agent `data-privacy-audit` (full triage in `DATA_PRIVACY_AUDIT_2026-06-09.md`)
+**adversarially validated this memo's thesis**: no third-party tracking on child-
+viewed pages (analytics is first-party server-side), no live child-data egress to
+surprise processors (Whisper is dormant/triple-gated), and the "from the adult, not
+the child" structure holds. Two audit findings that sounded alarming are verified
+**false positives**: "SSN stored plaintext" (only `last4` is stored; the encrypted
+column is never written plaintext) and "audio → OpenAI" (dormant). The audit's real
+value was first-party hygiene, not the legal gate — see the triage doc's section C.
+**Two of those are now fixed (2026-06-09):** (C1) the child's photo is gated off the
+three unauthenticated endpoints, so the privacy policy's "public minor pages show
+only the child's first name" is now true (closing a policy-vs-practice / FTC-
+deception gap); (C2) the deletion worker now scrubs analytics-event PII
+(ip/user-agent/session/props) on account deletion. The Stripe-media-URL minimization
+(C3) is a money-path refactor left for its own tested PR.
+
 ## Action items (this is the founder's call on what to take)
 
 - [x] **Self-host the two web fonts** — DONE 2026-06-09 (@fontsource-variable,
