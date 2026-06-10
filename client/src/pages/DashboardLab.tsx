@@ -2057,29 +2057,9 @@ export default function DashboardLab() {
     effectivePlanRef.current = effectivePlan;
   }, [effectivePlan]);
 
-  // Send a real, fund-less account to onboarding — but ONLY once the funds
-  // list is confirmed empty by an ACTUAL server fetch. The old guard gated on
-  // `!fundsLoading`, which is false during the window where the query is
-  // showing empty initialData (status 'success' + isLoading false) while the
-  // network fetch is still in flight (initialDataUpdatedAt: 0 here). That
-  // window bounced demo personas (who always have seeded funds) and real
-  // users mid-load to /get-started "randomly", depending purely on whether
-  // the fetch had resolved when the effect ran — the reported "I open the
-  // demo and it throws me to Get Started" bug. Now:
-  //   • fundsDataUpdatedAt > 0  → the network fetch actually resolved (not
-  //     just cached initialData), so funds.length === 0 is the truth.
-  //   • !fundsFetching          → no fetch in flight that could fill it.
-  //   • !isDemoAccount          → a demo persona is NEVER sent to signup
-  //     (defense in depth: a spurious bounce now also destroys the demo
-  //     session on GetStarted arrival, so the cost of a false positive rose).
-  useEffect(() => {
-    if (isDemoAccount) return;
-    if (authLoading || !isAuthenticated) return;
-    if (fundsFetching || fundsDataUpdatedAt === 0) return;
-    if (funds.length === 0) {
-      setLocation("/get-started");
-    }
-  }, [isDemoAccount, authLoading, isAuthenticated, fundsFetching, fundsDataUpdatedAt, funds.length, setLocation]);
+  // The fund-less redirect (onboarding vs. the gifter doorway) is now GIFTER-aware
+  // and lives BELOW, after the gifterPeek query, so it can route a fund-less gifter
+  // to their gifts instead of bouncing them to parent onboarding. Moved 2026-06-10.
 
   useEffect(() => {
     let canceledEffect = false;
@@ -2765,7 +2745,7 @@ export default function DashboardLab() {
   // them as a brand-new parent. Real parents never fire this request, and
   // the query key matches /my-gifts exactly so the tap lands on a warm cache.
   const looksLikeNonParent = !fundsLoading && fundsSuccess && funds.every((f: any) => getFundTotalValue(f) <= 0);
-  const { data: gifterPeek } = useQuery<{
+  const { data: gifterPeek, isFetched: gifterPeekFetched } = useQuery<{
     summary?: { totalGifted?: number };
     funds?: Array<{ giftCount?: number; totalGifted?: number; childFirstName?: string | null; childName?: string | null }>;
   }>({
@@ -2779,6 +2759,32 @@ export default function DashboardLab() {
     staleTime: 5 * 60_000,
     retry: false,
   });
+
+  // Fund-less redirect, single source of truth (moved here 2026-06-10 so it is
+  // GIFTER-aware: gifterPeek + looksLikeNonParent are declared just above). Once the
+  // funds list is confirmed empty by a real server fetch (fundsDataUpdatedAt>0 and
+  // not in flight — same guards as the prior version, which fixed the "demo throws
+  // me to Get Started" race):
+  //   - a GIFTER (no custodial fund but HAS given gifts) -> /my-gifts, their gifts
+  //     surface, NOT the empty parent shell with its phantom "your child turns 18".
+  //   - a real fund-less PARENT -> /get-started (onboarding), unchanged.
+  //   - a demo persona is NEVER sent to signup (a bounce destroys the demo session);
+  //     only the /my-gifts doorway, a normal logged-in route, can fire for a demo.
+  // We wait for the gifter-peek to resolve (it only fetches for non-parents) so a
+  // gifter is never bounced to onboarding before we know they are one. A parent
+  // never reaches here at all (funds.length>0 returns above).
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    if (fundsFetching || fundsDataUpdatedAt === 0) return;
+    if (funds.length !== 0) return;
+    if (looksLikeNonParent && !gifterPeekFetched) return;
+    if ((gifterPeek?.funds || []).some((f) => (f?.giftCount || 0) > 0)) {
+      setLocation("/my-gifts");
+      return;
+    }
+    if (isDemoAccount) return;
+    setLocation("/get-started");
+  }, [authLoading, isAuthenticated, fundsFetching, fundsDataUpdatedAt, funds.length, looksLikeNonParent, gifterPeekFetched, gifterPeek, isDemoAccount, setLocation]);
 
   const { data: giftCodeData } = useQuery<{ code: string; lookupUrl: string }>({
     queryKey: ["/api/funds", activeFundId, "gift-code"],
