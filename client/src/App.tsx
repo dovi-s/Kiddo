@@ -590,7 +590,7 @@ function prefetchCriticalRoutes() {
   _prefetchDone = true;
   const run = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (fn: () => void) => setTimeout(fn, 120);
   run(() => {
-    import("@/pages/Dashboard");
+    import("@/pages/DashboardLab"); // the ported dashboard (/dashboard); classic parked at /dashboard-classic
     import("@/pages/Settings");
     import("@/pages/Account");
     import("@/pages/Activity");
@@ -746,17 +746,19 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/demo"><Demo /></Route>
           <Route path="/p2p-preview"><P2PDemo /></Route>
           <Route path="/generational-loop"><GenerationalLoop /></Route>
-          {/* Dashboard-redesign sandbox (2026-06-04). A FORK of the real
-              Dashboard (DashboardLab.tsx) so /design-lab renders the real
-              Luke demo dashboard identically when logged into the demo. We
-              redesign sections in the fork; the real Dashboard.tsx is
-              untouched until a section is ported back. ProtectedRoute so it
-              has the same auth/data context as /dashboard. */}
+          {/* PORTED 2026-06-10: the redesign (DashboardLab) is now THE real
+              dashboard. /design-lab is kept as an ALIAS (existing links + the
+              build-blind dev workflow still work); both render DashboardLab.
+              The pre-port Dashboard.tsx is parked at /dashboard-classic for
+              instant rollback — to revert, point /dashboard back at <Dashboard/>
+              and the preload back at @/pages/Dashboard. The lab was written for
+              this (uses pathname-relative URLs, navigates to /dashboard). */}
           <Route path="/design-lab"><ProtectedRoute><DashboardLab /></ProtectedRoute></Route>
           <Route path="/get-started"><GetStarted /></Route>
           <Route path="/onboard"><Onboard /></Route>
           <Route path="/activate"><ProtectedRoute><ActivateInvesting /></ProtectedRoute></Route>
-          <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
+          <Route path="/dashboard"><ProtectedRoute><DashboardLab /></ProtectedRoute></Route>
+          <Route path="/dashboard-classic"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
           <Route path="/profile"><ProtectedRoute><Account /></ProtectedRoute></Route>
           <Route path="/activity"><ProtectedRoute><Activity /></ProtectedRoute></Route>
           <Route path="/activity/:id"><ProtectedRoute><ActivityDetail /></ProtectedRoute></Route>

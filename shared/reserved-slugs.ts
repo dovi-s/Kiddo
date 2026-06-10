@@ -13,7 +13,7 @@
 // didn't check at all). Keeping ONE list here prevents that.
 export const RESERVED_FUND_SLUGS: ReadonlySet<string> = new Set([
   // App (authenticated) + core flows
-  "login", "get-started", "onboard", "activate", "dashboard", "account",
+  "login", "get-started", "onboard", "activate", "dashboard", "dashboard-classic", "account",
   "settings", "activity", "events", "event", "send", "claim", "admin",
   "memory", "gift", "kid", "transition", "gifter", "my-gifts",
   "personal-funds", "projection", "tax-documents", "funds", "invitations",
