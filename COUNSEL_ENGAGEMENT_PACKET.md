@@ -119,8 +119,10 @@ three options below into one posture.*
    post-handoff), **by itself** enough to trigger RIA registration if our platform
    doesn't otherwise constitute "advice"?
 2. Does our surface constitute "investment advice" under the Advisers Act
-   three-prong test? Inputs: parent picks from a **curated 17-stock universe** (we
-   surface, don't recommend a specific stock), plus **user-selected broad-market ETF
+   three-prong test? Inputs: parent picks from a **curated 24-stock universe** of
+   recognizable consumer brands (we *surface* a neutral menu, framed by meaning
+   not performance; we do not recommend, rank by returns, or label "top picks"),
+   plus **user-selected broad-market ETF
    mix presets** (growth / balanced / conservative — chosen by the user, never
    auto-assigned by age; sharpened in the managed-allocation flags below); we
    **project** future value at a 7% historical assumption (disclaimed); we do **not**
@@ -208,9 +210,20 @@ need a **written yes/no** on each:
    vs. investment date) in a way we must disclose?
 6. **Tie-in:** if the answer is "only behind the BD / via segregated account," does
    that change anything in the Part 1 AUM structure?
+7. **Escrow — chosen vs. imposed (two questions).** (a) Does a true licensed-escrow
+   structure buy us anything over Option C (no funds held) or the FBO account, or
+   is it strictly heavier and skippable? (b) **More important:** if we *do* hold
+   funds in a segregated/FBO account conditioned on a future event (parent opens
+   account, else refund), could a regulator characterize that arrangement **itself
+   as escrow** and pull us under **state escrow-agent licensing** (e.g. CA Escrow
+   Law / DFPI), separate from the money-transmission analysis in #1? Does the
+   BD-as-holder structure inoculate us, and does the refund condition make it look
+   like escrow vs. a simple refundable pre-payment (#2-iii)? Full framing in
+   `LAWYER_Q_HOLDING_GIFT_FUNDS.md`.
 
 **What we need back:** which holding structure is permissible and cleanest, the
-max defensible hold window, and the required gifter disclosures.
+max defensible hold window, the required gifter disclosures, **and whether the
+funds-held fallback trips escrow-agent licensing.**
 
 **The five written gates that must close before we flip the flag.** The built
 flow is the no-funds-held SetupIntent design above; an internal implementation
@@ -296,14 +309,53 @@ owner mode), which is in tension with our "not a cash-out terminal" thesis.
 
 # Part 5 — COPPA / children's-privacy applicability ⭐ (Privacy)
 
-**Source:** `SECURITY_AND_COMPLIANCE_POSTURE.md` (External matrix).
+**Source:** `SECURITY_AND_COMPLIANCE_POSTURE.md` (External matrix) +
+`COPPA_APPLICABILITY_MEMO.md` (full grounded analysis with file:line evidence).
 
-We store children's PII (name, DOB, SSN, photos, voice). The **parent (not the
-child) provides it**, and Kid View is **PIN-gated / parent-controlled**, which
-*narrows* COPPA's "collected from a child" trigger. **Question:** is COPPA
-applicable given that posture, and what **state children's-privacy** obligations
-(e.g., state acts) attach? This pairs with Part 3 but is the broader
-applicability/obligations question, not just deletion.
+We store children's PII (name, DOB, SSN, photos, voice), but the **parent or
+gifter (never the child) provides all of it**, and the only child-touching surface
+(Kid View) is **PIN-gated and read-only for under-13s** — the one write path (teen
+stock suggestions) is hard-gated to age 13+ in code (`routes.ts:6892`), i.e. above
+the COPPA age. COPPA triggers on collecting personal information **from a child**;
+our position is that we collect *from the adult about the child*, which puts the
+core product outside COPPA.
+
+**Two things make this load-bearing rather than academic:** (1) we can never argue
+*lack of knowledge* (the product is "give to a child"), so the entire position
+rests on the single hinge "from the adult, not the child" — there is no backup
+argument; and (2) the 2025 amendments' **indefinite-retention prohibition** would
+make our permanent-Memory-Book moat partially illegal **if** COPPA applied, so the
+applicability answer gates the business model, not just a compliance checkbox. The
+2025 Rule amendments are already in effect (full-compliance date April 22, 2026,
+now passed).
+
+**Question for counsel (narrow):** Confirm Kiddo is **not a COPPA-covered
+operator** on the collected-from-the-adult theory, given PIN-gated read-only Kid
+View + teen-only (13+) write access. Identify the one or two surfaces where that
+conclusion is fragile (Kid View third-party egress — note we are self-hosting fonts
+to remove the IP-to-Google leak; Memory Book indefinite retention), and tell us
+which **state children's-privacy / age-appropriate-design** obligations (CA AADC
+and the wave behind it, which reach minors up to 18) attach **regardless** of the
+COPPA answer. Pairs with Part 3 (deletion) but is the broader applicability question.
+
+**Additional fragile surface flagged 2026-06-09 — the public gift link exposes a
+child's first name + photo to anyone who guesses the URL.** The gift page lives at a
+**guessable, un-tokened slug** (`/<child-name>`, e.g. `/luke-dunphy`):
+`generateUniqueFundSlug` (`routes.ts:2224`) is `slugify(name)` + a numeric
+collision suffix — no random token — and `GET /api/public/funds/:slug`
+(`routes.ts:7186`) returns the child's **first name + photo URL** with **no auth and
+no token check**. The page is `noindex,nofollow` (`GiftCheckout.tsx:455`), so it is
+not *search-indexed*, but it IS *enumerable/guessable* by anyone who knows or
+guesses the child's name. This is intrinsic to the gifter loop (a clean,
+shareable, child-named link is the conversion surface), so it is a deliberate
+product trade-off, not a bug — but the guessability + photo is the sharp edge.
+**Question for counsel:** does a child's first name + photo being retrievable by a
+guessable (un-indexed, un-authenticated) URL create COPPA / CA-AADC /
+state-children's-privacy exposure? If so, is `noindex` + rate-limiting the public
+endpoint sufficient, or must we gate the photo (and/or randomize the slug) behind
+an unguessable share token? Product mitigations are scoped and reversible; we are
+holding that build for this answer. (Honest-copy fix already shipped: the in-app +
+marketing copy no longer claims "only people you share with can reach it.")
 
 ---
 
