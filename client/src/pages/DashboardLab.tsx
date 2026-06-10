@@ -174,7 +174,7 @@ import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
 import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
-import { gifterShortName } from "@/lib/gifter-name";
+import { gifterShortName, gifterIdentityKey } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
 import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
@@ -3683,11 +3683,20 @@ export default function DashboardLab() {
 
   const gifterRoster = useMemo<GifterProfile[]>(() => {
     const map = new Map<string, GifterProfile>();
+    // Most-recent gift timestamp per identity, so a collapsed (email-keyed)
+    // gifter displays their LATEST self-identification rather than whichever
+    // name happened to be processed first. Ported from Dashboard (e750ad0).
+    const nameMsByKey = new Map<string, number>();
     for (const g of gifts) {
       const status = String(g.status || "").toLowerCase();
       if (status === "failed" || status === "refunded") continue;
       const rawName = displayGifterName(g.senderName, (g as any).isAnonymous);
-      const key = rawName.toLowerCase();
+      // Group by stable IDENTITY (email-when-present), not raw name — so the
+      // same person signing "Gloria Pritchett" then "Grandma" is ONE row, and
+      // two different people who share a name stay separate. Anonymous + no-email
+      // groupings are unchanged. See gifterIdentityKey. (founder catch 2026-06-08)
+      const key = gifterIdentityKey(g.senderName, (g as any).senderEmail, (g as any).isAnonymous);
+      const giftMs = g.createdAt ? new Date(String(g.createdAt)).getTime() : 0;
       const net = parseFloat(String(g.netAmount || g.amount || "0"));
       const giftPreferredName = ((g as any).gifterPreferredName && String((g as any).gifterPreferredName).trim()) || null;
       const giftAvatarUrl = (g as any).gifterAvatarUrl || null;
@@ -3701,20 +3710,19 @@ export default function DashboardLab() {
             existing.lastGiftDate = String(g.createdAt);
           }
         }
+        // Most-recent gift's name wins as the display name for this identity.
+        if (giftMs >= (nameMsByKey.get(key) ?? 0)) { existing.name = rawName; nameMsByKey.set(key, giftMs); }
         // Fill enrichment from whichever gift carries it (older gifts may pre-date
         // the gifter creating an account / setting a preferred name or photo).
         if (!existing.preferredName && giftPreferredName) existing.preferredName = giftPreferredName;
         if (!existing.avatarUrl && giftAvatarUrl) existing.avatarUrl = giftAvatarUrl;
         existing.gifts.push(g);
       } else {
-        const parts = rawName.trim().split(/\s+/);
-        const initials = parts.length >= 2
-          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-          : rawName.slice(0, 2).toUpperCase();
+        nameMsByKey.set(key, giftMs);
         map.set(key, {
           name: rawName,
-          initials,
-          colorIdx: gifterColorIdx(rawName),
+          initials: "", // resolved post-loop from the final (most-recent) name
+          colorIdx: 0,
           giftCount: 1,
           totalNetAmount: Number.isFinite(net) ? net : 0,
           lastGiftDate: g.createdAt ? String(g.createdAt) : null,
@@ -3723,6 +3731,16 @@ export default function DashboardLab() {
           avatarUrl: giftAvatarUrl,
         });
       }
+    }
+    // Initials + base color from the RESOLVED display name (after most-recent
+    // wins), so a collapsed gifter's avatar matches the name shown. Single-name
+    // gifters are unchanged (most-recent == only name).
+    for (const p of Array.from(map.values())) {
+      const parts = p.name.trim().split(/\s+/);
+      p.initials = parts.length >= 2
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : p.name.slice(0, 2).toUpperCase();
+      p.colorIdx = gifterColorIdx(p.name);
     }
     // Sort by RECENCY (most recent gift first), not total amount. Sorting
     // by amount made the most generous gifter appear first — leaderboard
@@ -9060,7 +9078,14 @@ export default function DashboardLab() {
               );
             })()}
 
-            {/* LAB: the portfolio ENGINE, collapsed (smooth open + close). */}
+            {/* LAB: the portfolio ENGINE, collapsed (smooth open + close).
+                Hidden on the post-handoff KEEPSAKE: a previous owner's frozen
+                view must not expose the now-adult's LIVE holdings + current
+                values (which also contradict the frozen hero), and there's no
+                honest way to show holdings "as of handoff" — positions can change
+                after, and they carry no per-date value. The keepsake centers on
+                the value handed over, who built it, and the Memory Book instead. */}
+            {!showHandoffKeepsake && (
             <LabCollapse
               marginTop={16}
               testid="lab-portfolio-details"
@@ -9704,6 +9729,7 @@ export default function DashboardLab() {
               })()}
             </motion.section>
             </LabCollapse>
+            )}
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
@@ -14993,7 +15019,7 @@ export default function DashboardLab() {
         open={!!addFromScheduleSheet}
         onOpenChange={(v) => { if (!v && !contributingNow) setAddFromScheduleSheet(null); }}
       >
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add to fund</DialogTitle>
           <div className="p-6 space-y-5">
             <div className="space-y-1">
@@ -15320,7 +15346,7 @@ export default function DashboardLab() {
           7% = $Y at 18) so the parent sees what Plus actually unlocks for
           their fund, not generic feature copy. */}
       <Dialog open={autoInvestUpgradeOpen} onOpenChange={(open) => { if (!open) setAutoInvestUpgradeOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
             const child = recipientFirstNameDisplay || "your child";
@@ -16158,7 +16184,7 @@ export default function DashboardLab() {
       </Dialog>
 
       <Dialog open={kidViewConfigOpen} onOpenChange={(o) => { if (!o) { setKidViewConfigOpen(false); setKidViewConfigStep("settings"); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Kid View settings</DialogTitle>
 
           {kidViewConfigStep === "settings" ? (
