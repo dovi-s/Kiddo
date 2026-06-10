@@ -86,6 +86,54 @@ const ACCOUNTS: DemoAccount[] = [
   },
 ];
 
+// Persona portraits for the demo picker. A face beats a generic icon here — the
+// whole pitch is "step into a family," and a photo makes each persona a person,
+// not a list item. Keyed by email so this stays decoupled from the ACCOUNTS
+// shape. (Internal demo: these are placeholder likenesses; swap for owned/
+// illustrated portraits before the page goes public — see the IP note + the
+// bottom-of-page disclaimer.)
+const PERSONA_PHOTOS: Record<string, string> = {
+  "phil@dunphyfamily.com": "https://pyxis.nymag.com/v1/imgs/1a5/a8b/1a2353ae4dfaf73880973701a654c5fdb8-ty-burrell-modern-family.rsquare.w330.jpg",
+  "claire@dunphyfamily.com": "https://arianadickson.wordpress.com/wp-content/uploads/2014/04/webct_upload_applet.jpg",
+  "jay@dunphyfamily.com": "https://openpsychometrics.org/tests/characters/test-resources/pics/MF/1.jpg",
+  "gloria@dunphyfamily.com": "https://static0.srcdn.com/wordpress/wp-content/uploads/2018/11/Modern-Family-Gloria.jpg?q=50&fit=crop&w=825&dpr=1.5",
+  "mitchell@dunphyfamily.com": "https://i.ytimg.com/vi/hVvQTyeLyp0/maxresdefault.jpg",
+  "cameron@dunphyfamily.com": "https://tvovermind.com/wp-content/uploads/2022/01/Cam-Tucker-750x402.jpg",
+  "manny@dunphyfamily.com": "https://cdn1.edgedatg.com/aws/v2/abc/ModernFamily/person/737059/0742ee201d7c06d751852e65200c9750/362x362-Q90_0742ee201d7c06d751852e65200c9750.jpg",
+  "haley@dunphyfamily.com": "https://cdn.mos.cms.futurecdn.net/RYvAQd4QgRDhP3qKVPEvNK.jpg",
+};
+
+// Circular persona portrait with a graceful fallback to initials — the photo
+// URLs are external (flaky), so a broken image degrades to a clean evergreen
+// initials chip rather than a torn-image icon.
+function PersonaAvatar({ email, name, size }: { email: string; name: string; size: number }) {
+  const [failed, setFailed] = useState(false);
+  const src = PERSONA_PHOTOS[email];
+  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  if (!src || failed) {
+    return (
+      <div
+        style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
+        className="flex shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] font-bold text-[hsl(var(--kiddo-evergreen))]"
+        aria-hidden
+      >
+        {initials}
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: size, height: size }} className="shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-black/5">
+      <img
+        src={src}
+        alt={name}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="h-full w-full object-cover"
+      />
+    </div>
+  );
+}
+
 export default function Demo() {
   // Now linked from the footer ("See it live"), so it's no longer an orphan URL.
   // Stay noindex,nofollow regardless: this page one-click logs a visitor into a
@@ -272,7 +320,10 @@ export default function Demo() {
           </section>
 
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Or start with Phil</h2>
+            <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
+              <Users size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+              Or start with Phil
+            </h2>
             <p className="text-sm text-muted-foreground">
               Three kids at three stages: Luke still getting gifts, Alex weeks from taking ownership, and Haley's fund already handed off. The whole arc in one family.
             </p>
@@ -286,9 +337,7 @@ export default function Demo() {
                 data-testid={`demo-login-${account.email.split("@")[0]}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                    <Users size={18} />
-                  </div>
+                  <PersonaAvatar email={account.email} name={account.display} size={44} />
                   <div>
                     <p className="font-semibold text-foreground">{account.display}</p>
                     <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
@@ -302,7 +351,10 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             {/* "Personal account", never "adult account", user-facing —
                 terminology locked 2026-06-04 (ownership framing, not age). */}
-            <h2 className="font-heading text-lg font-semibold text-foreground">Step into the account she owns now</h2>
+            <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
+              <GraduationCap size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+              Step into the account she owns now
+            </h2>
             <p className="text-sm text-muted-foreground">
               Haley came of age a year ago, and the fund transferred to her. Log in to see her personal account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Phil's dashboard it's a fund he can no longer touch.
             </p>
@@ -316,9 +368,7 @@ export default function Demo() {
                 data-testid={`demo-login-${account.email.split("@")[0]}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]">
-                    <GraduationCap size={18} />
-                  </div>
+                  <PersonaAvatar email={account.email} name={account.display} size={44} />
                   <div>
                     <p className="font-semibold text-foreground">{account.display}</p>
                     <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
@@ -330,7 +380,10 @@ export default function Demo() {
           </section>
 
           <section className="mx-auto mt-10 grid max-w-4xl gap-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Log in as a gifter</h2>
+            <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
+              <Gift size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+              Log in as a gifter
+            </h2>
             <p className="text-sm text-muted-foreground">
               Everyone in the family gives differently. Pick one to see their side.
             </p>
@@ -344,9 +397,7 @@ export default function Demo() {
                   className="group flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left transition-all hover:border-foreground/30 hover:bg-card/80 disabled:opacity-60"
                   data-testid={`demo-login-${account.email.split("@")[0]}`}
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                    {account.role === "co-parent" ? <Users size={14} /> : <Gift size={14} />}
-                  </div>
+                  <PersonaAvatar email={account.email} name={account.display} size={36} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground">{account.display}</p>
                     <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{account.oneLiner}</p>
