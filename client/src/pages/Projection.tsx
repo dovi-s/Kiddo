@@ -480,13 +480,13 @@ ${shareUrl}`;
           aria-label="Loading projection"
         >
           <div className="space-y-2">
-            <div className="h-7 w-44 rounded-lg bg-muted animate-pulse" />
-            <div className="h-4 w-64 rounded bg-muted/70 animate-pulse" />
+            <div className="h-7 w-44 rounded-lg bg-primary/10 animate-pulse" />
+            <div className="h-4 w-64 rounded bg-primary/10 animate-pulse" />
           </div>
-          <div className="h-64 rounded-3xl bg-muted animate-pulse" />
-          <div className="h-44 rounded-2xl bg-muted/80 animate-pulse" />
-          <div className="h-16 rounded-2xl bg-muted/70 animate-pulse" />
-          <div className="h-20 rounded-2xl bg-muted/70 animate-pulse" />
+          <div className="h-64 rounded-3xl bg-primary/10 animate-pulse" />
+          <div className="h-44 rounded-2xl bg-primary/10 animate-pulse" />
+          <div className="h-16 rounded-2xl bg-primary/10 animate-pulse" />
+          <div className="h-20 rounded-2xl bg-primary/10 animate-pulse" />
         </div>
       </div>
     );

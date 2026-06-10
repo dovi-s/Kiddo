@@ -45,7 +45,6 @@ const PASSIVE_VOICE_PATTERNS = [
 const CONTENT_ROOTS = [
   "client/src/content",
   "client/src/pages",
-  "client/src/components/ui/share-kit.tsx",
   // shared/ is walked so the INCLUDED_SHARED_FILES allowlist below can
   // catch customer-facing copy that lives in shared modules (email
   // preference labels, gift-lesson explainers). shouldScan filters to
@@ -194,7 +193,6 @@ const INCLUDED_COMPONENT_FILES = new Set([
 // here.
 const INCLUDED_SHARED_FILES = new Set([
   path.normalize("shared/emailPreferences.ts"),
-  path.normalize("shared/gift-lessons.ts"),
   path.normalize("shared/milestones.ts"),
 ]);
 
@@ -203,7 +201,6 @@ const SHARED_ROOT = path.normalize("shared");
 function shouldScan(filePath) {
   const normalized = path.normalize(filePath);
   if (normalized.endsWith(".md")) return true;
-  if (normalized.endsWith(path.normalize("client/src/components/ui/share-kit.tsx"))) return true;
   // Every email template is user-facing prose — scan the whole directory.
   if (normalized.startsWith(path.normalize("server/templates") + path.sep)) return true;
   if (INCLUDED_COMPONENT_FILES.has(normalized)) return true;

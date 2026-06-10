@@ -562,19 +562,19 @@ export default function FundsOverview() {
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
           <div className="rounded-3xl bg-card border border-border p-6">
-            <div className="h-3 w-20 rounded bg-muted/50 mb-4 animate-pulse" />
-            <div className="h-10 w-48 rounded bg-muted/50 mb-6 animate-pulse" />
+            <div className="h-3 w-20 rounded bg-primary/10 mb-4 animate-pulse" />
+            <div className="h-10 w-48 rounded bg-primary/10 mb-6 animate-pulse" />
             <div className="space-y-3 animate-pulse">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex items-center justify-between rounded-2xl border border-border bg-background p-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-muted/40" />
+                    <div className="h-10 w-10 rounded-full bg-primary/10" />
                     <div className="space-y-1.5">
-                      <div className="h-3 w-24 rounded bg-muted/50" />
-                      <div className="h-2.5 w-16 rounded bg-muted/30" />
+                      <div className="h-3 w-24 rounded bg-primary/10" />
+                      <div className="h-2.5 w-16 rounded bg-primary/10" />
                     </div>
                   </div>
-                  <div className="h-3 w-20 rounded bg-muted/40" />
+                  <div className="h-3 w-20 rounded bg-primary/10" />
                 </div>
               ))}
             </div>
