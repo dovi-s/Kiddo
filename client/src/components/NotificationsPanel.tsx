@@ -108,6 +108,18 @@ export function markNotificationsReadAsOf(ts: number): void {
   }
 }
 
+// Read the persisted lastReadAt (ms epoch) WITHOUT mutating it. The Activity
+// page uses this to capture "what had I already seen" on ARRIVAL, before its own
+// markNotificationsRead() clears the badge — so it can mark the genuinely-new
+// rows ("badge said 2, here are the 2"). Returns 0 when never set / corrupt
+// (treat everything as new), matching the comparison semantics below.
+export function getLastReadAt(): number {
+  if (typeof window === "undefined") return 0;
+  const stored = localStorage.getItem(NOTIF_LAST_READ_KEY);
+  const parsed = stored ? parseInt(stored, 10) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 // Shared subscriber hook — reads lastReadAt + readIds from localStorage
 // on mount, refreshes whenever the broadcast event fires. Single source
 // of truth across the bell badge, the activity-tab dot, and the panel.

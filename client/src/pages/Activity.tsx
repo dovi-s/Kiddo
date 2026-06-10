@@ -28,7 +28,7 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useActivities, useFundActivities } from "@/hooks/use-activities";
-import { markNotificationsRead } from "@/components/NotificationsPanel";
+import { markNotificationsRead, getLastReadAt } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -882,6 +882,14 @@ export default function Activity() {
   // again." Effect re-runs whenever activities change, so refetches
   // that pull in newer rows while the user is still on the Activity
   // page also clear cleanly.
+  // Capture what the user had ALREADY seen, ONCE on arrival, BEFORE the effect
+  // below clears the badge. Rows newer than this get a "New" marker, so the
+  // Activity page can answer "the badge said 2, here are the 2." Without it the
+  // page marks everything read on landing and nothing reads as new ("badge said
+  // N, click in, can't tell what was new"). Lazy init = the pre-visit value,
+  // frozen for the whole visit. seenBeforeArrival of 0 (never read) marks
+  // nothing, since a first-ever visitor has no "new since" reference.
+  const [seenBeforeArrival] = useState<number>(() => getLastReadAt());
   useEffect(() => {
     if (!isAuthenticated) return;
     const list = activities as { createdAt?: string | Date | null }[];
@@ -2506,6 +2514,10 @@ export default function Activity() {
                   const ticker = isGiftOrContrib ? extractTicker(meta, item.title) : null;
                   const giftMessage = typeof meta.message === "string" && meta.message ? meta.message : null;
                   const isFirstGift = firstGiftId === rowId;
+                  // "New since you last looked" marker. Only when there is a real
+                  // prior-read reference (seenBeforeArrival > 0); a first-ever
+                  // visitor has no "since," so nothing is falsely flagged new.
+                  const isNewSinceLastVisit = seenBeforeArrival > 0 && createdAt != null && createdAt.getTime() > seenBeforeArrival;
 
                   // Effective title + description — use the parent-contrib
                   // copy when the override fires; otherwise the row's own.
@@ -2720,6 +2732,14 @@ export default function Activity() {
                         {/* Content */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                            {isNewSinceLastVisit && (
+                              <span
+                                style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", color: "white", background: "hsl(var(--kiddo-evergreen))", borderRadius: 6, padding: "1px 5px", marginTop: 2, lineHeight: 1.5 }}
+                                data-testid={`activity-new-${rowId}`}
+                              >
+                                New
+                              </span>
+                            )}
                             <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3, flex: 1, minWidth: 0 }} data-testid={`text-title-${rowId}`}>
                               {effectiveTitle}
                             </p>

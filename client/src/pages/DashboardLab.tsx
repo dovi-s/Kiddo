@@ -7701,7 +7701,11 @@ export default function DashboardLab() {
               } else {
                 label = isOwnerMode ? "Start your own recurring" : "Set up recurring";
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-dashed border-[hsl(var(--kiddo-evergreen)/0.4)] bg-[hsl(var(--kiddo-evergreen)/0.04)]";
-                onClick = () => { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); };
+                // Consistent with the active/paused states above: this status chip
+                // scrolls to the "Invest in your fund" section (where "+ Add another"
+                // starts recurring) rather than jumping straight to a modal — so one
+                // control behaves one way. (Was: opened the auto-invest modal directly.)
+                onClick = () => summaryScrollTo("recurring");
               }
               // LAB: until the recurring data lands, `active`/`paused` are empty
               // so this falls to "Set up recurring" even when there IS recurring
@@ -9098,7 +9102,7 @@ export default function DashboardLab() {
               marginTop={16}
               testid="lab-portfolio-details"
               icon={PieChart}
-              title={recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}
+              title={isOwnerMode ? "What you own" : recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}
               stat={holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} powering the growth` : "The mix powering the growth"}
             >
             <motion.section
@@ -9777,7 +9781,15 @@ export default function DashboardLab() {
               // Non-owner (parent) view is unchanged.
               const parentInvestedForOwner = isOwnerMode
                 ? loveLiveGifts.reduce((s, g) => {
-                    if (!(g as any).parentContributionId) return s;
+                    // Add back ALL custodian-parent contributions — recurring AND
+                    // one-time. Was: only `parentContributionId` (recurring) rows, so
+                    // the parent's ONE-TIME additions fell out of `totalGifted` (excluded
+                    // as account-holder money) and were never re-added here — undercounting
+                    // this footer vs the breakdown card's `investedByParentsTotal` (the
+                    // visible "$23,350 vs $22,400" gap was exactly the parent's one-times).
+                    const sender = loveSenderOf(g);
+                    if (sender === loveOwnerEmail) return s; // owner's own money isn't a gift to themselves
+                    if (!loveAccountHolders.has(sender)) return s; // externals already counted in totalGifted
                     const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
                     return s + (Number.isFinite(n) && n > 0 ? n : 0);
                   }, 0)

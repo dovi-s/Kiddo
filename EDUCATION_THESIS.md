@@ -138,3 +138,29 @@ Build it by SUBTRACTING and SEQUENCING, never by bolting on another section. The
 first concrete build remains the cheapest model — zoom-out on the first real dip
 — but it should *replace or absorb* the static "what moves a stock," not stack on
 top of it.
+
+## 9. The arc peaks at handoff (education becomes retention)
+
+The six models are taught over years on the kid surface, but their **payoff is a
+single moment**: the handoff at 18-21, when the now-adult owner decides whether
+to cash out or keep it. **That decision IS the business** — kid-2.0 retention is
+the only revenue that compounds for ~40 years. So the whole education arc is not
+"lessons on Kid View"; it is a years-long build toward ONE outcome: at handoff,
+the owner is calm, literate, and confident enough to *keep going.* Every model
+serves that ending — zoom-out so a dip doesn't scare them out at 19, compounding
+so they feel what cashing out costs, patience so holding is the default.
+
+**The handoff screen (the adult-owner fund) is where the teaching moat and the
+retention moat become the same thing.** Today it nails the financial
+don't-cash-out tool ("On track for $1.49M at 65"). The missing capstone is the
+**identity beat**: *"You're not just getting money. You're the kind of investor
+who keeps it. That's what all of this was teaching you."* Education, made the
+reason she holds. This is the **highest-value education moment in the product**,
+because it fires at the exact instant the cash-out decision is live — worth more
+than any single Kid View lesson.
+
+**Hard guardrail:** positive identity only ("you're ready, keep going"). NEVER a
+guilt / loss-aversion / withdrawal-shaming frame ("are you sure? this costs you
+$X") — that is the banned GoFundMe manipulation (see `COMPOUNDING_NARRATIVE_NOTE.md`
+guardrail #3). The capstone earns the hold through confidence, not fear.
+Founder-owned: AI proposes the capstone; the founder writes the beat.

@@ -197,6 +197,24 @@ export default function DashboardTrendChart({
     );
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Multi-year views (ALL) format labels as "MMM YYYY"; Recharts auto-thins the
+  // ticks by pixels, so the months drift (Jul → Aug → Sep → Oct) and the axis looks
+  // irregular. Collapse to the year so a long axis reads clean (2009 · 2011 · … ·
+  // 2026). Only when the data spans many years (>= 7 distinct) — so 5Y and shorter
+  // keep their month labels, and at that span the thinned ticks are guaranteed > 1yr
+  // apart, so a year can never repeat. Short ranges pass through unchanged.
+  const xTickFormatter = (() => {
+    const distinctYears = new Set(
+      data.map((d) => (/\b(\d{4})\b/.exec(d.label) || [])[1]).filter(Boolean),
+    );
+    const collapse = distinctYears.size >= 7;
+    return (v: string) => {
+      if (!collapse) return v;
+      const m = /\b(\d{4})\b/.exec(v);
+      return m ? m[1] : v;
+    };
+  })();
+
   return (
     <div
       className="relative touch-pan-y"
@@ -234,7 +252,7 @@ export default function DashboardTrendChart({
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={28} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+          <XAxis dataKey="label" tickFormatter={xTickFormatter} tickLine={false} axisLine={false} minTickGap={28} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
           <YAxis
             hide
             // Auto-scale per window so short, low-variance ranges (1W/1M/YTD)
