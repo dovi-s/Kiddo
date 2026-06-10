@@ -648,7 +648,7 @@ function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast
           <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>
             {count} contributions · {range}{uniform ? ` · ${formatCurrency(amounts[0])} each` : ""}
           </p>
-          {note ? <p style={{ fontSize: 12, fontStyle: "italic", color: "rgb(140,130,122)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>&ldquo;{note}&rdquo;</p> : null}
+          {note ? <p style={{ fontSize: 12, fontStyle: "italic", color: "rgb(140,130,122)", marginTop: 4, overflowWrap: "anywhere" }}>&ldquo;{note}&rdquo;</p> : null}
           <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(96,124,104)", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
             {expanded ? "Hide" : "Show all"} {count}
             <ChevronDown size={12} style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
@@ -2782,7 +2782,10 @@ export default function Activity() {
                                 fontSize: 12.5, lineHeight: 1.45, marginTop: 3,
                                 color: "rgba(26,23,16,0.55)",
                                 fontStyle: shown.startsWith('"') ? "italic" : "normal",
-                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                // Gift notes WRAP and show in full — was nowrap+ellipsis,
+                                // which cut "feliz cumpleaños…" mid-message on mobile. The
+                                // notes are short and they're the heart of the feed.
+                                overflowWrap: "anywhere",
                               }}>
                                 {shown}
                               </p>
