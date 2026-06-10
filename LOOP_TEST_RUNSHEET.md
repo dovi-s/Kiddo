@@ -165,8 +165,47 @@ the test. The test is meant to be cheap and slightly janky on purpose.
   a different occasion before deciding; ambiguity usually means the manual
   friction, not the idea, is the drag.
 
+## 9.5 Read the result through these three lenses (test-design caveats)
+
+A flawed *reading* of this test is the most expensive error available — it green-
+lights a loop that isn't there, or kills one that is. The design is sound for a cheap
+directional probe; these three caveats are how to interpret it honestly (added
+2026-06-09 after an adversarial review of this run-sheet):
+
+1. **This measures "is there a spark," NOT "k ≥ 1."** With ~15 families, funded-k is
+   a ratio with a single-digit denominator — one or two spawned families swing it
+   from 0.1 to 0.4, and N=15 cannot distinguish k=0.8 from k=1.2. So a **"go" means
+   "a spark worth the next investment," not "the loop is proven at k≥1."** Don't let a
+   good result get over-read into "raise now." The kill/keep criteria above are
+   correctly qualitative for exactly this reason.
+
+2. **The dangerous false-GO: a Venmo-to-a-friend is an *easier* ask than funding a
+   real custodial account.** The §2 manual mechanism is a *gentler* proxy than the
+   real funnel (a locked UTMA with KYC friction). EarlyBird had gifting demand and
+   still died on the *funded*-funnel economics, so a positive proxy signal may not
+   transfer. **Strongly preferred: run the capture-at-intent flow (the built
+   `GIFTER_CAPTURE_AT_INTENT` Kickstarter-pledge mechanic) instead of the Venmo
+   proxy** — even gated, it tests the real ask and predicts the real funnel far
+   better. If you can only run the proxy, discount a positive result accordingly.
+
+3. **The false-KILL risk: your strongest signal is your slowest.** "It spreads past
+   your circle" (a second-order family starting unprompted) is the unfakeable signal —
+   but it needs the loop's *second turn*, which may not appear within the 60-day box
+   even if k≥1 in truth. So "no spread yet" is weak evidence of "no loop." The
+   conjunctive kill criteria (§7: low conversion AND no repeats AND no spread)
+   protect against this — hold the tension consciously and don't kill on the absence
+   of the slowest signal alone.
+
+**Net:** don't redesign the test — read it through these lenses, and swap the Venmo
+proxy for the capture-at-intent flag if you can. That single swap materially raises
+the trustworthiness of the signal.
+
 ---
 
 *This run-sheet operationalizes the Phase-1 step in `COMPANY_STRATEGY.md`. The
 goal isn't a pretty test — it's the one number (funded-k) that turns "plausible
 business" into "yes" or "no." Go read it.*
+
+*Companion: `BE_YOUR_OWN_CUSTOMER.md` — the founder's-eyes ritual that keeps the
+conversion surface worth converting on (craft QA against the seeded demo) while
+this field test runs against real people.*

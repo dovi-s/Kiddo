@@ -264,6 +264,71 @@ SEO you can't beat — they may prefer to buy the gifting layer.
 
 ---
 
+## 4. CREATOR / EARNED SOCIAL — the gift moment is the ad
+
+The one distribution channel we own outright, cost ~$0, and have barely turned
+on. Two facts make it ours:
+
+**(a) The product films itself.** Lovable grew on "you watch 10 seconds of it and
+go: that's new, let me try." Our equivalent is a 10-second, emotionally legible
+wow: *watch a $50 birthday gift become a real share of a company the kid knows,
+with a note attached, compounding until they turn 18.* Fintech almost never has a
+screenshot-able emotional moment; we do — the gift moment, the count-up roll, the
+Memory Book page, the "while you were away" digest are each a clip, not a
+value-prop paragraph. This audience can't be *told* the value in text; they have
+to *see it land.* That's also why influencer beats paid here: a written claim
+doesn't carry, a 10-second clip of the moment does.
+
+**(b) Building in public is warmer for us than for a dev tool.** The founder
+narrative — "why I'm building the thing that turns gifts to kids into a future
+instead of landfill" — is structurally more shareable than a product changelog,
+and it doubles as recruiting and acquirer-credibility brand. Treat audience as a
+company pillar, not marketing exhaust (`COMPANY_STRATEGY.md` §5).
+
+### What to make (cheapest first)
+- **The gift-moment clip.** Screen-record the real flow end to end: gifter picks
+  Disney, the moment, the parent's "while you were away," the Memory Book note.
+  Caption it with a real person's words, not marketing. This is the ad.
+- **Founder build-in-public posts** about the occasion the loop already lives in
+  (a pond from `COMPANY_STRATEGY.md` Phase 1: a bar/bat-mitzvah circuit, a church
+  baby-shower network). Show the thing, never a deck.
+- **Family-finance creators** — the people grandparents and values-driven parents
+  already follow. One 10-second "wait, this exists?" reaction outperforms a paid
+  placement. They reach the *parent* researching; pair them with the occasion
+  channels that reach the *gifter,* who isn't googling anything.
+
+### Stealable language (real people's words, from the field corpus — warmer than any tagline)
+- "Instead of toys they'll forget about or break in a month."
+- "Plant the seed and let it grow."
+- "Set and forget so he can look at it when he's 18."
+- "Family members can contribute to it."
+
+Use their phrasing in captions. It already converted them; it isn't invented.
+
+### The discipline (do not break these for reach)
+- **Two funnels, don't conflate them.** Creator and SEO roundups reach the
+  *parent* researching "best kids investing app." They do NOT reach the *gifter,*
+  who is stuck for a birthday present and is reached at the *occasion* (the
+  shared link, the registry, the event). Measure them separately; a roundup win
+  is not a gifter-loop win.
+- **Honesty over theater is the channel's credibility, not a tax.** This audience
+  roasts return-theater on sight ("you're just buying what's hot," "don't expect
+  18.75%/yr"). Never animate a loss as a gain, never imply outside "people" for
+  the parent's own money, never show simulated demo holdings as a funded account.
+  The honesty is *why* the clip is believable.
+- **This is a channel candidate, still gated.** Per the spine, the Phase-1 job is
+  to prove funded-k ≥ 1 AND find ONE repeatable cheap channel. This is the most
+  likely "one channel" — but a clip that drives signups we can't yet fund is
+  noise. Sequence it with the loop test (`LOOP_TEST_RUNSHEET.md`); don't outrun
+  custody.
+
+(Send-ready creator DM templates, the 30-second demo-video script, and UTM
+conventions live in the creator-outreach assets kit. This section is the *why
+this channel* and the *what makes it ours* — the part that decides where the
+founder's reps go.)
+
+---
+
 ## The brutal footer
 
 Every template above is the easy part. The hard part is hitting send 30

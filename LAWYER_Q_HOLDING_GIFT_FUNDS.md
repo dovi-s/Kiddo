@@ -78,6 +78,53 @@ relevant for the alternative (funds-held) design.
    broker-dealer / via a segregated account," does that change anything in the AUM
    structural decision already on the table?
 
+## ⭐ Escrow — is it the answer, or a trap we could fall into? (added 2026-06-09)
+
+"Just use escrow" is the intuitive frame for "money paid before the account
+exists." We think it's the right instinct pointing at the wrong tool — but it
+splits into **two distinct questions for you**, and the second is the one we can't
+answer ourselves.
+
+**Framing 1 — escrow as a mechanism we deliberately choose.** A licensed escrow
+agent (or escrow-as-a-service) holds the gift and releases it on a condition (the
+parent opens the fund). Clean in theory, but for a stream of small (~$25) gifts we
+believe it's the *heaviest* of the available structures: it needs a state-licensed
+escrow agent, carries per-transaction cost/friction sized for home sales, and adds
+a regulated counterparty we'd otherwise not have. Our read is that it resolves
+*into* the two structures already on the table and offers nothing they don't:
+  - **Option C (what we built): no funds held.** Stripe SetupIntent vaults the
+    card; we charge off-session when the fund goes live. There is no held balance,
+    so there is no thing to escrow. This is strictly lighter than escrow.
+  - **FBO / segregated account at the broker-dealer** (sub-question 2-ii). The
+    *licensed BD* holds the pooled funds for-benefit-of the eventual minor; we
+    direct, we don't custody. This already gives us the "held safely until release"
+    property that escrow's appeal rests on, without a separate escrow license.
+  We'd keep "escrow" only as a **trust/UX word** ("your gift is held safely until
+  the fund is live"), not as a mechanism. **Q: do you agree escrow buys us nothing
+  over Option C / FBO, or is there a reason to prefer a true escrow agent?**
+
+**Framing 2 — escrow as a classification imposed on us (the real risk).** This is
+the part we can't self-assess and the reason escrow belongs in this packet at all.
+**If we hold gift funds in a segregated/FBO account conditioned on a future event
+(parent opens the account; else refund), could a regulator characterize that
+arrangement *itself* as escrow** — and pull us (or the arrangement) under **state
+escrow-agent licensing** (e.g., California's Escrow Law / DFPI, and analogues),
+independent of the money-transmission analysis in sub-question 1? In other words,
+the held-funds fallback we describe in sub-question 2 might not be a way to *avoid*
+licensing; it could *be* the licensable activity under a different statute. We need
+to know whether the FBO design trips escrow licensing, whether the BD-as-holder
+structure inoculates us against that characterization, and whether the refund
+condition ("invest, or return in N days") is what makes it look like escrow versus
+a simple refundable pre-payment (sub-question 2-iii).
+
+**Net for the build.** None of this changes our preference for Option C (no funds
+held) — if (A) and (B) above clear, escrow is moot because we never hold money.
+Escrow only becomes load-bearing **if you tell us Option C needs MTL and we fall
+back to holding funds** — and at that moment Framing 2 decides whether the FBO
+fallback is actually clean or quietly drags in a second license. So: a yes/no on
+Framing 1 (skip it) and, more importantly, on **whether our funds-held fallback
+gets classified as escrow.**
+
 ## Why it's urgent (for the lawyer's prioritization)
 
 This is not a nicety. Our entire acquisition model depends on the gifter's

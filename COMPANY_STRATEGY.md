@@ -130,13 +130,30 @@ story. Everything before it is earning the right to attempt it.
 
 ## 5. The strategic forks worth deciding deliberately
 
-- **B2B2C vs. consumer brand.** Fighting for consumer attention is slow and
-  expensive. The faster scale path may be embedding "gift-investing-as-a-feature"
-  where gifting *already happens*: registries (Babylist), hospitals/pediatric,
-  employer baby-benefits, banks/credit unions, advisors with wealthy
-  grandparent clients. Seriously weigh whether Kiddo's best shape is
-  *infrastructure others embed* rather than a brand we market. It changes who we
-  hire and what we build.
+- **B2B2C vs. consumer brand — but the real variable is customer *ownership*.**
+  Fighting for consumer attention is slow and expensive. The faster scale path
+  may be embedding "gift-investing-as-a-feature" where gifting *already happens*:
+  registries (Babylist), hospitals/pediatric, employer baby-benefits,
+  banks/credit unions, advisors with wealthy grandparent clients. Seriously
+  weigh whether Kiddo's best shape is *infrastructure others embed* rather than a
+  brand we market. It changes who we hire and what we build. **But there's a fork
+  inside the fork that decides whether any embed builds a moat or just rents us
+  traffic:** does the gifter walk away an *identifiable, reusable Kiddo
+  relationship*, or a customer of the registry with Kiddo white-labeled
+  underneath? (Rampell's B2B2C test, a16z: the end customer must become
+  *untethered* from the middle and recognize *us* as the product — otherwise it's
+  a channel partnership like Hilton-on-Expedia, and the partner owns the
+  customer.) The clean shape is **"Affirm for gifting the future"**: sell the
+  registry/hospital/employer a category they cannot and do not want to own
+  (securities, custody, COPPA, compliance — *we* carry that, and it's the gift,
+  not a liability), and the gifter walks away with a reusable Kiddo account they
+  bring to the next occasion. **The reusability is the loop.** Non-negotiable in
+  any embed: co-branding + an identifiable, reusable gifter relationship.
+  Distribution that doesn't deposit a customer we own is a treadmill, not a moat.
+  This is the same doctrine as "integrate up, rent the rails down," now applied
+  to partners as well as to Stripe and the custodian — *whoever touches the
+  customer last owns them, so Kiddo must be the last touch.* (Structure + the
+  pass-through rule: `PARTNERSHIPS_FLYWHEEL.md`.)
 - **Audience/media as a company pillar, not a tactic.** A dead competitor proves
   the *product* is hard; nobody can stop us from owning the *audience* of
   gift-minded grandparents and values-driven parents. That list becomes launch

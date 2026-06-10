@@ -166,6 +166,60 @@ Do not do these too early:
 - brand campaigns before there is a strong landing and onboarding path
 - partnership decks that hide weak product metrics
 
+## Customer ownership: pass-through, or pass (the B2B2C test)
+
+Added 2026-06-09. Every tier above moves traffic; only some build a moat. The
+difference is *who owns the customer at the end.* Decide it deliberately, per deal.
+
+**The test (Rampell, a16z "On B2B2C Business Models").** A true B2B2C deal leaves
+the end customer *untethered* from the partner: the gifter recognizes *Kiddo* as
+the product and reuses us at the next occasion. If they walk away a customer of
+the school / employer / registry with Kiddo white-labeled underneath, that is a
+*channel partnership* (Hilton-on-Expedia): the partner owns the customer and we
+rented traffic, not built a moat. Our whole spine — "integrate up toward the
+relationship, rent the rails down" — IS this rule. Apply it to partners, not just
+to Stripe and the custodian.
+
+**Three structures (Temkin), mapped to our tiers — engineer for pass-through:**
+
+- *Dedicated* — the partner owns the long-term relationship; we only influence.
+  **Schools and brand partnerships skew here, and it is the highest leak risk:**
+  the institution owns the family and can cut us off. Use these tiers for trust
+  and density, but do not expect to own the customer through them — co-brand hard
+  and capture the gifter's own Kiddo account *at the moment of the gift*.
+- *Pass-through* — a transactional handoff where the end customer relates to *our*
+  brand, not the partner. **This is the target shape for employers, registries,
+  and hospitals:** the partner hands a *Kiddo* offer at the occasion; the gifter
+  and parent become Kiddo customers. Engineer every embed toward this.
+- The instruction: **structure deals pass-through, never dedicated, wherever the
+  occasion lets us put our brand on the gifter relationship.** "Institutions are
+  aggregators, not recipients" is exactly this principle.
+
+**Four rules for running an embed (Rampell) — the part our tier list under-weights:**
+
+1. **Sell where the partner does NOT want to be.** The easiest yes is a category
+   the partner is glad to offload for regulatory/operational reasons. Registries
+   will never become broker-dealers; *we carry the compliance,* and that is the
+   pitch, not an apology.
+2. **Give > Get.** Flex customer ownership only once we contribute more than we
+   take (premium gift category + traffic in; the gifter relationship out). Do
+   not over-lawyer a year-5 "we'll take your customers" clause — it poisons the
+   deal and may never matter.
+3. **Don't tickle the bear.** Never pitch a partner "we'll convert your people
+   and they'll bypass you." Pitch the give. Warm BD, always.
+4. **A signed contract is the *beginning*, not the win.** The classic B2B2C
+   failure is the partner signing and then never *promoting* us. Two layers of
+   customer success: win the partner's product team (prominent, repeated
+   placement) AND the end gifters. Design the placement and contact mechanics
+   into the deal — not just an attribution pixel.
+
+**The one primitive to pre-wire before launch** (so retrofitting it later isn't
+expensive): co-brand + gifter-attribution + reusable-account. Build the loop
+without it and every future partner deal silently leaks the customer to the
+middle B. Everything else here waits behind the same gate as launch (custody +
+the narrow legal memo + funded-k ≥ 1): this is wave-2 amplification of a loop
+that already turns, never the wedge itself.
+
 ## Simple Rule
 
 Every partnership tier should answer one question:
