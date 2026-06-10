@@ -166,6 +166,36 @@ Do not do these too early:
 - brand campaigns before there is a strong landing and onboarding path
 - partnership decks that hide weak product metrics
 
+## The offer, per channel (what we pitch, what we keep)
+
+Added 2026-06-09. The order above is the *when*; this is the *what* — the actual
+offer to each partner, consolidated from the scattered sources (so a founder or
+investor asking "what do we offer partners" reads one place). **Honest status: these
+are designed offers, not live deals.** All are gated behind custody + the legal memo
++ the `partnerSource` attribution primitive + funded-k ≥ 1 — EXCEPT the employer
+pilot, which needs no custody and is send-ready today (`OUTREACH_KIT.md` §2).
+
+**The one offer underneath all of them ("Affirm for gifting the future"):** *turn a
+gift / benefit / life-moment you already facilitate into something that compounds for
+18 years, with your name on the family's app the whole time — at zero build and zero
+regulatory cost, because we carry the compliance.* You give the partner a
+differentiated, premium, emotional category they can't/won't own (securities,
+custody, KYC, COPPA); you keep the gifter as a reusable Kiddo customer.
+
+| Channel | Hook (the moment) | Offer to the partner | What we keep | Status |
+|---|---|---|---|---|
+| **Employers** (via benefits brokers) | new-baby / milestone benefit | "Your $500 gift becomes real shares for the kid, growing to 18, your name in the family's app; better than a gift card, tax-advantaged, we don't skim it." | bulk parent acquisition + a reference customer (the CAC escape) | **NEAR-TERM, no custody needed** — manual pilot ready (`OUTREACH_KIT.md` §2) |
+| **Registries / platforms** (Babylist #1) | the baby registry | "Add 'gift the future' — the one gift category a registry can't build." | gift traffic + the gifter as a reusable Kiddo customer | build-ready spec, gated |
+| **Hospitals / pediatric** (via welcome-kit vendors) | **birth** (highest-intent moment) | "Start [baby]'s fund the day they're born" — not a formula sample | the new parent at peak LTV | aggregator plan, gated |
+| **Churches / synagogues** (strongest aggregator) | life moments (baptism, naming, b'nai mitzvah) | community invests in a child's future at the gathering; **per-funded-account donation to the ministry/foundation** | both sides of the loop seeded in a dense community | gated + live counsel question (packet Part 10) |
+| **Schools** (tier-4, NOT bulk) | financial literacy + local density | a real-investing literacy tool + a 1–3 school pilot, one champion | trust + seasonal density (NOT parent-CAC) | low priority — "schools park"; the bulk-CAC version is the death pattern |
+| **Advisers / brands** (later) | wealthy-grandparent clients / reach | grandchild funds + next-gen relationship / top-of-funnel reach | the next-gen relationship / amplified reach | last — only after conversion is proven |
+
+**Two disciplines that hold across every row:** gifters **never pay and are never
+paid to refer**; and every deal must be **pass-through, co-branded** (the gifter
+becomes *our* customer) — see the ownership test directly below, which is the rule
+that decides whether any of these build a moat or just rent us traffic.
+
 ## Customer ownership: pass-through, or pass (the B2B2C test)
 
 Added 2026-06-09. Every tier above moves traffic; only some build a moat. The
