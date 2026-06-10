@@ -518,6 +518,22 @@ is live** ahead of custody going live.
    securities held at a broker-dealer right now).
 3. What disclaimer placement/proximity makes present-tense framing defensible, if
    it's allowed at all?
+4. **Forward projections / hypothetical performance** *(not pre-custody-specific —
+   applies whenever a projection shows, so answer it on this same advertising
+   pass).* The product surfaces forward value projections **everywhere** — "$50 →
+   ~$82 when Luke turns 18," "On track for $1,490,926 at 65," the growth curves —
+   at a disclosed **7% historical assumption** with "not guaranteed" disclaimers
+   (rationale in `COMPOUNDING_NARRATIVE_NOTE.md`: 7% not the viral 10%, always
+   disclaimed, real-first). Projecting investment value to retail is governed by
+   securities-advertising rules on **hypothetical / projected performance** (SEC /
+   FINRA marketing rules, FTC) that are stricter than ordinary startup copy. Are
+   these illustrations defensible as **hypotheticals** given the assumption +
+   not-guaranteed disclaimers, and what wording / placement / proximity does the
+   projection need to be clean (or is any forward-dollar projection a line we
+   should not cross)? Separately, confirm our **kiddie-tax + projection
+   disclosures are accurate and sufficient** — the kiddie-tax fact is settled and
+   our copy is corrected in `shared/legal-copy.ts`, so this is an
+   accuracy/sufficiency review, not a question about the underlying law.
 
 **Why it matters:** a not-yet-live investment product worded as live is the
 textbook misrepresentation-of-a-securities-product risk. "It's gonna be" is not a
@@ -565,6 +581,62 @@ never pay (that discipline is locked); the institution never holds or routes mon
 referring users *out* to RIAs; this part is the reverse direction: institutions
 compensated for referring *into* Kiddo. Same compensation-for-referral family;
 please answer both in one pass and state whether the direction changes anything.
+
+---
+
+# Part 11 — Hosting third-party content on a child surface ⭐ (Privacy / Consumer / Criminal-reporting)
+
+**Source:** `TRUST_SAFETY_FINDINGS.md` (two independent multi-agent audits),
+`KID_VIEW_SAFETY_GATE_SPEC.md`, `CONTENT_SCANNER_VENDOR_SPEC.md`. **Gated by opening
+the public UGC surface to strangers — not by custody or launch-day** — so fold it in
+now and it rides the same engagement. Pairs with Part 5: Part 5 is the *privacy of
+the child's data*; this is the *posture for hosting third-party content that reaches
+a child*. Added 2026-06-09 (the one launch-gating area the packet did not yet ask).
+
+**Context.** Gifters submit user-generated content — notes, photos, video, voice —
+that lands on a child's surface (the Memory Book / PIN-gated Kid View). Via the
+public gift link a gifter can be a **stranger**. Our moderation stack today:
+submission-time text-safety on all five gifter text paths (`giftTextSafety.ts`); a
+content-scanner seam that **fails closed in production** (unscanned media is refused
+until a real vendor — PhotoDNA + a moderation vendor — is wired); a proposed
+**sender-trust pre-visibility gate** (untrusted/public senders' media held for
+parent approval before a child can see it); and a per-item report → auto-flag. The
+questions are about legal **sufficiency and obligations**, which only counsel can
+set.
+
+**The questions:**
+1. **CSAM reporting (18 U.S.C. §2258A).** As a platform hosting user-uploaded
+   images/video on a child-directed service, do we have a **registration + 24-hour
+   NCMEC reporting** obligation, and what **triggers** it (any UGC hosting, or only
+   a detected hit)? When must registration be in place relative to opening the
+   public upload path, and what record-retention attaches to a report?
+2. **Moderation sufficiency / duty of care.** Is the stack above — CSAM hash-match
+   + a moderation vendor + the sender-trust pre-visibility hold for untrusted
+   senders + report-and-remove — a **legally sufficient** standard of care for a
+   **child-facing** UGC platform before we open the public link? What is the
+   **minimum** bar (we would rather know the floor than guess), and are we over- or
+   under-built?
+3. **Platform liability / Section 230.** Does **Section 230** shield us for
+   gifter-submitted content that reaches a minor, or does the **child-directed
+   nature** plus the fact that we **curate** what the child sees (visibility rules,
+   the at-18 unlock) limit the shield? Does adding moderation **reduce** exposure or
+   create a "we assumed the duty" theory?
+4. **State duty-of-care for minors.** Beyond COPPA / CA-AADC (Part 5), do any state
+   **age-appropriate-design / duty-of-care** regimes impose obligations on a
+   platform that **transmits third-party content to a minor** (vs. merely collecting
+   the child's data)? Any **mandatory-reporter** status?
+5. **Grooming / contact-channel (cross-ref Part 5).** Part 5 asks the privacy
+   question about the child's name + photo at a guessable URL; the adjacent T&S
+   question: does letting a stranger reach a child's gift page and **submit
+   content** raise grooming / contact-channel duties we must design against (we
+   already strip contact info from gifter text)?
+
+**What we need back:** the **floor** for a child-facing UGC moderation posture; a
+yes/no + timing on the §2258A / NCMEC obligation; and whether opening the public
+upload path **before** the sender-trust gate + a real scanner are live is a
+**must-not** (our current engineering assumption) or merely advisable. The
+moderation builds are **scoped and reversible; we are holding the public-UGC opening
+for this answer.**
 
 ---
 
@@ -626,3 +698,5 @@ Form ADV / sign DriveWealth amendment / rewrite TOS, per chosen option).
   capture-at-intent design the Part 2 answer unblocks.
 - `memory/project_babylist_integration_plan.md` (institutional-aggregators section) —
   Part 10 (full channel plan + arrangement ladder).
+- `TRUST_SAFETY_FINDINGS.md` + `KID_VIEW_SAFETY_GATE_SPEC.md` +
+  `CONTENT_SCANNER_VENDOR_SPEC.md` — Part 11 (UGC-hosting / child-safety legal posture).
