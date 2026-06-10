@@ -348,6 +348,15 @@ const STATIC_TICKER_META: Record<string, { name: string; emoji: string }> = {
   ADBE:  { name: "Adobe",      emoji: "🎨" },
   TSLA:  { name: "Tesla",      emoji: "🚗" },
   Z:     { name: "Zillow",     emoji: "🏠" },
+  // Roster 2026-06-09 additions + MSFT/MCD (kept in sync with Dashboard.tsx).
+  MSFT:  { name: "Microsoft",  emoji: "🧱" },
+  MCD:   { name: "McDonald's", emoji: "🍟" },
+  MAT:   { name: "Mattel",     emoji: "🧸" },
+  HAS:   { name: "Hasbro",     emoji: "🎲" },
+  NVDA:  { name: "Nvidia",     emoji: "🤖" },
+  KO:    { name: "Coca-Cola",  emoji: "🥤" },
+  HSY:   { name: "Hershey",    emoji: "🍫" },
+  CROX:  { name: "Crocs",      emoji: "🐊" },
 };
 
 function lookupPickMeta(ticker: string | null | undefined, quotedStocks: AutoInvestStock[]):
@@ -2248,6 +2257,29 @@ export default function DashboardLab() {
   const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
+  // Replay the lab's signature ENTRANCE beats on a FUND SWITCH so switching to
+  // (say) Alex reads as Alex's fund LANDING, not a silent data swap: the faces
+  // cascade + the chart wipe re-fire (the hero count-up already re-rolls on the
+  // value change). The faces' reset is INSTANT (duration 0 — see their
+  // transition), so snapping them hidden then re-showing next frame replays a
+  // clean staggered cascade with no fade-out.
+  //
+  // Two-step on purpose: the new fund's gifter data loads ASYNC, so firing on
+  // the id change alone races an empty roster (the cascade has nothing to play).
+  // So: MARK pending on the switch here, then FIRE once `gifterRoster` settles to
+  // the new fund's people (the effect by that memo, below). Skips first load
+  // (mount draw + first in-view cascade own that) and off-screen faces (the
+  // observer handles those).
+  const prevSwitchFundRef = useRef(activeFundId);
+  const pendingSwitchCascadeRef = useRef(false);
+  const facesInViewLiveRef = useRef(facesInView);
+  facesInViewLiveRef.current = facesInView;
+  useEffect(() => {
+    if (prevSwitchFundRef.current === activeFundId) return;
+    prevSwitchFundRef.current = activeFundId;
+    if (activeFundId) pendingSwitchCascadeRef.current = true;
+  }, [activeFundId]);
+
   // Replicate a fund "click" once on first load. On a fresh load the active fund
   // is RESOLVED (funds[0] fallback, its dashboard shows) but never SELECTED — the
   // URL ?fund=, the shared store, and selectedFundId were all empty — so the
@@ -3692,6 +3724,21 @@ export default function DashboardLab() {
     }
     return sortedRoster;
   }, [gifts]);
+
+  // Fire the pending fund-switch entrance replay (armed above on the id change)
+  // now that gifterRoster has SETTLED to the newly-switched fund's people — so
+  // the faces cascade has real faces to animate instead of racing an empty
+  // mid-load roster. Replays the chart wipe too; the count-up already re-rolls.
+  useEffect(() => {
+    if (!pendingSwitchCascadeRef.current) return;
+    pendingSwitchCascadeRef.current = false;
+    chartWipePlayRef.current?.();
+    if (!facesInViewLiveRef.current) return;
+    setFacesInView(false);
+    const r = requestAnimationFrame(() => setFacesInView(true));
+    return () => cancelAnimationFrame(r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gifterRoster]);
 
   const recentGiftsFeed = useMemo(() => {
     return [...gifts]
@@ -7372,13 +7419,24 @@ export default function DashboardLab() {
                           // — the long horizon, "at 65" — which is also the
                           // right emotional anchor for an adult-owned fund
                           // (kid-2.0 keeps growing; parent-2.0 posture).
+                          // At-majority projection, computed up front so the gate
+                          // below can test whether it is genuinely meaningful.
+                          const heroAtMajProjection = projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj });
+                          // Near-handoff flatness gate (founder catch 2026-06-09):
+                          // Phil viewing Alex's fund 30 days from his 21st saw "On
+                          // track for $39,154 when Alex turns 21" — barely above
+                          // today's $38,878, because almost no growth runway is left
+                          // before handoff. A flat at-majority number reads broken,
+                          // so require it to be MEANINGFULLY above today (>10%, the
+                          // same threshold the handoff card's nearMajority flip uses);
+                          // otherwise anchor to the long-horizon "at 65" number, which
+                          // stays honest and non-flat for a near-grown fund.
                           const showAtMajority = !Boolean((activeFund as any)?.transferredAt)
                             && !!age18Transition
                             && yrsToMaj > 0.08
-                            && totalValue > 0;
-                          const atMaj = showAtMajority
-                            ? projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj })
-                            : displayHeroProjectedAt65;
+                            && totalValue > 0
+                            && heroAtMajProjection > totalValue * 1.1;
+                          const atMaj = showAtMajority ? heroAtMajProjection : displayHeroProjectedAt65;
                           const heroMajAge = age18Transition?.majorityAge || 18;
                           const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
                           const fmtMaj = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(atMaj);
