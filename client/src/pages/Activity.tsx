@@ -1825,7 +1825,7 @@ export default function Activity() {
           <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
             Activity
           </p>
-          <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
+          <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight" data-testid="heading-activity">
             Your activity
           </h1>
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">

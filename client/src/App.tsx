@@ -72,6 +72,7 @@ const StoryPage = lazy(() => import("@/pages/StoryPage"));
 const Compare = lazy(() => import("@/pages/Compare"));
 const Demo = lazy(() => import("@/pages/Demo"));
 const P2PDemo = lazy(() => import("@/pages/P2PDemo"));
+const GenerationalLoop = lazy(() => import("@/pages/GenerationalLoop"));
 const DashboardLab = lazy(() => import("@/pages/DashboardLab"));
 const Partners = lazy(() => import("@/pages/Partners"));
 const Security = lazy(() => import("@/pages/Security"));
@@ -744,6 +745,7 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
           <Route path="/p2p-preview"><P2PDemo /></Route>
+          <Route path="/generational-loop"><GenerationalLoop /></Route>
           {/* Dashboard-redesign sandbox (2026-06-04). A FORK of the real
               Dashboard (DashboardLab.tsx) so /design-lab renders the real
               Luke demo dashboard identically when logged into the demo. We

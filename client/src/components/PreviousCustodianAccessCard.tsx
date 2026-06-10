@@ -2,18 +2,18 @@
 // fund" control (2026-06-07, founder-approved; pairs with migration 0042 +
 // POST /api/funds/:fundId/revoke-previous-owner-access).
 //
-// After the at-18 handoff, the former custodian keeps a view-only window by
-// default — warm and right for most families (they built it for 18 years).
-// But the default was IRREVOCABLE, which turns a permanent observer on an
-// adult's financial account into a coercive-control vector in the
-// estranged-parent case. This card gives the ADULT OWNER the escape hatch:
-// default stays on; removal is theirs, one-way (re-granting is a support
-// flow on purpose), and SILENT — the former custodian is not notified, the
-// same posture as social-platform blocking, because notifying a controlling
-// parent that they've been cut off invites escalation.
+// After the at-18 handoff, the former custodian keeps a view-only window. As of
+// the keepsake change (2026-06-09) that window shows a FROZEN keepsake by
+// default — the fund as it was handed over, not the now-adult's live balance.
+// This card gives the ADULT OWNER two controls:
+//   1. "Let them watch it grow live" — opt them back into the live fund. A
+//      reversible visibility preference (POST .../previous-owner-live-access).
+//   2. "Remove their access" — cut the window entirely. One-way + SILENT (the
+//      same coercive-control escape hatch as before; re-granting is a support
+//      flow on purpose, and the former custodian is not notified).
 //
-// Renders only for the owner of a transferred fund while the window is
-// still open; disappears once revoked.
+// Renders only for the owner of a transferred fund while the window is still
+// open; disappears once revoked.
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,10 +26,45 @@ export function PreviousCustodianAccessCard({ fund }: { fund: any }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [liveBusy, setLiveBusy] = useState(false);
+  const [liveOn, setLiveOn] = useState(Boolean(fund?.previousOwnerLiveAccessGrantedAt));
 
   if (!fund?.id || !fund?.previousOwnerId || fund?.previousOwnerAccessRevokedAt || done) {
     return null;
   }
+
+  const setLive = async (grant: boolean) => {
+    setLiveBusy(true);
+    const prev = liveOn;
+    setLiveOn(grant); // optimistic
+    try {
+      const res = await fetch(`/api/funds/${fund.id}/previous-owner-live-access`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grant }),
+      });
+      if (res.ok) {
+        haptic("success");
+        toast({
+          title: grant ? "Sharing live" : "Back to keepsake",
+          description: grant
+            ? "They'll see this fund update live again."
+            : "They'll see the fund as you handed it over, frozen at the handoff.",
+        });
+        void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      } else {
+        setLiveOn(prev); // revert
+        const payload = await res.json().catch(() => ({}));
+        toast({ title: "Couldn't update", description: payload?.error || "Please try again.", variant: "destructive" });
+      }
+    } catch {
+      setLiveOn(prev);
+      toast({ title: "Couldn't update", description: "Check your connection and try again.", variant: "destructive" });
+    } finally {
+      setLiveBusy(false);
+    }
+  };
 
   const revoke = async () => {
     setBusy(true);
@@ -71,11 +106,35 @@ export function PreviousCustodianAccessCard({ fund }: { fund: any }) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-foreground">The parent who set this up</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              They kept a view-only window when the fund became yours: the balance, the growth,
-              and the Memory Book they helped fill. They can't change anything or move money.
+              When the fund became yours, their view froze to a keepsake: the fund as you handed it
+              over, on the handoff date. They see who gave and the Memory Book they helped fill, but
+              not your live balance, and they can&apos;t change anything or move money.
             </p>
           </div>
         </div>
+
+        {/* Phase 2: opt them back into the LIVE fund. Reversible anytime. */}
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Let them watch it grow live</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Share your current balance and growth, updating as it does. You can turn this off anytime.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={liveOn}
+            aria-label="Let the previous owner see this fund update live"
+            disabled={liveBusy}
+            onClick={() => { haptic("light"); void setLive(!liveOn); }}
+            data-testid="toggle-previous-owner-live"
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${liveOn ? "bg-[hsl(var(--kiddo-evergreen))]" : "bg-muted"}`}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${liveOn ? "left-[22px]" : "left-0.5"}`} />
+          </button>
+        </div>
+
         {!confirming ? (
           <button
             type="button"
@@ -88,8 +147,8 @@ export function PreviousCustodianAccessCard({ fund }: { fund: any }) {
         ) : (
           <div className="mt-3 rounded-2xl border border-red-200 bg-red-50/60 p-4" data-testid="revoke-previous-owner-confirm">
             <p className="text-xs leading-relaxed text-foreground">
-              This removes their view of this fund entirely. They won't be notified, and this
-              can't be undone in the app (you'd need to contact support). Your Memory Book and
+              This removes their view of this fund entirely. They won&apos;t be notified, and this
+              can&apos;t be undone in the app (you&apos;d need to contact support). Your Memory Book and
               everything in the fund stays exactly as it is.
             </p>
             <div className="mt-3 flex items-center gap-3">

@@ -5090,6 +5090,52 @@ function TransactionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   );
 }
 
+// "Request a company" intake: the escape hatch off the curated picker. Read-only
+// manual-review queue (status escape_hatch_requested). Reviewing means deciding
+// whether to add the brand to stock-picks.ts (plus its logo, quote, and Kid View
+// explainer); nothing is auto-promoted. Endpoint: GET /api/admin/stock-requests.
+function StockRequestsPanel() {
+  const { data, isLoading, isError } = useQuery<any>({
+    queryKey: ["/api/admin/stock-requests"],
+    queryFn: async () => fetchAdminJson(`/api/admin/stock-requests`),
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+  const requests = asArray<any>(data?.requests);
+  return (
+    <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Company requests <span className="ml-1 text-xs font-normal text-muted-foreground">(escape hatch)</span></h3>
+          <p className="mt-1 text-xs text-muted-foreground">Brands gifters and parents asked for that aren&apos;t in the curated picker. Manual review only. Add to <span className="font-mono">stock-picks.ts</span> (plus its logo, quote, and Kid View explainer) if it earns a slot. Nothing here is auto-added.</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5" data-testid="stock-requests-count">{requests.length}</span>
+      </div>
+      <div className="p-4">
+        {isLoading ? (
+          <div className="text-center text-xs text-muted-foreground py-4">Loading requests…</div>
+        ) : isError ? (
+          <div className="text-center text-xs text-muted-foreground py-4">Could not load requests.</div>
+        ) : requests.length === 0 ? (
+          <div className="text-center text-xs text-muted-foreground py-4">No open requests.</div>
+        ) : (
+          <div className="space-y-1.5">
+            {requests.map((r: any, i: number) => (
+              <div key={r.id || i} className="flex items-center justify-between gap-3 text-xs border-b border-border/30 pb-1.5 last:border-0">
+                <span className="font-medium text-foreground truncate" title={String(r.requested_text || "")}>{r.requested_text || "-"}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {r.requester_email ? <span className="mr-2">{String(r.requester_email)}</span> : null}
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AssetsTab() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [universeSearch, setUniverseSearch] = useState("");
@@ -5232,6 +5278,7 @@ function AssetsTab() {
 
   return (
     <div className="space-y-4">
+      <StockRequestsPanel />
       {data?.degraded && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Asset data is partially unavailable in this environment. Showing available subsets.

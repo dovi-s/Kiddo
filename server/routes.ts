@@ -1484,6 +1484,68 @@ export async function registerRoutes(
     }
   });
 
+  // "Request a company" escape hatch off the curated stock picker. A gifter or
+  // parent who doesn't see the brand they want can request it. Unauthenticated
+  // (gifters have no account), so: validate + length-cap + light per-IP rate
+  // limit. Routed to status 'escape_hatch_requested' and reviewed MANUALLY via
+  // the admin GET below — NEVER auto-added to the offered universe (keeps the
+  // self-directed menu from becoming a moving target; see
+  // project_stock_curation_liability). Mirrors the PMF intake above. Migration
+  // 0044 (stock_requests).
+  app.post("/api/stock-requests", async (req, res) => {
+    try {
+      const requestedText = String(req.body?.company ?? req.body?.requestedText ?? "").trim().slice(0, 120);
+      if (requestedText.length < 2) {
+        return res.status(400).json({ error: "Tell us which company you'd like." });
+      }
+      const email = String(req.body?.email || "").trim().toLowerCase().slice(0, 255) || null;
+      const fundId = req.body?.fundId ? String(req.body.fundId).slice(0, 64) : null;
+      const eventId = req.body?.eventId ? String(req.body.eventId).slice(0, 64) : null;
+      const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null;
+
+      // Light per-IP cap (20/hr) — low-abuse-value write, but bounded anyway.
+      if (ip && !(await checkRateLimit(`stock-request:${ip}`, 20, 60 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many requests. Please try again later." });
+      }
+
+      await db.execute(sql`
+        INSERT INTO stock_requests (requested_text, status, fund_id, event_id, requester_email, ip)
+        VALUES (${requestedText}, 'escape_hatch_requested', ${fundId}, ${eventId}, ${email}, ${ip})
+      `);
+
+      try {
+        recordEvent({ name: "stock_pick_requested", source: "public", props: { hasEmail: Boolean(email) } });
+      } catch (eventErr) {
+        console.warn("stock-request recordEvent failed (non-fatal):", eventErr);
+      }
+
+      return res.status(201).json({ success: true });
+    } catch (error) {
+      console.error("Error saving stock request:", error);
+      return res.status(500).json({ error: "Failed to save your request." });
+    }
+  });
+
+  // Admin view: the manual-review queue for "request a company" intake.
+  // Newest pending first. Reviewing = a founder decides whether to add the
+  // brand (then wires its logo + quote + Kid View explainer per stock-picks.ts);
+  // there is intentionally no automated promotion.
+  app.get("/api/admin/stock-requests", isAdmin, async (_req, res) => {
+    try {
+      const rows = await db.execute(sql`
+        SELECT id, requested_text, status, fund_id, event_id, requester_email, created_at
+        FROM stock_requests
+        WHERE status = 'escape_hatch_requested'
+        ORDER BY created_at DESC
+        LIMIT 200
+      `);
+      return res.json({ requests: rows.rows });
+    } catch (error) {
+      console.error("Error reading stock requests:", error);
+      return res.status(500).json({ error: "Failed to load stock requests." });
+    }
+  });
+
   // Admin view: aggregated PMF survey responses with the 40% Sean
   // Ellis threshold computed against the latest-per-email cohort.
   // The 40% threshold is the canonical PMF gate (per
@@ -2796,7 +2858,7 @@ export async function registerRoutes(
       // (recurring is free across tiers — see hasAutoInvestAccess below).
       const [
         rawHoldings,
-        giftsForFund,
+        giftsForFundRaw,
         eventsForFund,
         investmentPreferences,
         giftCodeRecord,
@@ -2846,6 +2908,28 @@ export async function registerRoutes(
           storage.getGiftAllocationsByFund(fund.id).catch(() => []),
         ]),
       );
+
+      // Server-side keepsake cap (defense-in-depth, 2026-06-10). When the
+      // requester is the previous owner of a transferred fund and hasn't been
+      // granted live access, they see the fund as they knew it AS CUSTODIAN —
+      // gifts up to the handoff, nothing after. Capping here (not just on the
+      // client) means NO downstream surface — gift list, roster, counts, the
+      // since-last-visit digest, large-gift holds — can leak the now-adult's
+      // post-handoff gift activity (or the private notes those gifts carry).
+      const reqIsKeepsakePrevOwner =
+        String((fund as any).previousOwnerId || "") === userId &&
+        !!(fund as any).transferredAt &&
+        !(fund as any).previousOwnerLiveAccessGrantedAt;
+      const giftsForFund = reqIsKeepsakePrevOwner
+        ? (() => {
+            const cutoff = new Date((fund as any).transferredAt).getTime();
+            if (!Number.isFinite(cutoff)) return giftsForFundRaw;
+            return giftsForFundRaw.filter((g: any) => {
+              const ts = g?.createdAt ? new Date(g.createdAt).getTime() : 0;
+              return !Number.isFinite(ts) || ts === 0 || ts <= cutoff;
+            });
+          })()
+        : giftsForFundRaw;
 
       // Self-heal: re-invest any gifts stuck in pending/processing so holdings are complete
       const hasStuckGifts = giftsForFund.some((g: any) => {
@@ -6463,6 +6547,33 @@ export async function registerRoutes(
     }
   });
 
+  // Phase 2 of the post-handoff keepsake (2026-06-09): the now-adult OWNER can
+  // opt to let the previous owner see this fund LIVE again (vs the frozen
+  // keepsake default), and freely toggle it back off. Distinct from the one-way
+  // safety revoke above — this is a reversible visibility preference. Owner-only,
+  // transferred funds only. The previous-owner dashboard reads
+  // previousOwnerLiveAccessGrantedAt to choose keepsake vs live.
+  app.post('/api/funds/:fundId/previous-owner-live-access', isAuthenticated, requireOwnedFundParam, requireFundMutator, async (req: any, res) => {
+    try {
+      const fund: any = req.ownedFund;
+      if (req.fundAccessRole !== 'owner') {
+        return res.status(403).json({ error: 'Only the fund owner can change this.' });
+      }
+      if (!fund.previousOwnerId || !fund.transferredAt) {
+        return res.status(400).json({ error: 'This fund has no previous custodian.' });
+      }
+      const grant = req.body?.grant === true;
+      await storage.updateFund(fund.id, { previousOwnerLiveAccessGrantedAt: grant ? new Date() : null } as any);
+      await writeAudit(req, grant ? 'previous_owner_live_access_granted' : 'previous_owner_live_access_revoked', 'fund', fund.id, {
+        previousOwnerId: fund.previousOwnerId,
+      });
+      res.json({ ok: true, live: grant });
+    } catch (error) {
+      console.error('Error updating previous-owner live access:', error);
+      res.status(500).json({ error: 'Could not update access. Please try again.' });
+    }
+  });
+
   app.patch('/api/funds/:fundId/kid-view-suggestions/:suggestionId', isAuthenticated, async (req: any, res) => {
     try {
       const fund = await storage.getFund(req.params.fundId);
@@ -8067,6 +8178,11 @@ export async function registerRoutes(
         // owner-mode UX activated (the demo seed set them by hand, masking it).
         transferredAt: new Date(),
         previousOwnerId,
+        // Freeze the handoff value as the previous owner's keepsake number.
+        // Capture the live total now; after this the fund is the now-adult's
+        // private account and the parent's view shows this frozen value, not
+        // her live balance. Mirror in the kid-view claim door (auth.ts).
+        valueAtTransfer: (fund as any).balance ?? "0",
       } as any);
       if (!updatedFund) {
         return res.status(500).json({ error: "Could not complete the transfer." });
@@ -10877,7 +10993,22 @@ export async function registerRoutes(
         return res.status(404).json({ error: 'Fund not found' });
       }
       // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      const gifts = await storage.getGiftsByFund(req.params.fundId);
+      const giftsRaw = await storage.getGiftsByFund(req.params.fundId);
+      // Keepsake cap (mirror of dashboard-summary): a previous owner viewing a
+      // transferred fund without live access granted sees gifts only up to the
+      // handoff — never the now-adult's post-handoff gift activity.
+      const reqUserId = (req.user as any)?.id;
+      const isKeepsakePrevOwner =
+        String((fund as any).previousOwnerId || "") === reqUserId &&
+        !!(fund as any).transferredAt &&
+        !(fund as any).previousOwnerLiveAccessGrantedAt;
+      const gifts = isKeepsakePrevOwner
+        ? giftsRaw.filter((g: any) => {
+            const cutoff = new Date((fund as any).transferredAt).getTime();
+            const ts = g?.createdAt ? new Date(g.createdAt).getTime() : 0;
+            return !Number.isFinite(cutoff) || !Number.isFinite(ts) || ts === 0 || ts <= cutoff;
+          })
+        : giftsRaw;
       // Enrich each gift with the matched account's preferred display name +
       // avatar (by senderEmail) so the "Who loves you" roster can show how the
       // family actually refers to a gifter ("Dad", "Mom") with a real photo,

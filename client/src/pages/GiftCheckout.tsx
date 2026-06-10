@@ -459,6 +459,12 @@ export default function GiftCheckout() {
   const [customAmount, setCustomAmount] = useState("");
   const [executionModel, setExecutionModel] = useState<ExecutionModel>("auto");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  // "Request a company" escape hatch — the bounded picker is never a hard wall.
+  const [stockRequestOpen, setStockRequestOpen] = useState(false);
+  const [stockRequestText, setStockRequestText] = useState("");
+  const [stockRequestSent, setStockRequestSent] = useState(false);
+  const [stockRequestSending, setStockRequestSending] = useState(false);
+  const [stockRequestError, setStockRequestError] = useState(false);
   // Stock-picker expansion state. The picker shows FEATURED 9 by default
   // (curated landing-density); tapping "Show more options" expands to
   // include the ADDITIONAL 8 approved stocks. Re-collapses when the
@@ -1668,7 +1674,16 @@ export default function GiftCheckout() {
                                 {uniqueGifterCount > 5 && <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 0 }}><span className="text-[9px] font-bold text-white">+{uniqueGifterCount - 5}</span></div>}
                               </div>
                               <span className="text-xs font-medium text-white/75">
-                                {uniqueGifterCount} {uniqueGifterCount === 1 ? "person has" : "people have"} already given.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
+                                {/* Scoped to the FUND, not this occasion. uniqueGifterCount
+                                    and recentGifters are fund-LIFETIME (the server sends the
+                                    fund-level field on event responses), so on a birthday
+                                    page months away, a bare "have already given" reads as
+                                    "given to the birthday" — false (nobody has, the date is
+                                    in the future). Per the one-pot model ("the birthday is
+                                    just how we're celebrating it; money goes to the fund"),
+                                    the honest framing names the fund: these people back the
+                                    fund this birthday gift will join. */}
+                                {uniqueGifterCount} {uniqueGifterCount === 1 ? "person has" : "people have"} already given to {recipientName}&apos;s fund.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
                               </span>
                             </div>
                           )}
@@ -1682,24 +1697,26 @@ export default function GiftCheckout() {
                     countdown.days >= 90 ? (() => {
                       // Far-future event (a graduation years out, etc.): a ticking
                       // days:hours:mins countdown is absurd at this range ("1458
-                      // Days : 13 Hours : 57 Mins") and fights the page's own
-                      // "grows over time" message. Show the date + the growth
-                      // runway instead, which reframes the long horizon as the
-                      // upside it is for an investment gift.
+                      // Days : 13 Hours : 57 Mins"). Show the date + how far away the
+                      // occasion is. NOTE: this is the countdown to the EVENT, not the
+                      // growth horizon — the gift grows until majority (~18), which the
+                      // projection line states. Labeling it "to grow" read as "the gift
+                      // only grows for 5 months," contradicting the page's own
+                      // "$50 → $82 at 18" pitch. Fixed 2026-06-09.
                       const evDate = new Date(String(eventData?.event?.eventDate));
                       const dateLabel = Number.isFinite(evDate.getTime())
                         ? evDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
                         : null;
                       const yrs = Math.round(countdown.days / 365);
-                      const runway = countdown.days >= 365
-                        ? `about ${yrs} year${yrs === 1 ? "" : "s"} to grow`
-                        : `about ${Math.round(countdown.days / 30)} months to grow`;
+                      const countdownLabel = countdown.days >= 365
+                        ? `about ${yrs} year${yrs === 1 ? "" : "s"} away`
+                        : `about ${Math.round(countdown.days / 30)} months away`;
                       return (
                         <div className="kiddo-card p-4 flex items-center justify-center gap-3 text-center">
                           <span className="text-xl shrink-0" aria-hidden="true">🌱</span>
                           <div>
                             {dateLabel && <p className="font-heading text-lg font-bold text-foreground">{dateLabel}</p>}
-                            <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{runway}</p>
+                            <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{countdownLabel}</p>
                           </div>
                         </div>
                       );
@@ -2571,6 +2588,68 @@ export default function GiftCheckout() {
                       Use family default instead
                     </button>
                   )}
+                  {/* Escape hatch — request a brand not in the curated set. The
+                      menu is bounded on purpose, but a gifter is never stuck
+                      with it. Manually reviewed (status escape_hatch_requested),
+                      never auto-added. See project_stock_curation_liability. */}
+                  <div className="mt-4 border-t border-border/60 pt-3">
+                    {stockRequestSent ? (
+                      <p className="text-xs text-muted-foreground" data-testid="stock-request-sent">Thanks. We&apos;ll take a look at adding it.</p>
+                    ) : stockRequestOpen ? (
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={stockRequestText}
+                            onChange={(e) => { setStockRequestText(e.target.value); setStockRequestError(false); }}
+                            placeholder="Company name"
+                            maxLength={120}
+                            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                            data-testid="input-stock-request"
+                          />
+                          <button
+                            type="button"
+                            disabled={stockRequestText.trim().length < 2 || stockRequestSending}
+                            onClick={async () => {
+                              const company = stockRequestText.trim();
+                              if (company.length < 2 || stockRequestSending) return;
+                              setStockRequestSending(true);
+                              setStockRequestError(false);
+                              try {
+                                const res = await fetch("/api/stock-requests", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ company, fundId: (eventData?.fund as any)?.id, eventId: (eventData?.event as any)?.id, email: senderEmail.trim() || undefined }),
+                                });
+                                if (res.ok) { setStockRequestSent(true); setStockRequestText(""); haptic("success"); }
+                                else { setStockRequestError(true); }
+                              } catch {
+                                setStockRequestError(true);
+                              } finally {
+                                setStockRequestSending(false);
+                              }
+                            }}
+                            className="shrink-0 rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                            data-testid="button-stock-request-send"
+                          >
+                            {stockRequestSending ? "Sending" : "Request"}
+                          </button>
+                        </div>
+                        {stockRequestError && (
+                          <p className="mt-2 text-xs text-destructive" data-testid="stock-request-error">Couldn&apos;t send that. Please try again.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { haptic("light"); setStockRequestOpen(true); }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        data-testid="button-stock-request-open"
+                      >
+                        Don&apos;t see the company you want? Request it.
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -2661,10 +2740,20 @@ export default function GiftCheckout() {
                 </div>
                 <div className="mt-6 grid gap-4">
                   <div>
+                    {/* Adaptive label: if a note was already written on the occasion
+                        landing step (same `message` state), ACKNOWLEDGE it here ("Your
+                        note…") rather than re-prompting ("Leave a note…") as if it's
+                        new — which read as redundant. Keeps the emotional-peak capture
+                        on the landing AND a review at payment, without "asked twice."
+                        Empty (skipped on landing) still gets the full prompt. */}
                     <label className="text-sm font-medium text-foreground">
-                      Leave a note for {recipientLooksLikeFund ? "their" : `${recipientName}'s`} Memory Book
+                      {message.trim() ? "Your note for " : "Leave a note for "}{recipientLooksLikeFund ? "their" : `${recipientName}'s`} Memory Book
                     </label>
-                    <p className="mt-1 text-xs text-muted-foreground">They'll read it when they're 18. Optional, but a note now becomes something they keep for life.</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {message.trim()
+                        ? "Looks good? Edit it here if you like. They'll read it when they're 18."
+                        : "They'll read it when they're 18. Optional, but a note now becomes something they keep for life."}
+                    </p>
                     <div className="mt-2 rounded-2xl border border-amber-200/60 bg-amber-50/40 p-3">
                       <textarea
                         value={message}

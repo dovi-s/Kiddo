@@ -55,6 +55,12 @@ type KidViewContent = {
   phase: "child" | "teen" | "adult" | "unknown";
   age: number | null;
   gifts: Array<{ id: string; senderName: string; amount: string; message?: string; createdAt?: string; status?: string }>;
+  /** Lifetime aggregate counts over ALL gifts, not just the capped `gifts`
+      window above (which is the recent slice for display). Drives the hero
+      stats so "gifts received / people gave" reflect the whole fund. Without
+      this the counts came from the 12-row display window and badly undercounted
+      (e.g. 134 gifts from 12 people rendering as "12 gifts / 4 people"). */
+  giftStats?: { total: number; gifters: number; noNote: number };
   memories: Array<{ id: string; authorName?: string; content?: string; photoUrl?: string | null; videoUrl?: string | null; visibility?: string }>;
   holdings: Array<{ id: string; ticker: string; name: string; currentValue: string; gain: string }>;
   suggestions: Array<{ id: string; ticker: string; reason: string; reviewedStatus: string }>;
@@ -255,6 +261,50 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
     whatTheyDo: "Zillow runs the most-visited home and real estate platform in the US.",
     whyItMatters: "When more people search for homes through Zillow, the company can earn from agents and ads.",
   },
+  // Roster 2026-06-09 stock-pick additions + Microsoft (offered since 2026-06-01
+  // but it never had a kid explainer, so it fell back to the generic glyph).
+  MSFT: {
+    emoji: "🧱",
+    youngOwner: "You own a tiny piece of Microsoft. Every Minecraft world, every Xbox game, every computer running Windows. Pieces of all of them are yours.",
+    whatTheyDo: "Microsoft makes Windows computers, Xbox, Minecraft, and software that businesses use every day.",
+    whyItMatters: "When people buy Xbox games, play Minecraft, or pay for Microsoft software, the company earns more.",
+  },
+  MAT: {
+    emoji: "🧸",
+    youngOwner: "You own a tiny piece of Mattel. Every Barbie, every Hot Wheels car, every UNO game. Pieces of all of them are yours.",
+    whatTheyDo: "Mattel makes some of the most famous toys in the world: Barbie, Hot Wheels, Fisher-Price, and UNO.",
+    whyItMatters: "When families buy these toys, and watch the Barbie movies, Mattel earns more.",
+  },
+  HAS: {
+    emoji: "🎲",
+    youngOwner: "You own a tiny piece of Hasbro. Every Nerf blaster, every Monopoly board, every can of Play-Doh, every Transformer. Pieces of all of them are yours.",
+    whatTheyDo: "Hasbro makes Nerf, Monopoly, Play-Doh, Transformers, and many other toys and games.",
+    whyItMatters: "When people buy these toys and games, Hasbro earns more.",
+  },
+  NVDA: {
+    emoji: "🤖",
+    youngOwner: "You own a tiny piece of Nvidia. The chips inside the computers that run video games, and the AI everyone is talking about, are made by them. A piece of that is yours.",
+    whatTheyDo: "Nvidia makes the powerful computer chips that run video games and artificial intelligence.",
+    whyItMatters: "As more of the world uses AI and big computers, more companies buy Nvidia's chips.",
+  },
+  KO: {
+    emoji: "🥤",
+    youngOwner: "You own a tiny piece of Coca-Cola. Every bottle of Coke, every Sprite, every Fanta, sold almost everywhere on Earth. A piece of that is yours.",
+    whatTheyDo: "Coca-Cola makes Coke, Sprite, Fanta, and hundreds of other drinks sold in nearly every country.",
+    whyItMatters: "People buy these drinks every single day all over the world, which keeps the business steady.",
+  },
+  HSY: {
+    emoji: "🍫",
+    youngOwner: "You own a tiny piece of Hershey. Every chocolate bar, every Kiss, every Reese's cup. Pieces of all of them are yours.",
+    whatTheyDo: "Hershey makes chocolate and candy: Hershey bars, Kisses, Reese's, and more.",
+    whyItMatters: "When people buy candy, especially around the holidays, Hershey earns more.",
+  },
+  CROX: {
+    emoji: "🐊",
+    youngOwner: "You own a tiny piece of Crocs. Every comfy clog, and every pair decorated with little Jibbitz charms. A piece of that is yours.",
+    whatTheyDo: "Crocs makes the comfy foam clogs, and the little charms that snap into them, that people wear everywhere.",
+    whyItMatters: "When more people buy Crocs and their charms, the company grows.",
+  },
 };
 
 function getCompanyExplainer(ticker: string, name: string) {
@@ -344,7 +394,7 @@ export default function KidView() {
     const contributed = Number(content?.fund?.totalContributed || 0);
     const gain = balance - contributed;
     const pct = contributed > 0 ? (gain / contributed) * 100 : 0;
-    return { gain, pct };
+    return { gain, pct, contributed };
   }, [content]);
 
   const futureProjection = useMemo(() => {
@@ -909,8 +959,11 @@ export default function KidView() {
               hero → balance → stats in a natural reading order. */}
           <div className="grid grid-cols-3 gap-2">
             {[
-              { value: cleanedGifts.length, label: "gifts\nreceived" },
-              { value: uniqueGifters, label: "people\ngave" },
+              // Lifetime totals from the server (giftStats), NOT the capped
+              // display window — see the giftStats field note. Fallback to the
+              // visible counts only if an older endpoint omits giftStats.
+              { value: content?.giftStats?.total ?? cleanedGifts.length, label: "gifts\nreceived" },
+              { value: content?.giftStats?.gifters ?? uniqueGifters, label: "people\ngave" },
               // "until it's yours", not "until you decide" — ownership
               // framing (terminology locked 2026-06-04): the fact is the
               // fund TRANSFERS at majority; "you decide" overstated a
@@ -1142,24 +1195,7 @@ export default function KidView() {
                   )}
                   <div className="space-y-3">
                     {cleanedGifts.map((gift) => {
-                      const giftAmount = parseFloat(gift.amount || "0");
                       const giftDate = gift.createdAt ? new Date(gift.createdAt) : null;
-                      const yearsInvested = giftDate ? (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000) : 0;
-                      // "What that gift would be worth today" — routes
-                      // through the canonical projectFundValue helper so the
-                      // kid sees the same fee-netted, effective-rate-
-                      // compounded numbers as every other surface. Migrated
-                      // from raw Math.pow(1.07, yearsInvested) on 2026-05-21
-                      // as part of the projection-helper consolidation
-                      // sweep. KidView already imported projectFundValue
-                      // for the at-18 projection; this single-gift loop
-                      // now uses it too.
-                      const estimatedNow = projectFundValue({
-                        startingValue: giftAmount,
-                        monthlyContribution: 0,
-                        yearsAhead: Math.max(0, yearsInvested),
-                      });
-                      const estimatedGain = estimatedNow - giftAmount;
                       const initials = (gift.senderName || "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
                       const hasNote = !!(gift.message && gift.message.trim());
                       return (
@@ -1194,9 +1230,6 @@ export default function KidView() {
                               {giftDate ? giftDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}
                               {gift.status === "settled" || gift.status === "processing" ? " · Invested" : ""}
                             </p>
-                            {!isYoungerMode && estimatedGain > 0.01 && (
-                              <p className="text-[11px] text-green-600 mt-0.5">+{fmtMoney(Math.max(0, estimatedGain))} growth so far</p>
-                            )}
                             {/* Subtle report affordance. Lives on every
                                 gift card so a kid (or anyone in this
                                 view) can flag a concerning note / sender
@@ -1370,6 +1403,30 @@ export default function KidView() {
               <div className="mt-4 rounded-3xl bg-primary/5 p-4 text-sm text-foreground">
                 {growthCardCopy}
               </div>
+              {/* Two-bucket split (KIDDO_VOICE.md): what people put in vs what
+                  the market added, side by side. The contrast of the two real
+                  numbers IS the discovery — no scripted question, no reveal
+                  (the label already says where it came from; a quiz on top of
+                  it just restated the same fact and read as weird). Only when
+                  there is real positive growth to point at: a down or flat fund
+                  keeps the honest growthCopy above and shows nothing here
+                  (silence is part of the voice). */}
+              {growthSummary.gain > 0 && (
+                <div className="mt-4 rounded-3xl border border-border/60 p-4">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {isYoungerMode ? "People put in" : "You and your family put in"}
+                      </p>
+                      <p className="mt-1 font-heading text-xl text-foreground">{fmtMoney(growthSummary.contributed)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">The market added</p>
+                      <p className="mt-1 font-heading text-xl text-foreground">+{fmtMoney(growthSummary.gain)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="rounded-[28px] border border-border/60 bg-card p-6">
@@ -1380,6 +1437,16 @@ export default function KidView() {
               <p className="mt-3 text-sm text-muted-foreground">
                 {projectionCopy}
               </p>
+              {/* The doubling device at the HONEST cadence (~10 yrs at 7% net,
+                  never "every 7 years" — that imports 10%; see
+                  COMPOUNDING_NARRATIVE_NOTE.md guardrail #6). The single most
+                  intuitive way to feel compounding. Hypothetical; the card's
+                  disclaimer below covers "not guaranteed." */}
+              {content.age !== null && content.age !== undefined && content.age <= 17 && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Left invested, money tends to roughly double about every ten years. A gift today could double before you turn {content.age + 10}, and again by {content.age + 20}.
+                </p>
+              )}
               <div className="mt-4 space-y-3">
                 <label className="block text-sm text-muted-foreground">
                   Estimate gifts each year

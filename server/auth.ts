@@ -1114,6 +1114,11 @@ export function setupAuth(app: Express) {
           previousOwnerId,
           transferredAt: transferTime,
           updatedAt: transferTime,
+          // Freeze the handoff value as the previous owner's keepsake number —
+          // mirrors the age-transition door (routes.ts). After handoff the
+          // parent's view shows this frozen value, not the now-adult's live
+          // balance. The two doors must stay in sync (handoff-doors rule).
+          valueAtTransfer: (fund as any).balance ?? "0",
         })
         .where(eq(fundsTable.id, fund.id));
 

@@ -34,9 +34,10 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Kiddo" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <!-- Fonts are self-hosted via @fontsource-variable (imported in
+         src/main.tsx), not hotlinked. This removes third-party font CDN
+         IP egress on child-viewed pages (Kid View). See
+         COPPA_APPLICABILITY_MEMO.md. -->
   </head>
   <body>
     <div id="root"></div>

@@ -33,6 +33,13 @@ export const TICKER_DOMAIN: Record<string, string> = {
   MSFT: "microsoft.com",
   MCD: "mcdonalds.com",
   Z: "zillow.com",
+  // Roster 2026-06-09 additions (toys, chips, treats, footwear)
+  MAT: "mattel.com",
+  HAS: "hasbro.com",
+  NVDA: "nvidia.com",
+  KO: "coca-cola.com",
+  HSY: "hershey.com",
+  CROX: "crocs.com",
 
   // Common ETFs (issuer brand, not ticker name)
   VOO: "vanguard.com",

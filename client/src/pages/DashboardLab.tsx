@@ -2381,6 +2381,24 @@ export default function DashboardLab() {
   // viewer case is the existing collaborator role.
   const isReadOnlyFund = isViewerOnly || isPreviousOwner;
   const isSharedFund = activeFundAccessRole !== 'owner';
+  // Post-handoff KEEPSAKE for the previous owner (the parent who handed it off).
+  // After handoff the fund is the now-adult's PRIVATE account; the parent's view
+  // shows the frozen value-at-handoff ("what you handed them on {date}"), not the
+  // adult's live balance. valueAtTransfer is captured in both handoff doors; NULL
+  // = legacy transfer predating the column → fall back to a clearly-labeled live
+  // value ("{name}'s balance now") rather than a misleading "Today".
+  const handoffKeepsakeValue = (activeFund as any)?.valueAtTransfer != null
+    ? parseFloat(String((activeFund as any).valueAtTransfer))
+    : null;
+  // ...unless the now-adult opted to share it live (Phase 2). Then the previous
+  // owner sees the live fund again, as before the keepsake default.
+  const showHandoffKeepsake = isPreviousOwner
+    && handoffKeepsakeValue != null
+    && Number.isFinite(handoffKeepsakeValue)
+    && !(activeFund as any)?.previousOwnerLiveAccessGrantedAt;
+  const handoffDateLabel = (activeFund as any)?.transferredAt
+    ? new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    : null;
   const cachedHeroFundValue = useMemo(
     () => (activeFundId ? readCachedFundValue(activeFundId) : null),
     [activeFundId],
@@ -2891,7 +2909,21 @@ export default function DashboardLab() {
     },
     enabled: !!activeFundId && dashboardSummaryError,
   });
-  const gifts: GiftType[] = dashboardSummary?.gifts ?? giftsFetched;
+  const giftsRaw: GiftType[] = dashboardSummary?.gifts ?? giftsFetched;
+  // Keepsake: the previous owner sees the fund as they knew it AS CUSTODIAN —
+  // gifts up to the handoff, nothing after. Stops post-handoff gift activity
+  // (and the private notes those gifts carry to the now-adult) from surfacing on
+  // their frozen view: the latest-gift row, the gifter roster, and the counts
+  // all cap at handoff. No-op for everyone else.
+  const gifts: GiftType[] = useMemo(() => {
+    if (!showHandoffKeepsake || !(activeFund as any)?.transferredAt) return giftsRaw;
+    const cutoff = new Date((activeFund as any).transferredAt).getTime();
+    if (!Number.isFinite(cutoff)) return giftsRaw;
+    return giftsRaw.filter((g) => {
+      const ts = g.createdAt ? new Date(g.createdAt).getTime() : 0;
+      return !Number.isFinite(ts) || ts === 0 || ts <= cutoff;
+    });
+  }, [giftsRaw, showHandoffKeepsake, activeFund]);
   const giftsLoading = giftsQueryLoading || (!!activeFundId && dashboardSummaryLoading && !dashboardSummary);
   const giftAllocations: GiftAllocationLite[] = dashboardSummary?.giftAllocations ?? [];
 
@@ -4099,6 +4131,17 @@ export default function DashboardLab() {
   const settling = pendingBalance;
   const uninvestedCash = cash + settling;
   const totalValue = invested + pendingBalance + cashBalance;
+  // Keepsake "current value" + history cutoff for the post-handoff previous
+  // owner. For everyone else these are exactly totalValue / null (no-ops), so
+  // the growth math and chart are untouched. For the previous owner they freeze
+  // the fund AS OF HANDOFF: growthCurrentValue replaces the live total in every
+  // growth stat, and keepsakeHistoryCutoffMs caps the chart + scrub at the
+  // handoff date — so the parent never sees the now-adult's post-handoff
+  // trajectory, only the fund they handed over.
+  const growthCurrentValue = showHandoffKeepsake && handoffKeepsakeValue != null ? handoffKeepsakeValue : totalValue;
+  const keepsakeHistoryCutoffMs = showHandoffKeepsake && (activeFund as any)?.transferredAt
+    ? new Date((activeFund as any).transferredAt).getTime()
+    : null;
   // Publish the hero's computed live total so the sidebar quotes the SAME
   // number (it has no holdings query; server fund.balance is
   // settlement-synced, not price-synced — see lib/fund-live-value.ts).
@@ -4486,13 +4529,22 @@ export default function DashboardLab() {
   const lifetimeContribPrincipal = dashboardMoneyMath.lifetimeContributionPrincipal;
   const totalReturnPctVsContributions = lifetimeContribPrincipal > 0 ? (totalReturnVsContributions / lifetimeContribPrincipal) * 100 : 0;
   const usableFundHistory = useMemo(() => {
-    if (totalValue <= 0) return fundHistory;
+    // Keepsake cap: the previous owner's chart + every history-derived stat stop
+    // at the handoff date, so the now-adult's post-handoff trajectory is never
+    // exposed. No-op (null cutoff) for everyone else.
+    const capped = keepsakeHistoryCutoffMs != null
+      ? fundHistory.filter((point) => {
+          const ts = new Date(point.snapshotDate || 0).getTime();
+          return !Number.isFinite(ts) || ts <= keepsakeHistoryCutoffMs;
+        })
+      : fundHistory;
+    if (totalValue <= 0) return capped;
     const maxReasonablePriorValue = Math.max(totalValue * 4, totalValue + 5000);
-    return fundHistory.filter((point) => {
+    return capped.filter((point) => {
       const value = parseFloat(point.totalValue || "0");
       return !Number.isFinite(value) || value <= maxReasonablePriorValue;
     });
-  }, [fundHistory, totalValue]);
+  }, [fundHistory, totalValue, keepsakeHistoryCutoffMs]);
 
   // Today's change: compare current value to the most recent prior-day snapshot
   const todayChange = useMemo(() => {
@@ -4505,7 +4557,7 @@ export default function DashboardLab() {
       .sort((a, b) => b.ts - a.ts);
     const priorSnapshot = sorted.find((p) => p.ts < todayStart.getTime());
     if (!priorSnapshot || priorSnapshot.value === 0) return null;
-    const rawDelta = totalValue - priorSnapshot.value;
+    const rawDelta = growthCurrentValue - priorSnapshot.value;
     if (todaysSellTotal > 0 && Math.abs(rawDelta - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) {
       return null;
     }
@@ -4527,7 +4579,7 @@ export default function DashboardLab() {
     const inRange = cutoff ? sorted.filter((p) => p.ts >= cutoff) : sorted;
     const startSnapshot = inRange[0];
     if (!startSnapshot || startSnapshot.value === 0) return null;
-    const rawDelta = totalValue - startSnapshot.value;
+    const rawDelta = growthCurrentValue - startSnapshot.value;
     if (todaysSellTotal > 0 && Math.abs(rawDelta - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) {
       return null;
     }
@@ -6871,7 +6923,13 @@ export default function DashboardLab() {
                         }}
                         data-testid="text-hero-balance-today-kicker"
                       >
-                        {isScrubbing ? scrubbedTrendPoint!.label : "Today"}
+                        {isScrubbing
+                          ? scrubbedTrendPoint!.label
+                          : showHandoffKeepsake
+                            ? `Handed off · ${handoffDateLabel}`
+                            : isPreviousOwner
+                              ? `${recipientFirstNameDisplay || "Their"}'s balance now`
+                              : "Today"}
                       </div>
                       {/* Shared-fund badge. Appears only when the active fund
                           is one the parent was invited to (not their own).
@@ -6991,7 +7049,9 @@ export default function DashboardLab() {
                       >
                         {isScrubbing
                           ? formatHeroBalance(scrubbedTrendPoint!.value)
-                          : formatHeroBalance(displayHeroBalance)}
+                          : showHandoffKeepsake
+                            ? formatHeroBalance(handoffKeepsakeValue)
+                            : formatHeroBalance(displayHeroBalance)}
                       </motion.div>
 
                       {/* Social-proof caption — the balance's attribution. Pairs
@@ -7844,8 +7904,8 @@ export default function DashboardLab() {
               // every other surface in the app.
               const periodContributionFlows = giftsFromOthersTotal + accountHolderContribTotal;
               const marketGrowth30 = (valueThen != null && Number.isFinite(valueThen))
-                ? (totalValue - valueThen) - periodContributionFlows
-                : (totalValue - periodContributionFlows);
+                ? (growthCurrentValue - valueThen) - periodContributionFlows
+                : (growthCurrentValue - periodContributionFlows);
 
               // Lifetime withdrawals — sums withdrawal transactions since
               // the period start. Only surfaced as a row when nonzero.
@@ -8479,6 +8539,13 @@ export default function DashboardLab() {
               icon={TrendingUp}
               title={isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}
               stat={(() => {
+                // Post-handoff keepsake: never surface the now-adult's LIVE
+                // "this month" performance to the previous owner — that's the
+                // private financial activity the keepsake exists to stop showing.
+                // The lifetime "fund so far" stat reads as the fund's story; a
+                // live monthly ticker reads as surveillance. Show the neutral
+                // tap-to-expand hint instead.
+                if (showHandoffKeepsake) return "The full chart over time";
                 // LAB: range-INDEPENDENT "this month" move — computed with the
                 // EXACT same recipe as the in-chart "Growth · 1M" box
                 // (growthInRange): live totalValue minus the FIRST snapshot
@@ -8499,7 +8566,7 @@ export default function DashboardLab() {
                 const cutoff = Date.now() - 30 * 86400000;
                 const start = snaps.find((p) => p.ts >= cutoff);
                 if (!start || start.value === 0) return "The full chart over time";
-                const move = totalValue - start.value;
+                const move = growthCurrentValue - start.value;
                 // Mirror growthInRange's guard: a big "move" that's really just
                 // today's sell re-shuffling isn't growth — hide rather than lie.
                 if (todaysSellTotal > 0 && Math.abs(move - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) return "The full chart over time";

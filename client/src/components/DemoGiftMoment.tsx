@@ -202,6 +202,11 @@ export function DemoGiftMoment() {
         const activeId = getActiveFundId();
         const fund = (funds.find((f) => f.id === activeId) ?? funds[0]) as any;
         if (!fund) return;
+        // Never land a simulated gift on a previous owner's keepsake view. Their
+        // post-handoff window is frozen at the handoff; a fake "new gift" toast
+        // both breaks that freeze and surfaces activity on the now-adult's private
+        // fund. (The owner — the now-adult — still gets the beat on their own view.)
+        if (fund.accessRole === 'previous_owner') return;
         const childRaw = String(fund.recipientFirstName || "");
         const child = capFirst(childRaw) || "your child";
         const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };

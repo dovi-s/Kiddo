@@ -24,6 +24,7 @@
         "test:security-regression": "set NODE_OPTIONS=--use-system-ca&& tsx script/test-security-regression.ts",
         "test:market-quotes": "tsx script/test-market-quotes.ts",
         "test:ui:smoke": "tsx script/ui-smoke-playwright.ts",
+        "test:image-pipeline": "tsx script/test-image-pipeline.ts",
         "test:mobile-gifter-logos": "node script/test-mobile-gifter-logos.cjs",
         "test:visual:kiddo-loop": "tsx script/visual-qa-kiddo-loop.ts",
         "test:signup-session": "tsx script/test-signup-session-flow.ts",
@@ -43,6 +44,7 @@
         "setup:local": "tsx script/setup-local.ts",
         "seed:dunphys": "set NODE_OPTIONS=--use-system-ca&& tsx script/seed-dunphys.ts",
         "reset:dunphys": "set NODE_OPTIONS=--use-system-ca&& tsx script/reset-dunphys.ts",
+        "founder:reel": "set NODE_OPTIONS=--use-system-ca&& tsx script/founder-reel.ts",
         "fetch:historical-prices": "set NODE_OPTIONS=--use-system-ca&& tsx script/fetch-historical-prices.ts",
         "report:demo-portfolio": "tsx script/demo-portfolio-report.ts",
         "test:demo-portfolio": "tsx script/demo-portfolio-report.ts",
@@ -71,6 +73,8 @@
         "test:gifter-identity": "tsx script/test-gifter-identity.ts"
     },
     "dependencies": {
+        "@fontsource-variable/bricolage-grotesque": "^5.2.10",
+        "@fontsource-variable/dm-sans": "^5.2.8",
         "@hookform/resolvers": "^3.10.0",
         "@jridgewell/trace-mapping": "^0.3.25",
         "@radix-ui/react-accordion": "^1.2.12",

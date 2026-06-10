@@ -272,29 +272,51 @@ export function ProjectionTrajectoryChart({
             and stronger age eyebrow weight. The calm register said
             "single label, no axis ticks" — that's still true — but
             the one label we DO render needs to anchor the chart's
-            emotional point ("where does this end up"). */}
-        <text
-          x={drawnArea.targetX}
-          y={drawnArea.targetY - 16}
-          textAnchor="middle"
-          fontSize="16"
-          fontWeight="700"
-          fill={evergreen}
-          style={{ fontVariantNumeric: "tabular-nums" }}
-        >
-          {fmtCompact(drawnArea.targetValue)}
-        </text>
-        <text
-          x={drawnArea.targetX}
-          y={drawnArea.targetY - 32}
-          textAnchor="middle"
-          fontSize="10"
-          fontWeight="600"
-          fill="rgba(26,23,16,0.55)"
-          style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
-        >
-          Age {drawnArea.targetAgeReal}
-        </text>
+            emotional point ("where does this end up").
+
+            Horizontal anchoring: the target dot is ALWAYS the rightmost
+            point (max age = rightmost), so it sits at x = VB_W - padX,
+            flush against the right edge. A centered label overflows the
+            viewBox and clips ("$784K" / "Age 65" cut off on the right).
+            Anchor the label to whichever edge it's near — end on the
+            right, start on the left, middle in between — so it grows
+            inward and stays inside the chart. Fixed 2026-06-09 (the
+            horizontal twin of the PAD_TOP "Age 40" vertical-clip fix). */}
+        {(() => {
+          const edgeBand = VB_W * (PAD_X_PCT + 0.06);
+          const labelAnchor =
+            drawnArea.targetX > VB_W - edgeBand
+              ? "end"
+              : drawnArea.targetX < edgeBand
+                ? "start"
+                : "middle";
+          return (
+            <>
+              <text
+                x={drawnArea.targetX}
+                y={drawnArea.targetY - 16}
+                textAnchor={labelAnchor}
+                fontSize="16"
+                fontWeight="700"
+                fill={evergreen}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {fmtCompact(drawnArea.targetValue)}
+              </text>
+              <text
+                x={drawnArea.targetX}
+                y={drawnArea.targetY - 32}
+                textAnchor={labelAnchor}
+                fontSize="10"
+                fontWeight="600"
+                fill="rgba(26,23,16,0.55)"
+                style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
+              >
+                Age {drawnArea.targetAgeReal}
+              </text>
+            </>
+          );
+        })()}
       </svg>
     </motion.div>
   );

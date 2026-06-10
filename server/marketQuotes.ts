@@ -42,6 +42,12 @@ export const MARKET_QUOTE_ESTIMATES: Record<string, number> = {
   RBLX: 47,
   MSFT: 415.00,
   MCD: 295.00,
+  MAT: 19.00,
+  HAS: 67.00,
+  NVDA: 140.00,
+  KO: 68.00,
+  HSY: 185.00,
+  CROX: 110.00,
 };
 
 export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | "Stock"; source: "auto_invest" | "stock_pick" | "both" }> = {
@@ -75,6 +81,13 @@ export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | 
   DPZ:   { name: "Domino's",  type: "Stock", source: "stock_pick" },
   CHWY:  { name: "Chewy",     type: "Stock", source: "stock_pick" },
   ADBE:  { name: "Adobe",     type: "Stock", source: "stock_pick" },
+  // Roster 2026-06-09 additions
+  MAT:   { name: "Mattel",    type: "Stock", source: "stock_pick" },
+  HAS:   { name: "Hasbro",    type: "Stock", source: "stock_pick" },
+  NVDA:  { name: "Nvidia",    type: "Stock", source: "stock_pick" },
+  KO:    { name: "Coca-Cola", type: "Stock", source: "stock_pick" },
+  HSY:   { name: "Hershey",   type: "Stock", source: "stock_pick" },
+  CROX:  { name: "Crocs",     type: "Stock", source: "stock_pick" },
   // Z (Zillow) intentionally NOT in the gifter/parent picker. It's not on the approved list
   // (not warm, not child-friendly). Legacy Zillow holdings still resolve via ticker-names.ts
   // and HoldingDetailSheet's TICKER_INFO so historical positions render correctly, but the

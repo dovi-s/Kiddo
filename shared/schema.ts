@@ -93,6 +93,21 @@ export const funds = pgTable("funds", {
   // years) survives revocation. NULL = access active (default behavior
   // unchanged).
   previousOwnerAccessRevokedAt: timestamp("previous_owner_access_revoked_at"),
+  // The fund's value at the moment of handoff (transferredAt). Captured ONCE
+  // when ownership flips, in both handoff doors (age-transition complete +
+  // kid-view claim). The previous owner's (parent's) post-handoff view shows
+  // THIS frozen keepsake number — "what you handed them on {date}" — instead of
+  // the now-adult's LIVE balance, which is the adult's private finance. NULL =
+  // not transferred, or a legacy transfer that predates this column (view
+  // falls back to a clearly-labeled live value). (2026-06-09, founder-approved.)
+  valueAtTransfer: decimal("value_at_transfer", { precision: 12, scale: 2 }),
+  // Phase 2 of the keepsake (2026-06-09): the now-adult can opt to let the
+  // previous owner see this fund LIVE again, instead of the frozen keepsake
+  // default. NULL = keepsake (default); non-null = live access granted at that
+  // moment. Freely reversible by the owner (a visibility preference — unlike the
+  // one-way safety revoke in previousOwnerAccessRevokedAt). The previous-owner
+  // dashboard reads this to choose keepsake vs live.
+  previousOwnerLiveAccessGrantedAt: timestamp("previous_owner_live_access_granted_at"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks
@@ -303,11 +318,9 @@ export const gifts = pgTable("gifts", {
   // boolean fields, not inferred from string patterns. Backfilled by
   // migration 0009 from the legacy fallback strings.
   isAnonymous: boolean("is_anonymous").notNull().default(false),
-  // Orphaned column from the retired 8-tag lesson system (see
-  // feedback_structure_vs_behavior.md). Kept in DB for historical
-  // data; not read by any current code path. Safe to drop in a future
-  // schema cleanup pass.
-  lessonTag: varchar("lesson_tag", { length: 64 }),
+  // (lesson_tag column dropped 2026-06-09 via migration 0043 — the retired
+  // 8-tag lesson system; see feedback_structure_vs_behavior.md. Drizzle no
+  // longer models it, so any residual column in an un-migrated DB is ignored.)
   // Client source — which surface created the gift. Populated by the
   // gift-checkout endpoint from a `clientSource` body field that the
   // mobile app sets explicitly; web clients leave it absent and the

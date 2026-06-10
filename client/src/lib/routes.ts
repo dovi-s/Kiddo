@@ -50,6 +50,7 @@ export function isMarketingRoute(path: string): boolean {
     // Now reserved slugs, so listed here explicitly to keep their chrome
     // intentional and net-neutral. /p2p-preview is the fenced P2P concept demo.
     pathname === "/p2p-preview" ||
+    pathname === "/generational-loop" ||
     pathname === "/legal" ||
     pathname === "/tools/at-18-calculator" ||
     pathname === "/tools/robux-vs-utma" ||

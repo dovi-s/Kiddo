@@ -50,6 +50,13 @@ interface CreateEventSheetProps {
   // True when the viewer OWNS this fund post-handoff (the adult owner). Flips
   // "for {child}" / "into {child}'s fund" instructional copy to second person.
   isOwnerMode?: boolean;
+  // The child's birthdate (ISO string) when known. Used ONLY to decide whether
+  // "Baby Shower" belongs in the occasion picker. Baby Shower is a pre-birth /
+  // newborn occasion (a deliberate acquisition wedge: the "set up a fund before
+  // your baby shower" content), so it is irrelevant once the child is months
+  // old. Absent or unknown means keep it (never hide a valid option on missing
+  // data).
+  childBirthdate?: string | null;
 }
 
 const GIFTING_TYPES = [
@@ -62,7 +69,14 @@ const GIFTING_TYPES = [
   { id: "graduation",   label: "Graduation",    emoji: "🎓" },
   { id: "baby_shower",  label: "Baby Shower",   emoji: "🍼" },
   { id: "just_because", label: "Just Because",  emoji: "💚" },
-  { id: "custom",       label: "Custom",        emoji: "🎁" },
+  // Custom is the inclusive catch-all for every occasion not enumerated above
+  // (Bar Mitzvah, Christening, Quinceanera, First Communion, Adoption Day, "in
+  // memory of", and the long tail). We intentionally do NOT enumerate a
+  // religious/cultural taxonomy in tiles: that signals who the product is for
+  // and bloats the grid, while a free-text occasion with good example prompts
+  // serves the tail better (same lesson as the retired gift-lesson tags). The
+  // pencil reads as "write your own", not a generic gift box.
+  { id: "custom",       label: "Custom",        emoji: "✏️" },
 ];
 
 const GOAL_TYPES = [
@@ -223,7 +237,7 @@ const S = {
 };
 
 export function CreateEventSheet({
-  open, onClose, fundId, fundName, fundSlug, childPhotoUrl, investPrefs, editEvent, isOwnerMode = false,
+  open, onClose, fundId, fundName, fundSlug, childPhotoUrl, investPrefs, editEvent, isOwnerMode = false, childBirthdate,
 }: CreateEventSheetProps) {
   const isEditing = !!(editEvent?.id);
   const isCreatingFromArchived = isEditing && !!editEvent?.isArchived;
@@ -504,6 +518,21 @@ export function CreateEventSheet({
     else if (step === "preview") setStep(category === "savings_goal" || isSavingsEdit ? "goal-details" : "details");
   }
 
+  // Baby Shower is a pre-birth / newborn occasion. Once the child is clearly
+  // born (more than ~3 months old) it no longer fits, so we hide it from the
+  // picker for existing kids (e.g. an 8-year-old) while keeping it for
+  // expecting parents and newborns. Unknown birthdate keeps it. The lookup
+  // array (GIFTING_TYPES) stays complete so editing an existing baby-shower
+  // occasion still resolves its label and emoji.
+  const visibleGiftingTypes = (() => {
+    const bd = childBirthdate ? new Date(childBirthdate) : null;
+    const monthsSinceBirth = bd && !isNaN(bd.getTime())
+      ? (Date.now() - bd.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+      : null;
+    const hideBabyShower = monthsSinceBirth !== null && monthsSinceBirth > 3;
+    return hideBabyShower ? GIFTING_TYPES.filter(t => t.id !== "baby_shower") : GIFTING_TYPES;
+  })();
+
   const selectedGiftingType = GIFTING_TYPES.find(t => t.id === eventType);
   const selectedGoalTypeDef = GOAL_TYPES.find(t => t.id === goalType);
   const effectiveGoal = goalPreset === "custom" ? customGoal : goalPreset;
@@ -751,7 +780,7 @@ export function CreateEventSheet({
             <motion.div key="type" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.16 }}
               style={{ padding: "4px 20px 32px", overflowY: "auto", flex: 1 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {GIFTING_TYPES.map((type) => (
+                {visibleGiftingTypes.map((type) => (
                   <button key={type.id} type="button" onClick={() => handleSelectGiftingType(type.id)}
                     style={{
                       background: "rgba(184,121,26,0.07)", // one warm gold wash (kiddo gold @ 7%) for every tile
@@ -828,7 +857,11 @@ export function CreateEventSheet({
               <div style={{ marginBottom: 14 }}>
                 <label style={S.label()}>Occasion name</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                  placeholder={fundName ? `e.g. ${fundName}'s 3rd Birthday` : "e.g. Emma's Birthday"}
+                  placeholder={
+                    eventType === "custom"
+                      ? "e.g. Bar Mitzvah, Christening, Quinceanera, Adoption Day"
+                      : fundName ? `e.g. ${fundName}'s 3rd Birthday` : "e.g. Emma's Birthday"
+                  }
                   autoFocus style={S.input()} />
               </div>
 
