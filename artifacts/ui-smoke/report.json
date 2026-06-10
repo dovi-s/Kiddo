@@ -1,65 +1,83 @@
 {
   "baseUrl": "http://127.0.0.1:5000",
-  "generatedAt": "2026-04-24T02:51:47.504Z",
+  "generatedAt": "2026-06-09T21:41:26.686Z",
   "results": [
     {
       "name": "public-home",
       "ok": true,
-      "detail": "consoleErrors=1",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-home.png"
     },
     {
       "name": "public-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-login.png"
     },
     {
       "name": "public-pricing",
       "ok": true,
-      "detail": "four plan cards and trust FAQ visible, consoleErrors=1",
+      "detail": "four plan cards and trust FAQ visible",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-pricing.png"
+    },
+    {
+      "name": "public-founding-members",
+      "ok": true,
+      "detail": "ok",
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-founding-members.png"
+    },
+    {
+      "name": "public-founding-members-open-gift",
+      "ok": true,
+      "detail": "ok",
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-founding-members-open-gift.png"
+    },
+    {
+      "name": "public-sponsor-success-page",
+      "ok": true,
+      "detail": "consoleErrors=1",
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-sponsor-success-page.png"
     },
     {
       "name": "public-activity-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-activity-redirect-login.png"
     },
     {
       "name": "public-dashboard-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-dashboard-redirect-login.png"
     },
     {
       "name": "public-events-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-events-redirect-login.png"
     },
     {
       "name": "public-settings-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-settings-redirect-login.png"
     },
     {
       "name": "public-admin-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=3",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-admin-redirect-login.png"
     },
     {
       "name": "public-memory-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-memory-redirect-login.png"
     },
     {
       "name": "public-transition-fund-redirect-login",
       "ok": true,
-      "detail": "consoleErrors=2",
+      "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\public-transition-fund-redirect-login.png"
     },
     {
@@ -81,18 +99,6 @@
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\auth-settings.png"
     },
     {
-      "name": "auth-events-sharing-model",
-      "ok": true,
-      "detail": "events page clarifies anytime fund code versus event-specific links and QR codes",
-      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\auth-events-sharing-model.png"
-    },
-    {
-      "name": "auth-settings-membership",
-      "ok": true,
-      "detail": "familyCardBackground=linear-gradient(145deg, rgb(27, 59, 44) 0%, rgb(15, 42, 29) 100%), setupNudgeVisible=true",
-      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\auth-settings-membership.png"
-    },
-    {
       "name": "auth-settings-notifications",
       "ok": true,
       "detail": "activationSwitch=checked->unchecked",
@@ -101,7 +107,7 @@
     {
       "name": "auth-settings-money",
       "ok": true,
-      "detail": "gifterStockSwitch=unchecked->checked",
+      "detail": "moneyPanel+strategyEditor=visible",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\auth-settings-money.png"
     },
     {
@@ -109,17 +115,6 @@
       "ok": true,
       "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\auth-memory-book.png"
-    },
-    {
-      "name": "auth-dashboard-interactions",
-      "ok": true,
-      "detail": "dashboardSummaryRequests=5, oldWaterfallRequests=0, processingGiftRefresh=ok, oneTimeFeeEstimates=ok, mobileVisualSmoke=ok",
-      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\auth-dashboard-interactions.png"
-    },
-    {
-      "name": "dashboard-cached-hero-refresh",
-      "ok": true,
-      "detail": "cached hero value painted first, then refreshed after paint"
     },
     {
       "name": "api-ownership-fund",
@@ -146,18 +141,6 @@
       "ok": true,
       "detail": "ok",
       "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\gift-checkout-fund.png"
-    },
-    {
-      "name": "gift-checkout-preview-stock-logos",
-      "ok": true,
-      "detail": "family default logos, estimate copy, stock picker logos, gift add-ons, investment preview, and memory photo upload visible",
-      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\gift-checkout-preview-stock-logos.png"
-    },
-    {
-      "name": "send-stock-logos",
-      "ok": true,
-      "detail": "send stock picker logos visible",
-      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\ui-smoke\\send-stock-logos.png"
     },
     {
       "name": "admin-overview",

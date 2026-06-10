@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T05:16:51.746Z",
+  "generatedAt": "2026-06-08T07:28:30.656Z",
   "sourcePath": "C:\\Apps\\Kora (newest)\\apps\\mobile\\src\\screens\\GifterFlowScreen.tsx",
   "stockChoicesPath": "C:\\Apps\\Kora (newest)\\packages\\utils\\src\\index.ts",
   "tickers": [
@@ -10,9 +10,17 @@
     "NFLX",
     "AMZN",
     "GOOGL",
-    "TSLA",
     "SPOT",
-    "RBLX"
+    "RBLX",
+    "TSLA",
+    "MSFT",
+    "NTDOY",
+    "DUOL",
+    "DPZ",
+    "CHWY",
+    "ABNB",
+    "TGT",
+    "MCD"
   ],
   "checks": [
     {
@@ -27,22 +35,22 @@
     },
     {
       "name": "mobile-gifter-stock-card-has-button-test-id",
-      "ok": true,
+      "ok": false,
       "detail": "each stock card should expose a stable button testID"
     },
     {
       "name": "mobile-stock-logo-has-wrapper-test-id",
-      "ok": true,
+      "ok": false,
       "detail": "logo wrapper should expose stock-logo-{TICKER}"
     },
     {
       "name": "mobile-stock-logo-has-image-test-id",
-      "ok": true,
+      "ok": false,
       "detail": "remote logo image should expose stock-logo-image-{TICKER}"
     },
     {
       "name": "mobile-stock-logo-has-fallback-test-id",
-      "ok": true,
+      "ok": false,
       "detail": "fallback badge should expose stock-logo-fallback-{TICKER}"
     },
     {
@@ -52,17 +60,17 @@
     },
     {
       "name": "mobile-stock-cards-show-shares-line",
-      "ok": true,
+      "ok": false,
       "detail": "stock cards should keep the amount-aware shares line"
     },
     {
       "name": "mobile-stock-cards-use-market-quote-endpoint",
-      "ok": true,
+      "ok": false,
       "detail": "mobile stock estimates should use /api/market/quotes instead of local price constants"
     },
     {
       "name": "mobile-stock-cards-explain-estimated-price",
-      "ok": true,
+      "ok": false,
       "detail": "share-count UI should include visible estimated-price microcopy"
     },
     {

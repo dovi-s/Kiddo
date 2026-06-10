@@ -49,3 +49,9 @@ apps/mobile/.expo
 # IDE
 .vscode/
 .idea/
+
+# Ephemeral verification / debug screenshots (per-session, not repo history).
+# The ui-smoke *baseline* shots stay tracked; only the throwaway run output is ignored.
+artifacts/verify-*/
+artifacts/founder-reel/
+artifacts/ui-smoke/*-fail.png
