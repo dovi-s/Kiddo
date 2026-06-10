@@ -8,6 +8,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { TrendChartSkeleton } from "@/components/TrendChartSkeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { haptic } from "@/lib/haptics";
 import { friendlyHoldingName } from "@/lib/ticker-names";
@@ -219,9 +220,10 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
 
       {/* Chart area */}
       {loading ? (
-        <div className="w-full rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center" style={{ height: 160 }}>
-          <span className="text-xs text-muted-foreground animate-pulse">Loading...</span>
-        </div>
+        // Chart-shaped skeleton (matches the dashboard/trend chart's loading
+        // treatment) instead of a bare "Loading…" — the area resolves into a
+        // price chart, so the placeholder should look like one.
+        <TrendChartSkeleton heightPx={160} />
       ) : error || data.length < 2 ? (
         <div className="w-full rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center" style={{ height: 160 }}>
           <span className="text-xs text-muted-foreground">Chart unavailable</span>
