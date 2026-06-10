@@ -61,7 +61,11 @@ type KidViewContent = {
       this the counts came from the 12-row display window and badly undercounted
       (e.g. 134 gifts from 12 people rendering as "12 gifts / 4 people"). */
   giftStats?: { total: number; gifters: number; noNote: number };
-  memories: Array<{ id: string; authorName?: string; content?: string; photoUrl?: string | null; videoUrl?: string | null; visibility?: string }>;
+  memories: Array<{ id: string; type?: string; authorName?: string; content?: string; photoUrl?: string | null; videoUrl?: string | null; visibility?: string }>;
+  /** Count of human notes (gift messages + parent notes) across the WHOLE
+      Memory Book — drives the "N notes from people who love you" line. The
+      `memories` array is the full book (human notes first), paginated client-side. */
+  memoryNoteCount?: number;
   holdings: Array<{ id: string; ticker: string; name: string; currentValue: string; gain: string }>;
   suggestions: Array<{ id: string; ticker: string; reason: string; reviewedStatus: string }>;
   allowTeenSuggestions: boolean;
@@ -462,6 +466,13 @@ export default function KidView() {
       !isLikelyTestData(m.content) && !isLikelyTestData(m.authorName)
     );
   }, [content?.memories, isLikelyTestData]);
+
+  // The Memory Book is the kid's whole book now (server sends it all, human notes
+  // first). Show a generous default so it reads abundant at a glance, with a
+  // "see all" to open the rest — nothing is locked away from the kid.
+  const MEMORY_PREVIEW = 12;
+  const [showAllMemories, setShowAllMemories] = useState(false);
+  const visibleMemories = showAllMemories ? cleanedMemories : cleanedMemories.slice(0, MEMORY_PREVIEW);
 
   useEffect(() => {
     if (!content) return;
@@ -1261,9 +1272,17 @@ export default function KidView() {
                 <BookOpen className="h-4 w-4 text-primary" />
                 <h2 className="font-heading text-2xl font-semibold text-foreground">Memory Book</h2>
               </div>
+              {/* The abundance line: one number conveys the moat better than the
+                  list. Counts human notes (server's memoryNoteCount), so an auto
+                  milestone never inflates "people who love you". */}
+              {(content.memoryNoteCount ?? 0) >= 3 && (
+                <p className="mt-1.5 text-sm font-semibold text-primary" data-testid="memory-note-count">
+                  {content.memoryNoteCount} notes from people who love you.
+                </p>
+              )}
               {content.phase === "teen" ? (
                 <div className="mt-4 space-y-3">
-                  {cleanedMemories.map((entry) => {
+                  {visibleMemories.map((entry) => {
                     // Mark entries that the parent specifically reserved for
                     // today (visibility='kid_at_18' on the entry, became
                     // visible only at majority age). Soft kiddo-gold border
@@ -1326,6 +1345,16 @@ export default function KidView() {
                     </div>
                     );
                   })}
+                  {cleanedMemories.length > MEMORY_PREVIEW && !showAllMemories && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMemories(true)}
+                      data-testid="memory-see-all"
+                      className="w-full rounded-2xl border border-border/60 bg-muted/20 py-3 text-sm font-semibold text-primary transition-colors hover:bg-muted/40"
+                    >
+                      See all {cleanedMemories.length} memories
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl bg-muted/30 p-5 text-center">
