@@ -2414,8 +2414,11 @@ export default function Activity() {
         })()}
 
         {/* Timeline - grouped by month */}
-        {!feedLoading && !feedError && grouped.map((group) => (
-          <EnlighteningReveal key={group.label}>
+        {!feedLoading && !feedError && grouped.map((group, gi) => (
+          // Stagger the month-group reveals so the ledger CASCADES in (one beat
+          // at a time) instead of every group blurring in at once — matches the
+          // dashboard/notifications arrival feel. Capped + reduced-motion-gated.
+          <EnlighteningReveal key={group.label} delay={prefersReducedMotion ? 0 : Math.min(gi, 6) * 0.06}>
             <div style={{ marginBottom: 24 }}>
               <p style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
