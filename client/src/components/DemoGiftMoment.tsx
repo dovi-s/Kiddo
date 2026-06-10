@@ -44,6 +44,7 @@ import { haptic } from "@/lib/haptics";
 import { recordDemoLiveGift } from "@/lib/demo-live-gifts";
 import { markNotificationsReadAsOf } from "@/components/NotificationsPanel";
 import { DEMO_AWAY_MS } from "@/components/dashboard/SinceLastVisitDigest";
+import { STOCK_PICK_NAMES } from "@shared/stock-picks";
 
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
 const SESSION_KEY = "kiddo.demo.giftMoment.genericBeat.v1"; // generic beat: once per session (a fresh / incognito session resets it)
@@ -75,8 +76,24 @@ const DEMO_GIFTS: Record<string, { sender: string; amount: string; ticker: strin
   alex: { sender: "Jay Pritchett", amount: "250", ticker: "GOOGL" },
   luke: { sender: "Manny Delgado", amount: "50", ticker: "RBLX" },
 };
-const TICKER_NAME: Record<string, string> = {
-  DIS: "Disney", GOOGL: "Google", RBLX: "Roblox", AAPL: "Apple", VTI: "the diversified mix",
+// Where the gift goes, in friendly terms. Uses the CANONICAL curated-stock name
+// map (STOCK_PICK_NAMES — all ~24 picks) so a loop-closure gift to ANY curated
+// stock reads true ("Going into Nike"); the old local 5-ticker map fell back to
+// a FALSE "the diversified mix" for the other 19. No specific ticker (managed
+// mix / VTI) → the honest "the diversified mix."
+const giftDestination = (ticker: string | null | undefined): string =>
+  STOCK_PICK_NAMES[String(ticker || "").toUpperCase()] || "the diversified mix";
+
+// Gift amount, currency-formatted: "$50", "$1,500", "$75.50" — never a raw
+// "$1500" or an ugly "$50.00". Matters for the loop-closure beat, where the
+// prospect picks the amount.
+const fmtGiftAmount = (raw: string | number): string => {
+  const n = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(n)) return String(raw);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 export function DemoGiftMoment() {
@@ -152,7 +169,7 @@ export function DemoGiftMoment() {
         const senderRaw = String(pending.senderName || "").trim();
         const sender = senderRaw && senderRaw.toLowerCase() !== "someone" ? senderRaw : "Someone";
         const amount = String(pending.amount || "").replace(/[^0-9.]/g, "") || "0";
-        const where = TICKER_NAME[String(pending.ticker || "").toUpperCase()] || "the diversified mix";
+        const where = giftDestination(pending.ticker);
         const isRecurring = !!pending.isRecurring;
         delay = JUST_SENT_DELAY_MS;
         fire = () => {
@@ -162,7 +179,7 @@ export function DemoGiftMoment() {
             variant: "gift", // warm, branded delight treatment — not a system card
             title: isRecurring
               ? `${sender}'s monthly gift to ${child} is on its way`
-              : `${sender} added $${amount} to ${child}'s future`,
+              : `${sender} added $${fmtGiftAmount(amount)} to ${child}'s future`,
             description: `Going into ${where}. The gift you just sent is landing in ${child}'s Memory Book.`,
             duration: 9000, // a delight beat needs time to read both lines + tap View
             action: (
@@ -210,7 +227,7 @@ export function DemoGiftMoment() {
         const childRaw = String(fund.recipientFirstName || "");
         const child = capFirst(childRaw) || "your child";
         const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
-        const where = TICKER_NAME[g.ticker] || "the diversified mix";
+        const where = giftDestination(g.ticker);
         // Record a REAL session gift (Stage 1 of the demo sandbox), so the
         // ambient beat genuinely lands a gift_received row in the Activity feed,
         // lights the notification bell, appears in the Memory Book, and ticks the
@@ -220,7 +237,7 @@ export function DemoGiftMoment() {
         haptic("success");
         toast({
           variant: "gift", // warm, branded delight treatment — not a system card
-          title: `${g.sender} added $${g.amount} to ${child}'s future`,
+          title: `${g.sender} added $${fmtGiftAmount(g.amount)} to ${child}'s future`,
           description: `Going into ${where}. A new moment in ${child}'s Memory Book.`,
           duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
           action: (
