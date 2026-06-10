@@ -11811,6 +11811,12 @@ export default function DashboardLab() {
                     <motion.button
                       key={key}
                       variants={LAB_TILE_VARIANTS}
+                      // Hover-lift + tap-press so the tiles feel alive/clickable
+                      // like the rest of the app (gifter faces, fund cards) — they
+                      // had the entrance cascade + click haptic but no hover/press
+                      // response. Signature easing; reduced-motion handled globally.
+                      whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                      whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
                       type="button"
                       onClick={() => { haptic("light"); setExpandedTileIdV2(isExpanded ? null : String(event.id)); }}
                       style={{
