@@ -7903,6 +7903,11 @@ export default function Dashboard() {
               );
             })()}
 
+            {/* Hidden on the post-handoff keepsake (mirror of DashboardLab): a
+                previous owner's frozen view must not expose the now-adult's live
+                holdings + current values; there's no honest "as of handoff"
+                holdings view, so the keepsake omits it. */}
+            {!showHandoffKeepsake && (
             <motion.section
               ref={holdingsSectionRef}
               initial={{ opacity: 0, y: 8 }}
@@ -8486,6 +8491,7 @@ export default function Dashboard() {
                 );
               })()}
             </motion.section>
+            )}
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
