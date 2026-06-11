@@ -114,7 +114,8 @@ async function tick(log: LogFn): Promise<void> {
       now,
     );
     try {
-      await sendEmail(buildVolatilityReassuranceEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildVolatilityReassuranceEmail({
         to: row.parent_email,
         unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "volatility"),
         parentFirstName: row.parent_first_name,
@@ -123,7 +124,7 @@ async function tick(log: LogFn): Promise<void> {
         dropPct,
         currentBalanceUsd: current,
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
-      }));
+      }), fundId: String(row.fund_id) });
       state.sentByFundDate[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

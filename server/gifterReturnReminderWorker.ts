@@ -98,13 +98,15 @@ async function tick(log: LogFn): Promise<void> {
       ? `${baseUrl}/${row.fund_slug}`
       : `${baseUrl}/gift/${row.fund_id}`;
     try {
-      await sendEmail(buildGifterReturnReminderEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint (never
+      // nudge a gifter to give again to a memorialized fund). See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildGifterReturnReminderEmail({
         to: row.sender_email,
         gifterFirstName: firstName,
         childFirstName: row.child_first_name,
         lastGiftMonthsAgo: monthsAgo,
         giftUrl,
-      }));
+      }), fundId: String(row.fund_id) });
       state.sentByGifterFundYear[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

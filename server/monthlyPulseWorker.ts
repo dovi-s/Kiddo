@@ -110,7 +110,8 @@ async function tick(log: LogFn): Promise<void> {
     const changeUsd = prior30Total != null ? total - prior30Total : null;
     const changePct = prior30Total != null && prior30Total > 0 && changeUsd != null ? (changeUsd / prior30Total) * 100 : null;
     try {
-      await sendEmail(buildMonthlyPulseEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildMonthlyPulseEmail({
         to: row.parent_email,
         unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "monthlyPulse"),
         parentFirstName: row.parent_first_name,
@@ -122,7 +123,7 @@ async function tick(log: LogFn): Promise<void> {
         newGifterCount30d: newGifterAgg.rows[0]?.new_gifters || 0,
         monthName: MONTH_NAMES[(today.month - 2 + 12) % 12], // the month that just ended
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
-      }));
+      }), fundId: String(row.fund_id) });
       state.lastSentByFundMonth[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

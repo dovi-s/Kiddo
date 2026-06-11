@@ -111,7 +111,8 @@ async function tick(log: LogFn): Promise<void> {
     if (state.sentByFundYearHoliday[key]) continue;
     const total = parseFloat(row.balance || "0") + parseFloat(row.cash_balance || "0");
     try {
-      await sendEmail(buildHolidayWarmthEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildHolidayWarmthEmail({
         to: row.parent_email,
         unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "motherFathersDay"),
         parentFirstName: row.parent_first_name,
@@ -121,7 +122,7 @@ async function tick(log: LogFn): Promise<void> {
         parentRole: role,
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
         memoryBookUrl: `${baseUrl}/memory?fund=${encodeURIComponent(row.fund_id)}`,
-      }));
+      }), fundId: String(row.fund_id) });
       state.sentByFundYearHoliday[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

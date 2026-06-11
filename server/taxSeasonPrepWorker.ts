@@ -80,7 +80,8 @@ async function tick(log: LogFn): Promise<void> {
     const key = `${row.fund_id}:${taxYear}:${phase}`;
     if (state.sentByFundYearPhase[key]) continue;
     try {
-      await sendEmail(buildTaxSeasonPrepEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildTaxSeasonPrepEmail({
         to: row.parent_email,
         unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "taxPrep"),
         parentFirstName: row.parent_first_name,
@@ -88,7 +89,7 @@ async function tick(log: LogFn): Promise<void> {
         taxYear,
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
         taxDocsUrl: `${baseUrl}/tax-documents?fund=${encodeURIComponent(row.fund_id)}`,
-      }));
+      }), fundId: String(row.fund_id) });
       state.sentByFundYearPhase[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

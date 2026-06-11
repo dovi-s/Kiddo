@@ -126,14 +126,32 @@ deletion. Setting it = the freeze engages everywhere at once.
 - **`test:memorialized-silence`** asserts the whole chain (marks a real fund, asserts,
   restores). This test must never go red.
 
-**Remaining (mechanical; the chokepoint + test make finishing it safe):** thread
-`fundId` into the other fund-scoped worker emails so the chokepoint fires for each —
-`monthlyPulse`, `yearEndWrapped`, `pmfSurveyTrigger`, `gifterNotification`,
-`gifterReturnReminder`, `gifterYearEnd`, `holidayWarmth`, `taxSeasonPrep`,
-`volatilityReassurance`, `parentLifecycle`, `postHandoffEngagement`,
-`sealedLetterDelivery`, `mobilePush`, `age18Transition`, `stalledHandoff`. Each is the
-same one-line spread: `sendEmail({ ...buildX(...), fundId })`; extend the test to each
-as it's threaded. **Until threaded, an un-threaded worker's email is the open edge —
-not yet gated.** (The account-level *subscription renewal* stays OUT of the fund freeze
-deliberately — that's the human runbook's call, since the parent may have other living
-children.)
+**Threaded + verified (fundId passed → the chokepoint suppresses; 10 single-fund email
+workers):** fundBirthday, kidMilestone, fundAnniversary, monthlyPulse, yearEndWrapped,
+holidayWarmth, taxSeasonPrep, volatilityReassurance, gifterReturnReminder,
+sealedLetterDelivery.
+
+**Remaining open edge — categorized (each needs worker-specific handling, NOT a blind
+thread):**
+- **Multi-call handoff workers** — `age18Transition` (×4 sends), `stalledHandoff` (×3),
+  `postHandoffEngagement` (×2): gate at the SOURCE — add `AND f.memorialized_at IS NULL`
+  to each worker's fund query (one filter silences all its sends). A memorialized child
+  never reaches the handoff anyway.
+- **Gifter-AGGREGATE (multi-fund)** — `gifterYearEnd`, `gifterNotification`: one email
+  can span a gifter's several recipients, so gating on a single fundId would wrongly
+  hide their OTHER living kids. EXCLUDE memorialized funds from the aggregate query;
+  never suppress the whole email.
+- **User-scoped** — `pmfSurveyTrigger`: about the user's overall experience, not one
+  fund. Suppress if the user has ANY memorialized fund (a user-level check). A
+  "how are we doing?" survey must never reach a bereaved user.
+- **Queue-driven** — `parentLifecycle`: thread the queued email record's fundId if it
+  carries one.
+- **Separate channel** — `mobilePush`: PUSH, not email — the email chokepoint does NOT
+  cover it. Needs its own guard at the push-send layer (high priority — a push is as
+  intrusive as an email).
+- **Account-level (deliberately OUT)** — subscription renewal: the parent may have
+  other living children; that's the human runbook's call, not the fund freeze.
+
+**Honest state:** charges fully frozen; 10 email workers silenced + verified; the above
+is the precise un-gated edge. `test:memorialized-silence` proves the chokepoint — extend
+it as each remaining worker is gated.
