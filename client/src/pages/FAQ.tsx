@@ -116,6 +116,12 @@ const faqItems = [
     answer: "Most child funds use a UTMA legal structure. That means you manage the fund until your child reaches adulthood, usually 18 or 21 depending on your state. Then it becomes fully theirs. Kiddo keeps that legal complexity underneath the gifting experience.",
   },
   {
+    id: "what-if-they-spend-it",
+    category: "Account Basics",
+    question: "What if my child just spends it all at 18?",
+    answer: "It is the fear every parent has, and it is the reason we built Kiddo the way we did. By law, a custodial account becomes your child's at the age of majority. No app can change that, and we would not want one that could. What we can do is spend the years before it making the account something they understand and care about, instead of a surprise check. A child who watched it grow, chose some of what is inside, and read a note from their grandfather about it is a very different eighteen-year-old than one handed a number. We cannot promise what they will do. We can promise we spent eighteen years preparing them to do it well.",
+  },
+  {
     id: "utma-vs-529",
     category: "Account Basics",
     question: "How is this different from a 529?",

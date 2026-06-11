@@ -16,6 +16,39 @@ relationship exists — it is *not* the business.
 
 ---
 
+## 0b. The keystone — and why the prize is also the fear (2026-06-10)
+
+Everything in this strategy converges on **one moment: the handoff.** It is not
+one feature among many; it is the keystone the whole arch leans on. The unit
+economics ($1B = post-handoff adult LTV — `UNIT_ECONOMICS.md`), the education
+thesis (graduate a calm owner who *keeps* it — `EDUCATION_THESIS.md`), the moat
+(the Memory Book is the concrete reason a 19-year-old doesn't liquidate), the loop
+(the adult owner becomes the next gifter), and the retention stack all terminate
+at the same place. Pull the keystone and the arch falls; secure it and everything
+else holds. **Prioritization filter: a thing is load-bearing only if it
+strengthens the handoff.**
+
+**The reframe that wins — the prize is also the market's #1 fear, and that fear is
+the wedge.** Real-voice demand research (`VOICE_OF_CUSTOMER.md`) is blunt: parents
+are *terrified* of a kid getting money at 18 ("they'll blow it," "keep it secret
+till 30," money kept in the parent's name to control the timing). Every competitor
+and every cautious parent treats "the kid gets it at 18" as a **bug** to engineer
+around (529s, UTMA-avoidance). Kiddo is the only product that turns it into the
+**feature**: *we are the only ones who spend eighteen years making sure they keep
+it — through the education, the people, and the ownership.* No 529, Fidelity UTMA,
+or Greenlight can answer the handoff fear, because none of them build the
+relationship that de-risks it. **The handoff fear is therefore both the wedge (why
+we must exist) and the moat (what no one can copy).** Lead the parent narrative by
+*confronting* the fear, never by assuming the handoff reads as good.
+
+**The honest edge:** the keystone is also the least-proven stone (no cohort has
+hit 18 yet, and the market is scared of it). So the two things that de-risk the
+whole company are **funded-k** (does the loop work) and **pre-18
+ownership/engagement** (the only leading indicator the keystone will hold before
+any kid actually reaches the handoff). Instrument both.
+
+---
+
 ## 1. What business we are NOT in (and why the obvious framing is a trap)
 
 "A kids' investing app" caps us in a small, crowded niche and makes the math

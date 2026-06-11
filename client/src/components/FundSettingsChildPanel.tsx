@@ -86,6 +86,12 @@ export function FundSettingsChildPanel({
   // See project_adult_account_is_parent_2_0_onramp.
   const fundIsOwnerHeld =
     (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
+  // Once a fund is TRANSFERRED it belongs to the now-adult, so Kid View (a
+  // parent-configures-a-minor surface) is meaningless on it. Gate Kid View on
+  // this, NOT fundIsOwnerHeld: keying on "owner-held" alone leaked editable
+  // "Turn on Kid View / Set a PIN" controls to the view-only PREVIOUS custodian
+  // on a handed-off fund (Phil on Haley's fund). 2026-06-10 fix.
+  const fundIsTransferred = Boolean((fund as any)?.transferredAt);
   // Collaborators (co-admin AND viewer): managing access, closing the fund,
   // and naming a successor custodian are owner-only structural actions (the
   // server 403s them), so hide those cards instead of showing controls that
@@ -102,11 +108,13 @@ export function FundSettingsChildPanel({
   return (
     <div className="space-y-4" data-testid="settings-child-panel">
       <ChildIdentityCard fund={fund} onEditChild={onEditFund} />
-      {/* Kid View is the CHILD's login surface — meaningless for an adult owner
-          who logs in as themselves with full access. Per the locked Kid View
-          policy, hide it for the owner (it returns naturally on a child fund
-          they later create). See project_adult_account_is_parent_2_0_onramp. */}
-      {!fundIsOwnerHeld && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
+      {/* Kid View is the CHILD's login surface, meaningless once the fund is
+          handed off (the now-adult logs in as themselves with full access). Hide
+          it on ANY transferred fund, for the adult owner AND the view-only
+          previous custodian alike (gating on owner-held alone leaked editable
+          controls to the previous owner). It returns naturally on a new child
+          fund. See project_adult_account_is_parent_2_0_onramp. */}
+      {!fundIsTransferred && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
       <InvitationsToYouCard />
       {!fundIsOwnerHeld && !fundIsCollaborator && (
         <CoParentAccessCard

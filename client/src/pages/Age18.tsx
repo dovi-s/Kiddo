@@ -421,6 +421,24 @@ export default function Age18() {
             </div>
 
             <div className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-premium-sm">
+              <h3 className="font-heading text-2xl font-semibold text-foreground">"What if she just spends it all?"</h3>
+              <div className="mt-4 space-y-4 text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
+                <p>
+                  It is the fear every parent has, and we will not pretend it away. By law, the account is hers, and she can do anything with it.
+                </p>
+                <p>
+                  What we can do is the years before it. Emma watches the fund grow, sees who showed up for her, learns how investing works from her own money, and reads the notes the people who love her left along the way.
+                </p>
+                <p className="font-medium text-foreground">
+                  So when it becomes hers, it is not a stranger's windfall. It is something she has understood, and felt loved through, for as long as she can remember.
+                </p>
+                <p>
+                  We cannot promise what she will do. We can promise we spent those years preparing her to do it well. That is the whole reason Kiddo exists.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-premium-sm">
               <h3 className="font-heading text-2xl font-semibold text-foreground">Age of majority varies by state.</h3>
               <div className="mt-4 space-y-3 text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
                 <p>Most states: 18.</p>

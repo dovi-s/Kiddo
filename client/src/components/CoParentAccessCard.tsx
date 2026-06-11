@@ -212,7 +212,7 @@ export function CoParentAccessCard({
         {isFetched && collaborators.length === 0 && (
           <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-gradient-to-br from-[hsl(var(--kiddo-evergreen)/0.05)] to-[hsl(var(--kiddo-cream-dark)/0.4)] p-4">
             <p className="kiddo-section-label mb-3">How co-parent access works</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
                 { emoji: "🔑", title: "You stay in control", body: "You are the legal custodian. They have no legal claim." },
                 { emoji: "👁", title: "Choose their role", body: "Viewer or Co-Admin. You decide what they can see and do." },
@@ -236,7 +236,7 @@ export function CoParentAccessCard({
         {!isFetched && collaborators.length === 0 && (
           <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border)/0.5)] bg-muted/30 p-4 animate-pulse">
             <div className="h-3 w-32 bg-muted rounded mb-3" />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="rounded-xl bg-card p-3">
                   <div className="h-5 w-5 bg-muted rounded mb-1.5" />

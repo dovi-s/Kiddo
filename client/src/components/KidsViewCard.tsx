@@ -146,7 +146,7 @@ export function KidsViewCard({
 
   return (
     <SectionCard>
-      <div className="p-4 flex items-center justify-between gap-3">
+      <div className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             {isOwnerMode ? "Your View" : fund?.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s View` : "Kid's View"}
@@ -155,7 +155,7 @@ export function KidsViewCard({
             {isActive ? "Active · PIN protected" : "Not set up yet"}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           {isActive ? (
             <>
               <button

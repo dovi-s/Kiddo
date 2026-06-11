@@ -7,10 +7,9 @@ import { motion } from "framer-motion";
 // usages were on "Is there a company you love?" kid-suggestion prompts;
 // replaced with Lightbulb (already imported), the canonical gentle-nudge
 // icon per feedback_gentle_nudge_pattern.md.
-import { BadgeCheck, BookOpen, Copy, Lightbulb, Lock, Share2, Target, TrendingUp, Users } from "lucide-react";
+import { BadgeCheck, BookOpen, Lightbulb, Lock, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { Mascot } from "@/components/ui/mascot";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
@@ -411,14 +410,25 @@ export default function KidView() {
     // etc. UTMA fund (majority 21) correctly shows a 3-extra-year
     // contribution window vs the default-18 fund.
     const majorityAge = Number(content?.fund?.majorityAge) || 18;
-    const yearsToMajority = Math.max(majorityAge - age, 0);
+    // PRECISE (fractional) years to majority, not integer age. `majorityAge - age`
+    // rounded a kid who is 20-and-11-months up to a FULL year, projecting a whole
+    // year of growth + gifts when majority is one month away — Alex's "By age 21"
+    // read ~$3k high ($42,077 vs the true ~$39k at 1 month out). The content
+    // endpoint already provides precise months-to-majority (`monthsUntil18`, named
+    // for the legacy 18 but majority-age-aware); use it, fall back to integer only
+    // if absent. Fixed 2026-06-10.
+    const monthsToMajority = (content as any)?.monthsUntil18;
+    const yearsToMajority = (typeof monthsToMajority === "number" && monthsToMajority >= 0)
+      ? monthsToMajority / 12
+      : Math.max(majorityAge - age, 0);
+    const yearsTo25 = Math.max(yearsToMajority + (25 - majorityAge), 0);
     const contributionYears = utmaContributionYearsRemaining(age, majorityAge);
     return {
       majorityAge,
       toMajority: projectFutureValue(balance, annualGiftEstimate, yearsToMajority, contributionYears),
-      to25: projectFutureValue(balance, annualGiftEstimate, Math.max(25 - age, 0), contributionYears),
+      to25: projectFutureValue(balance, annualGiftEstimate, yearsTo25, contributionYears),
     };
-  }, [annualGiftEstimate, content?.age, content?.fund?.balance, content?.fund?.majorityAge]);
+  }, [annualGiftEstimate, content?.age, content?.fund?.balance, content?.fund?.majorityAge, (content as any)?.monthsUntil18]);
 
   // Test-data hygiene: surgical client-side filter so gifts and memories
   // containing obvious test markers ("test", "tstgin", "asdf", "qqqqq",
@@ -1195,9 +1205,17 @@ export default function KidView() {
               // notes that DO exist breathe and feel personal.
               const noteCount = cleanedGifts.filter((g) => g.message && g.message.trim()).length;
               const noNoteCount = cleanedGifts.length - noteCount;
+              // "The gift was the message" is the right beat ONLY when notes are
+              // genuinely rare. It was firing off the recent (recurring-heavy, mostly
+              // silent) gift slice, so it claimed "the gift was the message" even on
+              // funds whose Memory Book is full of notes — directly contradicting the
+              // "{N} notes from people who love you" line below. Gate it on the fund's
+              // ACTUAL note count: suppress when notes are plentiful (let them breathe);
+              // fire only for genuinely sparse-note funds. Fixed 2026-06-10.
+              const fundIsNotesRich = (Number((content as any).memoryNoteCount) || 0) > 2;
               return (
                 <>
-                  {noNoteCount >= 3 && (
+                  {noNoteCount >= 3 && !fundIsNotesRich && (
                     <p className="text-[12px] italic text-muted-foreground/75 mb-3 leading-relaxed">
                       {noNoteCount === cleanedGifts.length
                         ? `${noNoteCount} ${noNoteCount === 1 ? "person gave" : "people gave"} without leaving a note. The gift was the message.`
