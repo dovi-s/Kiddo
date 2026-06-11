@@ -82,12 +82,14 @@ child. Three residual watch items, none fatal, all worth closing:
   (One Google Fonts `@import` for Inter remains in the **adult** print-flyer pop-up,
   `share-modal.tsx` `handlePrintFlyer` — not a child surface, and the flyer is a
   designed brand artifact, so it's left to a founder typography call.)
-- **(b) The Sentry seam must scrub child context if ever enabled.**
+- **(b) The Sentry seam is now safe-by-default — HARDENED 2026-06-10.**
   `client/src/lib/observability.ts` lazy-loads Sentry only when `VITE_SENTRY_DSN`
-  is set (currently **off** by default — good). If turned on, Kid View errors would
-  ship to a third party. Today no logged-in `userId` exists on Kid View so none is
-  sent, but the URL/stack can contain the share token. Before enabling Sentry,
-  confirm Kid View payloads carry no child identifiers/token.
+  is set (currently **off**). Previously, if turned on, Kid View errors could ship
+  the share token / `accessToken` (in URLs) + default PII to a third party. Now the
+  init sets `sendDefaultPii: false` and runs a `beforeBreadcrumb` + `beforeSend`
+  that redact query strings, UUIDs, and long opaque tokens from URLs, messages, and
+  exception text. So a future DSN flip is safe-by-default rather than relying on a
+  reviewer to remember. (No behavior change while Sentry is off.)
 - **(c) Teen free-text suggestion is stored raw + echoed into parent Activity.**
   `routes.ts:6895-6924` stores the 280-char `reason` and copies it into an Activity
   row. Teens are outside COPPA, but it is child-authored free text that could
@@ -183,7 +185,9 @@ deception gap); (C2) the deletion worker now scrubs analytics-event PII
       to a system stack — founder typography call, non-COPPA (adult surface).
 - [ ] Add a **"Kid View is a no-collection zone"** code comment / guardrail so the
       invariant survives future features.
-- [ ] Before ever enabling Sentry, confirm Kid View payloads carry no child token/PII.
+- [x] **Sentry safe-by-default** — DONE 2026-06-10: `observability.ts` now scrubs
+      tokens/PII (`sendDefaultPii:false` + redacting `beforeSend`/`beforeBreadcrumb`)
+      so a future DSN flip can't leak Kid View share tokens.
 - [ ] Write the **one-page children's-data security program** (cheap insurance).
 - [ ] Put the narrow question (above) to counsel via packet Part 5.
 - [ ] Reconcile permanent-Memory-Book vs deletable-on-request in the Part 3

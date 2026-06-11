@@ -17,6 +17,24 @@ type ErrorContext = {
 let sentryEnabled = false;
 let sentryClient: any = null;
 
+// Defense-in-depth for a children's product. Kid View and the claim/handoff
+// flows put opaque SHARE TOKENS in URLs (/kid-view/<token>/…, ?accessToken=…,
+// /take-over/<token>, /founder-claim/<token>); those plus IPs are COPPA
+// "personal information" and must never reach a third-party error sink. Sentry
+// is off by default (no VITE_SENTRY_DSN), but we scrub at the source so a
+// future flip is safe-by-default rather than relying on a reviewer to
+// remember. See COPPA_APPLICABILITY_MEMO.md (Kid View watch-item b).
+function redactSensitive(input: unknown): string {
+  let s = String(input ?? "");
+  // Drop query strings (accessToken=, etc.) from any URL-like substring.
+  s = s.replace(/\?[^\s"'`)]*/g, "?[redacted]");
+  // Redact UUIDs (fund ids / share tokens).
+  s = s.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "[id]");
+  // Redact long opaque tokens (hex / base64url, >= 24 chars).
+  s = s.replace(/\b[A-Za-z0-9_-]{24,}\b/g, "[token]");
+  return s;
+}
+
 async function ensureSentry(): Promise<void> {
   if (sentryEnabled || sentryClient !== null) return;
   const dsn = String(import.meta.env?.VITE_SENTRY_DSN || "").trim();
@@ -32,6 +50,30 @@ async function ensureSentry(): Promise<void> {
       dsn,
       environment: import.meta.env?.MODE || "development",
       tracesSampleRate: import.meta.env?.PROD ? 0.1 : 1.0,
+      // Never attach default PII (IP, cookies, request headers).
+      sendDefaultPii: false,
+      // Scrub tokens/ids from breadcrumb URLs + messages before they buffer.
+      beforeBreadcrumb(crumb: any) {
+        try {
+          if (crumb?.data?.url) crumb.data.url = redactSensitive(crumb.data.url);
+          if (typeof crumb?.message === "string") crumb.message = redactSensitive(crumb.message);
+        } catch { /* never block a breadcrumb on redaction */ }
+        return crumb;
+      },
+      // Final scrub on the outgoing event: request URL, message, exception text.
+      beforeSend(event: any) {
+        try {
+          if (event?.request?.url) event.request.url = redactSensitive(event.request.url);
+          if (typeof event?.message === "string") event.message = redactSensitive(event.message);
+          const values = event?.exception?.values;
+          if (Array.isArray(values)) {
+            for (const v of values) {
+              if (typeof v?.value === "string") v.value = redactSensitive(v.value);
+            }
+          }
+        } catch { /* on redaction error, still send so observability isn't lost */ }
+        return event;
+      },
     });
     sentryClient = sentryModule;
     sentryEnabled = true;
