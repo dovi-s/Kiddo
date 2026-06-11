@@ -44,7 +44,7 @@ import {
   type InsertGift,
   type InsertMemoryEntry,
 } from "../shared/schema";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray, like } from "drizzle-orm";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -1334,6 +1334,26 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
   // 1b. Seed the primary custodian's (Claire's) Family-plan subscription (idempotent).
   await ensurePhilFamilySubscription(ownerId);
   console.log(`  subscription: claire@dunphyfamily.com → Family · active`);
+
+  // 1c. GUARDRAIL: detect STALE demo funds owned by the co-parent (Phil). The
+  //     plain seed is idempotent BY OWNER, so after an ownership change (e.g. the
+  //     2026-06-11 mom flip: Phil→Claire) it can't see the OLD owner's funds and
+  //     would silently layer Claire's new funds on top — leaving the dashboard
+  //     showing DUPLICATES (each kid once as owner, once as the stale co-parent
+  //     collaborator row). The co-parent never OWNS a fund, so any -dunphy fund
+  //     owned by them is stale. Refuse and point to the clean path. (Haley's
+  //     graduated fund is owned by Haley, not the co-parent, so it never trips this.)
+  const staleCoParentFunds = await db
+    .select({ id: funds.id })
+    .from(funds)
+    .where(and(eq(funds.userId, coParentId), like(funds.slug, "%-dunphy%")));
+  if (staleCoParentFunds.length > 0) {
+    console.log(`\n⚠️  ${staleCoParentFunds.length} stale Dunphy fund(s) are still owned by the co-parent (likely a previous seed before the owner changed).`);
+    console.log("A plain seed would layer new funds on top → the demo would show DUPLICATES.");
+    console.log("Run `npm run reset:dunphys` instead — it wipes ALL Dunphy data + reseeds clean.");
+    if (closePool) await pool.end();
+    return;
+  }
 
   // 2. Check if Claire (the primary custodian) already has funds. If yes,
   //    assume the seed has already run before and exit early (idempotent).
