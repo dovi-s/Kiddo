@@ -211,9 +211,9 @@ behavior on any error or when the table/flag are absent — so it cannot break g
    missed method means flag-on media loss on that path** — which is precisely why the
    flag-on smoke test below must exercise the occasion-event, anonymous, and
    existing-gift paths, not just the happy path.
-7. **Cleanup**: opportunistic `DELETE FROM pending_gift_media WHERE created_at <
-   now() - interval '7 days'` (abandoned checkouts) — piggyback an existing worker
-   tick; low-harm if deferred (rows are URL strings only).
+7. **Cleanup** — DONE 2026-06-10. A 7-day TTL sweep
+   (`sweepPendingGiftMedia`) runs on the daily `giftIntentExpiryWorker` tick,
+   best-effort + silent before the migration is applied.
 
 **Test checklist (founder, or a session with live Stripe test webhooks):**
 - [ ] Apply migration 0046 (`npm run db:migrate`); confirm table exists.
