@@ -17,15 +17,12 @@ export const ETF_ALLOWLIST = [
   "QQQ",   // Nasdaq 100
 ] as const;
 
-// Individual stocks — gifter-pick options only. Never allowed in the managed mix.
-// Z (Zillow) intentionally removed: not warm enough for a child-facing curated list.
-// Existing recurring schedules and holdings to Z are grandfathered via LEGACY_PICK_META
-// in client Dashboard.tsx so parents see the friendly name + emoji on display, but
-// no new investments can target Z. Don't re-add without product sign-off.
-export const STOCK_ALLOWLIST = [
-  "DIS", "AAPL", "NKE", "NFLX", "RBLX", "SBUX", "AMZN", "GOOGL", "SPOT",
-  "TGT", "CMCSA", "DUOL", "ABNB", "NTDOY", "DPZ", "CHWY", "ADBE",
-] as const;
+// Individual stocks (gifter-pick options) are NOT configured here. The canonical
+// pick universe AND the server's enforcement live in shared/stock-picks.ts
+// (STOCK_PICKS + isAllowedStockPick, used in routes.ts). The old STOCK_ALLOWLIST
+// const that sat here was dead code — defined, imported nowhere — and had drifted
+// stale (missing MSFT/TSLA/NVDA/toys, still listing CMCSA/ADBE). Removed 2026-06-11
+// so there is one source of truth and the lists can't silently diverge again.
 
 // Custom managed-mix allocations are restricted to ETFs.
 export const CUSTOM_STRATEGY_ALLOWED_TICKERS = ETF_ALLOWLIST;
