@@ -43,12 +43,11 @@ import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
-import { markNotificationsReadAsOf } from "@/components/NotificationsPanel";
+import { markNotificationsReadAsOf, getLastReadAt } from "@/components/NotificationsPanel";
 import { DEMO_AWAY_MS } from "@/components/dashboard/SinceLastVisitDigest";
 import { STOCK_PICK_NAMES } from "@shared/stock-picks";
 
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
-const CAUGHT_UP_KEY = "kiddo.demo.caughtUp.v2";        // demo opens caught-up-as-of-the-digest-window: once per session
 
 // Loop closure (the only beat now). Lands the just-sent gift as its OWN beat
 // AFTER the initial-landing cascade settles, not on top of it: the pre-cache
@@ -105,11 +104,30 @@ export function DemoGiftMoment() {
   useEffect(() => {
     if (!isDemo || typeof window === "undefined") return;
     try {
-      if (window.sessionStorage.getItem(CAUGHT_UP_KEY)) return;
-      markNotificationsReadAsOf(Date.now() - DEMO_AWAY_MS);
-      window.sessionStorage.setItem(CAUGHT_UP_KEY, "1");
+      // Self-healing catch-up. The guard keys on the ACTUAL persisted read-state
+      // (getLastReadAt), not just a sessionStorage flag. Why this matters: the
+      // seeded backlog spans years; if lastReadAt is missing or ancient, EVERY
+      // worn item counts as unread and the bell + Activity badges open at "9+"
+      // (the anxiety-on-the-conversion-surface case this whole block exists to
+      // prevent). The old flag-only guard skipped re-applying whenever the flag
+      // was set on an earlier view but the persisted read-state was never
+      // written / got cleared — leaving the badges stuck at 9+ despite "caught
+      // up." Now: if lastReadAt is unset or older than the catch-up window, we
+      // (re)stamp "caught up as of the digest window" (~6 days). The genuinely-
+      // recent items the SinceLastVisitDigest summarizes (a fresh gift, a
+      // co-parent who just joined) stay unread, so the bell is ACTIVE, not dead.
+      // Idempotent + self-healing: the guard uses a STABLE staleness threshold
+      // (30 days), while the stamp sets the 6-day window. So once we stamp
+      // lastReadAt to ~now-6d (which is well inside 30d), the guard reads
+      // "caught up" and skips on every later load — it never re-clobbers a
+      // user's swipe-to-unread. It only (re)fires when lastReadAt is genuinely
+      // unset (0) or ancient, i.e. exactly the "whole backlog unread → 9+" state.
+      const STALE_MS = 30 * 24 * 60 * 60 * 1000;
+      if (getLastReadAt() < Date.now() - STALE_MS) {
+        markNotificationsReadAsOf(Date.now() - DEMO_AWAY_MS);
+      }
     } catch {
-      // sessionStorage blocked → skip; badges just open as before (no worse).
+      // storage blocked → skip; badges just open as before (no worse).
     }
   }, [isDemo]);
   // Includes /design-lab so the redesign surface gets the same live-gift beat as
