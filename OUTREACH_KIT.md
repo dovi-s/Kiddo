@@ -323,7 +323,7 @@ Use their phrasing in captions. It already converted them; it isn't invented.
   custody.
 
 (Send-ready creator DM templates, the 30-second demo-video script, and UTM
-conventions live in the creator-outreach assets kit. This section is the *why
+conventions live in `CREATOR_OUTREACH_KIT.md`. This section is the *why
 this channel* and the *what makes it ours* — the part that decides where the
 founder's reps go.)
 
