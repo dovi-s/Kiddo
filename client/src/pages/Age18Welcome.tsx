@@ -25,7 +25,7 @@ import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sprout, TrendingUp, He
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
-import { projectFundValue } from "@shared/projection";
+import { projectFundValue, PROJECTION_DISCLAIMER } from "@shared/projection";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { MomentParticles } from "@/components/MomentParticles";
@@ -366,7 +366,7 @@ export default function Age18Welcome() {
                   . That's enough to start another Kiddo for the next generation.
                 </p>
                 <p className="text-[10px] text-muted-foreground/70 leading-snug">
-                  Assumes 7% yearly average, net of Kiddo's annual fee. Illustrative only. Markets vary.
+                  {PROJECTION_DISCLAIMER}
                 </p>
               </div>
             )}

@@ -16,7 +16,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { getAge18Transition, formatAgeTransitionDate } from "@/lib/age-transition";
-import { projectFundValue } from "@shared/projection";
+import { projectFundValue, PROJECTION_DISCLAIMER } from "@shared/projection";
 import { sumMonthlyEquivalent } from "@shared/recurring-math";
 import { getPronouns } from "@/lib/pronouns";
 import { capFirst } from "@/lib/format-name";
@@ -137,7 +137,7 @@ function formatCurrency(n: number) {
 // 7% historical average, 0.10% AUM fee netted, effective monthly compounding,
 // contributions capped at the majority window. The disclaimer travels with
 // every render so a parent who reconciles against reality never feels oversold.
-const KIDDO_PROJECTION_DISCLAIMER = "Assuming 7% yearly average, net of Kiddo's annual fee. Markets vary. Time is what compounds.";
+const KIDDO_PROJECTION_DISCLAIMER = PROJECTION_DISCLAIMER;
 
 function projectAt18(balance: number, yearsLeft: number, monthlyContrib: number): number {
   return projectFundValue({ startingValue: balance, monthlyContribution: monthlyContrib, yearsAhead: yearsLeft });

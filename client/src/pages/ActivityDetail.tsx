@@ -10,7 +10,7 @@ import { capFirst } from "@/lib/format-name";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
-import { projectFundValue, yearsBetween } from "@shared/projection";
+import { projectFundValue, yearsBetween, PROJECTION_DISCLAIMER } from "@shared/projection";
 import { canonicalLabel } from "@shared/activity-semantics";
 import { StatusPill } from "@/lib/activity-helpers";
 import type { Activity } from "@shared/schema";
@@ -323,7 +323,7 @@ export default function ActivityDetail() {
                   {" "}until {giftProjection.childName} turns {giftProjection.majorityAge}.
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 mt-3 leading-snug">
-                  Assumes 7% yearly average net of Kiddo's annual fee ($1/yr per $1,000 invested). Illustrative only. Markets vary.
+                  {PROJECTION_DISCLAIMER}
                 </p>
               </motion.div>
             )}
