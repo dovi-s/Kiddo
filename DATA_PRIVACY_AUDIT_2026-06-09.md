@@ -189,12 +189,23 @@ behavior on any error or when the table/flag are absent — so it cannot break g
    `GiftCheckoutParams`. In **both** metadata blocks (session ~446-448 and
    payment_intent ~482-484): if `params.mediaToken`, emit `mediaToken` and **omit**
    `photoUrl/videoUrl/audioUrl`; else emit the URLs (legacy).
-6. **Webhook resolver** (`webhookHandlers.ts`): add one private helper
-   `resolveGiftMedia(metadata) → {photoUrl,videoUrl,audioUrl}`: if
-   `metadata.mediaToken`, fetch the row (then `deletePendingGiftMedia` after the gift
-   is created); else read `metadata.photoUrl/videoUrl/audioUrl`. **Replace every
-   read-site** (the three above) to call it. Anonymous-gating logic stays unchanged
-   (applied to the resolved values).
+6. **Webhook hydration** (`webhookHandlers.ts`) — the delicate part; verified
+   2026-06-10. Metadata is parsed **per-method** (`const metadata = session.metadata
+   || {}` recurs at lines 1102, 1206, 1244, 1360, 1461, 1559, 1615, 2063, 2176,
+   2364…), and gift media is read in **at least three distinct methods**: ~264-281
+   (parent-contribution path → `ensureMemoryEntryForGift`), ~405-417 (audio/photo
+   handling), and ~1244-1296 (main gift creation: reads at 1274 + 1294-1296). There
+   is **no single chokepoint**. Preferred approach (additive, no refactor of the live
+   read-sites): right after each media-reading method's `const metadata = …`, insert
+   one guarded `await hydrateMediaFromToken(metadata)` that, **only when
+   `metadata.mediaToken` is set**, fetches the row and populates
+   `metadata.photoUrl/videoUrl/audioUrl` in place (then schedules
+   `deletePendingGiftMedia` after the gift row is created). With the flag off no token
+   is ever set, so the hydration is a proven no-op and every existing read-site
+   behaves exactly as today. **Each media-reading method must get the hydration; a
+   missed method means flag-on media loss on that path** — which is precisely why the
+   flag-on smoke test below must exercise the occasion-event, anonymous, and
+   existing-gift paths, not just the happy path.
 7. **Cleanup**: opportunistic `DELETE FROM pending_gift_media WHERE created_at <
    now() - interval '7 days'` (abandoned checkouts) — piggyback an existing worker
    tick; low-harm if deferred (rows are URL strings only).
