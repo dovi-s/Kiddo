@@ -167,7 +167,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     slug: "acorns-early",
     metaTitle: "Acorns Early vs Kiddo | Micro-investing vs investment gifting",
     metaDescription:
-      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does something different: investment gifting. Here's the honest comparison.",
+      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does investment gifting. Here is how they compare.",
     heroTitle: "Acorns made micro-investing famous. Kiddo is for the birthday money that actually moves the needle.",
     heroBody: [
       "Acorns created micro-investing. Genuinely category-defining. Every coffee, every Uber, every grocery run quietly building a portfolio in the background. That is elegant.",
@@ -278,7 +278,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       "Stockpile uses gift cards. Kiddo uses a shareable link. Here is why that difference matters for your family.",
     heroTitle: "Stockpile uses gift cards. Kiddo uses a link.",
     heroBody: [
-      "That sounds like a small difference. It is not.",
+      "It sounds like a small difference.",
       "Gift cards create extra steps. A shareable link removes them. For family gifting, that difference changes whether people actually follow through.",
     ],
     ctaLabel: "Start your child's fund",

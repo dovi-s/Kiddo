@@ -1,6 +1,6 @@
 ---
 title: Does a UTMA hurt financial aid? The honest answer.
-description: Custodial accounts count as the student's asset on the FAFSA, and that matters more for some families than others. Here is the math, plainly.
+description: Custodial accounts count as the student's asset on the FAFSA, and that matters more for some families than others. This walks through the math.
 publishedAt: 2026-06-06
 category: comparison
 tags: utma, fafsa, financial aid, 529, comparison
@@ -47,9 +47,9 @@ Three approaches come up most often. All of them have tradeoffs, which is why th
 
 1. **Spend the UTMA for the child's benefit before filing years.** Custodial money can pay for things that directly benefit the child, like a laptop, tutoring, or a first car. Money spent for the child before the FAFSA is filed is not assessed.
 2. **Convert the UTMA into a custodial 529.** A 529 owned this way is reported as a parent asset on the FAFSA, which moves the assessment from up to 20 percent down to about 5.64 percent. The conversion requires selling the investments first, which can create capital gains tax for the child.
-3. **Accept the math knowingly.** For many families the UTMA holds money that simply would not exist otherwise, because it arrived as birthday gifts from grandparents and godparents, fifty dollars at a time. Aid formulas measure savings. They do not measure whether the savings would have happened at all.
+3. **Accept the math knowingly.** For many families the UTMA holds money that simply would not exist otherwise, because it arrived as birthday gifts from grandparents and godparents, fifty dollars at a time. The aid formula measures what you saved, not whether you would have saved it at all.
 
-That third point is worth sitting with. A dollar that was never going to be saved cannot lose you aid. A grandparent's gift that became an investment instead of a toy is new money in your child's life, even after the formula takes its view of it.
+That third point is worth sitting with. If a dollar was never going to be saved, the formula's view of it costs you nothing real. A grandparent's gift that became an investment instead of a toy is new money in your child's life, even after the formula takes its share into account.
 
 ## The practical rule
 

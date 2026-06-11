@@ -47,9 +47,9 @@ That difference is the strongest argument for the 529 side, and it deserves its 
 
 ## Where Kiddo fits
 
-Kiddo is built around a UTMA-style gifting experience because the real product problem is not just account custody. It is participation.
+Kiddo is built around a UTMA-style gifting experience because the hard part is getting family to participate, not the account custody underneath it.
 
-Families do not need a brokerage manual. They need a simple link.
+Most relatives will not work through a brokerage signup to give a gift. They will tap a simple link. A gift takes a few seconds.
 
 That is why a Kiddo UTMA works well for birthdays, holidays, baby showers, and the moments when family wants to show up but will not navigate a complicated provider workflow.
 

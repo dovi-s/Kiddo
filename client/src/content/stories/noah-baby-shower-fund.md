@@ -15,7 +15,7 @@ internalNote: Launch example, not a real customer story. Before any public campa
 
 Noah's parents were tired of answering the same question: "What do you still need?"
 
-They wanted one answer that felt more meaningful than duplicate gifts and more useful than a check tucked into a card.
+They wanted one answer that would last longer than duplicate gifts and a check tucked into a card.
 
 ## Why they used Kiddo
 
@@ -31,7 +31,7 @@ Relatives who lived far away could participate just as easily as the guests in t
 
 ## What mattered most
 
-The fund gave people a way to show up without friction, and it gave the parents the feeling that the shower gifts were building something longer-term from day one.
+The fund gave people an easy way to show up, and it gave the parents the feeling that the shower gifts were building something longer-term from day one.
 
 ## Memory Book highlight
 

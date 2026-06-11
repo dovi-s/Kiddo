@@ -1,6 +1,6 @@
 ---
 title: Set up a fund before your baby shower.
-description: Let guests gift real stocks instead of onesies. Here is exactly how to do it in 2 minutes and share it on the invitation.
+description: Let guests gift real stocks instead of onesies. Here is how to set it up and share it on the invitation.
 publishedAt: 2026-04-01
 category: occasion
 tags: baby shower, getting started, gifting
@@ -10,13 +10,11 @@ ctaHref: /get-started
 readTime: 4 min read
 heroNote: Best for expectant parents who want one clean gift link before invitations go out.
 ---
-Here is the thing about baby shower gifts.
+Most baby shower gifts have a short shelf life. The onesies get outgrown in three months, the toys are forgotten by six, and gift cards tend to disappear into a drawer.
 
-The onesies get outgrown in three months. The toys get forgotten in six. The gift cards get lost in a drawer.
+A gift that gets invested can still matter years later.
 
-But a gift that gets invested can still matter years later.
-
-Here is exactly how to set up a Kiddo fund before your baby shower and make it easy for every guest to give something that lasts.
+This guide covers how to set up a Kiddo fund before your baby shower and make it easy for every guest to give something that lasts.
 
 ## Step 1: Create the fund before invitations go out
 
@@ -53,14 +51,14 @@ That is enough.
 ## Why this works better than checks and cash
 
 - Nobody has to ask where to send money.
-- Gift-givers do not need an account.
+- Gifters do not need an account.
 - The money does not end up sitting in a drawer after the shower.
 - Faraway family members can participate without friction.
 
 ## What Kiddo handles for you
 
 - A private gift page
-- Secure checkout for gift-givers
+- Secure checkout for gifters
 - Automatic routing into the fund
 - A record of gifts and notes inside the Memory Book
 

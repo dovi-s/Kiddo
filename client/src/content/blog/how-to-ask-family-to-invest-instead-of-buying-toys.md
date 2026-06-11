@@ -47,6 +47,6 @@ The best time is before people have already bought something.
 - Do not make people create an account.
 - Do not make the message sound like guilt.
 
-The goal is not to correct your family. The goal is to give them an easier, better option.
+You are giving family an easier, better option, not correcting them.
 
 If you want a better mental model for the parent flow, read [How it works](/how-it-works).

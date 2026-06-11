@@ -18,7 +18,7 @@ The better version is simple: decide before the party where the money is suppose
 
 ## The better workflow
 
-With Kiddo, you set up the fund once and share one private link. Birthday guests can gift in under a minute, and the family does not need to coordinate checks, cash, and Venmo notes after the party.
+With Kiddo, you set up the fund once and share one private link. A birthday guest opens it, enters an amount, picks a stock or the ready-made mix, and sends, all in a few seconds. The family does not need to coordinate checks, cash, and Venmo notes after the party.
 
 That is the whole point. Make the right thing easy while the occasion is actually happening.
 
@@ -46,8 +46,6 @@ That is usually enough to catch both the planners and the last-minute gifters.
 
 ## Why this beats the envelope
 
-The envelope disappears into household clutter. The investment route turns the same gesture into something that can still matter later.
-
-That is the difference between birthday money being received and birthday money being remembered.
+The envelope tends to disappear into household clutter. The investment route turns the same gesture into something that can still matter years later, with the note and occasion kept alongside it.
 
 If your family still has questions about safety or custody, send them to [our FAQ](/faq) or [Security](/security).

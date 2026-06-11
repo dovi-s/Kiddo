@@ -1,6 +1,6 @@
 ---
 title: EarlyBird is shutting down. Now what?
-description: EarlyBird closed in June 2025. Your child's fund deserves a home. Here is exactly what to do next and how to transfer in 5 minutes.
+description: EarlyBird closed in June 2025. Your child's fund deserves a home. This guide walks through what to do next and how to start the transfer.
 publishedAt: 2026-03-20
 category: comparison
 tags: earlybird, alternative, comparison
@@ -8,7 +8,7 @@ eyebrow: Migration guide
 ctaLabel: Switch from EarlyBird to Kiddo
 ctaHref: /get-started
 readTime: 5 min read
-heroNote: EarlyBird is gone. The money is not. The real question is where the gifting experience lives next.
+heroNote: EarlyBird is gone, but the money is still yours. The question is where the gifting experience lives next.
 ---
 EarlyBird built something genuinely good.
 
@@ -20,9 +20,7 @@ If you are reading this, you are probably asking one question: what happens next
 
 ## What happens to the account
 
-The platform going away does not mean the investments disappear. The bigger issue is that the gifting layer, family ritual, and product experience are gone.
-
-Your child's money is not the problem. The experience around it is.
+The platform going away does not mean the investments disappear. The money stays yours. What you lose is the gifting layer, the family ritual, and the product experience built around it.
 
 ## Your options
 
@@ -37,7 +35,7 @@ You have three real paths:
 Kiddo is the closest replacement for the part EarlyBird families actually loved.
 
 - One shareable gift link
-- No account required for gift-givers
+- No account required for gifters
 - Event pages for birthdays and baby showers
 - A Memory Book for every contribution and note
 - A clearer age-18 transition story
@@ -49,6 +47,6 @@ Kiddo is the closest replacement for the part EarlyBird families actually loved.
 3. Email [transfers@kiddofund.com](mailto:transfers@kiddofund.com).
 4. Share your new gift link once the transfer is underway.
 
-Brokerage transfer timing and in-kind eligibility depend on the current custodian and account details, so this is a support-assisted process rather than a fake one-click promise.
+Brokerage transfer timing and in-kind eligibility depend on the current custodian and account details, so our team helps with each transfer directly.
 
 If you want the side-by-side product framing too, read [the EarlyBird comparison](/compare/earlybird).
