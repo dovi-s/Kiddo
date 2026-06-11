@@ -6757,6 +6757,13 @@ export async function registerRoutes(
         }
         await resetRateLimit(pinKey);
       }
+      // Teen-ownership signal (moat leading indicator): a kid_view_open = a
+      // deliberate PIN unlock (not a reload). Post-setup the Kid View link is
+      // predominantly the teen's surface (the parent uses the dashboard), so this
+      // is the closest direct early proxy for at-18 retention. Fire-and-forget so
+      // it never slows or blocks the unlock. See /api/admin/moat-indicators +
+      // MOAT_LEADING_INDICATORS.md.
+      void db.execute(sql`INSERT INTO analytics_events (event_name, fund_id, source) VALUES ('kid_view_open', ${record.fundId}, 'public')`).catch(() => {});
       const accessToken = await createKidViewAccessToken(record.fundId, req.params.token);
       res.json({ accessToken });
     } catch (error) {
@@ -19183,12 +19190,32 @@ export async function registerRoutes(
         SELECT COUNT(*)::int AS handed_off FROM funds WHERE transferred_at IS NOT NULL
       `);
 
+      // Teen ownership — the closest direct early proxy for at-18 retention.
+      // (a) Kid-view opens (deliberate PIN unlocks), last 30 days.
+      const openResult = await db.execute(sql`
+        SELECT COUNT(*)::int AS opens, COUNT(DISTINCT fund_id)::int AS funds_opened
+        FROM analytics_events
+        WHERE event_name = 'kid_view_open' AND occurred_at > NOW() - INTERVAL '30 days'
+      `);
+      // (b) Suggest-a-stock submissions (active teen intent). Stored in the
+      // file-backed kid-view record store, not Postgres, so counted here.
+      let suggestionCount = 0;
+      let fundsWithSuggestion = 0;
+      try {
+        const kvStore = await loadKidViewStore();
+        for (const rec of Object.values(kvStore.byFundId || {})) {
+          const n = Array.isArray((rec as any).suggestions) ? (rec as any).suggestions.length : 0;
+          if (n > 0) { suggestionCount += n; fundsWithSuggestion += 1; }
+        }
+      } catch { /* store unreadable -> 0, non-fatal */ }
+
       const m: any = (memResult.rows || [])[0] || {};
       const g: any = (gifterResult.rows || [])[0] || {};
       const rp: any = (repeatResult.rows || [])[0] || {};
       const rc: any = (recurringResult.rows || [])[0] || {};
       const st: any = (stakeResult.rows || [])[0] || {};
       const ho: any = (handoffResult.rows || [])[0] || {};
+      const op: any = (openResult.rows || [])[0] || {};
       const num = (x: any) => Number(x ?? 0);
       const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
 
@@ -19221,8 +19248,12 @@ export async function registerRoutes(
           note: "Retention of this cohort IS gate #2 — needs the near-majority handoff pilot to read early.",
         },
         teenOwnership: {
-          instrumented: false,
-          note: "Not yet instrumented — the closest direct proxy for at-18 retention (Kid View opens + suggest-a-stock). Worth wiring next.",
+          instrumented: true,
+          kidViewOpens30d: num(op.opens),
+          fundsOpened30d: num(op.funds_opened),
+          suggestions: suggestionCount,
+          fundsWithSuggestion,
+          note: "Closest direct proxy for at-18 retention. Opens = deliberate PIN unlocks (30d); suggest-a-stock = active teen intent. Opens accrue from now, so both read low until real teens engage.",
         },
         caveats: [
           "Demo (Dunphy) data dominates pre-launch — directional, not precise; the real-user signal emerges post-launch.",

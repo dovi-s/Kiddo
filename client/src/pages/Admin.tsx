@@ -2979,11 +2979,14 @@ function MoatIndicatorsCard() {
         </div>
         <div className="border-t border-border/50 pt-4">
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Gate #2: at-18 retention (the whole ballgame)</div>
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
             <KStat label="Funds handed off" value={fmtNum(Number(ho.handedOff ?? 0))} />
-            <KStat label="Teen ownership" value={teen.instrumented ? "wired" : "not wired"} />
+            <KStat label="Kid View opens (30d)" value={fmtNum(Number(teen.kidViewOpens30d ?? 0))} />
+            <KStat label="Suggest-a-stock" value={fmtNum(Number(teen.suggestions ?? 0))} />
+            <KStat label="Funds w/ a suggestion" value={fmtNum(Number(teen.fundsWithSuggestion ?? 0))} />
           </div>
           <p className="mt-2 text-[11px] text-amber-700">{ho.note}</p>
+          {teen.note ? <p className="mt-1 text-[11px] text-muted-foreground">{teen.note}</p> : null}
         </div>
       </div>
     </div>
