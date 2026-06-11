@@ -19103,6 +19103,139 @@ export async function registerRoutes(
     }
   });
 
+  // Moat leading indicators — "is the moat FORMING?" (companion to k-factor,
+  // which is gate #1 / the loop). The durable moat is relationship origination,
+  // realized only at AT-18 RETENTION (gate #2), ~18 yrs out — so we surface the
+  // leading indicators that predict it. Identity proxies (Memory Book richness,
+  // gifter density) over vanity gift count. See MOAT_LEADING_INDICATORS.md.
+  // Read-model over existing tables; no new tracking. Demo data dominates
+  // pre-launch (see caveats) — directional, not precise.
+  app.get('/api/admin/moat-indicators', isAdmin, async (_req: any, res) => {
+    try {
+      const PAID = sql`status IN ('processing','settled','completed','invested')`;
+
+      // Memory Book richness — human notes (the moat's literal substance), per
+      // fund. Counts gift messages + parent notes only; auto "crossed $X"
+      // milestones are not "from a person" and don't count.
+      const memResult = await db.execute(sql`
+        WITH human AS (
+          SELECT fund_id, COUNT(*)::int AS n
+          FROM memory_entries
+          WHERE type IN ('gift_message','parent_note')
+          GROUP BY fund_id
+        )
+        SELECT
+          COALESCE(SUM(n),0)::int                       AS total_human_notes,
+          COUNT(*)::int                                 AS funds_with_any_note,
+          COUNT(*) FILTER (WHERE n >= 5)::int           AS funds_rich,
+          COALESCE(ROUND(AVG(n)::numeric, 2), 0)        AS avg_notes_per_fund
+        FROM human
+      `);
+
+      // Distinct-gifter density — "peopled-ness". A fund 8 people built is a
+      // different psychological object than one only mom funded.
+      const gifterResult = await db.execute(sql`
+        WITH paid AS (
+          SELECT fund_id, LOWER(TRIM(sender_email)) AS ge
+          FROM gifts
+          WHERE ${PAID} AND sender_email IS NOT NULL AND TRIM(sender_email) <> ''
+        ),
+        per_fund AS (SELECT fund_id, COUNT(DISTINCT ge)::int AS gifters FROM paid GROUP BY fund_id)
+        SELECT
+          COUNT(*)::int                              AS funds_with_gifts,
+          COUNT(*) FILTER (WHERE gifters >= 3)::int  AS funds_peopled,
+          COALESCE(ROUND(AVG(gifters)::numeric, 2),0) AS avg_gifters_per_fund
+        FROM per_fund
+      `);
+
+      // Repeat gifting — habit + the substantial-balance-at-18 that makes
+      // ownership feel real. Repeat gifters + funds with an active recurring.
+      const repeatResult = await db.execute(sql`
+        WITH paid AS (
+          SELECT LOWER(TRIM(sender_email)) AS ge, COUNT(*)::int AS gifts
+          FROM gifts
+          WHERE ${PAID} AND sender_email IS NOT NULL AND TRIM(sender_email) <> ''
+          GROUP BY LOWER(TRIM(sender_email))
+        )
+        SELECT COUNT(*)::int AS distinct_gifters, COUNT(*) FILTER (WHERE gifts >= 2)::int AS repeat_gifters
+        FROM paid
+      `);
+      const recurringResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT fund_id)::int AS funds_with_recurring FROM recurring_gifts WHERE status = 'active'
+      `);
+
+      // Stake formation — the sticky-zone thresholds. Trivial balances get
+      // cashed out at 18; real ones create ownership psychology (NORTH_STAR).
+      const stakeResult = await db.execute(sql`
+        WITH bal AS (
+          SELECT (COALESCE(balance,0)+COALESCE(pending_balance,0)+COALESCE(cash_balance,0)) AS total FROM funds
+        )
+        SELECT
+          COUNT(*) FILTER (WHERE total > 0)::int     AS funded_funds,
+          COUNT(*) FILTER (WHERE total >= 500)::int  AS funds_500,
+          COUNT(*) FILTER (WHERE total >= 2000)::int AS funds_2k
+        FROM bal
+      `);
+
+      // Handoff cohort — funds that have transferred to the now-adult. Their
+      // RETENTION is gate #2 itself; measuring it early needs the pilot.
+      const handoffResult = await db.execute(sql`
+        SELECT COUNT(*)::int AS handed_off FROM funds WHERE transferred_at IS NOT NULL
+      `);
+
+      const m: any = (memResult.rows || [])[0] || {};
+      const g: any = (gifterResult.rows || [])[0] || {};
+      const rp: any = (repeatResult.rows || [])[0] || {};
+      const rc: any = (recurringResult.rows || [])[0] || {};
+      const st: any = (stakeResult.rows || [])[0] || {};
+      const ho: any = (handoffResult.rows || [])[0] || {};
+      const num = (x: any) => Number(x ?? 0);
+      const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
+
+      return res.json({
+        memoryBook: {
+          totalHumanNotes: num(m.total_human_notes),
+          fundsWithAnyNote: num(m.funds_with_any_note),
+          fundsRich: num(m.funds_rich), // >=5 human notes = a "rich" book
+          avgNotesPerFund: num(m.avg_notes_per_fund),
+        },
+        gifterDensity: {
+          fundsWithGifts: num(g.funds_with_gifts),
+          fundsPeopled: num(g.funds_peopled), // >=3 distinct gifters
+          avgGiftersPerFund: num(g.avg_gifters_per_fund),
+          peopledPct: pct(num(g.funds_peopled), num(g.funds_with_gifts)),
+        },
+        repeatGifting: {
+          distinctGifters: num(rp.distinct_gifters),
+          repeatGifters: num(rp.repeat_gifters),
+          repeatPct: pct(num(rp.repeat_gifters), num(rp.distinct_gifters)),
+          fundsWithRecurring: num(rc.funds_with_recurring),
+        },
+        stakeFormation: {
+          fundedFunds: num(st.funded_funds),
+          funds500: num(st.funds_500),
+          funds2k: num(st.funds_2k),
+        },
+        handoff: {
+          handedOff: num(ho.handed_off),
+          note: "Retention of this cohort IS gate #2 — needs the near-majority handoff pilot to read early.",
+        },
+        teenOwnership: {
+          instrumented: false,
+          note: "Not yet instrumented — the closest direct proxy for at-18 retention (Kid View opens + suggest-a-stock). Worth wiring next.",
+        },
+        caveats: [
+          "Demo (Dunphy) data dominates pre-launch — directional, not precise; the real-user signal emerges post-launch.",
+          "Identity proxies (Memory Book richness, gifter density) predict at-18 retention; raw gift count does not.",
+          "Memory Book richness counts human notes only (gift messages + parent notes), not auto-milestones.",
+        ],
+      });
+    } catch (error) {
+      console.error("admin moat-indicators error", error);
+      return res.status(500).json({ error: "Failed to load moat indicators" });
+    }
+  });
+
   // Quarterly access review surface — see policies/access-control.md §5.
   // Lists every user with admin or super-admin privileges along with
   // their last activity. The "needsReview" flag fires when a privileged

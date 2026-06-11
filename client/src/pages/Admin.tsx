@@ -2804,6 +2804,8 @@ function FunnelsTab() {
 
       <KFactorCard />
 
+      <MoatIndicatorsCard />
+
       <FunnelCard
         title="Parent activation"
         subtitle="Signup to first received gift on the parent's first fund."
@@ -2906,6 +2908,83 @@ function KFactorCard() {
             </div>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+// Moat leading indicators — "is the moat FORMING?" Companion to the k-factor
+// card (gate #1 / the loop). The durable moat is at-18 RETENTION (gate #2),
+// years from proof, so this surfaces the leading indicators that predict it.
+// Identity proxies (Memory Book richness, gifter density) over vanity gift
+// count. From /api/admin/moat-indicators. See MOAT_LEADING_INDICATORS.md.
+function MoatIndicatorsCard() {
+  const { data, isLoading, isError } = useQuery<any>({
+    queryKey: ["/api/admin/moat-indicators"],
+    queryFn: async () => fetchAdminJson(`/api/admin/moat-indicators`),
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+  if (isLoading) {
+    return <div className="bg-card rounded-xl border border-border/50 px-4 py-6 text-center text-xs text-muted-foreground">Loading moat indicators…</div>;
+  }
+  if (isError || !data) return null;
+  const mb = data.memoryBook || {};
+  const gd = data.gifterDensity || {};
+  const rg = data.repeatGifting || {};
+  const sf = data.stakeFormation || {};
+  const ho = data.handoff || {};
+  const teen = data.teenOwnership || {};
+  return (
+    <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/50">
+        <h3 className="text-sm font-semibold">Moat leading indicators</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Is the moat <span className="italic">forming</span>? The durable moat is at-18 retention (gate #2), years from proof, so these predict it. Identity proxies over vanity gift count.
+        </p>
+      </div>
+      <div className="p-4 space-y-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Memory Book richness <span className="text-emerald-700">· strongest proxy</span></div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+            <KStat label="Human notes" value={fmtNum(Number(mb.totalHumanNotes ?? 0))} />
+            <KStat label="Avg notes / fund" value={Number(mb.avgNotesPerFund ?? 0).toFixed(2)} />
+            <KStat label="Rich books (5+)" value={fmtNum(Number(mb.fundsRich ?? 0))} />
+            <KStat label="Funds w/ a note" value={fmtNum(Number(mb.fundsWithAnyNote ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Gifter density (peopled-ness)</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
+            <KStat label="Avg gifters / fund" value={Number(gd.avgGiftersPerFund ?? 0).toFixed(2)} />
+            <KStat label="Peopled (3+)" value={`${fmtNum(Number(gd.fundsPeopled ?? 0))} · ${Number(gd.peopledPct ?? 0).toFixed(0)}%`} />
+            <KStat label="Funds w/ gifts" value={fmtNum(Number(gd.fundsWithGifts ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Repeat / recurring (habit)</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
+            <KStat label="Repeat gifters" value={`${fmtNum(Number(rg.repeatGifters ?? 0))} · ${Number(rg.repeatPct ?? 0).toFixed(0)}%`} />
+            <KStat label="Funds w/ recurring" value={fmtNum(Number(rg.fundsWithRecurring ?? 0))} />
+            <KStat label="Distinct gifters" value={fmtNum(Number(rg.distinctGifters ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Stake formation (the sticky zone)</div>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <KStat label="Funded funds" value={fmtNum(Number(sf.fundedFunds ?? 0))} />
+            <KStat label="Over $500" value={fmtNum(Number(sf.funds500 ?? 0))} />
+            <KStat label="Over $2,000" value={fmtNum(Number(sf.funds2k ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Gate #2: at-18 retention (the whole ballgame)</div>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <KStat label="Funds handed off" value={fmtNum(Number(ho.handedOff ?? 0))} />
+            <KStat label="Teen ownership" value={teen.instrumented ? "wired" : "not wired"} />
+          </div>
+          <p className="mt-2 text-[11px] text-amber-700">{ho.note}</p>
+        </div>
       </div>
     </div>
   );
