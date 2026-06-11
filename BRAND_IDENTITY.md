@@ -46,39 +46,34 @@ surfaces where warmth (not gravitas) is the right register. The two tiers never
 fight because they never share a surface. This is the same "integrate up toward
 the customer, rent the rails down" logic, applied to identity.
 
-## Decision 2 — the atomic mark is the gold sprout glyph
+## Decision 2 — the atomic mark stays the K monogram (the sprout glyph was tried and rejected)
 
-**The problem we found:** the atomic mark is *split*. The favicon / app icon was
-a hand-drawn **K monogram with a heart**, while the mascot and the "reserved
-Sprout mark" use a **gold sprout**. Two atomic marks for one brand is the literal
-opposite of unmistakable. A glimpse of the tab said one thing; a glimpse of the
-gift moment said another.
+**The problem we found:** the atomic mark is *split*. The favicon / app icon is a
+hand-drawn **K monogram**, while the mascot carries a **gold sprout** on its head.
+Two atomic marks for one brand is the literal opposite of unmistakable. A glimpse
+of the tab says one thing; a glimpse of the gift moment says another.
 
-**The decision:** unify on the **gold sprout glyph** as the atomic mark.
-- It is the product metaphor compressed to one shape: a gift, planted, that grows.
-- It is in the color lock (gold on evergreen), so it carries the palette too.
-- It is *already on the mascot's head*, so the favicon, the app icon, and the
-  character all become the same idea at three sizes. One shape, three fidelities.
-- A sprout is more ownable than a letterform. Letter-plus-heart marks are common;
-  a gold sprout on deep evergreen, tied to a character, is not.
+**What we tried, and why it's dead:** to unify on one shape, we hand-authored a
+gold **sprout glyph** and wired it as the favicon. It was rejected on sight — a
+three-leaf green sprout on a children's *financial* product reads as a cannabis
+leaf. The glyph files (`sprout-glyph.svg`, `<SproutGlyph>`, `gen-brand-icons.mjs`)
+were deleted and the favicon set reverted to the **K monogram** — now a crisp
+white-K-on-evergreen tile from founder-supplied art, committed.
 
-The vector lives at `client/public/sprout-glyph.svg` and as the
-`<SproutGlyph>` React component (`client/src/components/ui/sprout-glyph.tsx`) for
-in-app use (share-card watermark, loading, sticker corner, eyebrows).
+**The lesson (load-bearing):** do not have the AI draw the brand mark blind. The
+mark is a designer / image-gen job with the **founder as the eyes**. A blind
+attempt risks exactly this kind of unintended read. (The same rule the design lab
+already runs on: AI builds motion/structure/plumbing; pixel-craft of an identity
+mark it cannot.)
 
-**Shipped in this pass (additive, reversible):** the browser-tab favicon
-(`favicon.svg` + `favicon.png`) now renders the sprout glyph. The K-monogram
-app-icon set (`apple-touch-icon`, `icon-192`, `icon-512`, `favicon.ico`) is
-deliberately *untouched* — promoting the sprout across the full app-icon set
-replaces a founder-tuned mark everywhere, so it is your call, not an AI default.
-When you approve it: `node script/gen-brand-icons.mjs --all` regenerates the
-whole set from the one vector. Revert the favicon in one line:
-`git checkout client/public/favicon.svg client/public/favicon.png`.
-
-> Founder-owned: brand/visual identity is yours to decide. The glyph above is a
-> built, eyeball-able starting point (founder is the eyes — run it, judge it,
-> retune the leaf curves in the SVG to taste). It is not a claim that the mark is
-> final.
+**So the atomic mark is the K, for now — and the split is still open.** Reverting
+the favicon correctly killed the bad glyph, but it re-opened the K-vs-sprout split
+named above. Resolving it (one mark that works at 16px *and* ties to the
+character) is the real remaining unmistakability question. It is a **founder +
+designer decision**, not an AI default, and not launch-gating: iconic-ness is
+earned by post-launch repetition (Decision 1), and the assets that already repeat
+(color lock, gift moment, character) carry recognition in the meantime. Do **not**
+ship another AI-drawn mark to force a resolution.
 
 ## Decision 3 — the character has two fidelities, one identity
 
@@ -87,18 +82,21 @@ body, gold sprout on its head, holding a gift / planting a coin) and **weak in
 form for small uses**:
 1. The glossy-3D-blob style is the 2024-26 AI-mascot default. The *style* is the
    opposite of ownable even though the *character* is good.
-2. The planting render has a literal **Sparkle** in the corner — our banned icon
-   (`lint-content.cjs`) and an AI-watermark tell. Remove it.
+2. The planting render's literal **Sparkle** (our banned icon, an AI-watermark
+   tell) is **removed** — replaced with clean transparent art (no white box, no
+   sparkle), committed.
 3. 3D does not reduce to 16px. A favicon / emoji / sticker needs flat geometry.
 
-So the character lives at **two fidelities, unified by the glyph**:
+So the character lives at **two fidelities**:
 - **Hero (3D):** gift moment, Kid View, milestone celebration. The render, kept.
-- **Atomic (flat):** favicon, app icon, stickers, loading, watermark. A new flat
-  2D sprite + the bare sprout glyph. Spec'd in
-  [BRAND_ASSET_PRODUCTION_KIT.md](./BRAND_ASSET_PRODUCTION_KIT.md).
+- **Atomic (flat):** favicon, app icon, stickers, loading, watermark. Today this
+  is the **K monogram**; a flat 2D character sprite is the open production-kit item
+  ([BRAND_ASSET_PRODUCTION_KIT.md](./BRAND_ASSET_PRODUCTION_KIT.md)). The earlier
+  plan to use a bare *sprout glyph* as the atomic fidelity is dead (Decision 2).
 
-Same creature, same gold sprout, two levels of detail. That is how the gift
-sticker, the tab favicon, and the Kid-View hero all read as one brand.
+How the gift sticker, the tab favicon, and the Kid-View hero finally read as one
+brand depends on resolving the K-vs-sprout atomic question (Decision 2) — a
+founder + designer call.
 
 ## Naming — stays unnamed in v1
 
@@ -118,34 +116,34 @@ C = generic / could be anyone, F = says the wrong thing.)
 | --- | --- | --- | --- |
 | Color lock (evergreen + gold + cream) | A- | Yes. Fintech defaults to blue/black; we don't. | Hold. Guard against drift (the kora->kiddo aliasing already does). |
 | The gift moment (count-up + "watch it land") | A- | Yes. No one animates a stranger's love arriving on a kid's fund. | Make it the *signature gesture*: identical motion on every value-arrival surface. |
-| The character (metaphor) | B+ | Yes in concept (sprout + gift + planting). | Keep hero 3D; add flat fidelity; kill the Sparkle; fix the render's AI-blob tell over time. |
-| The sprout glyph | B+ (new) | Yes. Product metaphor + color lock in one shape. | Now the favicon; eyeball + refine; promote to full app-icon set when approved. |
-| Atomic mark consistency | was D, now B- | Was split (K vs sprout). | Unifying on the sprout. Finish by swapping the app-icon set. |
-| Wordmark "Kiddo" (Bricolage, evergreen) | B- | Somewhat. Solid evergreen, one color everywhere (good). | Hold. The word alone is a weak common-word mark; it needs the glyph lockup to become unmistakable. |
+| The character (metaphor) | B+ | Yes in concept (sprout + gift + planting). | Keep hero 3D; add flat fidelity; Sparkle removed; fix the render's AI-blob tell over time. |
+| Atomic mark consistency | D (still split) | Favicon = K, mascot = sprout. | Open founder + designer call: resolve to ONE mark. Not via an AI-drawn glyph (Decision 2). |
+| Wordmark "Kiddo" (Bricolage, evergreen) | B- | Somewhat. Solid evergreen, one color everywhere (good). | Hold. The word alone is a weak common-word mark; it needs the mark lockup to become unmistakable. |
 | Typography (DM Sans body) | C | No. Beautiful but everywhere (Notion-adjacent). | Acceptable. Optionally one custom display touch in the wordmark later. |
-| Bricolage headings | C+ | Mildly. Distinctive but having a moment. | Acceptable; leans on color + glyph to carry it. |
+| Bricolage headings | C+ | Mildly. Distinctive but having a moment. | Acceptable; leans on color + mark to carry it. |
 | UI chrome (cards, radii, shadows, toasts) | C | No. shadcn DNA, same as a huge cohort. | The 3-layer card shadow is craft no one consciously registers. Fine; not a recognition driver. |
-| OG / social share image | C | Mixed. Stale `kado-og-image.png` / `kora-og-image.png` still present. | Delete stale-name OG assets; make the share image lead with glyph + gift moment. |
+| OG / social share image | C | Mixed. Stale `kado-og-image.png` / `kora-og-image.png` still present. | Delete stale-name OG assets; make the share image lead with the mark + gift moment. |
 
 **Read of the scorecard:** recognition has to be carried by the **color lock,
-the gift moment, and the sprout glyph/character** — because type and chrome never
-will. Everything in this doc points those three at the surfaces that repeat.
+the gift moment, and the character** — because type and chrome never will.
+Everything in this doc points those three at the surfaces that repeat.
 
-## What shipped vs what is proposed
+## What's settled vs what is proposed
 
-**Shipped this pass (code, additive, reversible):**
-- `client/public/sprout-glyph.svg` — the vector atomic mark.
-- `favicon.svg` + `favicon.png` — tab favicon now the sprout glyph.
-- `client/src/components/ui/sprout-glyph.tsx` — `<SproutGlyph>` for in-app use.
-- `script/gen-brand-icons.mjs` — regenerates the raster icon set from the vector.
+**Settled (the brand-mark experiment, reverted):**
+- The hand-drawn sprout glyph (`sprout-glyph.svg`, `<SproutGlyph>`,
+  `gen-brand-icons.mjs`) was rejected and **deleted**.
+- The favicon / app-icon set is the **K monogram**, regenerated crisp
+  (white-K-on-evergreen) from founder-supplied art and committed.
+- The planting mascot's Sparkle is removed (clean transparent art, committed).
 
 **Proposed, founder-gated (your call):**
-- Swap the full app-icon set to the sprout (`--all`), retire the K monogram, OR
-  keep the K monogram as the wordmark lockup and the sprout as the favicon/character
-  motif. Pick one atomic mark.
+- **Resolve the atomic mark:** pick ONE (the K, or a properly *designed*
+  sprout/character motif) so the favicon and the character stop saying different
+  things. Designer + your eyes, never another AI-drawn mark.
 - Commission the flat 2D character sprite + sticker set (production kit).
-- Delete stale `kado-og-image.png` / `kora-og-image.png`; rebuild the OG image.
-- Remove the Sparkle from the planting mascot render.
+- Delete stale `kado-og-image.png` / `kora-og-image.png`; rebuild the OG image to
+  lead with the mark + gift moment.
 - Promote "Pip" to a quiet public name (or not).
 
 ## The one rule
