@@ -14,6 +14,15 @@ bottom); pick whoever comes back with the sharpest scoping question, not the low
 >    truthfully. Option B (white-label) analysis hinges on this; do not overstate it.
 > 2. Your name + one line of background.
 
+> **⚠️ This is the SECURITIES engagement — it does NOT, by itself, clear the legal launch
+> gate.** Your gate has a privacy half too: per `COUNSEL_ENGAGEMENT_PACKET.md`, public launch
+> needs RIA (Q1), capture-at-intent (Q2), **AND child-PII deletion + COPPA (packet Parts 3 +
+> 5).** Note the priority: Q3 below (beneficiary/TOD) is bundled here because it's the same
+> attorney and cheap, but it is *custody-gated, not launch-day-gated* — whereas privacy/COPPA
+> *is* a launch must-have. So either (a) ask the firms below whether they have a privacy/data
+> partner and fold Parts 3 + 5 into this same engagement, or (b) run a short parallel privacy
+> engagement. **Do not read "securities memo in hand" as "legal gate cleared."**
+
 ---
 
 ## The three questions (one-paragraph each; detail in the attached docs)
@@ -81,6 +90,12 @@ and the money-movement framing in Q2 both turn on "control over funds/direction"
 > 3. **Owner-side beneficiary / transfer-on-death** — how the grown account owner designates
 >    an inheritor on an individual taxable account through our platform.
 >
+> We also have a **child-privacy / COPPA** question (whether we're a COPPA-covered operator,
+> given all child data is supplied by the parent or gifter and the only child-facing surface is
+> PIN-gated and read-only, plus our child-PII deletion posture). If your firm has a privacy or
+> data partner, we'd happily fold it into the same engagement; if not, just flag it and we'll
+> run it in parallel.
+>
 > Three short briefs are attached (one per question), each with the specific sub-questions.
 > We're looking for one 60–90 minute call plus a short written memo (which option/posture, and
 > what we must do operationally, on the site, and in the TOS to be clean), roughly a $5K–$8K
@@ -130,7 +145,10 @@ Candidates worth checking (verify still active + conflict-free before contacting
 and it is the *only* must-have that is not engineering work. Q2 additionally gates the
 capture-at-intent growth fix; Q3 gates the owner-account beneficiary build (deferred meanwhile,
 card hidden in owner mode). Custody (DriveWealth) must also be live before any present-tense
-custody copy ships — a separate, parallel workstream.
+custody copy ships — a separate, parallel workstream. **And this securities memo clears only
+the securities half of the legal gate** — the child-PII / COPPA posture (`COUNSEL_ENGAGEMENT_PACKET.md`
+Parts 3 + 5) must also be answered, by the same firm's privacy partner or a parallel privacy
+engagement, before public launch.
 
 ## Detail docs to attach
 - `AUM_LAWYER_BRIEF.md` (Q1 — full structure, three options, specific questions)
