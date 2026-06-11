@@ -1588,8 +1588,8 @@ export default function KidView() {
                       const eighteenthLabel = eighteenthDateRaw
                         ? new Date(eighteenthDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
                         : null;
-                      // State-specific UTMA majority age (18 default, 21 in CA/KY/IN,
-                      // 19 in AL/NE, 20 in MS). The countdown math + transfer copy
+                      // State-specific UTMA majority age (21 in most states; 18 in some,
+                      // e.g. CA/KY; 19 in AL/NE). The countdown math + transfer copy
                       // both need to use this — was hardcoded "18" in both places,
                       // factually wrong for non-18 states. See
                       // project_state_majority_age_sweep.md.

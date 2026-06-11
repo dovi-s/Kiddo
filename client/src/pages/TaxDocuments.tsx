@@ -1043,9 +1043,9 @@ export default function TaxDocuments() {
                     });
                   }
                   // The majority age is set by the GOVERNING STATE's UTMA
-                  // statute (18 in most; 19 in AL/NE; 21 in MS/PA and others).
+                  // statute (21 in most; 18 in some; 19 in AL/NE).
                   // Only assert a definitive age when the state is known —
-                  // otherwise the 18 default is a guess presented as law on a
+                  // otherwise the 18 fallback is a guess presented as law on a
                   // tax/legal page. Per project_age_milestone_majorityage_footgun.
                   const ma = Number((activeFund as any).majorityAge) || 18;
                   if (!isOwnerMode) {
@@ -1053,7 +1053,7 @@ export default function TaxDocuments() {
                       label: "Age of majority",
                       value: stateCode
                         ? `${ma} (per ${stateCode} UTMA law)`
-                        : "18 in most states; set your state to confirm",
+                        : "21 in most states; set your state to confirm",
                     });
                   }
                   // Fund open date.

@@ -303,7 +303,7 @@ export default function GetStarted() {
   const [projectionMilestone, setProjectionMilestone] = useState(18);
   // Recipient state — collected inline on the projection step so the
   // load-bearing aha math respects the kid's actual UTMA majority age
-  // (18 in most states, 19-21 in a few like AL/MS/CA/NE). Optional
+  // (21 in most states, 18 in some e.g. CA, 19 in AL/NE). Optional
   // field with smart default: empty string falls back to age 18 via
   // getMajorityAgeForState. When set, the projection numbers + the
   // "by the time {kid} is N" copy + the fund-creation payload all
@@ -1236,8 +1236,8 @@ export default function GetStarted() {
                 </div>
               </AnimatedBlock>
               {/* Inline state picker — REQUIRED for child funds. The state
-                  sets the UTMA age of majority (18 in most states, 19–21 in
-                  several), which anchors the legal handoff date, the at-18
+                  sets the UTMA age of majority (21 in most states, 18 in some,
+                  19 in AL/NE), which anchors the legal handoff date, the at-18
                   worker, the KidView countdown and the claim gate. Defaulting
                   a missing state to 18 is wrong by up to 3 years in PA/NY/TX,
                   so we require it rather than guess (matches AddFundSheet).
@@ -1265,7 +1265,7 @@ export default function GetStarted() {
                     <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/80">
                       {recipientState
                         ? `In your state, UTMA control transfers to ${displayName} at age ${effectiveMajorityAge}. Projection updated.`
-                        : "We need this to get the handoff date right. UTMA control transfers at 18 in most states, 19 to 21 in others."}
+                        : "We need this to get the handoff date right. UTMA control transfers at 21 in most states, 18 in some (19 in Alabama and Nebraska)."}
                     </p>
                   </div>
                 </AnimatedBlock>

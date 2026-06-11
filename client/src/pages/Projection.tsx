@@ -625,8 +625,8 @@ ${shareUrl}`;
                   // slider's two-phase nature reads visually: dragging past
                   // majority means "this is what compounds without your
                   // contributions." Only fires for UTMA; personal accounts
-                  // have no such inflection. State-aware: 18 in most states,
-                  // 21 in some (CA, MD, etc.). Fund's majorityAge field
+                  // have no such inflection. State-aware: 21 in most states,
+                  // 18 in some (CA, etc.). Fund's majorityAge field
                   // drives the comparison. Edge case: states with majority
                   // 19/20 don't have those in MILESTONE_AGES so no inflection
                   // mark renders — acceptable since those are rare states.

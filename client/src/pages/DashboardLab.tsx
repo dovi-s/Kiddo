@@ -4197,7 +4197,7 @@ export default function DashboardLab() {
   // (Age18Plan, Projection page, smart nudges) — one number, one
   // disclaimer line everywhere.
   const heroProjectedAt65 = useMemo(() => {
-    // `daysUntil18` is days-to-MAJORITY (21 in CA), so derive current age
+    // `daysUntil18` is days-to-MAJORITY (21 in most states, 18 in some), so derive current age
     // from the fund's actual majorityAge — never a hardcoded 18, which
     // would mis-age every 21-state kid by 3 years and inflate the horizon.
     const yearsToMajority = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;

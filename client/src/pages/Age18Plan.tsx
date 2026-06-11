@@ -24,8 +24,8 @@ import { haptic } from "@/lib/haptics";
 import { useCountUp } from "@/hooks/use-count-up";
 
 // Checklist items factory — parameterized on majorityAge so copy reflects the
-// fund's state-specific transfer age (18 in most states, 21 in CA/KY/IN,
-// 19 in AL/NE, 20 in MS). For 21-state customers, hardcoded "18" reads as
+// fund's state-specific transfer age (21 in most states; 18 in some, e.g. CA/KY;
+// 19 in AL/NE). For 21-state customers, hardcoded "18" reads as
 // factually wrong and contradicts the state-aware lifecycle worker. Same
 // shape as buildTimeline / buildFaq below.
 function buildChecklist(majorityAge: number) {

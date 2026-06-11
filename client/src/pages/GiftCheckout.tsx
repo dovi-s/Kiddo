@@ -822,7 +822,7 @@ export default function GiftCheckout() {
   // an owner fund can't fall back to the childhood "turns N" framing.
   const recipientIsOwner = Boolean((eventData?.fund as any)?.recipientIsOwner);
   const fundPronouns = getPronouns(eventData?.fund?.pronoun);
-  // State-specific UTMA majority age (18 default, 21 in CA/KY/IN, etc).
+  // State-specific UTMA majority age (21 in most states; 18 in some, e.g. CA/KY; 19 in AL/NE).
   // The gifter-facing projection copy below uses this for "when {child}
   // turns {N}" framing. The variable name `yearsUntil18` stays for
   // stability — its VALUE is already majority-aware (server computes from
