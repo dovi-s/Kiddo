@@ -3284,7 +3284,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     ADBE: { name: "Adobe", type: "Stock", source: "stock_pick", enabled: true },
   };
   const DEFAULT_AUTO_STRATEGIES: Record<string, any> = {
-    growth: { label: "Growth Mix", allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 } },
+    growth: { label: "Growth Mix", allocations: { VTI: 0.70, VXUS: 0.30 } },
     balanced: { label: "Balanced Mix", allocations: { VTI: 0.50, VXUS: 0.25, BND: 0.25 } },
     conservative: { label: "Conservative Mix", allocations: { VTI: 0.42, VXUS: 0.18, BND: 0.40 } },
   };
@@ -3399,7 +3399,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     if (autoStrategies[key]) return;
     setAutoStrategies((prev) => ({
       ...prev,
-      [key]: { label: key, allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 } },
+      [key]: { label: key, allocations: { VTI: 0.70, VXUS: 0.30 } },
     }));
     setNewStrategy("");
     setDirty(true);

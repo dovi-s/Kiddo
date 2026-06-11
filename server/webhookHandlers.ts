@@ -40,7 +40,8 @@ export class WebhookHandlers {
   private static readonly DEFAULT_AUTO_STRATEGIES: Record<string, { label: string; allocations: Record<string, number> }> = {
     growth: {
       label: 'Growth Mix',
-      allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 },
+      // All-equity (2026-06-11) — see DEFAULT_INVESTMENT_CONFIG.growth in routes.ts.
+      allocations: { VTI: 0.70, VXUS: 0.30 },
     },
     balanced: {
       label: 'Balanced Mix',
@@ -444,11 +445,11 @@ export class WebhookHandlers {
   }
 
   private static getAutoInvestBasket() {
-    // Broad market-cap default (no sector tilt) — see DEFAULT_AUTO_STRATEGIES.growth.
+    // Broad market-cap default, all-equity (no sector tilt, no bonds) — see
+    // DEFAULT_AUTO_STRATEGIES.growth.
     return [
-      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.62 },
-      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.28 },
-      { ticker: 'BND', name: 'Vanguard Total Bond Market ETF', weight: 0.10 },
+      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.70 },
+      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.30 },
     ];
   }
 

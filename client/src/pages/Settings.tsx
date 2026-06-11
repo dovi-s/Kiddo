@@ -1156,9 +1156,8 @@ const STRATEGIES = [
     expectedMean: 0.07,
     expectedSigma: 0.16,
     allocations: [
-      { ticker: "VTI", name: "Total Market Stocks", weight: 62, color: "#4F46E5" },
-      { ticker: "VXUS", name: "International Stocks", weight: 28, color: "#0EA5E9" },
-      { ticker: "BND", name: "Bonds", weight: 10, color: "#10B981" },
+      { ticker: "VTI", name: "Total Market Stocks", weight: 70, color: "#4F46E5" },
+      { ticker: "VXUS", name: "International Stocks", weight: 30, color: "#0EA5E9" },
     ],
   },
   {
@@ -1292,9 +1291,8 @@ const CUSTOM_ALLOCATION_OPTIONS = [
 const DEFAULT_CUSTOM_ALLOCATION_ROWS = [
   // Broad market-cap starting point (no pre-selected sector tilt). The user
   // edits this freely; VGT and other tickers remain available to add by choice.
-  { ticker: "VTI", weight: 62 },
-  { ticker: "VXUS", weight: 28 },
-  { ticker: "BND", weight: 10 },
+  { ticker: "VTI", weight: 70 },
+  { ticker: "VXUS", weight: 30 },
 ];
 
 const MAX_CUSTOM_HOLDINGS = 10;

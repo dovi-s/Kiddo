@@ -113,10 +113,16 @@ const DEFAULT_INVESTMENT_CONFIG: InvestmentConfig = {
   autoStrategies: {
     growth: {
       label: "Growth Mix",
+      // All-equity by design (2026-06-11). Growth is the TOP tier — there is no
+      // more-aggressive option — so it carries no bond sleeve: on an ~18-year
+      // horizon, and with the gift structure that behaviorally keeps families
+      // invested through dips (it never felt like "their" money to panic-sell),
+      // bonds are pure drag here. Broad market-cap, US-tilted, NO sector bet
+      // (sector tilts are the advice-like allocation the self-directed posture
+      // avoids). Balanced/Conservative below keep their bonds — that's their job.
       allocations: {
-        VTI: 0.62,
-        VXUS: 0.28,
-        BND: 0.10,
+        VTI: 0.70,
+        VXUS: 0.30,
       },
     },
     balanced: {
