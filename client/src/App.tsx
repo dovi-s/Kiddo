@@ -526,7 +526,13 @@ function RouteSkeletonFallback({ sidebarOffset = false }: { sidebarOffset?: bool
   // left gutter.
   return (
     <div className={`min-h-[60vh] px-4 py-8 animate-pulse ${sidebarOffset ? "md:ml-[264px]" : ""}`} aria-hidden="true">
-      <div className="mx-auto max-w-2xl space-y-4">
+      {/* Match the real page width (.kiddo-canvas = 1120px) — not max-w-2xl
+          (672px). On a cold/slow load the Suspense fallback fires and the
+          old 672px column read as a phone-width skeleton that then snapped
+          out to the 1120px desktop layout (founder catch 2026-06-10). Same
+          single width knob every authed page uses, so there's no horizontal
+          jump when the chunk resolves. */}
+      <div className="kiddo-canvas space-y-4">
         <div className="h-8 w-48 rounded-lg bg-muted/60" />
         <div className="h-4 w-72 rounded bg-muted/40" />
         <div className="mt-6 h-40 rounded-2xl bg-muted/50" />
