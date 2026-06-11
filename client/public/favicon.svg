@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAEX0lEQVR4nMVX+08UVxSeP8KqncH+ZGKtiTK7Ro2xaGbWt1KKQCtYsIrdINI1+HZ9oKiVUh+0+LY1hWATWjTRqDXV+MIqyIKgEkVBWUERlcBCl/ee5pyZO+4us+ySrHiSkztz753zffe8di/Hucmw6WOHCrJhhyAZygTJ0CbIBgiKSoY2XhJLBcmQjhicngiSMVqQRUfQQH2q6BCk0CgdcIPr/YNr6tJIDCO3D8bJvcMitgyfFfoRRzEfbPB3JLZzvGy4GwxjIeo4boEJ4tYnB/QNJiYSaA0W+MTYuVBRVQmvm97C6PCwAL4VHdxAgHhJJPWeH2EywqZfMuBtcxOgPK23w6j5nzOQfm1yAwHXmzclxkDVsxro7e2Fzq4uIlDX8ALGREwLLoHIlUvhesltcrP7PL4npa+HZWmrob2zgwg42lphUty8gOxygRLYn3uMjH+zIUWJu8lz/a9/ztF67tkCqH1RBxGWJbr7BkyAV11/q9xGANGp3/VJvpRdVlpreNMIn4aHgSVjC8SsMnvsCRkIAV7GZHv3Pv6rWdDS6oD/nE569i67mjo7EVi7d4fXqb3jL/onwOsk2+JNKwmg5H65xzye9kZpEa3lnTulVsR4ZV2tGCSD4ZiXHO/fA7wKjpm9IesH2Hk0i5oKGkc5kp+r7cMsZ+DXSm7BCNkI2X+coPgX3ysDOTGGSvF2hQ3qX72kBD19+QIIJmP/Hjicn0MlheJyuWjs7ummEbMd98wwL4QH1VU093fhFZpbt28nVNufweykOMi/eBYe19ZAYVkxnLp0nta/XpMEPT098KVlqW8C5m1ryShudFdGCMHSj+ynMkNye34/TE0Iv0UvoQeYrSvFNykpR86drIWrudUBqZlpvgmkZqYRUEdnpwbOBEkwIni6OcsXqTFXvs347QBcLirUbGEIWCmiTv02Epwd7dRPfBIYt8AE9Y0NGqC7IJkn9qf0XP28FiYsnKN8pxIQo2dQR5xpjlWrxOhBMCvvOLVoQfaTAzGrzXD1zr9Q/qiSflic7U4C3f1rNq0fLzhJ7/aX9ZoXWHlhpqMnWBl+oo5hiyPJ/fFWi/8q4N3KEGsea7+ruwsmLwpXa9wIOWf+JBKNTW+0xsT6AlYQ5hKL/WdfTCWySEyvIXF9m5DSiPA5wWohoPuPH0KISowRxIRDQQ9tzv7Rw4aSmEaYkhABldVVkHnikG4P0CWggCjjvpyjBIJlpZBTPIQk8R2B0TsotsoKSDv4E8SuS4b4jd/DsYI8yqOT5097dceACIg0Xrx5lYxbf96tecd9HRUzveRBudY3UBEYKyVx66p+wX0SYFpUUUqGMYmYBzzyhb1LIsxPSYAVu6zUrLAZaS3Zj3J6/4jZCbHj6WWur/3+5vqoJLZwdAsKgOn7UPpTitelD0VAkMVtH+xiwkti88dhxiHq1Sw0atCvZiYx0ut+GBqFSTEYJ+8DzgTvanhdEmTRFowLiwZKtkQbxlxzuyr/A8HeZYdCfI+2AAAAAElFTkSuQmCC" x="0" y="0" width="32" height="32"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Kiddo">
+  <!-- Kiddo favicon: the gold sprout on evergreen — the atomic brand mark.
+       Source of truth is /sprout-glyph.svg; this is the browser-tab copy.
+       To revert to the previous K monogram: `git checkout client/public/favicon.svg
+       client/public/favicon.png`. App icons (apple-touch / icon-192 / icon-512 /
+       favicon.ico) are still the K monogram by design — swapping the full icon
+       set to the sprout is a founder call; run `node script/gen-brand-icons.mjs
+       --all` once approved. See BRAND_IDENTITY.md. -->
+  <rect width="32" height="32" rx="7.2" fill="#1B3A2D"/>
+  <g fill="#EDC164">
+    <rect x="14.7" y="14.6" width="2.6" height="12.4" rx="1.3"/>
+    <path d="M16 16.8 C13.9 12.6 14.4 8.4 16 5.2 C17.6 8.4 18.1 12.6 16 16.8 Z"/>
+    <path d="M16 16.8 C11.9 16.2 8.2 12.9 7 7.8 C11.8 9.1 14.6 12.3 16 16.8 Z"/>
+    <path d="M16 16.8 C20.1 16.2 23.8 12.9 25 7.8 C20.2 9.1 17.4 12.3 16 16.8 Z"/>
+  </g>
+</svg>
