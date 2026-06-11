@@ -109,6 +109,7 @@ decades and engineering for 2055 is premature). What's actionable now:
    exist; this is a read-model + a surface, not new tracking.
 3. **The pilot**: recruit a near-majority cohort and run real handoffs. This is
    ops, not engineering, and it's the highest-value de-risking move available.
+   Operational plan + the pre-committed kill line: `HANDOFF_RETENTION_PILOT_RUNSHEET.md`.
 
 ## The one-liner
 
