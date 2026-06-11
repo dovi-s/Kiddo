@@ -173,8 +173,10 @@ value was first-party hygiene, not the legal gate — see the triage doc's secti
 three unauthenticated endpoints, so the privacy policy's "public minor pages show
 only the child's first name" is now true (closing a policy-vs-practice / FTC-
 deception gap); (C2) the deletion worker now scrubs analytics-event PII
-(ip/user-agent/session/props) on account deletion. The Stripe-media-URL minimization
-(C3) is a money-path refactor left for its own tested PR.
+(ip/user-agent/session/props) on account deletion; and (C3) the Stripe-media-URL
+minimization is **built and shipped default-OFF** behind `STRIPE_MEDIA_TOKEN_ENABLED`
+(commit 94fe178) — inert until the founder applies migration 0046 and runs the smoke
+checklist in `DATA_PRIVACY_AUDIT_2026-06-09.md` before enabling.
 
 ## Action items (this is the founder's call on what to take)
 
