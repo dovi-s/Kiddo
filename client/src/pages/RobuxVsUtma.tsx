@@ -223,7 +223,7 @@ export default function RobuxVsUtma() {
               You don't have to redirect all of it. Even half of your monthly Robux spend in a UTMA still becomes meaningful by 18. The compound math doesn't care about the amount; it cares that the dollars keep coming.
             </p>
             <p>
-              <span className="font-semibold text-foreground">A UTMA is a custodial brokerage account in your kid's name</span>, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (18 in most states, 21 in a few), the kid gets full ownership.
+              <span className="font-semibold text-foreground">A UTMA is a custodial brokerage account in your kid's name</span>, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (21 in most states, 18 in some; 19 in Alabama and Nebraska), the kid gets full ownership.
             </p>
             <p className="text-xs text-muted-foreground/70">
               Math assumes 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly. Real returns vary; markets are unpredictable. This is illustrative, not a guarantee.
@@ -262,7 +262,7 @@ export default function RobuxVsUtma() {
             </h3>
             <div>
               <p className="font-semibold text-foreground">Is Robux a waste of money?</p>
-              <p className="mt-1">A $25 Robux purchase is a $25 entertainment buy. The same $25 in a UTMA gets ~$72 by the time the kid takes ownership at majority (18 in most states, 19 to 21 in a few; about 10 years at 7%). That's the difference between consumption and compounding.</p>
+              <p className="mt-1">A $25 Robux purchase is a $25 entertainment buy. The same $25 in a UTMA gets ~$72 by the time the kid takes ownership at majority (21 in most states, 18 in some; about 10 years at 7%). That's the difference between consumption and compounding.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Can I do both?</p>

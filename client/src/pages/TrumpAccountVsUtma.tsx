@@ -324,7 +324,7 @@ export default function TrumpAccountVsUtma() {
               It's <span className="text-foreground">retirement plumbing</span>: index-only, capped at $5,000/yr, and penalized if withdrawn before 59½. A Kiddo fund does the other job: the companies your kid actually recognizes, gifts from everyone who loves them with no ceiling, and money that's <span className="font-semibold text-foreground">truly theirs at 18</span>. Most families will want both.
             </p>
             <p>
-              <span className="font-semibold text-foreground">A UTMA is a custodial brokerage account in your kid's name</span>, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (18 in most states, 21 in a few), the kid gets full ownership.
+              <span className="font-semibold text-foreground">A UTMA is a custodial brokerage account in your kid's name</span>, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (21 in most states, 18 in some; 19 in Alabama and Nebraska), the kid gets full ownership.
             </p>
             <p className="text-xs text-muted-foreground/70">
               Projections assume 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly; the federal column includes the $1,000 seed and the $5,000/yr cap. Federal account rules per the 2025 One Big Beautiful Bill Act, current as of May 2026 and subject to change. Verify before relying. Illustrative, not a guarantee. Markets are unpredictable.
