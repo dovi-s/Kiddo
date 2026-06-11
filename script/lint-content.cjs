@@ -298,6 +298,18 @@ function lintSegment(segment) {
     );
   }
 
+  // UTMA majority-age guard. "18 in most states" is factually backwards — 21 is
+  // the majority (shared/utma.ts: 35 states at 21, 14 at 18, CA among the 18s). It
+  // once spread to ~12 surfaces propping up the "at 18" story; this stops it
+  // re-spreading. Correct framing: "21 in most states, 18 in some". (The emotional
+  // "at 18" hero is fine — this only catches the factual "in most states" claim.)
+  if (normalized.includes("18 in most") && /utma|majorit|transfer|age of/.test(normalized)) {
+    issues.push('Backwards UTMA age "18 in most states" — 21 is the majority (shared/utma.ts); use "21 in most states, 18 in some"');
+  }
+  if (/\b21 in (ca|california|ky|kentucky)\b/.test(normalized)) {
+    issues.push('Wrong UTMA age — CA/KY are 18-states, not 21 (shared/utma.ts)');
+  }
+
   for (const phrase of BANNED_PHRASES) {
     if (normalized.includes(phrase)) issues.push(`Banned phrase "${phrase}"`);
   }
