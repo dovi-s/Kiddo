@@ -13888,6 +13888,29 @@ export async function registerRoutes(
       const giftById = new Map(giftsForFund.map((g: any) => [String(g.id), g]));
       const singleHolding = fundHoldings.length === 1 ? fundHoldings[0] : null;
       const eventNameById = new Map(fundEvents.filter((e: any) => !e.isPermanent).map((e: any) => [String(e.id), e.name as string]));
+      // Gifter avatars by email — so the parent's "Who loves [child]" roster
+      // shows each gifter's real face (same as the dashboard roster), not just an
+      // initial. Previously only the owner's photo resolved here; gifters who'd
+      // set a profile photo still rendered a letter tile. Batch lookup (mirrors
+      // the /gifts endpoint enrichment), non-fatal. AUTH'd endpoint only — the
+      // public memory endpoint intentionally omits gifter identity.
+      const gifterAvatarByEmail = new Map<string, string | null>();
+      try {
+        const giftEmails = Array.from(new Set(
+          giftsForFund.map((g: any) => String(g.senderEmail || "").trim().toLowerCase()).filter(Boolean),
+        ));
+        if (giftEmails.length > 0) {
+          const rows = await db
+            .select({ email: users.email, profileImageUrl: users.profileImageUrl })
+            .from(users)
+            .where(inArray(sql`lower(${users.email})`, giftEmails));
+          for (const r of rows) {
+            if (r.email) gifterAvatarByEmail.set(String(r.email).trim().toLowerCase(), (r as any).profileImageUrl || null);
+          }
+        }
+      } catch (e) {
+        console.warn("[memory] gifter avatar enrichment failed (non-fatal):", (e as any)?.message || e);
+      }
       const enriched = await Promise.all(
         entries.map(async (entry) => {
           const meta = await getMemoryMeta(entry.id);
@@ -13941,6 +13964,10 @@ export async function registerRoutes(
                     id: gift.id,
                     senderName: gift.senderName,
                     senderEmail: (gift as any).senderEmail || null,
+                    // Gifter's profile photo (resolved by email) so the parent's
+                    // roster shows their face, not just an initial. Owner's own
+                    // photo resolves client-side; this covers everyone else.
+                    gifterAvatarUrl: gifterAvatarByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null,
                     amount: gift.amount,
                     // netAmount + status added 2026-05-15 so the client-side
                     // gifterRoster in MemoryBook can: (a) exclude

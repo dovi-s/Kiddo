@@ -288,7 +288,7 @@ type EntryIdentity = {
   gifterBg: string | null;
 };
 function getEntryIdentity(
-  entry: { type?: string; gift?: { senderName?: string | null; senderEmail?: string | null } | null; authorName?: string | null },
+  entry: { type?: string; gift?: { senderName?: string | null; senderEmail?: string | null; gifterAvatarUrl?: string | null } | null; authorName?: string | null },
   ownerCtx: {
     emailLower: string;
     profileImageUrl: string | null;
@@ -345,7 +345,7 @@ function getEntryIdentity(
   return {
     kind: "gifter",
     displayName: named,
-    profileImageUrl: null,
+    profileImageUrl: entry.gift?.gifterAvatarUrl || null,
     avatarLetter: named.slice(0, 1).toUpperCase(),
     avatarStyle: "gifter",
     gifterBg: gifterColor(rawSender).bg,
@@ -2450,7 +2450,7 @@ export default function MemoryBook() {
       if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
       return false;
     };
-    const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean }>();
+    const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean; avatarUrl: string | null }>();
     for (const e of sortedEntries) {
       // A contribution = a gift_message OR the first-cycle parent_note that
       // carries a recurring auto-invest gift. Including the latter restores the
@@ -2499,6 +2499,7 @@ export default function MemoryBook() {
         // homogeneous, but defending against the case where a gifter
         // happens to share a first name with the parent.
         if (isOwnerEntry) existing.isOwnerRow = true;
+        if (!existing.avatarUrl && (e.gift as any).gifterAvatarUrl) existing.avatarUrl = (e.gift as any).gifterAvatarUrl;
       } else {
         map.set(key, {
           name: isAnon ? "Anonymous" : titleCaseName(senderName),
@@ -2508,6 +2509,10 @@ export default function MemoryBook() {
           anonPeople: isAnon ? 1 : 0,
           isAnon,
           isOwnerRow: isOwnerEntry && !isAnon,
+          // Gifter's profile photo (server-enriched by email) so the roster shows
+          // their real face, not just an initial — parity with the dashboard.
+          // Anon gifts carry no email, so they stay initials.
+          avatarUrl: isAnon ? null : ((e.gift as any).gifterAvatarUrl || null),
         });
       }
     }
@@ -3545,6 +3550,10 @@ export default function MemoryBook() {
                       // consistency the moment a parent contributed.
                       const ownerProfileImageUrl = gifter.isOwnerRow ? (user as any)?.profileImageUrl || null : null;
                       const ownerPreferredName = gifter.isOwnerRow ? (user as any)?.preferredName || null : null;
+                      // The face to show: the owner's own photo, else the gifter's
+                      // server-enriched profile photo (parity with the dashboard
+                      // roster). Falls back to the initial tile below.
+                      const rosterPhoto = ownerProfileImageUrl || gifter.avatarUrl;
                       // Shared rule (same as Dashboard): skips weak leaders so
                       // "Aunt Sarah" -> "Sarah", "The Johnsons" -> "Johnsons",
                       // "Phil's office" -> "office" — not the broken "Aunt / The /
@@ -3576,16 +3585,16 @@ export default function MemoryBook() {
                           title={gifter.isAnon ? undefined : `${gifter.name} · ${displayAmount(gifter.totalAmount)} · ${gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}`}
                           className="flex flex-col items-center gap-1.5 min-w-[64px] bg-transparent border-none p-0 cursor-pointer"
                         >
-                          {ownerProfileImageUrl ? (
+                          {rosterPhoto ? (
                             <div
                               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden transition-all"
                               style={{
-                                boxShadow: isActive
-                                  ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))"
-                                  : "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55)",
+                                boxShadow: ownerProfileImageUrl
+                                  ? (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55)")
+                                  : (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 3px 10px rgba(26,23,16,0.13)"),
                               }}
                             >
-                              <img src={ownerProfileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                              <img src={rosterPhoto} alt="" loading="lazy" className="h-full w-full object-cover" />
                             </div>
                           ) : (
                             <div
