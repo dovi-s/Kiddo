@@ -21,7 +21,7 @@ const outDir = path.join(process.cwd(), "artifacts", "founder-reel");
 const HEALTH_PATH = "/api/health";
 const HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_POLL_MS = 1_000;
-const DEMO_EMAIL = "phil@dunphyfamily.com";
+const DEMO_EMAIL = "claire@dunphyfamily.com";
 const DEMO_PASSWORD = "dunphyfamily";
 const DESKTOP = { width: 1440, height: 900 };
 const MOBILE = { width: 390, height: 844 };
@@ -132,7 +132,7 @@ async function pickFunds(context: BrowserContext) {
   }
   const funds: Array<any> = await res.json();
   if (!Array.isArray(funds) || funds.length === 0) {
-    throw new Error("Phil has no funds — reseed the demo before running the reel.");
+    throw new Error("Claire has no funds — reseed the demo before running the reel.");
   }
   const owned = funds.find((f) => f.status !== "transferred" && f.slug) ?? funds[0];
   return { fundId: owned.id as string, fundSlug: owned.slug as string };
@@ -171,12 +171,12 @@ async function main() {
     await publicCtx.close();
     await authProbe.close();
 
-    // The parent's world — logged in as Phil (3 kids, the seeded demo).
+    // The parent's world — logged in as Claire (3 kids, the seeded demo).
     const authCtx = await browser.newContext({ viewport: DESKTOP });
     await unlockLaunchGate(authCtx);
     await login(authCtx);
 
-    console.log("> Parent surfaces (logged in as Phil):");
+    console.log("> Parent surfaces (logged in as Claire):");
     await capture(authCtx, "04-dashboard", "/dashboard");
     await capture(authCtx, "04-dashboard", "/dashboard", MOBILE);
     await capture(authCtx, "05-memory-book", `/memory/${fundId}`);

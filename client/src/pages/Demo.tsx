@@ -39,14 +39,14 @@ const ACCOUNTS: DemoAccount[] = [
   {
     email: "phil@dunphyfamily.com",
     display: "Phil Dunphy",
-    role: "parent",
-    oneLiner: "Dad. The parent dashboard on the Family plan, with all three kids' funds in one place.",
+    role: "co-parent",
+    oneLiner: "Dad, the co-parent. The same three funds from his own login.",
   },
   {
     email: "claire@dunphyfamily.com",
     display: "Claire Dunphy",
-    role: "co-parent",
-    oneLiner: "Co-parent. The same three funds from her own login.",
+    role: "parent",
+    oneLiner: "Mom. The parent dashboard on the Family plan, with all three kids' funds in one place.",
   },
   {
     email: "jay@dunphyfamily.com",
@@ -166,7 +166,7 @@ export default function Demo() {
   // the very first dashboard open plays the cached→roll moment (founder call
   // 2026-06-04). Demo login clears localStorage, so without this a prospect's
   // first paint has no "last visit" number and the product's best micro-beat
-  // never fires. The demo's fiction is stepping into Phil's life mid-stream —
+  // never fires. The demo's fiction is stepping into Claire's life mid-stream —
   // a synthetic yesterday-number is set dressing: the start is bent ~0.6%,
   // the END is always the true balance. Best-effort; navigation never waits
   // on failure. (The Dashboard's own cache-write keeps re-seeding low for
@@ -211,11 +211,12 @@ export default function Demo() {
     }
   };
 
-  // Featured-walkthrough shortcut: log in as Phil, auto-select the
-  // approaching-handoff fund (Alex, ~30 days from majority) as the active
-  // fund, land on /age-18-plan. (Haley is now PAST majority — her fund is the
-  // graduated adult-account demo, reachable from the dashboard/Kid View.)
-  const FEATURED_EMAIL = "phil@dunphyfamily.com";
+  // Featured-walkthrough shortcut: log in as Claire (Mom, the primary custodian
+  // / lead persona), auto-select the approaching-handoff fund (Alex, ~30 days
+  // from majority) as the active fund, land on /age-18-plan. (Haley is now PAST
+  // majority — her fund is the graduated adult-account demo, reachable from the
+  // dashboard/Kid View.)
+  const FEATURED_EMAIL = "claire@dunphyfamily.com";
   const FEATURED_SLUG = "alex-dunphy";
   const handleFeaturedShortcut = async () => {
     setLoadingEmail(FEATURED_EMAIL);
@@ -226,7 +227,7 @@ export default function Demo() {
       // walkthrough lands on dashboards too.
       await preSeedDemoRoll();
       // After login (which cleared the previous user's caches), fetch
-      // Phil's funds fresh from server and locate the featured fund by slug.
+      // Claire's funds fresh from server and locate the featured fund by slug.
       const fundsRes = await fetch("/api/funds", { credentials: "include" });
       if (!fundsRes.ok) {
         haptic("success");
@@ -276,9 +277,9 @@ export default function Demo() {
 
           {/* Featured walkthrough — drops the visitor straight on
               Alex's handoff plan (the /age-18-plan page): the
-              centerpiece slider + Phil's sealed letter + the at-21
+              centerpiece slider + her dad's sealed letter + the at-21
               handoff countdown. Saves 3 navigation clicks vs the
-              standard "log in as Phil → dashboard → age-18-plan →
+              standard "log in as Claire → dashboard → age-18-plan →
               switch funds" path. (Haley, the older sister, is already
               PAST majority — her fund is the graduated adult-account
               demo, reachable from the dashboard.) Sits above
@@ -303,7 +304,7 @@ export default function Demo() {
                       assets don't exist yet (client/public/demo-audio/README.md, IP
                       question pending), so her memos render text-only. Don't promise
                       audio the page can't show; upgrade the word when audio lands. */}
-                  In a few weeks, the fund her dad Phil built becomes hers. This is the handoff page he sees: the projection slider, his sealed letter, Gloria's notes in Spanish, a whole childhood of gifts. Start here.
+                  In a few weeks, the fund her mom Claire built becomes hers. This is the handoff page Claire sees: the projection slider, a sealed letter from her dad, Gloria's notes in Spanish, a whole childhood of gifts. Start here.
                 </p>
               </div>
               <button
@@ -322,7 +323,7 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
               <Users size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
-              Or start with Phil
+              Or start with Claire
             </h2>
             <p className="text-sm text-muted-foreground">
               Three kids at three stages: Luke still getting gifts, Alex weeks from taking ownership, and Haley's fund already handed off. The whole arc in one family.
@@ -356,7 +357,7 @@ export default function Demo() {
               Step into the account she owns now
             </h2>
             <p className="text-sm text-muted-foreground">
-              Haley came of age a year ago, and the fund transferred to her. Log in to see her personal account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Phil's dashboard it's a fund he can no longer touch.
+              Haley came of age a year ago, and the fund transferred to her. Log in to see her personal account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Claire's dashboard it's a fund she can no longer touch.
             </p>
             {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
               <button

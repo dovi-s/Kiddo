@@ -4,10 +4,10 @@ import { funds, fundSnapshots, users } from "../shared/schema";
 import { eq, inArray, asc } from "drizzle-orm";
 
 async function main() {
-  const [phil] = await db.select().from(users).where(eq(users.email, "phil@dunphyfamily.com"));
-  if (!phil) { console.log("no phil"); await pool.end(); return; }
+  const [phil] = await db.select().from(users).where(eq(users.email, "claire@dunphyfamily.com"));
+  if (!phil) { console.log("no claire"); await pool.end(); return; }
   const philFunds = await db.select().from(funds).where(eq(funds.userId, phil.id));
-  console.log("Phil owns", philFunds.length, "funds:");
+  console.log("Claire owns", philFunds.length, "funds:");
   let totalBalance = 0;
   for (const f of philFunds) {
     console.log(`  ${f.slug?.padEnd(15)} balance=$${f.balance}`);
