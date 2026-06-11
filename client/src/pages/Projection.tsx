@@ -588,16 +588,16 @@ ${shareUrl}`;
                 }
                 input.kiddo-age-slider::-webkit-slider-thumb {
                   -webkit-appearance: none; appearance: none;
-                  width: 22px; height: 22px; border-radius: 9999px;
+                  width: 28px; height: 28px; border-radius: 9999px;
                   background: rgb(255,255,255);
                   border: 3px solid rgb(184,121,26);
                   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-                  margin-top: -8px; cursor: grab;
+                  margin-top: -11px; cursor: grab;
                   transition: transform 0.12s ease;
                 }
                 input.kiddo-age-slider:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.08); }
                 input.kiddo-age-slider::-moz-range-thumb {
-                  width: 22px; height: 22px; border-radius: 9999px;
+                  width: 28px; height: 28px; border-radius: 9999px;
                   background: rgb(255,255,255);
                   border: 3px solid rgb(184,121,26);
                   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
