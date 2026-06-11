@@ -1050,15 +1050,26 @@ export async function registerRoutes(
 
   const getAutoBasketForStrategy = async (strategy: string | null | undefined, fundId?: string | null) => {
     const cfg = await loadInvestmentConfig();
-    const strategyKey = String(strategy || "").trim().toLowerCase();
+    let strategyKey = String(strategy || "").trim().toLowerCase();
+    // Normalize the legacy placeholder "auto_invest" (and an empty value) to
+    // "growth" — the SAME normalization the strategy display path uses
+    // (auto_invest renders as "Growth Mix"), and the product default
+    // (GetStarted sends "growth"). Without this, an auto_invest / missing-
+    // strategy fund would DISPLAY as Growth Mix but get the BALANCED basket
+    // (bonds) the moment a parent auto-invests cash — a real label-vs-
+    // allocation mismatch (and a quiet bond drag against the growth default).
+    // growth/balanced/conservative/custom the parent actually chose pass through.
+    if (strategyKey === "auto_invest" || strategyKey === "") strategyKey = "growth";
     let allocations: Record<string, number> = {};
     if (strategyKey === "custom" && fundId) {
       const custom = (await getFundCustomAllocations(fundId)) || DEFAULT_CUSTOM_ALLOCATIONS;
       allocations = custom as Record<string, number>;
     } else {
+      // Last-resort fallback prefers growth (the product default) over balanced,
+      // so a config gap never silently seats a fund in bonds.
       const chosen = cfg.autoStrategies[strategyKey]
-        || cfg.autoStrategies.balanced
         || cfg.autoStrategies.growth
+        || cfg.autoStrategies.balanced
         || Object.values(cfg.autoStrategies)[0];
       allocations = chosen?.allocations || {};
     }
@@ -10357,7 +10368,7 @@ export async function registerRoutes(
         }
         investBasket = [{ ticker: requestedTicker, name: asset.name, weight: 1.0 }];
       } else {
-        const defaultBasket = await getAutoBasketForStrategy(fund.investmentStrategy || "balanced", fund.id);
+        const defaultBasket = await getAutoBasketForStrategy(fund.investmentStrategy || "growth", fund.id);
         if (defaultBasket.length === 0) {
           // This error surface is admin-facing in practice (only fires
           // when an investment strategy has zero allocations, which is
