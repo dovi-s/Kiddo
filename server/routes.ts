@@ -16843,6 +16843,90 @@ export async function registerRoutes(
   // interest flag in one round-trip so Settings can render the whole
   // section without three separate fetches. Per AGE_18_HANDOFF_SPEC.md
   // bucket 3 (Settings tax section).
+  // Data-subject access export (DSAR / CCPA right-to-access + parental access).
+  // Returns a JSON download of the AUTHENTICATED user's OWN data only: account
+  // profile, the funds they own (child name/DOB/state + Memory Book), the gifts
+  // received on those funds, and the memory entries. Every query is scoped to the
+  // requester's userId — no cross-user or co-admin'd data. Allowlist mapping (not
+  // raw rows), so the child's SSN and account secrets (password hash, OAuth id,
+  // KYC blob) are NEVER included. Read-only. See policies/child-data-protection.md §9.
+  app.get('/api/me/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [account] = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        preferredName: users.preferredName,
+        profileImageUrl: users.profileImageUrl,
+      }).from(users).where(eq(users.id, userId)).limit(1);
+
+      const ownedFunds = await storage.getFundsByUser(userId);
+      const fundsExport = [];
+      for (const f of ownedFunds) {
+        const giftRows = await storage.getGiftsByFund(f.id);
+        const memoryRows = await storage.getMemoryEntriesByFund(f.id, { includePending: true });
+        fundsExport.push({
+          fund: {
+            id: f.id,
+            name: f.name,
+            slug: f.slug,
+            accountType: f.accountType,
+            status: f.status,
+            balance: f.balance,
+            recipientFirstName: f.recipientFirstName,
+            recipientLastName: f.recipientLastName,
+            recipientBirthdate: f.recipientBirthdate,
+            recipientState: f.recipientState,
+            recipientRelation: f.recipientRelation,
+            childPhotoUrl: f.childPhotoUrl,
+            majorityAge: f.majorityAge,
+            transferredAt: f.transferredAt,
+            // recipient SSN (full + last-4) intentionally EXCLUDED from the export.
+          },
+          giftsReceived: giftRows.map((g) => ({
+            id: g.id,
+            senderName: g.senderName,
+            senderEmail: g.senderEmail,
+            amount: g.amount,
+            netAmount: g.netAmount,
+            message: g.message,
+            photoUrl: g.photoUrl,
+            videoUrl: g.videoUrl,
+            audioUrl: g.audioUrl,
+            status: g.status,
+            isAnonymous: g.isAnonymous,
+            createdAt: g.createdAt,
+          })),
+          memoryBook: memoryRows.map((m) => ({
+            id: m.id,
+            type: m.type,
+            content: m.content,
+            authorName: m.authorName,
+            photoUrl: m.photoUrl,
+            videoUrl: m.videoUrl,
+            audioUrl: m.audioUrl,
+            audioTranscript: m.audioTranscript,
+            visibility: m.visibility,
+          })),
+        });
+      }
+
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="kiddo-data-export.json"');
+      res.status(200).send(JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        note: "Your Kiddo data. The recipient SSN and account security fields are intentionally excluded.",
+        account: account || null,
+        funds: fundsExport,
+      }, null, 2));
+    } catch (error) {
+      console.error("Error generating data export:", error);
+      res.status(500).json({ error: "Could not generate your data export. Please try again." });
+    }
+  });
+
   app.get('/api/me/tax-profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;

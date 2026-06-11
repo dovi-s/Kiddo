@@ -116,8 +116,11 @@ Encryption, access gating, audit logging, and incident response are governed by
 ## 9. Parental rights
 
 Parents (account holders) may review, correct, and request deletion of data; the
-deletion flow is §6. A formal self-service **DSAR/export** endpoint is not yet built
-(open item). Requests are honored via support per the privacy policy.
+deletion flow is §6. A self-service **data export** endpoint exists
+(`GET /api/me/export`, added 2026-06-10): authenticated, scoped to the requester's
+own data, allowlist-mapped so the child SSN and account secrets are never included.
+A Settings UI affordance ("Download my data") is the remaining follow-up; correction
+and deletion requests are honored via support per the privacy policy.
 
 ## 10. Open items
 
@@ -125,5 +128,6 @@ deletion flow is §6. A formal self-service **DSAR/export** endpoint is not yet 
   token; money-path refactor, own tested PR). See `DATA_PRIVACY_AUDIT_2026-06-09.md`.
 - **Part 3** — counsel decision on child name/photo retention vs parental deletion.
 - **DPA execution** for the live processor short-list (§7).
-- **DSAR/export** self-service endpoint (§9).
+- **DSAR/export** Settings UI affordance (the `GET /api/me/export` endpoint is
+  built; a "Download my data" button is the remaining piece — §9).
 - COPPA applicability confirmation from counsel (`COUNSEL_ENGAGEMENT_PACKET.md` Part 5).
