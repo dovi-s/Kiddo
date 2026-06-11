@@ -1,14 +1,18 @@
 import { Link } from "wouter";
 import koraMarkImg from "../../assets/kiddo-logo-cropped.png";
+import koraMarkWhiteImg from "../../assets/kiddo-logo-white.png";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
   showWordmark?: boolean;
   className?: string;
   linkTo?: string | null;
+  /** On evergreen / dark backgrounds: use the white K + cream wordmark so the
+      mark stays legible (the default gradient K goes low-contrast on dark). */
+  onDark?: boolean;
 }
 
-export function Logo({ size = "md", showWordmark = true, className = "", linkTo = "/" }: LogoProps) {
+export function Logo({ size = "md", showWordmark = true, className = "", linkTo = "/", onDark = false }: LogoProps) {
   const sizes = {
     sm: { icon: "w-6 h-6", text: "text-[14px]", gap: "gap-1" },
     md: { icon: "w-7 h-7", text: "text-[16px]", gap: "gap-1.5" },
@@ -29,7 +33,7 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
           LogoMark export below KEEPS alt="Kiddo" because that variant
           is used without an adjacent wordmark and IS the only label. */}
       <img
-        src={koraMarkImg}
+        src={onDark ? koraMarkWhiteImg : koraMarkImg}
         alt=""
         aria-hidden="true"
         className={`${s.icon} object-contain`}
@@ -44,7 +48,7 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
           all light backgrounds). The K mark is intentionally left untouched. */}
       {showWordmark && (
         <span
-          className={`font-heading font-bold ${s.text} tracking-[-0.01em] text-[hsl(var(--kiddo-evergreen))]`}
+          className={`font-heading font-bold ${s.text} tracking-[-0.01em] ${onDark ? "text-[hsl(var(--kiddo-cream))]" : "text-[hsl(var(--kiddo-evergreen))]"}`}
         >
           Kiddo
         </span>
@@ -63,7 +67,7 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
   );
 }
 
-export function LogoMark({ size = "md", className = "" }: { size?: "sm" | "md" | "lg"; className?: string }) {
+export function LogoMark({ size = "md", className = "", onDark = false }: { size?: "sm" | "md" | "lg"; className?: string; onDark?: boolean }) {
   const sizes = {
     sm: { dim: "w-6 h-6" },
     md: { dim: "w-7 h-7" },
@@ -74,7 +78,7 @@ export function LogoMark({ size = "md", className = "" }: { size?: "sm" | "md" |
 
   return (
     <img
-      src={koraMarkImg}
+      src={onDark ? koraMarkWhiteImg : koraMarkImg}
       alt="Kiddo"
       className={`${s.dim} object-contain ${className}`}
     />
