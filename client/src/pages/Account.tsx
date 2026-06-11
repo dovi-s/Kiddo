@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { FounderBadge } from "@/components/ui/founder-badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star } from "lucide-react";
+import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star, Download } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
@@ -325,6 +325,31 @@ export default function Account() {
   // Account-deletion modal state. Modal handles the multi-step flow
   // (review → confirm → submit → done) + the blocked-for-balance state.
   const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  // Data-subject access: download a JSON export of the user's own data
+  // (GET /api/me/export). fetch+blob carries the session cookie and works in
+  // both dev and prod. The export is read-only and excludes SSN + secrets.
+  const [exportingData, setExportingData] = useState(false);
+  const handleExportData = async () => {
+    if (exportingData) return;
+    setExportingData(true);
+    try {
+      const res = await fetch("/api/me/export", { credentials: "include" });
+      if (!res.ok) throw new Error("export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kiddo-data-export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Couldn't prepare your export", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setExportingData(false);
+    }
+  };
   const profileNeedsName = !displayName;
   const profileNeedsPhoto = !user?.profileImageUrl;
   const profileNeedsCompletion = profileNeedsName || profileNeedsPhoto;
@@ -1910,6 +1935,21 @@ export default function Account() {
             >
               <LogOut size={15} />
               Log out
+            </button>
+
+            {/* Data-subject access (CCPA / parental access). Sits between
+                logout and delete as the standard data-rights cluster. Downloads
+                a JSON export of the user's own data; SSN + secrets excluded
+                server-side. See GET /api/me/export + policies/child-data-protection.md. */}
+            <button
+              type="button"
+              onClick={handleExportData}
+              disabled={exportingData}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-60"
+              data-testid="button-export-data"
+            >
+              {exportingData ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+              {exportingData ? "Preparing your data…" : "Download my data"}
             </button>
 
             {/* Account deletion — App Store 5.1.1(v) compliance. Quiet but
