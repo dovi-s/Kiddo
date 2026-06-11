@@ -124,7 +124,8 @@ async function tick(log: LogFn): Promise<void> {
     const dashboardUrl = `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fundId)}`;
     const memoryBookUrl = `${baseUrl}/memory?fund=${encodeURIComponent(row.fundId)}`;
     try {
-      await sendEmail(buildFundAnniversaryEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildFundAnniversaryEmail({
         to: row.parentEmail,
         unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parentEmail, "anniversary"),
         parentFirstName: row.parentFirstName,
@@ -133,7 +134,7 @@ async function tick(log: LogFn): Promise<void> {
         fundTotalUsd,
         dashboardUrl,
         memoryBookUrl,
-      }));
+      }), fundId: row.fundId });
       state.lastSentByFundYear[key] = new Date().toISOString();
       sent += 1;
       log(`fund-anniversary sent for fund ${row.fundId} (year ${fundAgeYears})`, WORKER_SOURCE);

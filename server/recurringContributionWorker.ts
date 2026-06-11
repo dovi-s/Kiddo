@@ -8,6 +8,7 @@ import { getUncachableStripeClient } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { buildReminderStopUrl } from './reminderStopToken';
 import { getFundCoverageState } from './services/monetization';
+import { shouldSilenceForFund } from './memorialized';
 
 type LogFn = (message: string, source?: string) => void;
 
@@ -106,6 +107,13 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
   const amount = parseFloat(row.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     log(`skipping contribution ${row.id as string}: invalid amount ${String(row.amount)}`, WORKER_SOURCE);
+    return;
+  }
+
+  // Bereavement freeze: a memorialized fund's recurring contribution must never
+  // fire — no charge, no gift record, no date advance. See BEREAVEMENT_POSTURE.md.
+  if (await shouldSilenceForFund(String(row.fund_id))) {
+    log(`contribution ${row.id as string}: skipped — fund memorialized`, WORKER_SOURCE);
     return;
   }
 

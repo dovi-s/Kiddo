@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { isEmailSuppressed } from "./postmarkWebhook";
+import { shouldSilenceForFund } from "./memorialized";
 
 export type EmailMessage = {
   to: string;
@@ -10,6 +11,11 @@ export type EmailMessage = {
   html?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  // Fund this email is about, when fund-scoped. Fund-scoped workers set this so
+  // the bereavement freeze can suppress at this single chokepoint: a memorialized
+  // fund's automated mail never sends. Omitted for non-fund mail (password reset,
+  // verification) — those must never be gated. See BEREAVEMENT_POSTURE.md.
+  fundId?: string;
   // Optional unsubscribe URL for non-transactional emails. When set:
   //   - The HTML body's footer should already include a visible
   //     unsubscribe link (renderKiddoEmail's unsubscribeUrl arg).
@@ -27,7 +33,7 @@ export type EmailMessage = {
 
 export type EmailDeliveryResult = {
   delivered: boolean;
-  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed" | "demo_suppressed";
+  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed" | "demo_suppressed" | "bereavement_suppressed";
   providerId?: string | null;
 };
 
@@ -219,6 +225,16 @@ async function sendWithSendGrid(message: EmailMessage): Promise<EmailDeliveryRes
 }
 
 export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryResult> {
+  // Bereavement freeze (the email chokepoint). A memorialized fund's automated
+  // mail never sends. Fund-scoped workers set message.fundId; non-fund/
+  // transactional mail has none and is never gated. Fail-closed inside
+  // shouldSilenceForFund (a fund we can't read is treated as silenced). This is
+  // the single place that protects every fund-scoped email at once. See
+  // BEREAVEMENT_POSTURE.md.
+  if (message.fundId && await shouldSilenceForFund(message.fundId)) {
+    return { delivered: false, mode: "bereavement_suppressed", providerId: null };
+  }
+
   // Suppression pre-flight. Hard-bounce + spam-complaint addresses
   // are stored in the email_suppressions table by the ESP webhook
   // handler (server/postmarkWebhook.ts). Sending to a suppressed

@@ -108,6 +108,12 @@ export const funds = pgTable("funds", {
   // one-way safety revoke in previousOwnerAccessRevokedAt). The previous-owner
   // dashboard reads this to choose keepsake vs live.
   previousOwnerLiveAccessGrantedAt: timestamp("previous_owner_live_access_granted_at"),
+  // Bereavement / memorial freeze (2026-06-11). Set by a HUMAN on a confirmed
+  // loss (a child or a family death). NULL = active; non-null = memorialized, at
+  // which point ALL automated comms + charges for this fund must go silent (the
+  // charge paths + the email chokepoint hard-gate on it, fail-closed). Reversible
+  // (set-in-error recovery). See BEREAVEMENT_POSTURE.md. NEVER set by automation.
+  memorializedAt: timestamp("memorialized_at"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks

@@ -11,6 +11,7 @@
         "lint:content": "node script/lint-content.cjs",
         "check": "npm run lint:content && tsc",
         "test:memory-utils": "tsx script/test-memory-utils.ts",
+        "test:memorialized-silence": "tsx script/test-memorialized-silence.ts",
         "test:activity-semantics": "tsx script/test-activity-semantics.ts",
         "test:launch-readiness": "tsx script/launch-readiness.ts",
         "test:smoke": "tsx script/smoke.ts",

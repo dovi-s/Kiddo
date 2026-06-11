@@ -1,5 +1,6 @@
 import { getUncachableStripeClient, getStripePublishableKey } from './stripeClient';
 import type Stripe from 'stripe';
+import { shouldSilenceForFund } from './memorialized';
 import {
   calculateKoraContributionFee,
   getGiftAddOn,
@@ -215,6 +216,13 @@ export class StripeService {
   // pairing). Throws on decline (StripeCardError) — callers must catch and fall
   // back. Gated upstream by isGifterCaptureAtIntentEnabled().
   async chargeGifterOffSession(params: { customerId: string; paymentMethodId: string; amountCents: number; metadata?: Record<string, string>; idempotencyKey?: string }): Promise<Stripe.PaymentIntent> {
+    // Bereavement freeze (defense in depth): never charge a gifter for a
+    // memorialized fund. The caller (giftIntentSettlement) gates this gracefully;
+    // this last-line guard refuses even if a future caller forgets. Fund id rides
+    // in metadata.fundId. See BEREAVEMENT_POSTURE.md.
+    if (await shouldSilenceForFund(params.metadata?.fundId)) {
+      throw new Error("bereavement_silenced: gifter off-session charge refused for a memorialized fund");
+    }
     const stripe = await getUncachableStripeClient();
     return await stripe.paymentIntents.create(
       {

@@ -107,11 +107,33 @@ deletion. Setting it = the freeze engages everywhere at once.
    the *immediate human need*; the asset/estate handling is separate and slower. Never
    make the grieving family navigate either alone.
 
-## Why this is spec'd, not half-built right now
-Deliberately. Wiring 20 workers in one pass on the most sensitive surface in the
-product — while the `memorialized_at` column isn't even live yet — risks missing one,
-and a missed one is a birthday email to a parent who just buried their child. The
-fail-closed chokepoint design above makes the real build small (~the two delivery
-paths + the test), bulletproof, and verifiable. That build should happen with intent
-and a green `test:memorialized-silence`, not as a rushed sweep. **The posture is locked
-today; the freeze is the next deliberate build.**
+## Build status (2026-06-11) — the freeze is built + verified
+
+**Built + verified (`npm run test:memorialized-silence` green, tsc clean):**
+- `funds.memorialized_at` is **live** (migration 0047, journaled; schema field). Set by
+  a HUMAN, reversible, NEVER by automation.
+- **`server/memorialized.ts` — the fail-closed silence gate** (`shouldSilenceForFund`):
+  memorialized → silence; fund-we-can't-read → silence; no fund context → never gated.
+- **Charge freeze (the worst harm — COMPLETE):** the gifter off-session charge
+  (`stripeService.chargeGifterOffSession` chokepoint + the `giftIntentSettlement`
+  caller, which holds silently rather than marking a decline) and the parent recurring
+  contribution (`recurringContributionWorker`) both refuse/skip for a memorialized
+  fund, fail-closed.
+- **Email chokepoint:** `sendEmail` suppresses any email carrying a memorialized
+  `fundId` (mode `bereavement_suppressed`); non-fund/transactional mail is never gated.
+- **Worst email workers threaded:** birthday, kid-milestone, anniversary pass `fundId`,
+  so the chokepoint fires for them. Verified suppressed.
+- **`test:memorialized-silence`** asserts the whole chain (marks a real fund, asserts,
+  restores). This test must never go red.
+
+**Remaining (mechanical; the chokepoint + test make finishing it safe):** thread
+`fundId` into the other fund-scoped worker emails so the chokepoint fires for each —
+`monthlyPulse`, `yearEndWrapped`, `pmfSurveyTrigger`, `gifterNotification`,
+`gifterReturnReminder`, `gifterYearEnd`, `holidayWarmth`, `taxSeasonPrep`,
+`volatilityReassurance`, `parentLifecycle`, `postHandoffEngagement`,
+`sealedLetterDelivery`, `mobilePush`, `age18Transition`, `stalledHandoff`. Each is the
+same one-line spread: `sendEmail({ ...buildX(...), fundId })`; extend the test to each
+as it's threaded. **Until threaded, an un-threaded worker's email is the open edge —
+not yet gated.** (The account-level *subscription renewal* stays OUT of the fund freeze
+deliberately — that's the human runbook's call, since the parent may have other living
+children.)
