@@ -1750,12 +1750,16 @@ export async function registerRoutes(
   // schema permits both). The bar to report is intentionally low; the
   // T&S queue handles signal-vs-noise via admin review.
   //
-  // Rate-limited per IP + per target to prevent abuse — a bad actor
+  // Rate-limited per IP AND per target to prevent abuse — a bad actor
   // can't paper-bomb the queue, and the same target can't be reported
-  // 100 times by one viewer.
-  const reportRateLimit = new Map<string, number[]>();
+  // 100 times. Backed by the durable, cross-instance Postgres limiter
+  // (server/rateLimiter.ts) so the cap holds across replicas and process
+  // restarts; the previous in-memory Map only protected a single process
+  // (effective cap was N× under a multi-instance deploy) and claimed a
+  // per-target dedupe it never actually enforced.
   const REPORT_RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-  const REPORT_RATE_MAX = 10; // 10 reports per IP per hour
+  const REPORT_RATE_MAX_PER_IP = 10; // 10 reports per IP per hour
+  const REPORT_RATE_MAX_PER_TARGET = 5; // 5 reports against one target per hour
   app.post("/api/reports", async (req: any, res) => {
     try {
       const targetType = String(req.body?.targetType || "").trim();
@@ -1771,16 +1775,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid email" });
       }
 
-      // Per-IP rate limit. Sliding window — drop timestamps older than
-      // the window, then check if we're under the cap.
+      // Per-IP rate limit (durable, cross-instance). Counts this submission.
       const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
-      const now = Date.now();
-      const recent = (reportRateLimit.get(ip) || []).filter((t) => now - t < REPORT_RATE_WINDOW_MS);
-      if (recent.length >= REPORT_RATE_MAX) {
+      if (!(await checkRateLimit(`report:ip:${ip}`, REPORT_RATE_MAX_PER_IP, REPORT_RATE_WINDOW_MS))) {
         return res.status(429).json({ error: "Too many reports from this device. Try again in a bit." });
       }
-      recent.push(now);
-      reportRateLimit.set(ip, recent);
+      // Per-target rate limit — caps how many times a single entry/gift can be
+      // reported within the window, so one target can't be paper-bombed into the
+      // queue (the dedupe the old comment claimed but never did).
+      if (!(await checkRateLimit(`report:target:${targetType}:${targetId}`, REPORT_RATE_MAX_PER_TARGET, REPORT_RATE_WINDOW_MS))) {
+        return res.status(429).json({ error: "This item has already been reported. Our team is reviewing it." });
+      }
 
       const reporterUserId = (req.user as any)?.id || null;
 
@@ -8809,9 +8814,33 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       const code = String(req.body?.code || '');
-      const [u] = await db.select({ pending: users.totpPendingSecret, enabled: users.totpEnabled }).from(users).where(eq(users.id, userId)).limit(1);
+      const [u] = await db.select({
+        pending: users.totpPendingSecret,
+        enabled: users.totpEnabled,
+        passwordHash: users.passwordHash,
+        googleId: users.googleId,
+      }).from(users).where(eq(users.id, userId)).limit(1);
       if (u?.enabled) return res.status(400).json({ error: 'Two-factor is already on.' });
       if (!u?.pending) return res.status(400).json({ error: 'Start setup first.' });
+      // Step-up reauth. Enabling a second factor changes account recovery and
+      // lockout behavior, so it must prove it's the account holder — not just a
+      // ride-along on a live session (stolen cookie, shared device). Mirrors the
+      // current-password check on /api/user/change-password. OAuth-only accounts
+      // (Google sign-in, no user-set password) can't supply one and already
+      // carry the provider's own 2FA, so they're exempt — the live TOTP code
+      // below still proves authenticator possession. The client reveals a
+      // password field on the `needsPassword` flag and re-submits.
+      const isPasswordAccount = Boolean(u.passwordHash) && !u.googleId;
+      if (isPasswordAccount) {
+        const currentPassword = String(req.body?.currentPassword || '');
+        if (!currentPassword) {
+          return res.status(400).json({ error: 'Enter your current password to turn on two-factor.', needsPassword: true });
+        }
+        const pwOk = await bcrypt.compare(currentPassword, u.passwordHash as string);
+        if (!pwOk) {
+          return res.status(400).json({ error: 'Current password is incorrect.', needsPassword: true });
+        }
+      }
       if (!verifyTotp(u.pending, code)) return res.status(400).json({ error: 'That code did not match. Check your authenticator and try again.' });
       const backupCodes = generateBackupCodes();
       const hashed = await hashBackupCodes(backupCodes);

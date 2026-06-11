@@ -812,7 +812,7 @@ function ComparisonHub() {
         <div className="mx-auto max-w-5xl px-4 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Compare</p>
           <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-tight text-foreground">
-            Investment gifting didn't exist until we built it.
+            Investment gifting, done right.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
             Acorns created micro-investing. Greenlight owns spending. 529s handle education. None of them built what comes next: a shareable link that turns every birthday, holiday, and baby shower into a real investment for your child.

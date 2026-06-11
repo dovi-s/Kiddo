@@ -17,7 +17,11 @@ async function postJson(url: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as any)?.error || "Something went wrong");
+  if (!res.ok) {
+    const err = new Error((data as any)?.error || "Something went wrong") as Error & { data?: any };
+    err.data = data;
+    throw err;
+  }
   return data as any;
 }
 
@@ -28,6 +32,8 @@ export function TwoFactorCard() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [setupData, setSetupData] = useState<{ secret: string; otpauthUri: string } | null>(null);
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [needsPassword, setNeedsPassword] = useState(false);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
 
@@ -41,7 +47,7 @@ export function TwoFactorCard() {
     staleTime: 30_000,
   });
 
-  const reset = () => { setPhase("idle"); setCode(""); setSetupData(null); };
+  const reset = () => { setPhase("idle"); setCode(""); setPassword(""); setNeedsPassword(false); setSetupData(null); };
 
   const setupMutation = useMutation({
     mutationFn: () => postJson("/api/auth/2fa/setup"),
@@ -50,15 +56,28 @@ export function TwoFactorCard() {
   });
 
   const enableMutation = useMutation({
-    mutationFn: () => postJson("/api/auth/2fa/enable", { code: code.trim() }),
+    mutationFn: () => postJson("/api/auth/2fa/enable", { code: code.trim(), currentPassword: password }),
     onSuccess: (d) => {
       haptic("success");
       setBackupCodes(Array.isArray(d?.backupCodes) ? d.backupCodes : []);
       setCode("");
+      setPassword("");
+      setNeedsPassword(false);
       setPhase("backup");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/2fa/status"] });
     },
-    onError: (e: any) => { haptic("error"); toast({ title: "Verification failed", description: e.message }); },
+    onError: (e: any) => {
+      // Step-up: a password account must confirm its password before 2FA turns
+      // on. Reveal the field and let the user re-submit. (OAuth accounts never
+      // hit this — the server exempts them.)
+      if (e?.data?.needsPassword) {
+        setNeedsPassword(true);
+        toast({ title: "Confirm your password", description: "Enter your account password to turn on two-factor." });
+        return;
+      }
+      haptic("error");
+      toast({ title: "Verification failed", description: e.message });
+    },
   });
 
   const disableMutation = useMutation({
@@ -142,12 +161,26 @@ export function TwoFactorCard() {
                 className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-center text-base tracking-[0.3em] tabular-nums outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                 data-testid="input-2fa-enable-code"
               />
+              {needsPassword && (
+                <>
+                  <p className="mt-3 text-xs font-semibold text-foreground">3. Confirm your password</p>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Your account password"
+                    className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                    data-testid="input-2fa-enable-password"
+                  />
+                </>
+              )}
               <div className="mt-3 flex gap-2">
                 <button type="button" onClick={reset} className="flex-1 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground">Cancel</button>
                 <button
                   type="button"
                   onClick={() => enableMutation.mutate()}
-                  disabled={!code.trim() || enableMutation.isPending}
+                  disabled={!code.trim() || (needsPassword && !password) || enableMutation.isPending}
                   className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background disabled:opacity-50"
                   data-testid="button-2fa-enable-confirm"
                 >

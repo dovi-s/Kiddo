@@ -820,6 +820,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // SECURITY: the dev-auth override (server/auth.ts getDevHeaderUserId) lets any
+  // request impersonate any user via the x-kora-dev-user-id header. It's already
+  // double-gated (env flag + localhost Host check), but a production deploy that
+  // accidentally carries KORA_ENABLE_DEV_AUTH_OVERRIDE=1 is catastrophic. Refuse
+  // to boot rather than run with the bypass armed in prod.
+  if (process.env.NODE_ENV === "production" && process.env.KORA_ENABLE_DEV_AUTH_OVERRIDE === "1") {
+    throw new Error(
+      "FATAL: KORA_ENABLE_DEV_AUTH_OVERRIDE=1 in production. The dev-auth header bypass must never be enabled in prod — unset it and redeploy.",
+    );
+  }
   await initStripe();
   await initOpsMonitoring();
   await bootstrapSuperAdmins();

@@ -49,6 +49,7 @@ import { registerPostmarkWebhook } from "./postmarkWebhook";
 import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { auditLogs } from "@shared/schema";
 import { verifyTotp, findBackupCodeMatch } from "./totp";
+import { checkRateLimit } from "./rateLimiter";
 import { sendEmail } from "./emailDelivery";
 import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { buildVerificationEmail } from "./templates/emailVerification";
@@ -843,6 +844,64 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // --- CSRF defense (origin-based, defense-in-depth over sameSite:"lax") ------
+  // Lax cookies block the classic cross-site form POST, but are not a complete
+  // CSRF defense. Layer an explicit same-origin check on every state-changing
+  // request that rides a COOKIE session. Scope is deliberately narrow so nothing
+  // legitimate breaks:
+  //   - Unsafe methods only (POST/PUT/PATCH/DELETE).
+  //   - Only when req.isAuthenticated() is true HERE — i.e. a passport COOKIE
+  //     session. Mobile (Authorization: Bearer) resolves later in the
+  //     isAuthenticated middleware, so it reads false here and is skipped: a
+  //     bearer request can't be CSRF'd (a cross-site page can't set that
+  //     header). Webhooks (Stripe, Postmark) and public unauthenticated POSTs
+  //     carry no session cookie, so they're skipped too — no ambient authority
+  //     to abuse.
+  //   - Production only. In dev the curated CORS allowlist (server/index.ts) and
+  //     same-origin Vite proxy already govern browser origins, and enforcing
+  //     here would fight the Expo/LAN dev origins.
+  // Enforcement: a PRESENT Origin/Referer whose host doesn't match the request
+  // host (or a configured trusted host) is rejected — that's the actual attack
+  // signature, since the browser sets Origin on unsafe-method requests and a
+  // page cannot forge it. A MISSING Origin and Referer is allowed (non-browser
+  // clients, stripped-referrer privacy modes); browsers send Origin on these
+  // methods, so the real vectors stay covered. Extra trusted hosts (apex/www, a
+  // split API domain) go in CSRF_TRUSTED_ORIGINS (comma-separated).
+  if (process.env.NODE_ENV === "production") {
+    const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+    const trustedHosts = new Set(
+      String(process.env.CSRF_TRUSTED_ORIGINS || "")
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+        .map((entry) => {
+          try {
+            return new URL(/^https?:\/\//i.test(entry) ? entry : `https://${entry}`).host.toLowerCase();
+          } catch {
+            return entry;
+          }
+        }),
+    );
+    app.use((req: any, res, next) => {
+      if (!UNSAFE_METHODS.has(req.method)) return next();
+      if (!req.isAuthenticated?.()) return next();
+      const requestHost = String(req.headers.host || "").toLowerCase();
+      const sourceUrl = req.headers.origin || req.headers.referer;
+      if (!sourceUrl) return next(); // no browser origin signal — see note above
+      let sourceHost = "";
+      try {
+        sourceHost = new URL(String(sourceUrl)).host.toLowerCase();
+      } catch {
+        return res.status(403).json({ message: "Request blocked: malformed origin." });
+      }
+      if (sourceHost && (sourceHost === requestHost || trustedHosts.has(sourceHost))) {
+        return next();
+      }
+      console.warn(`[csrf] blocked ${req.method} ${req.originalUrl} — origin host '${sourceHost}' != request host '${requestHost}'`);
+      return res.status(403).json({ message: "Request blocked: cross-site request not allowed." });
+    });
+  }
+
   passport.use(
     new LocalStrategy(
       { usernameField: "email", passwordField: "password" },
@@ -1381,6 +1440,18 @@ export function setupAuth(app: Express) {
       const remember2fa = (req.session as any)?.pending2faRemember !== false;
       if (!pendingId || Date.now() - pendingAt > 5 * 60 * 1000) {
         return res.status(401).json({ message: "Your sign-in step expired. Enter your email and password again." });
+      }
+      // Brute-force guard for the SECOND factor. The password step is lockout-
+      // protected (getLoginAttemptState); without a matching throttle here, an
+      // attacker who already has the password gets a 5-minute window to hammer
+      // TOTP/backup codes. Durable + cross-instance (Postgres-backed, fail-open
+      // on DB trouble), keyed by the pending user + client IP. ~10 attempts /
+      // 10 min is generous for a human mistyping a 6-digit code and nowhere near
+      // enough to brute-force the 10^6 code space.
+      const verifyIp = String(req.ip || req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+      const verifyAllowed = await checkRateLimit(`2fa-login-verify:${pendingId}:${verifyIp}`, 10, 10 * 60 * 1000);
+      if (!verifyAllowed) {
+        return res.status(429).json({ message: "Too many code attempts. Wait a few minutes, then sign in again." });
       }
       const code = String(req.body?.code || "");
       const [user] = await db.select().from(users).where(eq(users.id, pendingId)).limit(1);
