@@ -51,7 +51,7 @@ export default function PersonalFunds() {
             },
             {
               icon: PartyPopper,
-              title: "Any occasion, not just kids",
+              title: "Any occasion, any age",
               body: "Graduation, moving, a sabbatical, or a big life milestone. Same gifting loop, different moment.",
             },
             {
@@ -78,7 +78,7 @@ export default function PersonalFunds() {
               What personal funds will do.
             </h2>
             <div className="mt-6 space-y-5 text-base leading-8 text-muted-foreground">
-              <p>Everything Kiddo does for children. For you.</p>
+              <p>Everything Kiddo does for children, now for you.</p>
               <p>
                 Create a fund for yourself. Share a link. Your friends and family gift real stocks for your
                 birthday, your graduation, your house deposit, your sabbatical, or any other life moment that
@@ -86,7 +86,7 @@ export default function PersonalFunds() {
               </p>
               <p>&quot;Pay me back for dinner in Netflix shares&quot; is still the vibe.</p>
               <p className="font-medium text-foreground">
-                The core promise is the same: one link, one clear ask, one gift that can keep growing.
+                The core promise is the same. You share a link, people gift, and the gift can keep growing.
               </p>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function PersonalFunds() {
             </div>
             <h3 className="mt-8 font-heading text-2xl font-semibold text-foreground">Join the waitlist.</h3>
             <p className="mt-3 text-base leading-8 text-muted-foreground">
-              One email. One launch notification. No spam. No newsletter drip.
+              You get a single launch email when personal funds go live. No spam or newsletter drip.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Button onClick={() => setWaitlistOpen(true)} data-testid="link-personal-funds-waitlist">

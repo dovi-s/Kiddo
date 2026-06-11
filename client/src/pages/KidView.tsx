@@ -525,10 +525,10 @@ export default function KidView() {
   const growthCopy = growthSummary.gain > 0
     ? isYoungerMode
       ? `Your fund has grown by ${fmtMoney(growthSummary.gain)} so far. The gifts people gave you are making more money on their own.`
-      : `Your fund is up ${fmtMoney(growthSummary.gain)}. Your money is making more money. Without you doing anything. That's called investing.`
+      : `Your fund is up ${fmtMoney(growthSummary.gain)}. Your money is making more money on its own. That's called investing.`
     : isYoungerMode
       ? "Your story is just getting started. The first gift is what brings this to life."
-      : "Markets move up and down. Long-term growth comes from giving investments time, not from rushing.";
+      : "Markets move up and down. Long-term growth comes from giving investments plenty of time to grow.";
   const growthCardCopy = isYoungerMode
     ? "Every gift becomes part of a real account in your name. Your parent takes care of it for now while your story keeps building."
     : "Every gift becomes part of a real account in your name. Your parent stays in charge for now, and you can watch how it builds over time.";
@@ -931,8 +931,8 @@ export default function KidView() {
           </h1>
           <p className="text-sm opacity-70 mb-5">
             {content.phase === "teen"
-              ? `Real investments. In your name. Yours when you turn ${futureProjection.majorityAge}.`
-              : `Real stocks. Invested in your name. Yours fully when you turn ${futureProjection.majorityAge}.`}
+              ? `Real investments in your name, and they become yours when you turn ${futureProjection.majorityAge}.`
+              : `Real stocks invested in your name. They become fully yours when you turn ${futureProjection.majorityAge}.`}
           </p>
           {/* Balance count-ups over 1.4s on mount. Tabular-nums prevents
               digit jitter as the number climbs. aria-live flips "off" during
@@ -1071,9 +1071,7 @@ export default function KidView() {
               </div>
               <div className="mt-4 space-y-2 text-sm text-muted-foreground leading-relaxed">
                 <p>Full legal control transferred to you{eighteenthLabel ? ` on ${eighteenthLabel}` : ""}.</p>
-                <p>Nothing got sold. The investments stay exactly where they are.</p>
-                <p>You decide what happens next.</p>
-                <p className="font-serif italic text-foreground/90 pt-1">That's the whole point.</p>
+                <p>Nothing got sold, and the investments stay exactly where they are. You decide what happens next.</p>
               </div>
               {/* Reveal hint — gentle pointer that there are entries the
                   parent reserved for THIS day, now visible in the Memory
@@ -1407,7 +1405,7 @@ export default function KidView() {
                           {isYoungerMode ? (
                             <p className="text-[12px] text-muted-foreground mt-0.5">
                               {saved > 0
-                                ? `${fmtMoney(saved)} is already saved for this. That is real.`
+                                ? `${fmtMoney(saved)} is already saved toward this, in real money.`
                                 : "This is something your family is saving for."}
                             </p>
                           ) : (
@@ -1623,9 +1621,7 @@ export default function KidView() {
                           </div>
                           <div className="mt-4 space-y-2 text-sm text-muted-foreground leading-relaxed">
                             <p>Full legal control transfers to you at {majorityAge}.</p>
-                            <p>Nothing gets sold. The investments stay where they are.</p>
-                            <p>You decide what happens next.</p>
-                            <p className="font-serif italic text-foreground/90 pt-1">That&rsquo;s the whole point.</p>
+                            <p>Nothing gets sold, and the investments stay where they are. You decide what happens next.</p>
                           </div>
                           <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))]/70">
                             {countdownLabel}

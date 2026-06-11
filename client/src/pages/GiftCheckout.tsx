@@ -354,7 +354,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
           className="mt-3 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2"
           data-testid="guestbook-add-gift-too"
         >
-          Want to add a gift with it? Takes about a minute →
+          Want to add a gift with it? Takes a few seconds →
         </button>
       </div>
     );
@@ -451,7 +451,7 @@ export default function GiftCheckout() {
   // X-Robots-Tag + meta the og middleware sets for the scraper-facing variant.
   usePageSeo({
     title: "Send a gift that grows | Kiddo",
-    description: "Give a child a real investment gift in under a minute. No account needed.",
+    description: "Give a child a real investment gift in a few seconds. No account needed.",
     robots: "noindex, nofollow",
   });
   const [selectedAmount, setSelectedAmount] = useState(50);
@@ -1250,7 +1250,7 @@ export default function GiftCheckout() {
               {fundIsLive && fallbackGiftPath ? (
                 <>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {recipientName}&apos;s fund is still open. Gifts go to the same place: the same investments, the same Memory Book.
+                    {recipientName}&apos;s fund is still open. Gifts go to the same fund, get invested the same way, and land in the same Memory Book.
                   </p>
                   <Link href={fallbackGiftPath}>
                     <Button className="mt-6 h-12 w-full rounded-2xl text-base font-semibold" data-testid="button-open-fallback-gift-page">
@@ -1275,7 +1275,7 @@ export default function GiftCheckout() {
               {fundIsLive && fallbackGiftPath ? (
                 <>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    But {recipientName}&apos;s fund is always open. Gifts go to the same place: the same investments, the same Memory Book.
+                    {recipientName}&apos;s fund is always open. Gifts go to the same fund, get invested the same way, and land in the same Memory Book.
                   </p>
                   <Link href={fallbackGiftPath}>
                     <Button className="mt-6 h-12 w-full rounded-2xl text-base font-semibold" data-testid="button-open-fallback-gift-page">
@@ -1341,7 +1341,7 @@ export default function GiftCheckout() {
             : "Following the family's cash default";
   const provenanceName = recipientLooksLikeFund ? "this child's" : `${recipientName}'s`;
   const giftProvenance = `Invested in ${provenanceName} future with Kiddo.`;
-  const checkoutTrustLine = "When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then protected up to $500,000 against broker-dealer failure. Not a protection against market losses. sipc.org";
+  const checkoutTrustLine = "When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then protected up to $500,000 against broker-dealer failure. This does not cover market losses. sipc.org";
   // Trust-line JSX variant with inline anchor links. Used in the
   // payment-step trust card + order-summary "Where the money goes"
   // card. Sophisticated gifters (Five Towns persona) verify custody
@@ -1353,7 +1353,7 @@ export default function GiftCheckout() {
   // (logs, copy reference, etc).
   const checkoutTrustLineJsx = (
     <>
-      {"When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then protected up to $500,000 against broker-dealer failure. Not a protection against market losses. "}
+      {"When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then protected up to $500,000 against broker-dealer failure. This does not cover market losses. "}
       <a
         href="https://www.sipc.org"
         target="_blank"
@@ -1408,7 +1408,7 @@ export default function GiftCheckout() {
     if (recipientIsOwner) {
       return {
         headline: `${src} today → ~${fmt(g(10))} in 10 years. ~${fmt(g(20))} in 20 years. 🌱`,
-        tagline: "The best gifts keep compounding. Based on 7% historical returns, not guaranteed.",
+        tagline: "This gift keeps compounding over time. Based on 7% historical returns, not guaranteed.",
       };
     }
     // Years from today to milestone ages
@@ -1442,7 +1442,7 @@ export default function GiftCheckout() {
       const at30 = yTo30 >= 3 ? fmt(g(yTo30)) : null;
       return {
         headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}. But at 30? → ~${at30}.`,
-        tagline: `Gifts that last don't stop at ${fundMajorityAge}. 🌱 Based on 7% historical returns. Not guaranteed.`,
+        tagline: `It keeps growing well past ${fundMajorityAge}. 🌱 Based on 7% historical returns. Not guaranteed.`,
       };
     }
     // At/past majority (an owner-held fund, or an adult's personal account):
@@ -1454,7 +1454,7 @@ export default function GiftCheckout() {
     const in20 = fmt(g(20));
     return {
       headline: `${src} today → ~${in10} in 10 years. ~${in20} in 20 years. 🌱`,
-      tagline: "The best gifts keep compounding. Based on 7% historical returns. Not guaranteed.",
+      tagline: "This gift keeps compounding over time. Based on 7% historical returns. Not guaranteed.",
     };
   })();
 
@@ -1464,10 +1464,10 @@ export default function GiftCheckout() {
     const n = String(eventData?.event?.name || "").toLowerCase();
     const cultural: [RegExp, OccasionMeta][] = [
       [/mitzvah/i,                  { emoji: "✡️", headline: `Celebrate ${nm}'s B'nai Mitzvah!`, sub: `A once-in-a-lifetime milestone. These shares grow with ${nm} from today.`, notePlaceholder: `Mazel tov! Leave ${nm} a message...` }],
-      [/hanukkah|chanukah/i,        { emoji: "🕎", headline: `Happy Hanukkah, ${nm}!`, sub: `Eight nights of celebration. A lifetime of growth.`, notePlaceholder: `Chag Sameach! Leave ${nm} a message...` }],
+      [/hanukkah|chanukah/i,        { emoji: "🕎", headline: `Happy Hanukkah, ${nm}!`, sub: `Eight nights of celebration, and a gift that grows for a lifetime.`, notePlaceholder: `Chag Sameach! Leave ${nm} a message...` }],
       [/quincea/i,                  { emoji: "🌺", headline: `Feliz Quinceañera, ${nm}!`, sub: `Turning 15 is a milestone worth celebrating.`, notePlaceholder: `Leave ${nm} a Quinceañera message...` }],
-      [/first communion|communion/i,{ emoji: "✝️", headline: `${nm}'s First Communion`, sub: `A meaningful milestone. A gift that grows.`, notePlaceholder: `Leave ${nm} a blessing...` }],
-      [/confirmation/i,             { emoji: "✝️", headline: `${nm}'s Confirmation`, sub: `A step of faith. A gift that keeps growing with them.`, notePlaceholder: `Leave ${nm} a message of faith...` }],
+      [/first communion|communion/i,{ emoji: "✝️", headline: `${nm}'s First Communion`, sub: `A meaningful milestone, marked with a gift that grows.`, notePlaceholder: `Leave ${nm} a blessing...` }],
+      [/confirmation/i,             { emoji: "✝️", headline: `${nm}'s Confirmation`, sub: `A step of faith, marked with a gift that keeps growing with them.`, notePlaceholder: `Leave ${nm} a message of faith...` }],
       [/diwali|deepavali/i,         { emoji: "🪔", headline: `Happy Diwali, ${nm}!`, sub: `Light, prosperity, and a gift that compounds for years.`, notePlaceholder: `Happy Diwali! Leave ${nm} a message...` }],
       [/eid/i,                      { emoji: "☪️", headline: `Eid Mubarak, ${nm}!`, sub: `A blessed celebration and a future full of growth.`, notePlaceholder: `Eid Mubarak! Leave ${nm} a message...` }],
       [/lunar new year|chinese new year/i, { emoji: "🏮", headline: `Happy New Year, ${nm}!`, sub: `A new year, a new gift for ${nm}'s future.`, notePlaceholder: `Leave ${nm} a new year message...` }],
@@ -1477,13 +1477,13 @@ export default function GiftCheckout() {
       if (re.test(n)) return meta;
     }
     const byType: Record<string, OccasionMeta> = {
-      birthday:    { emoji: "🎂", headline: `It's ${nm}'s Birthday!`, sub: `Give ${nm} a gift that actually grows. Real stocks, invested in their name.`, notePlaceholder: `Leave ${nm} a birthday message...` },
+      birthday:    { emoji: "🎂", headline: `It's ${nm}'s Birthday!`, sub: `Give ${nm} a gift that actually grows, in real stocks invested in their name.`, notePlaceholder: `Leave ${nm} a birthday message...` },
       baby_shower: { emoji: "🍼", headline: `Welcome ${nm} to the world!`, sub: `Start them off right with a real investment in their name.`, notePlaceholder: `Leave a warm welcome note...` },
-      graduation:  { emoji: "🎓", headline: `Congrats, ${nm}!`, sub: `The best graduation gift grows over time. Start it now.`, notePlaceholder: `Leave ${nm} a congratulations message...` },
+      graduation:  { emoji: "🎓", headline: `Congrats, ${nm}!`, sub: `A graduation gift that grows over time. Start it now.`, notePlaceholder: `Leave ${nm} a congratulations message...` },
       holiday:     { emoji: "🎁", headline: `A Gift for ${nm}'s Future!`, sub: `This season, give something that keeps growing.`, notePlaceholder: `Season's greetings to ${nm}...` },
-      just_because:{ emoji: "💚", headline: `Surprise ${nm}!`, sub: `The best kind of gift: one they'll thank you for in 15 years.`, notePlaceholder: `Leave ${nm} a note...` },
+      just_because:{ emoji: "💚", headline: `Surprise ${nm}!`, sub: `A gift they'll thank you for in 15 years.`, notePlaceholder: `Leave ${nm} a note...` },
     };
-    return byType[eventData?.event?.eventType || ""] || { emoji: "🎁", headline: `A gift for ${nm}'s future`, sub: `Give a gift that actually grows. Real stocks, invested in their name.`, notePlaceholder: `Leave ${nm} a note...` };
+    return byType[eventData?.event?.eventType || ""] || { emoji: "🎁", headline: `A gift for ${nm}'s future`, sub: `Give a gift that actually grows, in real stocks invested in their name.`, notePlaceholder: `Leave ${nm} a note...` };
   })();
 
   return (
@@ -1761,7 +1761,7 @@ export default function GiftCheckout() {
                                 {recipientName}&apos;s {shareTitle.toLowerCase().includes(recipientName.toLowerCase()) ? shareTitle : shareTitle} hit its goal.
                               </p>
                               <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                                Still open — every gift keeps growing. The {passedLabel} date passed, the fund didn&apos;t.
+                                Still open, and every gift keeps growing. The {passedLabel} date has passed, but the fund stays open.
                               </p>
                             </>
                           ) : (
@@ -1770,7 +1770,7 @@ export default function GiftCheckout() {
                                 The {passedLabel} date passed.
                               </p>
                               <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                                Your gift still goes straight to {recipientName}&apos;s fund. Anytime is the right time.
+                                Your gift still goes straight to {recipientName}&apos;s fund. You can give whenever you like.
                               </p>
                             </>
                           )}
@@ -2209,7 +2209,7 @@ export default function GiftCheckout() {
                           {amt === 50 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isActive ? "bg-white/20 text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"}`}>Most common</span>}
                         </div>
                         <p className={`mt-2 text-[11px] ${isActive ? "text-white/85" : "text-muted-foreground"}`}>
-                          {amt === 25 ? "A small gift, a real start" : amt === 50 ? "Grows more than a toy ever would" : amt === 100 ? "More than a card. More than cash." : "A head start on their future"}
+                          {amt === 25 ? "A small gift that gives them a real start" : amt === 50 ? "Grows more than a toy ever would" : amt === 100 ? "Grows into more than a card or cash ever could" : "A head start on their future"}
                         </p>
                         {showProjection && (
                           <p className={`mt-1.5 text-[10.5px] font-semibold tabular-nums ${isActive ? "text-white/90" : "text-[hsl(var(--kiddo-evergreen))]"}`} data-testid={`amount-projection-${amt}`}>
@@ -2669,7 +2669,7 @@ export default function GiftCheckout() {
                 Gift ${activeAmount.toFixed(0)} to {amountStepChildLabel}
                 <ArrowRight size={16} className="ml-2" />
               </Button>
-              <p className="text-center text-[11px] text-muted-foreground">Prices vary. Investing involves risk. A gift card does too.</p>
+              <p className="text-center text-[11px] text-muted-foreground">Prices vary and investing involves risk, the same way a gift card loses value over time.</p>
             </motion.section>
           )}
 
@@ -2704,7 +2704,7 @@ export default function GiftCheckout() {
               )}
               <div className="kiddo-card p-5 md:p-6">
                 <p className="text-sm font-medium text-[hsl(var(--kiddo-evergreen))]">Almost there.</p>
-                <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground">The note is what they will read. The investment is what keeps growing.</h1>
+                <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground">They will read your note, and the investment keeps growing alongside it.</h1>
                 {/* Investment preview compressed: was a big 3-stat block
                     (Gift amount / Invested / Est. shares or Destination)
                     plus a paragraph plus a logo. The Order Summary card
@@ -3110,7 +3110,7 @@ export default function GiftCheckout() {
                   reassurance. Keeping it inline keeps the warmth without
                   adding another card to a page that's already content-dense. */}
               <p className="px-1 text-center text-xs leading-relaxed text-muted-foreground" data-testid="text-before-you-send">
-                Once sent, gifts are invested for {amountStepChildLabel} and can't be reversed. The best gifts never are.
+                Once sent, gifts are invested for {amountStepChildLabel} and can't be reversed, which is part of what makes them meaningful.
               </p>
 
               <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!canSubmit || isSubmitting} onClick={handlePay} data-testid="button-pay">

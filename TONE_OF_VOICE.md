@@ -95,10 +95,13 @@ The whole family is banned, not just that one phrasing:
 - Signpost throat-clearing: "Here is the honest answer.", "Here is the math, plainly."
 
 This is not lint-catchable (it is structure, not a token), so it is an editorial
-rule, caught by reading. One honest contrast is fine when the topic genuinely
-turns on it (gift-vs-toy is the real question a searcher has). The ban is on
-STACKING and PERFORMING contrast to manufacture profundity. Test: delete the
-setup. If the sentence still lands, the setup was the tell.
+rule, caught by reading. **Founder call 2026-06-11: scorched earth.** Kill the
+structure EVERYWHERE, including "good" brand lines and honest objection-rebuttals
+("a story, not just a statement", "It is not a ledger. It is a story.", "A UTMA
+isn't a gimmick. It's..."). Rewrite every instance as a plain declarative. The
+structure itself is the tell; do not preserve it even when the contrast is true.
+Test: delete the setup. If the sentence still lands, the setup was the tell, and
+the setup goes.
 
 ---
 

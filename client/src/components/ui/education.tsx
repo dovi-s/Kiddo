@@ -236,7 +236,7 @@ export function getMonthlyMoneyLesson({
       eyebrow: "This month's money lesson",
       title: "Start treating the fund like a conversation, not a surprise",
       body: "Talk through what the fund owns, why those companies or ETFs are there, and what decisions stay with you until adulthood.",
-      whyNow: "Teen years are when the fund can become part of real money judgment, not just a nice story.",
+      whyNow: "Teen years are when the fund can become part of real, hands-on money judgment.",
     });
   }
 
@@ -305,7 +305,7 @@ export function getMonthlyMoneyLesson({
       id: "foundational-stock",
       eyebrow: "This month's money lesson",
       title: "Start with one simple truth",
-      body: "A gift fund is not just stored money. It is money with time, meaning, and the chance to grow.",
+      body: "A gift fund is money with time, meaning, and the chance to grow.",
       whyNow: "This is the clearest foundational idea for parents to repeat early and often.",
     });
   }

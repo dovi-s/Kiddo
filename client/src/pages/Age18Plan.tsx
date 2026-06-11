@@ -99,7 +99,7 @@ function buildTimeline(childName: string, majorityAge: number, majorityOrdinal: 
     {
       label: `Age ${majorityAge}`,
       heading: "Control transfers",
-      detail: `Legal custodianship ends. ${childName} gets full control. The investments stay exactly where they are. Nothing sells. Nothing changes except who decides.`,
+      detail: `Legal custodianship ends and ${childName} gets full control. The investments stay exactly where they are. Nothing sells; the only thing that changes is who decides.`,
     },
   ];
 }
@@ -116,7 +116,7 @@ function buildFaq(childName: string, majorityAge: number, majorityOrdinal: strin
     },
     {
       q: `What if ${childName} doesn't want the money at ${majorityAge}?`,
-      a: "The fund can stay invested. Nothing forces a decision. It keeps compounding. There's no rush.",
+      a: "The fund can stay invested and keep compounding. Nothing forces a decision, so there's no rush.",
     },
     {
       q: "What taxes are owed?",
@@ -771,7 +771,7 @@ export default function Age18Plan() {
                         : parentLetter.content}"
                     </p>
                     <p className="text-[11px] text-muted-foreground/80 mt-2">
-                      — {parentLetter.authorName || parentName || "Dad"}
+                      From {parentLetter.authorName || parentName || "Dad"}
                     </p>
                   </>
                 ) : (
@@ -836,8 +836,8 @@ export default function Age18Plan() {
           <div className="h-px bg-border/40 mx-5 mt-5" />
           <div className="px-5 py-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              What can {childName} do at {majorityAge}? Keep investing. Add to it. Manage it {fundPronouns.reflexive}.
-              Withdraw some or all for college, a business, a house. Anything. No restrictions. No penalties.
+              What can {childName} do at {majorityAge}? Keep investing, add to it, or manage it {fundPronouns.reflexive}.
+              Withdraw some or all for college, a business, or a house. There are no restrictions or penalties.
             </p>
           </div>
         </div>
@@ -1214,17 +1214,16 @@ export default function Age18Plan() {
               beat — connects the future Roth to the existing fund
               metaphor). Per project_kid_2.0_handoff_funnel.md. */}
           <p className="text-xs text-muted-foreground leading-relaxed mt-4 pt-3 border-t border-border/50">
-            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). Tax-free growth is uniquely valuable when you're 17, not 47. Earned-income dollars compound the same way the gifts in this fund have.
+            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). Tax-free growth is worth the most when you start it young. Earned-income dollars compound the same way the gifts in this fund have.
           </p>
         </div>
 
         {/* The money conversation */}
         <div className="kiddo-card mb-4 p-5">
-          <p className="text-sm font-bold text-foreground mb-2">The money conversation does not start at {majorityAge}.</p>
+          <p className="text-sm font-bold text-foreground mb-2">Start the money conversation early.</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Families who do this well start at 13 or 14. Not about the numbers.
-            About the values behind the numbers. What does money mean? What would you do with it?
-            What does {childName} care about?
+            Families who do this well start at 13 or 14, and they talk about the values behind the
+            numbers more than the numbers. Ask {childName} what money means and what they'd want to do with it.
           </p>
         </div>
 

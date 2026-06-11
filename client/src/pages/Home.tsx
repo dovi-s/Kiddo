@@ -840,12 +840,12 @@ export default function Home() {
                 <div className="rounded-2xl border border-border bg-muted/30 p-6">
                   <p className="text-sm font-medium text-primary">Age-18 moment</p>
                   <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">
-                    Not just &quot;here&apos;s your balance.&quot;
+                    What they actually receive
                   </h3>
                   <div className="mt-4 space-y-3 text-sm leading-7 text-muted-foreground">
                     <p>Every gift note is still there.</p>
                     <p>Every family milestone still means something.</p>
-                    <p>The account arrives with a story, not just a statement.</p>
+                    <p>The account arrives as a story they can actually read.</p>
                   </div>
                 </div>
               </div>

@@ -114,10 +114,10 @@ export default function HowItWorks() {
           >
             <Mascot size="md" variant="planting" className="mx-auto mb-5 drop-shadow-sm" context="how-it-works" />
             <h1 className="mb-4 font-heading text-4xl font-bold tracking-normal text-foreground md:text-6xl" data-testid="text-how-headline">
-              Here is exactly how it works.
+              How Kiddo works.
             </h1>
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-              For parents. For gifters. For grandparents who have never bought a stock in their life.
+              Built for parents, gifters, and grandparents who have never bought a stock in their life.
             </p>
             <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-3">
               <div className="rounded-2xl border border-border bg-card/80 p-4 text-left shadow-premium-sm">
@@ -184,7 +184,7 @@ export default function HowItWorks() {
               Giving is even simpler.
             </h2>
             <p className="mx-auto mt-4 max-w-3xl text-muted-foreground">
-              You do not need a Kiddo account. You do not need to download an app. You do not need to know anything about investing.
+              You do not need a Kiddo account, an app to download, or any knowledge of investing.
             </p>
           </FadeIn>
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -248,13 +248,13 @@ export default function HowItWorks() {
                   For children
                 </div>
                 <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">
-                  The part that changes everything.
+                  What a child sees.
                 </h2>
                 <p className="mb-4 leading-relaxed text-muted-foreground">
                   When a child is old enough, Kiddo gives them an age-appropriate view of their fund. They see the brands they own, the people who gifted them, and the story being built in their name.
                 </p>
                 <p className="leading-relaxed text-muted-foreground">
-                  The education does not live in a separate classroom tab. It happens inside the fund itself, through the companies they already know and the gifts their family already gave.
+                  The learning happens inside the fund itself, through the companies they already know and the gifts their family already gave, with no separate classroom tab.
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-muted/30 p-6">
@@ -273,15 +273,15 @@ export default function HowItWorks() {
         <div className="mx-auto max-w-5xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
             <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">
-              The part nobody expects.
+              The Memory Book.
             </h2>
             <p className="mb-4 leading-relaxed text-muted-foreground">
               Every gift that comes into your child&apos;s fund gets captured in the Memory Book. The amount. The stock it was invested in. The note the gifter left. The occasion.
             </p>
             <p className="mb-4 leading-relaxed text-muted-foreground">
-              When your child is old enough to understand it, you can show them: here is every person who believed in your future. Here is what they gave. Here is what it grew into.
+              When your child is old enough to understand it, you can show them everyone who believed in their future, what each person gave, and what it grew into.
             </p>
-            <p className="font-medium text-foreground">It is not a ledger. It is a story.</p>
+            <p className="font-medium text-foreground">Every note and milestone is kept with the account, as a story they can read.</p>
           </FadeIn>
         </div>
       </section>
@@ -300,8 +300,8 @@ export default function HowItWorks() {
                   sold just because that birthday arrives.
                 </p>
                 <p className="leading-relaxed text-muted-foreground">
-                  What changes is control. Kiddo helps prepare that handoff so your child can inherit the
-                  account and the full story behind it, not just a balance.
+                  What changes is control. Kiddo helps prepare that handoff so your child inherits the
+                  account, the balance, and the full story behind it.
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-muted/30 p-6">

@@ -63,7 +63,7 @@ type PromptCopy = {
 const PROMPT_COPY: Record<PlusUpgradePromptKind, PromptCopy> = {
   "third-entry": {
     headline: "You're building something.",
-    body: "Plus lets you add your own photos, voice memos, and video so the Memory Book feels like yours, not just a list of gifts.",
+    body: "Plus lets you add your own photos, voice memos, and video so the Memory Book feels like yours.",
     icon: Camera,
     modalTitle: (childName) => `Make ${childName}'s Memory Book yours.`,
     modalBody: (childName) =>

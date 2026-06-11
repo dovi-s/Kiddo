@@ -1124,13 +1124,13 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">SIPC protection</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Up to $500,000 per account (including $250,000 for cash) against brokerage failure. Not protection against market losses.
+                      Up to $500,000 per account (including $250,000 for cash) against brokerage failure. It does not cover market losses.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares are {isOwnerMode ? "yours" : (activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's")}, not the broker's.
+                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares belong to {isOwnerMode ? "you" : (activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}` : "the child")}.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">

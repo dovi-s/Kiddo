@@ -391,10 +391,10 @@ export default function CalculatorAt18() {
                   A UTMA fund is a custodial investment account a parent or guardian opens for a child. The child legally owns the assets; the custodian manages them until the kid reaches the age of majority (18 in most states, 21 in some). At that point, control transfers and the kid decides what to do.
                 </p>
                 <p>
-                  The math above shows what consistent investing produces over a long time horizon. The reason early matters more than amount: the same dollar invested for a baby compounds for 18 years; the same dollar invested for a 14-year-old compounds for 4. Time does the heavy lifting, not the dollar amount.
+                  The math above shows what consistent investing produces over a long time horizon. Early matters more than amount: a dollar invested for a baby compounds for 18 years, while a dollar invested for a 14-year-old compounds for 4. Time does most of the heavy lifting.
                 </p>
                 <p>
-                  Kiddo's UTMA isn't only for college. It stays flexible at 18: first car, gap year, business, down payment, whatever the kid decides. That flexibility is the whole point. (See our FAQ on UTMA versus 529 for the financial-aid tradeoff.)
+                  Kiddo's UTMA stays flexible at 18: college, first car, gap year, business, down payment, whatever the kid decides. That flexibility is what makes it useful. (See our FAQ on UTMA versus 529 for the financial-aid tradeoff.)
                 </p>
               </div>
             </div>

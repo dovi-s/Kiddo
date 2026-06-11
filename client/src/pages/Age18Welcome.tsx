@@ -259,8 +259,8 @@ export default function Age18Welcome() {
               </h1>
             </div>
             <p className="text-base text-foreground/80 leading-relaxed">
-              What you see here is yours legally as of today. Nothing was sold. Nothing was moved.
-              Just the name on the paperwork. Your fund kept growing the whole time you were growing up.
+              What you see here is yours legally as of today. Nothing was sold or moved. Only the name
+              on the paperwork changed. Your fund kept growing the whole time you were growing up.
             </p>
             {totalGain > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 space-y-1">
@@ -269,7 +269,7 @@ export default function Age18Welcome() {
                   +{formatMoney(totalGain)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  The cash gifts cousins gave you would be long gone. This isn't.
+                  The cash gifts cousins gave you would be long gone by now. This grew instead.
                 </p>
               </div>
             )}
@@ -308,7 +308,7 @@ export default function Age18Welcome() {
                   ))}
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Every gift they sent kept compounding. The Memory Book has all of it — notes, photos, the moments behind each one.
+                  Every gift they sent kept compounding. The Memory Book has all of it: notes, photos, the moments behind each one.
                 </p>
               </motion.div>
             )}
@@ -318,7 +318,7 @@ export default function Age18Welcome() {
 
         {screen === 2 && (
           <ScreenShell key="s2">
-            <Eyebrow icon={<TrendingUp size={14} />}>Three buttons, three different futures.</Eyebrow>
+            <Eyebrow icon={<TrendingUp size={14} />}>Your options from here.</Eyebrow>
             <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
               You have real choices now.
             </h1>
@@ -361,9 +361,9 @@ export default function Age18Welcome() {
                   </p>
                 </div>
                 <p className="text-sm text-foreground/85 leading-relaxed">
-                  You don't have to be the last person this fund belongs to. Keep it invested through your own life and your own kids' childhoods, and at {multiGenHorizonYears} years from now it could be worth around{" "}
-                  <span className="font-semibold text-foreground">{formatMoney(projectedMultiGen, { decimals: 0 })}</span>{" "}
-                  — enough to start another Kiddo for the next generation.
+                  You don't have to be the last person this fund belongs to. Keep it invested through your own life and your own kids' childhoods, and {multiGenHorizonYears} years from now it could be worth around{" "}
+                  <span className="font-semibold text-foreground">{formatMoney(projectedMultiGen, { decimals: 0 })}</span>
+                  . That's enough to start another Kiddo for the next generation.
                 </p>
                 <p className="text-[10px] text-muted-foreground/70 leading-snug">
                   Assumes 7% yearly average, net of Kiddo's annual fee. Illustrative only. Markets vary.
@@ -394,7 +394,7 @@ export default function Age18Welcome() {
               />
               <TaxConcept
                 title="Low-income years are sell-friendly years."
-                body="Once you're on your own tax rates, selling in a low-earning year can mean 0% on long-term gains; selling at 30 earning $80k might be 15%. The same sale, very different bill. Timing matters."
+                body="Once you're on your own tax rates, selling in a low-earning year can mean 0% on long-term gains; selling at 30 earning $80k might be 15%. The year you sell changes the bill on the same shares."
               />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">General information, not tax advice. A CPA can confirm what applies to you.</p>
@@ -485,7 +485,7 @@ export default function Age18Welcome() {
                       Notify me when Roth IRA is ready in Kiddo.
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      No spam, no waitlist drama — one email when it's actually live so you can move the first $1 in.
+                      One email when it's actually live so you can move the first $1 in. No spam.
                     </p>
                   </div>
                 </div>
@@ -532,9 +532,9 @@ export default function Age18Welcome() {
             <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-5">
               <p className="text-sm text-foreground/85 leading-relaxed">
                 Someone started this for you before you were old enough to ask. One day there may be
-                someone whose future you want to show up for the same way, and now you know how:
-                quietly, early, and for years. The book you're about to open is the one you'll
-                someday know how to write.
+                someone whose future you want to show up for the same way, and now you know how it's
+                done: a little, early, and kept up over years. The book you're about to open shows you
+                what that looks like.
               </p>
             </div>
             <div className="flex flex-col gap-3 pt-2">

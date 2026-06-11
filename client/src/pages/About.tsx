@@ -35,10 +35,10 @@ export default function About() {
               Most birthday gifts are forgotten by <GradientText>Tuesday</GradientText>.
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-              The check gets lost. The savings bond sits in a drawer for a decade. The toy breaks in a week.
+              The check gets lost, the savings bond sits in a drawer for a decade, and the toy breaks in a week.
             </p>
             <p className="mt-4 text-lg md:text-xl font-semibold text-foreground">
-              Kiddo is different.
+              A gift through Kiddo gets invested and keeps growing.
             </p>
           </motion.div>
         </div>
@@ -49,7 +49,7 @@ export default function About() {
         <div className="max-w-3xl mx-auto px-4">
           <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12 space-y-5">
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              Family and friends gift money in under 60 seconds. No account needed. No app to download. Just a link, a stock pick, and a note.
+              Family and friends gift money in a few seconds. No account needed, no app to download. Just a link, a stock pick, and a note.
             </p>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
               That gift goes into your child's UTMA fund and, once investing is live, is invested in real stocks.{" "}
@@ -72,7 +72,7 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Memory Book</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  Every gift. Every note. Every person who showed up.
+                  A record of every gift, note, and person who showed up.
                 </h2>
               </div>
             </div>
@@ -80,7 +80,7 @@ export default function About() {
               <p>Every gift, every note, every person who showed up for your kid gets captured in the Memory Book.</p>
               <p>A living record of everyone who believed in them before they even knew what a stock was.</p>
               <p className="font-medium text-foreground">
-                This is the most differentiated feature in Kiddo. Not a transaction log. A story.
+                It is the most differentiated feature in Kiddo. Every gift and note is kept with the account, as a story they can read.
               </p>
             </div>
           </FadeIn>
@@ -104,12 +104,12 @@ export default function About() {
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                The Kid View lets them see their fund. The companies they own. The gifts that built it. Real financial education that does not feel like education.
+                The Kid View lets them see their fund: the companies they own and the gifts that built it. They learn how money grows by watching their own money grow.
               </p>
               <p>
                 A 10-year-old opens the app and sees Disney stock growing. They own a piece of it. Someone in their family put it there for them.
               </p>
-              <p className="font-medium text-foreground">That is the moment. That is what changes how they think about money forever.</p>
+              <p className="font-medium text-foreground">That moment changes how they think about money for good.</p>
             </div>
           </FadeIn>
         </div>
@@ -126,18 +126,18 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">The moment it all comes together</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  When the fund becomes theirs, they do not just get the money. They get the whole story.
+                  When the fund becomes theirs, they get the money and the whole story behind it.
                 </h2>
               </div>
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                Every gift. Every note. Every stock pick. Every person who believed in them. Delivered at the moment it matters most.
+                Every gift, note, stock pick, and person who believed in them, delivered at the moment it matters most.
               </p>
               <p>
-                Not just a brokerage balance dropped on them one day. A record of everyone who showed up for them. Starting from before they could even say thank you.
+                They inherit a record of everyone who showed up for them, starting from before they could even say thank you, alongside the balance itself.
               </p>
-              <p className="font-heading text-xl font-semibold text-foreground">That is Kiddo.</p>
+              <p className="font-heading text-xl font-semibold text-foreground">That is what Kiddo hands them.</p>
             </div>
           </FadeIn>
         </div>

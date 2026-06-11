@@ -1197,8 +1197,8 @@ export default function MemoryBook() {
           return `Dear ${name},\n\nThank you for the ${fmt} you gave me ${whenAgePhrase}.${portfolioSentenceWarm} I'm old enough now to understand what you were doing back then, and it means even more to me than it could have at the time.\n\nWith love,\n${ownerName}`;
         }
         return isOwnerMode
-          ? `Dear ${name},\n\nThank you so much for your ${fmt} gift to my fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for my future.\n\nWith love,\n${ownerName}`
-          : `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
+          ? `Dear ${name},\n\nThank you so much for your ${fmt} gift to my fund.${portfolioSentenceWarm} It means more than you know. You showed up for my future, and that is what stays with me.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know. You showed up for ${child}'s future, and that is what stays with us.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
       case "brief":
         return isOwnerMode
           ? `Hi ${name},\n\nThank you for the ${fmt} gift to my fund.${portfolioSentenceBrief} I really appreciate it!\n\nWith gratitude,\n${ownerName}`
@@ -1262,8 +1262,8 @@ export default function MemoryBook() {
     switch (tone) {
       case "warm":
         return isOwnerMode
-          ? `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. It means more than you know: not just the money but the fact that you keep showing up for me.\n\nWith love,\n${ownerName}`
-          : `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
+          ? `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. It means more than you know. You keep showing up for me, and that is what matters.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know. You keep showing up for ${child}, and that is what matters.\n\nWith love,\n${ownerName}`;
       case "brief":
         return isOwnerMode
           ? `Hi ${name},\n\nThank you for the ${count} gifts to my fund (${fmtTotal} total). I really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`
