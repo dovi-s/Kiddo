@@ -148,3 +148,62 @@ These fold into the existing packet, they do not add a new legal workstream:
    gift-media volume grows. Money-path (webhook reads the URLs back), so not bundled.
 4. **DPA execution** for the live processor short-list (ops, parallel to counsel).
 5. Everything else folds into counsel packet Parts 3 + 5 — already teed up.
+
+---
+
+## Appendix — C3 build-ready implementation plan (Stripe media-URL minimization)
+
+**Why this is a plan, not a commit:** the child Memory Book media URLs ride in
+Stripe metadata as the checkout→webhook transport, and the webhook resolves them in
+**multiple sites across methods** (`webhookHandlers.ts:1274`, `1294-1296`, and the
+`ensureMemoryEntryForGift` paths ~281/411), then *creates the gift row from that
+metadata*. Editing those read-sites blind, with no live Stripe webhook to test, risks
+**silent gift-media loss**. A feature flag protects the write side but not a missed
+read-site. So this lands as one tested unit (apply migration → enable in staging →
+smoke-test a real gift → confirm media attaches AND URLs are absent from Stripe).
+
+**Design: flag-gated + graceful degradation.** Ship inert; fall back to legacy
+behavior on any error or when the table/flag are absent — so it cannot break gifts.
+
+1. **Flag** — `server/stripeMediaTokenFlag.ts`, env `STRIPE_MEDIA_TOKEN_ENABLED`,
+   default **false** (mirror `giftCaptureFlag.ts`).
+2. **Table** — `pending_gift_media` (migration `0046`, hand-written SQL + journal
+   idx 45 per the migration gotcha; never `db:generate`):
+   ```sql
+   CREATE TABLE IF NOT EXISTS pending_gift_media (
+     token       varchar PRIMARY KEY,
+     photo_url   text,
+     video_url   text,
+     audio_url   text,
+     created_at  timestamp NOT NULL DEFAULT now()
+   );
+   ```
+   Add the matching `pendingGiftMedia` Drizzle table in `shared/schema.ts`.
+3. **Storage** (`server/storage.ts`): `createPendingGiftMedia({token,photoUrl,
+   videoUrl,audioUrl})`, `getPendingGiftMedia(token)`, `deletePendingGiftMedia(token)`.
+4. **Checkout call-sites** (`routes.ts:12878` + `17419`): when the flag is on AND any
+   media URL is present, generate a `crypto.randomUUID()` token, persist the media,
+   and pass `mediaToken` to `createGiftCheckoutSession`. On **any** failure, skip the
+   token (→ legacy URLs-in-metadata path). Keep passing the URL params too.
+5. **`stripeService.createGiftCheckoutSession`**: add `mediaToken?: string` to
+   `GiftCheckoutParams`. In **both** metadata blocks (session ~446-448 and
+   payment_intent ~482-484): if `params.mediaToken`, emit `mediaToken` and **omit**
+   `photoUrl/videoUrl/audioUrl`; else emit the URLs (legacy).
+6. **Webhook resolver** (`webhookHandlers.ts`): add one private helper
+   `resolveGiftMedia(metadata) → {photoUrl,videoUrl,audioUrl}`: if
+   `metadata.mediaToken`, fetch the row (then `deletePendingGiftMedia` after the gift
+   is created); else read `metadata.photoUrl/videoUrl/audioUrl`. **Replace every
+   read-site** (the three above) to call it. Anonymous-gating logic stays unchanged
+   (applied to the resolved values).
+7. **Cleanup**: opportunistic `DELETE FROM pending_gift_media WHERE created_at <
+   now() - interval '7 days'` (abandoned checkouts) — piggyback an existing worker
+   tick; low-harm if deferred (rows are URL strings only).
+
+**Test checklist (founder, or a session with live Stripe test webhooks):**
+- [ ] Apply migration 0046 (`npm run db:migrate`); confirm table exists.
+- [ ] Flag **off**: gift with photo + voice → media attaches (legacy path unchanged).
+- [ ] Flag **on**: gift with photo + voice → media attaches AND the Stripe
+      dashboard shows `mediaToken` with **no** photo/video/audio URLs in metadata.
+- [ ] Anonymous gift with media → media correctly suppressed (gating intact).
+- [ ] `pending_gift_media` row deleted after completion; abandoned rows swept.
+- [ ] In-flight session created before deploy (legacy metadata) still attaches media.
