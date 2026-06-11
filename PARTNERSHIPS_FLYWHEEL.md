@@ -250,6 +250,55 @@ middle B. Everything else here waits behind the same gate as launch (custody +
 the narrow legal memo + funded-k ≥ 1): this is wave-2 amplification of a loop
 that already turns, never the wedge itself.
 
+## Professional advisors: CPAs first, then wealth managers / family offices
+
+Added 2026-06-10 (founder raised the channel). The thin "Advisers / brands (later)"
+row above understates what this is. Sharpened:
+
+**Why it fits — they are COMPLEMENTARY, not competitive.** A wealth manager /
+family office manages the *parents'* wealth; they do NOT run gift-occasion-driven
+kids' accounts, the gifter loop, or the Memory Book. So we do the thing they
+can't, for the relationship they don't serve (the grandparent, the aunt, the
+godparent). Family offices especially map onto the multi-generational /
+at-18-handoff worldview — that IS their thesis. And it fits our identity: we're
+the experience/relationship layer, they keep the rails.
+
+**The trap — customer ownership (the whole ballgame).** Apply the B2B2C test above
+without exception. The advisor must INTRODUCE, never OWN. The moment we become
+their white-labeled feature — advisor owns the client, we're a tool they offer —
+the gifter stops being OUR customer and becomes THEIR cost line, and we've
+inverted our own moat (the EarlyBird-as-channel-partner death). Structure every
+deal pass-through: the gifter/family is ours, the Memory Book is the switching
+cost; the advisor gets the warm "I set up my client's grandkids' futures." Never
+dedicated.
+
+**Sequence — CPAs FIRST, not wealth managers:**
+1. **CPAs (warmest, lowest-touch, start here).** A CPA advising on a client's
+   grandkid + the **709 gift-tax / kiddie-tax** is the most natural, least-
+   competitive referral — they advise on gifting and tax, they do not manage
+   investments, so there is no turf to defend. "Gift the future, here's the tax
+   treatment" is on-brand for their job.
+2. **Wealth managers / RIAs (higher value, slower).** Higher gift sizes, more
+   AUM-adjacent, but the ownership question is sharper (they own the client
+   harder) and some may read a kids' product as adjacent to their own next-gen
+   offering — qualify for complementary-not-competitive before pitching.
+3. **Family offices (highest value, slowest, bespoke).** UHNW, thesis-aligned on
+   multi-gen, but high-touch and few — a year-3+ relationship sale, not a scalable
+   channel. Romanticize it last.
+
+**Near-term, near-zero-cost move (the Babylist warm-BD pattern):** a one-page
+referral sheet + warm conversations can start NOW — no integration, no custody.
+The sheet: what Kiddo is; why it is complementary to their practice (they keep the
+parents' wealth, we do the gifter loop + the kid relationship they don't); how a
+referral works; and the tax hooks (709 / kiddie-tax) their clients will ask about.
+Not a build — a relationship to warm before the gates clear.
+
+**Status:** wave-2 distribution, gated by the same launch blockers (custody + the
+legal memo + the `partnerSource` attribution primitive + funded-k ≥ 1). NOT the
+wedge — a B2B sales motion layered before the loop is proven is exactly the
+premature diversification "prove the loop, don't raise" warns against. Capture
+now, build later; CPAs are the first call when it unlocks.
+
 ## Simple Rule
 
 Every partnership tier should answer one question:
