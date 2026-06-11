@@ -122,7 +122,11 @@ When adding a new column or table:
 
 ## 5. Open items
 
-- Formal PII scrubbing configuration in Sentry (`scrubFields` allowlist)
-  — needs to be wired before the DSN is enabled in production.
+- ~~Formal PII scrubbing configuration in Sentry~~ — **DONE 2026-06-10.**
+  `client/src/lib/observability.ts` now sets `sendDefaultPii: false` and runs a
+  `beforeSend` + `beforeBreadcrumb` that redact query strings, UUIDs, and long
+  opaque tokens from URLs, messages, and exception text. Safe-by-default before the
+  DSN is ever enabled. See `policies/child-data-protection.md` §3.
 - Automated detection for Tier 1 data appearing in Tier 3 logs (e.g.,
-  SSN-shaped patterns in `analytics_events` props).
+  SSN-shaped patterns in `analytics_events` props). Partial mitigation: the
+  account-deletion worker now nulls `analytics_events` props on deletion.
