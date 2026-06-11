@@ -216,9 +216,9 @@ const comparisonPages: Record<string, ComparisonPage> = {
         ],
       },
     ],
-    bottomTitle: "Gifts that last. Not just spare change.",
+    bottomTitle: "Gifts that grow into real money.",
     bottomBody:
-      "Round-ups are clever. But the $50 grandma gives at every birthday has always been the bigger opportunity. Kiddo turns that moment into a real investment. In under 60 seconds. No account needed to give.",
+      "Round-ups are clever, but the $50 grandma gives at every birthday has always been the bigger opportunity. Kiddo turns that moment into a real investment in a few seconds, with no account needed to give.",
   },
   greenlight: {
     slug: "greenlight",
@@ -999,7 +999,7 @@ function ComparisonHub() {
               A new category
             </div>
             <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              Gifts that last. Not just spare change.
+              Gifts that grow into real money.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
               The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. It's invested in real stock, given as a gift, with no account for her to open. That last bit is the part nobody else has actually built.
