@@ -1130,6 +1130,9 @@ ${shareUrl}`;
               <strong className="text-foreground">7%</strong> is roughly the historical average annual return of the US stock market over multi-decade windows. Some years are higher, some are lower, sometimes much lower. Over decades it tends to land in this neighborhood.
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
+              That 7% is a <strong className="text-foreground">real return</strong>: it already accounts for inflation. So the projected number is in <strong className="text-foreground">today's dollars</strong>, roughly what it could buy now, not a bigger future figure that buys less.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               <strong className="text-foreground">5%</strong> is a more conservative pick, closer to a bond-heavy mix.
               <strong className="text-foreground"> 9%</strong> is optimistic, closer to long-running US equity index returns.
             </p>

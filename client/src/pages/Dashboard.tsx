@@ -71,6 +71,7 @@ import { EventGateModal } from "@/components/EventGateModal";
 // further down). The orphaned component file remains in repo as a
 // potential future surface.
 import { InvestCashModal, type CashContext } from "@/components/InvestCashModal";
+import { ProjectionTrajectoryChart } from "@/components/ProjectionTrajectoryChart";
 import { GiftReceivedToast } from "@/components/ui/plg-loops";
 import { isGiftToastDismissed, markGiftToastDismissed } from "@/lib/gift-toast-dismissed";
 import {
@@ -253,9 +254,8 @@ const MANAGED_STRATEGY_ALLOCATIONS: Record<string, Array<{ ticker: string; name:
   // defensible self-directed posture. The bet's old weight is redistributed into
   // the broad-market sleeves at the same US:International ratio.
   growth: [
-    { ticker: "VTI",  name: "US Total Market", weight: 62 },
-    { ticker: "VXUS", name: "International",    weight: 28 },
-    { ticker: "BND",  name: "Bonds",            weight: 10 },
+    { ticker: "VTI",  name: "US Total Market", weight: 70 },
+    { ticker: "VXUS", name: "International",    weight: 30 },
   ],
   balanced: [
     { ticker: "VTI",  name: "US Total Market", weight: 50 },
@@ -1122,6 +1122,17 @@ function getGiftDisplayAmountForTransaction(transaction: DashboardTransaction, g
 // correct "once per session" contract.
 let smartNudgeShownThisSession = false;
 
+// Default a parent into their first OWNED, non-transferred fund — never a
+// handed-off / previous_owner fund. A parent shouldn't open straight into the
+// kid's graduated account, and in the seeded demo the graduated fund (Haley) is
+// created FIRST, so a naive funds[0] lands there. Falls back to funds[0] only
+// when every fund is shared/transferred (e.g. a fully-graduated household).
+function pickDefaultFundId(funds: any[]): string {
+  const list = funds || [];
+  const owned = list.find((f) => f?.accessRole !== "previous_owner" && !f?.transferredAt);
+  return (owned ?? list[0])?.id ?? "";
+}
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -1741,7 +1752,7 @@ export default function Dashboard() {
     if (!selectedFundId) return;
     if (funds.length === 0) return;
     if (funds.some((f) => f.id === selectedFundId)) return;
-    const fallback = funds[0]?.id ?? "";
+    const fallback = pickDefaultFundId(funds);
     setSelectedFundId(fallback);
     setActiveFundId(fallback);
     const params = new URLSearchParams(window.location.search);
@@ -1969,7 +1980,7 @@ export default function Dashboard() {
   // loading-state regression for the common case.
   const selectedOwnedByUser =
     funds.length > 0 && Boolean(selectedFundId) && funds.some((f) => f.id === selectedFundId);
-  const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
+  const activeFundId = (selectedOwnedByUser ? selectedFundId : pickDefaultFundId(funds)) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
   // Idle-time prefetch of next-likely pages — relocated here from
@@ -8736,14 +8747,20 @@ export default function Dashboard() {
                                   ⭐
                                 </div>
                               )}
-                              {/* Owner+recurring resolution — when the parent
-                                  has their own recurring schedule, the gold
-                                  ring is masked by the evergreen owner ring.
-                                  Surface a small ↻ badge top-right so both
-                                  signals coexist. */}
-                              {isOwner && isRecurring && (
+                              {/* Recurring badge (↻), shown for ANYONE on a
+                                  recurring schedule — the parent AND recurring
+                                  gifters. For the owner, their gold recurring
+                                  ring is masked by the evergreen owner ring, so
+                                  the badge is the only recurring cue. For a
+                                  recurring gifter the avatar already carries a
+                                  gold ring, but a ring COLOUR isn't self-evidently
+                                  "recurring" — the ↻ glyph makes it legible at a
+                                  glance, and surfaces the recurring gift that the
+                                  at-majority projection counts (so the headline
+                                  number reconciles with what's on the roster). */}
+                              {isRecurring && (
                                 <div
-                                  title="Recurring schedule"
+                                  title={isOwner ? "Recurring schedule" : "Recurring gifter"}
                                   style={{
                                     position: "absolute", top: -2, right: -2,
                                     width: 18, height: 18, borderRadius: 9999,
@@ -11415,6 +11432,56 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Handoff TRAJECTORY curve, doorway to the Projection slider.
+                    The handoff is a WAYPOINT on an accelerating line, not the
+                    finish: the back-loaded magic of compounding is SHOWN, not
+                    preached (no caption; the curve is the argument). Card stops at
+                    majority+12 on purpose; the full horizon (to 65) is one tap away
+                    on the Projection page, explorable and user-chosen, never a
+                    fixed retirement headline. Age-robust: near majority the
+                    "Turns N" waypoint is dropped (it would sit on "today"); past
+                    majority the card is gated out (daysUntil18 > 0). Ported from
+                    DashboardLab 2026-06-11. */}
+                {totalValue > 0 && age18Transition && age18Transition.daysUntil18 > 0 && (() => {
+                  const yearsToMajority = age18Transition.daysUntil18 / 365.25;
+                  const majAge = age18Transition.majorityAge;
+                  const currentAge = Math.max(0, majAge - yearsToMajority);
+                  const beyondAge = majAge + 12;
+                  const activeMonthly = sumMonthlyEquivalent([
+                    ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                    ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
+                  ]);
+                  const projectAtCurve = (years: number, contribStop: number = years) =>
+                    projectFundValue({ startingValue: totalValue, monthlyContribution: activeMonthly, yearsAhead: years, contributionYears: contribStop });
+                  const pts: { age: number; value: number }[] = [{ age: currentAge, value: totalValue }];
+                  for (let age = Math.ceil(currentAge); age <= beyondAge; age++) {
+                    pts.push({ age, value: projectAtCurve(age - currentAge, yearsToMajority) });
+                  }
+                  if (pts.length < 3) return null;
+                  const showMilestone = yearsToMajority > 1.5;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => { haptic("selection"); if (activeFund?.id) setLocation(`/projection/${activeFund.id}`); }}
+                      aria-label="Explore the full growth horizon"
+                      style={{ display: "block", width: "100%", textAlign: "left", background: "white", border: "none", borderTop: "1px solid rgba(26,23,16,0.06)", padding: "10px 12px 12px", cursor: "pointer" }}
+                    >
+                      <ProjectionTrajectoryChart
+                        points={pts}
+                        targetAge={beyondAge}
+                        currentValue={totalValue}
+                        currentAge={Math.round(currentAge)}
+                        milestoneAge={showMilestone ? majAge : undefined}
+                        milestoneLabel={showMilestone ? `Turns ${majAge}` : undefined}
+                        heightPx={142}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4, marginTop: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-evergreen))" }}>Explore the full horizon →</span>
+                      </div>
+                    </button>
+                  );
+                })()}
+
                 {/* Letter - inline */}
                 <AnimatePresence initial={false}>
                   {letterInlineOpen ? (
@@ -11809,7 +11876,17 @@ export default function Dashboard() {
                   const items = [
                     "Current invested balance",
                     ...(monthlyLabel ? [monthlyLabel] : []),
-                    "7% historical average annual return, compounded monthly",
+                    // Rate line matches what projectFundValue actually computes:
+                    // 7% historical average LESS the 0.10% AUM fee (netAumFee
+                    // defaults true), i.e. 6.9% net, compounded monthly. The
+                    // "after inflation" is load-bearing honesty: ~7% is the long-
+                    // run REAL (inflation-adjusted) total return of a diversified
+                    // equity portfolio (nominal historical is ~10%), so the figure
+                    // lands in TODAY'S dollars, not inflated future ones. That's
+                    // the framing the skeptical Boglehead-adjacent parent already
+                    // holds and rewards; the today's-dollars line below states the
+                    // takeaway plainly. 2026-06-11.
+                    "7% historical average annual return, after inflation, net our 0.10% fee, compounded monthly",
                     ...(majorityDateLabel ? [majorityDateLabel] : []),
                   ];
                   return items.map((item) => (
@@ -11819,6 +11896,9 @@ export default function Dashboard() {
                   ));
                 })()}
               </div>
+              <p className="text-[13px] text-muted-foreground/85 leading-relaxed">
+                Because that 7% is already after inflation, the number is in today's dollars: what it could buy now, not an inflated future figure.
+              </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 This is hypothetical. Not guaranteed. Markets go up and down. But gifts that last? Those are guaranteed. 🌱
               </p>

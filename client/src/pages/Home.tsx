@@ -17,6 +17,7 @@ import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from "@/components/ui/dialog";
 import { haptic } from "@/lib/haptics";
 import { websiteCopy } from "@kora/content";
+import { projectFundValue } from "@shared/projection";
 
 type MarketingStats = {
   fundCount: number;
@@ -26,6 +27,18 @@ type MarketingStats = {
 };
 
 const SECTION_MAX = "max-w-6xl mx-auto px-4";
+
+// Cost-of-waiting beat: a fixed, relatable scenario ($50/mo for a newborn)
+// computed via the canonical projector (6.9% net, today's dollars) so the
+// numbers are real, not hardcoded magic. Start-at-birth vs a 3-year delay; the
+// gap is the "time you can't get back." The calculator is one tap away for the
+// visitor's own inputs.
+const cowFmt = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+const COW_START = projectFundValue({ startingValue: 0, monthlyContribution: 50, yearsAhead: 18 });
+const COW_WAIT = projectFundValue({ startingValue: 0, monthlyContribution: 50, yearsAhead: 15 });
+const COW_GAP = Math.max(0, COW_START - COW_WAIT);
+const COW_PCT = COW_START > 0 ? Math.round((COW_WAIT / COW_START) * 100) : 0;
 
 function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
   const reduceMotion = useReducedMotion();
@@ -928,6 +941,60 @@ export default function Home() {
           <div className={SECTION_MAX}>
             <FadeIn>
               <LockedRefusalsPanel variant="marketing" />
+            </FadeIn>
+          </div>
+        </section>
+
+        {/* Cost of waiting — the "why now" beat just before the closing CTA.
+            Same honest frame as the at-18 calculator (time, never fear); a fixed
+            relatable scenario, real numbers, calculator one tap away. */}
+        <section className="py-20 md:py-28">
+          <div className={SECTION_MAX}>
+            <FadeIn className="mx-auto max-w-2xl">
+              <div
+                className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.35)] p-7 md:p-10"
+                style={{ background: "linear-gradient(135deg, hsl(var(--kiddo-gold)/0.12) 0%, hsl(var(--kiddo-cream)) 58%)" }}
+              >
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
+                  The cost of waiting
+                </p>
+                <h2 className="font-heading text-2xl font-bold tracking-normal text-foreground md:text-3xl">
+                  Time is the one gift you can&apos;t get back.
+                </h2>
+                <p className="mt-3 leading-relaxed text-muted-foreground">
+                  The earliest dollars compound the longest. At $50 a month for a newborn, even a three-year head start changes where the fund lands by 18.
+                </p>
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-foreground">Start at birth</span>
+                      <span className="font-heading text-lg font-bold tabular-nums text-[hsl(var(--kiddo-evergreen))]">{cowFmt(COW_START)}</span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <motion.div className="h-full rounded-full bg-[hsl(var(--kiddo-evergreen))]" initial={{ width: 0 }} whileInView={{ width: "100%" }} viewport={{ once: true }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-muted-foreground">Wait until age 3</span>
+                      <span className="font-heading text-lg font-bold tabular-nums text-muted-foreground">{cowFmt(COW_WAIT)}</span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <motion.div className="h-full rounded-full bg-[hsl(var(--kiddo-evergreen)/0.50)]" initial={{ width: 0 }} whileInView={{ width: `${COW_PCT}%` }} viewport={{ once: true }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-t border-[hsl(var(--kiddo-gold)/0.25)] pt-4">
+                  <span className="font-heading text-2xl font-bold tabular-nums text-foreground md:text-3xl">{cowFmt(COW_GAP)}</span>
+                  <span className="text-sm text-muted-foreground">more by 18, just from starting now.</span>
+                </div>
+                <div className="mt-6">
+                  <Link href="/tools/at-18-calculator" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))] transition-all hover:gap-2.5" data-testid="link-cost-of-waiting-calculator">
+                    Run your own numbers
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
             </FadeIn>
           </div>
         </section>

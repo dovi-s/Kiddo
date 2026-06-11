@@ -149,6 +149,26 @@ export default function CalculatorAt18() {
     enabled: hysa > 0,
   });
 
+  // Cost of waiting — the calculator's most honest urgency. The SAME plan
+  // started WAIT_YEARS later has that many fewer years to compound, and for a
+  // kid with real runway almost the entire gap is lost GROWTH (the earliest
+  // dollars compound the longest). So it shows "time is the input you can't get
+  // back" without a single fear word — the bars do the talking. Hidden near
+  // majority (< 5 years left), where a 3-year wait isn't meaningful and the
+  // message would read as pressure rather than math.
+  const WAIT_YEARS = 3;
+  const projectionWaited = useMemo(
+    () => projectFund(startingGift, monthly, 0.07, Math.max(0, yearsToMajority - WAIT_YEARS)),
+    [startingGift, monthly, yearsToMajority],
+  );
+  const costOfWaiting = Math.max(0, projectionMid - projectionWaited);
+  const showCostOfWaiting = projectionMid > 0 && yearsToMajority >= 5;
+  const waitedBarPct = projectionMid > 0
+    ? Math.max(6, Math.min(100, Math.round((projectionWaited / projectionMid) * 100)))
+    : 0;
+  const { value: animatedProjectionWaited } = useCountUp({ to: projectionWaited, duration: 600, enabled: projectionWaited > 0 });
+  const { value: animatedCostOfWaiting } = useCountUp({ to: costOfWaiting, duration: 600, enabled: costOfWaiting > 0 });
+
   const dynamicHeadline =
     monthly > 0
       ? `What does ${fmtMoney(monthly)} a month become for a kid by ${majorityAge}?`
@@ -277,7 +297,7 @@ export default function CalculatorAt18() {
                     className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                     data-testid="select-state-majority"
                   >
-                    <option value="">Most states (18)</option>
+                    <option value="">If unsure (18)</option>
                     {US_STATES.map((s) => {
                       const age = getMajorityAgeForState(s.code);
                       return (
@@ -378,6 +398,72 @@ export default function CalculatorAt18() {
           </FadeIn>
         </div>
       </section>
+
+      {/* Cost of waiting — show, don't preach. Two proportional bars (start
+          today vs start three years later) + the gap as the punch. The frame is
+          the preciousness of TIME, not fear/FOMO: warm, forward-looking, and the
+          numbers carry the urgency. Live-reacts to every slider. */}
+      {showCostOfWaiting && (
+        <section className="pb-12 md:pb-16">
+          <div className="mx-auto max-w-4xl px-4">
+            <FadeIn>
+              <div className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.35)] p-6 md:p-9"
+                style={{ background: "linear-gradient(135deg, hsl(var(--kiddo-gold)/0.12) 0%, hsl(var(--kiddo-cream)) 58%)" }}>
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
+                  The cost of waiting
+                </p>
+                <h2 className="font-heading text-2xl font-bold text-foreground md:text-3xl">
+                  Time is the one gift you can&apos;t get back.
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  The earliest dollars compound the longest. The same plan started three years from now gives the fund three fewer years to grow, and that head start never comes back.
+                </p>
+
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-foreground">
+                        Start today {childAge === 0 ? "(newborn)" : `(age ${childAge})`}
+                      </span>
+                      <span className="font-heading text-lg font-bold tabular-nums text-[hsl(var(--kiddo-evergreen))]">
+                        {fmtMoney(projectionMid)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <div className="h-full rounded-full bg-[hsl(var(--kiddo-evergreen))]" style={{ width: "100%" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        Wait until age {childAge + WAIT_YEARS}
+                      </span>
+                      <span className="font-heading text-lg font-bold tabular-nums text-muted-foreground">
+                        {fmtMoney(animatedProjectionWaited)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <div
+                        className="h-full rounded-full bg-[hsl(var(--kiddo-evergreen)/0.50)] transition-[width] duration-700 ease-out"
+                        style={{ width: `${waitedBarPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-t border-[hsl(var(--kiddo-gold)/0.25)] pt-4">
+                  <span className="font-heading text-2xl font-bold tabular-nums text-foreground md:text-3xl">
+                    {fmtMoney(animatedCostOfWaiting)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    less by {majorityAge}, just from waiting three years.
+                  </span>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+      )}
 
       <section className="py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-4">

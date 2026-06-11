@@ -84,6 +84,7 @@ import { EventGateModal } from "@/components/EventGateModal";
 // further down). The orphaned component file remains in repo as a
 // potential future surface.
 import { InvestCashModal, type CashContext } from "@/components/InvestCashModal";
+import { ProjectionTrajectoryChart } from "@/components/ProjectionTrajectoryChart";
 import { GiftReceivedToast } from "@/components/ui/plg-loops";
 import { isGiftToastDismissed, markGiftToastDismissed } from "@/lib/gift-toast-dismissed";
 import {
@@ -271,9 +272,8 @@ const MANAGED_STRATEGY_ALLOCATIONS: Record<string, Array<{ ticker: string; name:
   // defensible self-directed posture. The bet's old weight is redistributed into
   // the broad-market sleeves at the same US:International ratio.
   growth: [
-    { ticker: "VTI",  name: "US Total Market", weight: 62 },
-    { ticker: "VXUS", name: "International",    weight: 28 },
-    { ticker: "BND",  name: "Bonds",            weight: 10 },
+    { ticker: "VTI",  name: "US Total Market", weight: 70 },
+    { ticker: "VXUS", name: "International",    weight: 30 },
   ],
   balanced: [
     { ticker: "VTI",  name: "US Total Market", weight: 50 },
@@ -10069,14 +10069,17 @@ export default function DashboardLab() {
                                   ⭐
                                 </div>
                               )}
-                              {/* Owner+recurring resolution — when the parent
-                                  has their own recurring schedule, the gold
-                                  ring is masked by the evergreen owner ring.
-                                  Surface a small ↻ badge top-right so both
-                                  signals coexist. */}
-                              {isOwner && isRecurring && (
+                              {/* Recurring badge (↻), shown for ANYONE on a
+                                  recurring schedule — the parent AND recurring
+                                  gifters. Owner's gold ring is masked by the
+                                  evergreen owner ring (badge is the only cue);
+                                  a recurring gifter has a gold ring, but the ↻
+                                  glyph makes "recurring" legible and surfaces the
+                                  recurring gift the at-majority projection counts.
+                                  Mirrors Dashboard.tsx. */}
+                              {isRecurring && (
                                 <div
-                                  title="Recurring schedule"
+                                  title={isOwner ? "Recurring schedule" : "Recurring gifter"}
                                   style={{
                                     position: "absolute", top: -2, right: -2,
                                     width: 18, height: 18, borderRadius: 9999,
@@ -12951,6 +12954,66 @@ export default function DashboardLab() {
                   </div>
                 </div>
 
+                {/* LAB: handoff TRAJECTORY curve → doorway to the Projection
+                    slider. The handoff is a WAYPOINT on an accelerating line, not
+                    the finish — the back-loaded magic of compounding is SHOWN, not
+                    preached (no caption; the curve is the argument). The card stops
+                    at majority+12 ON PURPOSE: the FULL long horizon (to 65, where
+                    the real hockey-stick + the seven-figure number live) is one tap
+                    away on the Projection page, where the parent DRAGS the age out
+                    and FEELS each decade leap — explorable + user-chosen, never a
+                    fixed retirement headline on the conversion surface.
+
+                    Age-robust:
+                    • Young/mid kid → full curve, "Turns N" waypoint marked.
+                    • Near majority (kid at ~20) → the waypoint would collide with
+                      "today", so it's dropped; the curve reads "nearly theirs,
+                      still climbing." (The text block above already flips to the
+                      keep-growing framing via nearMajority.)
+                    • Past majority → this whole card is gated out (daysUntil18 > 0).
+                    v1 for /design-lab judgment. */}
+                {totalValue > 0 && age18Transition && heroDataReady && age18Transition.daysUntil18 > 0 && (() => {
+                  const yearsToMajority = age18Transition.daysUntil18 / 365.25;
+                  const majAge = age18Transition.majorityAge;
+                  const currentAge = Math.max(0, majAge - yearsToMajority);
+                  const beyondAge = majAge + 12;
+                  const activeMonthly = sumMonthlyEquivalent([
+                    ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                    ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
+                  ]);
+                  const projectAt = (years: number, contribStop: number = years) =>
+                    projectFundValue({ startingValue: totalValue, monthlyContribution: activeMonthly, yearsAhead: years, contributionYears: contribStop });
+                  const pts: { age: number; value: number }[] = [{ age: currentAge, value: totalValue }];
+                  for (let age = Math.ceil(currentAge); age <= beyondAge; age++) {
+                    pts.push({ age, value: projectAt(age - currentAge, yearsToMajority) });
+                  }
+                  if (pts.length < 3) return null;
+                  // Drop the handoff waypoint when majority is basically "today"
+                  // (kid near 21) — else its dot + label collide with the start dot.
+                  const showMilestone = yearsToMajority > 1.5;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => { haptic("selection"); if (activeFund?.id) setLocation(`/projection/${activeFund.id}`); }}
+                      aria-label="Explore the full growth horizon"
+                      style={{ display: "block", width: "100%", textAlign: "left", background: "white", border: "none", borderTop: "1px solid rgba(26,23,16,0.06)", padding: "10px 12px 12px", cursor: "pointer" }}
+                    >
+                      <ProjectionTrajectoryChart
+                        points={pts}
+                        targetAge={beyondAge}
+                        currentValue={totalValue}
+                        currentAge={Math.round(currentAge)}
+                        milestoneAge={showMilestone ? majAge : undefined}
+                        milestoneLabel={showMilestone ? `Turns ${majAge}` : undefined}
+                        heightPx={142}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4, marginTop: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-evergreen))" }}>Explore the full horizon →</span>
+                      </div>
+                    </button>
+                  );
+                })()}
+
                 {/* Letter - inline */}
                 <AnimatePresence initial={false}>
                   {letterInlineOpen ? (
@@ -13364,7 +13427,12 @@ export default function DashboardLab() {
                   const items = [
                     "Current invested balance",
                     ...(monthlyLabel ? [monthlyLabel] : []),
-                    "7% historical average annual return, compounded monthly",
+                    // Match projectFundValue: 7% historical average LESS the
+                    // 0.10% AUM fee = 6.9% net. "after inflation" because ~7% is
+                    // the long-run REAL return (nominal historical ~10%), so the
+                    // figure is in today's dollars. Mirrors Dashboard.tsx (kept in
+                    // sync as the lab is groomed to replace it). 2026-06-11.
+                    "7% historical average annual return, after inflation, net our 0.10% fee, compounded monthly",
                     ...(majorityDateLabel ? [majorityDateLabel] : []),
                   ];
                   return items.map((item) => (
@@ -13374,6 +13442,9 @@ export default function DashboardLab() {
                   ));
                 })()}
               </div>
+              <p className="text-[13px] text-muted-foreground/85 leading-relaxed">
+                Because that 7% is already after inflation, the number is in today's dollars: what it could buy now, not an inflated future figure.
+              </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 This is hypothetical. Not guaranteed. Markets go up and down. But gifts that last? Those are guaranteed. 🌱
               </p>

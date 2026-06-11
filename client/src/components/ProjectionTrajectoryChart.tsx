@@ -54,6 +54,14 @@ interface Props {
   currentAge?: number;
   // Optional CSS height. Defaults to 168px.
   heightPx?: number;
+  // Optional milestone marker drawn ON the curve, distinct from the
+  // target endpoint — e.g. the at-majority handoff age. Renders a small
+  // hollow dot + tiny label at that age so the curve reads as "the climb
+  // CONTINUES past this point" (the handoff is a waypoint, not the finish
+  // line). When omitted, no milestone is drawn (Projection.tsx behaviour
+  // is unchanged).
+  milestoneAge?: number;
+  milestoneLabel?: string;
 }
 
 function fmtCompact(n: number): string {
@@ -68,6 +76,8 @@ export function ProjectionTrajectoryChart({
   currentValue,
   currentAge,
   heightPx = 168,
+  milestoneAge,
+  milestoneLabel,
 }: Props) {
   // Measure the container so the viewBox ratio MATCHES the rendered
   // box. Previously the viewBox was locked to a fixed 3:1 ratio with
@@ -160,6 +170,20 @@ export function ProjectionTrajectoryChart({
     const targetY = toY(targetPoint.value);
     const startX = toX(points[0].age);
     const startY = toY(points[0].value);
+    // Milestone marker (e.g. the handoff age) — the curve point nearest
+    // milestoneAge, so it sits ON the line and the trajectory visibly
+    // continues to the right of it.
+    let milestone: { x: number; y: number; value: number; age: number } | null = null;
+    if (typeof milestoneAge === "number") {
+      let mIdx = 0;
+      let mDist = Infinity;
+      points.forEach((p, i) => {
+        const d = Math.abs(p.age - milestoneAge);
+        if (d < mDist) { mDist = d; mIdx = i; }
+      });
+      const mp = points[mIdx];
+      milestone = { x: toX(mp.age), y: toY(mp.value), value: mp.value, age: mp.age };
+    }
     return {
       linePath,
       fillPath,
@@ -171,8 +195,9 @@ export function ProjectionTrajectoryChart({
       startY,
       startValue: points[0].value,
       baseY,
+      milestone,
     };
-  }, [ok, points, targetAge, VB_W, VB_H]);
+  }, [ok, points, targetAge, milestoneAge, VB_W, VB_H]);
 
   if (!ok || !drawnArea) return null;
 
@@ -247,6 +272,37 @@ export function ProjectionTrajectoryChart({
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
+
+        {/* Milestone marker (e.g. the handoff age) — a hollow dot ON the
+            curve with a tiny label below it. Distinct from the target dot
+            (which is the far endpoint) so the eye reads the climb as
+            CONTINUING past the milestone, not ending at it. */}
+        {drawnArea.milestone && (
+          <>
+            <circle
+              cx={drawnArea.milestone.x}
+              cy={drawnArea.milestone.y}
+              r={5}
+              fill="white"
+              stroke={evergreen}
+              strokeWidth={2.5}
+              vectorEffect="non-scaling-stroke"
+            />
+            {milestoneLabel && (
+              <text
+                x={drawnArea.milestone.x}
+                y={drawnArea.milestone.y + 18}
+                textAnchor="middle"
+                fontSize="9.5"
+                fontWeight="700"
+                fill="rgba(26,23,16,0.5)"
+                style={{ letterSpacing: "0.05em", textTransform: "uppercase" }}
+              >
+                {milestoneLabel}
+              </text>
+            )}
+          </>
+        )}
 
         {/* Target dot — bigger (r=7 vs 6 in v1) so the focal point
             actually reads as the focal point on mobile-sized charts.
