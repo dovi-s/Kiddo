@@ -8,6 +8,12 @@
 
 import assert from "node:assert/strict";
 import { senderNameIssue, giftMessageIssue, sanitizeTranscript } from "../server/giftTextSafety";
+// giftTextSafety transitively imports server/db, which opens the Postgres
+// pool. The pool's idle connections (plus the warm-pool heartbeat) keep
+// Node's event loop alive, so without closing it this pure-logic test never
+// self-exits — it just sits there after the assertions pass. Close it at the
+// end, same convention as the DB-touching tests (test-security-regression et al).
+import { pool } from "../server/db";
 
 // ── Names: real gifter signatures stay legal ───────────────────────────────
 for (const ok of [
@@ -102,3 +108,5 @@ assert.equal(sanitizeTranscript(""), null);
 assert.equal(sanitizeTranscript(undefined), null);
 
 console.log("gift text safety tests passed");
+
+await pool.end().catch(() => undefined);
