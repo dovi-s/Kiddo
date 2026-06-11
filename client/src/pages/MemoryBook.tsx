@@ -3539,7 +3539,7 @@ export default function MemoryBook() {
                       box-shadow) gets cut at the top — most visible on the owner's
                       photo tile. Symmetric padding gives the ring room both sides. */}
                   <div className="flex gap-4 overflow-x-auto pt-1 pb-1" style={{ scrollbarWidth: "none" }}>
-                    {gifterRoster.map((gifter) => {
+                    {gifterRoster.map((gifter, faceIdx) => {
                       const isActive = gifterFilter?.toLowerCase() === gifter.name.toLowerCase();
                       // Owner treatment — same as every other surface
                       // (Dashboard sidebar, Memory Book list rows, book
@@ -3568,9 +3568,18 @@ export default function MemoryBook() {
                         <motion.button
                           key={gifter.name}
                           type="button"
+                          // Roll-in cascade — the people who love this kid arrive,
+                          // staggered, as the opening beat of their story (the
+                          // timeline animates below). Parity with the dashboard
+                          // roster; the real faces (gifter photos) make it land
+                          // harder than initials would. Honors reduced-motion the
+                          // page's way: opacity-only, no transform. Plays once on
+                          // mount (stable keys, so filtering never replays it).
+                          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.85 }}
+                          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                          transition={{ duration: prefersReducedMotion ? 0.3 : 0.44, delay: Math.min(faceIdx, 12) * (prefersReducedMotion ? 0.02 : 0.06), ease: [0.16, 1, 0.3, 1] }}
                           // Hover-lift + tap-press so the roster faces feel clickable
                           // like the rest of the app (they filter the entries on tap).
-                          // Signature easing; reduced-motion handled globally.
                           whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
                           whileTap={{ scale: 0.96, transition: { duration: 0.1 } }}
                           onClick={() => setGifterFilter(isActive ? null : gifter.name)}
