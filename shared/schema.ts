@@ -1173,6 +1173,19 @@ export const analyticsEvents = pgTable("analytics_events", {
 // The pairing logic runs in POST /api/funds when a parent creates a
 // new fund: any pending intent matching the parent's email AND the
 // kid's first name (case-insensitive) gets paired automatically.
+// C3 (data-privacy audit): ephemeral store so child Memory Book media URLs do
+// NOT ride in Stripe checkout metadata. The gift-checkout path writes a row
+// keyed by an opaque token, passes only the token through Stripe, and the
+// webhook hydrates the URLs back. Read at webhook time; swept after a few days.
+// Inert unless STRIPE_MEDIA_TOKEN_ENABLED is on. See migration 0046.
+export const pendingGiftMedia = pgTable("pending_gift_media", {
+  token: varchar("token").primaryKey(),
+  photoUrl: text("photo_url"),
+  videoUrl: text("video_url"),
+  audioUrl: text("audio_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const giftIntents = pgTable("gift_intents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   // Token for the nudge URL the parent receives. Unguessable; rotates

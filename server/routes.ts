@@ -3,6 +3,7 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
+import { isStripeMediaTokenEnabled } from "./stripeMediaTokenFlag";
 import { isSeamlessPlanDowngradeEnabled } from "./planDowngradeFlag";
 import { settleGiftIntentOffSession } from "./giftIntentSettlement";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -73,7 +74,7 @@ import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllo
 import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fundInvestmentPreferences";
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftAllocations, giftIntents, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftAllocations, giftIntents, pendingGiftMedia, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { isAllowedStockPick } from "@shared/stock-picks";
@@ -12875,6 +12876,30 @@ export async function registerRoutes(
         req.get('Idempotency-Key') || req.body?.idempotencyKey,
       );
 
+      // C3 (data-privacy): when enabled, persist the gift media server-side and
+      // pass only an opaque token through Stripe so child Memory Book media URLs
+      // never reach the payment processor's metadata. Best-effort — any failure
+      // (or the flag being off) falls back to the legacy URL-in-metadata path so
+      // a gift never loses its media. See stripeMediaTokenFlag.ts + migration 0046.
+      let giftMediaToken: string | undefined;
+      if (
+        isStripeMediaTokenEnabled() &&
+        (normalizedPhotoUrl || normalizedVideoUrl || normalizedAudioUrl)
+      ) {
+        try {
+          const token = crypto.randomUUID();
+          await db.insert(pendingGiftMedia).values({
+            token,
+            photoUrl: normalizedPhotoUrl || null,
+            videoUrl: normalizedVideoUrl || null,
+            audioUrl: normalizedAudioUrl || null,
+          });
+          giftMediaToken = token;
+        } catch (mediaErr) {
+          console.warn('[gift-checkout] pending media persist failed; using legacy metadata path:', (mediaErr as any)?.message || mediaErr);
+        }
+      }
+
       const session = await stripeService.createGiftCheckoutSession({
         fundId,
         eventId,
@@ -12885,6 +12910,9 @@ export async function registerRoutes(
         photoUrl: normalizedPhotoUrl || undefined,
         videoUrl: normalizedVideoUrl || undefined,
         audioUrl: normalizedAudioUrl || undefined,
+        // C3: opaque token when media was persisted server-side (above). When
+        // undefined, stripeService keeps the media URLs inline (legacy).
+        mediaToken: giftMediaToken,
         coverFees: coverFees || false,
         hasLegacyPremiumEventCoverage,
         hostPlan: (coverageStatus === "trial_active"

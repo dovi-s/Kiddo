@@ -151,16 +151,21 @@ These fold into the existing packet, they do not add a new legal workstream:
 
 ---
 
-## Appendix — C3 build-ready implementation plan (Stripe media-URL minimization)
+## Appendix — C3 (Stripe media-URL minimization) — BUILT 2026-06-10, default-OFF, PENDING SMOKE TEST
 
-**Why this is a plan, not a commit:** the child Memory Book media URLs ride in
-Stripe metadata as the checkout→webhook transport, and the webhook resolves them in
-**multiple sites across methods** (`webhookHandlers.ts:1274`, `1294-1296`, and the
-`ensureMemoryEntryForGift` paths ~281/411), then *creates the gift row from that
-metadata*. Editing those read-sites blind, with no live Stripe webhook to test, risks
-**silent gift-media loss**. A feature flag protects the write side but not a missed
-read-site. So this lands as one tested unit (apply migration → enable in staging →
-smoke-test a real gift → confirm media attaches AND URLs are absent from Stripe).
+**Status: implemented and tsc/lint-green, shipped INERT behind
+`STRIPE_MEDIA_TOKEN_ENABLED` (default off).** The architecture turned out to be more
+tractable than first feared: `completeGiftPostPayment(giftId, metadata)` receives
+metadata as a **parameter** threaded from the handler that parses `session.metadata`,
+and the held-gift-release path reads media from the **gift row**, so a **single
+hydration point** at the gift-creation metadata parse covers every downstream read
+(gift row, existing-gift early return, memory entry, milestones). The write path
+**degrades gracefully** (any persist failure → legacy URL-in-metadata path), so a
+gift can never lose its media. ⚠️ **Still requires the founder smoke test below
+before the flag is enabled in production** — the live Stripe webhook cannot be
+exercised from the build environment. Sequence: apply migration 0046 → enable in
+staging → run the checklist → confirm media attaches AND the URLs are absent from
+the Stripe dashboard → enable in prod.
 
 **Design: flag-gated + graceful degradation.** Ship inert; fall back to legacy
 behavior on any error or when the table/flag are absent — so it cannot break gifts.

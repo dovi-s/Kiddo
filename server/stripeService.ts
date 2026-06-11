@@ -23,6 +23,11 @@ export interface GiftCheckoutParams {
   photoUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
+  // C3: when set, the gift media was persisted server-side under this opaque
+  // token and the media URLs are OMITTED from Stripe metadata (the webhook
+  // hydrates them back from the token). When unset, the URLs ride in metadata
+  // as before. See stripeMediaTokenFlag.ts.
+  mediaToken?: string;
   coverFees: boolean;
   hasLegacyPremiumEventCoverage?: boolean;
   hasEventBoost?: boolean;
@@ -443,9 +448,13 @@ export class StripeService {
         senderName: params.senderName.slice(0, 100),
         senderEmail: params.senderEmail || '',
         message: (params.message || '').slice(0, 490),
-        photoUrl: (params.photoUrl || '').slice(0, 2000),
-        videoUrl: (params.videoUrl || '').slice(0, 2000),
-        audioUrl: (params.audioUrl || '').slice(0, 2000),
+        // C3: omit child media URLs when persisted server-side under a token
+        // (the webhook hydrates them back from mediaToken). Legacy path keeps
+        // the URLs inline when no token.
+        photoUrl: params.mediaToken ? '' : (params.photoUrl || '').slice(0, 2000),
+        videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
+        audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
+        mediaToken: params.mediaToken || '',
         baseAmount: params.amount.toString(),
         processingFee: fees.processingFee.toString(),
         koraFee: fees.koraFee.toString(),
@@ -479,9 +488,11 @@ export class StripeService {
           senderName: params.senderName,
           senderEmail: params.senderEmail || '',
           message: (params.message || '').slice(0, 490),
-          photoUrl: (params.photoUrl || '').slice(0, 2000),
-          videoUrl: (params.videoUrl || '').slice(0, 2000),
-          audioUrl: (params.audioUrl || '').slice(0, 2000),
+          // C3: see the checkout-session metadata block above.
+          photoUrl: params.mediaToken ? '' : (params.photoUrl || '').slice(0, 2000),
+          videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
+          audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
+          mediaToken: params.mediaToken || '',
           baseAmount: params.amount.toString(),
           processingFee: fees.processingFee.toString(),
           koraFee: fees.koraFee.toString(),

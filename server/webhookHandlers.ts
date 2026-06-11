@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { db } from './db';
-import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers, giftIntents } from '@shared/schema';
+import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers, giftIntents, pendingGiftMedia } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { captureError, sendOpsAlert } from './ops';
 import { recordEvent } from './analytics';
@@ -1242,6 +1242,29 @@ export class WebhookHandlers {
     }
 
     const metadata = session.metadata || {};
+    // C3 (data-privacy): if the gift media was persisted server-side (token in
+    // metadata, URLs omitted from Stripe), hydrate the URLs back onto `metadata`
+    // so every downstream read-site behaves exactly as the legacy path —
+    // the gift-row creation below, the existing-gift early return, and the
+    // threaded completeGiftPostPayment (memory entry + media milestones). Read-
+    // only here (idempotent under Stripe webhook retries); a TTL sweep cleans the
+    // row up later. No-op when there is no token (the default / flag off).
+    if (metadata.mediaToken) {
+      try {
+        const [pending] = await db
+          .select()
+          .from(pendingGiftMedia)
+          .where(eq(pendingGiftMedia.token, String(metadata.mediaToken)))
+          .limit(1);
+        if (pending) {
+          if (pending.photoUrl) (metadata as any).photoUrl = pending.photoUrl;
+          if (pending.videoUrl) (metadata as any).videoUrl = pending.videoUrl;
+          if (pending.audioUrl) (metadata as any).audioUrl = pending.audioUrl;
+        }
+      } catch (hydrateErr) {
+        console.warn('[Webhook] pending gift-media hydrate failed:', (hydrateErr as any)?.message || hydrateErr);
+      }
+    }
     const rawExecutionModel = String(metadata.executionModel || '').toLowerCase();
     const normalizedExecutionModel =
       rawExecutionModel.includes('pick')
