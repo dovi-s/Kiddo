@@ -1552,10 +1552,13 @@ export async function registerRoutes(
   app.get("/api/admin/stock-requests", isAdmin, async (_req, res) => {
     try {
       const rows = await db.execute(sql`
-        SELECT id, requested_text, status, fund_id, event_id, requester_email, created_at
-        FROM stock_requests
-        WHERE status = 'escape_hatch_requested'
-        ORDER BY created_at DESC
+        SELECT sr.id, sr.requested_text, sr.status, sr.fund_id, sr.event_id,
+               sr.requester_email, sr.created_at,
+               f.recipient_first_name AS child_name
+        FROM stock_requests sr
+        LEFT JOIN funds f ON f.id = sr.fund_id
+        WHERE sr.status = 'escape_hatch_requested'
+        ORDER BY sr.created_at DESC
         LIMIT 200
       `);
       return res.json({ requests: rows.rows });

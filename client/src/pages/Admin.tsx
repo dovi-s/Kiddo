@@ -5184,6 +5184,16 @@ function StockRequestsPanel() {
     retry: 1,
   });
   const requests = asArray<any>(data?.requests);
+  // Demand signal: how many open requests share the same (normalized) brand,
+  // so a ticker asked for repeatedly stands out for curation. Free-text, so we
+  // normalize case + whitespace; it won't catch "Tesla" vs "TSLA" but groups
+  // the common dupes.
+  const normalizeBrand = (t: any) => String(t || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const demandCount: Record<string, number> = requests.reduce((acc: Record<string, number>, r: any) => {
+    const k = normalizeBrand(r.requested_text);
+    if (k) acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
   return (
     <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between gap-3">
@@ -5204,7 +5214,14 @@ function StockRequestsPanel() {
           <div className="space-y-1.5">
             {requests.map((r: any, i: number) => (
               <div key={r.id || i} className="flex items-center justify-between gap-3 text-xs border-b border-border/30 pb-1.5 last:border-0">
-                <span className="font-medium text-foreground truncate" title={String(r.requested_text || "")}>{r.requested_text || "-"}</span>
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="font-medium text-foreground truncate" title={String(r.requested_text || "")}>{r.requested_text || "-"}</span>
+                  {(() => {
+                    const n = demandCount[normalizeBrand(r.requested_text)] || 0;
+                    return n > 1 ? <span className="shrink-0 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5" title={`${n} open requests for this brand`}>×{n}</span> : null;
+                  })()}
+                  {r.child_name ? <span className="shrink-0 text-muted-foreground truncate">· {String(r.child_name)}&apos;s fund</span> : null}
+                </div>
                 <span className="shrink-0 text-muted-foreground">
                   {r.requester_email ? <span className="mr-2">{String(r.requester_email)}</span> : null}
                   {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
