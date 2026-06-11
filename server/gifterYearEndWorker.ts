@@ -128,6 +128,9 @@ async function tick(log: LogFn): Promise<void> {
         COUNT(DISTINCT g.fund_id)::int AS recipient_count
       FROM gifts g
       WHERE g.sender_email IS NOT NULL
+        -- bereavement: exclude memorialized recipients from a gifter's recap (don't
+        -- count a child who's gone; the gifter's OTHER living kids still count). BEREAVEMENT_POSTURE.md
+        AND NOT EXISTS (SELECT 1 FROM funds mf WHERE mf.id = g.fund_id AND mf.memorialized_at IS NOT NULL)
         AND g.sender_email <> ''
         AND g.parent_contribution_id IS NULL
         AND g.status NOT IN ('failed', 'canceled', 'refunded', 'pending')
@@ -163,6 +166,7 @@ async function tick(log: LogFn): Promise<void> {
       FROM gifts g
       LEFT JOIN funds f ON f.id = g.fund_id
       WHERE g.sender_email IS NOT NULL
+        AND (f.memorialized_at IS NULL) -- bereavement: exclude memorialized recipients from the recap (BEREAVEMENT_POSTURE.md)
         AND g.sender_email <> ''
         AND g.parent_contribution_id IS NULL
         AND g.status NOT IN ('failed', 'canceled', 'refunded', 'pending')

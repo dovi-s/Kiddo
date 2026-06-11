@@ -126,32 +126,37 @@ deletion. Setting it = the freeze engages everywhere at once.
 - **`test:memorialized-silence`** asserts the whole chain (marks a real fund, asserts,
   restores). This test must never go red.
 
-**Threaded + verified (fundId passed → the chokepoint suppresses; 10 single-fund email
-workers):** fundBirthday, kidMilestone, fundAnniversary, monthlyPulse, yearEndWrapped,
-holidayWarmth, taxSeasonPrep, volatilityReassurance, gifterReturnReminder,
-sealedLetterDelivery.
-
-**Remaining open edge — categorized (each needs worker-specific handling, NOT a blind
-thread):**
-- **Multi-call handoff workers** — `age18Transition` (×4 sends), `stalledHandoff` (×3),
-  `postHandoffEngagement` (×2): gate at the SOURCE — add `AND f.memorialized_at IS NULL`
-  to each worker's fund query (one filter silences all its sends). A memorialized child
-  never reaches the handoff anyway.
-- **Gifter-AGGREGATE (multi-fund)** — `gifterYearEnd`, `gifterNotification`: one email
-  can span a gifter's several recipients, so gating on a single fundId would wrongly
-  hide their OTHER living kids. EXCLUDE memorialized funds from the aggregate query;
-  never suppress the whole email.
-- **User-scoped** — `pmfSurveyTrigger`: about the user's overall experience, not one
-  fund. Suppress if the user has ANY memorialized fund (a user-level check). A
-  "how are we doing?" survey must never reach a bereaved user.
-- **Queue-driven** — `parentLifecycle`: thread the queued email record's fundId if it
-  carries one.
-- **Separate channel** — `mobilePush`: PUSH, not email — the email chokepoint does NOT
-  cover it. Needs its own guard at the push-send layer (high priority — a push is as
-  intrusive as an email).
-- **Account-level (deliberately OUT)** — subscription renewal: the parent may have
+**Coverage — every automated surface is now gated (`test:memorialized-silence` green,
+tsc clean):**
+- **Charges (chokepoint, fail-closed):** recurring contribution + gifter off-session
+  refuse for a memorialized fund.
+- **Email chokepoint:** `sendEmail` suppresses any email carrying a memorialized
+  `fundId`; non-fund/transactional mail never gated.
+- **10 single-fund email workers thread `fundId`** → suppressed at the chokepoint:
+  fundBirthday, kidMilestone, fundAnniversary, monthlyPulse, yearEndWrapped,
+  holidayWarmth, taxSeasonPrep, volatilityReassurance, gifterReturnReminder,
+  sealedLetterDelivery.
+- **Handoff workers (source-query filter):** `age18Transition`, `stalledHandoff`,
+  `postHandoffEngagement` exclude memorialized funds at the query (a memorialized child
+  never reaches handoff); postHandoff also threads `fundId` on its sends.
+- **Gifter-AGGREGATE (query exclusion, NOT whole-email suppression):** `gifterYearEnd`
+  + `gifterNotification` exclude memorialized funds from the aggregate, so a gifter's
+  recap/nudge counts only their LIVING recipients — their other kids are untouched.
+- **User-scoped:** `pmfSurveyTrigger` skips anyone who owns or gifted to a memorialized
+  fund (`shouldSilenceForEmail`). A "how are we doing?" survey never reaches a bereaved
+  person.
+- **Queue-driven:** `parentLifecycle` threads the queue record's `fundId` (only when
+  fund-scoped).
+- **Push channel:** `mobilePush`'s `sendExpoPush` refuses for a memorialized fund (via
+  `metadata.fundId`); fund-scoped pushes carry it for deep-linking.
+- **Deliberately OUT (account-level):** subscription renewal — the parent may have
   other living children; that's the human runbook's call, not the fund freeze.
 
-**Honest state:** charges fully frozen; 10 email workers silenced + verified; the above
-is the precise un-gated edge. `test:memorialized-silence` proves the chokepoint — extend
-it as each remaining worker is gated.
+**Verified:** `test:memorialized-silence` proves the charge refusal, the email
+suppression at the chokepoint, the fail-closed gate, the user-level silence, and that
+active + transactional mail are untouched. The query-level + push gates are confirmed by
+code inspection. **The machine is silent for a memorialized fund.**
+
+> Forward note: new fund-scoped workers must pass `fundId` to `sendEmail` (or filter
+> their fund query) — `shouldSilenceForFund` / `shouldSilenceForEmail` in
+> `server/memorialized.ts` are the gates; extend `test:memorialized-silence` for each.

@@ -52,6 +52,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildSeanEllisSurveyEmail } from "./templates/seanEllisSurvey";
 import { recordEvent } from "./analytics";
+import { shouldSilenceForEmail } from "./memorialized";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "pmf-survey-trigger";
@@ -171,6 +172,10 @@ async function tick(log: LogFn): Promise<void> {
   for (const row of batch) {
     const email = String(row.email).toLowerCase();
     const firstName = (row.first_name || "").trim() || null;
+
+    // Bereavement freeze (user-level): a "how are we doing?" survey must never reach
+    // someone who owns or gifted to a memorialized fund. See BEREAVEMENT_POSTURE.md.
+    if (await shouldSilenceForEmail(email)) continue;
 
     try {
       const message = buildSeanEllisSurveyEmail({

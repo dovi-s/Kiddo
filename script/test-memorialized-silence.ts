@@ -9,7 +9,7 @@
 // restores it (try/finally), so it leaves the DB exactly as it found it.
 
 import { pool } from "../server/db";
-import { shouldSilenceForFund } from "../server/memorialized";
+import { shouldSilenceForFund, shouldSilenceForEmail } from "../server/memorialized";
 import { sendEmail } from "../server/emailDelivery";
 import { stripeService } from "../server/stripeService";
 
@@ -54,6 +54,13 @@ async function main() {
       chargeRefused = /bereavement_silenced/.test(String(e?.message || e));
     }
     check("memorialized fund: gifter off-session charge REFUSED", chargeRefused);
+
+    // User-level silence (PMF survey etc.): the memorialized fund's OWNER must never
+    // get a person-addressed "how are we doing?" send.
+    const ownerRow = await pool.query("select u.email from funds f join users u on u.id = f.user_id where f.id = $1", [fundId]);
+    const ownerEmail = String(ownerRow.rows[0]?.email || "");
+    if (ownerEmail) check("memorialized fund owner: shouldSilenceForEmail = true", (await shouldSilenceForEmail(ownerEmail)) === true);
+    check("unrelated email: shouldSilenceForEmail = false", (await shouldSilenceForEmail("nobody-xyz@example.invalid")) === false);
 
     // Non-fund (transactional) mail must STILL send even with the fund memorialized.
     const txn = await sendEmail({ to: TEST_TO, subject: "password reset", text: "x" });

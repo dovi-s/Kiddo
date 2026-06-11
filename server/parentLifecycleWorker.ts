@@ -763,6 +763,9 @@ async function processQueue(log: (message: string, source?: string) => void) {
       text: rendered.text,
       html: brandedHtml,
       tags: ["parent_lifecycle", String(parsed.type || "unknown")],
+      // bereavement freeze: gate fund-scoped lifecycle mail (only when fund-scoped,
+      // so non-fund lifecycle mail isn't suppressed). See BEREAVEMENT_POSTURE.md.
+      fundId: parsed.fundId ? String(parsed.fundId) : undefined,
       metadata: {
         queueId: id,
         lifecycleType: String(parsed.type || "unknown"),

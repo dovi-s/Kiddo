@@ -133,6 +133,7 @@ async function getStalledRows(log: LogFn): Promise<StalledRow[]> {
       JOIN funds f ON f.id = at.fund_id
       JOIN users u ON u.id = f.user_id
       WHERE at.invited_at IS NOT NULL
+        AND f.memorialized_at IS NULL -- bereavement freeze (BEREAVEMENT_POSTURE.md)
         AND at.child_claimed_at IS NULL
         AND at.ownership_transferred_at IS NULL
         AND at.invited_at <= NOW() - INTERVAL '7 days'

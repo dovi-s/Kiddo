@@ -386,6 +386,7 @@ async function getFundReminderRows(): Promise<FundReminderRow[]> {
     FROM funds f
     LEFT JOIN users u ON u.id = f.user_id
     WHERE f.recipient_birthdate IS NOT NULL
+      AND f.memorialized_at IS NULL -- bereavement freeze: never nudge gifters about a memorialized child (BEREAVEMENT_POSTURE.md)
       -- Exclude post-handoff funds: a transferred fund is owned by the now-adult recipient,
       -- so gifter birthday/holiday/age-18 reminders ("Emma's birthday is in 14 days") are
       -- contextually wrong once Emma is grown and owns the fund. Mirrors fundBirthdayWorker.
@@ -1371,6 +1372,7 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
     FROM gifts g
     LEFT JOIN funds f ON f.id = g.fund_id
     WHERE g.sender_email IS NOT NULL
+      AND (f.memorialized_at IS NULL) -- bereavement: exclude memorialized recipients (BEREAVEMENT_POSTURE.md)
       AND TRIM(g.sender_email) <> ''
       AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold', 'pending')
       AND g.created_at >= NOW() - INTERVAL '14 days'
@@ -1517,6 +1519,7 @@ async function enqueueGiftAnniversaryEmails(log: (message: string, source?: stri
     FROM gifts g
     LEFT JOIN funds f ON f.id = g.fund_id
     WHERE g.sender_email IS NOT NULL
+      AND (f.memorialized_at IS NULL) -- bereavement: exclude memorialized recipients (BEREAVEMENT_POSTURE.md)
       AND TRIM(g.sender_email) <> ''
       AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold', 'pending')
       AND g.created_at <= NOW() - INTERVAL '1 year'

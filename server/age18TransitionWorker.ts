@@ -222,6 +222,7 @@ async function loadDueFunds(): Promise<{
       FROM funds f
       JOIN users u ON u.id = f.user_id
       WHERE f.recipient_birthdate IS NOT NULL
+        AND f.memorialized_at IS NULL -- bereavement freeze: a memorialized child never reaches handoff (BEREAVEMENT_POSTURE.md)
         AND f.status = 'active'
         AND u.email IS NOT NULL
         -- Demo-safety: never fire real age-of-majority emails for demo

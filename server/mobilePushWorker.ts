@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { shouldSilenceForFund } from "./memorialized";
 
 const MOBILE_PUSH_STATE_PATH = path.join(process.cwd(), ".local", "mobile-push-state.json");
 const MOBILE_PUSH_QUEUE_PATH = path.join(process.cwd(), ".local", "mobile-push-queue.jsonl");
@@ -183,6 +184,13 @@ async function disableDeviceToken(userId: string, token: string, reason: string)
 }
 
 async function sendExpoPush(token: string, title: string, body: string, deepLink?: string | null, metadata?: Record<string, unknown> | null) {
+  // Bereavement freeze: never push about a memorialized fund. Fund-scoped pushes
+  // carry fundId in metadata (for deep-linking); a push without one isn't fund-scoped
+  // and isn't gated. Returns a benign "ok" so the caller marks it handled, not retried.
+  // See BEREAVEMENT_POSTURE.md.
+  if (await shouldSilenceForFund((metadata as any)?.fundId)) {
+    return { data: { status: "ok", bereavement_skipped: true } } as any;
+  }
   const response = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
     headers: {
