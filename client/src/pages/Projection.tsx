@@ -568,7 +568,7 @@ ${shareUrl}`;
                   WebKit track is generated below from sliderFillPct so the filled portion
                   follows the thumb position smoothly as the parent drags. */}
               <style>{`
-                input.kiddo-age-slider { -webkit-appearance: none; appearance: none; background: transparent; height: 28px; padding: 0; cursor: pointer; }
+                input.kiddo-age-slider { -webkit-appearance: none; appearance: none; background: transparent; height: 44px; padding: 0; cursor: pointer; } /* 44px = Apple-HIG min touch band for easy one-handed drag (2026-06-10). The visible track stays 6px and the thumb stays 22px and centered (both auto-center on the track, so input height does not move them); only the invisible grab area grows from 28px to 44px. */
                 input.kiddo-age-slider:focus { outline: none; }
                 input.kiddo-age-slider::-webkit-slider-runnable-track {
                   height: 6px; border-radius: 9999px;
