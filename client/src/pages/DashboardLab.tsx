@@ -94,6 +94,7 @@ import {
   Banknote,
   Gift,
   Share2,
+  Send,
   Hash,
   Calendar,
   BookOpen,
@@ -7609,6 +7610,48 @@ export default function DashboardLab() {
                             </button>
                           );
                         })()}
+
+                        {/* Send-to-a-friend — the gifter loop's adult turn.
+                            ONLY on a personal, adult-OWNED fund (isOwnerMode =
+                            owner + transferred, e.g. Haley after her handoff).
+                            A minor's UTMA is irrevocable and for the child's
+                            benefit, so "send out of it" must NEVER appear on a
+                            custodial fund; an adult's own Personal account can.
+                            Routes to the honesty-fenced concept preview
+                            (/p2p-preview, "concept preview, no real money moves")
+                            because the real send is gated on live custody (the
+                            stock leg) + money-transmitter licensing (the cash
+                            leg) per P2P_STOCK_SETTLE_SPEC.md. The preview "gets
+                            it all": the recipient's cash-or-stock choice AND the
+                            licensing caveat, so the affordance never implies a
+                            live P2P feature. marginLeft:auto floats it to the
+                            row's right edge on desktop; in the mobile column it
+                            just stacks full-width like the others. */}
+                        {isOwnerMode && (
+                          <button
+                            onClick={() => { haptic("selection"); setLocation("/p2p-preview"); }}
+                            data-testid="button-hero-send-friend"
+                            className="kiddo-press lab-tap"
+                            aria-label="Send a friend cash or stock"
+                            title="Send a friend cash or stock (concept preview)"
+                            style={{
+                              marginLeft: "auto",
+                              flexShrink: 0,
+                              width: 42,
+                              height: 42,
+                              background: "rgba(255,255,255,0.12)",
+                              border: "1px solid rgba(255,255,255,0.22)",
+                              borderRadius: 9999,
+                              color: "rgba(255,255,255,0.94)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Send size={16} color="rgba(255,255,255,0.94)" />
+                          </button>
+                        )}
                       </div>
                     </>
                   )}
