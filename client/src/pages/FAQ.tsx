@@ -261,16 +261,17 @@ const faqItems = [
     question: "Can I create a fund for myself, not a child?",
     answer: (
       <>
-        Yes. Kiddo supports personal funds for adults. Your personal fund still gives you a
-        shareable link, simple gifting for friends and family, and a real investment account behind it.
+        Personal funds for adults are coming soon. Today Kiddo is built for children&apos;s funds. A
+        personal fund would give you the same shareable link, simple gifting from friends and family, and
+        a real investment account behind it, held in your own personal brokerage account rather than a
+        child-fund structure.
         <br />
         <br />
-        The difference is the account type. A child fund uses a legal child-fund structure. A personal
-        fund uses your own personal brokerage account. Start at{" "}
+        You can see the idea and join the waitlist at{" "}
         <Link href="/get-started" className="text-primary hover:underline">
           get started
         </Link>{" "}
-        and choose <span className="font-medium text-foreground">For myself</span>.
+        under <span className="font-medium text-foreground">For myself</span>.
       </>
     ),
   },
