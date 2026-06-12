@@ -12509,7 +12509,16 @@ export default function DashboardLab() {
                                           : evTy ? "draft"
                                           : "missing";
                                         return (
-                                          <div key={g.id ?? gi} style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, paddingBottom: 8, borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)" }}>
+                                          <div
+                                            key={g.id ?? gi}
+                                            className={g.id ? "lab-tap" : undefined}
+                                            onClick={g.id ? () => { haptic("selection"); setLocation(`/memory/${activeFundId}?gift=${g.id}`); } : undefined}
+                                            role={g.id ? "button" : undefined}
+                                            tabIndex={g.id ? 0 : undefined}
+                                            onKeyDown={g.id ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); haptic("selection"); setLocation(`/memory/${activeFundId}?gift=${g.id}`); } } : undefined}
+                                            title={g.id ? ((evTyState === "missing" || evTyState === "draft") ? `Open ${gName}'s gift in the Memory Book to thank them` : `Open ${gName}'s gift in the Memory Book`) : undefined}
+                                            style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, paddingBottom: 8, borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)", cursor: g.id ? "pointer" : "default" }}
+                                          >
                                             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "hsl(143,47%,94%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                               <span style={{ fontSize: 10, fontWeight: 800, color: "hsl(143,47%,28%)" }}>{gName.charAt(0).toUpperCase()}</span>
                                             </div>
@@ -12529,6 +12538,7 @@ export default function DashboardLab() {
                                               {g.message && <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.5)", fontStyle: "italic", margin: 0, marginTop: 2 }}>"{g.message}"</p>}
                                             </div>
                                             <span style={{ fontSize: 13, fontWeight: 700, color: "rgb(26,23,16)", flexShrink: 0 }}>{fmtC(gAmt)}</span>
+                                            {g.id && <ChevronRight size={14} aria-hidden style={{ color: (evTyState === "missing" || evTyState === "draft") ? "hsl(43,55%,45%)" : "rgba(26,23,16,0.25)", flexShrink: 0, marginLeft: -2 }} />}
                                           </div>
                                         );
                                       })}
