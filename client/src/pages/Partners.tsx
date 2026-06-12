@@ -27,7 +27,7 @@ const WHAT_KIDDO_IS = [
   },
   {
     title: "Built for the long horizon",
-    body: "The fund grows toward the child's 18th birthday and beyond. Free to start; the only ongoing fee is $1 a year per $1,000 invested.",
+    body: "The fund grows toward the child's 18th birthday and beyond. Free to start; the only ongoing investment fee is $1 a year per $1,000 invested.",
   },
 ];
 

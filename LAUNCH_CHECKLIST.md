@@ -124,6 +124,21 @@ can't charge:
   (`project_aum_fee_display_only`)
 - **Founder Stripe products inert** until `npm run founder:seed-stripe` is run.
   (`project_founding_member_claim_flow_spec`)
+- **`STRIPE_WEBHOOK_SECRET` MUST be set in production.** Webhook signature
+  verification + idempotency are built correctly (`webhookHandlers.ts:1010-1023`,
+  `constructEvent` + `onConflictDoNothing` on `stripeEventId`), but the secret is
+  `.optional()` (`env.ts:31`) and `index.ts:234` warns "verification disabled" if
+  unset. Unset in prod = either spoofable money webhooks or a throwing handler.
+  Same shape as the CSRF deploy gotcha. Verify it is set before launch.
+- **Failed-payment behavior (dunning).** `past_due` now KEEPS Plus access through
+  Stripe's retry window (`hasEntitlementFromStatus`, fixed 2026-06-12) and a
+  `payment_failed` nudge fires in-app (`actionItems.ts:146`). The remaining gap is
+  the EMAIL: dunning / card-failed / renewal-receipt emails depend on the
+  unconfigured email provider (the launch-critical email gap). Wire the
+  card-failed email when email goes live — it is the highest-value transactional.
+- **Sales tax on subscriptions (verify).** No Stripe Tax wiring found in the
+  pricing sweep. US SaaS subscriptions are taxable in some states; minor pre-scale,
+  but confirm the posture (enable Stripe Tax or document why not) before scaling.
 
 ---
 

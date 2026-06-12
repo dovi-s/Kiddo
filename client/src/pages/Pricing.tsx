@@ -641,7 +641,7 @@ export default function Pricing() {
             </div>
             <div className="mt-8 border-t border-border/40 pt-6">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                $1 per year per $1,000 invested is the only ongoing fee. Across every plan. No hidden charges. No data sales.
+                $1 per year per $1,000 invested is the only ongoing fee on the investment itself. Across every plan. No hidden charges. No data sales.
               </p>
             </div>
           </FadeIn>

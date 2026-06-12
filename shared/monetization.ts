@@ -153,12 +153,23 @@ export function hasEntitlementAtLeast(plan: EffectivePlan, required: EffectivePl
 //  - "canceled" but currentPeriodEnd is still in the future — catches users who
 //    hit cancel mid-period; they keep access until the period actually ends (no
 //    hard cutoff, which would be a dark pattern the other way).
+//  - "past_due" — a renewal payment failed and Stripe is still RETRYING (smart
+//    retries run ~2 weeks, then Stripe moves the sub to canceled/unpaid). Keep
+//    access through the dunning window instead of yanking Plus the moment a card
+//    hiccups: same "no hard cutoff" stance as canceled above, and it avoids
+//    punishing a parent for an expired card while we (and Stripe) are still trying
+//    to charge it. A payment_failed nudge already fires (actionItems.ts). Stripe's
+//    retry schedule self-bounds this, so no explicit time cap is needed — when
+//    retries are exhausted the status becomes canceled/unpaid and access ends.
+//    NOTE: "unpaid"/"incomplete"/"incomplete_expired" are NOT entitled (retries
+//    exhausted, or the sub never activated).
 export function hasEntitlementFromStatus(
   status?: string | null,
   currentPeriodEnd?: Date | string | null,
 ): boolean {
   const normalized = String(status || "").toLowerCase();
   if (normalized === "active" || normalized === "trialing") return true;
+  if (normalized === "past_due") return true;
   if (normalized !== "canceled") return false;
   if (!currentPeriodEnd) return true;
   const end = new Date(currentPeriodEnd);

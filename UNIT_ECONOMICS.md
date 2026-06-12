@@ -28,6 +28,30 @@ clear**, not a forecast. Plug in real numbers as the loop produces them.*
 So the near-term engine is **subscription**; AUM is the long tail; the $1B engine
 is **adult LTV + a graduated take rate**, never the UTMA fee by itself.
 
+## Pricing decisions (recorded 2026-06-12) -> `ONE_METER_FEE_DECISION.md`
+
+Settled enough to build against (founder-ratifiable; implementation is custody-gated).
+The full memo + an editable calculator (`script/revenue-model.mjs`) live alongside.
+Load-bearing rules so this does not drift:
+
+- **Greater-of billing, never the sum.** A fund pays MAX(subscription, AUM). A paying
+  family never sees two fees stacked. The subscription is the fee while the balance is
+  small; AUM takes over once the balance crosses ~$29k (Plus) / ~$59k (Family).
+- **Charge on invested BALANCE, not earnings.** A performance/earnings fee is barred
+  (advisory + qualified-client rule); the 0.10% is a platform fee, not advisory, today.
+- **The subscription is the FLOOR, not the business.** Per-fund revenue RISES as
+  balances compound (the AUM annuity), and the real engine is the adult-LTV handoff. Do
+  not optimize for sub ARR or price in a way that slows fund growth. ("10k funds =
+  $600k" is the visible floor, not the asset.)
+- **Day 1 (launch) = free loop, never gated; subscription genuinely optional; AUM and
+  float turn on at custody.** The launch gate is funded-k, not revenue.
+- **Future streams (ranked):** advisory fee post-RIA (0.10% -> ~0.25%) > adult LTV >
+  Kiddo Cash parent HYSA (the real float play, since the kid's gifted cash is deployed,
+  not idle; pay a fair rate) > gifter a la carte > B2B. Avoid PFOF, debit interchange,
+  paid education.
+- **Trust rules (mostly already true):** lock + grandfather prices forever, frictionless
+  cancel, money + memories always exportable, never deduct a fee Stockpile-style.
+
 ## The five levers
 
 | Lever | What it is | Why it's decisive | Has to clear |

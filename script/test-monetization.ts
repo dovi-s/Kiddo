@@ -79,9 +79,10 @@ function main() {
   assert.equal(hasEntitlementFromStatus("canceled", future), true, "canceled but still in paid period stays entitled");
   assert.equal(hasEntitlementFromStatus("canceled", past), false, "canceled past period end is not entitled");
   assert.equal(hasEntitlementFromStatus("canceled", null), true, "canceled with no known period end stays entitled (no hard cutoff)");
-  assert.equal(hasEntitlementFromStatus("past_due"), false, "past_due is not entitled");
-  assert.equal(hasEntitlementFromStatus("incomplete"), false, "incomplete is not entitled");
-  assert.equal(hasEntitlementFromStatus("unpaid"), false, "unpaid is not entitled");
+  assert.equal(hasEntitlementFromStatus("past_due"), true, "past_due stays entitled through the Stripe retry/dunning window (no hard cutoff while a failed card is still being retried)");
+  assert.equal(hasEntitlementFromStatus("PAST_DUE"), true, "past_due check is case-insensitive");
+  assert.equal(hasEntitlementFromStatus("incomplete"), false, "incomplete is not entitled (sub never activated)");
+  assert.equal(hasEntitlementFromStatus("unpaid"), false, "unpaid is not entitled (retries exhausted)");
   assert.equal(hasEntitlementFromStatus(null), false);
   assert.equal(hasEntitlementFromStatus(undefined), false);
 
