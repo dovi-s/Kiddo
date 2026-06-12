@@ -11494,14 +11494,15 @@ export default function DashboardLab() {
             </LabCollapse>
 
             {/* ===== Occasions ===== */}
-            {/* LAB: rolls in when scrolled into view, replaying every time
-                (whileInView once:false) - and the tiles inside cascade
-                left-to-right as variant children (staggerChildren), the same
-                craft register as the faces. */}
+            {/* LAB: animates in on MOUNT (not whileInView) so the section is NEVER
+                blank white space waiting to be scrolled into view — the founder
+                disliked the gate-visibility-on-scroll behavior, especially once the
+                occasion detail expands tall (2026-06-12). Tiles inside still cascade
+                left-to-right as variant children (staggerChildren); visible by
+                default, the animation only enhances. */}
             <motion.section
               initial="hidden"
-              whileInView="show"
-              viewport={{ once: false, amount: 0.2, margin: "0px 0px -40px 0px" }}
+              animate="show"
               variants={{
                 hidden: { opacity: 0, y: 14 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.055, delayChildren: 0.05 } },
@@ -12883,15 +12884,15 @@ export default function DashboardLab() {
                 the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
                 extended to all transferred-fund viewers 2026-06-02. */}
             {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
-            // LAB: handoff section rolls in on view (replaying) with a two-beat
-            // stagger — the sentence lands first ("The day it all becomes
-            // Luke's."), a breath, then the card rises under it. The sentence
-            // IS the emotional payload; giving it its own beat makes the
-            // section read instead of just appear.
+            // LAB: handoff section animates in on MOUNT (not whileInView) so it is
+            // never blank-until-scroll (founder call 2026-06-12), with a two-beat
+            // stagger — the sentence lands first ("The day it all becomes Luke's."),
+            // a breath, then the card rises under it. The sentence IS the emotional
+            // payload; giving it its own beat makes the section read instead of
+            // just appear.
             <motion.section
               initial="hidden"
-              whileInView="show"
-              viewport={{ once: false, amount: 0.2, margin: "0px 0px -40px 0px" }}
+              animate="show"
               variants={{
                 hidden: { opacity: 0, y: 14 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.16 } },
