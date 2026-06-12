@@ -754,6 +754,14 @@ export default function Activity() {
   const [filter, setFilter] = useState<FilterType>(initialFilter);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Per-row "New" dismissal. seenBeforeArrival freezes the "new since last
+  // visit" set for the whole visit (so the page can answer "the badge said N,
+  // here are the N"); but opening a row IS reading it, so clearing that row's
+  // own "New" on expand matches the universal read-it convention (founder
+  // 2026-06-12: "when clicking on it, shouldn't the New go away?"). Visit-scoped
+  // and add-only — the next visit's clean slate comes from seenBeforeArrival,
+  // and collapsing a row again must not resurrect its badge.
+  const [dismissedNewIds, setDismissedNewIds] = useState<Set<string>>(() => new Set());
   const [tab, setTab] = useState<ActivityTab>(initialTab);
   // Keep tab state in sync with URL changes — the chip in the expanded
   // row's "Manage schedules →" navigates to `?tab=scheduled` while the
@@ -2520,7 +2528,7 @@ export default function Activity() {
                   // "New since you last looked" marker. Only when there is a real
                   // prior-read reference (seenBeforeArrival > 0); a first-ever
                   // visitor has no "since," so nothing is falsely flagged new.
-                  const isNewSinceLastVisit = seenBeforeArrival > 0 && createdAt != null && createdAt.getTime() > seenBeforeArrival;
+                  const isNewSinceLastVisit = seenBeforeArrival > 0 && createdAt != null && createdAt.getTime() > seenBeforeArrival && !dismissedNewIds.has(rowId);
 
                   // Effective title + description — use the parent-contrib
                   // copy when the override fires; otherwise the row's own.
@@ -2713,7 +2721,19 @@ export default function Activity() {
                         >
                       <button
                         type="button"
-                        onClick={() => { haptic("selection"); setExpandedId(isExpanded ? null : rowId); }}
+                        onClick={() => {
+                          haptic("selection");
+                          // Opening the row clears its own "New" — add-only so a
+                          // later collapse can't bring the badge back this visit.
+                          if (!isExpanded && isNewSinceLastVisit) {
+                            setDismissedNewIds((prev) => {
+                              const next = new Set(prev);
+                              next.add(rowId);
+                              return next;
+                            });
+                          }
+                          setExpandedId(isExpanded ? null : rowId);
+                        }}
                         data-testid={`button-expand-${rowId}`}
                         style={{
                           display: "flex", alignItems: "flex-start", gap: 12,
