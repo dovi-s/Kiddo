@@ -230,9 +230,12 @@ live + counsel-cleared):**
 - One-liner: "Your plan covers your fund's annual fee. If a fund ever grows large enough
   that the 0.10% would be more than your plan, you simply pay that instead. Never both."
 - FAQ "Do I pay the subscription AND the 0.10%?": "No, you pay whichever is larger,
-  never both. While a fund is small the plan is the only fee; once a fund grows past
-  about $29,000 (Kiddo+) or $59,000 (Family) the 0.10% becomes the larger number and you
-  pay that instead of the plan. A family never pays two fees on one fund."
+  never both. While a fund is small the plan is the only fee; once a fund grows large
+  enough that the 0.10% for the year would be more than your plan, you pay that instead.
+  A family never pays two fees on one fund." (Do NOT cite a fixed crossover dollar
+  amount in customer copy: it is ~$29k for an annual Kiddo+ but ~$48k for a monthly
+  Kiddo+, since the crossover is the annual-equivalent subscription / 0.10%. Internal
+  memo above carries the precise annual figures + the monthly caveat.)
 
 This keeps "clear to customers" prepared and on-voice for the moment the gates clear,
 without shipping a claim before it is true.

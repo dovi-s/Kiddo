@@ -139,6 +139,13 @@ can't charge:
 - **Sales tax on subscriptions (verify).** No Stripe Tax wiring found in the
   pricing sweep. US SaaS subscriptions are taxable in some states; minor pre-scale,
   but confirm the posture (enable Stripe Tax or document why not) before scaling.
+- **Upgrade-overlap filter misses `past_due` (minor, pre-existing).** When a parent
+  upgrades to Family/Legacy, the filter that schedules their old Plus subs to cancel
+  (`webhookHandlers.ts:1432` / `:1530`) only includes `active` + canceled-in-period,
+  NOT `past_due`. A Plus sub mid-dunning would not be auto-scheduled to cancel, so if
+  its retry later succeeds the parent could be briefly double-billed (Plus + Family).
+  Low severity, rare. Fix = mirror `hasEntitlementFromStatus` (add `past_due`) in that
+  filter. Touches the recurring-precharge webhook area, so coordinate before editing.
 
 ---
 
