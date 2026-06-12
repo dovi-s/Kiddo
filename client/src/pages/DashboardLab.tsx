@@ -2649,6 +2649,27 @@ export default function DashboardLab() {
     prevValueRef.current = rawTotalValue;
   }, [rawTotalValue]);
 
+  // Hold the ancillary banner stack (welcome / co-parent / Plus celebrations /
+  // recurring nudge / upgrade prompt / milestone) until the hero count-up has
+  // settled, so the load reads as ONE clean beat — the old cached number rolls
+  // up to the new live number — and everything else arrives after, never on top
+  // of the roll. Generalizes the SinceLastVisitDigest's own reveal-hold to the
+  // whole stack so "roll first, the rest after" is a system property, not a
+  // per-component accident (founder call 2026-06-12). ~1.3s = the 1.2s hero roll
+  // plus a beat. Latched PER-FUND via a ref so the steady 30s dashboard-summary
+  // poll (a new object each refetch) can't re-hold and flicker the banners; a
+  // genuine fund switch (activeFundId change → the roll re-plays) re-holds once.
+  const [bannersRevealed, setBannersRevealed] = useState(false);
+  const bannersHeldForFundRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary) return;
+    if (bannersHeldForFundRef.current === activeFundId) return;
+    bannersHeldForFundRef.current = activeFundId;
+    setBannersRevealed(false);
+    const t = window.setTimeout(() => setBannersRevealed(true), 1300);
+    return () => window.clearTimeout(t);
+  }, [activeFundId, dashboardSummary]);
+
   // DEMO roll, change-based not every-open (2026-06-07, founder approved
   // "do what's best"). The demo under-seed used to fire on EVERY fund-open
   // (06bd8bb "maximum showcase"), so wandering back to an unchanged fund
@@ -6364,6 +6385,12 @@ export default function DashboardLab() {
           />
         )}
 
+        {/* Ancillary banner stack — held until the hero count-up settles
+            (bannersRevealed, ~1.3s) so the roll is the FIRST and only thing
+            moving on load, then these arrive one calm beat later. See the
+            bannersRevealed latch above. The SinceLastVisitDigest above keeps
+            its own (later) hold and stays outside this wrapper. */}
+        {bannersRevealed && (<>
         <KidAt18WelcomeBanner
           kidClaimedAt={isOwnerMode ? ((dashboardSummary as any)?.kidClaimedAt as string | null | undefined) : null}
           fundId={activeFundId}
@@ -6490,6 +6517,7 @@ export default function DashboardLab() {
           }).length}
           peopleCount={contributorCount}
         />
+        </>)}
 
         {/* Closed-fund banner — calm, action-bearing. Renders when the
             active fund is in the 'closed' state. Mirror of the Settings

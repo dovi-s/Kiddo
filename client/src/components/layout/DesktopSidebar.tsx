@@ -93,7 +93,14 @@ export function DesktopSidebar() {
   // /settings) leaves the sidebar's Memory link and unread dot scoped to
   // the previous fund. URL ?fund= still wins when present (Dashboard's
   // canonical pattern); the listener is the localStorage-driven fallback.
-  const [storedFundId, setStoredFundId] = useState<string>(() => getActiveFundId());
+  // Seed from the URL ?fund (cold deep-link to /dashboard?fund=X) when present,
+  // else the stored active id. After mount, the fund is driven by whichever
+  // signal CHANGED most recently — the active-fund event OR a real URL change —
+  // not by a persistent "URL always wins" rule.
+  const [storedFundId, setStoredFundId] = useState<string>(() => {
+    const fromUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("fund") : null;
+    return fromUrl || getActiveFundId();
+  });
   useEffect(() => {
     // Parameter typed as `globalThis.Event` to disambiguate from the
     // schema `Event` (gifting event row) imported above.
@@ -104,7 +111,18 @@ export function DesktopSidebar() {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  const selectedFundId = new URLSearchParams(search).get("fund") || storedFundId || "";
+  // Follow REAL URL ?fund changes (deep-link nav, browser back/forward), but only
+  // when the param is actually present and changes — so a STALE ?fund left behind
+  // by a non-wouter URL write (DashboardLab's setActiveFundId-on-render / a
+  // replaceState switch) can't persistently override a fund switch that fired the
+  // change event. Previously the sidebar read `useSearch().get("fund")` inline and
+  // let it WIN unconditionally, which pinned the sidebar to the old fund's name +
+  // balance + quick links after an in-dashboard switch (founder-reported 2026-06-12).
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(search).get("fund");
+    if (fromUrl) setStoredFundId(fromUrl);
+  }, [search]);
+  const selectedFundId = storedFundId || "";
   // Defensive: funds can be null/undefined when the API errors out
   // (initialData reads from local cache which may serialize JSON
   // null; the queryFn falls back to [] on non-OK responses but
