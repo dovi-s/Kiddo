@@ -715,13 +715,13 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     <div class="hero">
       <p class="hero-eyebrow">Investment gift</p>
       <p class="hero-name">${recipientName}</p>
-      <p class="hero-sub">Give a gift that grows. Every dollar becomes a real investment.</p>
+      <p class="hero-sub">Give a gift that grows into a real investment.</p>
     </div>
     <div class="body">
       ${pageLabel && !selected.isPermanent ? `<p class="event-label">${pageLabel}</p>` : ""}
       <div class="qr-wrap"><img src="${dataUrl}" alt="QR code" /></div>
       <p class="scan-cta">Scan to give a gift that grows</p>
-      <p class="scan-sub">Scan the QR code or visit the link below to send ${recipientName} a real stock investment. No account needed.</p>
+      <p class="scan-sub">Scan the QR code or visit the link below to send ${recipientName} a gift. Once investing is live, it's invested in real stock. No account needed.</p>
       <div class="divider"></div>
       <p class="url-chip">${selected.url}</p>
       ${exportGiftCode ? `<p class="code-line">No camera handy? Enter code <strong>${exportGiftCode}</strong> at ${codeLookupDisplay}</p>` : ""}
