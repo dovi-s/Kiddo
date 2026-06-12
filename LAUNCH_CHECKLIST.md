@@ -147,6 +147,29 @@ can't charge:
   Low severity, rare. Fix = mirror `hasEntitlementFromStatus` (add `past_due`) in that
   filter. Touches the recurring-precharge webhook area, so coordinate before editing.
 
+### Transactional email program — the full set (all gated on the email provider)
+
+Mapped 2026-06-12 from a competitor-email sweep (Acorns/Prime Video/Amazon/Progressive/
+Canva). The provider (Postmark/SendGrid) is the launch-critical gate; templates are
+being built ahead of it. State:
+- **BUILT:** gifter gift receipt (`gift_receipt_followup`), recurring-contribution
+  pre-charge heads-up (`sendPrechargeNotice`), monthly relationship digest
+  (`monthlyPulse`, now names + a note), cancellation confirmation
+  (`templates/subscriptionCanceled.ts` — template only, trigger pending its
+  downgrade-guard).
+- **GAP — failed-payment / dunning:** the single highest-value transactional; wire
+  first when email goes live (see the dunning item above).
+- **GAP — parent subscription receipt** (the Canva email): a parent charged $29/$59
+  should get a receipt. Default to **Stripe's built-in receipt emails** (a dashboard
+  config, no custom template) unless a branded one is wanted. Decide + enable.
+- **GAP — annual auto-renewal advance reminder (COMPLIANCE, not just nicety):** an
+  annual Kiddo+ that auto-renews likely **requires** advance notice under California's
+  Automatic Renewal Law + the FTC negative-option / "click-to-cancel" rule. No renewal
+  reminder exists. Counsel should confirm the required cadence + content; then build the
+  template. Add to `COUNSEL_ENGAGEMENT_PACKET.md`.
+- **NOT ours:** regulatory shareholder comms (prospectus/annual-report/proxy) are the
+  rented BD partner's job, not Kiddo's (see `BUSINESS_STRUCTURE.md` checklist #7).
+
 ---
 
 ## P2-5 — Drive frequency (frequency is a moat *input*)
