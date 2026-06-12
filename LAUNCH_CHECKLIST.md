@@ -147,6 +147,13 @@ can't charge:
   the EMAIL: dunning / card-failed / renewal-receipt emails depend on the
   unconfigured email provider (the launch-critical email gap). Wire the
   card-failed email when email goes live — it is the highest-value transactional.
+  **Spec (best-practice from the insurer/sub playbook): dunning is a SEQUENCE, not one
+  email** — escalating touches before access lapses (e.g. retry-failed → "update your
+  card, your Plus is at risk" → final "Plus ends [date]"), with **friction stripped
+  out**: a one-click card-update link (Stripe customer-portal / billing magic link, no
+  login). Mirror the existing **gifter** 2-stage dunning (14d card-update + 30d cancel,
+  per `EXTERNAL_SERVICES.md`) for the PARENT subscription. Keep Stripe's own dunning
+  emails OFF so it's one branded sender, not two (double-dunning reads as a scam).
 - **Sales tax on subscriptions (verify).** No Stripe Tax wiring found in the
   pricing sweep. US SaaS subscriptions are taxable in some states; minor pre-scale,
   but confirm the posture (enable Stripe Tax or document why not) before scaling.
