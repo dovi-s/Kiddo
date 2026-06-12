@@ -222,7 +222,7 @@ const pricingFaqs = [
   },
   {
     question: "What's the annual fee on invested assets?",
-    answer: "$1 per year for every $1,000 invested. About $10/year on a $10,000 fund, $100/year on a $100,000 fund. Once investing is live, it's charged only on invested assets; cash sitting in the fund and pending gifts aren't charged. Prorated daily, so you only pay for the days assets are invested. Same rate on Free, Kiddo+, and Kiddo Family. The subscription is a separate fee for product features, not a fee on the investment.",
+    answer: "$1 per year for every $1,000 invested. About $10/year on a $10,000 fund, $100/year on a $100,000 fund. Once investing is live, it's charged only on invested assets; cash sitting in the fund and pending gifts aren't charged. Prorated daily, so you only pay for the days assets are invested. Same rate on Free, Kiddo+, and Kiddo Family. Your subscription, if you have one, is a separate fee for the app's features.",
   },
   {
     question: "Is there a free trial?",
