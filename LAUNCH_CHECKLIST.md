@@ -130,6 +130,17 @@ can't charge:
   `.optional()` (`env.ts:31`) and `index.ts:234` warns "verification disabled" if
   unset. Unset in prod = either spoofable money webhooks or a throwing handler.
   Same shape as the CSRF deploy gotcha. Verify it is set before launch.
+  **And the endpoint itself must exist:** create a LIVE-mode webhook in the Stripe
+  dashboard pointed at the prod domain + `/api/stripe/webhook`, subscribed to the 9
+  events the handler processes (`webhookHandlers.ts:1043-1067`):
+  `checkout.session.completed`, `customer.subscription.updated`,
+  `customer.subscription.deleted`, `customer.deleted`, `payment_intent.succeeded`,
+  `payment_intent.payment_failed`, `charge.refunded`, `invoice.paid`,
+  `invoice.payment_failed`. Then set `STRIPE_WEBHOOK_SECRET` to THAT endpoint's
+  signing secret. Do NOT aim it at an ephemeral dev host: a test-mode endpoint
+  pointed at an old Replit URL got auto-disabled after 9 days of 404s (2026-05,
+  harmless in test mode, but the live equivalent is silent billing + gift-settlement
+  failure with no error). For dev, use `stripe listen --forward-to <url>/api/stripe/webhook`.
 - **Failed-payment behavior (dunning).** `past_due` now KEEPS Plus access through
   Stripe's retry window (`hasEntitlementFromStatus`, fixed 2026-06-12) and a
   `payment_failed` nudge fires in-app (`actionItems.ts:146`). The remaining gap is
