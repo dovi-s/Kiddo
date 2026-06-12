@@ -55,3 +55,9 @@ apps/mobile/.expo
 artifacts/verify-*/
 artifacts/founder-reel/
 artifacts/ui-smoke/*-fail.png
+artifacts/copy-check/
+artifacts/fee-preview/
+
+# Stray local diff snapshots (saved patches, never repo history).
+_mine.patch
+*.local.patch
