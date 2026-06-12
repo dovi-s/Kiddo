@@ -217,7 +217,7 @@ const pricingFaqs = [
   },
   {
     question: "Is there a platform fee on gifts?",
-    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and an annual fee of $1 per $1,000 invested (about $10/year on a $10,000 fund) that applies to every plan.",
+    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and an annual fee of $1 per $1,000 invested (about $10/year on a $10,000 fund) that applies to every plan; on a paid plan your subscription covers that fee, so you never pay both.",
   },
   {
     question: "What's the annual fee on invested assets?",
@@ -410,10 +410,17 @@ export default function Pricing() {
                   </ul>
 
                   {/* Fee as a footnote, not a checkmarked bullet — a charge
-                      under a green check reads as a perk. Applies to every
-                      plan, so it renders on all cards. The full breakdown is
-                      in the "How the annual fee works" table below. */}
-                  <p className="-mt-4 mb-8 text-xs leading-relaxed text-muted-foreground/70">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
+                      under a green check reads as a perk. Free funds pay the
+                      AUM fee directly; on a paid plan the subscription covers
+                      it under the greater-of rule, so the paid-card footnote
+                      says so (otherwise it reads as an add-on and contradicts
+                      the "never both" model). Full breakdown is in the "How
+                      the annual fee works" section below. */}
+                  <p className="-mt-4 mb-8 text-xs leading-relaxed text-muted-foreground/70">
+                    {plan.pricing.kind === "flat"
+                      ? "Annual fee: $1/year per $1,000 invested (only on invested assets)."
+                      : "You pay your plan or the annual fund fee, whichever is larger. Never both."}
+                  </p>
 
                   <Link href="/get-started">
                     <Button variant={plan.featured ? "default" : "outline"} className="w-full" data-testid={`button-pricing-${plan.id}`}>
