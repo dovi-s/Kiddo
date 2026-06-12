@@ -653,6 +653,58 @@ const FUND_BALANCE_CACHE_PREFIX = "kiddo.fund.balance.v1:";
 // time horizon.
 const FUND_PROJECTION_AT_65_CACHE_PREFIX = "kiddo.fund.projectionAt65.v1:";
 
+// Demo-only: how far BELOW the true value to seed the count-up's prior, so every
+// demo cold-load plays an Acorns-style roll-up to the real number. A REAL user's
+// prior is their genuine last-visit value, so their roll is the REAL delta
+// (market + gifts together, exactly like Acorns) — always honest, never chosen.
+// The demo has no real "yesterday" (its holdings are frozen), so it synthesizes
+// one, read as "while you were away, growth + contributions landed". The END is
+// ALWAYS the true value, so up-only honesty holds. Synthesized FRESH from live
+// on every cold load (NOT read from the persisted cache — that's what made the
+// roll fire only the first time), so it rolls every single open. Balance AND
+// projection share this ONE factor so they climb in lockstep — this is the
+// single dial. 0.96 = prior ~4% under live (~$900 on a $23k fund): a clearly
+// visible climb sized like a real gift/recurring + market landing, not a 2%
+// twitch, yet modest enough not to look cartoonish. Toward 1.0 = gentler,
+// lower = punchier.
+const DEMO_ROLL_UNDERSEED_FACTOR = 0.96;
+
+// ── Hero cold-load cascade — ONE timeline, single source of truth ──────────────
+// Every beat below is derived from these three base values, in ms from the
+// data-ready anchor (when the roll/digest first can run). These were drifting
+// across two files (the "while you were away" digest had its own hardcoded
+// 2900ms that fell mid-roll once the linger changed) — deriving everything from
+// one place is what keeps the choreography honest when a base value is tuned.
+//
+// LINGER on the old (cached / prior) number, static and readable, BEFORE the
+// count-up climbs — the Acorns "here's where you were… now watch it grow" beat.
+// During this delay `useCountUp` holds the display at the `from` value, so the
+// parent reads the old number, THEN sees the climb. (This only feels good
+// because the roll that follows is real now — the old hold read as
+// "sit-then-nudge" purely because the roll after it was broken and snapped.)
+// NOTE the card fades in over the first ~540ms (220ms delay + 320ms), so part of
+// this is the number arriving; the rest is the crisp static read before the
+// climb. Tunable: THE "how long do I sit on the old number" dial.
+const HERO_ROLL_START_DELAY_MS = 850;
+// The balance / projection climb duration (the focal duration-ladder rung).
+const HERO_ROLL_DURATION_MS = 1200;
+// Gap after the balance settles before the projection climbs — so the focal
+// number lands first and the projection reads as a deliberate SECOND reveal,
+// not a competing simultaneous roll.
+const HERO_PROJECTION_BEAT_MS = 250;
+// Derived: when the projection starts, and when the whole number cascade has
+// settled. Everything ancillary (the "while you were away" digest, the banner
+// stack) lands AFTER this so the roll is the first and only thing moving.
+const HERO_PROJECTION_START_DELAY_MS =
+  HERO_ROLL_START_DELAY_MS + HERO_ROLL_DURATION_MS + HERO_PROJECTION_BEAT_MS;
+const HERO_CASCADE_SETTLED_MS = HERO_PROJECTION_START_DELAY_MS + HERO_ROLL_DURATION_MS;
+// The "while you were away" digest reveals just after the cascade settles — the
+// capstone that ATTRIBUTES the roll ("$50 from Manny, $120 in market growth").
+const HERO_DIGEST_REVEAL_MS = HERO_CASCADE_SETTLED_MS + 150;
+// The ancillary banner stack follows the digest by a beat, so they sequence
+// (number cascade → recap → celebrations) instead of all arriving at once.
+const HERO_BANNERS_REVEAL_MS = HERO_DIGEST_REVEAL_MS + 300;
+
 function readCachedFundValue(fundId: string): number | null {
   // Per-fund balance key is written on every successful load - more current than funds list.
   const dedicated = readLocalCache<number>(`${FUND_BALANCE_CACHE_PREFIX}${fundId}`);
@@ -2581,20 +2633,47 @@ export default function DashboardLab() {
     return sum + parseFloat(f.balance || "0") + parseFloat(f.pendingBalance || "0") + parseFloat((f as any).cashBalance || "0");
   }, 0);
   const prevValueRef = useRef(rawTotalValue);
+  // The roll's "from" (welcome-back prior):
+  //  - Demo: a synthetic prior a visible step below live. CAPTURED ONCE per fund,
+  //    the first render its real value is ready (dashboardSummary loaded + a real
+  //    activeFundId), then FROZEN. This is load-bearing: recomputing live*0.96
+  //    every render made the seed THRASH as the fund's data settled in steps (and
+  //    briefly applied under the empty "" fund id before activeFundId resolved),
+  //    which re-armed the roll's paint gate over and over and made it fire
+  //    inconsistently — "sometimes it rolls" / "fresh incognito doesn't". A frozen
+  //    prior can't thrash, so each kid rolls once, cleanly, the first time it's
+  //    opened. The END is always the true live value, so up-only honesty holds.
+  //  - Real: the genuine last-visit value from warm-data cache → the roll is the
+  //    REAL delta (market + gifts together, Acorns-style), or an honest snap on a
+  //    true first visit / a quiet unchanged return (no fabricated roll).
+  const demoBalancePriorByFundRef = useRef<Record<string, number>>({});
+  if (
+    isDemoAccount && activeFundId && dashboardSummary &&
+    rawTotalValue > 0 && demoBalancePriorByFundRef.current[activeFundId] == null
+  ) {
+    demoBalancePriorByFundRef.current[activeFundId] = rawTotalValue * DEMO_ROLL_UNDERSEED_FACTOR;
+  }
+  const demoBalancePrior =
+    isDemoAccount && activeFundId ? (demoBalancePriorByFundRef.current[activeFundId] ?? null) : null;
   const {
     displayValue: displayHeroBalance,
     delta: rawSinceLastVisitDelta,
     shouldAnimate: showFresheningCue,
     isAnimating: balanceAnimating,
+    isRolling: balanceRolling,
   } = useCachedFirstNumber({
-    seedValue: cachedHeroFundValue,
+    seedValue: isDemoAccount ? demoBalancePrior : cachedHeroFundValue,
     liveValue: rawTotalValue,
-    // 1200ms (vs the hook's 900ms default) — the hero balance is the focal
-    // count-up element; the longer ladder rung gives the parent time to
-    // perceive the rise from cached → live. Per
+    // The hero balance is the focal count-up element; the longer ladder rung
+    // gives the parent time to perceive the rise from cached → live. Per
     // project_count_up_animation_consistency.md: "Duration ladder + 'from'
     // anchor rules" — hero balances are the slowest tier in the ladder.
-    duration: 1200,
+    duration: HERO_ROLL_DURATION_MS,
+    // Linger on the old number, then climb. See HERO_ROLL_START_DELAY_MS.
+    startDelay: HERO_ROLL_START_DELAY_MS,
+    // Roll ONCE per kid: each fund rolls the first time you open it this session,
+    // then snaps on every return (switching back to a kid you've seen, polls).
+    rollKey: activeFundId,
   });
 
   // Hero balance never overflows on mobile (2026-06-07, founder: "will it fit
@@ -2655,10 +2734,12 @@ export default function DashboardLab() {
   // up to the new live number — and everything else arrives after, never on top
   // of the roll. Generalizes the SinceLastVisitDigest's own reveal-hold to the
   // whole stack so "roll first, the rest after" is a system property, not a
-  // per-component accident (founder call 2026-06-12). ~1.3s = the 1.2s hero roll
-  // plus a beat. Latched PER-FUND via a ref so the steady 30s dashboard-summary
-  // poll (a new object each refetch) can't re-hold and flicker the banners; a
-  // genuine fund switch (activeFundId change → the roll re-plays) re-holds once.
+  // per-component accident (founder call 2026-06-12). Lands at
+  // HERO_BANNERS_REVEAL_MS — after the whole number cascade settles AND the
+  // "while you were away" recap, so the order is roll → recap → celebrations.
+  // Latched PER-FUND via a ref so the steady 30s dashboard-summary poll (a new
+  // object each refetch) can't re-hold and flicker the banners; a genuine fund
+  // switch (activeFundId change) re-holds once.
   const [bannersRevealed, setBannersRevealed] = useState(false);
   const bannersHeldForFundRef = useRef<string | null>(null);
   useEffect(() => {
@@ -2666,58 +2747,24 @@ export default function DashboardLab() {
     if (bannersHeldForFundRef.current === activeFundId) return;
     bannersHeldForFundRef.current = activeFundId;
     setBannersRevealed(false);
-    const t = window.setTimeout(() => setBannersRevealed(true), 1300);
+    const t = window.setTimeout(() => setBannersRevealed(true), HERO_BANNERS_REVEAL_MS);
     return () => window.clearTimeout(t);
   }, [activeFundId, dashboardSummary]);
 
-  // DEMO roll, change-based not every-open (2026-06-07, founder approved
-  // "do what's best"). The demo under-seed used to fire on EVERY fund-open
-  // (06bd8bb "maximum showcase"), so wandering back to an unchanged fund
-  // (returning from the kid view / Memory Book / a gifter flow you didn't
-  // complete) re-rolled the SAME number — which reads as a gratuitous loop,
-  // against the calm register. Now the under-seed (the thing that makes the
-  // hero roll) primes a fund ONLY when its value is genuinely new vs the
-  // last value we primed for it THIS session. Result: first sight of each
-  // fund rolls; a gift landing (value changed) rolls — the payoff; an
-  // unchanged return stays calm. Per-fund (not global) so tabbing
-  // Luke→Alex→Luke doesn't re-prime Luke. The SAME boolean gates BOTH the
-  // balance and the at-65 seeds below, so they always roll (or rest)
-  // together — one rolling while the other sits still would read as a glitch.
-  const demoSeedByFundRef = useRef<Record<string, number>>({});
-  const demoShouldPrime = isDemoAccount && !!activeFundId && Number.isFinite(rawTotalValue) && rawTotalValue > 0
-    && (demoSeedByFundRef.current[activeFundId] == null
-        || Math.abs(demoSeedByFundRef.current[activeFundId] - rawTotalValue) > 0.5);
-  // Persist the live balance per-fund so the next session seeds the count-up from the last known value.
-  // GUARDED on dashboardSummary being resolved (2026-06-04 perfection pass):
-  // in the window where the fund row has loaded but the summary (holdings)
-  // hasn't, rawTotalValue = 0 invested + pending + cash — a low-but-positive
-  // PARTIAL total. Writing that would poison the seed, and the next session
-  // would "roll up" from a number the fund was never actually at — a fake
-  // gain, the one dishonesty this animation must never produce. The window
-  // only exists on cold caches (first visit, post-demo-login clear), which
-  // is precisely when the seed is being established.
+  // Persist the TRUE live balance per-fund so the next session's cold-load roll
+  // starts from this genuine last-visit value (real users) — the demo ignores
+  // this cache and synthesizes its prior fresh from live, so one honest path
+  // serves both. GUARDED on dashboardSummary being resolved (2026-06-04): in the
+  // window where the fund row has loaded but the summary (holdings) hasn't,
+  // rawTotalValue = 0 invested + pending + cash — a low-but-positive PARTIAL
+  // total. Writing that would poison the seed, and the next session would "roll
+  // up" from a number the fund was never actually at — a fake gain, the one
+  // dishonesty this animation must never produce.
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
-    // DEMO accounts persist a seed ~0.6% BELOW live (founder call
-    // 2026-06-04: "should the demo have a lower cached amount always so
-    // [you] can always do the roll-in thing?"). The roll's premise is
-    // "you've been away; here's what changed" — a real returning parent
-    // always has a yesterday-number, and the demo's fiction is stepping
-    // into Phil's life mid-stream, so a synthetic last-visit number is
-    // set dressing, not a lie: the START is bent, the END is always the
-    // true balance, up-only holds by construction. Every fund-tab open
-    // in the demo now plays the returning-parent moment; the ambient
-    // DemoGiftMoment beat separately demos live ARRIVAL. Real accounts:
-    // exact live value, untouched.
-    // Under-seed (→ roll) only when this fund's value is genuinely new this
-    // session (demoShouldPrime). Otherwise write the TRUE value so a calm
-    // re-view doesn't re-roll, and a real change (gift landing) rolls from
-    // the actual prior value to the new — the clean delta. See demoShouldPrime.
-    const seedToStore = demoShouldPrime ? rawTotalValue * 0.994 : rawTotalValue;
-    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, seedToStore);
-    if (isDemoAccount && activeFundId) demoSeedByFundRef.current[activeFundId] = rawTotalValue;
-  }, [activeFundId, rawTotalValue, dashboardSummary, isDemoAccount, demoShouldPrime]);
+    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, rawTotalValue);
+  }, [activeFundId, rawTotalValue, dashboardSummary]);
 
   // Per-fund cached seed for the hero's "$X at 65" projection peek. Same
   // Acorns-style pattern as the balance: paint the last known projection
@@ -3597,6 +3644,15 @@ export default function DashboardLab() {
 
   useEffect(() => {
     if (giftToastDismissed || !gifts.length) return;
+    // Hold the gift toast — and the coverage-upgrade modal it triggers 900ms
+    // later — until the hero value roll has SETTLED (the same `bannersRevealed`
+    // gate, 1300ms, re-held on fund switch). Without this, a return visit with
+    // a recent gift slides a toast in bottom-right and can pop the coverage
+    // modal over the hero mid-count-up, stealing the one focal moment.
+    // `recentGiftForToast` is what BOTH the toast render and the coverage-modal
+    // timer key off, so this single guard gates both. (founder: "no
+    // distractions" during the load roll, 2026-06-12.)
+    if (!bannersRevealed) return;
     // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
     // (top-center). This bottom-right GiftReceivedToast is the real-product
     // PLG nudge — firing BOTH meant two different gifts announced at once in
@@ -3646,7 +3702,7 @@ export default function DashboardLab() {
       // canonical surfacing.
       markGiftToastDismissed(String(recent.id || ""));
     }
-  }, [gifts, giftToastDismissed, isDemoAccount]);
+  }, [gifts, giftToastDismissed, isDemoAccount, bannersRevealed]);
 
   // (Removed: the effect that surfaced `pendingGiftNotice`. See note on
   // the deleted state above — the banner pattern was the wrong shape for
@@ -4268,41 +4324,46 @@ export default function DashboardLab() {
     });
   }, [totalValue, age18Transition, parentContributions]);
 
+  // Mirror the balance's prior — CAPTURED ONCE per fund + frozen (same reason as
+  // the balance: a per-render live*factor seed thrashes and makes the roll fire
+  // inconsistently). So the at-65 peek climbs in lockstep with the hero balance.
+  const demoProjectionPriorByFundRef = useRef<Record<string, number>>({});
+  if (
+    isDemoAccount && activeFundId && dashboardSummary &&
+    heroProjectedAt65 > 0 && demoProjectionPriorByFundRef.current[activeFundId] == null
+  ) {
+    demoProjectionPriorByFundRef.current[activeFundId] = heroProjectedAt65 * DEMO_ROLL_UNDERSEED_FACTOR;
+  }
+  const demoProjectionPrior =
+    isDemoAccount && activeFundId ? (demoProjectionPriorByFundRef.current[activeFundId] ?? null) : null;
   const {
     displayValue: displayHeroProjectedAt65,
   } = useCachedFirstNumber({
-    seedValue: cachedHeroProjectionAt65,
+    seedValue: isDemoAccount ? demoProjectionPrior : cachedHeroProjectionAt65,
     liveValue: heroProjectedAt65,
-    // 1200ms matches the hero balance — both numbers belong to the same
-    // focal hero moment and ride the same duration ladder rung
-    // (per project_count_up_animation_consistency.md).
-    duration: 1200,
+    // Matches the hero balance — both numbers belong to the same focal hero
+    // moment and ride the same duration ladder rung.
+    duration: HERO_ROLL_DURATION_MS,
     // STAGGER (2026-06-04, founder UX catch): the balance and the projection
-    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor.
-    // The projection now holds at its value until the hero balance has settled
-    // (1200ms) plus a beat, then rolls — focal number lands first, then the
-    // projection follows. Sequential and intentional. Beat widened 150ms -> 250ms
-    // (1350 -> 1450) on a founder pass: at 150ms the projection trod on the
-    // balance's heels; 250ms lets it read as a deliberate SECOND reveal without
-    // any dead time. Perceptual + tunable — nudge up if it should breathe more.
-    startDelay: 1450,
+    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor. The
+    // projection now holds until the balance has settled plus a beat, then rolls
+    // — focal number lands first, projection follows. Derived from the one
+    // cascade timeline (linger + balance climb + beat).
+    startDelay: HERO_PROJECTION_START_DELAY_MS,
+    // Roll once per kid, in lockstep with the balance.
+    rollKey: activeFundId,
   });
 
-  // Persist the live projection per-fund so the next session seeds the
-  // count-up from the last known projection. Same pattern as the balance
-  // cache write above — including the dashboardSummary guard, because the
-  // projection derives from totalValue and inherits the same partial-load
-  // poison window (see the balance write's comment).
+  // Persist the TRUE live projection per-fund so the next session's cold-load
+  // roll starts from the genuine last-visit projection (real users); the demo
+  // synthesizes its prior fresh from live, same as the balance. Same
+  // dashboardSummary guard as the balance write — the projection derives from
+  // totalValue and inherits the same partial-load poison window.
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
-    // Demo under-seed uses the SAME demoShouldPrime gate as the balance write
-    // above, so the hero balance and the at-65 peek roll together (or rest
-    // together) — one rolling while its sibling sits still would read as a
-    // glitch, not a moment. Change-based now: primes only on a genuinely new
-    // value this session, not every open.
-    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, demoShouldPrime ? heroProjectedAt65 * 0.994 : heroProjectedAt65);
-  }, [activeFundId, heroProjectedAt65, dashboardSummary, isDemoAccount, demoShouldPrime]);
+    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, heroProjectedAt65);
+  }, [activeFundId, heroProjectedAt65, dashboardSummary]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
   // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.
@@ -6001,7 +6062,7 @@ export default function DashboardLab() {
             "add a second fund" path). The dropdown stays alongside
             for FundsOverview + jump-to-any-fund affordances. Locked
             2026-05-26. */}
-        <FundTabs funds={funds} activeFundId={selectedFundId} />
+        <FundTabs funds={funds} activeFundId={selectedFundId} onSelect={selectFund} />
 
         {/* Approaching-18 prep banner. Renders when the kid's
             majority date is within the 90-day window but hasn't
@@ -6381,6 +6442,9 @@ export default function DashboardLab() {
             gifts={gifts as any}
             isDemoAccount={isDemoAccount}
             ready={Boolean(dashboardSummary)}
+            // Reveal just after the hero number cascade settles, derived from the
+            // SAME timeline as the rolls so it can never land mid-roll again.
+            revealDelayMs={HERO_DIGEST_REVEAL_MS}
             subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
           />
         )}
@@ -7109,17 +7173,19 @@ export default function DashboardLab() {
                           // so it's stable through the count-up. See its def.
                           fontSize: heroBalanceFontSize,
                           fontWeight: 700,
-                          // Gold while EITHER the count-up is running OR a new gift
-                          // just arrived. The newGiftFlash window holds the cue lit
-                          // for ~3.8s after arrival so the gold-glow moment isn't
-                          // blink-and-miss. Count-up duration bumped to 1200ms
-                          // 2026-05-12 (was 900ms default) — hero balance is the
-                          // focal element on the duration ladder.
-                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
+                          // Gold while the number is ACTIVELY climbing, OR a new
+                          // gift just arrived. Keyed off `balanceRolling` (not the
+                          // whole animating beat), so the old number sits WHITE
+                          // during the linger and only WARMS to gold as it actually
+                          // rolls up — then eases back to white on landing (the
+                          // `transition` below). The gold tracks the growth, not the
+                          // static prior. The newGiftFlash window holds the cue lit
+                          // ~3.8s after an arrival so it isn't blink-and-miss.
+                          color: !isScrubbing && ((balanceRolling && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
                           letterSpacing: "-1.5px",
                           lineHeight: 1,
                           marginBottom: 4,
-                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
+                          filter: !isScrubbing && ((balanceRolling && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
                           transition: "color 0.55s ease, filter 0.55s ease",
                         }}
                         data-testid="text-total-balance"
@@ -15660,7 +15726,7 @@ export default function DashboardLab() {
                     <li>· Add your own photos, videos, and voice to Memory Book entries</li>
                     <li>· Custom fund mix (pick your own stocks and weights)</li>
                     <li>· Co-parent access for a partner or guardian</li>
-                    <li>· 3 active occasions at a time, priority support</li>
+                    <li>· Unlimited occasions, priority support</li>
                   </ul>
                 </div>
 
