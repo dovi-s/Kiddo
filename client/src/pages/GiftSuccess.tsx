@@ -12,6 +12,7 @@ import { Logo } from "@/components/ui/logo"
 import { StockLogo } from "@/components/ui/stock-logo"
 import { RecurringGiftNudge, RecurringSetupModal } from "@/components/ui/plg-loops"
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker"
+import { GiftStatusTimeline } from "@/components/GiftStatusTimeline"
 import { toast } from "@/hooks/use-toast"
 import { buildTrackedGetStartedHref, trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition"
 import { useAuth } from "@/hooks/use-auth"
@@ -999,17 +1000,24 @@ export default function GiftSuccess() {
             audit (2026-05-14), this is the lowest-leverage / highest-
             confusion gap to close. Calm muted register; not a love
             mark. */}
-        <motion.p
-          className="mx-auto max-w-md text-center text-xs text-muted-foreground/80 mb-6"
+        <motion.div
+          className="mx-auto w-full max-w-xs mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.62 }}
           data-testid="text-success-settling-note"
         >
-          {isRecurringSetup
-            ? `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days. Manage or cancel any time from your gifter dashboard.`
-            : `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
-        </motion.p>
+          {/* Money-in-motion beat (per the fintech-UX canon: visualize the
+              in-flight state so the gifter feels the gift is safe and on its
+              way, not vanished). HONEST: the steps mirror the approved settling
+              copy below; no new claim, no faked instant settlement. */}
+          <GiftStatusTimeline
+            current="settling"
+            caption={isRecurringSetup
+              ? `Settling into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days. Manage or cancel any time from your gifter dashboard.`
+              : `Settling into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
+          />
+        </motion.div>
 
         {/* Occasion chip — names WHAT this gift was for (birthday,
             graduation, etc.). Only renders for goalless occasions: goal
