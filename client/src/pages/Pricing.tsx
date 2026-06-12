@@ -232,6 +232,18 @@ const pricingFaqs = [
     question: "What is the difference between a fund and an occasion?",
     answer: "A fund is your child's permanent investment account. An occasion is a gifting moment tied to that fund: a birthday page, a holiday page, a baby shower page. All gifts from all occasions flow into the same fund. The fund is permanent. Occasions are temporary.",
   },
+  {
+    question: "Do I pay the subscription and the 0.10% at the same time?",
+    answer: "They cover two different things. The subscription is for product features: recurring contributions, your own photos and voice in the Memory Book, custom fund mix, co-parent access. The 0.10% is the fee on the invested money itself, the same kind of fee any brokerage charges to hold and grow it, and it is tiny ($1 a year per $1,000). You can skip the subscription entirely and still invest on Free, where the 0.10% is the only fee.",
+  },
+  {
+    question: "Why pay anything when a Fidelity or Vanguard custodial account is free?",
+    answer: "If all you want is a plain brokerage account for your child, those are great and you should use one. Kiddo adds the parts a bare custodial account has no concept of: a gift link the whole family can give into, a Memory Book that records everyone who showed up, gifter notes and voices your child reads at 18, and a handoff built around the day they take ownership. That is what the optional plans and the small annual fee support.",
+  },
+  {
+    question: "Will you ever raise the price?",
+    answer: "If we ever change plan prices, anyone already on a plan keeps the price they signed up at. We don't do surprise hikes on a fund you already started, and Founding Members lock their price for life.",
+  },
 ];
 
 export default function Pricing() {
@@ -638,6 +650,30 @@ export default function Pricing() {
                 </h3>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   At majority, when the fund legally becomes the kid's, the parent's Kiddo+ subscription retires for that fund. The kid pays nothing to keep using their own brokerage account.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  Tax records are free, every plan.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Your annual contribution summary for tax time is included on Free. We don't put tax records behind a paywall.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  We don't raise the price on a plan you already have.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Lock a plan and keep that price for as long as you stay on it. No surprise hikes on a fund you already started. Founding Members lock their price for life.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  Your money and memories are always yours.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Cancel any time with no fees, and export your records whenever you want. Your fund and everything in it stays yours, and nothing is locked in.
                 </p>
               </div>
             </div>
