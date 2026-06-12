@@ -2319,7 +2319,7 @@ export default function GiftCheckout() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">Keep this gift going</p>
                     <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                      Send the same gift on the schedule you pick. Cancel anytime. Free, no Kiddo subscription.
+                      Send the same gift on the schedule you pick. We email you before each charge. Cancel anytime. Free, no Kiddo subscription.
                     </p>
                   </div>
                 </label>
@@ -2707,7 +2707,7 @@ export default function GiftCheckout() {
                           else if (recurringFrequency === "yearly") d.setFullYear(d.getFullYear() + 1);
                           else d.setMonth(d.getMonth() + 1);
                           return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                        })()}, then {recurringFrequency}. Cancel anytime from your gifter dashboard.
+                        })()}, then {recurringFrequency}. We'll email you before each charge, and you can cancel anytime from your gifter dashboard.
                       </p>
                     </div>
                   </div>

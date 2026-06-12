@@ -330,6 +330,13 @@
       "when": 1779900000000,
       "tag": "0047_fund_memorialized_at",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1780000000000,
+      "tag": "0048_recurring_precharge_notice",
+      "breakpoints": true
     }
   ]
 }

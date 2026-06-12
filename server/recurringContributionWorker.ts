@@ -1012,6 +1012,176 @@ async function processRecurringRequestFulfillment(log: LogFn): Promise<void> {
   if (sent > 0) log(`recurring-request fulfillment: ${sent} gifter(s) notified`, WORKER_SOURCE);
 }
 
+// ── Pre-charge heads-up notices ──────────────────────────────────────────────
+// A few days before each HEALTHY recurring charge, email a calm "we're about to
+// charge you on {date}, nothing to do, change or cancel anytime" notice. This is
+// the transparency-bias trust lever (Cal AI / Blinkist: stating exactly when you
+// charge raises conversion and cuts complaints), and it backs the "we'll email
+// you before each charge" line on the gift-checkout recurring surfaces.
+//
+// Covers BOTH charging systems:
+//   - gifter recurring (recurring_gifts WITH a Stripe subscription; Stripe bills,
+//     the invoice.paid webhook keeps next_charge_date current). Reminder-only
+//     rows (stripe_subscription_id IS NULL) never charge, so they're excluded.
+//   - parent auto-invest (parent_contributions; the worker charges via a
+//     PaymentIntent when next_run_date comes due).
+//
+// Dedup is EXACT: we stamp the charge date we noticed for (precharge_notice_for_date),
+// so a row sends once per cycle and re-qualifies only when its next charge date
+// advances. The query targets FUTURE charges in a short lead window, so this pass
+// is disjoint from the due-now charge passes -- it can never race a real charge.
+const PRECHARGE_LEAD_DAYS = 3;
+
+async function sendPrechargeNotice(opts: {
+  to: string;
+  fundId: string;
+  recipientName: string;
+  childName: string;
+  amount: number;
+  chargeDate: Date;
+  manageUrl: string;
+  stopUrl?: string;
+  kind: "gifter" | "parent";
+}): Promise<void> {
+  const { to, fundId, recipientName, childName, amount, chargeDate, manageUrl, stopUrl, kind } = opts;
+  const dateLabel = chargeDate.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  const amountLabel = `$${Number.isFinite(amount) ? amount.toFixed(2) : "?"}`;
+  // Gifter rows are billed by Stripe off our mirrored date, so "on or around";
+  // parent auto-invest charges off next_run_date directly, so "on".
+  const whenPhrase = kind === "gifter" ? `on or around ${dateLabel}` : `on ${dateLabel}`;
+  const heading = kind === "gifter"
+    ? `Your recurring gift to ${childName} is coming up`
+    : `${childName}'s recurring investment is coming up`;
+  const sentence = kind === "gifter"
+    ? `Your recurring gift of ${amountLabel} to ${childName}'s fund is set to run ${whenPhrase}.`
+    : `Your recurring investment of ${amountLabel} into ${childName}'s fund is set to run ${whenPhrase}.`;
+  const intro = [
+    `Hi ${recipientName},`,
+    "",
+    sentence,
+    "",
+    "Nothing to do, it happens automatically. Want to change the amount or stop it? You can do that anytime before it runs.",
+  ].join("\n");
+  const { html } = renderKiddoEmail({
+    heading,
+    intro,
+    cta: { text: "Manage or cancel", url: manageUrl },
+    ...(kind === "gifter" && stopUrl ? { unsubscribeUrl: stopUrl } : {}),
+  });
+  await sendEmail({
+    to,
+    subject: heading,
+    text: [intro, "", `Manage or cancel: ${manageUrl}`, "", "The Kiddo team"].join("\n"),
+    html,
+    fundId,
+    tags: ["recurring_precharge_notice"],
+    ...(kind === "gifter" && stopUrl ? { listUnsubscribeUrl: stopUrl } : {}),
+  } as any);
+}
+
+export async function processPrechargeNotices(log: LogFn = () => undefined): Promise<void> {
+  // --- Gifter recurring (Stripe-subscription rows; next_charge_date kept current
+  //     by the invoice.paid webhook). ---
+  const gifterRows = await pool.query<Record<string, any>>(`
+    SELECT rg.id, rg.fund_id, rg.sender_name, rg.sender_email, rg.amount,
+           rg.next_charge_date,
+           f.recipient_first_name, f.name AS fund_name
+    FROM recurring_gifts rg
+    JOIN funds f ON f.id = rg.fund_id
+    WHERE rg.status = 'active'
+      AND f.status = 'active'
+      AND rg.stripe_subscription_id IS NOT NULL
+      AND rg.sender_email IS NOT NULL
+      AND rg.next_charge_date IS NOT NULL
+      AND rg.next_charge_date > NOW()
+      AND rg.next_charge_date <= NOW() + INTERVAL '${PRECHARGE_LEAD_DAYS} days'
+      AND (rg.precharge_notice_for_date IS NULL
+           OR rg.precharge_notice_for_date IS DISTINCT FROM rg.next_charge_date)
+    ORDER BY rg.next_charge_date ASC
+    LIMIT 200
+  `);
+
+  let gifterSent = 0;
+  for (const row of gifterRows.rows) {
+    try {
+      const senderEmail = String(row.sender_email || "");
+      if (!senderEmail) continue;
+      const childName = String(row.recipient_first_name || row.fund_name || "the child");
+      const stopUrl = buildReminderStopUrl(getBaseUrl(), row.id as string, senderEmail);
+      await sendPrechargeNotice({
+        to: senderEmail,
+        fundId: String(row.fund_id),
+        recipientName: String(row.sender_name || "there"),
+        childName,
+        amount: parseFloat(String(row.amount)),
+        chargeDate: new Date(row.next_charge_date as string),
+        manageUrl: `${getBaseUrl()}/my-gifts`,
+        stopUrl,
+        kind: "gifter",
+      });
+      // Stamp the exact date we noticed for; won't re-send until the charge
+      // advances next_charge_date to a new cycle.
+      await pool.query(
+        `UPDATE recurring_gifts SET precharge_notice_for_date = $1 WHERE id = $2`,
+        [row.next_charge_date, row.id],
+      );
+      gifterSent += 1;
+    } catch (err) {
+      log(`precharge notice (gifter) failed for ${String(row.id)}: ${String(err)}`, WORKER_SOURCE);
+    }
+  }
+
+  // --- Parent auto-invest (worker-charged on next_run_date). ---
+  const parentRows = await pool.query<Record<string, any>>(`
+    SELECT pc.id, pc.fund_id, pc.amount, pc.next_run_date,
+           f.recipient_first_name, f.name AS fund_name,
+           u.email AS user_email, u.first_name AS user_first_name
+    FROM parent_contributions pc
+    JOIN funds f ON f.id = pc.fund_id
+    JOIN users u ON u.id = pc.user_id
+    WHERE pc.status = 'active'
+      AND f.status = 'active'
+      AND f.user_id = pc.user_id
+      AND pc.next_run_date IS NOT NULL
+      AND pc.next_run_date > NOW()
+      AND pc.next_run_date <= NOW() + INTERVAL '${PRECHARGE_LEAD_DAYS} days'
+      AND (pc.precharge_notice_for_date IS NULL
+           OR pc.precharge_notice_for_date IS DISTINCT FROM pc.next_run_date)
+    ORDER BY pc.next_run_date ASC
+    LIMIT 200
+  `);
+
+  let parentSent = 0;
+  for (const row of parentRows.rows) {
+    try {
+      const userEmail = String(row.user_email || "");
+      if (!userEmail) continue;
+      const childName = String(row.recipient_first_name || row.fund_name || "your child");
+      await sendPrechargeNotice({
+        to: userEmail,
+        fundId: String(row.fund_id),
+        recipientName: String(row.user_first_name || "there"),
+        childName,
+        amount: parseFloat(String(row.amount)),
+        chargeDate: new Date(row.next_run_date as string),
+        manageUrl: `${getBaseUrl()}/dashboard?fund=${String(row.fund_id)}`,
+        kind: "parent",
+      });
+      await pool.query(
+        `UPDATE parent_contributions SET precharge_notice_for_date = $1 WHERE id = $2`,
+        [row.next_run_date, row.id],
+      );
+      parentSent += 1;
+    } catch (err) {
+      log(`precharge notice (parent) failed for ${String(row.id)}: ${String(err)}`, WORKER_SOURCE);
+    }
+  }
+
+  if (gifterSent + parentSent > 0) {
+    log(`precharge notices sent: ${gifterSent} gifter, ${parentSent} parent`, WORKER_SOURCE);
+  }
+}
+
 export async function runRecurringContributionWorker(log: LogFn = () => undefined): Promise<void> {
   if (workerRunning) return;
   workerRunning = true;
@@ -1021,6 +1191,8 @@ export async function runRecurringContributionWorker(log: LogFn = () => undefine
     await processGifterRecurringDunning(log);
     await processRecurringRequestFulfillment(log);
     await processAnniversaryMilestones(log);
+    // Future charges only (disjoint from the due-now charge passes above).
+    await processPrechargeNotices(log);
   } catch (err) {
     log(`recurring contribution worker failed: ${String(err)}`, WORKER_SOURCE);
   } finally {

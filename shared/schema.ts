@@ -909,6 +909,11 @@ export const recurringGifts = pgTable("recurring_gifts", {
   // Reset to null on schedule resume so a future failure starts a
   // fresh 14/30 day clock.
   lastDeclineReminderAt: timestamp("last_decline_reminder_at"),
+  // Pre-charge heads-up dedup: the charge date we last emailed a "we're about to
+  // charge you" notice for. Sent once per cycle; when next_charge_date advances,
+  // this differs and the row re-qualifies. See recurringContributionWorker
+  // processPrechargeNotices. Nullable for legacy rows.
+  prechargeNoticeForDate: timestamp("precharge_notice_for_date"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("recurring_gifts_fund_id_idx").on(table.fundId),
@@ -945,6 +950,9 @@ export const parentContributions = pgTable("parent_contributions", {
   // accurate; the cooldown is email-only. Nullable for legacy rows that
   // pre-date the column.
   lastDeclineEmailAt: timestamp("last_decline_email_at"),
+  // Pre-charge heads-up dedup (see recurring_gifts.precharge_notice_for_date):
+  // the next_run_date we last emailed a "we're about to charge you" notice for.
+  prechargeNoticeForDate: timestamp("precharge_notice_for_date"),
   totalContributed: decimal("total_contributed", { precision: 12, scale: 2 }).default("0"),
   executionModel: text("execution_model").default("auto"), // auto | pick | family
   selectedTicker: text("selected_ticker"),
