@@ -141,7 +141,7 @@ export const educationContent = {
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gifter. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund), same rate on Free, Kiddo+, and Kiddo Family. On a paid plan your subscription covers this fee: you pay your plan or the 0.10%, whichever is larger, never both. Cash and pending gifts are not charged. All fees are shown before checkout.",
+    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gifter. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund). Same rate on Free, Kiddo+, and Kiddo Family. The subscription is a separate fee for product features, not a fee on the investment. Cash and pending gifts are not charged. All fees are shown before checkout.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",

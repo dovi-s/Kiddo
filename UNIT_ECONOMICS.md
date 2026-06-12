@@ -34,9 +34,12 @@ Settled enough to build against (founder-ratifiable; implementation is custody-g
 The full memo + an editable calculator (`script/revenue-model.mjs`) live alongside.
 Load-bearing rules so this does not drift:
 
-- **Greater-of billing, never the sum.** A fund pays MAX(subscription, AUM). A paying
-  family never sees two fees stacked. The subscription is the fee while the balance is
-  small; AUM takes over once the balance crosses ~$29k (Plus) / ~$59k (Family).
+- **Two fees, two purposes (greater-of was reverted 2026-06-12).** The subscription is
+  for product features; the 0.10% is the fee on invested assets and applies on every
+  plan. NOT stacked-as-one-meter and NOT greater-of (that crossover was over-engineered);
+  the two-fee optic is handled by framing + trust signals (gifts free, tax summary free,
+  unlimited occasions, gifter media always visible, kid never pays a sub). See
+  `ONE_METER_FEE_DECISION.md`.
 - **Charge on invested BALANCE, not earnings.** A performance/earnings fee is barred
   (advisory + qualified-client rule); the 0.10% is a platform fee, not advisory, today.
 - **The subscription is the FLOOR, not the business.** Per-fund revenue RISES as

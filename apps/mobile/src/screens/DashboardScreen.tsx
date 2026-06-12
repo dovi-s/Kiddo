@@ -425,7 +425,7 @@ function AccountTab({
         <View style={styles.planCard}>
           <Text style={styles.planTitle}>Free</Text>
           <Text style={styles.planBody}>
-            One active event. Platform fee: $2 on gifts up to $200, then 1% of the full gift amount over $200.
+            One active occasion. No platform fee on gifts: the full gift goes to the fund. Annual fee: $1/year per $1,000 invested, on invested assets only.
           </Text>
           <Pressable
             style={styles.primarySmallBtn}

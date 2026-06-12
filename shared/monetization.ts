@@ -270,55 +270,6 @@ export function estimateAnnualAumFee(investedAssets: number): number {
   return Math.round(safeAssets * KIDDO_AUM_FEE_RATE * 100) / 100;
 }
 
-// Annual-equivalent subscription price for a plan (monthly plans annualized).
-export function annualSubscriptionUsd(plan: GiftFeePlan, interval: "month" | "year" = "year"): number {
-  switch (plan) {
-    case "starter":
-      return interval === "month" ? roundMoney(KORA_STARTER_MONTHLY * 12) : KORA_STARTER_YEARLY;
-    case "family":
-      return interval === "month" ? roundMoney(KORA_FAMILY_MONTHLY * 12) : KORA_FAMILY_YEARLY;
-    case "legacy":
-      return KIDDO_LEGACY_YEARLY;
-    case "free":
-    case "trial":
-    default:
-      return 0;
-  }
-}
-
-export type EffectiveFeeResult = {
-  annualFee: number;
-  billedAs: "subscription" | "aum" | "none";
-  annualSubscription: number;
-  annualAum: number;
-};
-
-// Greater-of "one meter" (ONE_METER_FEE_DECISION.md): a fund pays the LARGER of its
-// subscription or its AUM fee, NEVER the sum. Free/trial funds have no subscription, so
-// the AUM is the only fee; a paying fund's subscription "covers" the AUM until the fund
-// grows large enough that 0.10% exceeds the plan, at which point the AUM is the fee.
-//
-// IMPORTANT: the AUM leg is DISPLAY-ONLY until custody is live (AUM_FEE_COLLECTION_SPEC.md).
-// This resolver is the canonical model for that future billing + any "what you pay"
-// display. It does NOT itself charge anything, and the collection job must respect this
-// (do not accrue AUM on a fund where the subscription is the larger fee — the greater-of
-// guard in AUM_FEE_COLLECTION_SPEC.md).
-export function resolveEffectiveAnnualFee(opts: {
-  plan: GiftFeePlan;
-  billingInterval?: "month" | "year";
-  investedAssets: number;
-}): EffectiveFeeResult {
-  const annualAum = estimateAnnualAumFee(opts.investedAssets);
-  const annualSubscription = annualSubscriptionUsd(opts.plan, opts.billingInterval || "year");
-  if (annualSubscription === 0 && annualAum === 0) {
-    return { annualFee: 0, billedAs: "none", annualSubscription, annualAum };
-  }
-  if (annualAum > annualSubscription) {
-    return { annualFee: annualAum, billedAs: "aum", annualSubscription, annualAum };
-  }
-  return { annualFee: annualSubscription, billedAs: "subscription", annualSubscription, annualAum };
-}
-
 export const MONETIZATION_TRIGGER_IDS = {
   contributionLanding: "contribution_landing",
   cumulativeFees: "cumulative_fees",

@@ -108,7 +108,7 @@ const PLUS_BENEFITS = [
   { id: "co-parent", icon: Users, title: "Co-parent access", body: "Invite your partner or co-guardian to the fund." },
   // Display says "occasions" per the locked 2026-05-13 copy rule;
   // internal code still uses `events` (table name, types, etc.).
-  { id: "occasions-3", icon: CalendarHeart, title: "3 active occasions at once", body: "Run up to three in parallel." },
+  { id: "occasions-3", icon: CalendarHeart, title: "Unlimited occasions", body: "Run as many at once as you want." },
   { id: "priority-support", icon: Headphones, title: "Priority support", body: "Fast-track help when you need it." },
 ] as const;
 

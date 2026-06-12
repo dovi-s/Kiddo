@@ -117,7 +117,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
                   <ul className="mt-2 space-y-1">
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Check size={12} className="shrink-0 text-primary" />
-                      Up to 3 active occasions at a time
+                      Unlimited active occasions
                     </li>
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Check size={12} className="shrink-0 text-primary" />

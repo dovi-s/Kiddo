@@ -92,8 +92,9 @@ const plans: readonly Plan[] = [
       "1 active occasion at a time",
       "Shareable gift link, QR code, and gift code",
       "Gifter reminder system (birthday and repeat-gift reminders)",
-      "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
+      "See every gift, photo, video, and voice memo from gifters in the Memory Book, and write your own text entries",
       "Kid View. Your child sees what they own and how their fund grows",
+      "Annual contribution summary for tax records",
       "SIPC protection via our broker-dealer partner when investing is live",
     ],
     note: "No credit card. No commitment.",
@@ -130,7 +131,7 @@ const plans: readonly Plan[] = [
       "Strategy switching with rebalancing. Move between conservative, balanced, and growth",
       "Add your own photos, videos, and voice memos to Memory Book entries",
       "Co-parent access. Invite a partner or guardian",
-      "3 active occasions at a time (Free is 1)",
+      "Unlimited occasions (Free is 1 at a time)",
       "Priority support",
     ],
   },
@@ -217,11 +218,11 @@ const pricingFaqs = [
   },
   {
     question: "Is there a platform fee on gifts?",
-    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and an annual fee of $1 per $1,000 invested (about $10/year on a $10,000 fund) that applies to every plan; on a paid plan your subscription covers that fee, so you never pay both.",
+    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and an annual fee of $1 per $1,000 invested (about $10/year on a $10,000 fund) that applies to every plan.",
   },
   {
     question: "What's the annual fee on invested assets?",
-    answer: "$1 per year for every $1,000 invested. About $10/year on a $10,000 fund, $100/year on a $100,000 fund. Once investing is live, it's charged only on invested assets; cash sitting in the fund and pending gifts aren't charged. Prorated daily, so you only pay for the days assets are invested. Same rate on Free, Kiddo+, and Kiddo Family. On a paid plan, your subscription covers this fee while the fund is smaller: you pay your plan or the 0.10%, whichever is larger, never both.",
+    answer: "$1 per year for every $1,000 invested. About $10/year on a $10,000 fund, $100/year on a $100,000 fund. Once investing is live, it's charged only on invested assets; cash sitting in the fund and pending gifts aren't charged. Prorated daily, so you only pay for the days assets are invested. Same rate on Free, Kiddo+, and Kiddo Family. The subscription is a separate fee for product features, not a fee on the investment.",
   },
   {
     question: "Is there a free trial?",
@@ -410,17 +411,11 @@ export default function Pricing() {
                   </ul>
 
                   {/* Fee as a footnote, not a checkmarked bullet — a charge
-                      under a green check reads as a perk. Free funds pay the
-                      AUM fee directly; on a paid plan the subscription covers
-                      it under the greater-of rule, so the paid-card footnote
-                      says so (otherwise it reads as an add-on and contradicts
-                      the "never both" model). Full breakdown is in the "How
-                      the annual fee works" section below. */}
-                  <p className="-mt-4 mb-8 text-xs leading-relaxed text-muted-foreground/70">
-                    {plan.pricing.kind === "flat"
-                      ? "Annual fee: $1/year per $1,000 invested (only on invested assets)."
-                      : "You pay your plan or the annual fund fee, whichever is larger. Never both."}
-                  </p>
+                      under a green check reads as a perk. The 0.10% is the fee
+                      on the investment itself and applies on every plan; the
+                      subscription is a separate fee for product features. Full
+                      breakdown is in the "How the annual fee works" section. */}
+                  <p className="-mt-4 mb-8 text-xs leading-relaxed text-muted-foreground/70">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
 
                   <Link href="/get-started">
                     <Button variant={plan.featured ? "default" : "outline"} className="w-full" data-testid={`button-pricing-${plan.id}`}>
@@ -446,7 +441,7 @@ export default function Pricing() {
                 Small. Transparent. Same on every plan.
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                The annual fee is $1 per $1,000 invested, charged only on invested assets once investing is live. Cash sitting in the fund and pending gifts aren't charged. It is prorated daily, so you only pay for the days your assets are invested. On a paid plan, your subscription covers this fee while the fund is smaller. You pay your plan or the 0.10%, whichever is larger, never both.
+                The annual fee is $1 per $1,000 invested, charged only on invested assets once investing is live. Cash sitting in the fund and pending gifts aren't charged. It is prorated daily, so you only pay for the days your assets are invested. It applies on every plan, because it is the fee on the investment itself; a paid subscription is a separate fee for product features.
               </p>
             </div>
             <div className="mt-6 overflow-hidden rounded-xl border border-border">

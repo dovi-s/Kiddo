@@ -61,12 +61,9 @@ collection mechanism. This spec records the mechanism we actually want.
 - [ ] `fee` transaction type + ledger rows (date, fund, accrued amount, basis,
       collected amount, source = cash|dividend|withdrawal).
 - [ ] Daily accrual job: per fund, `invested_value × 0.001 / 365`, summed into a
-      running `accruedFeePayable`.
-      - **Greater-of guard (see `ONE_METER_FEE_DECISION.md`):** if the fund is on a
-        paid plan whose subscription is currently the LARGER fee, accrue NOTHING —
-        the subscription already covers it. Accrue AUM only where AUM exceeds the
-        sub (post-crossover funds + post-handoff inherited funds with no sub).
-        Accruing unconditionally would re-create the sub+AUM double-charge.
+      running `accruedFeePayable`. (The 0.10% applies on every plan — it is the fee on
+      the invested assets; the subscription is a separate product fee. No greater-of /
+      plan-conditional accrual: see `ONE_METER_FEE_DECISION.md`, greater-of was reverted.)
 - [ ] Monthly collection job: debit `accruedFeePayable` from available cash;
       leave the remainder as payable if cash is short (per decision #2).
 - [ ] Reconciliation against the custodian's fee debits; surface mismatches.

@@ -196,7 +196,7 @@ export function RecurringRequestsNudge({
         featureId="recurring_requests_aggregated"
         requiredTier="plus"
         title={`Enable monthly contributions on ${displayChild}'s fund.`}
-        body={`${count === 1 ? firstName : `${count} gifters`} ${count === 1 ? "has" : "have"} asked to set up monthly contributions to ${displayChild}'s fund. Kiddo+ on the fund unlocks recurring for them (and for any future gifter), plus your own monthly contributions, custom fund mix, parent-authored photo and voice memos in the Memory Book, co-parent access, and an annual tax summary. The fund's existing gifts and Memory Book entries stay either way.`}
+        body={`${count === 1 ? firstName : `${count} gifters`} ${count === 1 ? "has" : "have"} asked to set up monthly contributions to ${displayChild}'s fund. Kiddo+ on the fund unlocks recurring for them (and for any future gifter), plus your own monthly contributions, custom fund mix, parent-authored photo and voice memos in the Memory Book, co-parent access, and unlimited occasions. The fund's existing gifts and Memory Book entries stay either way.`}
         upgradePath={`/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`}
       />
     </div>

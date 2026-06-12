@@ -1554,7 +1554,7 @@ export default function Account() {
                       </div>
                       {/* Fee as a footnote, NOT a checkmarked bullet — a charge
                           under a green check reads as a perk you receive. */}
-                      <p className="mt-3 text-xs text-muted-foreground/70">You pay your plan or the annual fund fee, whichever is larger. Never both.</p>
+                      <p className="mt-3 text-xs text-muted-foreground/70">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
                       {includedHint("starter") && (
                         <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
                           <Check size={10} />
@@ -1608,7 +1608,7 @@ export default function Account() {
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
                         ))}
                       </div>
-                      <p className="mt-3 text-xs text-[hsl(var(--kiddo-cream)/0.6)]">You pay your plan or the annual fund fee, whichever is larger. Never both.</p>
+                      <p className="mt-3 text-xs text-[hsl(var(--kiddo-cream)/0.6)]">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
                       {includedHint("family") && (
                         <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
                           <Check size={10} />

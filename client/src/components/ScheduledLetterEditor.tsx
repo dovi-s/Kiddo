@@ -282,7 +282,7 @@ export function ScheduledLetterEditor({
         featureId="scheduled_sealed_letter"
         requiredTier="plus"
         title={`Schedule a sealed letter for ${displayName}.`}
-        body={`Write a letter today and pick the exact date ${displayName} reads it. ${displayName}'s 13th birthday. Graduation. The day they leave for college. Whatever moment you want to be there for. Kiddo+ on the fund unlocks this and unlocks recurring contributions, custom mix, parent-authored media, co-parent access, and tax summary.`}
+        body={`Write a letter today and pick the exact date ${displayName} reads it. ${displayName}'s 13th birthday. Graduation. The day they leave for college. Whatever moment you want to be there for. Kiddo+ on the fund unlocks this and unlocks recurring contributions, custom mix, parent-authored media, co-parent access, and unlimited occasions.`}
         upgradePath={`/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`}
       />
     );

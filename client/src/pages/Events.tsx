@@ -213,9 +213,12 @@ export default function Events() {
     selectedFundCoverage === "trial_active";
   const isFree = !isFamily && !hasAnyStarter && !selectedFundCovered;
   const activeCustomEventCount = events.filter((event) => !event.isPermanent && event.status === "active").length;
-  const activeEventLimit = (isFamily || selectedFundFamilyCovered)
+  // Occasions are loop fuel (each one is a gifting moment -> funded-k), so paid plans
+  // get UNLIMITED active occasions. Premium occasion FEATURES (designs/QR/digital card)
+  // are the upsell, not the count. Free keeps 1-at-a-time as the tier differentiator.
+  const activeEventLimit = (isFamily || selectedFundFamilyCovered || hasAnyStarter || selectedFundCovered)
     ? Number.POSITIVE_INFINITY
-    : (hasAnyStarter || selectedFundCovered) ? 3 : 1;
+    : 1;
   const canCreateAnotherEvent = activeCustomEventCount < activeEventLimit;
   const pendingEventPass: { count: number } | null = null;
   const pendingEventPassSessionId = "";
@@ -543,8 +546,14 @@ export default function Events() {
                   </Link>
                 ) : (
                   <>
-                    <p>{hasAnyStarter ? "Kiddo+ includes 3 active occasions at a time." : "Free includes 1 active occasion at a time."}</p>
-                    <p>Kiddo Family is unlimited.</p>
+                    {hasAnyStarter ? (
+                      <p>Kiddo+ includes unlimited active occasions.</p>
+                    ) : (
+                      <>
+                        <p>Free includes 1 active occasion at a time.</p>
+                        <p>Kiddo+ and Family are unlimited.</p>
+                      </>
+                    )}
                   </>
                 )}
               </div>

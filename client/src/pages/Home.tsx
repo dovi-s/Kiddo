@@ -195,12 +195,11 @@ const BENTO_TILES: BentoTile[] = [
     title: "Recurring investing",
     body: "Set up an automatic monthly investment. On a Plus fund it unlocks for you and for every gifter, so the people who love your child can show up on a schedule too.",
     modalLead:
-      "Plus is for the parent who shows up every month. Recurring contributions on the fund unlock for you AND any gifter (the baby shower's six relatives can each set $25/mo, free, because the fund is Plus). Invite a co-parent or guardian to share the fund. A yearly contribution summary keeps tax time simple.",
+      "Plus is for the parent who shows up every month. Recurring contributions on the fund unlock for you AND any gifter (the baby shower's six relatives can each set $25/mo, free, because the fund is Plus). Invite a co-parent or guardian to share the fund.",
     modalDetails: [
       "Recurring contributions on the fund (parent + any gifter). Free funds get a reminder system for gifters instead.",
       "Invite a co-parent or guardian to share the same fund and view.",
       "Pause, resume, or change the amount anytime.",
-      "Annual contribution summary for tax records.",
     ],
     modalCallout: { label: "Plan tier", value: "Kiddo+ and above" },
   },
