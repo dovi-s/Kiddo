@@ -1203,7 +1203,7 @@ export default function Events() {
                       <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
                         <li className="flex items-start gap-2">
                           <Gift size={14} className="mt-0.5 text-primary shrink-0" />
-                          Kiddo+ unlocks premium occasion themes and three active occasions at a time for one child.
+                          Kiddo+ unlocks premium occasion themes and unlimited active occasions for one child.
                         </li>
                         <li className="flex items-start gap-2">
                           <Crown size={14} className="mt-0.5 text-primary shrink-0" />
