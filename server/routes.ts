@@ -10102,6 +10102,17 @@ export async function registerRoutes(
       if (!bankName || !accountLast4) {
         return res.status(400).json({ error: 'Bank name and account last 4 digits are required' });
       }
+      // Input hygiene: last-4 fields must be exactly 4 digits. Without this the
+      // route stored arbitrary user-typed strings as a "linked" destination,
+      // which the withdrawal path then trusts. This is validation only — the
+      // deeper destination-verification (micro-deposit / Plaid) is the
+      // founder-owned money-out decision tracked in SECURITY_HARDENING_FOLLOWUPS.md.
+      if (!/^\d{4}$/.test(String(accountLast4))) {
+        return res.status(400).json({ error: 'Account last 4 must be exactly 4 digits.' });
+      }
+      if (routingLast4 != null && routingLast4 !== '' && !/^\d{4}$/.test(String(routingLast4))) {
+        return res.status(400).json({ error: 'Routing last 4 must be exactly 4 digits.' });
+      }
 
       const existingAccounts = await storage.getBankAccountsByUser(userId);
       const shouldBeDefault = Boolean(isDefault) || existingAccounts.length === 0;

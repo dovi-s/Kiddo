@@ -26,6 +26,14 @@
 //      memory endpoint and the gifter dashboard must not return
 //      parent_letter / parent_only / locked kid_at_18 content (2026-06-04).
 //      Uses the seeded Dunphy letters as permanent canaries.
+//  11. Durable rate limiter enforces its cap (backs the 2FA-login-verify
+//      brute-force guard + /api/reports per-IP/per-target limits, 2026-06-11).
+//  12. CSRF origin decision (evaluateRequestOrigin): cross-site blocked,
+//      same-origin/trusted/no-origin allowed, malformed flagged (2026-06-11).
+//  13. 2FA enable requires password step-up for password accounts —
+//      enabling without it is rejected with needsPassword and 2FA stays off
+//      (2026-06-11).
+//  14. Manual bank account rejects non-4-digit last-4 input (2026-06-11).
 
 import "../server/env";
 import { db, pool } from "../server/db";
@@ -40,10 +48,13 @@ import {
   transactions,
   activities,
 } from "../shared/schema";
+import { bankAccounts } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
 import { storage } from "../server/storage";
 import { WebhookHandlers } from "../server/webhookHandlers";
 import { isReservedFundSlug } from "../shared/reserved-slugs";
+import { checkRateLimit, resetRateLimit } from "../server/rateLimiter";
+import { evaluateRequestOrigin } from "../server/auth";
 import crypto from "node:crypto";
 
 async function main() {
@@ -54,16 +65,65 @@ async function main() {
   };
   const cleanup: Array<() => Promise<void>> = [];
 
+  // Exit reporting the failure count, so a no-demo partial run still fails CI
+  // if a demo-independent check (below) regressed.
+  const finish = async () => {
+    if (failures > 0) {
+      console.error(`\nSecurity regression tests FAILED (${failures} failing).`);
+      await pool.end();
+      process.exit(1);
+    }
+    console.log("\nSecurity regression tests passed.");
+    await pool.end();
+  };
+
+  // --- Demo-INDEPENDENT checks (run even when the Dunphy demo isn't seeded) ---
+
+  // Durable rate limiter enforces its cap (2026-06-11). Backs the
+  // 2FA-login-verify brute-force guard AND the /api/reports per-IP/per-target
+  // limits. Deterministic + DB-only: a unique key, 3 allowed then the 4th
+  // blocked, reset clears it.
+  {
+    const rlKey = `sectest-rl:${crypto.randomUUID()}`;
+    const windowMs = 60 * 60 * 1000;
+    const verdicts = [
+      await checkRateLimit(rlKey, 3, windowMs),
+      await checkRateLimit(rlKey, 3, windowMs),
+      await checkRateLimit(rlKey, 3, windowMs),
+      await checkRateLimit(rlKey, 3, windowMs),
+    ];
+    ok("durable rate limiter allows up to the cap then blocks (3 ok, 4th denied)",
+      verdicts[0] && verdicts[1] && verdicts[2] && !verdicts[3]);
+    await resetRateLimit(rlKey);
+  }
+
+  // CSRF origin decision (2026-06-11). Pure-function lock on the production
+  // middleware in server/auth.ts: cross-site blocked; same-origin, trusted
+  // host, and no-origin allowed; malformed flagged.
+  {
+    const trusted = new Set<string>(["www.kiddo.com"]);
+    ok("CSRF: cross-site origin is blocked",
+      evaluateRequestOrigin("https://evil.example.com", "app.kiddo.com", trusted) === "block");
+    ok("CSRF: same-origin is allowed",
+      evaluateRequestOrigin("https://app.kiddo.com/dashboard", "app.kiddo.com", trusted) === "allow");
+    ok("CSRF: explicitly trusted host is allowed",
+      evaluateRequestOrigin("https://www.kiddo.com", "app.kiddo.com", trusted) === "allow");
+    ok("CSRF: missing origin/referer is allowed (non-browser client)",
+      evaluateRequestOrigin(undefined, "app.kiddo.com", trusted) === "allow");
+    ok("CSRF: malformed origin is flagged",
+      evaluateRequestOrigin("not a url", "app.kiddo.com", trusted) === "malformed");
+  }
+
   const [phil] = await db.select().from(users).where(eq(users.email, "phil@dunphyfamily.com")).limit(1);
   if (!phil) {
-    console.log("Demo not seeded (no phil@dunphyfamily.com); skipping security regression tests.");
-    await pool.end();
+    console.log("Demo not seeded (no phil@dunphyfamily.com); skipping demo-backed checks.");
+    await finish();
     return;
   }
   const philFunds = await db.select().from(funds).where(eq(funds.userId, phil.id)).limit(2);
   if (philFunds.length < 2) {
-    console.log("Need 2 demo funds; skipping. Run `npm run reset:dunphys` first.");
-    await pool.end();
+    console.log("Need 2 demo funds; skipping demo-backed checks. Run `npm run reset:dunphys` first.");
+    await finish();
     return;
   }
   const [fundA, fundB] = philFunds;
@@ -430,19 +490,88 @@ async function main() {
     } catch {
       console.log("  - sealed-letter canary checks skipped (dev server not reachable)");
     }
+
+    // --- 13. 2FA enable requires password step-up for password accounts
+    //         (2026-06-11). Phil is a password account → starting setup then
+    //         calling /enable WITHOUT a password must be rejected with
+    //         needsPassword:true (and must NOT enable 2FA). Best-effort HTTP;
+    //         clears phil's pending secret afterward. ---
+    try {
+      const base = "http://127.0.0.1:5000";
+      const loginRes = await fetch(`${base}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "phil@dunphyfamily.com", password: "dunphyfamily" }),
+      });
+      if (loginRes.ok) {
+        const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")
+          || loginRes.headers.get("set-cookie") || "";
+        cleanup.push(async () => {
+          await db.update(users).set({ totpPendingSecret: null } as any).where(eq(users.id, phil.id));
+        });
+        await fetch(`${base}/api/auth/2fa/setup`, { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie } });
+        const enableRes = await fetch(`${base}/api/auth/2fa/enable`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Cookie: cookie },
+          body: JSON.stringify({ code: "000000" }), // no currentPassword
+        });
+        const body: any = await enableRes.json().catch(() => ({}));
+        ok("2FA enable without password is rejected with needsPassword (step-up)",
+          enableRes.status === 400 && body?.needsPassword === true);
+        const [philAfter] = await db.select({ enabled: users.totpEnabled }).from(users).where(eq(users.id, phil.id)).limit(1);
+        ok("2FA did not turn on when the password step-up was skipped", philAfter?.enabled !== true);
+      } else {
+        console.log(`  - 2FA step-up check skipped (login status ${loginRes.status})`);
+      }
+    } catch {
+      console.log("  - 2FA step-up check skipped (dev server not reachable)");
+    }
+
+    // --- 14. Manual bank account rejects non-4-digit last-4 input
+    //         (2026-06-11 hygiene). A junk accountLast4 must 400 and create no
+    //         row; a clean one creates and is cleaned up. Best-effort HTTP. ---
+    try {
+      const base = "http://127.0.0.1:5000";
+      const loginRes = await fetch(`${base}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "phil@dunphyfamily.com", password: "dunphyfamily" }),
+      });
+      if (loginRes.ok) {
+        const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")
+          || loginRes.headers.get("set-cookie") || "";
+        const badRes = await fetch(`${base}/api/bank-accounts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Cookie: cookie },
+          body: JSON.stringify({ bankName: "Sectest Bank", accountLast4: "12ab" }),
+        });
+        ok("manual bank account rejects non-4-digit last-4 input", badRes.status === 400);
+
+        const goodRes = await fetch(`${base}/api/bank-accounts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Cookie: cookie },
+          body: JSON.stringify({ bankName: "Sectest Bank", accountLast4: "4242", routingLast4: "0001" }),
+        });
+        if (goodRes.ok) {
+          const created: any = await goodRes.json().catch(() => ({}));
+          if (created?.id) cleanup.push(async () => { await db.delete(bankAccounts).where(eq(bankAccounts.id, created.id)); });
+          ok("manual bank account accepts a valid 4-digit last-4", Boolean(created?.id));
+        } else {
+          console.log(`  - bank valid-input check skipped (status ${goodRes.status})`);
+        }
+      } else {
+        console.log(`  - bank validation check skipped (login status ${loginRes.status})`);
+      }
+    } catch {
+      console.log("  - bank validation check skipped (dev server not reachable)");
+    }
   } finally {
     for (const c of cleanup.reverse()) {
       try { await c(); } catch (err) { console.warn("cleanup step failed (non-fatal):", err); }
     }
   }
 
-  if (failures > 0) {
-    console.error(`\nSecurity regression tests FAILED (${failures} failing).`);
-    await pool.end();
-    process.exit(1);
-  }
-  console.log("\nSecurity regression tests passed.");
-  await pool.end();
+  await finish();
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

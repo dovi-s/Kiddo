@@ -401,6 +401,32 @@ async function getUser(id: string): Promise<User | undefined> {
   return user;
 }
 
+// CSRF origin decision, factored out as a pure function so it can be unit-
+// tested without booting the server (the middleware that uses it is production-
+// gated). Given the request's Origin-or-Referer URL, the request Host, and the
+// set of extra trusted hosts:
+//   - "allow"     → same-origin (or a trusted host), or no browser origin
+//                   signal at all (non-browser client / stripped referrer).
+//   - "block"     → a present origin whose host doesn't match (the real CSRF
+//                   signature — the browser sets Origin on unsafe methods).
+//   - "malformed" → an origin header we can't parse.
+export function evaluateRequestOrigin(
+  sourceUrl: string | undefined,
+  requestHost: string,
+  trustedHosts: Set<string>,
+): "allow" | "block" | "malformed" {
+  if (!sourceUrl) return "allow";
+  let sourceHost = "";
+  try {
+    sourceHost = new URL(String(sourceUrl)).host.toLowerCase();
+  } catch {
+    return "malformed";
+  }
+  const reqHost = String(requestHost || "").toLowerCase();
+  if (sourceHost && (sourceHost === reqHost || trustedHosts.has(sourceHost))) return "allow";
+  return "block";
+}
+
 function getDevHeaderUserId(req: Request): string | null {
   if (process.env.KORA_ENABLE_DEV_AUTH_OVERRIDE !== "1") return null;
   const host = String(req.headers.host || "").toLowerCase();
@@ -885,19 +911,14 @@ export function setupAuth(app: Express) {
     app.use((req: any, res, next) => {
       if (!UNSAFE_METHODS.has(req.method)) return next();
       if (!req.isAuthenticated?.()) return next();
-      const requestHost = String(req.headers.host || "").toLowerCase();
+      const requestHost = String(req.headers.host || "");
       const sourceUrl = req.headers.origin || req.headers.referer;
-      if (!sourceUrl) return next(); // no browser origin signal — see note above
-      let sourceHost = "";
-      try {
-        sourceHost = new URL(String(sourceUrl)).host.toLowerCase();
-      } catch {
+      const verdict = evaluateRequestOrigin(sourceUrl, requestHost, trustedHosts);
+      if (verdict === "allow") return next();
+      if (verdict === "malformed") {
         return res.status(403).json({ message: "Request blocked: malformed origin." });
       }
-      if (sourceHost && (sourceHost === requestHost || trustedHosts.has(sourceHost))) {
-        return next();
-      }
-      console.warn(`[csrf] blocked ${req.method} ${req.originalUrl} — origin host '${sourceHost}' != request host '${requestHost}'`);
+      console.warn(`[csrf] blocked ${req.method} ${req.originalUrl} — origin '${sourceUrl}' != request host '${requestHost}'`);
       return res.status(403).json({ message: "Request blocked: cross-site request not allowed." });
     });
   }
