@@ -162,6 +162,11 @@ export function RecurringRequestsNudge({
               <span className="font-semibold text-foreground">$3.99/month</span>
               <span className="text-muted-foreground/70">, about 13¢ a day.</span>
             </p>
+            {/* Cancel transparency, consistent with PlusUpgradePromptCard. The
+                nothing-lost half is already covered in the body above. */}
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/70">
+              Cancel anytime in Settings.
+            </p>
             <div className="mt-3 flex gap-2">
               <Button
                 size="sm"

@@ -2317,9 +2317,9 @@ export default function GiftCheckout() {
                     data-testid="checkbox-recurring-gift"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Make this recurring</p>
+                    <p className="text-sm font-semibold text-foreground">Keep this gift going</p>
                     <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                      Send the same amount on a regular schedule. Cancel any time. Free. No Kiddo subscription.
+                      Send the same gift on the schedule you pick. Cancel anytime. Free, no Kiddo subscription.
                     </p>
                   </div>
                 </label>
@@ -2692,10 +2692,22 @@ export default function GiftCheckout() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">
-                        Recurring {recurringFrequency} gift, ${activeAmount.toFixed(2)} each time.
+                        {recurringFrequency.charAt(0).toUpperCase() + recurringFrequency.slice(1)} gift, ${activeAmount.toFixed(2)} each time.
                       </p>
+                      {/* Specificity-is-trust: name the actual NEXT charge date, not a
+                          vague "same schedule" (conversion research: "delivery in 23
+                          min" beats "fast"). Reframes recurring from "will I get
+                          surprise-charged?" into a known, cancelable plan. The
+                          "we'll email you before each charge" line gets added here
+                          once the pre-charge heads-up email ships. */}
                       <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                        Today's charge is ${totalCharge.toFixed(2)} (gift plus processing). Future charges run on the same {recurringFrequency} schedule. Cancel any time from your gifter dashboard.
+                        Today: ${totalCharge.toFixed(2)} (gift plus processing). Next: ${activeAmount.toFixed(2)} on {(() => {
+                          const d = new Date();
+                          if (recurringFrequency === "weekly") d.setDate(d.getDate() + 7);
+                          else if (recurringFrequency === "yearly") d.setFullYear(d.getFullYear() + 1);
+                          else d.setMonth(d.getMonth() + 1);
+                          return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                        })()}, then {recurringFrequency}. Cancel anytime from your gifter dashboard.
                       </p>
                     </div>
                   </div>
