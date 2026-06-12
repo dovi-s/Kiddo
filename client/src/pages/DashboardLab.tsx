@@ -7792,7 +7792,7 @@ export default function DashboardLab() {
                     <p className="mt-2 text-xs leading-relaxed text-muted-foreground/80">
                       {showHandoffKeepsake
                         ? `You're seeing ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund the way you handed it over. ${recipientFirstNameDisplay || "They"} can choose to share it live anytime.`
-                        : `${recipientFirstNameDisplay || "They"} chose to keep sharing it with you live, so you can keep watching it grow. It's ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} to turn off anytime.`}
+                        : `${recipientFirstNameDisplay || "They"} chose to keep sharing it with you live, so you can keep watching it grow. It's ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} to change anytime.`}
                     </p>
                   </div>
                 </div>
