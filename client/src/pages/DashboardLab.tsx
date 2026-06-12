@@ -1341,7 +1341,14 @@ export default function DashboardLab() {
     const params = new URLSearchParams(window.location.search);
     if (id) params.set("fund", id); else params.delete("fund");
     const qs = params.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    // Route the URL change through wouter (replace: true = no new history entry)
+    // rather than window.history.replaceState, which bypasses wouter's router.
+    // A raw replaceState left useSearch() STALE in the chrome that reads it
+    // (DesktopSidebar / AppHeader / MobileNav resolve the active fund from the
+    // ?fund param), so an in-page fund switch updated the dashboard body but left
+    // the sidebar pinned to the previous fund's name, balance, and quick links
+    // ("stuck on Luke even after switching to Alex", founder-reported 2026-06-12).
+    setLocation(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { replace: true });
   };
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedGiftCode, setCopiedGiftCode] = useState(false);
@@ -2049,7 +2056,9 @@ export default function DashboardLab() {
     const params = new URLSearchParams(window.location.search);
     if (fallback) params.set("fund", fallback); else params.delete("fund");
     const qs = params.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    // wouter nav (see selectFund) so the corrected ?fund propagates to the
+    // sidebar/header chrome, not just the dashboard body.
+    setLocation(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { replace: true });
     // Also blow away the per-fund local caches keyed by the stale ID
     // so the next page load doesn't briefly render against ghost data
     // either. The funds-list cache itself stays valid (the funds query
@@ -7918,6 +7927,14 @@ export default function DashboardLab() {
                   .filter(Boolean),
               ));
               const otherHolderLabel = otherHolderNames.length === 1 ? otherHolderNames[0] : "Family";
+              // Full sender name for the Memory Book ?gifter= filter, which matches
+              // senderName (not the friendly "Dad" preferredName label above). One
+              // co-contributor → tapping the row opens their contributions filtered
+              // in the Memory Book; multiple → open it unfiltered.
+              const otherHolderSenderNames = Array.from(new Set(
+                otherHolderRows.map((g) => String((g as any).senderName || "").trim()).filter(Boolean),
+              ));
+              const otherHolderGifterParam = otherHolderSenderNames.length === 1 ? otherHolderSenderNames[0] : null;
               // Owner-mode (post-handoff) split: what the custodian parent(s) put
               // in BEFORE handoff vs. what the owner (e.g. Haley) adds herself.
               // Reserves "Your additions" for the owner's own money and credits
@@ -8197,13 +8214,24 @@ export default function DashboardLab() {
                       {/* The OTHER account-holder's money — the co-parent's view of
                           the custodian's recurring ("Dad's contributions"), or the
                           custodian's view of the co-parent's additions ("Mom's
-                          contributions"). Display-only (no drill-down: the schedule
-                          lists below are viewer-keyed). Owner mode has its own fold
-                          ("Invested by Dad" recognition line), so this row is
-                          parent/co-parent mode only. */}
+                          contributions"). Taps through to the Memory Book filtered to
+                          that person — the same ?gifter= view the "Who loves {child}"
+                          roster opens — so it's clickable like the rows above (those
+                          jump to viewer-keyed page sections; this one has no such
+                          section, so it opens their contribution history instead).
+                          Owner mode has its own fold ("Invested by Dad"), so this row
+                          is parent/co-parent mode only. */}
                       {!isOwnerMode && otherHolderTotal > 0 && (
-                        <div
-                          className="w-full flex items-baseline justify-between py-1.5 px-2 -mx-2 text-left"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            haptic("selection");
+                            if (!activeFundId) return;
+                            setLocation(otherHolderGifterParam
+                              ? `/memory/${activeFundId}?gifter=${encodeURIComponent(otherHolderGifterParam)}`
+                              : `/memory/${activeFundId}`);
+                          }}
+                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="last30-row-other-holder"
                         >
                           <span className="text-sm text-muted-foreground">{otherHolderLabel}'s contributions</span>
@@ -8213,7 +8241,7 @@ export default function DashboardLab() {
                             </span>
                             <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                           </span>
-                        </div>
+                        </button>
                       )}
                       {marketGrowth30 != null && (
                         <button
