@@ -11637,11 +11637,17 @@ export default function DashboardLab() {
                         : `${Math.ceil(daysUntil / 365)}yr away`;
                       suggestions.push({
                         key: "sug-birthday", emoji: "🎂",
-                        name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`,
-                        sub: nextBday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                        // Generic name (not "{nextAge}th Birthday"): a birthday is ONE
+                        // perpetual occasion whose date rolls forward each year
+                        // (@shared/occasions), so an ordinal name would drift — it'd read
+                        // "14th" while the date already points at the 15th. The celebratory
+                        // "turns N" lives in the sub instead. One-time milestones (Welcome,
+                        // license, graduation) keep their specific names.
+                        name: `${childFirstSug}'s Birthday`,
+                        sub: `Turns ${nextAge} · ${nextBday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
                         countdown: countdownStr,
                         sortMs: nextBday.getTime(),
-                        prefill: { name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`, eventType: "birthday", eventDate: nextBday.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
+                        prefill: { name: `${childFirstSug}'s Birthday`, eventType: "birthday", eventDate: nextBday.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
                       });
                     }
                   }
