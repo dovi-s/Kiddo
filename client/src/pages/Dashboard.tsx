@@ -13983,7 +13983,7 @@ export default function Dashboard() {
                     <li>· Add your own photos, videos, and voice to Memory Book entries</li>
                     <li>· Custom fund mix (pick your own stocks and weights)</li>
                     <li>· Co-parent access for a partner or guardian</li>
-                    <li>· 3 active occasions at a time, priority support</li>
+                    <li>· Unlimited occasions, priority support</li>
                   </ul>
                 </div>
 
