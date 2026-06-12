@@ -17,6 +17,15 @@ export type MonthlyPulseInput = {
   changePct: number | null;
   giftCount30d: number;
   newGifterCount30d: number;
+  // The PEOPLE who gave in the last 30 days (deduped, "Anonymous" excluded),
+  // most-recent first. This is the relationship soul Acorns structurally can't
+  // send: a brokerage statement says "3 deposits", we say "Grandma and Uncle Mike
+  // gave". When present, we lead with the names instead of a bare count.
+  gifterNames?: string[];
+  // One recent gift note to surface as the month's Memory Book moment (the
+  // artifact). The parent already owns/sees this in the Memory Book; the digest
+  // just brings it back to them. Null when there's no note to show.
+  memoryMoment?: { senderName: string; message: string } | null;
   monthName: string;
   dashboardUrl: string;
   unsubscribeUrl?: string | null;
@@ -30,13 +39,31 @@ function fmtSignedUsd(n: number): string {
   const sign = n >= 0 ? "+" : "−";
   return `${sign}${fmtUsd(Math.abs(n))}`;
 }
+function humanizeNames(names: string[]): string {
+  const n = names.map((s) => s.trim()).filter(Boolean);
+  if (n.length === 0) return "";
+  if (n.length === 1) return n[0];
+  if (n.length === 2) return `${n[0]} and ${n[1]}`;
+  if (n.length === 3) return `${n[0]}, ${n[1]}, and ${n[2]}`;
+  return `${n[0]}, ${n[1]}, and ${n.length - 2} others`;
+}
+function truncate(s: string, max: number): string {
+  const t = s.trim();
+  return t.length <= max ? t : `${t.slice(0, max - 1).trimEnd()}…`;
+}
 
 export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
-  const { to, parentFirstName, childFirstName, fundTotalUsd, changeUsd, changePct, giftCount30d, newGifterCount30d, monthName, dashboardUrl, unsubscribeUrl } = input;
+  const { to, parentFirstName, childFirstName, fundTotalUsd, changeUsd, changePct, giftCount30d, newGifterCount30d, gifterNames, memoryMoment, monthName, dashboardUrl, unsubscribeUrl } = input;
   const greeting = parentFirstName?.trim() ? `Hi ${parentFirstName.trim()},` : "Hi there,";
+  const names = humanizeNames(gifterNames ?? []);
   const giftLine = giftCount30d === 0
     ? `No gifts last month. The fund quietly compounded what was already there.`
-    : `${giftCount30d} gift${giftCount30d === 1 ? "" : "s"} arrived last month${newGifterCount30d > 0 ? `, ${newGifterCount30d} from new gifter${newGifterCount30d === 1 ? "" : "s"}` : ""}.`;
+    : names
+      ? `${names} gave last month.`
+      : `${giftCount30d} gift${giftCount30d === 1 ? "" : "s"} arrived last month${newGifterCount30d > 0 ? `, ${newGifterCount30d} from new gifter${newGifterCount30d === 1 ? "" : "s"}` : ""}.`;
+  const memoryLine = memoryMoment && memoryMoment.message.trim()
+    ? `${memoryMoment.senderName.trim() || "A gifter"} left a note: “${truncate(memoryMoment.message, 140)}”`
+    : null;
   const changeLine = changeUsd == null
     ? null
     : changePct != null
@@ -49,6 +76,7 @@ export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
     ...(changeLine ? [``, changeLine] : []),
     ``,
     giftLine,
+    ...(memoryLine ? [``, memoryLine] : []),
   ].join("\n");
   const { html } = renderKiddoEmail({
     heading: `${monthName} pulse for ${childFirstName}'s fund`,
@@ -63,6 +91,7 @@ export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
     ...(changeLine ? [``, changeLine] : []),
     ``,
     giftLine,
+    ...(memoryLine ? [``, memoryLine] : []),
     ``,
     `Open the fund: ${dashboardUrl}`,
     ``,

@@ -101,6 +101,33 @@ async function tick(log: LogFn): Promise<void> {
       `SELECT COUNT(*)::int AS new_gifters FROM (SELECT MIN(created_at) AS first_gift, LOWER(sender_email) AS se FROM gifts WHERE fund_id = $1 AND status IN ('processing','settled','completed') GROUP BY LOWER(sender_email)) sub WHERE sub.first_gift > NOW() - INTERVAL '30 days'`,
       [row.fund_id],
     ).catch(() => ({ rows: [{ new_gifters: 0 }] }));
+    // The PEOPLE who gave last month (one name per distinct gifter, most recent
+    // first, "Anonymous" excluded). This is what lets the digest say "Grandma and
+    // Uncle Mike gave" instead of "3 deposits" — the warmth a brokerage can't send.
+    const namesAgg = await pool.query(
+      `SELECT sender_name FROM (
+         SELECT DISTINCT ON (LOWER(sender_email)) sender_name, created_at
+         FROM gifts
+         WHERE fund_id = $1 AND created_at > NOW() - INTERVAL '30 days'
+           AND status IN ('processing','settled','completed')
+           AND sender_name IS NOT NULL AND TRIM(sender_name) <> '' AND LOWER(TRIM(sender_name)) <> 'anonymous'
+         ORDER BY LOWER(sender_email), created_at DESC
+       ) s ORDER BY s.created_at DESC LIMIT 6`,
+      [row.fund_id],
+    ).catch(() => ({ rows: [] as Array<{ sender_name: string }> }));
+    const gifterNames: string[] = (namesAgg.rows || []).map((r: any) => String(r.sender_name || "")).filter(Boolean);
+    // One recent gift note to bring back as the month's Memory Book moment.
+    const noteAgg = await pool.query(
+      `SELECT sender_name, message FROM gifts
+       WHERE fund_id = $1 AND created_at > NOW() - INTERVAL '30 days'
+         AND status IN ('processing','settled','completed')
+         AND message IS NOT NULL AND TRIM(message) <> ''
+       ORDER BY created_at DESC LIMIT 1`,
+      [row.fund_id],
+    ).catch(() => ({ rows: [] as Array<{ sender_name: string; message: string }> }));
+    const memoryMoment = noteAgg.rows?.[0]
+      ? { senderName: String(noteAgg.rows[0].sender_name || ""), message: String(noteAgg.rows[0].message || "") }
+      : null;
     // Same composition as the dashboard hero (invested balance + pending +
     // cash) so the email's headline number never disagrees with what the
     // parent sees when they click through — the click IS the product moment.
@@ -121,6 +148,8 @@ async function tick(log: LogFn): Promise<void> {
         changePct,
         giftCount30d: giftAgg.rows[0]?.gift_count || 0,
         newGifterCount30d: newGifterAgg.rows[0]?.new_gifters || 0,
+        gifterNames,
+        memoryMoment,
         monthName: MONTH_NAMES[(today.month - 2 + 12) % 12], // the month that just ended
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
       }), fundId: String(row.fund_id) });
