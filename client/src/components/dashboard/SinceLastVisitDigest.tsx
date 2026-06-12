@@ -35,13 +35,12 @@ const MIN_AWAY_MS = 24 * 60 * 60 * 1000; // a real "while you were away", not a 
 const NOTEWORTHY_MOVE_FRAC = 0.005; // or a >0.5% balance move counts even without a gift
 export const DEMO_AWAY_MS = 6 * 24 * 60 * 60 * 1000; // demo: pretend "6 days ago" (also drives the bell's demo catch-up window — see DemoGiftMoment)
 const DEMO_SYNTH_GROWTH_RATE = 0.008; // demo: ~0.8% synthetic growth over the gap
-// Hold the digest until the hero count-up cascade has settled, so the landing
-// reads as a SEQUENCE (balance + projection roll in → THEN "while you were
-// away") instead of everything arriving at once. The balance rolls ~0–1.2s and
-// the projection ~1.45–2.65s after the data lands; ~2.9s drops the digest just
-// after, mirroring the gift-beat timing (DemoGiftMoment SWITCH_DELAY_MS). Both
-// the roll and this reveal are anchored to the same data-ready signal, so on a
-// slow load they stay sequenced no matter how late the data arrives.
+// Standalone DEFAULT hold before the digest reveals, so it lands as a SEQUENCE
+// (balance + projection roll in → THEN "while you were away") instead of on top
+// of the roll. Callers that own a hero-roll cascade should pass `revealDelayMs`
+// derived from THEIR timeline (DashboardLab does — its rolls and this reveal
+// share one data-ready anchor, so they stay sequenced no matter how late data
+// arrives). This default covers surfaces without their own cascade.
 const DIGEST_REVEAL_DELAY_MS = 2_900;
 
 type LastSeen = { value: number; ts: number };
@@ -93,6 +92,7 @@ export function SinceLastVisitDigest({
   isDemoAccount,
   ready,
   subject = "Your fund",
+  revealDelayMs = DIGEST_REVEAL_DELAY_MS,
 }: {
   fundId: string | null;
   currentValue: number;
@@ -104,6 +104,10 @@ export function SinceLastVisitDigest({
   // The headline subject — "Luke's fund" for a parent, "Your fund" for the
   // grown owner. Makes it a personal update, not a subjectless stat.
   subject?: string;
+  // How long after `digest` is ready to hold before revealing — so the caller
+  // can sync this to ITS hero-roll cascade (DashboardLab derives it from the one
+  // timeline). Defaults to the standalone DIGEST_REVEAL_DELAY_MS.
+  revealDelayMs?: number;
 }) {
   // Read the OLD marker ONCE on mount, before the write effect updates it.
   const lastSeen = useMemo<LastSeen | null>(() => {
@@ -213,9 +217,9 @@ export function SinceLastVisitDigest({
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
     if (!digest) return;
-    const t = window.setTimeout(() => setRevealed(true), DIGEST_REVEAL_DELAY_MS);
+    const t = window.setTimeout(() => setRevealed(true), revealDelayMs);
     return () => window.clearTimeout(t);
-  }, [digest]);
+  }, [digest, revealDelayMs]);
 
   // Latch the demo once-per-session flag only once it's ACTUALLY shown (after
   // the reveal hold) — so a prospect who leaves during the hold still gets the

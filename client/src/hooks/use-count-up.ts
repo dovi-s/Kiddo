@@ -36,7 +36,7 @@ export type UseCountUpOptions = {
   startDelay?: number;
 };
 
-export type UseCountUpResult = { value: number; isAnimating: boolean };
+export type UseCountUpResult = { value: number; isAnimating: boolean; isRolling: boolean };
 
 // Overload signatures
 export function useCountUp(target: number, duration?: number, precision?: number): number;
@@ -56,16 +56,38 @@ export function useCountUp(
 
   const initial = fromOpt !== undefined && Number.isFinite(fromOpt) ? fromOpt : target;
   const [display, setDisplay] = useState(initial);
+  // `isAnimating` = the whole beat is in progress, INCLUDING the startDelay hold
+  // (drives aria-live="off" so a screen reader doesn't read intermediate frames).
+  // `isRolling` = the number is ACTIVELY climbing right now — true only during
+  // the rAF loop, false during the linger/hold. Use this for "warm the number
+  // while it moves" visual cues so the static old number doesn't pre-light.
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isRolling, setIsRolling] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(target)) return;
+
+    const hasFrom = fromOpt !== undefined && Number.isFinite(fromOpt);
+
     if (!enabled) {
-      setDisplay(target);
+      // Gated (roll not permitted yet) or a settled value. If a roll is PENDING
+      // — we hold a `from` anchor BELOW the live target — sit at the anchor so we
+      // don't snap to the target and turn the upcoming roll into a no-op (the bug
+      // that ate the cold-load roll: `display` pre-snapped to target, then the
+      // enabled run early-returned because display === target). Otherwise (no
+      // anchor, or a down / no-op move) snap straight to the target.
+      setDisplay(hasFrom && (fromOpt as number) < target ? (fromOpt as number) : target);
       setIsAnimating(false);
+      setIsRolling(false);
       return;
     }
-    if (display === target) return;
+
+    // The roll ALWAYS starts from the explicit `from` anchor when provided —
+    // never from the current `display`, which may have been pre-snapped to the
+    // target while the roll was gated. Legacy positional callers pass no `from`
+    // and keep rolling from wherever the number currently sits.
+    const start = hasFrom ? (fromOpt as number) : display;
+    if (start === target) return;
 
     // Respect OS-level motion preference. No animation, just snap.
     const reducedMotion =
@@ -75,10 +97,10 @@ export function useCountUp(
     if (reducedMotion) {
       setDisplay(target);
       setIsAnimating(false);
+      setIsRolling(false);
       return;
     }
 
-    const start = display;
     const delta = target - start;
 
     // Never animate downward — losses snap. Per brand: honest losses are
@@ -87,16 +109,20 @@ export function useCountUp(
     if (delta < 0) {
       setDisplay(target);
       setIsAnimating(false);
+      setIsRolling(false);
       return;
     }
 
     const factor = effectivePrecision > 0 ? Math.pow(10, effectivePrecision) : 1;
+    setDisplay(start); // anchor the first visible frame at `from` so the climb begins there
     setIsAnimating(true);
+    setIsRolling(false); // linger/hold phase: the beat has begun but isn't climbing yet
 
     let frame = 0;
     let delayTimer: ReturnType<typeof setTimeout> | null = null;
 
     const runRoll = () => {
+      setIsRolling(true); // the actual climb starts now (after any startDelay)
       const startedAt = performance.now();
       frame = requestAnimationFrame(function tick(now) {
         const t = Math.min(1, (now - startedAt) / effectiveDuration);
@@ -109,6 +135,7 @@ export function useCountUp(
         } else {
           setDisplay(target); // ensure final frame lands exactly on target
           setIsAnimating(false);
+          setIsRolling(false);
         }
       });
     };
@@ -128,10 +155,10 @@ export function useCountUp(
       if (frame) cancelAnimationFrame(frame);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, effectiveDuration, effectivePrecision, enabled, effectiveStartDelay]);
+  }, [target, effectiveDuration, effectivePrecision, enabled, effectiveStartDelay, fromOpt]);
 
   if (isObjectArg) {
-    return { value: display, isAnimating };
+    return { value: display, isAnimating, isRolling };
   }
   return display;
 }
