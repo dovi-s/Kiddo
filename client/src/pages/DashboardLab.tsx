@@ -1266,6 +1266,17 @@ function getGiftDisplayAmountForTransaction(transaction: DashboardTransaction, g
   return Number.isFinite(netAmount) ? netAmount : parseFloat(transaction.amount || "0");
 }
 
+// Default a parent into their first OWNED, non-transferred fund — never a
+// handed-off / previous_owner fund. A parent shouldn't open straight into the
+// kid's graduated account, and in the seeded demo the graduated fund (Haley) is
+// created FIRST, so a naive funds[0] lands there. Falls back to funds[0] only
+// when every fund is shared/transferred (e.g. a fully-graduated household).
+function pickDefaultFundId(funds: any[]): string {
+  const list = funds || [];
+  const owned = list.find((f) => f?.accessRole !== "previous_owner" && !f?.transferredAt);
+  return (owned ?? list[0])?.id ?? "";
+}
+
 export default function DashboardLab() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -1489,6 +1500,10 @@ export default function DashboardLab() {
   // — so the user never wonders whether anything happened during the network round-trip.
   const [nudgeSwitchLoading, setNudgeSwitchLoading] = useState<string | null>(null);
   const [nudgeOptimisticallyDismissed, setNudgeOptimisticallyDismissed] = useState<Set<string>>(new Set());
+  // Per-occasion "show all gifts" expansion in the occasion detail view — the
+  // "+N more" row expands the list in place instead of being a dead end. Keyed
+  // by event id so switching occasions doesn't carry a stale expanded state.
+  const [expandedOccasionGiftLists, setExpandedOccasionGiftLists] = useState<Set<string>>(new Set());
   const [showArchivedTilesV2, setShowArchivedTilesV2] = useState(false);
   const [eventShareTarget, setEventShareTarget] = useState<SharePage[] | null>(null);
   const [investCashOpen, setInvestCashOpen] = useState(false);
@@ -2026,7 +2041,7 @@ export default function DashboardLab() {
     if (!selectedFundId) return;
     if (funds.length === 0) return;
     if (funds.some((f) => f.id === selectedFundId)) return;
-    const fallback = funds[0]?.id ?? "";
+    const fallback = pickDefaultFundId(funds);
     setSelectedFundId(fallback);
     setActiveFundId(fallback);
     const params = new URLSearchParams(window.location.search);
@@ -2234,7 +2249,7 @@ export default function DashboardLab() {
   // loading-state regression for the common case.
   const selectedOwnedByUser =
     funds.length > 0 && Boolean(selectedFundId) && funds.some((f) => f.id === selectedFundId);
-  const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
+  const activeFundId = (selectedOwnedByUser ? selectedFundId : pickDefaultFundId(funds)) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
   // Replay the lab's signature ENTRANCE beats on a FUND SWITCH so switching to
@@ -12183,6 +12198,8 @@ export default function DashboardLab() {
                           .filter(g => g.eventId === ev.id && g.status !== "failed" && g.status !== "refunded")
                           .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
                         const emoji = eventEmoji(ev.eventType);
+                        const evGiftsExpanded = expandedOccasionGiftLists.has(String(ev.id));
+                        const evGiftsVisible = evGiftsExpanded ? evGifts.length : 5;
 
                         return (
                           <motion.div
@@ -12470,7 +12487,7 @@ export default function DashboardLab() {
                                   <div>
                                     <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this occasion page</p>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                                      {evGifts.slice(0, 5).map((g, gi) => {
+                                      {evGifts.slice(0, evGiftsVisible).map((g, gi) => {
                                         const gName = displayGifterName(g.senderName, (g as any).isAnonymous);
                                         const gAmt = parseFloat(String(g.netAmount || g.amount || "0"));
                                         // Year included: annual gifters (e.g. a grandparent who
@@ -12478,7 +12495,7 @@ export default function DashboardLab() {
                                         // rows ("Cameron Tucker · Nov 20 · $75" twice) that read as a
                                         // duplicate bug. The year is what distinguishes them.
                                         const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : null;
-                                        const isLast = gi === Math.min(evGifts.length, 5) - 1;
+                                        const isLast = gi === Math.min(evGifts.length, evGiftsVisible) - 1;
                                         // Same thank-you state rules as elsewhere: owner self / anonymous / sent / draft / missing.
                                         const evGiftEmail = String((g as any)?.senderEmail || "").trim().toLowerCase();
                                         const evOwnerEmail = String(user?.email || "").trim().toLowerCase();
@@ -12516,7 +12533,19 @@ export default function DashboardLab() {
                                         );
                                       })}
                                       {evGifts.length > 5 && (
-                                        <p style={{ fontSize: 11, color: "rgba(26,23,16,0.4)", textAlign: "center", paddingTop: 6 }}>+{evGifts.length - 5} more</p>
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedOccasionGiftLists(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(String(ev.id))) next.delete(String(ev.id));
+                                            else next.add(String(ev.id));
+                                            return next;
+                                          })}
+                                          data-testid="occasion-gifts-toggle"
+                                          style={{ background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "center", paddingTop: 8, paddingBottom: 2, fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-evergreen))" }}
+                                        >
+                                          {evGiftsExpanded ? "Show less" : `+${evGifts.length - 5} more`}
+                                        </button>
                                       )}
                                     </div>
                                   </div>
