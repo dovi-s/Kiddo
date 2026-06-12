@@ -24,24 +24,57 @@
 
 ## 3) Stripe Setup
 
-- In Stripe Dashboard, create products/prices used by app:
-  - Kiddo Plus monthly and yearly
-  - Kiddo Family monthly and yearly
-  - Kiddo Occasions one-time
-- Run `npx tsx scripts/seed-products.ts` to create or sync test-mode products.
-- Copy the printed `STRIPE_PRICE_PLUS_*`, `STRIPE_PRICE_FAMILY_*`, and `STRIPE_PRICE_OCCASION_TOP_UP` values into the environment.
-- Configure webhook endpoint:
-  - `POST https://YOUR_DOMAIN/api/stripe/webhook`
-- Subscribe webhook to:
-  - `checkout.session.completed`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `payment_intent.succeeded`
-  - `payment_intent.payment_failed`
-  - `charge.refunded`
-  - `invoice.paid`
-  - `invoice.payment_failed`
-- Put webhook signing secret in `STRIPE_WEBHOOK_SECRET`.
+Do this in **TEST** mode first to validate end-to-end, then repeat in **LIVE**.
+
+**A. Products + prices — run BOTH seed scripts (both are required, both idempotent):**
+- `npx tsx scripts/seed-products.ts` — the regular plans (Plus $3.99/$29, Family
+  $6.99/$59, Occasion top-up). Copy the printed `STRIPE_PRICE_PLUS_*`,
+  `STRIPE_PRICE_FAMILY_*`, `STRIPE_PRICE_OCCASION_TOP_UP` into the environment.
+- `npm run founder:seed-stripe` — the founder-lock products ("Kiddo+ Founder Annual"
+  $19/yr, "Kiddo Family Founder Annual" $59/yr). **Without this, founding-member
+  checkout has no price to route to.**
+- Prices come from `shared/monetization.ts`; if you change a price there, re-run the seeds.
+
+**B. Webhook — subscribe to ALL NINE events the handler processes (`webhookHandlers.ts:1043-1069`):**
+- Endpoint: `POST https://YOUR_DOMAIN/api/stripe/webhook`
+- Events: `checkout.session.completed`, `customer.subscription.updated`,
+  `customer.subscription.deleted`, `customer.deleted`, `payment_intent.succeeded`,
+  `payment_intent.payment_failed`, `charge.refunded`, `invoice.paid`,
+  `invoice.payment_failed`.
+  ⚠️ The prior list omitted **`customer.deleted`** — without it the account-deletion
+  cascade (`handleCustomerDeleted`) never fires.
+- Put the signing secret in `STRIPE_WEBHOOK_SECRET`. **REQUIRED in prod:** if unset,
+  webhook verification is disabled (spoofable money events) or the handler throws
+  (`env.ts` marks it optional; `index.ts:234` warns). Same shape as the CSRF gotcha.
+
+**C. Go LIVE:**
+- ⚠️ **Account ownership first.** The current Stripe is a PERSONAL account. Do NOT go
+  live on it. A regulated kids'-investing platform moving real gift money must run
+  Stripe under the **company entity** (LLC/C-corp + EIN) and be owned via **ops@**, not
+  a personal email/SSN. Pre-launch (test mode, no real charges) is the easiest time to
+  fix this. Cleanest path: once the entity + EIN exist, **create a fresh Stripe account
+  under ops@ + the entity and re-run the two seeds** (idempotent — they recreate all
+  products/prices, so nothing material is lost; test data is disposable). Or convert the
+  existing account (Settings → Business details → entity + EIN; add ops@ as owner; Stripe
+  support assists with owner transfer). Same rule for every money/infra vendor
+  (custodian, registrar, hosting). The COMPANY ENTITY is the real prerequisite — it's
+  also needed for the custodian's KYB.
+- Swap to LIVE keys (from the company/ops@ account): `STRIPE_SECRET_KEY`,
+  `STRIPE_PUBLISHABLE_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`.
+- Re-run BOTH seeds against the live account and register the LIVE webhook (its own
+  signing secret). `npm run founder:seed-stripe` only makes the $19 lock real once run
+  in live.
+
+**D. Stripe Dashboard config (the app sets none of this; it all comes from account
+settings — audited 2026-06-04):**
+- **Statement descriptor** → KIDDO / KIDDOFUND (what a gifter's card shows; a confusing
+  descriptor is a refund/chargeback risk — not a legal-entity name, not "Kora").
+- **Public business name + icon + brand color** (Branding) → verify they say Kiddo
+  (they appear on Checkout, receipts, invoices).
+- **Customer emails** (Settings → Emails): **receipts ON** (gifters expect one),
+  **failed-payment/dunning OFF** (the app ships its own branded dunning; two senders
+  reads as a scam).
+- **Support email on receipts** → support@kiddofund.com (once monitored).
 
 ## 4) App Build and Runtime
 
