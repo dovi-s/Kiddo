@@ -320,7 +320,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                   >
                     <p className="text-sm text-muted-foreground">What kind of fund do you want to add?</p>
                     <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-                      This quick-add sheet is for children&apos;s funds. Personal funds are live in onboarding through <span className="font-medium text-foreground">Get started &rarr; For myself</span>.
+                      This quick-add sheet is for children&apos;s funds. A fund for yourself is coming soon. You can see the idea from <span className="font-medium text-foreground">Get started &rarr; For myself</span>.
                     </div>
 
                     <button
