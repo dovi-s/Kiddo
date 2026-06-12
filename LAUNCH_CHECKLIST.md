@@ -181,6 +181,23 @@ being built ahead of it. State:
 - **NOT ours:** regulatory shareholder comms (prospectus/annual-report/proxy) are the
   rented BD partner's job, not Kiddo's (see `BUSINESS_STRUCTURE.md` checklist #7).
 
+**Deliverability + warmup (the two real gates, more than warmup itself):** The code
+hygiene is GOOD — Postmark+SendGrid adapters, RFC 8058 one-click List-Unsubscribe now
+across all 10 promotional workers (the 2026-06-03 audit gap is closed), bounce/complaint
+suppression (`postmarkWebhook` + `email_suppressions`), dedupe, demo-domain guards. What
+remains is operational and external:
+1. **Wire the provider** (`POSTMARK_SERVER_TOKEN`) and point `EMAIL_FROM` at a
+   **monitored** inbox (trusted-contact email invites replies).
+2. **Authenticate the sending domain — SPF + DKIM + DMARC** on kiddofund.com (Postmark
+   gives the records). This is the actual inbox-vs-spam decider; can't be verified from
+   code. Confirm the DNS records are live before any real send.
+3. **Warmup itself is near-automatic at our volume:** use Postmark's **shared,
+   pre-warmed IP pool** (no manual IP warmup; a dedicated IP isn't worth it until
+   ~100k+/mo). The warmup that matters is **sequencing** — turn on transactional,
+   high-engagement mail first (verification, "your gift just landed", pre-charge), then
+   layer in the monthly pulse. The relationship-email mix warms gently; we are not a
+   bulk blaster. The gate is provider + DNS auth, not warmup.
+
 ---
 
 ## P2-5 — Drive frequency (frequency is a moat *input*)
