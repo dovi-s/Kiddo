@@ -9,6 +9,7 @@ import {
   getKiddoOccasionTier,
   hasEntitlementAtLeast,
   hasEntitlementFromStatus,
+  resolveEffectiveAnnualFee,
   KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS,
   KIDDO_LEGACY_YEARLY,
 } from "@shared/monetization";
@@ -85,6 +86,29 @@ function main() {
   assert.equal(hasEntitlementFromStatus("unpaid"), false, "unpaid is not entitled (retries exhausted)");
   assert.equal(hasEntitlementFromStatus(null), false);
   assert.equal(hasEntitlementFromStatus(undefined), false);
+
+  // Greater-of "one meter": a fund pays MAX(subscription, AUM), never the sum.
+  // Free fund: AUM is the only fee.
+  const free10k = resolveEffectiveAnnualFee({ plan: "free", investedAssets: 10000 });
+  assert.equal(free10k.annualFee, 10, "free fund pays AUM only");
+  assert.equal(free10k.billedAs, "aum");
+  // Empty free fund: nothing.
+  assert.equal(resolveEffectiveAnnualFee({ plan: "free", investedAssets: 0 }).billedAs, "none");
+  // Small paid fund: the subscription is the larger fee (covers the AUM).
+  const starterSmall = resolveEffectiveAnnualFee({ plan: "starter", billingInterval: "year", investedAssets: 10000 });
+  assert.equal(starterSmall.annualFee, 29, "annual Kiddo+ ($29) covers the $10 AUM on a $10k fund");
+  assert.equal(starterSmall.billedAs, "subscription");
+  // Large paid fund: the AUM exceeds the subscription and becomes the fee (never both).
+  const starterLarge = resolveEffectiveAnnualFee({ plan: "starter", billingInterval: "year", investedAssets: 50000 });
+  assert.equal(starterLarge.annualFee, 50, "AUM ($50) exceeds annual Kiddo+ ($29) on a $50k fund");
+  assert.equal(starterLarge.billedAs, "aum");
+  // Monthly billers pay more sub, so the crossover is higher: $40k AUM ($40) < monthly Kiddo+ ($47.88).
+  const starterMonthly40k = resolveEffectiveAnnualFee({ plan: "starter", billingInterval: "month", investedAssets: 40000 });
+  assert.equal(starterMonthly40k.billedAs, "subscription", "monthly Kiddo+ ($47.88/yr) still covers a $40 AUM");
+  // Family crossover near $59k.
+  const family80k = resolveEffectiveAnnualFee({ plan: "family", billingInterval: "year", investedAssets: 80000 });
+  assert.equal(family80k.annualFee, 80, "AUM ($80) exceeds annual Family ($59) on an $80k fund");
+  assert.equal(family80k.billedAs, "aum");
 
   console.log("Monetization tests passed.");
 }

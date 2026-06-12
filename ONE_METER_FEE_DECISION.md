@@ -7,6 +7,24 @@ gets decided deliberately rather than by default. Grounded in `shared/monetizati
 (`project_pricing_fee_sensitivity_research` in memory). Companion to
 `BUSINESS_STRUCTURE.md` and `COMPETITIVE_LANDSCAPE.md`.*
 
+## STATUS: greater-of COMMITTED + implemented (2026-06-12)
+
+Founder directed execution. Greater-of (Option C below) is now the committed model:
+- **Logic implemented:** `resolveEffectiveAnnualFee()` in `shared/monetization.ts`
+  (pure resolver, MAX(subscription, AUM), with tests in `script/test-monetization.ts`).
+- **Copy shipped** (honest, "once investing is live" frame) on the canonical surfaces:
+  `Pricing.tsx` (annual-fee FAQ + "How the annual fee works"), `Legal.tsx` §4 (binding
+  terms), and the shared `TrustMicroStrip` (`ux-foundations.tsx`, which renders on
+  Account + ~18 surfaces, so it propagates in-app everywhere). Post-handoff
+  "no subscription" surfaces left intact (correct there).
+- **Billing ENFORCEMENT is custody-gated and NOT built** — the AUM leg does not bill
+  until custody (`AUM_FEE_COLLECTION_SPEC.md`, which carries the greater-of accrual
+  guard). Today only the subscription bills, so the public "never both" copy is already
+  true (AUM charges nothing yet). When custody goes live the collection job must honor
+  the guard or the shipped copy becomes false. This is the forcing function.
+- **Reversible** before custody by editing the copy; near-term revenue impact is zero
+  (AUM not billing). The revenue tradeoff at scale is in the model below.
+
 ## TL;DR
 
 There is **no emergency and nothing live is broken.** The live `/pricing` page already
