@@ -102,6 +102,28 @@ export function loadEnv() {
       `[env] Missing optional development keys: ${missingProdKeys.join(", ")}. Some payment flows will stay unavailable locally.`,
     );
   }
+
+  // Email provider is an OR, not a single required key: Postmark OR SendGrid.
+  // The gifter loop (the moat) runs entirely on email, so booting PRODUCTION
+  // with neither configured is a silent, catastrophic failure — every send
+  // quietly falls to .local/email-outbox.jsonl and nothing actually leaves the
+  // box, with no error. Hard-fail in prod (same posture as the Stripe keys
+  // above); warn in dev, where the outbox fallback is the intended behavior.
+  const hasEmailProvider =
+    Boolean(String(process.env.POSTMARK_SERVER_TOKEN || "").trim()) ||
+    Boolean(String(process.env.SENDGRID_API_KEY || "").trim());
+  if (parsed.data.NODE_ENV === "production" && !hasEmailProvider) {
+    throw new Error(
+      "Production environment has no email provider: set POSTMARK_SERVER_TOKEN or SENDGRID_API_KEY. " +
+        "Without one, all email silently queues to .local/email-outbox.jsonl and the gifter loop cannot run.",
+    );
+  }
+  if (parsed.data.NODE_ENV !== "production" && !hasEmailProvider) {
+    console.warn(
+      "[env] No email provider (POSTMARK_SERVER_TOKEN / SENDGRID_API_KEY) set. " +
+        "Emails queue locally to .local/email-outbox.jsonl — fine for dev, but they will NOT send.",
+    );
+  }
 }
 
 loadEnv();
