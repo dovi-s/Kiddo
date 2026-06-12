@@ -402,8 +402,8 @@ export default function TaxDocuments() {
               <p className="text-sm font-bold text-foreground">Tax information is not tax advice.</p>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                 {isOwnerMode
-                  ? "This is your own individual investment account. Numbers shown here are informational; realized gains are taxed at your own rate when positions are sold. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."
-                  : "UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."}
+                  ? "This is your own individual investment account. Numbers shown here are informational; realized gains (the profit when you sell a position) are taxed at your own rate. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."
+                  : "Custodial (UTMA) accounts have unique tax rules, including the kiddie tax (the IRS rule for a child's investment income). Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."}
               </p>
             </div>
           </div>
