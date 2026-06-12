@@ -7781,6 +7781,19 @@ export default function DashboardLab() {
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                       It's {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} now, but you're the one who built it up over the years, and that doesn't change. When you're ready to do this for another kid, you already know how.
                     </p>
+                    {/* Visibility-state clarity: post-handoff the former custodian's view
+                        is the NEW OWNER's to control (PreviousCustodianAccessCard) —
+                        default is a frozen keepsake, the owner can opt them into the live
+                        fund or remove access entirely. The parent's view never said which
+                        state it was in or that it's the owner's choice; a parent could
+                        assume the live view is automatic/permanent. This calm sub-line
+                        names the state + that the owner controls it (a warm signal when
+                        live: they chose to keep you in). Founder-owned handoff feel. */}
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground/80">
+                      {showHandoffKeepsake
+                        ? `You're seeing ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund the way you handed it over. ${recipientFirstNameDisplay || "They"} can choose to share it live anytime.`
+                        : `${recipientFirstNameDisplay || "They"} chose to keep sharing it with you live, so you can keep watching it grow. It's ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} to turn off anytime.`}
+                    </p>
                   </div>
                 </div>
               </div>
