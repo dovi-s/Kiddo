@@ -1114,6 +1114,25 @@ export default function MemoryBook() {
   // Per-gift thank-you state for gift cards: ✓ Thanked / ⏳ Awaiting / ✨ From you / etc.
   // Suppressed for anonymous (can't be reached) and senders without an email.
   const ownerEmailLowerForMemory = String(user?.email || "").trim().toLowerCase();
+  // Account-holder emails = the owner + anyone who has a parent-contribution
+  // (recurring) gift on this fund — i.e. a custodian / co-parent. Derived from
+  // the data exactly like the dashboard breakdown (DashboardLab ~7881) so the
+  // two agree. Used to keep account-holders OUT of the thank-you flow: you don't
+  // thank the household — owner OR co-parent — for funding the account. Catches
+  // their NON-recurring one-time adds too (those carry no parentContributionId
+  // but the same sender, which a parentContributionId-only check would miss).
+  const accountHolderEmails = useMemo(() => {
+    const set = new Set<string>();
+    if (ownerEmailLowerForMemory) set.add(ownerEmailLowerForMemory);
+    for (const e of (Array.isArray(rawMemoryEntries) ? rawMemoryEntries : [])) {
+      const g: any = (e as any).gift;
+      if (g?.parentContributionId) {
+        const em = String(g.senderEmail || "").trim().toLowerCase();
+        if (em) set.add(em);
+      }
+    }
+    return set;
+  }, [rawMemoryEntries, ownerEmailLowerForMemory]);
   const thankYouStateForGift = (gift: any): "sent" | "draft" | "missing" | "self" | "anonymous" => {
     const senderEmail = String(gift?.senderEmail || "").trim().toLowerCase();
     const senderName = String(gift?.senderName || "").trim();
@@ -1128,6 +1147,11 @@ export default function MemoryBook() {
     const isTestSender = ["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lcSender);
     const isAnon = !senderName || /^someone who loves/i.test(senderName) || lcSender === "anonymous" || isTestSender;
     if (!!ownerEmailLowerForMemory && senderEmail === ownerEmailLowerForMemory) return "self";
+    // Co-parent / account-holder contributions aren't thankable gifts (the
+    // household funding the account — recurring OR one-time). Before the mom-flip
+    // the co-parent WAS the owner so this fell under the check above; now they're
+    // a distinct sender (e.g. Phil). The render at ~5258 already expects "self".
+    if (senderEmail && accountHolderEmails.has(senderEmail)) return "self";
     if (isAnon || !senderEmail) return "anonymous";
     const ty = gift?.id ? thankYouByGiftId.get(String(gift.id)) : null;
     if (ty?.status === "sent") return "sent";
