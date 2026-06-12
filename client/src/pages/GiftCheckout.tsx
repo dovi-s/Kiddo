@@ -21,6 +21,7 @@ import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
 import { buildGiftDraftKey, isMeaningfulGiftDraft, parseGiftDraft, serializeGiftDraft, type GiftDraftFields } from "@/lib/giftDraft";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
+import { effectiveOccasionDate } from "@shared/occasions";
 import { FEATURED_STOCK_PICKS as CANON_FEATURED_STOCK_PICKS, ADDITIONAL_STOCK_PICKS as CANON_ADDITIONAL_STOCK_PICKS } from "@shared/stock-picks";
 import { projectFundValue } from "@shared/projection";
 import { investingLiveCopy } from "@shared/legal-copy";
@@ -627,15 +628,13 @@ export default function GiftCheckout() {
 
   const [countdown, setCountdown] = useState<{ days: number; hours: number; mins: number } | null>(null);
   useEffect(() => {
-    const dateStr = eventData?.event?.eventDate;
-    if (!dateStr) { setCountdown(null); return; }
+    // Effective date rolls a birthday to its next occurrence (@shared/occasions)
+    // so a recurring birthday counts down to the upcoming one and never reads as
+    // past. effectiveOccasionDate parses plain "YYYY-MM-DD" and full ISO alike.
+    const effDate = effectiveOccasionDate(eventData?.event);
+    if (!effDate) { setCountdown(null); return; }
     const compute = () => {
-      // Parse robustly. Server may return a plain "YYYY-MM-DD" date OR a
-      // full ISO timestamp like "2026-05-29T12:00:00.000Z". Splitting on
-      // "-" used to leave the day-segment as "29T12:00..." which parsed
-      // to NaN and propagated into "NaN Days : NaN Hours : NaN Mins" on
-      // the gifter checkout page. Date constructor handles both.
-      const target = new Date(String(dateStr));
+      const target = effDate;
       const targetMs = target.getTime();
       // Bail to a null countdown (hides the strip cleanly) on any of:
       // 1) unparseable date (NaN), 2) date in the past — "the event already
@@ -653,7 +652,7 @@ export default function GiftCheckout() {
     compute();
     const t = setInterval(compute, 60000);
     return () => clearInterval(t);
-  }, [eventData?.event?.eventDate]);
+  }, [eventData?.event?.eventDate, eventData?.event?.eventType]);
 
   const recipientName = capFirst(eventData?.fund?.recipientFirstName) || eventData?.fund?.name || "Recipient";
   const recipientLooksLikeFund = /\bfund\b/i.test(recipientName);
@@ -1703,7 +1702,7 @@ export default function GiftCheckout() {
                       // projection line states. Labeling it "to grow" read as "the gift
                       // only grows for 5 months," contradicting the page's own
                       // "$50 → $82 at 18" pitch. Fixed 2026-06-09.
-                      const evDate = new Date(String(eventData?.event?.eventDate));
+                      const evDate = effectiveOccasionDate(eventData?.event) ?? new Date(NaN);
                       const dateLabel = Number.isFinite(evDate.getTime())
                         ? evDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
                         : null;

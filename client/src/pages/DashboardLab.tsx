@@ -198,6 +198,7 @@ import {
 import { calculateDashboardMoneyMath } from "@shared/dashboard-money-math";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
+import { effectiveOccasionDate } from "@shared/occasions";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 // Cultural-traditions UI + suggestion interleaving fully removed from the
@@ -541,8 +542,8 @@ function pickActiveOccasion(events: any[]): any | null {
   const isGifting = (e: any) => String(e?.eventCategory || "gifting_occasion") !== "savings_goal";
   const dated = active
     .filter(e => e.eventDate && isGifting(e))
-    .map(e => ({ e, days: Math.ceil((new Date(e.eventDate).getTime() - now) / 86400000) }))
-    .filter(({ days }) => days >= 0)
+    .map(e => { const d = effectiveOccasionDate(e); return { e, days: d ? Math.ceil((d.getTime() - now) / 86400000) : Number.POSITIVE_INFINITY }; })
+    .filter(({ days }) => days >= 0 && Number.isFinite(days))
     .sort((a, b) => a.days - b.days);
   if (dated.length > 0) return dated[0].e;
   const undatedGifting = active
@@ -11776,8 +11777,9 @@ export default function DashboardLab() {
                   const fundTowardGoal = goal > 0 ? totalValue : 0;
                   const pct = goal > 0 ? Math.min(100, (fundTowardGoal / goal) * 100) : 0;
                   const goalReached = goal > 0 && fundTowardGoal >= goal;
-                  const daysLeft = event.eventDate
-                    ? Math.ceil((new Date(event.eventDate).getTime() - Date.now()) / 86400000)
+                  const effEventDate = effectiveOccasionDate(event);
+                  const daysLeft = effEventDate
+                    ? Math.ceil((effEventDate.getTime() - Date.now()) / 86400000)
                     : null;
                   const isSoon = !isArchived && daysLeft !== null && daysLeft <= 7 && daysLeft >= 0;
                   // Prefer the savings goal type when the event is a savings goal
@@ -11797,9 +11799,9 @@ export default function DashboardLab() {
                   })();
                   // Tile-friendly date label. Year is omitted when the event is in
                   // the current calendar year (saves precious tile pixels).
-                  const tileDateLabel = event.eventDate
+                  const tileDateLabel = effEventDate
                     ? (() => {
-                        const d = new Date(event.eventDate as any);
+                        const d = effEventDate;
                         const sameYear = d.getUTCFullYear() === new Date().getFullYear();
                         return d.toLocaleDateString("en-US", sameYear
                           ? { month: "short", day: "numeric", timeZone: "UTC" }
@@ -12185,14 +12187,16 @@ export default function DashboardLab() {
                             ? `${window.location.origin}/${fundSlug}`
                             : `${window.location.origin}/${fundSlug}/${ev.slug}`
                           : null;
-                        const daysLeft = ev.eventDate
-                          ? Math.ceil((new Date(ev.eventDate).getTime() - Date.now()) / 86400000)
+                        const evEffDate = effectiveOccasionDate(ev);
+                        const daysLeft = evEffDate
+                          ? Math.ceil((evEffDate.getTime() - Date.now()) / 86400000)
                           : null;
                         // eventDate is stored at UTC midnight (date-only, picked
                         // via <input type="date">). Render in UTC so Apr 9 stays
-                        // Apr 9, not Apr 8 in US timezones.
-                        const dateStr = ev.eventDate
-                          ? new Date(ev.eventDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+                        // Apr 9, not Apr 8 in US timezones. For a birthday this is
+                        // the NEXT occurrence (see @shared/occasions).
+                        const dateStr = evEffDate
+                          ? evEffDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
                           : null;
                         const evGifts = gifts
                           .filter(g => g.eventId === ev.id && g.status !== "failed" && g.status !== "refunded")
