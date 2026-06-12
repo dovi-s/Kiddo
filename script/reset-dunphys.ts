@@ -176,13 +176,47 @@ async function wipeDemoState(): Promise<void> {
     // activities_fund_id_funds_id_fk. Re-clear fund-keyed activities (the
     // observed offender) immediately before the funds delete to shrink the
     // race window to ~microseconds.
-    await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
     // Same race, second offender (observed 2026-06-04): the snapshot writer
     // re-inserted a fund_snapshots row between the bulk wipe above and the
     // funds delete, tripping fund_snapshots_fund_id_funds_id_fk and aborting
-    // the whole reset. Re-clear snapshots in the same tight window.
-    await db.delete(fundSnapshots).where(inArray(fundSnapshots.fundId, demoFundIds));
-    await db.delete(funds).where(inArray(funds.id, demoFundIds));
+    // the whole reset. The single-shot re-clear below still lost the race when
+    // the dev server was UP (the worker re-inserts every few seconds). Retry the
+    // re-clear + funds delete a few times: the race window is microseconds, so a
+    // handful of attempts reliably hits a clean window and the reset succeeds
+    // WITHOUT having to stop the server first. 2026-06-11.
+    // idsList is block-scoped to the dependent-clear section above; recompute it
+    // here for the raw by-gift deletes in the retry loop.
+    const idsList = drizzleSql.join(demoFundIds.map((id) => drizzleSql`${id}`), drizzleSql`, `);
+    let deleted = false;
+    for (let attempt = 0; attempt < 8 && !deleted; attempt++) {
+      try {
+        // Re-clear EVERY fund-referencing table a live worker or request can
+        // repopulate mid-reset, in FK-safe order, then delete the funds:
+        //   recurring-gift worker / gift checkout → gifts (+ memory_entries,
+        //     thank_yous, holdings off the settled gift)
+        //   snapshot worker → fund_snapshots
+        //   misc workers → activities
+        // Single-shot re-clears kept losing the race to whichever table the
+        // server touched next (snapshots → gifts → ...). Re-clearing the whole
+        // set and retrying the block reliably hits a clean window, so the reset
+        // succeeds with the server UP instead of aborting (which leaves stale
+        // funds and makes the seed SKIP). 2026-06-11.
+        await db.execute(drizzleSql`DELETE FROM memory_entries WHERE gift_id IN (SELECT id FROM gifts WHERE fund_id IN (${idsList}))`);
+        await db.execute(drizzleSql`DELETE FROM thank_yous WHERE gift_id IN (SELECT id FROM gifts WHERE fund_id IN (${idsList}))`);
+        await db.delete(gifts).where(inArray(gifts.fundId, demoFundIds));
+        await db.delete(holdings).where(inArray(holdings.fundId, demoFundIds));
+        await db.delete(parentContributions).where(inArray(parentContributions.fundId, demoFundIds));
+        await db.delete(recurringGifts).where(inArray(recurringGifts.fundId, demoFundIds));
+        await db.delete(transactions).where(inArray(transactions.fundId, demoFundIds));
+        await db.delete(fundSnapshots).where(inArray(fundSnapshots.fundId, demoFundIds));
+        await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
+        await db.delete(funds).where(inArray(funds.id, demoFundIds));
+        deleted = true;
+      } catch (raceErr) {
+        if (attempt === 7) throw raceErr;
+        await new Promise((r) => setTimeout(r, 250)); // let the racing worker's txn settle
+      }
+    }
     console.log(`  deleted ${demoFundIds.length} fund(s)`);
   }
 

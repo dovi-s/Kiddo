@@ -1454,7 +1454,7 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
       description: "Haley now owns this fund in Kiddo.",
       createdAt: transferredAt,
     } as any);
-    console.log(`  handoff: Haley's fund → haley@dunphyfamily.com (graduated adult account; Phil is previous owner)`);
+    console.log(`  handoff: Haley's fund → haley@dunphyfamily.com (graduated adult account; Claire is previous owner)`);
   }
 
   // 3c. Seed a connected bank for the recurring-setup demo. Recurring pulls
