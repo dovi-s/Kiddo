@@ -23024,13 +23024,20 @@ export async function registerRoutes(
 
     // Brokerage / custodian
     {
-      const vars = evs([["CUSTODIAN_TRANSFER_WEBHOOK_URL", false], ["CUSTODIAN_TRANSFER_WEBHOOK_SECRET", false]]);
+      const vars = evs([
+        ["CUSTODIAN_TRANSFER_WEBHOOK_URL", false],
+        ["CUSTODIAN_TRANSFER_WEBHOOK_SECRET", false],
+        ["CUSTODIAN_PROVIDER", false],
+        ["ALPACA_BROKER_API_KEY", false],
+        ["ALPACA_BROKER_API_SECRET", false],
+      ]);
+      const provider = String(process.env.CUSTODIAN_PROVIDER || "stub").toLowerCase();
       integrations.push({
-        id: "custodian", label: "DriveWealth (custodian)", category: "Brokerage",
-        purpose: "UTMA brokerage account provider. Webhook receives custody events. funds.drivewealthAccountId links Kiddo funds to brokerage accounts.",
+        id: "custodian", label: "Custodian (DriveWealth / Alpaca)", category: "Brokerage",
+        purpose: "UTMA brokerage account provider behind a provider-agnostic interface (server/custodianService.ts → getCustodianProvider). Transfer webhook receives custody events; funds.drivewealthAccountId stores the custodian account id.",
         envVars: vars, configured: vars[0].set,
-        health: { status: vars[0].set ? "ok" : "unknown", message: vars[0].set ? "Webhook URL configured" : "Webhook integration not yet enabled", checkedAt: new Date().toISOString() },
-        notes: "Integration scaffolded but full DriveWealth API client not yet wired. funds.drivewealthAccountId column exists for future use.",
+        health: { status: vars[0].set ? "ok" : "unknown", message: `provider=${provider}; transfer webhook ${vars[0].set ? "configured" : "not enabled"}`, checkedAt: new Date().toISOString() },
+        notes: "Provider selected via CUSTODIAN_PROVIDER (stub|drivewealth|alpaca; default stub). DriveWealth account-open is scaffolded; the Alpaca Broker API client (server/alpacaBrokerClient.ts) is sandbox-ready (set ALPACA_BROKER_API_KEY/_SECRET, run `npm run smoke:alpaca-custodial`). Account-open route is NOT yet wired — gated on the provider pick + counsel. See CUSTODIAN_VENDOR_DILIGENCE.md.",
       });
     }
 

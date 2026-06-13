@@ -25,6 +25,23 @@ import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSe
 
 const DISMISS_KEY_PREFIX = "kiddo.kid-welcome-dismissed.";
 
+function kidWelcomeDismissKey(fundId: string): string {
+  return `${DISMISS_KEY_PREFIX}${fundId}`;
+}
+
+// Single source of truth for "has this at-18 welcome been dismissed." The
+// Dashboard digest yields to this banner, but only WHILE it's showing — once
+// dismissed, the digest returns so a dismissed banner can't suppress the recap
+// for the rest of the server's claim window.
+export function isKidAt18WelcomeBannerDismissed(fundId: string | null): boolean {
+  if (!fundId) return false;
+  try {
+    return !!window.localStorage.getItem(kidWelcomeDismissKey(fundId));
+  } catch {
+    return false;
+  }
+}
+
 export type KidAt18WelcomeBannerProps = {
   kidClaimedAt: string | null | undefined;
   fundId: string | null;
@@ -40,15 +57,12 @@ export function KidAt18WelcomeBanner({
 
   if (!kidClaimedAt || !fundId) return null;
 
-  const dismissKey = `${DISMISS_KEY_PREFIX}${fundId}`;
-  if (typeof window !== "undefined") {
-    try {
-      if (window.localStorage.getItem(dismissKey)) return null;
-    } catch {
-      // localStorage unavailable (private browsing, SSR snapshot, etc.) —
-      // fall through and render. Better one extra render than swallowing
-      // the welcome moment entirely.
-    }
+  const dismissKey = kidWelcomeDismissKey(fundId);
+  if (isKidAt18WelcomeBannerDismissed(fundId)) {
+    // Already dismissed — don't show the welcome twice. (localStorage-
+    // unavailable falls through to render: the helper returns false, so the
+    // welcome moment is never swallowed by a storage error.)
+    return null;
   }
 
   const childFirst = (childFirstName || "").trim();

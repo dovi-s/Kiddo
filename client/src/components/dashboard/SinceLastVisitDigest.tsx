@@ -30,7 +30,34 @@ import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const LASTSEEN_PREFIX = "kiddo.fund.lastSeen.v1:";
-const DEMO_SHOWN_KEY = "kiddo.demo.awayDigest.shown.v1";
+// Per-fund, session-persistent DISMISSAL. The digest behaves like the co-parent
+// banner: it persists across navigating away and back, and only leaves when the
+// viewer swipes / X's it -- PER FUND, so dismissing Luke's recap never touches
+// Alex's. (Replaces a single shared `dismissed` flag that leaked across kids AND
+// a GLOBAL demo "shown once" key that let only the first kid viewed in a session
+// ever show the digest.) Demo dismissals stay under the kiddo.demo.* namespace so
+// the demo's cache reset still clears them.
+const AWAY_DISMISSED_REAL_PREFIX = "kiddo.fund.awayDismissed.v1:";
+const AWAY_DISMISSED_DEMO_PREFIX = "kiddo.demo.awayDigest.dismissed.v1:";
+function awayDismissKey(fundId: string, isDemo: boolean): string {
+  return `${isDemo ? AWAY_DISMISSED_DEMO_PREFIX : AWAY_DISMISSED_REAL_PREFIX}${fundId}`;
+}
+function readAwayDismissed(fundId: string | null, isDemo: boolean): boolean {
+  if (!fundId) return false;
+  try {
+    return !!window.sessionStorage.getItem(awayDismissKey(fundId, isDemo));
+  } catch {
+    return false;
+  }
+}
+function writeAwayDismissed(fundId: string | null, isDemo: boolean): void {
+  if (!fundId) return;
+  try {
+    window.sessionStorage.setItem(awayDismissKey(fundId, isDemo), "1");
+  } catch {
+    /* ignore */
+  }
+}
 const MIN_AWAY_MS = 24 * 60 * 60 * 1000; // a real "while you were away", not a same-day re-check
 const NOTEWORTHY_MOVE_FRAC = 0.005; // or a >0.5% balance move counts even without a gift
 export const DEMO_AWAY_MS = 6 * 24 * 60 * 60 * 1000; // demo: pretend "6 days ago" (also drives the bell's demo catch-up window — see DemoGiftMoment)
@@ -93,6 +120,7 @@ export function SinceLastVisitDigest({
   ready,
   subject = "Your fund",
   revealDelayMs = DIGEST_REVEAL_DELAY_MS,
+  revealed: revealedProp,
 }: {
   fundId: string | null;
   currentValue: number;
@@ -104,10 +132,14 @@ export function SinceLastVisitDigest({
   // The headline subject — "Luke's fund" for a parent, "Your fund" for the
   // grown owner. Makes it a personal update, not a subjectless stat.
   subject?: string;
-  // How long after `digest` is ready to hold before revealing — so the caller
-  // can sync this to ITS hero-roll cascade (DashboardLab derives it from the one
-  // timeline). Defaults to the standalone DIGEST_REVEAL_DELAY_MS.
+  // How long after `digest` is ready to hold before revealing — used only when
+  // the caller does NOT drive the reveal itself. Defaults to the standalone
+  // DIGEST_REVEAL_DELAY_MS.
   revealDelayMs?: number;
+  // PARENT-DRIVEN reveal. When provided, the parent owns timing (e.g. DashboardLab
+  // anchors it to the hero roll's ACTUAL start, so the digest can't land mid-roll
+  // on a slow machine). When omitted, the internal revealDelayMs timer is used.
+  revealed?: boolean;
 }) {
   // Read the OLD marker ONCE on mount, before the write effect updates it.
   const lastSeen = useMemo<LastSeen | null>(() => {
@@ -115,25 +147,40 @@ export function SinceLastVisitDigest({
     return readLocalCache<LastSeen>(`${LASTSEEN_PREFIX}${fundId}`) ?? null;
   }, [fundId]);
 
-  // Demo "show once per session" — read once on mount so latching it below
-  // doesn't make the card vanish on a re-render.
-  const demoAlreadyShown = useMemo(() => {
-    if (!isDemoAccount) return false;
-    try {
-      return !!window.sessionStorage.getItem(DEMO_SHOWN_KEY);
-    } catch {
-      return false;
+  // Per-fund dismissal. The component instance PERSISTS across fund switches (no
+  // remount), so this must key off fundId -- a single boolean would leak one
+  // kid's dismissal onto another. dismissTick just forces a re-read after a write.
+  const [dismissTick, setDismissTick] = useState(0);
+  const dismissed = useMemo(
+    () => readAwayDismissed(fundId, isDemoAccount),
+    [fundId, isDemoAccount, dismissTick],
+  );
+  const handleDismiss = () => {
+    writeAwayDismissed(fundId, isDemoAccount);
+    // Advance the real-account baseline so this recap won't reappear and the next
+    // away-period diffs from here. (Demo uses a synthetic reference -- no marker.)
+    if (fundId && !isDemoAccount && currentValue > 0) {
+      try {
+        writeLocalCache(`${LASTSEEN_PREFIX}${fundId}`, { value: currentValue, ts: Date.now() });
+      } catch {
+        /* best-effort */
+      }
     }
-  }, [isDemoAccount]);
+    setDismissTick((t) => t + 1);
+  };
 
-  const [dismissed, setDismissed] = useState(false);
-
-  // Update the marker for the NEXT visit (real accounts only — never poison the
-  // demo's synthetic reference; only with a settled positive balance).
+  // Establish the baseline marker the FIRST time we ever see this fund, but do
+  // NOT overwrite it on every view. The digest must keep diffing against where
+  // you LAST left, so it persists across navigating away and back (like the
+  // co-parent banner) instead of vanishing on revisit. The baseline only advances
+  // when the viewer dismisses the recap (handleDismiss above).
   useEffect(() => {
     if (!fundId || isDemoAccount || !(currentValue > 0)) return;
     try {
-      writeLocalCache(`${LASTSEEN_PREFIX}${fundId}`, { value: currentValue, ts: Date.now() });
+      const existing = readLocalCache<LastSeen>(`${LASTSEEN_PREFIX}${fundId}`);
+      if (!existing) {
+        writeLocalCache(`${LASTSEEN_PREFIX}${fundId}`, { value: currentValue, ts: Date.now() });
+      }
     } catch {
       /* best-effort */
     }
@@ -141,7 +188,6 @@ export function SinceLastVisitDigest({
 
   const digest = useMemo(() => {
     if (!ready || !(currentValue > 0)) return null;
-    if (isDemoAccount && demoAlreadyShown) return null;
 
     const sinceTs = isDemoAccount ? Date.now() - DEMO_AWAY_MS : lastSeen?.ts ?? 0;
     if (!sinceTs) return null;
@@ -187,6 +233,11 @@ export function SinceLastVisitDigest({
     } else {
       delta = currentValue - (lastSeen?.value ?? currentValue);
       if (delta < 1) return null; // nothing, or down — no fake "up"
+      // Honesty: if a market dip means the gifts alone EXCEED the total gain, the
+      // "up $X" headline would read as less than the gift we'd credit — the parts
+      // wouldn't reconcile to the total. Suppress rather than show a recap that
+      // doesn't add up (the notification bell still surfaces the individual gift).
+      if (othersSum + ownSum > delta + 1) return null;
       const noteworthy = giftsSince.length > 0 || delta >= currentValue * NOTEWORTHY_MOVE_FRAC;
       if (!noteworthy) return null;
       growth = Math.max(0, delta - othersSum - ownSum);
@@ -205,7 +256,7 @@ export function SinceLastVisitDigest({
       ownSum,
       growth,
     };
-  }, [ready, isDemoAccount, demoAlreadyShown, lastSeen, currentValue, gifts]);
+  }, [ready, isDemoAccount, lastSeen, currentValue, gifts]);
 
   // Hold the digest behind the hero roll cascade (see DIGEST_REVEAL_DELAY_MS) so
   // the landing reads as a sequence (balance + projection roll in -> THEN "while
@@ -214,26 +265,21 @@ export function SinceLastVisitDigest({
   // watches the hero roll, and the digest is a "welcome back" recap that belongs
   // after it settles. The digest only renders on a meaningful return (24h+ and a
   // noteworthy delta), so the ~2.9s settle-beat never gates a non-event.
-  const [revealed, setRevealed] = useState(false);
+  // When the parent drives the reveal (`revealedProp` !== undefined), use it
+  // verbatim — the parent anchors timing to the hero roll. Otherwise fall back to
+  // the internal hold timer.
+  const parentDriven = revealedProp !== undefined;
+  const [internalRevealed, setInternalRevealed] = useState(false);
   useEffect(() => {
-    if (!digest) return;
-    const t = window.setTimeout(() => setRevealed(true), revealDelayMs);
+    if (parentDriven || !digest) return;
+    const t = window.setTimeout(() => setInternalRevealed(true), revealDelayMs);
     return () => window.clearTimeout(t);
-  }, [digest, revealDelayMs]);
+  }, [parentDriven, digest, revealDelayMs]);
+  const revealed = parentDriven ? Boolean(revealedProp) : internalRevealed;
 
-  // Latch the demo once-per-session flag only once it's ACTUALLY shown (after
-  // the reveal hold) — so a prospect who leaves during the hold still gets the
-  // digest next visit instead of burning the once-per-session flag on a card
-  // they never saw.
-  useEffect(() => {
-    if (isDemoAccount && digest && revealed) {
-      try {
-        window.sessionStorage.setItem(DEMO_SHOWN_KEY, "1");
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [isDemoAccount, digest, revealed]);
+  // (The old once-per-session demo latch is gone: dismissal is now per-fund and
+  // persistent, so each kid's recap shows until the viewer dismisses it — and a
+  // prospect who never dismisses it sees it again on the next visit.)
 
   if (!digest || !revealed) return null;
 
@@ -241,7 +287,11 @@ export function SinceLastVisitDigest({
   const parts: string[] = [];
   if (digest.otherGiftCount > 0) {
     if (digest.otherGifterCount === 1 && digest.singleOtherName) {
-      parts.push(`a ${fmtMoney0(digest.othersSum)} gift from ${digest.singleOtherName}`);
+      parts.push(
+        digest.otherGiftCount === 1
+          ? `a ${fmtMoney0(digest.othersSum)} gift from ${digest.singleOtherName}`
+          : `${fmtMoney0(digest.othersSum)} from ${digest.singleOtherName} (${digest.otherGiftCount} gifts)`,
+      );
     } else {
       parts.push(
         `${digest.otherGiftCount} ${digest.otherGiftCount === 1 ? "gift" : "gifts"} (${fmtMoney0(digest.othersSum)}) from ${people(digest.otherGifterCount)}`,
@@ -263,7 +313,7 @@ export function SinceLastVisitDigest({
       // stays as the discoverable/a11y path). This banner looked dismissible but
       // wasn't swipeable — the infra was already here, just the callback wasn't
       // passed.
-      onRequestDismiss={() => setDismissed(true)}
+      onRequestDismiss={handleDismiss}
       className="mb-4 rounded-3xl border p-5 shadow-premium-sm sm:p-6"
       style={{
         borderColor: "hsl(var(--kiddo-evergreen) / 0.28)",
@@ -287,7 +337,7 @@ export function SinceLastVisitDigest({
         </div>
         <button
           type="button"
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           className="shrink-0 -mr-1 -mt-1 rounded-full p-1.5 text-muted-foreground/70 hover:text-foreground hover:bg-black/5 transition-colors"
           data-testid="since-last-visit-dismiss"
           aria-label="Dismiss the since-you-were-away summary"

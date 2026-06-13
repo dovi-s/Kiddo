@@ -173,8 +173,8 @@ import type { SharePage } from "@/components/ui/share-modal";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
-import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
-import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
+import { KidAt18WelcomeBanner, isKidAt18WelcomeBannerDismissed } from "@/components/dashboard/KidAt18WelcomeBanner";
+import { CoparentAcceptedBanner, isCoparentAcceptedBannerDismissed } from "@/components/dashboard/CoparentAcceptedBanner";
 import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
 import { gifterShortName, gifterIdentityKey } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
@@ -704,6 +704,17 @@ const HERO_DIGEST_REVEAL_MS = HERO_CASCADE_SETTLED_MS + 150;
 // The ancillary banner stack follows the digest by a beat, so they sequence
 // (number cascade → recap → celebrations) instead of all arriving at once.
 const HERO_BANNERS_REVEAL_MS = HERO_DIGEST_REVEAL_MS + 300;
+// Guaranteed-reveal safety net. The cascade above anchors the digest/banner
+// reveals to the hero roll ACTUALLY starting (`balanceAnimating`). When a roll
+// arms but never starts (the known "sometimes it doesn't roll" flake) or snaps
+// unexpectedly, that anchor never fires and the catch-up cards stay stranded
+// hidden for the whole visit — the bug behind "Alex never gets the digest" and
+// "Luke's digest is gone after switching away and back". This net force-reveals
+// after a generous bound (well past the slowest legit cascade, even with start-
+// delay + slow-frame lag) so the cards always appear and then persist until
+// dismissed, exactly like the co-parent banner. In the happy path the cascade
+// has already revealed and anchored, so the net is a no-op.
+const HERO_REVEAL_SAFETY_NET_MS = HERO_ROLL_START_DELAY_MS + HERO_BANNERS_REVEAL_MS + 2000;
 
 function readCachedFundValue(fundId: string): number | null {
   // Per-fund balance key is written on every successful load - more current than funds list.
@@ -2661,6 +2672,7 @@ export default function DashboardLab() {
     shouldAnimate: showFresheningCue,
     isAnimating: balanceAnimating,
     isRolling: balanceRolling,
+    locked: balanceLocked,
   } = useCachedFirstNumber({
     seedValue: isDemoAccount ? demoBalancePrior : cachedHeroFundValue,
     liveValue: rawTotalValue,
@@ -2674,6 +2686,10 @@ export default function DashboardLab() {
     // Roll ONCE per kid: each fund rolls the first time you open it this session,
     // then snaps on every return (switching back to a kid you've seen, polls).
     rollKey: activeFundId,
+    // Persist the lock across route nav (Memory Book -> back) so returning to the
+    // dashboard snaps instead of replaying the roll. Own scope so it doesn't
+    // cross-lock with the projection.
+    lockScope: "hero-balance",
   });
 
   // Hero balance never overflows on mobile (2026-06-07, founder: "will it fit
@@ -2740,16 +2756,81 @@ export default function DashboardLab() {
   // Latched PER-FUND via a ref so the steady 30s dashboard-summary poll (a new
   // object each refetch) can't re-hold and flicker the banners; a genuine fund
   // switch (activeFundId change) re-holds once.
+  // ANCHORED TO THE ROLL'S ACTUAL START (`balanceAnimating`), not to data-ready.
+  // The digest used its own data-ready timer, which on a slow machine landed
+  // DURING the (projection) roll — the roll can start late and run on slower
+  // frames, so a fixed offset from data-ready drifts into the cascade. Anchoring
+  // both reveals to when the roll actually begins makes them trail the cascade no
+  // matter the machine. Fallback: a fund that does NOT roll (switch-back to a kid
+  // you've seen, or a quiet no-change visit) reveals after a short settle so the
+  // recap still appears. Per-fund so the 30s poll can't re-flicker.
   const [bannersRevealed, setBannersRevealed] = useState(false);
-  const bannersHeldForFundRef = useRef<string | null>(null);
+  const [digestRevealed, setDigestRevealed] = useState(false);
+  const cascadeAnchoredForFundRef = useRef<string | null>(null);
+  const cascadeTimersRef = useRef<number[]>([]);
+  const cascadeFallbackTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    setBannersRevealed(false);
+    setDigestRevealed(false);
+    cascadeAnchoredForFundRef.current = null;
+    cascadeTimersRef.current.forEach((id) => window.clearTimeout(id));
+    cascadeTimersRef.current = [];
+    if (cascadeFallbackTimerRef.current) {
+      window.clearTimeout(cascadeFallbackTimerRef.current);
+      cascadeFallbackTimerRef.current = null;
+    }
+    // Arm the guaranteed-reveal net (see HERO_REVEAL_SAFETY_NET_MS): if neither
+    // the roll-anchored path nor the no-roll fallback resolves — a roll that
+    // armed but never started — force the reveal so the catch-up cards can never
+    // be stranded hidden. Pushed into cascadeTimersRef so the next fund switch
+    // clears it; the captured fundId guard stops it acting on a stale fund.
+    const fundForNet = activeFundId;
+    if (fundForNet) {
+      cascadeTimersRef.current.push(
+        window.setTimeout(() => {
+          if (cascadeAnchoredForFundRef.current === fundForNet) return; // cascade already revealed
+          cascadeAnchoredForFundRef.current = fundForNet;
+          setDigestRevealed(true);
+          setBannersRevealed(true);
+        }, HERO_REVEAL_SAFETY_NET_MS),
+      );
+    }
+  }, [activeFundId]);
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
-    if (bannersHeldForFundRef.current === activeFundId) return;
-    bannersHeldForFundRef.current = activeFundId;
-    setBannersRevealed(false);
-    const t = window.setTimeout(() => setBannersRevealed(true), HERO_BANNERS_REVEAL_MS);
-    return () => window.clearTimeout(t);
-  }, [activeFundId, dashboardSummary]);
+    if (cascadeAnchoredForFundRef.current === activeFundId) return;
+    // A roll is coming (`showFresheningCue`) or in progress (`balanceAnimating`)
+    // → cancel any pending no-roll fallback so it can NEVER fire during a roll
+    // (the bug a slow CPU exposed: the roll starts late, the fallback fires first).
+    if (balanceAnimating || showFresheningCue) {
+      if (cascadeFallbackTimerRef.current) {
+        window.clearTimeout(cascadeFallbackTimerRef.current);
+        cascadeFallbackTimerRef.current = null;
+      }
+    }
+    if (balanceAnimating) {
+      // Roll has actually started — anchor the reveals HERE (timers survive later
+      // dep changes; cleared only on a fund switch).
+      cascadeAnchoredForFundRef.current = activeFundId;
+      cascadeTimersRef.current.push(
+        window.setTimeout(() => setDigestRevealed(true), HERO_DIGEST_REVEAL_MS),
+        window.setTimeout(() => setBannersRevealed(true), HERO_BANNERS_REVEAL_MS),
+      );
+      return;
+    }
+    if (showFresheningCue) return; // roll is coming — wait for it to actually start
+    // No roll for this fund. `balanceLocked` = a switch-back to a kid you've
+    // already seen (definitely no roll) → reveal promptly. Otherwise a quiet
+    // no-change real visit → reveal after a longer settle. Either way the timer is
+    // cancelled above the instant a roll appears, so it can't fire mid-roll.
+    if (cascadeFallbackTimerRef.current == null) {
+      cascadeFallbackTimerRef.current = window.setTimeout(() => {
+        cascadeAnchoredForFundRef.current = activeFundId;
+        setDigestRevealed(true);
+        setBannersRevealed(true);
+      }, balanceLocked ? 400 : 1200);
+    }
+  }, [activeFundId, dashboardSummary, balanceAnimating, showFresheningCue, balanceLocked]);
 
   // Persist the TRUE live balance per-fund so the next session's cold-load roll
   // starts from this genuine last-visit value (real users) — the demo ignores
@@ -4352,6 +4433,8 @@ export default function DashboardLab() {
     startDelay: HERO_PROJECTION_START_DELAY_MS,
     // Roll once per kid, in lockstep with the balance.
     rollKey: activeFundId,
+    // Persist across route nav like the balance, under its own scope.
+    lockScope: "hero-projection",
   });
 
   // Persist the TRUE live projection per-fund so the next session's cold-load
@@ -6426,15 +6509,20 @@ export default function DashboardLab() {
             YIELDS when a rarer, more emotional lifetime-celebration banner is
             present this load — a co-parent joining or the at-18 handoff is the
             bigger headline, and stacking the digest under it was two
-            catch-up banners at once. Gated on the celebrations' server signals,
-            both recency-bounded (coparentAcceptance is a 30-day window;
-            kidClaimedAt is server-gated recent), so the digest simply returns
-            on a later visit once they age out — never permanently suppressed.
-            Plus-media isn't included (no recency window → would over-suppress),
-            and it's rare enough to coexist. */}
+            catch-up banners at once. Yields only WHILE that banner is actually
+            showing: the gate ANDs the server signal with "not yet dismissed"
+            (the banners' own localStorage predicates). Without that, dismissing
+            the celebration left a dead zone — the banner gone but the digest
+            still suppressed by the still-present signal — so for the rest of the
+            30-day (co-parent) / 60-day (claim) window NEITHER catch-up card
+            showed and a real gift recap was silently swallowed. Plus-media isn't
+            included (no recency window → would over-suppress) and is rare enough
+            to coexist. */}
         {!isReadOnlyFund
-          && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance)
-          && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt)
+          && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance
+              && !isCoparentAcceptedBannerDismissed(activeFundId, (dashboardSummary as any)?.coparentAcceptance?.collaboratorId))
+          && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt
+              && !isKidAt18WelcomeBannerDismissed(activeFundId))
           && (
           <SinceLastVisitDigest
             fundId={activeFundId}
@@ -6442,9 +6530,10 @@ export default function DashboardLab() {
             gifts={gifts as any}
             isDemoAccount={isDemoAccount}
             ready={Boolean(dashboardSummary)}
-            // Reveal just after the hero number cascade settles, derived from the
-            // SAME timeline as the rolls so it can never land mid-roll again.
-            revealDelayMs={HERO_DIGEST_REVEAL_MS}
+            // Reveal is driven by the parent's cascade latch (anchored to the
+            // roll's ACTUAL start), so the digest can never land mid-roll — even
+            // on a slow machine where the roll starts late. See the latch above.
+            revealed={digestRevealed}
             subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
           />
         )}
@@ -15828,7 +15917,7 @@ export default function DashboardLab() {
 
           <div className="px-6 pt-4 shrink-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-              <span className="text-[10px]">🔁</span> Recurring investment
+              <Repeat size={11} strokeWidth={2.5} /> Recurring investment
             </span>
           </div>
 
@@ -15872,7 +15961,7 @@ export default function DashboardLab() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                       <input
                         type="number"
-                        min="1"
+                        min="5"
                         step="1"
                         value={autoInvestAmount}
                         onChange={(e) => setAutoInvestAmount(e.target.value)}
@@ -15963,13 +16052,15 @@ export default function DashboardLab() {
                   const periodsPerYear = autoInvestFrequency === "daily" ? 365 : autoInvestFrequency === "weekly" ? 52 : autoInvestFrequency === "yearly" ? 1 : 12;
                   const monthly = amt * (periodsPerYear / 12);
                   // Future value of an annuity at 7% annual return, compounded monthly,
-                  // running until the child turns 18. The 7% assumption is intentionally
-                  // conservative (long-run S&P avg is ~10% nominal / ~7% real) and the
-                  // disclaimer is non-negotiable: parents who later reconcile the projection
-                  // against reality should never feel oversold. Honest losses, honest gains.
-                  const yearsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
-                  const fvOf = (m: number) => yearsTo18 && yearsTo18 > 0
-                    ? projectFundValue({ startingValue: 0, monthlyContribution: m, yearsAhead: yearsTo18 })
+                  // running until the child reaches majority (18 to 21 by state;
+                  // age18Transition.daysUntil18 is days-to-MAJORITY despite its name). The
+                  // 7% assumption is intentionally conservative (long-run S&P avg is ~10%
+                  // nominal / ~7% real) and the disclaimer is non-negotiable: parents who
+                  // later reconcile the projection against reality should never feel
+                  // oversold. Honest losses, honest gains.
+                  const yearsToMajority = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
+                  const fvOf = (m: number) => yearsToMajority && yearsToMajority > 0
+                    ? projectFundValue({ startingValue: 0, monthlyContribution: m, yearsAhead: yearsToMajority })
                     : null;
                   const fv = fvOf(monthly);
                   const fmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));
@@ -16258,7 +16349,7 @@ export default function DashboardLab() {
                     Where should we pull from?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Recurring investments run from your connected bank account. Lower fees. More reliable. Better for {recipientFirstNameDisplay || "them"}.
+                    Recurring investments run from your connected bank account. It costs less and runs more reliably than a card, so more of each gift reaches {recipientFirstNameDisplay || "them"}.
                   </p>
                 </div>
 

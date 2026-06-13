@@ -126,6 +126,31 @@ near-identical copy). Slogans are weak marks; the durable defense is the
 **distinct voice** (already locked) + trade dress, not a tagline registration.
 Set a basic **trademark watch** post-filing.
 
+**🟡 Alternative-name evaluation (2026-06-12, "Later" / `later.fund` floated).**
+Decision-support only; confusion analysis is an attorney's call. Findings (USPTO
+records verified via uspto.report + Justia; *not* yet pulled from TSDR by counsel):
+- **"Later" for a fintech = high trademark risk — recommend against.** Acorns Grow
+  owns **`ACORNS LATER®` (Reg. 5,552,405)** and **`ACORNS EARLY®` (Reg. 6,828,343)**;
+  **Acorns Early Invest is a UTMA/UGMA custodial account** — the *identical* service
+  to ours. Acorns owns the *compound* marks (dominant element "ACORNS"), so it's not
+  an automatic block, but a bare "Later" custodial-investing brand shares the
+  life-stage term with a registered mark over identical services → real
+  likelihood-of-confusion / TTAB-opposition vector, and Acorns is the party with both
+  standing and motive. Second front: **Later.com (Victory Square Media)** holds
+  `LATER` / `LATER SOCIAL` software marks + the "Later" App Store listing name.
+- **The word "fund" in a brand/URL (`kiddofund.com`) is low legal risk.** The
+  Investment Company Act **Names Rule (Rule 35d-1)** and **§35(d)** bind *registered
+  investment companies/BDCs* — not arbitrary brands using "fund" as a verb (Cornell
+  Law 17 CFR 270.35d-1; SEC release 2023-188; K&L Gates). Residual exposure is the
+  general "materially misleading impression" principle. **Mitigations:** never name
+  the *legal entity* or the *account product* "The Kiddo Fund," keep "fund" in the
+  verb/marketing sense, disclose the real structure (custodial UTMA brokerage account
+  via the custodian). Note: a bare **`.fund` TLD** reads as the *noun* ("the Later
+  fund") and the registry markets it *for* investment funds → slightly worse than
+  `kiddofund.com` on `.com`, which reads as the verb.
+- Add to §8 counsel questions: pull TSDR on `ACORNS LATER`/`ACORNS EARLY` +
+  any `KIDDO` Class 36 marks; bless the "fund"-as-verb wording + disclaimer.
+
 ---
 
 ## 3. Copyright

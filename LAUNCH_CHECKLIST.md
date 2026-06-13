@@ -48,14 +48,17 @@ explicitly, deliberately chosen a no-charge reminder), and there is a state
 machine: `captured → invested-on-fund-creation` OR `captured → auto-refunded
 after N days`.
 
-**Implementation-ready:** the full 3-way build spec (auth-hold / charge-and-hold /
-vault-and-charge-later) with schema deltas, the settlement hook at the pairing
-point (`routes.ts:3402`), the expiry/dunning worker, edge cases, and a
-lawyer-answer→which-option decision matrix is in `P0-1_SPEC_CAPTURE_AT_INTENT.md`.
-The moment counsel answers `LAWYER_Q_HOLDING_GIFT_FUNDS.md`, building is
-mechanical. Default recommendation: **Option C (vault-and-charge-later)** — no
-funds held, lightest legal dependency — unless the lawyer affirmatively clears
-holding funds, then **Option B** for best conversion.
+**✅ CORRECTION (verified against code 2026-06-12): this is BUILT, not a pending
+build.** Option C (vault-and-charge-later) is implemented and INERT behind a flag:
+`server/giftCaptureFlag.ts` (`isGifterCaptureAtIntentEnabled()`, env
+`GIFTER_CAPTURE_AT_INTENT`, defaults OFF) + `server/giftIntentSettlement.ts`
+(off-session SetupIntent charge of the pledged amount, netted to the fund) +
+`server/giftIntentExpiryWorker.ts` (decline recovery + expiry) + the
+`stripeService.ts` SetupIntent helpers + `giftOrphanMonitorWorker.ts`
+(charged-never-invested guard). So P0-1 is NOT a code task — it's exactly like
+custody/email: built-but-gated. To go live: counsel answers
+`LAWYER_Q_HOLDING_GIFT_FUNDS.md` → flip `GIFTER_CAPTURE_AT_INTENT=true`. The full
+spec is `P0-1_SPEC_CAPTURE_AT_INTENT.md` (+ `P0-1_IMPLEMENTATION_REVIEW.md`).
 
 ---
 
@@ -115,10 +118,12 @@ bank payment clears.
 
 All verified-inert in project memory; launch-day hygiene — the moat is moot if we
 can't charge:
-- **Reverse trial defaults OFF** (`reverseTrialEnabled`, `routes.ts ~3427` /
-  `monetization.ts ~194`) while pricing advertises "14 days of Plus free." Either
-  `setReverseTrialEnabled(true)` in prod + verify a fresh signup gets
-  `trial_active`, or soften the copy. (`project_reverse_trial_off_by_default`)
+- **Reverse trial — ✅ RESOLVED (stale entry, corrected 2026-06-12).** It now
+  defaults ON in code (`monetization.ts:211-216,223`, founder decision 2026-05-31),
+  matching the "14 days of Plus free" pricing copy — default-in-code so it survives
+  redeploys (the ephemeral state-file toggle wouldn't). No prod action needed; an
+  admin can still disable via the state file. Just verify a fresh prod signup gets
+  `trial_active`.
 - **AUM fee is display-only** — correct pre-custody; do NOT build a collector now.
   Collection design is locked in `AUM_FEE_COLLECTION_SPEC.md`.
   (`project_aum_fee_display_only`)

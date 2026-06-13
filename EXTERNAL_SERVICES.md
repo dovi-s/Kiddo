@@ -15,13 +15,48 @@ before a real launch are flagged Tier 1.
 
 ---
 
+## Launch gap triage — where building actually helps (verified against code 2026-06-12)
+
+Almost every item below is a CONFIG / OPS gap (a key, a DNS record, a dashboard
+setting). Building more code does NOT unblock those. The repo is far more
+built-out than "❌ not set" implies. Verified:
+
+- **Pure config / founder actions (NO code needed):** Stripe live keys + dashboard
+  branding/descriptor/customer-emails, Email (Postmark token + DKIM/SPF/DMARC +
+  webhook), prod `SESSION_SECRET`, Supabase Storage keys, Sentry DSN, PostHog key
+  (instrumentation already wired across 6 surfaces), Google/Apple OAuth keys,
+  WebAuthn domain, super-admin allowlist, market-data keys (optional — Yahoo
+  covers). All are wired in code; they're just unset.
+- **Genuine CODE gaps (building helps) — each gated on an external process:**
+  1. **Content scanner** (`server/contentScanner.ts`): the PhotoDNA / AWS
+     Rekognition vendor calls are STUBS that return "not-implemented" (fail-closed).
+     Prod REJECTS public uploads while unscanned — safe, but it blocks the feature.
+     To ship public stranger photo/voice uploads: pick a vendor → (for CSAM) sign
+     the NCMEC + Microsoft PhotoDNA partnership (MONTHS of lead time) → implement
+     the SDK call (~a day) → wire the NCMEC 24h-report workflow. Launch choice:
+     wire it, or gate public uploads OFF at launch.
+  2. **Custody account-open route**: wire the activate-investing handler through
+     `getCustodianProvider().openCustodialAccount` (see `CUSTODIAN_VENDOR_DILIGENCE.md`).
+     Gated on the provider pick + counsel.
+- **Long-lead EXTERNAL processes (START NOW — the code is fast once they clear):**
+  the NCMEC/PhotoDNA partnership (content scanning) and the custody provider pick
+  + AUM/RIA counsel memo. These weeks-to-months items, not code, are the real
+  critical path.
+
+**Correction:** the 2026-06-03 email-audit note in the Email row (parent emails
+lack List-Unsubscribe → "build it") is STALE — it was built since:
+`server/emailUnsubscribeToken.ts` + `GET`/`POST /api/email/unsubscribe` (signed,
+RFC 8058 one-click) + every parent promotional worker passes the unsubscribe URL.
+
+---
+
 ## Tier 1: Launch-critical (need real accounts before going live)
 
 | Service | What it's for | Env vars | Status | Get it at |
 |---|---|---|---|---|
 | **Supabase Postgres** | The database (all app data). | `DATABASE_URL`, `PGSSLMODE` | ✅ | supabase.com (already the project DB) |
 | **Stripe** | All payments: subscriptions, gift checkout, recurring. Effectively un-swappable (see CLAUDE.md). | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | ✅ (test) | stripe.com. For launch: swap to LIVE keys, run `npm run founder:seed-stripe` to mint real products/prices, register the prod webhook endpoint. **Stripe-SENT emails + branding (Dashboard config, audited 2026-06-04 — the code sets NO `receipt_email`/`statement_descriptor`, so ALL of this comes from account settings):** (1) **Statement descriptor** must read KIDDO/KIDDOFUND — it's what a gifter's card statement shows ("what is this charge?" is a refund-risk moment; make sure it doesn't say a legal-entity name or the old "Kora"). (2) **Public business name + icon + brand color** (Settings → Branding) appear on Checkout, receipts, and invoices — verify they say Kiddo. (3) **Customer emails** (Settings → Emails): decide deliberately. Recommended: Stripe receipts ON for successful payments (gifters expect a receipt; ours don't replace it), but Stripe's **failed-payment/dunning emails OFF** — the app ships its own branded 2-stage gifter dunning (14d card-update + 30d cancel) and double-dunning from two senders reads as a scam. (4) **Support email/phone on receipts** → support@kiddofund.com once monitored. |
-| **Email (Postmark primary, SendGrid fallback)** | Every transactional email: gift-intent nudge to parents, founder-claim, at-18 handoff, thank-yous, dunning. The gifter loop does not work without this. Falls to a no-op "outbox" when both are absent. | `POSTMARK_SERVER_TOKEN`, `POSTMARK_MESSAGE_STREAM`, `POSTMARK_WEBHOOK_USER/PASS`, (or `SENDGRID_API_KEY`), `EMAIL_FROM` | ❌ | postmarkapp.com (or sendgrid.com). Verify a sending domain. **Go-live gaps found in the 2026-06-03 email audit:** (1) PARENT-facing promotional emails (fund birthday, monthly pulse, anniversary, etc.) send NO List-Unsubscribe header — only gifter emails have unsubscribe tokens. Gmail/Yahoo require RFC 8058 one-click unsubscribe for bulk senders; build a parent unsubscribe token + endpoint and pass `unsubscribeUrl` from each promotional worker before sending real volume (Settings toggles exist; the header/link plumbing doesn't). (2) Make `EMAIL_FROM` a monitored inbox or set a monitored Reply-To — the trusted-contact email (FINRA 4512 outreach) invites replies. |
+| **Email (Postmark primary, SendGrid fallback)** | Every transactional email: gift-intent nudge to parents, founder-claim, at-18 handoff, thank-yous, dunning. The gifter loop does not work without this. Falls to a no-op "outbox" when both are absent. | `POSTMARK_SERVER_TOKEN`, `POSTMARK_MESSAGE_STREAM`, `POSTMARK_WEBHOOK_USER/PASS`, (or `SENDGRID_API_KEY`), `EMAIL_FROM` | ❌ | postmarkapp.com (or sendgrid.com). Verify a sending domain. **Go-live gaps:** (1) ~~parent promotional emails lack List-Unsubscribe~~ **DONE since the 2026-06-03 audit** — `emailUnsubscribeToken.ts` + `GET`/`POST /api/email/unsubscribe` (signed one-click) + every parent promotional worker passes the URL. (2) Make `EMAIL_FROM` a monitored inbox or set a monitored Reply-To — the trusted-contact email (FINRA 4512 outreach) invites replies. |
 | **Session secret** | Signs login sessions. | `SESSION_SECRET` | ✅ | Generate a long random string for prod (not the dev value). |
 
 ## Tier 2: Important (you'll want these, but they degrade gracefully)

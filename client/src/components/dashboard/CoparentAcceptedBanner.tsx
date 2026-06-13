@@ -28,6 +28,27 @@ import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSe
 
 const DISMISS_KEY_PREFIX = "kiddo.coparent-accepted-dismissed.";
 
+function coparentDismissKey(fundId: string, collaboratorId: string): string {
+  return `${DISMISS_KEY_PREFIX}${fundId}.${collaboratorId}`;
+}
+
+// Single source of truth for "has this co-parent celebration been dismissed."
+// The Dashboard's "while you were away" digest yields to this banner, but must
+// yield only WHILE it's actually showing — once dismissed, the digest returns,
+// so a dismissed banner can't leave a dead zone where neither catch-up card
+// shows for the rest of the server's 30-day acceptance window.
+export function isCoparentAcceptedBannerDismissed(
+  fundId: string | null,
+  collaboratorId: string | null | undefined,
+): boolean {
+  if (!fundId || !collaboratorId) return false;
+  try {
+    return !!window.localStorage.getItem(coparentDismissKey(fundId, collaboratorId));
+  } catch {
+    return false;
+  }
+}
+
 export type CoparentAcceptedBannerProps = {
   acceptance: {
     collaboratorId: string;
@@ -50,14 +71,12 @@ export function CoparentAcceptedBanner({
 
   // Per-collaborator-id dismiss key so future co-parent acceptances on the
   // same fund (e.g., a guardian added later) trigger their own celebration.
-  const dismissKey = `${DISMISS_KEY_PREFIX}${fundId}.${acceptance.collaboratorId}`;
-  if (typeof window !== "undefined") {
-    try {
-      if (window.localStorage.getItem(dismissKey)) return null;
-    } catch {
-      // localStorage unavailable — render the banner. Better to celebrate
-      // twice than to swallow the moment.
-    }
+  const dismissKey = coparentDismissKey(fundId, acceptance.collaboratorId);
+  if (isCoparentAcceptedBannerDismissed(fundId, acceptance.collaboratorId)) {
+    // Already dismissed — better to swallow this celebration than show it
+    // twice. (localStorage-unavailable falls through to render: the helper
+    // returns false, so the moment is never lost to a storage error.)
+    return null;
   }
 
   const childFirst = (childFirstName || "").trim();

@@ -4,6 +4,7 @@
 Zero custody, zero lawyer, zero ad spend, zero new features. Just your time.*
 
 **Owner:** founder · **Time-box:** 60 days · **Created:** 2026-06-02
+**Updated:** 2026-06-12 — grandma-first k-actor + reminder-as-repeat-engine (§1, §3, §5).
 **Governs:** this is the Phase-1 "prove the engine" step from `COMPANY_STRATEGY.md`.
 
 ---
@@ -39,6 +40,22 @@ The loop is a chain; it breaks at its weakest link. Watch all of it:
 **funded-k (rough) = (new families started because they saw/received a gift) ÷
 (families who ran the loop).** k ≥ 1 = compounding. k ≈ 0.4 = decay (you'd have
 to buy growth = EarlyBird's grave).
+
+**The k-actor is usually the grandparent, not the parent.** The parent *seeds*
+(sets up, shares); the gifter is who both funds heaviest and spawns the next fund
+— most often a grandparent, who (a) gives the most, most often, for the longest
+horizon, and (b) can't open a fund for their own grown kid, so spawns the next one
+*laterally*: nudging their OTHER adult children to set up funds so they can gift
+all the grandkids equally. So when you watch behaviors 3 and 4, watch the
+**grandparents** — that's where both the dollars and the k actually live.
+
+**"Repeat" is driven by the *reminder*, not an auto-charge.** The product's repeat
+engine is the post-gift reminder (an emailed nudge to gift again — no bank link, no
+auto-charge), chosen deliberately: a reminder pulls the gifter *back into the flow*
+(re-exposure + a fresh chance to re-share), which is what feeds k, whereas a silent
+subscription is invisible to the loop. So "repeat rate" means *did the reminder
+bring them back* — and that number is only real once email is wired
+(Postmark/SendGrid), which gates this whole row. See `project_recurring_engine_decision`.
 
 ---
 
@@ -76,6 +93,15 @@ separate and you're completely clean.
   occasions to ride. The test and Phase 1 are ONE motion: you're not just asking
   "does the loop turn," you're asking "can I own every kid-money occasion in
   this circle." The question changes who you pick.
+- **Center the grandparent, not just the parent.** The seed is whoever runs the
+  kid's occasions (usually a parent/mom); the *highest-signal gifter* is a
+  grandparent with an imminent occasion, the means, and the motivation (genuinely
+  sick of plastic toys that are landfill by July). Recruit at least a few families
+  *through* a gift-ready grandparent. A grandparent who funds, then nudges their
+  other adult kid to start a fund so the cousins get the same, is funded-k firing
+  in one family in front of you — the densest signal you can get without waiting
+  for the slow second-order spread. Don't over-index on "mom with cash": the model
+  is the parent brings the kid + occasion + graph, the gifters bring the money.
 - **Read signal honestly:** friends/family = a **weak "yes"** (they'll humor you)
   but a **strong "no"** (if even your own people won't, that's an answer). The
   signal that can't be faked: it **spreads past your circle** — a gift
@@ -109,6 +135,17 @@ separate and you're completely clean.
 
 Keep it warm, keep it honest, make the *note* feel as important as the money (the
 note is the Memory Book = the switching cost).
+
+**Link hygiene (matters most for the grandparent).** Send gifters the
+*card-capturing* surface — the fund/occasion gift link (`GiftCheckout`), not the
+warm-promise `/give-a-gift` flow that takes no card. An older gifter is the most
+likely to come away from a no-card flow feeling good and having paid **$0**, which
+silently zeroes your gifter-conversion number. The real flow is already built for
+her: PayPal is a first-class rail (many will click "Pay with PayPal" before they'll
+type a card), a one-time gift needs **no account**, and there's no strategy picker
+to stall on. The only friction wall is the *recurring* toggle's password step — so
+for the test, point grandma at a **one-time** gift and let the post-gift *reminder*
+carry the repeat.
 
 ---
 
