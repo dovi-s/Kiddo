@@ -1,11 +1,19 @@
-# Kora Deployment Plan — Render + Supabase
+# Kiddo Deployment Plan — Render + Supabase
 
-> Status: **Plan, not executed.** Production deployment of Kora to
-> Render (web service) + Supabase (Postgres + Storage) + supporting
-> services. Written so you can execute it as a focused half-day task,
-> or hand to someone else, without re-deriving the moving pieces.
+> Status: **DECIDED 2026-06-12, not yet executed.** Render single web service
+> (site + web app + API + workers) + Supabase (Postgres + Storage) + Cloudflare
+> (DNS/CDN). A **`render.yaml` blueprint is committed at repo root** — deploy =
+> connect the repo as a Render Blueprint and set the dashboard secrets.
+> **Staged cost:** START on Render's **free** tier for demo / Alpaca-sandbox /
+> loop-testing (Stripe test-mode + Alpaca sandbox = a sleeping instance is fine);
+> flip `render.yaml` `plan: free` -> `starter` ($7/mo always-on) at REAL launch so
+> Stripe/Alpaca/Postmark webhooks aren't missed while idle. Native (Expo) is not
+> hosted here — EAS builds -> app stores -> calls this same API.
 >
-> Last updated: 2026-05-13
+> Migrations on Render: run `node script/migrate.mjs` from a one-off shell/job
+> (the package.json `db:migrate` uses Windows `set` syntax; on Linux drop it).
+>
+> Last updated: 2026-06-12 (decision locked; cost table below is illustrative)
 
 ---
 
