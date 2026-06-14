@@ -8,6 +8,77 @@ distinct archetypes.*
 
 ---
 
+## 2026-06-14 verified update (SEC-primary where tagged)
+
+*Added after a deep-research run with adversarial verification. New facts on Endowe,
+Stockpile's death, the Stash/Stockpile deal, and the Acorns convergence. The archetype
+map below (2026-06-10) still holds; this sharpens it. Two material changes: EarlyBird is
+now confirmed **Acorns-owned**, and the convergent threat is **Acorns**, not only
+Greenlight. Voice-of-customer sentiment (`VOICE_OF_CUSTOMER.md`) is still pending — its
+research run was cut off by a session limit.*
+
+**Endowe — closest positional rival, but a one-person regulatory shell with ~zero
+traction.** Verified from its own Form ADV (IAPD CRD #338697,
+https://adviserinfo.sec.gov/firm/summary/338697):
+- Endowe Advisory LLC is an SEC-registered RIA (SEC #801-134897), registered 12/8/2025,
+  San Jose CA, ADV executed 4/6/2026. Two-entity structure confirmed: Endowe Inc. =
+  platform ("not a broker-dealer," no advisory); Endowe Advisory LLC = the RIA.
+- **Qualified custodian named in the ADV = Interactive Brokers LLC** (the site only says
+  "a qualified SEC-registered custodian"). A third reference custodian next to the
+  Alpaca / DriveWealth evaluation.
+- **$300 total AUM, 2 discretionary accounts, 1 employee** (Adaeze Ezeh, Managing Member
+  and CCO; Endowe Inc. owns 75%+). Product = an investment gift registry, "become a
+  trust fund kid," aimed at students / adults / parents (https://endowe.com/).
+- Read: the platform-Inc + affiliated-SEC-RIA + qualified-custodian structure Kiddo's
+  counsel packet circles is **provably registrable** (Endowe is a live template). But at
+  $300 AUM they have not proven the loop any more than we have, and their recipient-
+  creates-own-registry model lacks the gifter loop, Memory Book, and at-18 funnel. Copy
+  the structure; do not fear the company.
+
+**Stockpile — the 14-year incumbent died ~April 17, 2026** (accounts to Public / Stash /
+Apex; https://www.doctorofcredit.com/stockpile-to-close-on-april-17-2026-accounts-transferred-to-public-stash-apex/).
+FINRA had fined it **$50,000 plus a censure** (Rule 2210 / 2010 crypto-disclosure
+violations, Jul–Sep 2022;
+https://fxnewsgroup.com/forex-news/cryptocurrency/finra-imposes-50k-fine-on-stockpile-investments/).
+Three causes, each a monetization lesson: (1) shifted to a **monthly membership fee that
+eroded small kid accounts** (the loudest grievance in this market), (2) it **was the
+broker-dealer** (full BD cost, the fine), (3) **no relationship moat**, so giftable
+fractional stock got commoditized by free Robinhood / Public / Fidelity. This is the
+empirical proof that the gifting wedge alone is not a business, and it validates the
+free-family-side, rent-the-rails, earned-retention stance in `UNIT_ECONOMICS.md`.
+
+**Stash — absorbed Stockpile's kids' book and prices the way users hate.** Acquisition
+announced 3/19/2026 (https://www.stash.com/news/stash-agrees-to-acquire-stockpile-kids-accounts/).
+Pricing is a flat subscription: **Starter $3/mo, Stash+ $12/mo**, and custodial "Kids
+portfolios" **require Stash+ at $12/mo** (https://www.stash.com/custodial,
+https://www.stash.com/pricing). A $12/mo fee on a $500 kid account is ~29%/yr of drag.
+That is the live foil for "we never charge your child's account a monthly fee," and the
+force-migrated Stockpile families are a wedge audience now.
+
+**EarlyBird — confirmed acquired by Acorns (2025), and this is the real convergence.**
+EarlyBird was a family-wealth AND **digital-memory** platform (custodial gifting plus a
+Memory-Book-like layer). It never raised a Series A, had ~6 months of runway by Jan 2025,
+and the CAC-payback problem (consistent with the leaked $200+ parent CAC) drove it to
+acquisition (https://techcrunch.com/2025/05/15/acorns-acquires-family-wealth-and-digital-memory-platform-earlybird/,
+https://jordan-wexler.medium.com/accepting-reality-and-pivoting-to-acquisition-80609e1a23d1).
+**So Acorns now holds Acorns Early (custodial + "Giftlinks" gifting,
+https://www.acorns.com/early/) plus EarlyBird's digital-memory tech — i.e., Kiddo's exact
+combo (custodial + gifting + memory) with distribution and the ACORNS EARLY trademark.**
+Track Acorns as the convergent threat alongside Greenlight. The differentiation is loop
+quality, relationship depth, and not charging the family, not the feature checklist.
+
+**GoFundMe — the optional-tipping precedent.** GoFundMe dropped its 5% platform fee on
+U.S. personal campaigns in 2017 and replaced it with **voluntary tips** at the moment of
+giving (https://techcrunch.com/2017/11/30/gofundme-drops-5-platform-fee-for-u-s-personal-campaigns-adds-tips/).
+The proven model for monetizing the generous-giver moment instead of charging the
+beneficiary a subscription.
+
+*Could-not-verify flags: exact Acorns Early / Acorns Gold subscription prices (a claimed
+$8/$12 was killed in verification — do not cite); Endowe funding, backers, product launch
+date, and traction metrics; GoFundMe tip-conversion percentages.*
+
+---
+
 ## The map
 
 Kids'-money startups cluster into three archetypes. **Kiddo is in none of them.**

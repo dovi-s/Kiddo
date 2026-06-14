@@ -73,6 +73,55 @@ call in parallel as the proven comparison. Decide on facts, not the table above.
 - SLAs, support tier, incident history, data-portability / exit terms (we keep
   the orchestration layer — see "integrate up, rent rails down").
 
+### 🔬 Sharpened / new questions (2026-06-12, after sandbox onboarding + reading the Custodial / ACAT / FDIC Sweep docs)
+
+**The handoff — now the #1 risk (ACAT liquidates fractional):**
+- At majority, is it an **in-place re-registration** of the custodial account into the
+  beneficiary's individual account (same account, **fractional positions + cost basis
+  preserved, NO liquidation**), or does it require an **ACAT**? Your ACAT docs say a full
+  ACAT **liquidates fractional shares** before transfer — we are fractional-heavy and tell
+  customers "nothing was sold," so an ACAT-based handoff is disqualifying as-is. Confirm the
+  exact mechanism.
+- API-triggered or ops ticket? Timeline? Does the now-adult re-KYC / sign new agreements?
+  Does cost basis + holding period carry through for their future capital-gains?
+- Do you track the **state-specific majority age** (18–21) and drive UTMA termination, or do we?
+
+**Third-party (gifter) funding — core to our model, not yet covered anywhere:**
+- Accounts are funded by **many gifters who are NOT the custodian** (often no Alpaca/KYC
+  relationship). Supported architecture? We expect to collect gifts via our PSP (Stripe) into
+  a **pooled FBO / sweep account**, then ACH/journal into each custodial account — do you
+  support that, and what are the **AML / source-of-funds** expectations for third-party-
+  originated deposits?
+- Supported rails: ACH, wire, **Instant/JIT funding** (invest a gift before ACH settles)?
+  Journal API between a partner FBO and customer accounts?
+
+**Curated mix / managed portfolios (the RIA line):**
+- We offer a **default curated-but-self-directed** ETF basket (Growth/Balanced/Conservative;
+  no individual recommendations, no discretion). Does using your **Portfolio Rebalancing API**
+  to maintain those model portfolios keep us a **Technology Partner**, or tip us into needing
+  **RIA** registration? What's the supported non-RIA structure for default model portfolios?
+- Confirm **fully-disclosed** (not omnibus) is the structure for our per-kid accounts.
+
+**Kiddo Cash / FDIC sweep:**
+- Custodial accounts are eligible for the FDIC sweep — what are the **partner economics** (do
+  we share in the interest/float, or does it pass to the customer)? Any extra disclosures we
+  must surface (cash is FDIC pass-through, **not SIPC**)?
+
+**Sandbox smoke-test progress (2026-06-12):** auth works (use **Legacy** credential type =
+Basic auth; the new `Client Secret` type is OAuth2 and 401s the script). Identity payload now
+valid (Alpaca requires the custodian financial profile — income/net-worth/risk/objective). Hit
+**`403 {40310000} "creating custodial USA accounts is not enabled"`** → custodial creation is an
+**entitlement gated per-correspondent**, OFF by default even in sandbox. **ACTION: ask Alpaca to
+enable custodial account creation for our sandbox correspondent (firm `frvq`)**, then re-run.
+Fractional-in-custodial (#2) still needs a re-run during market hours once #1 is enabled.
+
+**📄 DOC FINDINGS round 2 (2026-06-12 — Funding / Rebalancing / SSE / Instant Funding / Market Data):**
+- **🟢 Gifter-funding architecture RESOLVED → Cash Pooling + Journals API.** Alpaca's "Funding Accounts" doc: *"send customer deposits in a bulk to your firm account first and reconcile later using the Journals API"* (= aggregate funding). This is exactly Kiddo's model: collect gifts via Stripe → pool in a Kiddo firm/FBO account → `Journals API` (JNLC) into each kid's custodial account. **Caveat (not new): "you may need a local license… check your counsel"** + **Travel Rule** transmitter info on journals → this is the SAME money-transmission gate already in `COUNSEL_ENGAGEMENT_PACKET` (holding gift funds pre-account), now concretely mapped to the Alpaca funding path. Not a new blocker; the known counsel gate.
+- **🟢 Curated mixes RESOLVED → Portfolio Rebalancing API.** Define Growth/Balanced/Conservative as **Portfolios** (weighted VTI/VXUS/BND), **subscribe** each account, Alpaca auto-runs `invest_cash` (cash >$10 → buys toward target, 9:30-3:30 ET) + `full_rebalance` on drift-band/calendar. Uses **fractional/notional** orders. Min $1/asset, $10 invest_cash. Our gifts ($25-100) + 2-3 assets fit cleanly. (Doc frames it "for investment advisors" — the RIA-vs-tech-partner characterization is still the counsel question, but the *mechanic* is a perfect fit.)
+- **🟢 Event sync → SSE Events** (account status / journal / transfer / trade / non-trade-activity / system EOD): replayable by ULID, maps to Kiddo's existing webhook+outbox pattern.
+- **🟡 Instant Funding = available but SKIP at launch.** It extends instant buying power *before* funds settle (for ACH-first apps) — needs a partner deposit, T+1 wire settlement, signed pricing amendment, late interest (Fed+8%). Kiddo **pre-collects via Stripe**, so we already hold the cash before investing → don't need the credit/risk. Revisit only if we want sub-day "watch it land."
+- **Market data:** Broker API plans = Basic (free, IEX/15-min-delayed) → Standard $500-$2,000/mo. Delayed/IEX is fine for showing fund values. NB market-data auth uses the **OAuth Client-Credentials** flow → the `Client Secret` credential we generated earlier IS the one for market data (Legacy/Basic-auth is for the Broker REST endpoints). Both have a use.
+
 ## The plan (sandbox-first, decide on evidence)
 
 1. **Alpaca sandbox today** (free, self-serve). Prototype the three make-or-break

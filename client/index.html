@@ -29,9 +29,21 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1B4332" />
+    <!-- theme-color must match the color DIRECTLY under the iOS status bar — the
+         cream AppHeader / body — so the status strip blends into the app instead
+         of floating as a green bar above a cream header (the Acorns "seamless"
+         effect is just bar-color === top-content-color). Dark-mode variant matches
+         the dark app background. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F9F7F3" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0C140F" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <!-- "default" = the standard LIGHT status bar (dark glyphs) — the right
+         choice for our cream top: it blends into the cream AppHeader instead of
+         standing out. (black-translucent was tried but it forces WHITE glyphs,
+         which vanish on cream; that mode only suits a dark-colored top.) iOS
+         reserves the status-bar area, so content sits below it — no under-the-clock
+         offset needed. theme-color (cream, above) tints the same blend in browser. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Kiddo" />
     <!-- Fonts are self-hosted via @fontsource-variable (imported in

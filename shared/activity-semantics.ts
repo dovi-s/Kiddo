@@ -79,6 +79,13 @@ export const GROWTH_TYPES = [
   // GROWTH_TYPES is checked before MILESTONE_TYPES in the mapper.
   "fund_strategy_changed",
   "custom_allocations_changed",
+  // FUTURE — when real custody is live (Alpaca/DriveWealth wired), discrete
+  // broker income + fee events belong HERE so the ledger stays complete:
+  //   "dividend_received", "interest_accrued", "platform_fee_charged"
+  // Wire createActivity at the broker reconciliation path + the AUM/fee path.
+  // (NOT continuous price drift — that stays out of the ledger by design; the
+  // hero + the "while you were away" digest carry aggregate growth.) Pre-custody
+  // none of these flow, so there is nothing to log yet.
 ];
 
 export const ENGINE_MILESTONE_TYPES = [
@@ -107,6 +114,11 @@ export const MILESTONE_TYPES = [
   "kid_stock_suggestion",
   "kid_suggestion_approved", "kid_suggestion_declined",
   "fund_created",
+  // The fund goes LIVE for investing (draft -> active, after KYC approval). A
+  // distinct moment from creation — without it a fund could flip to active with
+  // no ledger entry explaining when it became real. See the activate-pending-
+  // drafts route.
+  "fund_activated",
   "event_created", "event_archived", "event_unarchived",
   "ssn_provided",
   "successor_custodian_added", "successor_custodian_changed", "successor_custodian_removed",
@@ -236,6 +248,7 @@ export function canonicalLabel(type?: string | null): string | null {
 
   // Account / fund decisions
   if (t === "fund_created") return "Fund created";
+  if (t === "fund_activated") return "Investing live";
   if (t === "fund_strategy_changed") return "Strategy";
   if (t === "custom_allocations_changed") return "Custom mix";
   if (t === "event_created") return "Occasion";

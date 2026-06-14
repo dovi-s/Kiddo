@@ -72,6 +72,20 @@ async function main() {
       country_of_birth: "USA",
       country_of_tax_residence: "USA",
       funding_source: ["family"],
+      // Financial profile — Alpaca requires these on the custodian identity
+      // (sandbox returns 422 "annual_income_min is required" without them).
+      // Values mirror Alpaca's own custodial docs sample so the enums are valid.
+      annual_income_min: "50000",
+      annual_income_max: "100000",
+      liquid_net_worth_min: "50000",
+      liquid_net_worth_max: "100000",
+      total_net_worth_min: "100000",
+      total_net_worth_max: "150000",
+      liquidity_needs: "does_not_matter",
+      investment_experience_with_stocks: "over_5_years",
+      risk_tolerance: "conservative",
+      investment_objective: "market_speculation",
+      investment_time_horizon: "more_than_10_years",
     },
     disclosures: {
       is_control_person: false,

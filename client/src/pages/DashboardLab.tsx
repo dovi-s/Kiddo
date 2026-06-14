@@ -6535,6 +6535,11 @@ export default function DashboardLab() {
             // on a slow machine where the roll starts late. See the latch above.
             revealed={digestRevealed}
             subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
+            // Only the pre-handoff owner parent set up the recurring auto-invest,
+            // so only they hear "from you." A co-parent (co-admin) sees the OTHER
+            // parent's recurring; the post-handoff kid (isOwnerMode) sees a
+            // parent's — neither is "you," so don't claim it.
+            viewerIsContributor={activeFundAccessRole === 'owner' && !isOwnerMode}
           />
         )}
 

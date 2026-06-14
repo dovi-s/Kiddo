@@ -521,7 +521,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // seed mirrors that pattern. (giftList computed above with the portfolio.)
   const sendersSeen = new Set<string>();
 
-  // Phil's recurring schedule (parent_contribution). Created BEFORE the
+  // Claire's recurring schedule (parent_contribution). Created BEFORE the
   // gift loop so each monthly cycle can link back to it — exactly the
   // shape the production worker leaves behind. totalContributed +
   // lastRunDate are backfilled from the cycles after they're inserted.
@@ -536,7 +536,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // per kid). The cycle gift rows themselves carry no message.
   const recurringChargeNote = recurringNoteFor(kid);
   const recurringNextRun = (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d; })();
-  const [philContribution] = await db.insert(parentContributions).values({
+  const [recurringSchedule] = await db.insert(parentContributions).values({
     fundId: fund.id,
     userId: parentUserId,
     amount: kid.recurring.amount.toFixed(2),
@@ -553,7 +553,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   let recurringMemoryStamped = false;
   // Collect external gifts so a realistic subset can be seeded as ALREADY-SENT
   // thank-yous after the loop (so the demo shows the "Thanked" state, not only
-  // the auto-backfilled "awaiting" drafts). Phil's recurring cycles are excluded
+  // the auto-backfilled "awaiting" drafts). Claire's recurring cycles are excluded
   // — the Memory Book renders those as "from you", never thankable.
   const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date; occasion?: string; memoryEntryId?: string; hasAudio?: boolean }> = [];
   for (const g of giftList) {
@@ -587,7 +587,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       // source tag, exactly as recurringContributionWorker stamps them.
       // parentContributionId is what moves them into the dashboard's
       // "Your recurring investments" breakdown row (instead of "one-time").
-      parentContributionId: isRecurring ? philContribution.id : null,
+      parentContributionId: isRecurring ? recurringSchedule.id : null,
       source: isRecurring ? "recurring_worker" : null,
       createdAt: new Date(g.createdAt),
     } as any;
@@ -610,7 +610,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
 
     // Activity-ledger row, mirroring the "arrival" activity production
     // writes in completeGiftPostPayment (webhookHandlers.ts:241):
-    // gift_received for gifters, parent_contribution for Phil's recurring
+    // gift_received for gifters, parent_contribution for Claire's recurring
     // cycles. Backdated to the gift date so the Activity tab reads as a
     // real multi-year ledger instead of just "Fund created." The
     // parentContributionId in metadata also lets the recurring schedule's
@@ -645,7 +645,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         contributorName: isParentContrib ? parentDisplayName : null,
         isParentContribution: isParentContrib,
         // Only recurring cycles link to the schedule; one-time additions don't.
-        parentContributionId: isRecurring ? philContribution.id : null,
+        parentContributionId: isRecurring ? recurringSchedule.id : null,
       }),
       createdAt: new Date(g.createdAt),
     } as any);
@@ -733,7 +733,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       // 36 cycles span ~3 years (an impossible "Started today + 36 cycles").
       ...(recurringFirstDate ? { createdAt: recurringFirstDate } : {}),
     })
-    .where(eq(parentContributions.id, philContribution.id));
+    .where(eq(parentContributions.id, recurringSchedule.id));
 
   // Update contributor count from unique senders.
   await db.update(funds)
@@ -746,7 +746,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // i.e., an engaged parent who's caught up except the most recent couple
   // months. The freshest gifts (incl. the just-arrived one) stay awaiting, so
   // the actionable "thank now" prompt + composer also show at the top of the
-  // book. Self-gifts (Phil's recurring) were never collected, so they're
+  // book. Self-gifts (Claire's recurring) were never collected, so they're
   // untouched and render as "from you". Pronoun-correct; mirrors the Memory
   // Book's own warm template.
   const nowMs = Date.now();
@@ -1540,7 +1540,7 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     console.log(`  collaborator: phil@dunphyfamily.com → co-parent on ${seededFundIds.filter((id) => id !== haleyFundId).length} fund(s) (Haley's transferred out)`);
   }
 
-  // 5. Phil's recurring parent_contributions are now seeded PER FUND
+  // 5. Claire's recurring parent_contributions are now seeded PER FUND
   //    inside seedKidFund — each schedule is created with its realized
   //    monthly-cycle history (linked gifts, totalContributed, lastRunDate)
   //    so the recurring detail and the dashboard breakdown read real

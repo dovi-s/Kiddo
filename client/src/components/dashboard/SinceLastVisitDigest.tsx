@@ -58,6 +58,33 @@ function writeAwayDismissed(fundId: string | null, isDemo: boolean): void {
     /* ignore */
   }
 }
+// Per-SESSION frozen baseline. "While you were away" must mean "since your last
+// SESSION", not "since your first-ever visit". The persisted lastSeen marker
+// advances once per session (at the first view of a fund this session); the
+// value it HAD at that moment is frozen here in sessionStorage and drives the
+// digest for the whole session. That gives both properties at once:
+//   - across sessions: next session diffs from THIS session's start → true
+//     "since last visit" (the window never drifts to an ever-growing "since
+//     [first-ever date]" for a viewer who never taps dismiss);
+//   - within a session: navigating away and back re-reads the SAME frozen
+//     baseline, so the recap persists instead of vanishing on revisit.
+// Real accounts only — the demo uses a synthetic 6-days-ago reference.
+const SESSION_BASELINE_PREFIX = "kiddo.fund.awayBaseline.session.v1:";
+function readSessionBaseline(fundId: string): LastSeen | null {
+  try {
+    const raw = window.sessionStorage.getItem(`${SESSION_BASELINE_PREFIX}${fundId}`);
+    return raw ? (JSON.parse(raw) as LastSeen) : null;
+  } catch {
+    return null;
+  }
+}
+function writeSessionBaseline(fundId: string, baseline: LastSeen): void {
+  try {
+    window.sessionStorage.setItem(`${SESSION_BASELINE_PREFIX}${fundId}`, JSON.stringify(baseline));
+  } catch {
+    /* ignore */
+  }
+}
 const MIN_AWAY_MS = 24 * 60 * 60 * 1000; // a real "while you were away", not a same-day re-check
 const NOTEWORTHY_MOVE_FRAC = 0.005; // or a >0.5% balance move counts even without a gift
 export const DEMO_AWAY_MS = 6 * 24 * 60 * 60 * 1000; // demo: pretend "6 days ago" (also drives the bell's demo catch-up window — see DemoGiftMoment)
@@ -121,6 +148,7 @@ export function SinceLastVisitDigest({
   subject = "Your fund",
   revealDelayMs = DIGEST_REVEAL_DELAY_MS,
   revealed: revealedProp,
+  viewerIsContributor = true,
 }: {
   fundId: string | null;
   currentValue: number;
@@ -132,6 +160,15 @@ export function SinceLastVisitDigest({
   // The headline subject — "Luke's fund" for a parent, "Your fund" for the
   // grown owner. Makes it a personal update, not a subjectless stat.
   subject?: string;
+  // Whether the VIEWER is the person whose recurring auto-invest (the
+  // `parentContributionId` rows) this is. Only the pre-handoff owner parent set
+  // up that schedule, so only they get the warm "from you" credit. A co-parent
+  // (co-admin) viewing the OTHER parent's recurring, or the post-handoff kid
+  // viewing a parent's historical contributions, must NOT be told it was "you" —
+  // that's a mis-attribution, and the brand's trust is the moat. They get a
+  // neutral, true label instead. Defaults true so standalone callers (owner
+  // surfaces) keep the personal voice.
+  viewerIsContributor?: boolean;
   // How long after `digest` is ready to hold before revealing — used only when
   // the caller does NOT drive the reveal itself. Defaults to the standalone
   // DIGEST_REVEAL_DELAY_MS.
@@ -141,11 +178,24 @@ export function SinceLastVisitDigest({
   // on a slow machine). When omitted, the internal revealDelayMs timer is used.
   revealed?: boolean;
 }) {
-  // Read the OLD marker ONCE on mount, before the write effect updates it.
-  const lastSeen = useMemo<LastSeen | null>(() => {
-    if (!fundId) return null;
-    return readLocalCache<LastSeen>(`${LASTSEEN_PREFIX}${fundId}`) ?? null;
-  }, [fundId]);
+  // The reference the digest diffs against: the per-session frozen baseline if
+  // it exists, else the persisted marker (last session). Per fund — recomputes
+  // when fundId changes (the component persists across fund switches). The
+  // establish effect below freezes the session baseline and advances the
+  // persisted marker on the first view of a fund each session; until then this
+  // falls back to the persisted marker, which IS the right value (last
+  // session's), so the digest is correct even before the effect runs. Always
+  // null for the demo (it uses a synthetic 6-days-ago reference instead).
+  const sessionBaseline = useMemo<LastSeen | null>(() => {
+    if (isDemoAccount || !fundId) return null;
+    const frozen = readSessionBaseline(fundId);
+    if (frozen) return frozen;
+    try {
+      return readLocalCache<LastSeen>(`${LASTSEEN_PREFIX}${fundId}`) ?? null;
+    } catch {
+      return null;
+    }
+  }, [isDemoAccount, fundId]);
 
   // Per-fund dismissal. The component instance PERSISTS across fund switches (no
   // remount), so this must key off fundId -- a single boolean would leak one
@@ -169,27 +219,40 @@ export function SinceLastVisitDigest({
     setDismissTick((t) => t + 1);
   };
 
-  // Establish the baseline marker the FIRST time we ever see this fund, but do
-  // NOT overwrite it on every view. The digest must keep diffing against where
-  // you LAST left, so it persists across navigating away and back (like the
-  // co-parent banner) instead of vanishing on revisit. The baseline only advances
-  // when the viewer dismisses the recap (handleDismiss above).
+  // On the FIRST view of a fund each session, freeze the current persisted marker
+  // (last session's reference) as the session baseline, then advance the
+  // persisted marker to NOW so the NEXT session diffs from here — true "since
+  // last visit" with no ever-growing window, while away-and-back THIS session
+  // re-reads the frozen baseline so the recap persists. Guarded on a settled
+  // positive value so a partial mid-load total never poisons the marker (the next
+  // session must never roll up from a value the fund was never at). Runs once per
+  // session per fund; later views find the freeze and skip. Dismiss still
+  // advances the persisted marker too (handleDismiss), so a dismisser's next
+  // session diffs from the dismiss moment — either path is honest "since last".
   useEffect(() => {
-    if (!fundId || isDemoAccount || !(currentValue > 0)) return;
+    if (isDemoAccount || !fundId || !ready || !(currentValue > 0)) return;
+    if (readSessionBaseline(fundId)) return; // already established this session
+    let persisted: LastSeen | null = null;
     try {
-      const existing = readLocalCache<LastSeen>(`${LASTSEEN_PREFIX}${fundId}`);
-      if (!existing) {
-        writeLocalCache(`${LASTSEEN_PREFIX}${fundId}`, { value: currentValue, ts: Date.now() });
-      }
+      persisted = readLocalCache<LastSeen>(`${LASTSEEN_PREFIX}${fundId}`) ?? null;
     } catch {
       /* best-effort */
     }
-  }, [fundId, currentValue, isDemoAccount]);
+    // First-ever visit (no persisted marker) → baseline is "now", so nothing
+    // reads as "away" this session; the next session diffs from this first view.
+    const baseline: LastSeen = persisted ?? { value: currentValue, ts: Date.now() };
+    writeSessionBaseline(fundId, baseline);
+    try {
+      writeLocalCache(`${LASTSEEN_PREFIX}${fundId}`, { value: currentValue, ts: Date.now() });
+    } catch {
+      /* best-effort */
+    }
+  }, [isDemoAccount, fundId, ready, currentValue]);
 
   const digest = useMemo(() => {
     if (!ready || !(currentValue > 0)) return null;
 
-    const sinceTs = isDemoAccount ? Date.now() - DEMO_AWAY_MS : lastSeen?.ts ?? 0;
+    const sinceTs = isDemoAccount ? Date.now() - DEMO_AWAY_MS : sessionBaseline?.ts ?? 0;
     if (!sinceTs) return null;
     if (!isDemoAccount && Date.now() - sinceTs < MIN_AWAY_MS) return null; // not a real return
 
@@ -231,7 +294,7 @@ export function SinceLastVisitDigest({
       growth = currentValue * DEMO_SYNTH_GROWTH_RATE;
       delta = othersSum + ownSum + growth;
     } else {
-      delta = currentValue - (lastSeen?.value ?? currentValue);
+      delta = currentValue - (sessionBaseline?.value ?? currentValue);
       if (delta < 1) return null; // nothing, or down — no fake "up"
       // Honesty: if a market dip means the gifts alone EXCEED the total gain, the
       // "up $X" headline would read as less than the gift we'd credit — the parts
@@ -256,7 +319,7 @@ export function SinceLastVisitDigest({
       ownSum,
       growth,
     };
-  }, [ready, isDemoAccount, lastSeen, currentValue, gifts]);
+  }, [ready, isDemoAccount, sessionBaseline, currentValue, gifts]);
 
   // Hold the digest behind the hero roll cascade (see DIGEST_REVEAL_DELAY_MS) so
   // the landing reads as a sequence (balance + projection roll in -> THEN "while
@@ -298,7 +361,14 @@ export function SinceLastVisitDigest({
       );
     }
   }
-  if (digest.ownSum >= 1) parts.push(`${fmtMoney0(digest.ownSum)} from you`);
+  if (digest.ownSum >= 1) {
+    // "from you" only when the viewer actually made these recurring
+    // contributions (the pre-handoff owner). For a co-parent or the
+    // post-handoff kid it wasn't them — label it truthfully, never falsely "you".
+    parts.push(viewerIsContributor
+      ? `${fmtMoney0(digest.ownSum)} from you`
+      : `${fmtMoney0(digest.ownSum)} in recurring investments`);
+  }
   if (digest.growth >= 1) parts.push(`${fmtMoney0(digest.growth)} in market growth`);
   const body = joinParts(parts);
 

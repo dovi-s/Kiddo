@@ -149,14 +149,17 @@ const createDemoFund = (name: string, type: 'child' | 'personal', status: Fund['
 export function KoraProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<KoraState>(() => {
     if (typeof window === 'undefined') return createEmptyState();
-    
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return createEmptyState();
-      }
+    // The localStorage READ must be inside the try too. When the browser blocks
+    // storage (private/incognito mode, or "block all cookies"), `getItem` itself
+    // throws a SecurityError ("the operation is insecure") — and because this
+    // runs in the top-level provider's initial render, an uncaught throw here
+    // white-screens the ENTIRE app. Guarding only the JSON.parse left that hole.
+    // Degrade to an empty state instead so the app always renders.
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      /* storage blocked or corrupt — start fresh */
     }
     return createEmptyState();
   });
@@ -253,7 +256,11 @@ export function KoraProvider({ children }: { children: ReactNode }) {
 
   const resetToEmpty = () => {
     setState(createEmptyState());
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* storage blocked — state reset is what matters */
+    }
   };
 
   const loadDemoData = () => {

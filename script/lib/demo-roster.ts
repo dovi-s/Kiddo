@@ -234,8 +234,9 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
   // Phil (Dad) — the recurring auto-investor ("shows up every month"). Managed
   // mix, no ticker. Modeled as one gift per monthly cycle; the seed links these
   // to the parent_contribution and stamps the Memory Book ONCE (first cycle).
-  // The mix backbone: Phil auto-invested for years. Active funds run through
-  // last month; paused ones (near/after handoff) stopped a few months back.
+  // The mix backbone: Claire (lead custodian) auto-invested for years. Active
+  // funds run through last month; paused ones (near/after handoff) stopped a few
+  // months back.
   // Note varies per kid (the seed supplies the single first-cycle note).
   // Active funds start at offset 0 (most recent cycle = CURRENT month) so a
   // freshly-seeded demo's default "Last 30 days" money summary actually shows
@@ -246,8 +247,14 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
   const recurringCycles = (kid.recurringPaused ? Math.min(fundAge, 14) : Math.min(fundAge, 7)) * 12;
   for (let i = 0; i < recurringCycles; i++) {
     list.push({
-      senderName: "Phil Dunphy",
-      senderEmail: "phil@dunphyfamily.com",
+      // The recurring backbone is the LEAD custodian's (Claire, post-2026-06-11
+      // role flip — moms are the day-to-day primary user). This is what makes the
+      // viewer's "Your part of {kid}'s story · N investments over Y years" line
+      // AGREE with the active $100/month schedule: the cycles count toward the
+      // viewer's own total instead of being credited to the co-parent. Phil
+      // (co-parent) keeps his signed one-time top-ups below.
+      senderName: "Claire Dunphy",
+      senderEmail: "claire@dunphyfamily.com",
       amount: kid.recurringAmount,
       message: undefined, // the seed supplies the single first-cycle note
       createdAt: isoYearsMonthsAgo(0, recurringStartOffset + i),
@@ -255,8 +262,9 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
     });
   }
 
-  // Phil (Dad) — occasional ONE-TIME top-ups on top of the monthly recurring,
-  // the way a real engaged parent does (a birthday extra, a good-bonus month).
+  // Phil (Dad, co-parent) — occasional ONE-TIME top-ups on top of Claire's
+  // monthly recurring, the way a real engaged co-parent does (a birthday extra,
+  // a good-bonus month). Signed "dad" — these stay his.
   // Single-stock picks (so the dashboard's "one-time investment" card shows a
   // logo + "now worth"), his own money (kind parent_one_time → not an external
   // gift). Most recent is RECENT for active funds (shows fresh + in the 30-day
@@ -409,14 +417,16 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
   return list;
 }
 
-// The per-kid recurring note (varies per kid; the seed stamps it once).
+// The per-kid recurring note (varies per kid; the seed stamps it once on the
+// first cycle). Claire's voice — the recurring backbone is the lead custodian's
+// (see the recurring block above), so this note is signed "mom".
 export function recurringNoteFor(kid: { firstName: string }): string {
   const byName: Record<string, string> = {
-    Luke: "another month buddy! love you. dad",
-    Alex: "every month like i said i would. dad",
-    Haley: "still putting a little in every month. love, dad",
+    Luke: "a little every month, like clockwork. love you bug. mom",
+    Alex: "every month, same as always. so proud of you. mom",
+    Haley: "a little every month, all these years. love, mom",
   };
-  return byName[kid.firstName] ?? `a little every month. dad`;
+  return byName[kid.firstName] ?? `a little every month. mom`;
 }
 
 // The co-parent (Claire) timeline note — varies per kid (no verbatim repeat).

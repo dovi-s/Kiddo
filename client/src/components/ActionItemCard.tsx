@@ -252,24 +252,14 @@ export function ActionItemList({
         ))}
         {overflow > 0 && (
           <a
-            href={overflowHref ?? "#"}
-            onClick={(e) => {
-              // Default behavior: open the notifications panel (which
-              // hosts the full inbox). Consumers that want a different
-              // destination can pass overflowHref. Without a custom
-              // target, fire the global open-notifications event the
-              // bell already listens to.
-              if (!overflowHref) {
-                e.preventDefault();
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("kiddo:open-notifications"));
-                }
-              }
-            }}
+            // The notifications bell (and its panel) was removed 2026-06-13, so
+            // the full "needs you" list now lives on Activity. Overflow routes
+            // there by default; consumers can still pass a custom overflowHref.
+            href={overflowHref ?? "/activity"}
             className="block rounded-2xl border border-dashed border-[hsl(var(--kiddo-border))] bg-card/40 px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground hover:bg-muted/40"
             data-testid="action-item-overflow"
           >
-            {overflow} more {overflow === 1 ? "item" : "items"} in your inbox →
+            {overflow} more {overflow === 1 ? "item" : "items"} in Activity →
           </a>
         )}
       </div>

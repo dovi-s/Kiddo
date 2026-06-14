@@ -21,7 +21,11 @@ function persistDevUserId(user: SafeUserWithFlags | null) {
   if (user?.id) {
     safeLocalSet(DEV_USER_ID_KEY, String(user.id));
   } else {
-    window.localStorage.removeItem(DEV_USER_ID_KEY);
+    try {
+      window.localStorage.removeItem(DEV_USER_ID_KEY);
+    } catch {
+      /* storage blocked (private mode) — best-effort, never throw on the auth path */
+    }
   }
 }
 

@@ -649,11 +649,14 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
     inset 0 1px 0 rgba(255, 255, 255, 0.52);
   backdrop-filter: blur(14px) saturate(1.04);
   -webkit-backdrop-filter: blur(14px) saturate(1.04);
-  /* Floor trimmed 10px -> 6px (2026-06-07): the rail read bottom-heavy (~10px
-     under the content vs ~4px above it after the py-1 pass). 6px balances it,
-     and max() still yields the full home-indicator inset on notched phones, so
-     only the non-notched floor tightens. */
-  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  /* Symmetric internal floor (6px), tuned 2026-06-07. The home-indicator inset
+     is NOT applied here anymore: as internal padding it only inflated empty space
+     inside the pill (icons shoved up, pill bottom still jammed 12px from the
+     screen edge, overlapping the indicator — "too far down / bottom-heavy" on
+     notched phones, founder-reported). It now lives in the pill's `bottom`
+     position (MobileNav.tsx) so the WHOLE rail lifts above the home indicator
+     with a consistent gap. Non-notched phones (inset = 0) are unchanged. */
+  padding-bottom: 6px;
 }
 
 .get-started-screen {

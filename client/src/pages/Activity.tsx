@@ -297,6 +297,8 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   // Account / fund-decision family — neutral palette (parent admin actions)
   if (t === "fund_created")
     return { ...PALETTE.GIFT, icon: <Sprout size={16} />, label: "Fund created" };
+  if (t === "fund_activated")
+    return { ...PALETTE.GIFT, icon: <Sprout size={16} />, label: "Investing live" };
   if (t === "fund_strategy_changed")
     return { ...PALETTE.MEMORY, icon: <Sliders size={16} />, label: "Strategy" };
   if (t === "custom_allocations_changed")
@@ -1860,14 +1862,15 @@ export default function Activity() {
             card has a Fix CTA + Remind tomorrow snooze. */}
         {scopedActionItems.length > 0 && (
           <div className="mb-5">
-            {/* maxVisible=2 added 2026-05-19 — Activity is a feed, not
-                a todo list. An unbounded "verify identity + set up
-                successor + thank gifter + 5 more" stack at the top of
-                the feed reads as nag spam. Cap at the 2 most urgent
-                items; everything else rolls into "N more in your
-                inbox" linking to the notifications panel where the
-                full list lives. */}
-            <ActionItemList items={scopedActionItems} heading="Needs your attention" maxVisible={2} />
+            {/* Uncapped 2026-06-13: with the notifications bell removed, Activity
+                IS the home for the full "needs you" list (no panel to overflow to).
+                Action items are genuinely actionable + server-deduped to what's
+                still OPEN, and in practice there are only ever a few, so the full
+                set at the top of the dedicated Activity surface reads as a real
+                to-do header, not nag spam (the dashboard already shows them all
+                too). The Fix / Remind-tomorrow controls keep the stack from
+                lingering. */}
+            <ActionItemList items={scopedActionItems} heading="Needs your attention" />
           </div>
         )}
 

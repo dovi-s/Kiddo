@@ -177,7 +177,13 @@ export function MobileNav() {
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="mobile-nav-shell fixed inset-x-3 bottom-3 z-50 md:hidden"
+      className="mobile-nav-shell fixed inset-x-3 z-50 md:hidden"
+      // Lift the whole floating rail above the iOS home indicator: a flat 12px
+      // (bottom-3) left it overlapping the indicator on notched phones. The
+      // safe-area inset rides the POSITION (not internal padding) so the pill
+      // stays compact and balanced and clears the indicator with a steady gap.
+      // Non-notched devices: inset = 0 → identical to the old bottom-3.
+      style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
     >
       <div
         /* py-1 (2026-06-07): the grid AND each tab both carried vertical

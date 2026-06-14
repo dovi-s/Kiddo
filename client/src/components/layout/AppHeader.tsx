@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Bell, Check, ChevronDown, Plus, Share2, User } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Plus, Share2, User } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT } from "@/hooks/use-active-fund";
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav, isFundSubPage } from "@/lib/page-scope";
@@ -10,7 +10,6 @@ import { rememberAppLocation, readLastAppLocation, formatBackLabel, backTargetHr
 import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
-import { NotificationsPanel, useBellUnreadCount } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { ShareModal, type SharePage } from "@/components/ui/share-modal";
 import { readFundLiveValue } from "@/lib/fund-live-value";
@@ -68,18 +67,15 @@ function formatCurrency(value: number): string {
 export function AppHeader() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, user } = useAuth();
-  const [notifOpen, setNotifOpen] = useState(false);
-  // Listen for the global open-notifications event. The ActionItemList
-  // overflow row ("3 more items in your inbox →") dispatches this when
-  // a parent taps the overflow link on a capped Action Items section
-  // (Activity, Dashboard). Wiring the listener here means the bell
-  // panel opens regardless of which page the overflow was on. Locked
-  // 2026-05-19 per the action-items pruning pass.
-  useEffect(() => {
-    const handler = () => setNotifOpen(true);
-    window.addEventListener("kiddo:open-notifications", handler);
-    return () => window.removeEventListener("kiddo:open-notifications", handler);
-  }, []);
+  // Notifications bell REMOVED 2026-06-13 (founder call). Its content was
+  // redundant or re-homed: the recent-activity peek duplicated the Activity
+  // ledger, and action items already render in-page (Dashboard + Activity, the
+  // latter now uncapped). The only thing unique to the bell was a global unread
+  // dot — the exact pull-to-check compulsion the brand rejects (the dashboard is
+  // deliberately dot-free). So: Activity = the history, in-page action cards =
+  // "needs you", the Activity/Memory tab dots = the gentle "new here" signal. A
+  // real message center (company→user inbox) gets built when we actually send
+  // statements/announcements — not before.
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   // Local share modal — opens for non-Dashboard pages where the in-page
   // (richer) Dashboard modal isn't mounted to listen for the event. Without
@@ -87,21 +83,6 @@ export function AppHeader() {
   // fires the event into the void and nothing happens.
   const [headerShareOpen, setHeaderShareOpen] = useState(false);
   const fundPickerRef = useRef<HTMLDivElement>(null);
-  // Bell badge uses the noise-filtered count so it agrees with the
-  // notifications panel's own header count and with what the panel
-  // actually shows when tapped. Routine flows (auto-invest fires,
-  // subscription renewals, parent's own admin actions) live in the
-  // Activity tab — see useBellUnreadCount comment for the canonical
-  // "bell vs tab dot" split.
-  // Scope-aware bell badge. On non-fund-scoped pages (/funds, /account)
-  // the badge counts across ALL funds — fund context doesn't apply, so
-  // limiting the count to the implicit active fund would silently hide
-  // notifications from other kids' funds. On fund-scoped pages, keep
-  // the default per-fund scope so the badge matches the page context.
-  // location is already declared at the top of the component (line 63).
-  // See project_chrome_scope_tiers.md.
-  const unreadCount = useBellUnreadCount(shouldSuppressFundChrome(location) ? "all" : "active");
-
   // queryClient drives the live fund-value read below (and previously a manual
   // header refresh button, removed 2026-06-07). Freshness is handled without a
   // manual control — SSE + 30s polling + window-focus refetch — and a manual
@@ -240,6 +221,24 @@ export function AppHeader() {
   const pageTitle = getPageTitle(location);
   const withFund = showsFundContext(location) && activeFund;
 
+  // On mobile the bottom nav already labels AND highlights the four primary
+  // destinations (Home / Memory / Activity / Settings), so repeating the title
+  // in the header is pure duplication — and it crowds the cramped mobile header,
+  // squeezing the genuinely useful fund switcher. Hide it VISUALLY on mobile
+  // (kept for screen readers via sr-only, so the page still has its h1) but only
+  // when the fund switcher will fill the left in its place — never leave the left
+  // empty. Sub-pages (Occasions, Potential, Tax Docs, New Event, the age-18 flow)
+  // are NOT bottom-nav tabs, so their title stays: it's the only "where am I"
+  // there, and they carry a Back arrow. Desktop always shows the title — the
+  // sidebar is the nav there, and the header title orients.
+  const isPrimaryTabRoot =
+    location.startsWith("/dashboard") ||
+    location.startsWith("/design-lab") ||
+    location.startsWith("/memory") ||
+    location.startsWith("/activity") ||
+    location.startsWith("/settings");
+  const hideTitleOnMobile = isPrimaryTabRoot && !!withFund && !isUserScoped;
+
   // Track last non-/account location so the /account Back button
   // can return there (instead of always defaulting to the fund's
   // Dashboard). Saves on every location change EXCEPT when the
@@ -342,7 +341,7 @@ export function AppHeader() {
             </button>
           )}
           <h1
-            className="font-heading shrink-0 text-[15px] font-bold text-foreground"
+            className={`font-heading shrink-0 text-[15px] font-bold text-foreground${hideTitleOnMobile ? " sr-only md:not-sr-only" : ""}`}
             data-testid="header-page-title"
           >
             {pageTitle}
@@ -358,7 +357,7 @@ export function AppHeader() {
                   (/account) — the fund-switcher trigger doesn't render
                   there, so there's nothing to separate from anyway. */}
               {pageTitle && (
-                <span className="shrink-0 text-[18px] leading-none text-foreground/15">·</span>
+                <span className={`shrink-0 text-[18px] leading-none text-foreground/15${hideTitleOnMobile ? " hidden md:inline" : ""}`}>·</span>
               )}
 
               {/* Fund name — always tappable. Even with one fund, the
@@ -514,41 +513,9 @@ export function AppHeader() {
             on a long-horizon product, contrary to the locked design lens
             and feedback_no_ai_slop's anti-streak-gamification rule. */}
         <div className="flex shrink-0 items-center gap-2">
-          {/* Bell — second in the mobile right-cluster (situational
-              alert, scanned occasionally). Convention: rightmost slot in
-              a mobile header is for the durable identity / profile entry
-              point (Gmail, LinkedIn, Notion, iOS Settings, Apple HIG).
-              Bell sits inside that, profile sits at the far edge below. */}
-          <button
-            type="button"
-            onClick={() => { haptic("selection"); setNotifOpen((v) => !v); }}
-            // Base + hover both via className so the :hover pseudo-class can
-            // override the base — inline `style` props had higher specificity
-            // and were silently killing the hover affordance. Hover darkens
-            // the muted-evergreen tint a notch so the bell reads as
-            // interactive on cursor approach. focus-visible mirror for kbd.
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[rgb(237,244,238)] border-[rgb(224,237,227)] transition-colors hover:bg-[rgb(224,237,227)] focus-visible:bg-[rgb(224,237,227)] focus-visible:outline-none"
-            data-testid="header-bell"
-            aria-label="Notifications"
-          >
-            {/* lucide Bell on the app icon scale (size 16, stroke 2, evergreen).
-                Replaced a custom hand-drawn SVG bell at strokeWidth 1.4 that read
-                thinner/lighter than the rest of the lucide system next to it. */}
-            <Bell size={16} strokeWidth={2} style={{ color: "rgb(26,61,43)" }} />
-            {unreadCount > 0 && (
-              <div
-                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white px-0.5 text-[9px] font-black text-white"
-                style={{ background: "rgb(26,61,43)" }}
-              >
-                {/* Cap as "9+" to match DesktopSidebar's nav badge
-                    convention. Previously displayed bare "9" for any
-                    count >9 which read as "exactly 9" rather than
-                    "9 or more." min-w-4 lets the badge widen by ~2px
-                    to accommodate the plus glyph. */}
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </div>
-            )}
-          </button>
+          {/* Bell removed 2026-06-13 — see the note at the top of the component.
+              The right cluster is now just the profile entry (and Share lives in
+              the page chrome / bottom nav). */}
 
           {/* Profile — rightmost on mobile. Routes to /account (identity
               surface, distinct from /settings which is fund control panel).
@@ -658,7 +625,6 @@ export function AppHeader() {
         </div>
       </motion.header>
 
-      <NotificationsPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
       {headerSharePages.length > 0 && (
         <ShareModal
           open={headerShareOpen}

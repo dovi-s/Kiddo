@@ -51,11 +51,52 @@ const DialogContent = React.forwardRef<
     haptic('light')
   }, [])
 
+  // Swipe-down-to-dismiss for the bottom-sheet variant on mobile (founder ask
+  // 2026-06-14: "anything that slides up should slide down to dismiss"). The
+  // drag handle is the ONLY grab zone — a small center strip — so it never fights
+  // the body's scroll (the classic bottom-sheet-vs-scroll conflict). Dragging it
+  // past a threshold animates the sheet the rest of the way down and triggers the
+  // real Radix close (a hidden DialogClose .click()), so onOpenChange + the
+  // slide-out exit fire exactly as they would from the X. Desktop (centered) keeps
+  // no handle. Backdrop-tap + the X button stay as fallbacks regardless.
+  const contentRef = React.useRef<HTMLDivElement | null>(null)
+  const closeRef = React.useRef<HTMLButtonElement | null>(null)
+  const drag = React.useRef({ startY: 0, dy: 0, active: false })
+  const setRefs = (node: HTMLDivElement | null) => {
+    contentRef.current = node
+    if (typeof ref === 'function') ref(node)
+    else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node
+  }
+  const onTouchStart = (e: React.TouchEvent) => {
+    drag.current = { startY: e.touches[0].clientY, dy: 0, active: true }
+    if (contentRef.current) contentRef.current.style.transition = 'none'
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!drag.current.active) return
+    const dy = Math.max(0, e.touches[0].clientY - drag.current.startY)
+    drag.current.dy = dy
+    if (contentRef.current) contentRef.current.style.transform = `translateY(${dy}px)`
+  }
+  const onTouchEnd = () => {
+    if (!drag.current.active) return
+    const { dy } = drag.current
+    drag.current.active = false
+    const el = contentRef.current
+    if (el) el.style.transition = 'transform 0.22s cubic-bezier(0.16,1,0.3,1)'
+    if (dy > 110) {
+      haptic('selection')
+      if (el) el.style.transform = 'translateY(100%)'
+      window.setTimeout(() => { closeRef.current?.click(); if (el) el.style.transform = '' }, 180)
+    } else if (el) {
+      el.style.transform = 'translateY(0px)'
+    }
+  }
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
-        ref={ref}
+        ref={setRefs}
         // Easing via INLINE animation-timing-function (reliably overrides
         // tailwindcss-animate): outExpo on open + close — the same curve as the
         // count-up/chevron — so the subtle zoom-95 scale-in settles on our system
@@ -67,12 +108,34 @@ const DialogContent = React.forwardRef<
             // (the fix for the earlier regression: a fixed-height body broke scroll
             // under the bottom anchor). Bottom-anchored slide-up on mobile, centered
             // zoom on desktop. Inline outExpo easing above drives the motion.
-            ? "fixed inset-x-0 bottom-0 z-50 flex flex-col w-full max-h-[92vh] gap-5 border-0 bg-background p-6 shadow-premium-lg rounded-t-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-[100%] data-[state=closed]:slide-out-to-bottom-[100%] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[88vh] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:duration-200 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
+            // pt bumped on mobile to make room for the drag handle.
+            ? "fixed inset-x-0 bottom-0 z-50 flex flex-col w-full max-h-[92vh] gap-5 border-0 bg-background p-6 pt-7 shadow-premium-lg rounded-t-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-[100%] data-[state=closed]:slide-out-to-bottom-[100%] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[88vh] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6 sm:duration-200 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
             : "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-5 border-0 bg-background p-6 shadow-premium-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl",
           className
         )}
         {...props}
       >
+        {sheet && (
+          <>
+            {/* Drag handle — center-only touch zone so it never intercepts a
+                corner close button or steals the body's scroll. Mobile only. */}
+            <div
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              className="absolute left-1/2 top-0 z-10 flex h-8 w-24 -translate-x-1/2 items-start justify-center pt-2 touch-none cursor-grab active:cursor-grabbing sm:hidden"
+              aria-hidden="true"
+              data-testid="sheet-drag-handle"
+            >
+              <span className="h-1.5 w-10 rounded-full bg-foreground/20" />
+            </div>
+            {/* Hidden real close so the drag dismiss runs Radix's onOpenChange +
+                slide-out exit, identical to tapping the X. */}
+            <DialogPrimitive.Close ref={closeRef} aria-hidden="true" tabIndex={-1} className="sr-only">
+              close
+            </DialogPrimitive.Close>
+          </>
+        )}
         {children}
       </DialogPrimitive.Content>
     </DialogPortal>
