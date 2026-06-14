@@ -2828,6 +2828,23 @@ export async function registerRoutes(
           id: fund.id,
           name: fund.recipientFirstName || fund.name || 'fund',
         });
+        // Ledger entry — the moment the fund went LIVE for investing. fund_created
+        // logs at draft time; without this, a draft flipping to active (after KYC)
+        // was the one user-facing state change with no Activity row. Best-effort:
+        // never fail the activation on a logging hiccup.
+        try {
+          const childName = String(fund.recipientFirstName || '').trim();
+          await storage.createActivity({
+            userId,
+            fundId: fund.id,
+            type: 'fund_activated',
+            title: childName ? `${childName}'s fund is live` : 'Your fund is live',
+            description: 'Identity verified. The fund is active and ready to invest.',
+            metadata: JSON.stringify({ strategy: allowedStrategy, recipientFirstName: fund.recipientFirstName || null }),
+          });
+        } catch (err) {
+          console.error('[activity] fund_activated write failed:', err);
+        }
       }
       if (activated.length > 0) {
         console.log(`[funds:activate-pending-drafts] user=${userId} activated=${activated.length}`);
@@ -13983,21 +14000,30 @@ export async function registerRoutes(
       // the /gifts endpoint enrichment), non-fatal. AUTH'd endpoint only — the
       // public memory endpoint intentionally omits gifter identity.
       const gifterAvatarByEmail = new Map<string, string | null>();
+      // Sender's relationship label (preferredName: "Mom"/"Dad"/...) resolved the
+      // same way as the avatar, so the Memory Book labels EACH contributor by THEIR
+      // OWN relationship ("Phil Dunphy (Dad)") instead of the viewer's. Mirrors the
+      // /gifts endpoint's gifterPreferredName enrichment.
+      const gifterPrefNameByEmail = new Map<string, string | null>();
       try {
         const giftEmails = Array.from(new Set(
           giftsForFund.map((g: any) => String(g.senderEmail || "").trim().toLowerCase()).filter(Boolean),
         ));
         if (giftEmails.length > 0) {
           const rows = await db
-            .select({ email: users.email, profileImageUrl: users.profileImageUrl })
+            .select({ email: users.email, profileImageUrl: users.profileImageUrl, preferredName: users.preferredName })
             .from(users)
             .where(inArray(sql`lower(${users.email})`, giftEmails));
           for (const r of rows) {
-            if (r.email) gifterAvatarByEmail.set(String(r.email).trim().toLowerCase(), (r as any).profileImageUrl || null);
+            if (r.email) {
+              const k = String(r.email).trim().toLowerCase();
+              gifterAvatarByEmail.set(k, (r as any).profileImageUrl || null);
+              gifterPrefNameByEmail.set(k, (r as any).preferredName || null);
+            }
           }
         }
       } catch (e) {
-        console.warn("[memory] gifter avatar enrichment failed (non-fatal):", (e as any)?.message || e);
+        console.warn("[memory] gifter identity enrichment failed (non-fatal):", (e as any)?.message || e);
       }
       const enriched = await Promise.all(
         entries.map(async (entry) => {
@@ -14056,6 +14082,7 @@ export async function registerRoutes(
                     // roster shows their face, not just an initial. Owner's own
                     // photo resolves client-side; this covers everyone else.
                     gifterAvatarUrl: gifterAvatarByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null,
+                    gifterPreferredName: (gift as any).isAnonymous ? null : (gifterPrefNameByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null),
                     amount: gift.amount,
                     // netAmount + status added 2026-05-15 so the client-side
                     // gifterRoster in MemoryBook can: (a) exclude
@@ -14135,6 +14162,8 @@ export async function registerRoutes(
               id: gift.id,
               senderName: gift.senderName,
               senderEmail: (gift as any).senderEmail || null,
+              gifterAvatarUrl: gifterAvatarByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null,
+              gifterPreferredName: (gift as any).isAnonymous ? null : (gifterPrefNameByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null),
               amount: gift.amount,
               message: gift.message,
               photoUrl: normalizeHttpUrl(gift.photoUrl),

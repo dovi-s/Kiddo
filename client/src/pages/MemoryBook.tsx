@@ -180,6 +180,11 @@ interface MemoryEntry {
     id?: string;
     senderName: string;
     senderEmail?: string | null;
+    // Resolved from the sender's user record (server join on senderEmail).
+    // Lets the Memory Book label each contributor by THEIR own relationship
+    // ("Phil Dunphy (Dad)") + show their face. Auth endpoint only.
+    gifterAvatarUrl?: string | null;
+    gifterPreferredName?: string | null;
     amount: string;
     // netAmount + status surfaced 2026-05-15 to align the per-gifter
     // roster sum here with Dashboard's gifterRoster: exclude failed/
@@ -4720,11 +4725,22 @@ export default function MemoryBook() {
                         // the file — single source of truth).
                         const tyState = thankYouStateForGift(entry.gift);
                         const isOwnerEntry = tyState === "self";
-                        const ownerProfileImageUrl = isOwnerEntry ? (user as any)?.profileImageUrl : null;
-                        const ownerPreferredName = isOwnerEntry ? (user as any)?.preferredName : null;
+                        // Relationship label + photo come from the SENDER's OWN
+                        // resolved identity (server join senderEmail->users): a
+                        // co-parent reads "Phil Dunphy (Dad)", the viewing parent's
+                        // own gift reads "Claire Dunphy (Mom)". Falls back to the
+                        // viewer's own profile for their gifts when enrichment is
+                        // absent. NEVER stamp the VIEWER's relationship onto someone
+                        // else's gift — that produced the "Phil Dunphy (Mom)" bug
+                        // (tyState === "self" is true for ANY account holder, incl.
+                        // a co-parent with a recurring schedule, not just the viewer).
+                        const giftSenderEmailLower = String(entry.gift?.senderEmail || "").trim().toLowerCase();
+                        const isViewersOwnGift = !!ownerEmailLowerForMemory && giftSenderEmailLower === ownerEmailLowerForMemory;
+                        const ownerProfileImageUrl = entry.gift?.gifterAvatarUrl || (isViewersOwnGift ? (user as any)?.profileImageUrl : null) || null;
+                        const ownerPreferredName = entry.gift?.gifterPreferredName || (isViewersOwnGift ? (user as any)?.preferredName : null) || null;
                         const displaySenderName = isAnonSender
                           ? "Anonymous"
-                          : isOwnerEntry && ownerPreferredName
+                          : ownerPreferredName
                             ? `${titleCaseName(rawSender)} (${ownerPreferredName})`
                             : titleCaseName(rawSender);
                         const avatarLetter = isAnonSender ? "?" : (rawSender || "G").slice(0, 1).toUpperCase();
@@ -4792,7 +4808,10 @@ export default function MemoryBook() {
                         // were created before that server change.
                         const photoUrl = entry.gift.photoUrl || entry.photoUrl;
                         const audioUrl = entry.audioUrl;
-                        const isSilentSelf = tyState === "self" && !hasNote && !photoUrl && !embeddedVideo && !audioUrl;
+                        // Only the VIEWER's own silent contributions read "You
+                        // added $X". A co-parent's silent contribution must NOT
+                        // claim "You" — fall through to the full card (their name).
+                        const isSilentSelf = isViewersOwnGift && !hasNote && !photoUrl && !embeddedVideo && !audioUrl;
                         if (isSilentSelf) {
                           return (
                             <div className="px-4 sm:px-5 py-2.5">
