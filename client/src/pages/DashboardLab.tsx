@@ -7775,7 +7775,11 @@ export default function DashboardLab() {
                           const atMaj = showAtMajority ? heroAtMajProjection : displayHeroProjectedAt65;
                           const heroMajAge = age18Transition?.majorityAge || 18;
                           const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
-                          const fmtMaj = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(atMaj);
+                          // "~" signals an estimate, matching the sibling projections
+                          // ("~$11,483 by 21", "~$113,833 to 33"). A market projection
+                          // shown as a flat "$51,113" implies a precision the market
+                          // can't promise; the tilde keeps every forward number honest.
+                          const fmtMaj = "~" + new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(atMaj);
                           // Birthday-aware beat (founder-approved, 2026-06-05):
                           // on the child's birthday ONLY, the projection pill
                           // warms — gold-tinted border + soft glow — and the 🌱
@@ -13327,7 +13331,7 @@ export default function DashboardLab() {
                                 {nearMajority ? (
                                   <>On track for ~{fmtUSD0(Math.round(projectedLongHorizon))} if {childSubject} keep{childIsSingular ? "s" : ""} it growing to {beyondAge} 🌱</>
                                 ) : (
-                                  <>On track for {fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱</>
+                                  <>On track for ~{fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱</>
                                 )}
                               </p>
                               <button
@@ -13588,10 +13592,10 @@ export default function DashboardLab() {
                           );
                         })() : (
                           <>
-                            <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 3 }}>
+                            <p style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               Write something for {recipientFirstNameDisplay || childPronouns.object}
                             </p>
-                            <p style={{ fontSize: 12, color: "rgba(26,23,16,0.45)", lineHeight: 1.5 }}>
+                            <p style={{ fontSize: 11, color: "rgba(26,23,16,0.45)", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {/* Pronoun-aware reads-it line; name takes singular verb;
                                   pronoun form uses childPronouns.singular for agreement. */}
                               {recipientFirstNameDisplay
