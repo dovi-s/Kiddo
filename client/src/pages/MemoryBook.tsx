@@ -62,6 +62,7 @@ import { EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { gifterShortName } from "@/lib/gifter-name";
+import { gifterAvatarColor } from "@/lib/gifter-avatar";
 import { prefetchDashboard, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getDeepLinkHighlightStyle, getDeepLinkHighlightCardStyle, hasActiveDeepLink, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
@@ -235,18 +236,11 @@ const typeConfig: Record<string, { icon: typeof Gift; color: string; dotColor: s
 // variables for a single-purpose rotation would be over-engineering.
 // If the brand palette ever adds a "diverse avatar" token set, this
 // is the migration target.
-const GIFTER_COLORS = [
-  { bg: "rgb(26,61,43)",   text: "white" },
-  { bg: "rgb(161,88,0)",   text: "white" },
-  { bg: "rgb(30,80,170)",  text: "white" },
-  { bg: "rgb(124,58,130)", text: "white" },
-  { bg: "rgb(185,28,28)",  text: "white" },
-];
-function gifterColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return GIFTER_COLORS[h % GIFTER_COLORS.length];
-}
+// Gifter avatar colors now come from the shared @/lib/gifter-avatar source of
+// truth (same palette + per-identity hash as the dashboard roster), so a gifter
+// is the same color in the Memory Book and on the dashboard. `gifterColor` is
+// kept as a thin local alias so the existing call sites read unchanged.
+const gifterColor = gifterAvatarColor;
 
 // ─── Boilerplate / test-pattern message detection ───
 // Single source of truth for "is this message text the kind we suppress
@@ -3583,6 +3577,13 @@ export default function MemoryBook() {
                       // server-enriched profile photo (parity with the dashboard
                       // roster). Falls back to the initial tile below.
                       const rosterPhoto = ownerProfileImageUrl || gifter.avatarUrl;
+                      // Per-person initials color, matching the dashboard roster
+                      // exactly (same shared palette + hash). Anonymous has no
+                      // identity to color, so it stays the neutral evergreen
+                      // tint. The owner is colored like anyone else and set apart
+                      // by the evergreen ring below (parity with the dashboard,
+                      // which rings the owner rather than recoloring them).
+                      const personColor = gifter.isAnon ? null : gifterColor(gifter.name);
                       // Shared rule (same as Dashboard): skips weak leaders so
                       // "Aunt Sarah" -> "Sarah", "The Johnsons" -> "Johnsons",
                       // "Marcus's office" -> "office" — not the broken "Aunt / The /
@@ -3638,9 +3639,17 @@ export default function MemoryBook() {
                             <div
                               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold select-none transition-all"
                               style={{
-                                background: isActive ? "hsl(var(--kiddo-evergreen))" : "hsl(var(--kiddo-evergreen)/0.10)",
-                                color: isActive ? "white" : "hsl(var(--kiddo-evergreen))",
-                                boxShadow: isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "none",
+                                background: isActive
+                                  ? "hsl(var(--kiddo-evergreen))"
+                                  : personColor
+                                    ? personColor.bg
+                                    : "hsl(var(--kiddo-evergreen)/0.10)",
+                                color: isActive || personColor ? "white" : "hsl(var(--kiddo-evergreen))",
+                                boxShadow: isActive
+                                  ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))"
+                                  : gifter.isOwnerRow
+                                    ? "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55), 0 3px 10px rgba(26,23,16,0.13)"
+                                    : "0 3px 10px rgba(26,23,16,0.13)",
                               }}
                             >
                               {gifter.name.slice(0, 1).toUpperCase()}

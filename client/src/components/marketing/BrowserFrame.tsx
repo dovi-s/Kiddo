@@ -66,7 +66,9 @@ export function BrowserFrame({ src, alt, caption, className = "", href, liveLabe
       {caption ? (
         <figcaption className="mt-4 text-center text-xs text-muted-foreground">
           {caption}
-          {href ? <span className="ml-1 font-medium text-primary">{liveLabel} &rarr;</span> : null}
+          {/* "See it live →" on its own line (see ProductFrame) — inline it
+              wrapped mid-phrase past the caption width on narrow screens. */}
+          {href ? <span className="mt-0.5 block font-medium text-primary">{liveLabel} &rarr;</span> : null}
         </figcaption>
       ) : null}
     </motion.figure>

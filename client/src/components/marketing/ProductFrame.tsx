@@ -99,7 +99,9 @@ export function ProductFrame({ src, alt, caption, tilt = "none", className = "",
       {caption ? (
         <figcaption className="mt-4 text-center text-xs text-muted-foreground">
           {caption}
-          {href ? <span className="ml-1 font-medium text-primary">{liveLabel} &rarr;</span> : null}
+          {/* "See it live →" on its OWN line, not inline — appended inline it
+              overflowed the 260px caption on longer captions and wrapped mid-phrase. */}
+          {href ? <span className="mt-0.5 block font-medium text-primary">{liveLabel} &rarr;</span> : null}
         </figcaption>
       ) : null}
     </motion.figure>

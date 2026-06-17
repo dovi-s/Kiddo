@@ -146,6 +146,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { haptic } from "@/lib/haptics";
+import { GIFTER_AVATAR_COLORS, gifterAvatarColorIdx } from "@/lib/gifter-avatar";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getPronouns } from "@/lib/pronouns";
 import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
@@ -187,7 +188,7 @@ import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
-import { investingLiveCopy } from "@shared/legal-copy";
+import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
 import {
   calculateKoraContributionFee,
   calculatePaymentProcessingFee,
@@ -1307,22 +1308,9 @@ type GifterProfile = {
 // Other accent uses of gold (recurring ↻ badge, first-gifter ⭐ badge,
 // strategy chip dot) are kept — those are small, intentional one-time
 // signals, not ambient surface color.
-const GIFTER_AVATAR_COLORS = [
-  { bg: "rgb(26,61,43)",   text: "white" }, // Evergreen (brand primary — fine on small avatars)
-  { bg: "rgb(180,90,60)",  text: "white" }, // Terracotta (was brand gold — replaced)
-  { bg: "rgb(67,101,82)",  text: "white" }, // Sage green
-  { bg: "rgb(90,65,45)",   text: "white" }, // Coffee brown
-  { bg: "rgb(58,55,92)",   text: "white" }, // Indigo
-  { bg: "rgb(110,70,95)",  text: "white" }, // Plum
-  { bg: "rgb(70,95,120)",  text: "white" }, // Slate blue
-  { bg: "rgb(40,95,100)",  text: "white" }, // Deep teal
-];
-
-function gifterColorIdx(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0x7fffffff;
-  return h % GIFTER_AVATAR_COLORS.length;
-}
+// GIFTER_AVATAR_COLORS + the per-person hash now live in @/lib/gifter-avatar so
+// the dashboard roster and the Memory Book draw the SAME color for the SAME
+// person. (Imported above.)
 
 function getTransactionTimestamp(transaction?: DashboardTransaction | null): number {
   const raw = transaction?.completedAt || transaction?.createdAt;
@@ -3974,7 +3962,7 @@ export default function DashboardLab() {
       p.initials = parts.length >= 2
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : p.name.slice(0, 2).toUpperCase();
-      p.colorIdx = gifterColorIdx(p.name);
+      p.colorIdx = gifterAvatarColorIdx(p.name);
     }
     // Sort by RECENCY (most recent gift first), not total amount. Sorting
     // by amount made the most generous gifter appear first — leaderboard
@@ -3987,25 +3975,13 @@ export default function DashboardLab() {
       const tb = b.lastGiftDate ? new Date(b.lastGiftDate).getTime() : 0;
       return tb - ta;
     });
-    // De-collide avatar colors so two gifters in the displayed (recency) order
-    // never share a background while the palette has room (the user-reported
-    // "orange twice"). Greedy: keep the name's stable hash color when it's
-    // still free, else take the next unused palette slot. Repeats only when
-    // there are more gifters than palette colors (unavoidable; "unique if
-    // possible"). Deterministic per render.
-    const usedColors = new Set<number>();
-    for (const gifter of sortedRoster) {
-      let idx = gifter.colorIdx;
-      if (usedColors.size < GIFTER_AVATAR_COLORS.length) {
-        let tries = 0;
-        while (usedColors.has(idx) && tries < GIFTER_AVATAR_COLORS.length) {
-          idx = (idx + 1) % GIFTER_AVATAR_COLORS.length;
-          tries++;
-        }
-      }
-      gifter.colorIdx = idx;
-      usedColors.add(idx);
-    }
+    // NOTE: we intentionally do NOT de-collide colors by display order anymore.
+    // The old greedy "next free slot" pass made a gifter's color depend on who
+    // else was in THIS list and in what order, so the same person came out a
+    // different color in the Memory Book (different membership/sort) — the exact
+    // cross-surface mismatch we're fixing. Color is now a pure per-identity hash
+    // (see @/lib/gifter-avatar), identical everywhere. The enlarged palette
+    // keeps accidental same-color repeats rare.
     return sortedRoster;
   }, [gifts]);
 
@@ -7817,8 +7793,13 @@ export default function DashboardLab() {
                                 border: isChildBirthdayToday ? "1px solid hsl(43, 85%, 60% / 0.55)" : "1px solid rgba(255,255,255,0.22)",
                                 boxShadow: isChildBirthdayToday ? "0 0 18px hsl(43, 85%, 50% / 0.22)" : undefined,
                                 borderRadius: 9999,
-                                padding: "11px 18px",
-                                fontSize: 13,
+                                // Keep the projection line ONE row on narrow phones
+                                // (was wrapping to two on some devices). Tighter
+                                // padding/gap + a viewport-responsive font that shrinks
+                                // so even long values/names fit a single line; paired
+                                // with whiteSpace:nowrap on the text span below.
+                                padding: "10px 16px",
+                                fontSize: "clamp(10.5px, 3.3vw, 13px)",
                                 fontWeight: 600,
                                 color: "rgba(255,255,255,0.94)",
                                 cursor: "pointer",
@@ -7828,7 +7809,7 @@ export default function DashboardLab() {
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                gap: 7,
+                                gap: 6,
                                 maxWidth: "100%",
                                 transition: "background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease",
                               }}
@@ -7847,7 +7828,7 @@ export default function DashboardLab() {
                               ) : (
                                 <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>🌱</span>
                               )}
-                              <span style={{ minWidth: 0 }}>
+                              <span style={{ minWidth: 0, whiteSpace: "nowrap" }}>
                                 On track for <span style={{ fontWeight: 800 }}>{fmtMaj}</span>{" "}
                                 {showAtMajority
                                   ? <>when {heroChildN} turn{heroChildN === "you" ? "" : "s"} {heroMajAge}</>
@@ -8316,6 +8297,16 @@ export default function DashboardLab() {
                 new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
               return (
+                <>
+                {/* ONE calm preview frame for all the growth below — replaces the
+                    inconsistent per-number "(preview)" tags. Investing isn't live yet
+                    (INVESTING_LIVE=false) so the figures are a real-priced simulation.
+                    Kept SHORT so it stays one line on mobile; auto-hides when live. */}
+                {!INVESTING_LIVE && (
+                  <p style={{ fontSize: "clamp(10px, 2.7vw, 11.5px)", color: "rgba(26,23,16,0.42)", fontStyle: "italic", textAlign: "center", marginTop: 16, marginBottom: -4 }}>
+                    Preview · investing isn't live yet
+                  </p>
+                )}
                 <LabCollapse
                   marginTop={16}
                   testid="lab-summary-details"
@@ -8330,11 +8321,11 @@ export default function DashboardLab() {
                   // a different growth definition that drifts by uninvested
                   // cash/realized bits — founder saw "+$9,553 grown so far"
                   // collapse open to "Market growth +$9,603.39".
-                  // Investing isn't live (INVESTING_LIVE=false) — this growth is
-                  // real-priced but on SIMULATED holdings. Tag it "(preview)" until
-                  // custody is live so it doesn't read as realized, live earnings.
-                  // Auto-drops the tag at the atomic flip.
-                  stat={Number.isFinite(marketGrowth30) && marketGrowth30 >= 1 ? `+$${Math.round(marketGrowth30).toLocaleString("en-US")} ${investingLiveCopy("grown so far", "grown so far (preview)")}` : "Gifts, growth, and where it all went"}
+                  // Per-number "(preview)" tags removed — they were inconsistent (only
+                  // on closed collapse stats, gone on open, absent from chart/holdings).
+                  // ONE calm page-level preview line frames all the growth instead
+                  // (rendered below the hero — search "live-priced preview").
+                  stat={Number.isFinite(marketGrowth30) && marketGrowth30 >= 1 ? `+$${Math.round(marketGrowth30).toLocaleString("en-US")} grown so far` : "Gifts, growth, and where it all went"}
                 >
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
@@ -8670,6 +8661,7 @@ export default function DashboardLab() {
                   </div>
                 </motion.section>
                 </LabCollapse>
+                </>
               );
             })()}
 
@@ -8902,7 +8894,7 @@ export default function DashboardLab() {
                       className="mt-2 flex items-center justify-center gap-1.5 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-2.5 text-center text-xs font-medium leading-snug text-[hsl(var(--kiddo-evergreen))] transition hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] md:text-sm"
                       data-testid="demo-try-gifting"
                     >
-                      See it from a gifter's side: give {childFirst} a gift, then watch it land →
+                      See the gifter's side, watch it land →
                     </Link>
                   )}
                 </motion.section>
@@ -8949,7 +8941,7 @@ export default function DashboardLab() {
                 // today's sell re-shuffling isn't growth — hide rather than lie.
                 if (todaysSellTotal > 0 && Math.abs(move - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) return "The full chart over time";
                 if (Math.abs(move) < 1) return "The full chart over time";
-                return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} ${investingLiveCopy("this month", "this month (preview)")} ${move >= 0 ? "↗" : "↘"}`;
+                return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}`;
               })()}
             >
             <motion.section
@@ -12506,9 +12498,11 @@ export default function DashboardLab() {
                       )}
                     </div>
 
-                    {/* ── "All in the same fund" clarity note ── */}
+                    {/* "All in the same fund" clarity note. Responsive font so this
+                        locked framing line stops wrapping a touch long on narrow
+                        phones — copy unchanged. */}
                     {activeEvents.length > 0 && (
-                      <p style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
+                      <p style={{ fontSize: "clamp(10.5px, 3vw, 12px)", fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
                         Every occasion goes into the same one fund. Nothing is set aside. 🌱
                       </p>
                     )}
@@ -13312,7 +13306,12 @@ export default function DashboardLab() {
                         return (
                           <>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                              <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.55)", fontStyle: "italic" }}>
+                              {/* Responsive font so the projection line stays compact
+                                  on narrow phones (matches the hero pill fix). Kept as a
+                                  flowing caption — NOT nowrap — since it lives in a
+                                  full-width card where a clean wrap is fine and nowrap
+                                  would risk overflowing the flex row. */}
+                              <p style={{ fontSize: "clamp(10px, 2.9vw, 11.5px)", color: "rgba(255,255,255,0.55)", fontStyle: "italic" }}>
                                 {nearMajority ? (
                                   <>On track for ~{fmtUSD0(Math.round(projectedLongHorizon))} if {childSubject} keep{childIsSingular ? "s" : ""} it growing to {beyondAge} 🌱</>
                                 ) : (
