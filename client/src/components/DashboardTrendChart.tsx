@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { trendYDomain } from "@/lib/trend-domain";
@@ -109,6 +109,33 @@ export default function DashboardTrendChart({
   // unambiguous "I'm done" signal.
   const scrubReleaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── "Quietly alive" chart ──────────────────────────────────────────────────
+  // (1) A heartbeat on TODAY's point (see renderDot) and (2) a smooth morph when
+  // the timeframe changes (see the Area below). The promise on this screen is
+  // "watch it grow", so a frozen line undercuts it. Calm-alive, never casino:
+  // the pulse is a slow ambient ring (an EMOTIONAL "still growing" cue), NOT a
+  // live-price ticker — investing isn't live yet, so nothing counts or ticks.
+  //
+  // Respect reduced-motion: skip the pulse for users who ask for less motion.
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    try {
+      setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch {
+      /* matchMedia unavailable — leave motion on */
+    }
+  }, []);
+  // Animate ONLY on a genuine window change. `data` is a stable memo from the
+  // parent (keyed on chartRange), so a NEW reference means the timeframe actually
+  // changed — vs. an unrelated re-render (tooltip/scrub), which reuses the same
+  // reference. First render has no previous reference → false, so the mount stays
+  // instant (the deliberate no-baseline-morph behavior is preserved).
+  const prevDataRef = useRef<DashboardTrendPoint[] | null>(null);
+  const isDataUpdate = prevDataRef.current !== null && prevDataRef.current !== data;
+  useEffect(() => {
+    prevDataRef.current = data;
+  });
+
   const emitScrub = useCallback((point: DashboardTrendPoint | null) => {
     if (!onScrub) return;
     const key = point ? `${point.label}|${point.value}` : null;
@@ -154,6 +181,19 @@ export default function DashboardTrendChart({
 
   const renderDot = useCallback((props: any) => {
     const { cx, cy, payload, index } = props;
+
+    // TODAY (the last point) is marked by the PARENT's gold live-dot overlay
+    // (the pulsing "this is where the fund is right now" dot in DashboardLab /
+    // Dashboard). The chart must NOT also draw its own dot here — it used to
+    // render a green heartbeat dot at the same point, and because the two are
+    // positioned by different math (recharts cx/cy vs the overlay's CSS %), the
+    // green peeked out from under the gold and read as TWO dots (founder catch).
+    // Drawing nothing here leaves a single, clean gold live-dot. (No usage of
+    // this chart renders without that overlay.)
+    if (index === data.length - 1) {
+      return <g key={`dot-today-${index}`} />;
+    }
+
     if (!payload?.event) return <g key={`dot-empty-${index}`} />;
     const ev = payload.event as { label: string; detail: string };
 
@@ -195,7 +235,7 @@ export default function DashboardTrendChart({
         />
       </g>
     );
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data.length, reduceMotion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Multi-year views (ALL) format labels as "MMM YYYY"; Recharts auto-thins the
   // ticks by pixels, so the months drift (Jul → Aug → Sep → Oct) and the axis looks
@@ -277,11 +317,15 @@ export default function DashboardTrendChart({
             strokeWidth={2.5}
             dot={renderDot}
             activeDot={{ r: 4, fill: "hsl(143, 64%, 41%)" }}
-            // Recharts' default mount animation interpolates every point up
-            // from a flat baseline, so the line briefly reads as a straight
-            // diagonal that "morphs" into the real trend - finicky and off-
-            // brand. Render the true shape immediately instead.
-            isAnimationActive={false}
+            // Mount renders the true shape INSTANTLY (false on first paint):
+            // Recharts' mount animation interpolates every point up from a flat
+            // baseline, reading as an off-brand straight-diagonal morph. But on a
+            // genuine timeframe change (`isDataUpdate`) we let it animate, so
+            // 1W -> 1M -> ALL morphs between shapes instead of hard-cutting.
+            // Short + eased so it feels responsive, not floaty.
+            isAnimationActive={isDataUpdate}
+            animationDuration={550}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ChartContainer>
