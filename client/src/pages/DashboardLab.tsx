@@ -8378,7 +8378,7 @@ export default function DashboardLab() {
                       <button
                         type="button"
                         onClick={() => { haptic("selection"); setLocation(`/memory/${activeFundId}`); }}
-                        className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                        className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-gifts"
                       >
                         <span className="text-sm text-muted-foreground">
@@ -8394,7 +8394,7 @@ export default function DashboardLab() {
                           Gifts from people who love {isOwnerMode ? "you" : childFirst}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                          <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
                             {fmtRow(giftsRowTotal)}
                           </span>
                           <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
@@ -8418,7 +8418,7 @@ export default function DashboardLab() {
                       <button
                         type="button"
                         onClick={() => summaryScrollTo("recurring")}
-                        className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                        className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-auto"
                       >
                         <span className="text-sm text-muted-foreground">
@@ -8437,7 +8437,7 @@ export default function DashboardLab() {
                           )}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                          <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
                             {fmtRow(yourRecurringRowTotal)}
                           </span>
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
@@ -8446,12 +8446,12 @@ export default function DashboardLab() {
                       <button
                         type="button"
                         onClick={() => summaryScrollTo("onetime")}
-                        className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                        className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-onetime"
                       >
                         <span className="text-sm text-muted-foreground">Your one-time additions</span>
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                          <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
                             {fmtRow(yourOneTimeTotal)}
                           </span>
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
@@ -8477,12 +8477,12 @@ export default function DashboardLab() {
                               ? `/memory/${activeFundId}?gifter=${encodeURIComponent(otherHolderGifterParam)}`
                               : `/memory/${activeFundId}`);
                           }}
-                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                          className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="last30-row-other-holder"
                         >
                           <span className="text-sm text-muted-foreground">{otherHolderLabel}'s contributions</span>
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-foreground tabular-nums">
+                            <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
                               {fmtRow(otherHolderTotal)}
                             </span>
                             <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
@@ -8493,7 +8493,7 @@ export default function DashboardLab() {
                         <button
                           type="button"
                           onClick={() => { haptic("selection"); if (activeFundId) setLocation(`/projection/${activeFundId}`); }}
-                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                          className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="last30-row-growth"
                         >
                           {/* Bear-year honesty (2026-06-05, pre-checked since
@@ -8546,7 +8546,7 @@ export default function DashboardLab() {
                           // withdrawal rows. If a dedicated withdrawals filter
                           // ships later, swap this URL.
                           onClick={() => { haptic("selection"); setLocation("/activity"); }}
-                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                          className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="lifetime-row-withdrawals"
                         >
                           <span className="text-sm text-muted-foreground">Withdrawals</span>
@@ -9796,7 +9796,7 @@ export default function DashboardLab() {
                                     >
                                       <p className="text-sm font-bold text-foreground">{formatCurrency(hValue)}</p>
                                       {hCost > 0 && Math.abs(hGain) > 0.01 && (
-                                        <p className={`text-xs font-semibold tabular-nums ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        <p className={`text-xs font-semibold tabular-nums whitespace-nowrap ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
                                           {hGain >= 0 ? "+" : ""}{formatCurrency(hGain)} ({hGain >= 0 ? "+" : ""}{hGainPct.toFixed(2)}%)
                                         </p>
                                       )}
@@ -14034,7 +14034,7 @@ export default function DashboardLab() {
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
-                          <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
+                          <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
                             {Math.abs(pctDelta) >= 0.1 && (
@@ -14359,7 +14359,7 @@ export default function DashboardLab() {
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
-                          <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
+                          <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
                         </div>
                       </div>

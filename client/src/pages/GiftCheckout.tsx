@@ -814,7 +814,11 @@ export default function GiftCheckout() {
     : familyDefaultMode === "stock"
       ? familyDefaultStock
       : suggestedStock;
-  const yearsUntil18 = eventData?.yearsUntil18 ?? 18;
+  // Fallback to 0, NOT 18: a missing value must NOT silently project 18 years of
+  // growth mislabeled "when {child} turns {majority}" (that over-stated the gift —
+  // founder caught a transient "$50 → $166 at 21" when the field briefly didn't
+  // arrive). 0 routes to the honest forward-arc ("in 10/20 years") instead.
+  const yearsUntil18 = eventData?.yearsUntil18 ?? 0;
   // Explicit owner-fund signal (server sets Boolean(fund.transferredAt)). Drives
   // the gift page's owner framing + the forward-arc projection DIRECTLY, so it
   // never depends on yearsUntil18 reaching 0 through the server+wrapper layers —
@@ -1410,19 +1414,24 @@ export default function GiftCheckout() {
         tagline: "This gift keeps compounding over time. Based on 7% historical returns, not guaranteed.",
       };
     }
-    // Years from today to milestone ages
-    const yTo25 = Math.max(0, yearsUntil18 + 7);
-    const yTo30 = Math.max(0, yearsUntil18 + 12);
+    // Years from today to a milestone age, RELATIVE to this fund's majority age
+    // (UTMA majority is 18–21 by state). Previously hardcoded as +7/+12 from 18,
+    // which mislabeled the math on a 21 fund ("grow to 25" actually computed age
+    // 28). yearsUntil18 is years-to-majority despite the legacy name.
+    const yToAge = (age: number) => Math.max(0, yearsUntil18 + (age - fundMajorityAge));
+    const yTo25 = yToAge(25);
+    const yTo30 = yToAge(30);
+    const yTo40 = yToAge(40);
 
     if (yearsUntil18 >= 10) {
-      // Young child - 18-year projection is exciting enough on its own. The math
-      // is the comparison (a $50 gift card stays $50; this $50 becomes ~$X);
-      // jamming "More meaningful than a gift card" onto the disclaimer line was
-      // mixing honesty with marketing-feel and dulled both. The line-1757 jab
-      // below the conversion CTA does the gift-card neutralization work where
-      // it's actually load-bearing.
+      // Young child — the majority arc is already big, but the gift's real power is
+      // the lifetime runway, so show a far "keep growing" horizon too (founder ask
+      // 2026-06-16: show higher/further ages, not just majority). 40 is a meaningful
+      // jump for a young kid; the gift-card comparison still does its work below.
+      const atMajority = fmt(g(yearsUntil18));
+      const at40 = yTo40 >= 3 ? fmt(g(yTo40)) : null;
       return {
-        headline: `${src} today → ~${fmt(g(yearsUntil18))} when ${child} turns ${fundMajorityAge}.`,
+        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}.${at40 ? ` And ~${at40} by 40 if ${fundPronouns.subject} keep${fundPronouns.singular ? "s" : ""} it growing. 🌱` : ""}`,
         tagline: "Based on 7% historical returns. Not guaranteed.",
       };
     }

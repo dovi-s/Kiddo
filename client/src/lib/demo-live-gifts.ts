@@ -14,6 +14,11 @@
 import { useSyncExternalStore } from "react";
 import type { Activity } from "@shared/schema";
 import { gifterShortName } from "./gifter-name";
+import { STOCK_PICKS as CANON_STOCK_PICKS, STOCK_PICK_NAMES } from "@shared/stock-picks";
+
+// Canonical price per pickable individual stock — used to synthesize a NEW
+// holding row when a demo gift/buy goes to a ticker the fund doesn't already own.
+const STOCK_PICK_PRICE = new Map<string, number>(CANON_STOCK_PICKS.map((s) => [s.ticker, s.fallbackPrice]));
 
 const KEY = "kiddo.demo.liveGifts.v1";
 const MAX = 5; // keep only the most recent few so the timeline never floods
@@ -226,6 +231,25 @@ export function applyDemoLiveGiftsToHoldings<T extends HoldingLike>(
     const want = String(g.ticker || "").toUpperCase();
 
     let idx = want ? result.findIndex((h) => tickerOf(h) === want) : -1;
+    // Gifted a ticker the fund doesn't own yet, but it's a real individual pick
+    // (not an ETF): CREATE a new holding row so it shows in "What X owns"
+    // ("Picked"), instead of silently folding the dollars into VTI — which hid the
+    // gifted ticker (founder-flagged 2026-06-16: "where's the NVDA I gifted?").
+    if (idx < 0 && want && STOCK_PICK_PRICE.has(want)) {
+      const price = STOCK_PICK_PRICE.get(want) || amt;
+      const shares = price > 0 ? amt / price : 0;
+      result.push({
+        id: `demo-holding-${g.fundId}-${want}`,
+        fundId: g.fundId,
+        ticker: want,
+        name: STOCK_PICK_NAMES[want] || want, // so the row shows "Nvidia", not "NVDA"
+        shares: String(shares),
+        costBasis: amt.toFixed(2),
+        currentValue: amt.toFixed(2),
+        gain: "0.00",
+      } as unknown as T);
+      continue;
+    }
     if (idx < 0) idx = result.findIndex((h) => tickerOf(h) === "VTI");
     if (idx < 0) {
       idx = result.reduce((best, h, i, arr) => (valOf(h) > valOf(arr[best]) ? i : best), 0);
@@ -515,6 +539,23 @@ export function applyDemoBuysToHoldings<T extends HoldingLike>(
     if (amt <= 0) continue;
     const want = String(b.ticker || "").toUpperCase();
     let idx = want ? result.findIndex((h) => tickerOf(h) === want) : -1;
+    // Invested cash into a pick the fund doesn't own yet → create a NEW holding
+    // row (same fix as the gift path) so it shows in "Picked", not folded into VTI.
+    if (idx < 0 && want && STOCK_PICK_PRICE.has(want)) {
+      const price = STOCK_PICK_PRICE.get(want) || amt;
+      const shares = price > 0 ? amt / price : 0;
+      result.push({
+        id: `demo-holding-${b.fundId}-${want}`,
+        fundId: b.fundId,
+        ticker: want,
+        name: STOCK_PICK_NAMES[want] || want, // so the row shows "Nvidia", not "NVDA"
+        shares: String(shares),
+        costBasis: amt.toFixed(2),
+        currentValue: amt.toFixed(2),
+        gain: "0.00",
+      } as unknown as T);
+      continue;
+    }
     if (idx < 0) idx = result.findIndex((h) => tickerOf(h) === "VTI");
     if (idx < 0) idx = result.reduce((best, h, i, arr) => (valOf(h) > valOf(arr[best]) ? i : best), 0);
     const h = result[idx] as HoldingLike;

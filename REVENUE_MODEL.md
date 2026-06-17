@@ -56,7 +56,7 @@ ask "what's the stack."
 | Stream | Near-term | At scale | Notes |
 |---|---|---|---|
 | **Parent subscription** | small | moderate | The base. Necessary, insufficient (EarlyBird's proof). |
-| **Cash-float interest** | small | high-margin | Interest on uninvested gift cash. Alpaca pays ~3.6% on cash — confirm the **partner spread split**. Passive, never touches the user. |
+| **Cash-float interest** | small | thin | Interest on uninvested gift cash (Alpaca pays ~3.6%). **PINNED STANCE: shared-yield only — the yield accrues to the CHILD, disclosed, with at most a thin disclosed spread to Kiddo. NEVER silently pocketed (that's taxing a kid's money = the trust-moat killer, see the Cash App "don't tax the accumulation" rule).** Thin regardless: the whole point is gifts get *invested*, so little cash sits idle. FDIC pass-through, NOT SIPC → counsel must bless any "earns/insured" copy. Gated on custody. |
 | **Gifter-sponsors-Plus** | small | moderate | The *only* brand-safe way to monetize gifters — they buy a sub, not pay a toll. Already built. |
 | **B2B2C** | the real near-term scaler | could exceed B2C | One employer = hundreds of parents at ~zero CAC + high ACV. See `B2B_GIFTING_SPEC.md`. |
 | **AUM 0.10%** (conditional on RIA) | ≈ $0 | compounds for decades | ~$5/yr on a $5k fund. A scale/future asset, not a near-term lever. |
@@ -102,7 +102,7 @@ the reason you're not just a prettier EarlyBird.
 - **Sharpen the post-gift "start one for yours" moment** — tiny UX, massive
   leverage on lever #1 (the visceral "$50 → $X at 18" pitch).
 - **Surface gifter-sponsors-Plus harder** — already built; push it.
-- **Turn on cash float the day custody is live** — passive money, zero product work.
+- **Turn on cash float the day custody is live** — but as **shared-yield to the kid** (disclosed), never silently pocketed; thin anyway (money's invested, not idle). See the stack-table note.
 - **One B2B2C manual pilot** — one yes validates the whole CAC escape.
 - **Founding-members push** — willingness-to-pay proof + pre-launch capital +
   advocates in one.
