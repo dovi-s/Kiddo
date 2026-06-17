@@ -80,6 +80,24 @@ export const STOCK_PICKS: readonly StockPick[] = [
   { ticker: "KO",    name: "Coca-Cola",  tagline: "for the classics",             featured: false, fallbackPrice: 68.00,  emoji: "🥤" },
   { ticker: "HSY",   name: "Hershey",    tagline: "for the sweet tooth",          featured: false, fallbackPrice: 185.00, emoji: "🍫" },
   { ticker: "CROX",  name: "Crocs",      tagline: "for the originals",            featured: false, fallbackPrice: 110.00, emoji: "🐊" },
+  // Roster 2026-06-17: closed the remaining recognizable-brand gaps a kid feels
+  // something about — PlayStation/console gaming (Sony), a snack name beyond Coke
+  // (PepsiCo = Frito-Lay/Gatorade), an entire missing BEAUTY category (e.l.f. —
+  // dominant with tweens/teens), a literal kids' brand (Build-A-Bear), and the
+  // kid/teen restaurant favorite (Chipotle, affordable per-share post 50:1 split).
+  // Deliberately NOT added: SpaceX/OpenAI/Epic/Lego (all private, unbuyable) and
+  // EA (pending take-private → delist risk). Social names (Meta/Snap) skipped —
+  // off-thesis to push Instagram/Snapchat inside a kids' product.
+  { ticker: "PEP",   name: "PepsiCo",    tagline: "for the snack drawer",         featured: false, fallbackPrice: 142.00, emoji: "🥨" },
+  { ticker: "ELF",   name: "e.l.f.",     tagline: "for the get-ready routine",    featured: false, fallbackPrice: 62.00,  emoji: "💄" },
+  { ticker: "BBW",   name: "Build-A-Bear", tagline: "for the one you build",      featured: false, fallbackPrice: 32.00,  emoji: "🐻" },
+  { ticker: "CMG",   name: "Chipotle",   tagline: "for the usual order",          featured: false, fallbackPrice: 32.00,  emoji: "🌯" },
+  // CUSTODY FLAG: SONY is a sponsored NYSE-listed ADR (Sony Group, Japan) — far
+  // more liquid/standard than NTDOY's pink-sheet ADR, and the only way to give a
+  // child PlayStation exposure (no clean US-listed alternative). Major sponsored
+  // ADRs are broadly supported, but confirm SONY fractional eligibility with the
+  // live custodian before custody goes live, same as NTDOY. Display-only today.
+  { ticker: "SONY",  name: "Sony",       tagline: "for the PlayStation crew",     featured: false, fallbackPrice: 20.00,  emoji: "🕹️" },
 ] as const;
 
 export const FEATURED_STOCK_PICKS: readonly StockPick[] = STOCK_PICKS.filter((s) => s.featured);

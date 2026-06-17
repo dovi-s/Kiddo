@@ -368,6 +368,12 @@ const TICKER_INFO: Record<string, { about: string; category: string }> = {
   CHWY:  { about: "Chewy. Ships food and supplies to millions of pets. Customers send Chewy more handwritten thank-yous than any retailer.", category: "Consumer / Pets" },
   ADBE:  { about: "Adobe. Photoshop, Illustrator, Premiere. The software behind most of the world's creative work.", category: "Technology" },
   Z:     { about: "Zillow. The first place most Americans look when imagining their next home.", category: "Real Estate" },
+  // Roster 2026-06-17 additions
+  PEP:   { about: "PepsiCo. Pepsi, Gatorade, Doritos, Cheetos, and Lay's. A snack and drink giant in nearly every pantry.", category: "Consumer" },
+  ELF:   { about: "e.l.f. Beauty. Affordable makeup and skincare that became a favorite with younger shoppers.", category: "Consumer / Beauty" },
+  BBW:   { about: "Build-A-Bear. The make-your-own stuffed-animal experience, in malls and online.", category: "Consumer / Retail" },
+  CMG:   { about: "Chipotle. Burritos and bowls made to order. A fast-casual favorite with a devoted following.", category: "Consumer / Restaurants" },
+  SONY:  { about: "Sony. PlayStation, Spider-Man and Sony Pictures, music, and the camera sensors inside many phones.", category: "Entertainment / Technology" },
 };
 
 function formatCurrency(v: number) {

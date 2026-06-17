@@ -308,6 +308,37 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
     whatTheyDo: "Crocs makes the comfy foam clogs, and the little charms that snap into them, that people wear everywhere.",
     whyItMatters: "When more people buy Crocs and their charms, the company grows.",
   },
+  // Roster 2026-06-17 stock-pick additions.
+  PEP: {
+    emoji: "🥨",
+    youngOwner: "You own a tiny piece of PepsiCo. Every bag of Doritos, every Gatorade, every can of Pepsi. Pieces of all of them are yours.",
+    whatTheyDo: "PepsiCo makes Pepsi, Gatorade, Doritos, Cheetos, Lay's, and dozens of other snacks and drinks.",
+    whyItMatters: "People grab these snacks and drinks every day all over the world, which keeps the business busy.",
+  },
+  ELF: {
+    emoji: "💄",
+    youngOwner: "You own a tiny piece of e.l.f. Every lip gloss, every little makeup bag packed for school. A piece of that is yours.",
+    whatTheyDo: "e.l.f. makes affordable makeup and skincare that a lot of people use every day.",
+    whyItMatters: "When more people buy e.l.f. at the store or online, the company earns more.",
+  },
+  BBW: {
+    emoji: "🐻",
+    youngOwner: "You own a tiny piece of Build-A-Bear. Every stuffed animal someone picked out, stuffed, and named themselves. A piece of that is yours.",
+    whatTheyDo: "Build-A-Bear runs the stores where you make your own stuffed animal from start to finish.",
+    whyItMatters: "When more families build a bear, in stores or online, the company earns more.",
+  },
+  CMG: {
+    emoji: "🌯",
+    youngOwner: "You own a tiny piece of Chipotle. Every burrito, every bowl, every usual order. A piece of that is yours.",
+    whatTheyDo: "Chipotle runs the restaurants that make burritos, bowls, and tacos to order.",
+    whyItMatters: "When more people grab lunch or dinner at Chipotle, the company earns more.",
+  },
+  SONY: {
+    emoji: "🕹️",
+    youngOwner: "You own a tiny piece of Sony. Every PlayStation game, every Spider-Man movie, every song from their artists. Pieces of all of them are yours.",
+    whatTheyDo: "Sony makes the PlayStation, movies and music, and the cameras and chips inside lots of devices.",
+    whyItMatters: "When people buy PlayStations and games, or watch Sony movies, the company earns more.",
+  },
 };
 
 function getCompanyExplainer(ticker: string, name: string) {

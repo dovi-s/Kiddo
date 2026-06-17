@@ -40,6 +40,12 @@ export const TICKER_DOMAIN: Record<string, string> = {
   KO: "coca-cola.com",
   HSY: "hershey.com",
   CROX: "crocs.com",
+  // Roster 2026-06-17 additions (PlayStation, snacks, beauty, kids' brand, food)
+  PEP: "pepsico.com",
+  ELF: "elfcosmetics.com",
+  BBW: "buildabear.com",
+  CMG: "chipotle.com",
+  SONY: "sony.com",
 
   // Common ETFs (issuer brand, not ticker name)
   VOO: "vanguard.com",
