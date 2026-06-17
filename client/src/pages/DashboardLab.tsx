@@ -10176,7 +10176,7 @@ export default function DashboardLab() {
                     const who = isOwnerMode ? "your" : childName ? `${childName}'s` : "their";
                     const headline = mostlyAnon
                       ? `${Poss} future is growing`
-                      : `${contributorCount > 0 ? contributorCount + " " : ""}people are building ${who} future`;
+                      : `${contributorCount > 0 ? contributorCount + " " : ""}${contributorCount === 1 ? "person is" : "people are"} building ${who} future`;
                     const sub = mostlyAnon
                       ? (isOwnerMode ? "Gift by gift, from people who love you." : `Gift by gift, from people who love ${childName || "them"}.`)
                       : (isOwnerMode ? "Everyone who showed up for you." : `Everyone who has shown up for ${childName || "them"}.`);
