@@ -221,10 +221,21 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // PWA service worker — offline shell + push for the installed ("Add to Home
-// Screen") app. PRODUCTION ONLY so it never interferes with Vite HMR in dev.
-// The SW is network-first (see client/public/sw.js), so it never serves stale
-// content while online.
-if (import.meta.env.PROD && typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+// Screen") app. Registered in PRODUCTION, and also when the app is served over
+// HTTPS from a non-localhost host — e.g. the Tailscale `*.ts.net` tunnel used to
+// test the installable PWA on a phone straight from the dev server. Service
+// workers are per-origin, so this NEVER registers on your localhost dev (http)
+// and can't touch Vite HMR. The SW is network-first (client/public/sw.js), so it
+// never serves stale content while online.
+const isHttpsTunnel =
+  typeof window !== "undefined" &&
+  window.location.protocol === "https:" &&
+  !/^(localhost|127\.|0\.0\.0\.0$)/.test(window.location.hostname);
+if (
+  (import.meta.env.PROD || isHttpsTunnel) &&
+  typeof navigator !== "undefined" &&
+  "serviceWorker" in navigator
+) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   });

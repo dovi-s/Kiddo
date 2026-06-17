@@ -10,15 +10,13 @@
 
 name: Mobile build (Capacitor)
 
+# MANUAL-ONLY for now. Native CI (Android SDK licenses, iOS pods/signing) needs a
+# real debugging pass against the run logs before it's trusted — and it was firing
+# on every push and emailing failures. Run it from the Actions tab ("Run workflow")
+# when you want to iterate on it. Codemagic (codemagic.yaml) is the recommended
+# path for actual store builds; this is the free fallback once it's green.
 on:
   workflow_dispatch: {}        # run manually from the Actions tab
-  push:
-    paths:
-      - "client/**"
-      - "android/**"
-      - "ios/**"
-      - "capacitor.config.ts"
-      - ".github/workflows/mobile-build.yml"
 
 jobs:
   android:
