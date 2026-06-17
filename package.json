@@ -6,6 +6,7 @@
     "scripts": {
         "dev:client": "vite dev --port 5000",
         "dev": "set NODE_OPTIONS=--use-system-ca&& set NODE_ENV=development&& tsx watch server/index.ts",
+        "web:tunnel": "node script/web-tunnel.cjs",
         "build": "tsx script/build.ts",
         "start": "set NODE_ENV=production&& node dist/index.cjs",
         "lint:content": "node script/lint-content.cjs",
@@ -47,6 +48,7 @@
         "setup:local": "tsx script/setup-local.ts",
         "seed:dunphys": "set NODE_OPTIONS=--use-system-ca&& tsx script/seed-dunphys.ts",
         "reset:dunphys": "set NODE_OPTIONS=--use-system-ca&& tsx script/reset-dunphys.ts",
+        "cleanup:legacy-demo": "set NODE_OPTIONS=--use-system-ca&& tsx script/cleanup-legacy-demo.ts",
         "founder:reel": "set NODE_OPTIONS=--use-system-ca&& tsx script/founder-reel.ts",
         "fetch:historical-prices": "set NODE_OPTIONS=--use-system-ca&& tsx script/fetch-historical-prices.ts",
         "report:demo-portfolio": "tsx script/demo-portfolio-report.ts",

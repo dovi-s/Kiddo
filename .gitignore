@@ -65,3 +65,4 @@ _mine.patch
 # dev/audit artifacts (screenshots, capture output)
 artifacts/
 audit.json
+dev-server.log
