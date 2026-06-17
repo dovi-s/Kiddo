@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { recordDemoBuy } from "@/lib/demo-live-gifts";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
+import { projectFundValue } from "@shared/projection";
 
 // Derived from the canonical universe (shared/stock-picks.ts) — the cash-invest
 // picker (adult / owner-mode) now reads the SAME list as the gift page, parent
@@ -68,6 +69,12 @@ interface InvestCashModalProps {
   fundMonthReturnPct?: number;
   fundAgeYears?: number;
   fundAverageGiftDate?: string;
+  // Years until the child reaches majority, plus the age, so the invest
+  // confirmation can show a forward "by the time {child} turns {age}" glimpse
+  // (connects this contribution to the handoff). Optional — callers that omit
+  // them simply don't render the glimpse.
+  yearsToMajority?: number;
+  majorityAge?: number;
   onSuccess?: () => void;
 }
 
@@ -83,6 +90,8 @@ export function InvestCashModal({
   fundMonthReturnPct: _fundMonthReturnPct,
   fundAgeYears: _fundAgeYears,
   fundAverageGiftDate: _fundAverageGiftDate,
+  yearsToMajority,
+  majorityAge,
   onSuccess,
 }: InvestCashModalProps) {
   const { user } = useAuth();
@@ -569,6 +578,40 @@ export function InvestCashModal({
                   )}
                 </div>
               </div>
+
+              {/* Forward glimpse — ties this contribution to the handoff (the
+                  keystone moment). Honest: "could be about", the SAME canonical
+                  projectFundValue math as the dashboard's "on track for" number,
+                  projecting a single lump with NO assumed further contributions,
+                  whole dollars (no false precision). Only for a real investment
+                  (not hold-as-cash or withdraw) with a real horizon to majority. */}
+              {(investMode === "default" || investMode === "stock") &&
+                typeof yearsToMajority === "number" &&
+                yearsToMajority >= 1 &&
+                roundedAmountToInvest > 0 &&
+                (() => {
+                  const future = projectFundValue({
+                    startingValue: roundedAmountToInvest,
+                    monthlyContribution: 0,
+                    yearsAhead: yearsToMajority,
+                  });
+                  if (future <= roundedAmountToInvest) return null;
+                  const fmt0 = (v: number) =>
+                    new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      maximumFractionDigits: 0,
+                    }).format(v);
+                  return (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-2.5">
+                      <span className="text-base leading-none mt-0.5" aria-hidden>🌱</span>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        Left to grow, this {formatCurrency(roundedAmountToInvest)} could be about{" "}
+                        <span className="font-semibold">{fmt0(future)}</span> by the time {childName} turns {majorityAge ?? 18}.
+                      </p>
+                    </div>
+                  );
+                })()}
 
               {/* Auto-invest toggle - only shown after investing, not withdrawing */}
               {investMode !== "withdraw" && prefs !== null && prefs !== undefined && (
