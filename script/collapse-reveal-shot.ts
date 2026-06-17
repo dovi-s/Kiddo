@@ -29,8 +29,11 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   try {
     // iPhone-ish viewport so the floating mobile nav is present (worst case for
-    // "content revealed behind the bottom bar").
-    const ctx = await browser.newContext({ viewport: { width: 414, height: 896 }, deviceScaleFactor: 2 });
+    // "content revealed behind the bottom bar"). Override via VP_W/VP_H to shoot
+    // the desktop case (no mobile nav, taller header).
+    const vpW = Number(process.env.VP_W || 414);
+    const vpH = Number(process.env.VP_H || 896);
+    const ctx = await browser.newContext({ viewport: { width: vpW, height: vpH }, deviceScaleFactor: vpW < 700 ? 2 : 1 });
     await ctx.addInitScript(() => sessionStorage.setItem("kora-launched", "1"));
     // Log in via the API (sets the session cookie on the context) — the
     // canonical path the ui-smoke harness uses; form-fill is flaky.

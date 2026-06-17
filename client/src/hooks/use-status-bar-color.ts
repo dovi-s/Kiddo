@@ -1,53 +1,101 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
-// Dynamic status-bar / browser-chrome tint (the Acorns "seamless top" effect,
-// but honest about iOS's constraint). We update the single <meta name="theme-color">
-// to match whatever opaque background currently sits DIRECTLY under the iOS
-// status bar, so the strip blends into the screen you're on instead of being
-// locked to cream.
+// Status-bar tint that tracks whatever is scrolled under it (the Acorns
+// "seamless top"). iOS IGNORES <meta name="theme-color"> for the status-bar
+// region — verified by forcing it red on iPhone Safari + installed PWA and
+// seeing no change. With viewport-fit=cover the page draws under the status
+// bar, so the only reliable lever is to PAINT it: a fixed opaque strip over the
+// top safe-area whose background we keep matched to the content currently below
+// it. We also still update theme-color, which Android/Chrome DOES honor.
 //
-// THE iOS CONSTRAINT (see feedback_status_bar_blends_not_green): the status-bar
-// GLYPHS (time/wifi/battery) are dark — set by `apple-mobile-web-app-status-bar-style:
-// default` — and iOS will NOT flip glyph color live for a PWA. So we only ever
-// tint to LIGHT colors (where dark glyphs stay readable); anything dark falls
-// back to cream rather than swallowing the glyphs. Across Kiddo's cream/white/
-// pale palette that reads as "the bar follows the app"; on a genuinely dark top
-// it stays safely cream.
-//
-// NOTE: dynamic theme-color updates reliably in mobile Safari. An INSTALLED
-// standalone PWA on iOS may freeze the bar at its load-time color until next
-// launch — that's an OS limitation, not a bug here.
+// Glyphs note: the status-bar glyphs (time/wifi/battery) are dark — set by
+// `apple-mobile-web-app-status-bar-style: default`, which iOS won't flip live —
+// so a genuinely dark strip would hide them. The app is cream/light throughout,
+// so faithful matching stays readable in practice; revisit only if a dark-topped
+// screen ships.
 
-const CREAM = "#F9F7F3";
-// Relative luminance below this = treat as "dark", keep glyphs safe with cream.
-const LIGHT_THRESHOLD = 0.55;
+const FILL_ID = "kiddo-statusbar-fill";
+const DEFAULT = "#F8F5F0"; // --kiddo-cream, matches the app header (avoids a load flash)
 
 type Rgb = { r: number; g: number; b: number; a: number };
 
 function parseRgb(value: string): Rgb | null {
   const m = value.match(/rgba?\(([^)]+)\)/i);
   if (!m) return null;
-  const parts = m[1].split(",").map((v) => parseFloat(v.trim()));
-  if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) return null;
-  return { r: parts[0], g: parts[1], b: parts[2], a: parts[3] ?? 1 };
+  const p = m[1].split(",").map((v) => parseFloat(v.trim()));
+  if (p.length < 3 || p.some((n) => Number.isNaN(n))) return null;
+  return { r: p[0], g: p[1], b: p[2], a: p[3] ?? 1 };
 }
 
-function luminance({ r, g, b }: Rgb): number {
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+// Normalize ANY computed CSS color (rgb, rgba, #hex, and CSS Color 4 forms like
+// oklab()/oklch()/color() that Tailwind v4 emits) to rgb via a canvas, which the
+// browser uses to convert. Falls back to null if the engine rejects the value.
+let _ctx: CanvasRenderingContext2D | null | undefined;
+const SENTINEL = "#010203";
+function toRgb(value: string): Rgb | null {
+  const direct = parseRgb(value);
+  if (direct) return direct;
+  if (typeof document === "undefined") return null;
+  if (_ctx === undefined) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    _ctx = c.getContext("2d");
+  }
+  if (!_ctx) return null;
+  try {
+    _ctx.fillStyle = SENTINEL;
+    _ctx.fillStyle = value; // browser normalizes; leaves SENTINEL if rejected
+    const norm = _ctx.fillStyle as string;
+    if (norm === SENTINEL && value.trim().toLowerCase() !== SENTINEL) return null;
+    if (norm.startsWith("#")) {
+      const hex = norm.length === 4
+        ? norm.replace(/#(.)(.)(.)/, "#$1$1$2$2$3$3")
+        : norm;
+      return {
+        r: parseInt(hex.slice(1, 3), 16),
+        g: parseInt(hex.slice(3, 5), 16),
+        b: parseInt(hex.slice(5, 7), 16),
+        a: 1,
+      };
+    }
+    return parseRgb(norm);
+  } catch {
+    return null;
+  }
 }
 
-// Walk up from the topmost element under the status bar until we hit a
-// non-transparent background. elementFromPoint is sampled a couple px down so
-// we read the content that draws under the reserved status-bar area.
-function sampleTopColor(): Rgb | null {
-  if (typeof document === "undefined" || typeof window === "undefined") return null;
+// The fixed strip that physically paints the status-bar area. Created once and
+// reused. Height is the iOS safe-area inset (0 on non-notched devices → no-op).
+function ensureFill(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  let el = document.getElementById(FILL_ID);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = FILL_ID;
+    el.setAttribute("aria-hidden", "true");
+    el.style.cssText =
+      "position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);" +
+      "z-index:2147483646;pointer-events:none;background:" + DEFAULT + ";";
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+// Read the first opaque background just BELOW the status-bar strip — that's what
+// the bar should match. Skips the strip itself.
+function sampleBelow(fillHeight: number): Rgb | null {
+  if (typeof window === "undefined") return null;
   const x = Math.max(1, Math.floor(window.innerWidth / 2));
-  let el = document.elementFromPoint(x, 2) as Element | null;
+  const y = Math.max(4, Math.round(fillHeight) + 4);
+  let el = document.elementFromPoint(x, y) as Element | null;
   let guard = 0;
   while (el && guard++ < 16) {
-    const bg = getComputedStyle(el).backgroundColor;
-    const rgb = parseRgb(bg);
+    if (el.id === FILL_ID) {
+      el = el.parentElement;
+      continue;
+    }
+    const rgb = toRgb(getComputedStyle(el).backgroundColor);
     if (rgb && rgb.a >= 0.5) return rgb;
     el = el.parentElement;
   }
@@ -55,14 +103,14 @@ function sampleTopColor(): Rgb | null {
 }
 
 function apply(): void {
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (!meta) return;
-  const rgb = sampleTopColor();
-  const next =
-    rgb && luminance(rgb) >= LIGHT_THRESHOLD
-      ? `rgb(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)})`
-      : CREAM;
-  if (meta.getAttribute("content") !== next) meta.setAttribute("content", next);
+  const fill = ensureFill();
+  if (!fill) return;
+  const rgb = sampleBelow(fill.offsetHeight);
+  if (!rgb) return;
+  const color = `rgb(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)})`;
+  if (fill.style.background !== color) fill.style.background = color;
+  const meta = document.querySelector('meta[name="theme-color"]'); // Android honors this
+  if (meta && meta.getAttribute("content") !== color) meta.setAttribute("content", color);
 }
 
 export function useStatusBarColor(): void {
@@ -81,9 +129,9 @@ export function useStatusBarColor(): void {
     apply();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
-    // childList catches overlays (sheets / dialogs / drawers) mounting and
-    // unmounting over the top; attributes are intentionally NOT observed —
-    // framer-motion mutates inline styles every frame and would spin this.
+    // childList catches overlays (sheets / dialogs / drawers) mounting over the
+    // top; attributes are intentionally NOT observed — framer-motion mutates
+    // inline styles every frame and would spin this.
     const mo = new MutationObserver(schedule);
     mo.observe(document.body, { childList: true, subtree: true });
 

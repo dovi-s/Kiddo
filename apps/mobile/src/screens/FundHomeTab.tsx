@@ -272,6 +272,7 @@ function Collapsible({
   summaryColor,
   open,
   onToggle,
+  onReveal,
   children,
 }: {
   title: string;
@@ -279,10 +280,33 @@ function Collapsible({
   summaryColor?: string;
   open: boolean;
   onToggle: () => void;
+  // Web-parity reveal: when this section opens low in the scroll, glide it up so
+  // the freshly shown content isn't stranded below the fold. The parent decides
+  // whether a scroll is actually needed (it knows the offset + viewport) — we
+  // just report our position + height once the open layout has settled. Fires
+  // only on the closed→open transition; on close we report nothing, so the
+  // section collapses in place and the page never moves. (Sections stay
+  // independent — opening one never closes another.)
+  onReveal?: (y: number, height: number) => void;
   children: React.ReactNode;
 }) {
+  const yRef = useRef(0);
+  const hRef = useRef(0);
+  useEffect(() => {
+    if (!open || !onReveal) return;
+    // Wait a frame so the expanded children have laid out and hRef reflects the
+    // OPEN height (rAF runs after the layout pass that fires our onLayout).
+    const id = requestAnimationFrame(() => onReveal(yRef.current, hRef.current));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
   return (
-    <Pressable onPress={onToggle}>
+    <Pressable
+      onPress={onToggle}
+      onLayout={(e) => {
+        yRef.current = e.nativeEvent.layout.y;
+        hRef.current = e.nativeEvent.layout.height;
+      }}
+    >
       <KiddoCard>
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
@@ -347,6 +371,23 @@ export function FundHomeTab(props: FundHomeTabProps) {
   const [holdingsOpen, setHoldingsOpen] = useState(false);
   const [age18Open, setAge18Open] = useState(false);
   const [kidViewOpen, setKidViewOpen] = useState(false);
+
+  // Reveal-if-needed on section open (web parity, see Collapsible). We track the
+  // live scroll offset + viewport height so we ONLY scroll when the opened
+  // section would otherwise fall below the fold — an already-visible section is
+  // left exactly where it is (no yank). On close nothing fires.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const viewportHRef = useRef(0);
+  const revealIfNeeded = (cardY: number, cardH: number) => {
+    const sv = scrollRef.current;
+    const vh = viewportHRef.current;
+    if (!sv || !vh) return;
+    const top = scrollYRef.current;
+    const fullyVisible = cardY >= top && cardY + cardH <= top + vh;
+    if (fullyVisible) return; // already comfortable — don't move it
+    sv.scrollTo({ y: Math.max(0, cardY - spacing.md), animated: true });
+  };
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -539,10 +580,18 @@ export function FundHomeTab(props: FundHomeTabProps) {
   return (
     <>
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1 }}
       contentContainerStyle={{ padding: spacing.md, gap: spacing.lg, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
       refreshControl={refresh}
+      scrollEventThrottle={16}
+      onScroll={(e) => {
+        scrollYRef.current = e.nativeEvent.contentOffset.y;
+      }}
+      onLayout={(e) => {
+        viewportHRef.current = e.nativeEvent.layout.height;
+      }}
     >
       {/* ── activate investing (fund not yet active = identity not verified) ── */}
       {!isReadOnly && String(activeFund.status || "").toLowerCase() === "draft" ? (
@@ -896,6 +945,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
           }
           summaryColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
           open={growthOpen}
+          onReveal={revealIfNeeded}
           onToggle={() => {
             haptic("selection");
             setGrowthOpen((o) => !o);
@@ -959,6 +1009,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
             d.chosen.length + d.managed.length === 1 ? "" : "s"
           } powering the growth`}
           open={holdingsOpen}
+          onReveal={revealIfNeeded}
           onToggle={() => {
             haptic("selection");
             setHoldingsOpen((o) => !o);
