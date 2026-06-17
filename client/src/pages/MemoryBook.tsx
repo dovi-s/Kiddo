@@ -1904,11 +1904,15 @@ export default function MemoryBook() {
       { key: "moved-out",         label: "Moved out",           starter: "Moved out on their own. ", age: 18 },
     ];
     const strip = ({ age: _age, ...m }: { key: string; label: string; starter: string; age: number }) => m;
-    if (kidAgeForMoments == null) return ALL.filter((m) => m.age <= 8).map(strip);
+    // Cap at 6, most-recent-first — a tight prompt set, not a checklist. (Was
+    // 10, which for an older kid showed a wall of baby moments plus the
+    // confusingly-similar "First tooth" (age 1) AND "Lost first tooth" (age 6);
+    // the cap drops the age-1 one and keeps the list age-relevant.)
+    if (kidAgeForMoments == null) return ALL.filter((m) => m.age <= 8).slice(0, 6).map(strip);
     return ALL
       .filter((m) => m.age <= kidAgeForMoments + 1)
       .sort((a, b) => b.age - a.age)
-      .slice(0, 10)
+      .slice(0, 6)
       .map(strip);
   }, [kidAgeForMoments]);
 
@@ -2252,7 +2256,12 @@ export default function MemoryBook() {
     e.currentTarget.value = "";
   };
 
-  const updateEntryMeta = async (entryId: string, patch: { visibility?: "public" | "family" | "private"; isFeatured?: boolean }) => {
+  // Returns true if the change persisted. In the demo (or any no-persist case)
+  // the server returns 200 {saved:false}; this is a RAW fetch, so the global
+  // apiRequest demo-toast never fires and res.ok is true — detect {saved:false}
+  // here and surface an honest "not saved in the demo" toast instead of letting
+  // the caller claim a false success. (Same bug class as the child-photo fix.)
+  const updateEntryMeta = async (entryId: string, patch: { visibility?: "public" | "family" | "private"; isFeatured?: boolean }): Promise<boolean> => {
     const res = await fetch(`/api/memory/${entryId}/meta`, {
       method: "PATCH",
       credentials: "include",
@@ -2260,7 +2269,13 @@ export default function MemoryBook() {
       body: JSON.stringify(patch),
     });
     if (!res.ok) throw new Error("Failed to update memory settings");
+    const data = await res.json().catch(() => null);
+    if (data && data.saved === false) {
+      toast({ title: "Not saved in the demo", description: data.message || "Changes save in your own fund." });
+      return false;
+    }
     await queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
+    return true;
   };
 
   // Mark the Memory Book as visited — clears the bottom-nav unread dot.
@@ -3456,8 +3471,8 @@ export default function MemoryBook() {
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground mb-3">
                   {isOwnerMode
-                    ? "Tap one. Add a date, a note, a photo to your story."
-                    : <>Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.</>}
+                    ? "Tap one. It's part of your story."
+                    : <>Tap one. {childName || "They"}'ll read it later.</>}
                 </p>
                 {/* Single-row horizontal scroll (was flex-wrap) —
                     locked 2026-05-19 per the chip-row layout audit.
@@ -4523,9 +4538,11 @@ export default function MemoryBook() {
                               onSelect={async (e) => {
                                 e.preventDefault();
                                 try {
-                                  await updateEntryMeta(entry.id, { isFeatured: !entry.isFeatured });
-                                  haptic("success");
-                                  toast({ title: entry.isFeatured ? "Unpinned" : "Pinned to top" });
+                                  const ok = await updateEntryMeta(entry.id, { isFeatured: !entry.isFeatured });
+                                  if (ok) {
+                                    haptic("success");
+                                    toast({ title: entry.isFeatured ? "Unpinned" : "Pinned to top" });
+                                  }
                                 } catch {
                                   toast({ title: "Could not update", variant: "destructive" });
                                 }
@@ -4543,9 +4560,11 @@ export default function MemoryBook() {
                                 const next = order[(order.indexOf(current) + 1) % order.length];
                                 const labels: Record<string, string> = { public: "Anyone with link", family: "Family only", private: "Private" };
                                 try {
-                                  await updateEntryMeta(entry.id, { visibility: next });
-                                  haptic("selection");
-                                  toast({ title: `Visibility: ${labels[next]}` });
+                                  const ok = await updateEntryMeta(entry.id, { visibility: next });
+                                  if (ok) {
+                                    haptic("selection");
+                                    toast({ title: `Visibility: ${labels[next]}` });
+                                  }
                                 } catch {
                                   toast({ title: "Could not update", variant: "destructive" });
                                 }
@@ -4702,8 +4721,16 @@ export default function MemoryBook() {
                               <div className="min-w-0 flex-1 flex items-center gap-2 text-xs">
                                 <Repeat size={11} className="shrink-0 text-muted-foreground/70" />
                                 <span className="font-medium text-foreground truncate">{titleCaseName(compressedSender)}</span>
-                                <span className="text-muted-foreground/60">·</span>
-                                <span className="text-muted-foreground tabular-nums">{displayAmount(entry.gift.amount)}</span>
+                                <span className="shrink-0 text-muted-foreground/60">·</span>
+                                <span className="shrink-0 text-muted-foreground tabular-nums">{displayAmount(entry.gift.amount)}</span>
+                                <span className="shrink-0 text-muted-foreground/60">·</span>
+                                {/* Destination — answers "where's the recurring going?" The row
+                                    used to stop at the amount (unlike gift cards + silent-
+                                    contribution rows, which name where the money landed). Show the
+                                    picked stock when there is one, else the managed mix. */}
+                                <span className="truncate text-muted-foreground/75">
+                                  {entry.gift.selectedTicker || `${childName || "the"}'s mix`}
+                                </span>
                               </div>
                               <p className="text-[10px] text-muted-foreground/70 shrink-0 tabular-nums">
                                 {formatDate(entry.createdAt)}

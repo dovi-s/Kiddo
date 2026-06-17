@@ -18,6 +18,8 @@ const { chromium } = require("playwright-core");
     await page.waitForURL(/dashboard/, { timeout: 30000 }).catch(() => {});
     // Let the dashboard + lazy trend chart settle.
     await page.waitForTimeout(8000);
+    // Hero shot (top of page) — verify the projection tilde.
+    await page.screenshot({ path: "artifacts/ui-smoke/hero-projection.png", fullPage: false });
     // Expand the growth section (it's collapsed by default), then settle.
     const growth = page.getByText("Theo's growth", { exact: false }).first();
     await growth.scrollIntoViewIfNeeded({ timeout: 8000 }).catch(() => {});
