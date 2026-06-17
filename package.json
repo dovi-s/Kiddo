@@ -78,6 +78,9 @@
         "test:gifter-identity": "tsx script/test-gifter-identity.ts"
     },
     "dependencies": {
+        "@capacitor/android": "^8.4.0",
+        "@capacitor/core": "^8.4.0",
+        "@capacitor/ios": "^8.4.0",
         "@fontsource-variable/bricolage-grotesque": "^5.2.10",
         "@fontsource-variable/dm-sans": "^5.2.8",
         "@hookform/resolvers": "^3.10.0",
@@ -162,6 +165,7 @@
         "zod-validation-error": "^3.4.0"
     },
     "devDependencies": {
+        "@capacitor/cli": "^8.4.0",
         "@tailwindcss/vite": "^4.1.14",
         "@types/connect-pg-simple": "^7.0.3",
         "@types/express": "4.17.21",

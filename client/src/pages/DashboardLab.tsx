@@ -7764,20 +7764,26 @@ export default function DashboardLab() {
                           // At-majority projection, computed up front so the gate
                           // below can test whether it is genuinely meaningful.
                           const heroAtMajProjection = projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj });
-                          // Near-handoff flatness gate (founder catch 2026-06-09):
-                          // Marcus viewing Nora's fund 30 days from his 21st saw "On
-                          // track for $39,154 when Nora turns 21" — barely above
-                          // today's $38,878, because almost no growth runway is left
-                          // before handoff. A flat at-majority number reads broken,
-                          // so require it to be MEANINGFULLY above today (>10%, the
-                          // same threshold the handoff card's nearMajority flip uses);
-                          // otherwise anchor to the long-horizon "at 65" number, which
-                          // stays honest and non-flat for a near-grown fund.
+                          // Near-handoff flatness gate (founder catches: 2026-06-09
+                          // Nora near-flat; 2026-06-16 Emma). Show the at-majority
+                          // number ONLY when real GROWTH runway makes it compelling —
+                          // not when it's merely inflated by ongoing contributions.
+                          // The old test (at-maj > today * 1.1) was fooled by deposits:
+                          // Emma ($1,967 → $2,401, ~6mo from 18) cleared it on the
+                          // $50/mo recurring alone (+~17%) while actual market growth
+                          // was only ~$84 (~4%), so the hero showed a flat, unexciting
+                          // "$2,401 at 18". Measure the GROWTH portion — the projection
+                          // minus a 0%-return, contributions-only baseline — and require
+                          // it to be meaningful vs today (≥10%); otherwise anchor to the
+                          // long-horizon "at 65" number. (Normal case still leads with
+                          // at-majority, per the design-lab hero decision.)
+                          const noReturnAtMaj = projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj, annualReturnRate: 0, netAumFee: false });
+                          const atMajGrowthPortion = heroAtMajProjection - noReturnAtMaj;
                           const showAtMajority = !Boolean((activeFund as any)?.transferredAt)
                             && !!age18Transition
                             && yrsToMaj > 0.08
                             && totalValue > 0
-                            && heroAtMajProjection > totalValue * 1.1;
+                            && atMajGrowthPortion > totalValue * 0.10;
                           const atMaj = showAtMajority ? heroAtMajProjection : displayHeroProjectedAt65;
                           const heroMajAge = age18Transition?.majorityAge || 18;
                           const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
@@ -11908,7 +11914,14 @@ export default function DashboardLab() {
                     // "0th Birthday." Welcome branch above is the right
                     // fallback for the unborn case; for born-today we just
                     // don't add a 1st-birthday tile a year away.
-                    if (nextAge > 0) {
+                    // Suppress when the next birthday IS the majority/handoff
+                    // birthday: that exact moment is already owned by the handoff
+                    // card ("the day it becomes {child}'s"), so suggesting a birthday
+                    // OCCASION for it is redundant (founder catch 2026-06-16). A
+                    // younger kid's next birthday still suggests normally.
+                    const handoffAge = age18Transition?.majorityAge ?? null;
+                    const nextBirthdayIsHandoff = handoffAge != null && nextAge >= handoffAge;
+                    if (nextAge > 0 && !nextBirthdayIsHandoff) {
                       const daysUntil = Math.ceil((nextBday.getTime() - nowMs) / 86400000);
                       const countdownStr = daysUntil <= 0
                         ? "Today"
@@ -12337,9 +12350,13 @@ export default function DashboardLab() {
                               variants={LAB_TILE_VARIANTS}
                               type="button"
                               onClick={() => { haptic("selection"); setEditEventTarget({ name: sug.prefill.name, eventType: sug.prefill.eventType ?? undefined, eventDate: sug.prefill.eventDate ?? undefined, goalAmount: sug.prefill.goalAmount ?? undefined, eventCategory: sug.prefill.eventCategory ?? undefined }); setCreateEventSheetOpen(true); }}
-                              style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: `1px solid ${theme.accent}33`, overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}
+                              style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: `1.5px dashed ${theme.accent}66`, overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}
                             >
                               <div style={{ flex: 1, background: theme.background, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                                {/* "Suggested" chip — marks the tile as a not-yet-created
+                                    template (dashed border reinforces) so it doesn't read
+                                    as an existing occasion. */}
+                                <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(255,255,255,0.82)", color: "rgba(26,23,16,0.5)", fontSize: 7.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 5px", borderRadius: 999 }}>Suggested</span>
                                 <span style={{ fontSize: 38, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{sug.emoji || theme.emoji}</span>
                               </div>
                               <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
@@ -12407,7 +12424,7 @@ export default function DashboardLab() {
                             style={{
                               width: 140, minWidth: 140, height: 148, flexShrink: 0,
                               borderRadius: 18,
-                              border: `1px solid ${theme.accent}33`,
+                              border: `1.5px dashed ${theme.accent}66`,
                               overflow: "hidden", cursor: "pointer", background: "white",
                               display: "flex", flexDirection: "column",
                               boxShadow: "none",
@@ -12419,6 +12436,10 @@ export default function DashboardLab() {
                                 blue, etc.) gives each suggestion a designed
                                 feel without licensing real photos. */}
                             <div style={{ flex: 1, position: "relative", background: theme.background, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {/* "Suggested" chip — marks this as a not-yet-created
+                                  template (dashed border reinforces) so it doesn't read
+                                  as an existing occasion. */}
+                              <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(255,255,255,0.82)", color: "rgba(26,23,16,0.5)", fontSize: 7.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 5px", borderRadius: 999 }}>Suggested</span>
                               <span style={{ fontSize: 38, lineHeight: 1, userSelect: "none", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{sug.emoji || theme.emoji}</span>
                             </div>
                             {/* Bottom info */}

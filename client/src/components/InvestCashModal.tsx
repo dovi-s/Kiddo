@@ -368,9 +368,13 @@ export function InvestCashModal({
                           <StockLogo ticker={stock.ticker} size={32} className="mb-1.5" />
                           <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
-                          {amountToInvest > 0 && (
+                          {/* Only the SELECTED pick shows the amount, and it's the
+                              ACTION ("goes here"), not "invested" (done) — this was
+                              rendering "$X invested" on all 24 rows, implying $X was
+                              already in each. */}
+                          {isSelected && amountToInvest > 0 && (
                             <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
-                              {formatCurrency(amountToInvest)} invested
+                              {formatCurrency(amountToInvest)} goes here
                             </p>
                           )}
                         </button>

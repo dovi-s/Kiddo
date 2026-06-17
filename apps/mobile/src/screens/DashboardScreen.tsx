@@ -19,6 +19,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { slugify } from "@kora/utils";
 import { KText, KiddoCard, Button, elevate } from "../ui";
+import { areFontsLoaded } from "../ui/native";
+import { fontLoadError } from "../ui/fonts";
 import {
   apiCreateEvent,
   apiCreateMemoryNote,
@@ -73,7 +75,7 @@ import {
 // Bump this whenever you want to confirm the phone picked up a fresh bundle.
 // It prints at the bottom of the Settings tab. If you DON'T see this exact
 // string there, your Expo Go is serving a stale cached build (run mobile:reset).
-const BUILD_TAG = "Jun16-parity-1";
+const BUILD_TAG = "Jun17-fonts-1";
 
 type Tab = "home" | "memory" | "gift" | "growth" | "settings";
 
@@ -630,6 +632,7 @@ function AccountTab({
         style={{ textAlign: "center", color: "#A9AFA6", fontSize: 12, marginTop: spacing.md, marginBottom: 4 }}
       >
         Kiddo native · build {BUILD_TAG}
+        {"\n"}fonts: {areFontsLoaded() ? "loaded ✓" : `FALLBACK ${fontLoadError ?? "…"}`}
       </Text>
 
       <TaxDocsSheet visible={taxOpen} childName={childName} onClose={() => setTaxOpen(false)} />

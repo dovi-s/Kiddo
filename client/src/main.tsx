@@ -219,3 +219,13 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </AppErrorBoundary>,
 );
+
+// PWA service worker — offline shell + push for the installed ("Add to Home
+// Screen") app. PRODUCTION ONLY so it never interferes with Vite HMR in dev.
+// The SW is network-first (see client/public/sw.js), so it never serves stale
+// content while online.
+if (import.meta.env.PROD && typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
