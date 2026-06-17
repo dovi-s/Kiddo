@@ -19,7 +19,7 @@ sell, gift — all reflecting live), without shared-state risk. Written 2026-06-
 
 ## Why client-side (not server forking)
 
-- The demo is a **shared account** (`phil@dunphyfamily.com`). Persisting changes
+- The demo is a **shared account** (`marcus@riverafamily.com`). Persisting changes
   server-side would corrupt the demo for every visitor → needs per-session
   isolation, which server-side means forking demo data per session + cleanup
   workers: heavy.
@@ -56,7 +56,7 @@ serverSeed (read-only)  +  demoOverlay (session deltas)  =  what the UI renders
    "your one-time additions" reflect it.
 3. **Gift in.** A simulated inbound gift writes a delta → appears in gifts +
    Memory Book + "who gave."
-4. **Buy / sell holdings.** Delta on holdings → "What Luke owns" updates. (Most
+4. **Buy / sell holdings.** Delta on holdings → "What Theo owns" updates. (Most
    complex — touches share counts + the reconciled totals; do last.)
 5. **Reset affordance + polish.** Visible reset, edge-cases (reload mid-flow),
    make sure the convert-the-intent toast still fires on top.

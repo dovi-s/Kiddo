@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { slugify } from "@kora/utils";
@@ -25,6 +26,7 @@ import {
   apiUpdateMemoryEntry,
   apiDeleteMemoryEntry,
   apiUploadMemoryPhoto,
+  apiGetActivities,
   apiGetAllEvents,
   apiGetDashboardSummary,
   apiGetFundGifts,
@@ -36,6 +38,7 @@ import {
   apiRegisterMobilePushToken,
   apiUpdateMobilePushPreferences,
   formatBalance,
+  type ApiActivity,
   type ApiEvent,
   type ApiFund,
   type ApiGift,
@@ -66,6 +69,11 @@ import {
   apiRevokeTrustedDevice,
   type TrustedDeviceRow,
 } from "../api";
+
+// Bump this whenever you want to confirm the phone picked up a fresh bundle.
+// It prints at the bottom of the Settings tab. If you DON'T see this exact
+// string there, your Expo Go is serving a stale cached build (run mobile:reset).
+const BUILD_TAG = "Jun16-parity-1";
 
 type Tab = "home" | "memory" | "gift" | "growth" | "settings";
 
@@ -238,6 +246,9 @@ function AccountTab({
   activeFund: ApiFund | null;
   onLogout: () => void;
 }) {
+  // useNavigation resolves the parent native-stack so the Account tab (rendered
+  // deep inside DashboardScreen) can push the Plan screen.
+  const navigation = useNavigation<any>();
   const [loggingOut, setLoggingOut] = useState(false);
   const [taxOpen, setTaxOpen] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -404,6 +415,21 @@ function AccountTab({
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const childName = getChildName(activeFund);
+  const majorityAge = Number((activeFund as any)?.majorityAge) || 18;
+  const transferDate = (() => {
+    if (!activeFund?.recipientBirthdate) return null;
+    const d = new Date(`${activeFund.recipientBirthdate}T12:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setFullYear(d.getFullYear() + majorityAge);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  })();
+  const statusRaw = String(activeFund?.status || "active").toLowerCase();
+  const statusText = statusRaw === "active" ? "Active" : statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
+  const fundDetails: [string, string][] = [
+    ["Account type", String(activeFund?.accountType || "UTMA").toUpperCase()],
+    ["Status", statusText],
+    ...(transferDate ? ([[`Transfers to ${childName}`, transferDate]] as [string, string][]) : []),
+  ];
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -412,7 +438,7 @@ function AccountTab({
       <CoParentSection activeFund={activeFund} />
       <KidViewSection activeFund={activeFund} />
 
-      <Section title={`When ${childName} turns 18`}>
+      <Section title={`When ${childName} turns ${majorityAge}`}>
         <View style={styles.planCard}>
           <Text style={styles.planTitle}>They get full control.</Text>
           <Text style={styles.planBody}>
@@ -421,17 +447,78 @@ function AccountTab({
         </View>
       </Section>
 
+      <Section title="Fund details">
+        <View style={styles.planCard}>
+          {fundDetails.map(([label, value], i) => (
+            <View
+              key={label}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingVertical: 9,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: "#EEE8DD",
+              }}
+            >
+              <Text style={{ color: "#5E675F", fontSize: 14 }}>{label}</Text>
+              <Text
+                style={{
+                  color: label === "Status" && statusRaw === "active" ? "#1A7F47" : colors.ink,
+                  fontSize: 14,
+                  fontWeight: "700",
+                }}
+              >
+                {value}
+              </Text>
+            </View>
+          ))}
+          {(
+            [
+              ["Tax documents", `${WEB_BASE}/tax-documents`],
+              ["Legal & disclosures", `${WEB_BASE}/legal`],
+            ] as [string, string][]
+          ).map(([label, url]) => (
+            <Pressable
+              key={label}
+              onPress={() => Linking.openURL(url).catch(() => {})}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingVertical: 11,
+                borderTopWidth: 1,
+                borderTopColor: "#EEE8DD",
+              }}
+            >
+              <Text style={{ color: colors.evergreen, fontSize: 14, fontWeight: "700" }}>{label}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#8B948C" />
+            </Pressable>
+          ))}
+        </View>
+      </Section>
+
+      <Section title="Account">
+        <View style={styles.planCard}>
+          <Text style={styles.planTitle}>{displayName}</Text>
+          <Text style={styles.planBody}>{user.email}</Text>
+          <Pressable style={styles.primarySmallBtn} onPress={() => navigation.navigate("Profile")}>
+            <Text style={styles.primarySmallBtnText}>Edit profile</Text>
+          </Pressable>
+        </View>
+      </Section>
+
       <Section title="Membership">
         <View style={styles.planCard}>
-          <Text style={styles.planTitle}>Free</Text>
+          <Text style={styles.planTitle}>Kiddo membership</Text>
           <Text style={styles.planBody}>
-            One active occasion. No platform fee on gifts: the full gift goes to the fund. Annual fee: $1/year per $1,000 invested, on invested assets only.
+            See your plan, manage billing, or unlock more with Kiddo+ and Family. No platform fee on gifts: the full gift goes to the fund.
           </Text>
           <Pressable
             style={styles.primarySmallBtn}
-            onPress={() => Linking.openURL(`${WEB_BASE}/pricing`).catch(() => {})}
+            onPress={() => navigation.navigate("Plan", { fundId: activeFund?.id })}
           >
-            <Text style={styles.primarySmallBtnText}>See Kiddo+</Text>
+            <Text style={styles.primarySmallBtnText}>Manage plan</Text>
           </Pressable>
         </View>
       </Section>
@@ -536,6 +623,14 @@ function AccountTab({
       <Pressable onPress={handleLogout} disabled={loggingOut} style={styles.signOutBtn}>
         <Text style={styles.signOutText}>{loggingOut ? "Signing out..." : "Sign out"}</Text>
       </Pressable>
+
+      {/* Build marker — confirms the phone is running the latest bundle (vs a
+          stale Expo Go cache). Bump BUILD_TAG whenever you want a fresh check. */}
+      <Text
+        style={{ textAlign: "center", color: "#A9AFA6", fontSize: 12, marginTop: spacing.md, marginBottom: 4 }}
+      >
+        Kiddo native · build {BUILD_TAG}
+      </Text>
 
       <TaxDocsSheet visible={taxOpen} childName={childName} onClose={() => setTaxOpen(false)} />
     </ScrollView>
@@ -696,6 +791,8 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
   // The Memory Book timeline for the active fund (drives MemoryTab).
   const [memory, setMemory] = useState<MemoryEntry[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
+  // The canonical per-fund activity feed (Activity tab). null = loading.
+  const [activities, setActivities] = useState<ApiActivity[] | null>(null);
 
   const activeFund = useMemo(
     () => (selectedFundId ? funds.find((f) => f.id === selectedFundId) : null) ?? funds[0] ?? null,
@@ -744,14 +841,34 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     }
   }, []);
 
+  // Per-fund activity feed (Activity tab). null = loading; on error we keep
+  // null so the tab shows skeletons (never a false "Nothing yet"), and
+  // pull-to-refresh recovers.
+  const activitiesReqRef = useRef<string | undefined>(undefined);
+  const loadActivities = useCallback(async (fundId: string | undefined) => {
+    activitiesReqRef.current = fundId;
+    if (!fundId) {
+      setActivities([]);
+      return;
+    }
+    try {
+      const next = await apiGetActivities(fundId);
+      if (activitiesReqRef.current === fundId) setActivities(next);
+    } catch {
+      // leave null → skeletons; the connectivity banner + refresh recover.
+    }
+  }, []);
+
   useEffect(() => {
     // Clear stale data immediately on switch so the new fund never shows the
     // previous fund's holdings/gifts/memory for a frame.
     setSummary(null);
     setMemory([]);
+    setActivities(null);
     loadSummary(activeFund?.id);
     loadMemory(activeFund?.id);
-  }, [activeFund?.id, loadSummary, loadMemory]);
+    loadActivities(activeFund?.id);
+  }, [activeFund?.id, loadSummary, loadMemory, loadActivities]);
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -792,6 +909,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     loadDashboard(true);
     loadSummary(activeFund?.id);
     loadMemory(activeFund?.id);
+    loadActivities(activeFund?.id);
   };
 
   const childName = getChildName(activeFund);
@@ -830,21 +948,23 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerKiddo}>Kiddo</Text>
             {activeFund ? (
               <Pressable
                 onPress={() => funds.length > 1 && setFundSwitcherOpen(true)}
                 style={styles.fundSwitcherBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.fundSwitcherName}>{childName}</Text>
-                {funds.length > 1 && (
-                  <Ionicons name="chevron-down" size={14} color={colors.evergreen} style={{ marginTop: 1 }} />
-                )}
+                <Text style={styles.fundSwitcherName}>{childName}'s Fund</Text>
+                <Ionicons name="chevron-down" size={16} color={colors.ink} style={{ marginTop: 2 }} />
               </Pressable>
-            ) : null}
+            ) : (
+              <Text style={styles.headerKiddo}>Kiddo</Text>
+            )}
           </View>
-          <Text style={styles.headerTabLabel}>{headerTitle[tab]}</Text>
+          {/* profile/account icon (web parity, replaces the page-name label) */}
+          <Pressable onPress={() => setTab("settings")} hitSlop={10}>
+            <Ionicons name="person-circle-outline" size={30} color={colors.evergreen} />
+          </Pressable>
         </View>
 
         {/* Fund switcher tabs (multi-fund parents) — mirrors the web's
@@ -853,8 +973,8 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={{ marginTop: 10, marginHorizontal: -2 }}
-            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 2 }}
+            style={{ marginTop: 12, marginHorizontal: -2 }}
+            contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: 2, paddingVertical: 2 }}
           >
             {funds.map((f) => {
               const isActive = f.id === activeFund?.id;
@@ -862,23 +982,20 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
                 <Pressable
                   key={f.id}
                   onPress={() => setSelectedFundId(f.id)}
-                  style={{ paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: isActive ? colors.evergreen : "transparent" }}
+                  style={[tabStyles.fundPill, isActive ? tabStyles.fundPillActive : tabStyles.fundPillIdle]}
                 >
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: isActive ? "900" : "700",
-                      color: isActive ? colors.evergreen : "#8B948C",
-                    }}
-                  >
+                  <Text style={[tabStyles.fundPillText, { color: isActive ? "#F8F5F0" : "#5E675F" }]}>
                     {getChildName(f)}
                   </Text>
                 </Pressable>
               );
             })}
-            <Pressable onPress={onAddFund} style={{ paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Ionicons name="add" size={15} color="#8B948C" />
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#8B948C" }}>Add</Text>
+            <Pressable
+              onPress={onAddFund}
+              style={[tabStyles.fundPill, tabStyles.fundPillIdle, { flexDirection: "row", gap: 3 }]}
+            >
+              <Ionicons name="add" size={15} color="#5E675F" />
+              <Text style={[tabStyles.fundPillText, { color: "#5E675F" }]}>Add</Text>
             </Pressable>
           </ScrollView>
         ) : null}
@@ -898,6 +1015,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           onSelectFund={onSelectFund}
           onAddFund={onAddFund}
           onCreateEvent={() => setCreatingEvent(true)}
+          isDemoAccount={user.isDemoAccount}
         />
       )}
       {tab === "memory" && (
@@ -961,6 +1079,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
         <ActivityTab
           activeFund={activeFund}
           summary={summary}
+          activities={activities}
           loading={loading || summaryLoading}
           refreshing={refreshing}
           onRefresh={handleRefresh}
@@ -1105,6 +1224,11 @@ const switcher = StyleSheet.create({
 });
 
 const tabStyles = StyleSheet.create({
+  // Fund switcher pills (web parity: filled active / outline idle, not underline).
+  fundPill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  fundPillActive: { backgroundColor: colors.evergreen },
+  fundPillIdle: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: "#E5DDD4" },
+  fundPillText: { fontSize: 14, fontWeight: "700" },
   bar: {
     flexDirection: "row",
     backgroundColor: semanticColors.surface.card,
@@ -1150,11 +1274,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: semanticColors.surface.muted,
   },
-  headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { gap: 1 },
   headerKiddo: { color: colors.evergreen, fontSize: 12, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" },
   fundSwitcherBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  fundSwitcherName: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 26 },
+  fundSwitcherName: { color: colors.ink, fontSize: 17, fontWeight: "800", lineHeight: 22 },
   headerTabLabel: { color: "#8B948C", fontSize: 13, fontWeight: "700" },
 
   // Back nav

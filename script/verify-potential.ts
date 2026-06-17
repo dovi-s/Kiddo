@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 // Render the Potential page (Projection.tsx) after the count-up + dot-glide +
 // desktop two-column work, so the founder (and a blind builder) can SEE it.
-// Logs in as the demo parent, resolves Luke's fund, then shoots:
+// Logs in as the demo parent, resolves Theo's fund, then shoots:
 //   desktop two-column at the default age + after sliding to another milestone
 //   (to confirm the target dot + labels moved, i.e. the glide endpoint), and
 //   the mobile single-column stack. Also shoots the loading skeleton by
@@ -20,17 +20,17 @@ async function main() {
   // Warm the dev server (first hit can trigger a slow Vite dep-optimize).
   await context.request.get(`${baseUrl}/api/health`, { timeout: 120000 }).catch(() => {});
   const loginRes = await context.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" },
+    data: { email: "marcus@riverafamily.com", password: "riverafamily" },
     timeout: 120000,
   });
   console.log(`login HTTP ${loginRes.status()} — ${(await loginRes.text()).slice(0, 120)}`);
 
-  // Resolve Luke's fund id from the API (the page route is /projection/:fundId).
+  // Resolve Theo's fund id from the API (the page route is /projection/:fundId).
   const fundsRes = await context.request.get(`${baseUrl}/api/funds`, { timeout: 120000 });
   const raw = await fundsRes.json();
   const funds: any[] = Array.isArray(raw) ? raw : (raw?.funds || raw?.data || raw?.items || []);
   if (!funds.length) console.log("funds payload keys:", Object.keys(raw || {}));
-  // Pick the fund by name (arg, default Alex — the near-handoff kid where the
+  // Pick the fund by name (arg, default Nora — the near-handoff kid where the
   // contribution cap matters most; pass "luke" for the long-horizon case).
   const want = process.argv[2] || "alex";
   const target = funds.find((f) => new RegExp(want, "i").test(f?.recipientFirstName || f?.name || "")) || funds[0];

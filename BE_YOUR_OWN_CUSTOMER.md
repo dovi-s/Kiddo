@@ -34,13 +34,13 @@ Run after any change to a conversion surface, and ~2x/week regardless.
 
 1. **Reseed the demo to a known-good state.**
    `npm run reset:dunphys` then `npm run seed:dunphys`
-   The Dunphy demo *is* the conversion surface — Cam's photo, the seeded 17-year
+   The Rivera demo *is* the conversion surface — Cam's photo, the seeded 17-year
    curve, the graduated kid's fund all live here.
 
 2. **Run the reel — it walks the real funnel and dumps clean screenshots.**
    `npm run founder:reel`
    Output lands in `artifacts/founder-reel/`, named in funnel order. It logs in as
-   the demo parent (Phil), pulls his fund ids/slugs from the live API (so it
+   the demo parent (Marcus), pulls his fund ids/slugs from the live API (so it
    survives a reseed), and waits for loading skeletons to clear before each shot
    so you see *real content, not a loading-pulse.* A surface that errors leaves a
    `*-MISSING.png` and the reel keeps going.
@@ -55,7 +55,7 @@ Run after any change to a conversion surface, and ~2x/week regardless.
    them as the gifter and the parent, not as a test report:
    - `01-home` — is the first five seconds a *wow,* or a value-prop paragraph?
    - `02-pricing` — honest and simple, or a wall?
-   - `03-gift-link` (+ `-mobile`) — the gifter moment. Does Luke's page feel like
+   - `03-gift-link` (+ `-mobile`) — the gifter moment. Does Theo's page feel like
      a gift (hero, the roster of who's given, the projection), or a form?
    - `04-dashboard` (+ `-mobile`) — the parent's count-up, the "while you were
      away" digest, the faces. Honest, warm, alive?

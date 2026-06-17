@@ -140,7 +140,7 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // an empty list and gets redirected to /get-started — even
       // though every per-fund endpoint (gated by requireOwnedFundParam)
       // would happily grant them access. Locked 2026-05-21 after the
-      // Dunphy demo's Claire account exposed this gap end-to-end.
+      // Rivera demo's Elena account exposed this gap end-to-end.
       try {
         // collaboratorRows is fetched in the batched Promise.all above.
         const roleByFundId = new Map(
@@ -159,7 +159,7 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
           // Tag with the collaborator's REAL role ('co-admin' | 'viewer'),
           // matching what requireOwnedFundParam derives per-request. The old
           // generic accessRole='collaborator' tag broke role gating in BOTH
-          // directions (found 2026-06-04 via the demo's Claire): client
+          // directions (found 2026-06-04 via the demo's Elena): client
           // checks for === 'co-admin' failed, so a co-admin was shown the
           // owner-only co-parent invite card + Kiddo+ upsell ("Primary
           // custodian · Full control" on someone else's fund), while
@@ -325,7 +325,7 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // preserve any role already stamped above. The transferred-only push
       // (line ~173) tags handed-off funds 'previous_owner'; a blanket 'owner'
       // map clobbered that tag, so a parent viewing a fund they handed off
-      // (Phil → Haley's transferred fund) resolved to accessRole='owner' +
+      // (Marcus → Mia's transferred fund) resolved to accessRole='owner' +
       // transferredAt = isOwnerMode, and saw the now-adult's second-person
       // self-view ("your future / who loves you / Start one for someone you
       // love") instead of the read-only previous-owner view. Only entries with

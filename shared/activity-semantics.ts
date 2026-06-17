@@ -126,7 +126,7 @@ export const MILESTONE_TYPES = [
   "majority_state_updated",
   // Co-parent / collaborator relationship events. Were audit-logged only (never
   // surfaced in the feed) until 2026-06-07 — a parent's Activity never showed
-  // "Claire joined as a co-parent." Now first-class fund events.
+  // "Elena joined as a co-parent." Now first-class fund events.
   "collaborator_invited", "collaborator_accepted", "collaborator_role_changed", "collaborator_removed",
 ];
 

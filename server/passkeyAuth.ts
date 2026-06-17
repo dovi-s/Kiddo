@@ -259,19 +259,28 @@ export function registerPasskeyRoutes(
 
       session.passkeyChallenge = undefined;
 
-      req.login(user as any, (err) => {
-        if (err) {
-          console.error("Passkey login error:", err);
+      // Regenerate the session BEFORE req.login — prevents session fixation
+      // (a pre-planted session id surviving authentication), matching the
+      // password / OAuth / magic-link / 2FA flows. Security audit 2026-06-15.
+      req.session.regenerate((regenErr: any) => {
+        if (regenErr) {
+          console.error("Passkey session regenerate error:", regenErr);
           return res.status(500).json({ error: "Could not establish session" });
         }
-        res.json({
-          success: true,
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-          },
+        req.login(user as any, (err) => {
+          if (err) {
+            console.error("Passkey login error:", err);
+            return res.status(500).json({ error: "Could not establish session" });
+          }
+          res.json({
+            success: true,
+            user: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+            },
+          });
         });
       });
     } catch (error) {

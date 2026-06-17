@@ -28,7 +28,7 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useActivities, useFundActivities } from "@/hooks/use-activities";
-import { markNotificationsRead, getLastReadAt } from "@/components/NotificationsPanel";
+import { markNotificationsRead, getLastReadAt, isBellNoise, isRepresentedByActionItem } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -2531,7 +2531,18 @@ export default function Activity() {
                   // "New since you last looked" marker. Only when there is a real
                   // prior-read reference (seenBeforeArrival > 0); a first-ever
                   // visitor has no "since," so nothing is falsely flagged new.
-                  const isNewSinceLastVisit = seenBeforeArrival > 0 && createdAt != null && createdAt.getTime() > seenBeforeArrival && !dismissedNewIds.has(rowId);
+                  // Apply the SAME noise filter the Activity-tab badge uses
+                  // (isBellNoise + isRepresentedByActionItem) so the count of
+                  // "New" tags equals the badge number. Without it, your OWN
+                  // actions ("You contributed" = parent_contribution) got a New
+                  // tag yet were excluded from the badge — "feed shows 2 New,
+                  // badge says 1." Internal-only / lifecycle rows already don't
+                  // render here, so they're covered. 2026-06-16.
+                  const isNewSinceLastVisit = seenBeforeArrival > 0 && createdAt != null
+                    && createdAt.getTime() > seenBeforeArrival
+                    && !dismissedNewIds.has(rowId)
+                    && !isBellNoise(rawType)
+                    && !isRepresentedByActionItem(rawType);
 
                   // Effective title + description — use the parent-contrib
                   // copy when the override fires; otherwise the row's own.

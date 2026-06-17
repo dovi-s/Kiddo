@@ -1,6 +1,7 @@
 import { Link, useParams } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Scale, ShieldAlert } from "lucide-react";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,7 @@ const comparisonCards: ComparisonCard[] = [
   {
     slug: "earlybird",
     title: "EarlyBird vs Kiddo",
-    teaser: "EarlyBird was acquired by Acorns and rolled into Acorns Early. Here is how Kiddo compares and what to do next.",
+    teaser: "EarlyBird was acquired by Acorns and rolled into Acorns Early. How Kiddo compares, and what to do next.",
     href: "/compare/earlybird",
   },
   {
@@ -167,12 +168,12 @@ const comparisonPages: Record<string, ComparisonPage> = {
     slug: "acorns-early",
     metaTitle: "Acorns Early vs Kiddo | Micro-investing vs investment gifting",
     metaDescription:
-      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does investment gifting. Here is how they compare.",
+      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does investment gifting. The two work very differently.",
     heroTitle: "Acorns made micro-investing famous. Kiddo is for the birthday money that actually moves the needle.",
     heroBody: [
       "Acorns created micro-investing. Genuinely category-defining. Every coffee, every Uber, every grocery run quietly building a portfolio in the background. That is elegant.",
-      "But here is the honest math: the average round-up is about $0.50. At 30 transactions a month, that is $15 of micro-investment. At 7% annual returns over 18 years, you are looking at roughly $6,500. That is a nice bonus. Not a head start.",
-      "Kiddo is a different category entirely. Not micro-investing. Investment gifting. The $75 grandma gives at every birthday. The $100 from uncle Joe at Christmas. The $50 from a friend who followed a link in a text message. All of it compounding together for 18 years.",
+      "The honest math: the average round-up is about $0.50. At 30 transactions a month, that is $15 of micro-investment. At a hypothetical 7% over 18 years (not guaranteed), that is roughly $6,500: a nice bonus, not a head start.",
+      "Kiddo is a different category entirely: investment gifting. The $75 grandma gives at every birthday. The $100 from uncle Joe at Christmas. The $50 from a friend who followed a link in a text message. All of it compounding together for 18 years.",
     ],
     ctaLabel: "Start your child's fund",
     heroNote: "Free to start. Takes 2 minutes. Investing involves risk.",
@@ -196,23 +197,23 @@ const comparisonPages: Record<string, ComparisonPage> = {
         title: "Acorns created a real category",
         body: [
           "Micro-investing is a genuine innovation. Acorns built a $2B+ company on the insight that friction is the enemy of saving. Remove the friction, the saving happens. That is true.",
-          "If you already use Acorns and want a custodial account inside that same ecosystem, Acorns Early is a coherent choice. No dishonesty here.",
+          "If you already use Acorns and want a custodial account inside that same ecosystem, Acorns Early is a coherent choice.",
         ],
       },
       {
         title: "The math tells the story",
         body: [
-          "Acorns model: $15/month in round-ups at 7% for 18 years is roughly $6,500. Real money. Not life-changing money.",
-          "Kiddo model: eight people who love your child each gifting $50 to $100 per year is $400 to $800 annually. At 7% over 18 years, that is $14,000 to $28,000. And that is conservative. That is a real head start.",
-          "The difference is not the product. It is the model. One person saving versus a whole community investing.",
+          "Acorns model: $15/month in round-ups at a hypothetical 7% for 18 years is roughly $6,500: real money, not life-changing money.",
+          "Kiddo model: eight people who love your child each gifting $50 to $100 per year is $400 to $800 annually. At a hypothetical 7% over 18 years (not guaranteed), that is $14,000 to $28,000: a real head start.",
+          "The difference is the model: one person saving versus a whole community investing.",
         ],
       },
       {
         title: "Investment gifting is a new category",
         body: [
-          "Acorns = one person investing for themselves. Kiddo = a community investing in a child. Those are different jobs. Different emotional experiences. Different outcomes.",
-          "Nobody had built the category for investing in someone else until now. For the child. For the 18-year relationship. For the birthday and the Christmas and the baby shower that already exist in family life.",
-          "That is what Kiddo is. Gifts that actually last.",
+          "Acorns is one person investing for themselves, while Kiddo is a whole community investing in a child. Those are different jobs, with different outcomes.",
+          "Kiddo was built for a category nobody had: investing in someone else, around the birthdays and holidays already in family life.",
+          "That is what Kiddo is: gifts that actually last.",
         ],
       },
     ],
@@ -262,7 +263,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       {
         title: "The gifting gap",
         body: [
-          "Greenlight does not give your family a no-account-required link they can use in under 60 seconds to invest for your child.",
+          "Greenlight does not give your family a no-account-required link they can use in seconds to invest for your child.",
           "Kiddo was built around that exact experience. Grandma taps a link, pays, and the gift goes to work.",
         ],
       },
@@ -447,7 +448,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Annual fee on invested assets", competitor: "None on the UTMA itself. ETF expense ratios apply.", kora: "$1/year per $1,000 invested, all plans (about $10/yr on a $10,000 fund). ETF expense ratios still apply on top." },
       { label: "Account opening time", competitor: "About 20 to 30 minutes including KYC", kora: "About 5 minutes. KYC handled in flow." },
       { label: "Investment universe", competitor: "Full ETFs, mutual funds, individual stocks", kora: "Curated age-appropriate mixes plus custom ticker selection" },
-      { label: "Shareable gifting link", competitor: "None. Brokerages don't do gifting flow.", kora: "Yes. Family opens, picks an amount, pays in under a minute." },
+      { label: "Shareable gifting link", competitor: "None. Brokerages don't do gifting flow.", kora: "Yes. Family opens, picks an amount, pays in seconds." },
       { label: "No-account-needed gifting", competitor: "No. Gifts arrive as a transfer the parent has to wire in.", kora: "Yes. Gifters never sign up." },
       { label: "Occasion pages for birthdays and milestones", competitor: "None", kora: "Custom occasion pages with QR codes" },
       { label: "Memory Book of every gift", competitor: "Statement only", kora: "Every gift, every note, photo, video, voice memory" },
@@ -461,7 +462,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
         title: "What Fidelity does well",
         body: [
           "If your only job is to hold investments for a child until they turn 18, Fidelity is excellent. The fees are competitive, the investment universe is wide, and the brand is established. Many families already have a Fidelity relationship for their own retirement and 529 accounts, and adding a custodial UTMA there is a one-form decision.",
-          "What Fidelity does NOT do is the part most families struggle with: the actual ritual of giving. There's no shareable link. There's no occasion page for the baby shower. There's no clean way for grandma to gift from across the country in under a minute without a paper check. Brokerages were built for self-directed investors, not for the family-and-friends gifting layer that builds a kid's fund over 18 years.",
+          "What Fidelity does NOT do is the part most families struggle with: the actual ritual of giving. There's no shareable link. There's no occasion page for the baby shower. There's no clean way for grandma to gift from across the country in seconds without a paper check. Brokerages were built for self-directed investors, not for the family-and-friends gifting layer that builds a kid's fund over 18 years.",
         ],
       },
       {
@@ -517,7 +518,7 @@ const fullComparisonRows: FullComparisonRow[] = [
   },
   {
     feature: "Shareable gift link",
-    kiddo: "Yes, anyone can give in under a minute",
+    kiddo: "Yes, anyone can give in seconds",
     earlybird: "Yes (product no longer active)",
     // Fact-checked 2026-06-07 against Acorns' own help center: Early Gifts /
     // Giftlinks DOES exist (per-child link, amount + a message). Previously
@@ -839,6 +840,29 @@ function ComparisonHub() {
         </div>
       </section>
 
+      {/* The differentiator brokerages structurally lack: a place for the gifter */}
+      <section className="pb-16 md:pb-20">
+        <div className="mx-auto max-w-5xl px-4">
+          <FadeIn className="grid items-center gap-8 rounded-3xl border border-border bg-card p-8 shadow-premium-sm md:grid-cols-2 md:p-10">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">The difference</p>
+              <h2 className="mt-3 font-heading text-2xl font-semibold text-foreground md:text-3xl">A place for the people who give.</h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                Most accounts are built for one self-directed investor. Kiddo is built around everyone who shows up for a child, each with their own view of what they gave and how it has grown since.
+              </p>
+            </div>
+            <ProductFrame
+              src="/product/mygifts.webp"
+              alt="The gifter's view: every child they've gifted to, the total given, and how each gift kept growing."
+              caption="The gifter's own view."
+              tilt="right"
+              href="/demo"
+              liveLabel="See it live"
+            />
+          </FadeIn>
+        </div>
+      </section>
+
       {/* The math section */}
       <section className="pb-16 md:pb-20">
         <div className="mx-auto max-w-5xl px-4">
@@ -868,7 +892,7 @@ function ComparisonHub() {
                   <span className="text-lg font-bold text-foreground">~$6,500</span>
                 </div>
               </div>
-              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Real money. Not a head start. Not the story you want to tell your child when they turn 18.</p>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Real money, but not a head start, and not the story you want to tell your child at 18.</p>
             </div>
 
             <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-premium-sm">
@@ -896,7 +920,7 @@ function ComparisonHub() {
                   <span className="text-lg font-bold text-primary">~$17,000+</span>
                 </div>
               </div>
-              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">And that is conservative. One child. A small circle. No viral loop. Add the people who love your child, and the number grows with them.</p>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">And this is conservative: one child, a small circle, no viral loop. Add the people who love your child, and the number grows with them.</p>
             </div>
           </FadeIn>
           <FadeIn delay={0.1}>
@@ -1002,7 +1026,7 @@ function ComparisonHub() {
               Gifts that grow into real money.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. It's invested in real stock, given as a gift, with no account for her to open. That last bit is the part nobody else has actually built.
+              The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. Once investing is live, it gets invested in real stock, given as a gift, with no account for her to open. That last bit is the part nobody else has actually built.
             </p>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
               No account needed to give. No gift card to redeem. No app to download. Just a link and a gift that grows.

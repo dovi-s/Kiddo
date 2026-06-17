@@ -89,7 +89,7 @@ No text baked in (copy lives in the message). No Sparkles.
 - Delete the stale-name leftovers: `client/public/kado-og-image.png` and
   `client/public/kora-og-image.png` (the live one is `kiddo-og-image.png`).
 - Rebuild the OG image to lead with the recognition assets: the gift moment (a
-  "Gloria added $75 to Haley's future" card) plus the sprout glyph, on cream, with
+  "Sofia added $75 to Mia's future" card) plus the sprout glyph, on cream, with
   the evergreen wordmark. It should be screenshot-of-the-product honest, not stock.
 
 ## Asset 5 — the app-icon set decision (founder picks one)

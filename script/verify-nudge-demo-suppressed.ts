@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 // Verify the smart-nudge no longer fires on the demo (commit 85f770f).
-// Loads Phil's Luke dashboard and waits past the 8s nudge timer, asserting
+// Loads Marcus's Theo dashboard and waits past the 8s nudge timer, asserting
 // no "Adjust recurring" toast appears. One-off; assumes dev server on :5000 +
-// Dunphy seed. (A negative test by nature — the demo's isDemoAccount gate
+// Rivera seed. (A negative test by nature — the demo's isDemoAccount gate
 // should suppress the nudge entirely; before the fix it fired up to 3x.)
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -16,14 +16,14 @@ async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" },
+    data: { email: "marcus@riverafamily.com", password: "riverafamily" },
   });
-  // Find Luke's fund.
+  // Find Theo's fund.
   const fundsRes = await context.request.get(`${baseUrl}/api/funds`);
   const fundsJson: any = await fundsRes.json().catch(() => ({}));
   const list: any[] = Array.isArray(fundsJson) ? fundsJson : fundsJson?.funds || [];
   const luke = list.find((f) => /luke/i.test(String(f.recipientFirstName || f.name || "")));
-  if (!luke) throw new Error(`Luke's fund not found (${list.length} funds)`);
+  if (!luke) throw new Error(`Theo's fund not found (${list.length} funds)`);
 
   const page = await context.newPage();
   await page.goto(`${baseUrl}/dashboard?fund=${luke.id}`, { waitUntil: "domcontentloaded", timeout: 30000 });

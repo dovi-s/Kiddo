@@ -218,7 +218,11 @@ const BELL_EXCLUDED_TYPES = new Set<string>([
   "bank_unlinked",
   "ssn_provided",
 ]);
-function isBellNoise(type?: string | null): boolean {
+// Exported so the Activity feed's "New since last visit" tag can apply the SAME
+// noise filter the tab badge uses — otherwise the count of "New" rows (which
+// included your own actions like "You contributed") didn't match the badge
+// number (which excludes them). 2026-06-16.
+export function isBellNoise(type?: string | null): boolean {
   const t = String(type || "");
   // Engagement nudges (lifecycle_no_gift_14d, lifecycle_share_no_checkout_48h,
   // lifecycle_event_*, lifecycle_first_gift_received, …) are internal growth
@@ -257,7 +261,7 @@ const ACTION_ITEM_REPRESENTED_TYPES = new Set<string>([
   // is doing the work.
   "age18_handoff_ready",
 ]);
-function isRepresentedByActionItem(type?: string | null): boolean {
+export function isRepresentedByActionItem(type?: string | null): boolean {
   return ACTION_ITEM_REPRESENTED_TYPES.has(String(type || ""));
 }
 
@@ -1886,6 +1890,15 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
       // visit (markNotificationsRead clears unreadIds too).
       const idStr = String(a.id);
       if (unreadIds.has(idStr)) return true;
+      // No read reference yet (lastReadAt === 0): mirror the Activity feed's
+      // `seenBeforeArrival > 0` guard (Activity.tsx). With no "new since" anchor,
+      // nothing is naturally new — only explicit swipe-unread (above) counts.
+      // Without this, an unseeded read-state counted the whole worn backlog as
+      // unread → the badge read "9+" while the feed (guarding on
+      // seenBeforeArrival > 0) marked nothing new: the "9+ but nothing's new"
+      // divergence — e.g. the demo before DemoGiftMoment's read-state seed lands,
+      // or a real user whose localStorage was cleared. 2026-06-15.
+      if (lastReadAt === 0) return false;
       if (new Date(a.createdAt!).getTime() <= lastReadAt) return false;
       if (readIds.has(idStr)) return false;
       return true;
@@ -1922,18 +1935,19 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  // Fund-scope the feed on a fund page so the badge counts THIS fund's own
-  // 40-row window, not a global 40 shared across every fund then narrowed.
-  // On a busy multi-fund account the shared window let other funds' rows
-  // crowd out the active fund's, so the bell under-reported (e.g. read "6"
-  // while the fund-scoped Activity-tab dot correctly read "9+"). Mirrors
-  // useScopedNotifActivities' query scoping so all four surfaces agree.
-  const scopedFundId = scope === "active" ? (activeFundId || null) : null;
-  const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated, scopedFundId);
-  const activities = useMemo(
-    () => dedupeGiftPairs(activitiesRaw as Activity[]),
-    [activitiesRaw],
-  );
+  // Source the feed through the SAME hook the Activity-tab dot uses, which is
+  // what the useScopedNotifActivities doc-block already promised ("Bell badge +
+  // mobile activity-tab dot use this hook") but the bell had drifted away from.
+  // For a normal fund this is the identical fund-scoped /api/me 40-row window the
+  // bell read before (non-owner behavior is byte-for-byte unchanged), so the bell
+  // and the dot now compute from one source and cannot diverge by feed. It ALSO
+  // adds the owner-mode branch: a fund transferred TO this viewer at majority
+  // reads the FUND ledger (/api/funds/:id/activities), because the viewer's
+  // /api/me feed returns nothing for a fund whose history lives under the previous
+  // owner's userId. Before this, the bell badge under-counted to ~0 on a
+  // post-handoff owner's own fund while the dot read correctly. dedupe is applied
+  // inside the hook.
+  const activities = useScopedNotifActivities(scope, activeFundId, isAuthenticated);
 
   // Cross-fund realtime nudge. The activities query (and the fund list)
   // both contribute to the bell badge — on any new gift across any of
@@ -2002,6 +2016,15 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
       if (scope === "active" && (!activeFundId || a.fundId !== activeFundId)) return false;
       const idStr = String(a.id);
       if (unreadIds.has(idStr)) return true;
+      // No read reference yet (lastReadAt === 0): mirror the Activity feed's
+      // `seenBeforeArrival > 0` guard (Activity.tsx). With no "new since" anchor,
+      // nothing is naturally new — only explicit swipe-unread (above) counts.
+      // Without this, an unseeded read-state counted the whole worn backlog as
+      // unread → the badge read "9+" while the feed (guarding on
+      // seenBeforeArrival > 0) marked nothing new: the "9+ but nothing's new"
+      // divergence — e.g. the demo before DemoGiftMoment's read-state seed lands,
+      // or a real user whose localStorage was cleared. 2026-06-15.
+      if (lastReadAt === 0) return false;
       if (new Date(a.createdAt!).getTime() <= lastReadAt) return false;
       if (readIds.has(idStr)) return false;
       return true;

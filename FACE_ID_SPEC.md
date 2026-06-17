@@ -210,7 +210,7 @@ Deferred from MVP because:
 | User cancels the Face ID prompt | Stays on LockScreen with "Try again" button. Sign-out remains visible. |
 | App is opened by a deep link (gift URL, notification) while locked | Lock takes precedence. After unlock, the deep-link destination is preserved via `targetScreen` and opens automatically. |
 | User on a device without biometric (older iPad, etc.) | Toggle in Settings shows "Set up Face ID on this device first" and tap is a no-op with toast. The user can still log in via email/password — that path is unchanged. |
-| Demo accounts (Dunphys) | Demo accounts have biometric off by default. Demo visitors can enable it on their personal device and it'll work normally. Per the demo-loop locked pattern, this is fine. |
+| Demo accounts (Riveras) | Demo accounts have biometric off by default. Demo visitors can enable it on their personal device and it'll work normally. Per the demo-loop locked pattern, this is fine. |
 
 ---
 

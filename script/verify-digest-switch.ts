@@ -3,8 +3,8 @@
 // appear on the landing fund, appear again when you switch to another kid, and
 // REAPPEAR when you switch back (per-fund, persist-until-dismissed — same model
 // as the co-parent banner). Regression target: the reveal latch could strand
-// hidden when a roll armed but never started, so a fund showed no digest (Alex)
-// or lost it on switch-back (Luke). The HERO_REVEAL_SAFETY_NET guarantees it.
+// hidden when a roll armed but never started, so a fund showed no digest (Nora)
+// or lost it on switch-back (Theo). The HERO_REVEAL_SAFETY_NET guarantees it.
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -50,7 +50,7 @@ async function main() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1100 } });
   await ctx.request.get(`${baseUrl}/api/health`, { timeout: 120000 }).catch(() => {});
   const login = await ctx.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "claire@dunphyfamily.com", password: "dunphyfamily" }, timeout: 120000,
+    data: { email: "elena@riverafamily.com", password: "riverafamily" }, timeout: 120000,
   });
   console.log(`login HTTP ${login.status()}`);
   if (login.status() !== 200) { console.log("rate-limited — stopping"); await browser.close(); return; }
@@ -71,33 +71,33 @@ async function main() {
   await page.waitForSelector(DIGEST, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(500);
 
-  // Land on Luke explicitly via ?fund= so the first paint is deterministic.
+  // Land on Theo explicitly via ?fund= so the first paint is deterministic.
   await page.goto(`${baseUrl}/design-lab?fund=${luke.id}`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await page.waitForTimeout(800);
 
-  console.log("\n1) LAND on Luke:");
-  const land = await waitForDigest(page, "Luke land");
+  console.log("\n1) LAND on Theo:");
+  const land = await waitForDigest(page, "Theo land");
   await page.screenshot({ path: path.join(outDir, "1-luke-land.png") });
 
-  console.log("\n2) SWITCH to Alex:");
-  await switchToFund(page, alex.id, "Alex");
-  const alexShow = await waitForDigest(page, "Alex");
+  console.log("\n2) SWITCH to Nora:");
+  await switchToFund(page, alex.id, "Nora");
+  const alexShow = await waitForDigest(page, "Nora");
   await page.screenshot({ path: path.join(outDir, "2-alex.png") });
 
-  console.log("\n3) SWITCH BACK to Luke:");
-  await switchToFund(page, luke.id, "Luke");
-  const lukeBack = await waitForDigest(page, "Luke back");
+  console.log("\n3) SWITCH BACK to Theo:");
+  await switchToFund(page, luke.id, "Theo");
+  const lukeBack = await waitForDigest(page, "Theo back");
   await page.screenshot({ path: path.join(outDir, "3-luke-back.png") });
 
   // --- Dead-zone fix: dismissing the co-parent banner must release the digest.
-  // On Alex the co-parent celebration shows and the digest yields (correct).
+  // On Nora the co-parent celebration shows and the digest yields (correct).
   // But dismiss persists only in localStorage while the server signal lives 30d,
   // so the digest must yield only WHILE the banner shows — once dismissed, the
   // recap returns instead of leaving a "neither card" dead zone.
   const COPARENT = '[data-testid="coparent-accepted-banner"]';
   const COPARENT_X = '[data-testid="coparent-accepted-dismiss"]';
-  console.log("\n4) On Alex: co-parent banner present, digest yields:");
-  await switchToFund(page, alex.id, "Alex");
+  console.log("\n4) On Nora: co-parent banner present, digest yields:");
+  await switchToFund(page, alex.id, "Nora");
   await page.waitForSelector(COPARENT, { timeout: 16000 }).catch(() => {});
   const coparentShown = await page.locator(COPARENT).first().isVisible().catch(() => false);
   const digestYielded = !(await page.locator(DIGEST).first().isVisible().catch(() => false));
@@ -105,12 +105,12 @@ async function main() {
 
   let digestAfterDismiss: number | null = null;
   if (coparentShown) {
-    console.log("5) Dismiss the co-parent banner, reload Alex:");
+    console.log("5) Dismiss the co-parent banner, reload Nora:");
     await page.locator(COPARENT_X).first().click().catch(() => {});
     await page.waitForTimeout(900); // let the collapse finish so dismiss persists (onExitComplete)
     await page.goto(`${baseUrl}/design-lab?fund=${alex.id}`, { waitUntil: "domcontentloaded", timeout: 120000 });
     await page.waitForTimeout(800);
-    digestAfterDismiss = await waitForDigest(page, "Alex after dismiss");
+    digestAfterDismiss = await waitForDigest(page, "Nora after dismiss");
     await page.screenshot({ path: path.join(outDir, "4-alex-after-dismiss.png") });
   }
 
@@ -118,9 +118,9 @@ async function main() {
   const switchOk = land != null && lukeBack != null;
   const yieldOk = coparentShown && digestYielded;
   const deadZoneClosed = digestAfterDismiss != null;
-  console.log(`Luke land:                 ${land != null ? `OK (${land}ms)` : "FAIL"}`);
-  console.log(`Luke return (switch-back): ${lukeBack != null ? `OK (${lukeBack}ms)` : "FAIL"}`);
-  console.log(`Alex yields to co-parent:  ${yieldOk ? "OK" : "FAIL"}`);
+  console.log(`Theo land:                 ${land != null ? `OK (${land}ms)` : "FAIL"}`);
+  console.log(`Theo return (switch-back): ${lukeBack != null ? `OK (${lukeBack}ms)` : "FAIL"}`);
+  console.log(`Nora yields to co-parent:  ${yieldOk ? "OK" : "FAIL"}`);
   console.log(`Digest returns post-dismiss: ${deadZoneClosed ? `OK (${digestAfterDismiss}ms)` : "FAIL — DEAD ZONE"}`);
   const pass = switchOk && yieldOk && deadZoneClosed;
   console.log(pass

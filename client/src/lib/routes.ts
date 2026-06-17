@@ -22,7 +22,7 @@ export function normalizePath(path: string): string {
 // Public, unauthenticated marketing surfaces. These render their own
 // Nav + Footer chrome (no app sidebar / mobile nav) and never show the
 // demo banner. /demo is included: it is the marketing landing page for
-// the Dunphy demo (the actual demo *experience* after login is the
+// the Rivera demo (the actual demo *experience* after login is the
 // app, not this page).
 export function isMarketingRoute(path: string): boolean {
   const pathname = normalizePath(path);
@@ -72,7 +72,7 @@ export function isMarketingRoute(path: string): boolean {
 
 // Authenticated app surfaces — the pages where a signed-in user is
 // actually operating on fund data (theirs or, in the demo, the seeded
-// Dunphy data). This is an ALLOWLIST on purpose: the demo banner shows
+// Rivera data). This is an ALLOWLIST on purpose: the demo banner shows
 // ONLY here. Any route not listed (marketing, /login, /get-started,
 // claim / transfer / invite flows, public gift checkout, password
 // reset, email verify, magic-link landing, etc.) is a public /

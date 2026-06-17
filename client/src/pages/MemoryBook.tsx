@@ -182,7 +182,7 @@ interface MemoryEntry {
     senderEmail?: string | null;
     // Resolved from the sender's user record (server join on senderEmail).
     // Lets the Memory Book label each contributor by THEIR own relationship
-    // ("Phil Dunphy (Dad)") + show their face. Auth endpoint only.
+    // ("Marcus Rivera (Dad)") + show their face. Auth endpoint only.
     gifterAvatarUrl?: string | null;
     gifterPreferredName?: string | null;
     amount: string;
@@ -434,14 +434,14 @@ function deriveMemoryHeaderStats(
     return false;
   };
   // Count every contribution honestly so the Memory Book reconciles with the
-  // Dashboard, the source of truth (Luke = 82 gifts / $9,275). A contribution
+  // Dashboard, the source of truth (Theo = 82 gifts / $9,275). A contribution
   // is a gift_message OR the first-cycle parent_note that carries a recurring
   // auto-invest gift (parentContributionId): the server stores cycle #1 as a
   // note and backfills cycles #2..N as gift entries, so counting only
   // gift_message dropped that one $75 cycle (the "$2,625 vs $2,700 / 35 vs 36"
   // bug). We also no longer collapse the 36 identical monthly cycles to 1 — the
   // Dashboard counts them in full, and a collapsed "47" beside the Dashboard's
-  // "82" was the core mismatch. Non-gift notes (Claire's, parent letters) still
+  // "82" was the core mismatch. Non-gift notes (Elena's, parent letters) still
   // add their author to the people set without counting as a gift.
   for (const entry of entries || []) {
     const isContribution = entry.type === "gift_message" ||
@@ -502,7 +502,7 @@ export default function MemoryBook() {
   // the fund, but the thank-yous in this book are ones THEY sent during the
   // custodial years — so they get the ✓ Thanked story (badges + reveal),
   // never the workflow (Awaiting chips/filters, composer, drafts). Without
-  // this split, Phil viewing handed-off Haley's book saw every gift badged
+  // this split, Marcus viewing handed-off Mia's book saw every gift badged
   // "No thanks yet" + actionable chrome that could only 403.
   const isPreviousOwnerMemory = memoryFundAccessRole === "previous_owner";
   // Honor OS reduced-motion. When set, the heavy slides + zooms in
@@ -1155,7 +1155,7 @@ export default function MemoryBook() {
     // Co-parent / account-holder contributions aren't thankable gifts (the
     // household funding the account — recurring OR one-time). Before the mom-flip
     // the co-parent WAS the owner so this fell under the check above; now they're
-    // a distinct sender (e.g. Phil). The render at ~5258 already expects "self".
+    // a distinct sender (e.g. Marcus). The render at ~5258 already expects "self".
     if (senderEmail && accountHolderEmails.has(senderEmail)) return "self";
     if (isAnon || !senderEmail) return "anonymous";
     const ty = gift?.id ? thankYouByGiftId.get(String(gift.id)) : null;
@@ -1250,8 +1250,8 @@ export default function MemoryBook() {
     setComposerTone("warm");
     setComposerContext(ctx ?? {});
     // Post-handoff owner: the stored auto-draft (ty.message) was generated in
-    // the parent era — "Thank you X for your generous gift of $Y to Haley's
-    // Fund!", third person — and reads wrong when Haley thanks her own gifters.
+    // the parent era — "Thank you X for your generous gift of $Y to Mia's
+    // Fund!", third person — and reads wrong when Mia thanks her own gifters.
     // Seed from the first-person warm template instead (buildThankYouMessage is
     // owner-aware). The parent still gets their stored/auto draft as before.
     setComposerMessage((!isOwnerMode && ty?.message) || buildThankYouMessage("warm", senderName, amount, ctx));
@@ -2390,7 +2390,7 @@ export default function MemoryBook() {
       // Same contribution rule as deriveMemoryHeaderStats: a gift_message OR the
       // first-cycle parent_note carrying a recurring auto-invest gift. Counts in
       // full (no schedule-collapse) and giftTotal sums every cycle's real
-      // dollars — so this reconciles with the Dashboard ($9,275 for Luke).
+      // dollars — so this reconciles with the Dashboard ($9,275 for Theo).
       const isContribution = e.type === "gift_message" ||
         (e.type === "parent_note" && Boolean((e.gift as any)?.parentContributionId));
       if (isContribution) {
@@ -2575,7 +2575,7 @@ export default function MemoryBook() {
   const isOwner = isAuthenticated && !!user && !!fundData && String(fundData.userId) === String(user.id);
   // Post-handoff adult OWNER (not a pre-handoff parent, not a previous-owner parent):
   // the fund was transferred and the current viewer holds the owner role. The Memory
-  // Book is now THEIRS, so it reads "Your Memory Book / Your Story", not "Haley's".
+  // Book is now THEIRS, so it reads "Your Memory Book / Your Story", not "Mia's".
   // Same isOwnerMode signal used across Dashboard/Projection/AppHeader. 2026-05-29.
   const isOwnerMode = (fundData as any)?.accessRole === "owner" && !!(fundData as any)?.transferredAt;
   const fundValue =
@@ -3585,8 +3585,8 @@ export default function MemoryBook() {
                       const rosterPhoto = ownerProfileImageUrl || gifter.avatarUrl;
                       // Shared rule (same as Dashboard): skips weak leaders so
                       // "Aunt Sarah" -> "Sarah", "The Johnsons" -> "Johnsons",
-                      // "Phil's office" -> "office" — not the broken "Aunt / The /
-                      // Phil's" the old name.split(" ")[0] produced here.
+                      // "Marcus's office" -> "office" — not the broken "Aunt / The /
+                      // Marcus's" the old name.split(" ")[0] produced here.
                       const firstName = gifterShortName(gifter.name);
                       const labelName = gifter.isAnon
                         ? (gifter.anonPeople > 1 ? `${gifter.anonPeople} anon` : "Anon")
@@ -4727,11 +4727,11 @@ export default function MemoryBook() {
                         const isOwnerEntry = tyState === "self";
                         // Relationship label + photo come from the SENDER's OWN
                         // resolved identity (server join senderEmail->users): a
-                        // co-parent reads "Phil Dunphy (Dad)", the viewing parent's
-                        // own gift reads "Claire Dunphy (Mom)". Falls back to the
+                        // co-parent reads "Marcus Rivera (Dad)", the viewing parent's
+                        // own gift reads "Elena Rivera (Mom)". Falls back to the
                         // viewer's own profile for their gifts when enrichment is
                         // absent. NEVER stamp the VIEWER's relationship onto someone
-                        // else's gift — that produced the "Phil Dunphy (Mom)" bug
+                        // else's gift — that produced the "Marcus Rivera (Mom)" bug
                         // (tyState === "self" is true for ANY account holder, incl.
                         // a co-parent with a recurring schedule, not just the viewer).
                         const giftSenderEmailLower = String(entry.gift?.senderEmail || "").trim().toLowerCase();
@@ -5288,7 +5288,7 @@ export default function MemoryBook() {
 
                           {/* Thank-you section. Owner gets the full
                               workflow; previous_owner gets ONLY the sent
-                              reveal below ("What you sent Gloria" — they
+                              reveal below ("What you sent Sofia" — they
                               are who sent it, during the custodial years).
                               Composer/Say-thanks stays owner-only. */}
                           {(isOwner || isPreviousOwnerMemory) && entry.giftId && (() => {

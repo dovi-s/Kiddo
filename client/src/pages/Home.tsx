@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
 // Eye replaces Sparkles 2026-05-12 for the "Kid View" feature card —
@@ -13,7 +13,12 @@ import { Mascot } from "@/components/ui/mascot";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { JsonLd } from "@/components/JsonLd";
 import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
+import { BrowserFrame } from "@/components/marketing/BrowserFrame";
+import { EmbeddedDemo } from "@/components/marketing/EmbeddedDemo";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from "@/components/ui/dialog";
 import { haptic } from "@/lib/haptics";
 import { websiteCopy } from "@kora/content";
@@ -136,6 +141,8 @@ type BentoTile = {
   modalDetails: string[];
   modalCallout?: { label: string; value: string };
   deepLink?: { href: string; label: string; external?: boolean };
+  // Real product screenshot shown inside the modal (IP-safe Rivera demo).
+  image?: { src: string; alt: string; mode?: "static" | "scroll"; imgHeight?: number };
 };
 
 const BENTO_TILES: BentoTile[] = [
@@ -143,7 +150,7 @@ const BENTO_TILES: BentoTile[] = [
     icon: Gift,
     eyebrow: "For grandma",
     title: "Gift page",
-    body: "One link. Three taps. No account. Anyone can become a gifter in under a minute.",
+    body: "One link, a few taps, no account. Anyone can become a gifter in seconds.",
     modalLead:
       "Family lands on a clean page, picks an amount, leaves a note or voice memo, and becomes the person who gave something that lasts. No Kiddo account, no app to install. The whole flow is designed for grandma's first try at 9pm on a Tuesday.",
     modalDetails: [
@@ -154,9 +161,10 @@ const BENTO_TILES: BentoTile[] = [
     ],
     modalCallout: {
       label: "Median time from landing to checkout",
-      value: "under 60 seconds",
+      value: "in seconds",
     },
     deepLink: { href: "/how-it-works", label: "See the gifter flow" },
+    image: { src: "/product/giftflow.webp", alt: "The private gift page: pick an amount, leave a note, pay, no account needed." },
   },
   {
     icon: BookOpen,
@@ -173,6 +181,7 @@ const BENTO_TILES: BentoTile[] = [
     ],
     modalCallout: { label: "Lives", value: "for the life of the fund and beyond" },
     deepLink: { href: "/how-it-works#memory", label: "See how the Memory Book works" },
+    image: { src: "/product/memory-full.webp", alt: "The Memory Book: the total, the occasions, who built the fund, and every gift with its note.", mode: "scroll", imgHeight: 3762 },
   },
   {
     icon: Eye,
@@ -188,6 +197,7 @@ const BENTO_TILES: BentoTile[] = [
       "PIN-gated. The parent decides who has access. Not searchable, not shareable to strangers.",
     ],
     deepLink: { href: "/how-it-works#kid-view", label: "See the Kid View phases" },
+    image: { src: "/product/kidview.webp", alt: "The child's own view: their balance, who gave, and what they own, in plain language." },
   },
   {
     icon: Repeat,
@@ -202,6 +212,7 @@ const BENTO_TILES: BentoTile[] = [
       "Pause, resume, or change the amount anytime.",
     ],
     modalCallout: { label: "Plan tier", value: "Kiddo+ and above" },
+    image: { src: "/product/recurring.webp", alt: "Recurring investments: an active monthly schedule, with the linked bank and withdrawals." },
   },
   {
     icon: TrendingUp,
@@ -227,6 +238,7 @@ const BENTO_TILES: BentoTile[] = [
     ],
     modalCallout: { label: "Rebalancing", value: "contribution-based, no drift selling" },
     deepLink: { href: "/how-it-works#mix", label: "Read the strategy details" },
+    image: { src: "/product/mix.webp", alt: "The strategy picker: Growth, Balanced, Conservative, or a Custom ETF mix, with the live allocation." },
   },
   {
     icon: Sprout,
@@ -243,6 +255,7 @@ const BENTO_TILES: BentoTile[] = [
     ],
     modalCallout: { label: "Designed for", value: "what the kid sees on their 18th birthday" },
     deepLink: { href: "/age-18", label: "See the at-18 lifecycle" },
+    image: { src: "/product/age18.webp", alt: "The age-of-majority handoff: the projected value, what transfers, and the family record." },
   },
 ];
 
@@ -262,7 +275,7 @@ function ProductBento() {
       <div className={SECTION_MAX}>
         <FadeIn className="mx-auto mb-10 max-w-3xl text-center md:mb-14">
           <h2 className="font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
-            Six surfaces. One promise.
+            Six surfaces, one promise.
           </h2>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             Every part of Kiddo is built for one of three people: the family member sending a gift, the parent stewarding the fund, or the kid who one day owns it.
@@ -297,50 +310,64 @@ function ProductBento() {
           to satisfy curiosity without committing them to a full sub-page
           load. Closes on overlay click, ESC, or X (shadcn defaults). */}
       <Dialog open={!!openTile} onOpenChange={(open) => { if (!open) setOpenTile(null); }}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
           {openTile ? (
-            <>
-              <DialogHeader>
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <openTile.icon className="h-6 w-6 text-primary" strokeWidth={2} />
-                </div>
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/70">{openTile.eyebrow}</p>
-                <DialogTitle className="font-heading text-2xl font-bold tracking-normal text-foreground">
-                  {openTile.title}
-                </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                  {openTile.modalLead}
-                </DialogDescription>
-              </DialogHeader>
-              <ul className="mt-2 space-y-2.5">
-                {openTile.modalDetails.map((detail, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.4} />
-                    <span className="leading-relaxed">{detail}</span>
-                  </li>
-                ))}
-              </ul>
-              {openTile.modalCallout ? (
-                <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
-                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/80">
-                    {openTile.modalCallout.label}
-                  </p>
-                  <p className="mt-1 font-heading text-base font-semibold text-foreground">
-                    {openTile.modalCallout.value}
-                  </p>
+            <div className="flex flex-col gap-5 sm:flex-row sm:gap-7">
+              <ModalCloseButton onClick={() => setOpenTile(null)} label={`Close ${openTile.title} details`} className="absolute right-2 top-2 z-10" testId="bento-modal-close" />
+              {openTile.image ? (
+                <div className="mx-auto w-full max-w-[190px] shrink-0 sm:mx-0 sm:w-[190px] sm:pt-1">
+                  <ProductFrame
+                    src={openTile.image.src}
+                    alt={openTile.image.alt}
+                    mode={openTile.image.mode}
+                    imgHeight={openTile.image.imgHeight}
+                    className="max-w-[190px]"
+                  />
                 </div>
               ) : null}
-              {openTile.deepLink ? (
-                <div className="mt-2 flex justify-end">
-                  <Link href={openTile.deepLink.href}>
-                    <Button variant="outline" size="sm" onClick={() => setOpenTile(null)}>
-                      {openTile.deepLink.label}
-                      <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-              ) : null}
-            </>
+              <div className="min-w-0 flex-1">
+                <DialogHeader>
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                    <openTile.icon className="h-6 w-6 text-primary" strokeWidth={2} />
+                  </div>
+                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/70">{openTile.eyebrow}</p>
+                  <DialogTitle className="font-heading text-2xl font-bold tracking-normal text-foreground">
+                    {openTile.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                    {openTile.modalLead}
+                  </DialogDescription>
+                </DialogHeader>
+                <ul className="mt-2 space-y-2.5">
+                  {openTile.modalDetails.map((detail, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.4} />
+                      <span className="leading-relaxed">{detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                {openTile.modalCallout ? (
+                  <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-primary/80">
+                      {openTile.modalCallout.label}
+                    </p>
+                    <p className="mt-1 font-heading text-base font-semibold text-foreground">
+                      {openTile.modalCallout.value}
+                    </p>
+                  </div>
+                ) : null}
+                {openTile.deepLink ? (
+                  <div className="mt-4 flex justify-end">
+                    <Link href={openTile.deepLink.href}>
+                      <Button variant="outline" size="sm" onClick={() => setOpenTile(null)}>
+                        {openTile.deepLink.label}
+                        <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -356,7 +383,7 @@ const testimonials = [
   },
   {
     quote:
-      "My parents are in their 70s and not great with technology. They gifted my son through Kiddo in under a minute. I could not believe it.",
+      "My parents are in their 70s and not great with technology. They gifted my son through Kiddo in seconds. I could not believe it.",
     attribution: "Illustrative: why grandparents find it easy",
   },
   {
@@ -368,7 +395,7 @@ const testimonials = [
 
 
 const comparisonRows = [
-  { label: "Anyone can gift in 60 seconds", savings: "No", plan529: "No", kora: "Yes" },
+  { label: "Anyone can gift in seconds", savings: "No", plan529: "No", kora: "Yes" },
   { label: "Invests automatically", savings: "No", plan529: "Sometimes", kora: "Yes" },
   { label: "No restrictions on how money is used", savings: "Yes", plan529: "No", kora: "Yes" },
   { label: "Helps children learn how investing works", savings: "No", plan529: "No", kora: "Yes" },
@@ -380,6 +407,22 @@ const comparisonRows = [
 export default function Home() {
   const reduceMotion = useReducedMotion();
   const { user, isAuthenticated, isLoading } = useAuth();
+  // Sitewide Organization + WebSite structured data (emitted from the landing).
+  const orgJsonLd = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          name: "Kiddo",
+          description: "Kiddo turns family gifts into a real investment fund a child opens when they reach adulthood.",
+          ...(origin ? { url: origin, logo: `${origin}/icon-512.png` } : {}),
+        },
+        { "@type": "WebSite", name: "Kiddo", ...(origin ? { url: origin } : {}) },
+      ],
+    };
+  }, []);
   // Demo accounts are exempt from the "authenticated → dashboard" redirect
   // below. A real logged-in parent's home IS their dashboard, so "/" should
   // bounce them there. But a DEMO visitor is a prospective user exploring the
@@ -451,6 +494,7 @@ export default function Home() {
 
   return (
     <div className="kiddo-app-page">
+      <JsonLd data={orgJsonLd} id="org-jsonld" />
       <Nav />
       <main>
         {/* Hero — disciplined to 5 elements: mascot, eyebrow, H1, subhead,
@@ -588,7 +632,7 @@ export default function Home() {
             attention (post-hero, pre-feature-fatigue) instead of
             being buried 9 sections deep. Per the team-audit copy
             specialist's #1 recommendation. */}
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-3xl text-center">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -608,6 +652,15 @@ export default function Home() {
                 At 18, they don&apos;t just get a brokerage balance. They get proof of everyone who showed up for them.
               </p>
             </FadeIn>
+
+            <ProductFrame
+              src="/product/memory-full.webp"
+              alt="The Memory Book: the fund's total, the occasions it was built around, and everyone who contributed, scrolling through the whole story."
+              caption="The Memory Book, the part no brokerage gives you."
+              mode="scroll"
+              imgHeight={3762}
+              className="mt-12"
+            />
 
             <div className="mx-auto mt-14 max-w-4xl grid gap-5 md:grid-cols-3">
               {[
@@ -649,6 +702,41 @@ export default function Home() {
             surface plus the recurring + at-18 lifecycle anchors. */}
         <ProductBento />
 
+        {/* "Any device" showcase — the product is a full responsive web app,
+            not only a phone app. Desktop browser frame + the "while you were
+            away" digest floating as a feature accent. */}
+        <section className="py-14 md:py-20">
+          <div className={SECTION_MAX}>
+            <FadeIn className="mx-auto mb-12 max-w-2xl text-center">
+              <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
+                Everything the family builds, in one place.
+              </h2>
+              <p className="text-lg leading-relaxed text-muted-foreground">
+                On your phone or the web. The fund, every gift, and the people behind them, always in view.
+              </p>
+            </FadeIn>
+            <div className="relative mx-auto max-w-3xl">
+              <BrowserFrame
+                src="/product/dashboard-desktop.webp"
+                alt="The Kiddo dashboard on the web: the fund balance, recent gifts, what it's on track to be worth, and the family who built it."
+                href="/demo"
+                liveLabel="See it live"
+              />
+              <motion.img
+                src="/product/feature-digest.webp"
+                alt="A 'while you were away' summary: the fund is up since your last visit, with the gifts and growth that got it there."
+                loading="lazy"
+                decoding="async"
+                initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 24 }}
+                whileInView={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.6, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute -bottom-7 -left-3 hidden w-60 rounded-xl border border-border bg-card shadow-[0_24px_48px_-18px_rgba(12,20,15,0.4)] md:block lg:-left-10"
+              />
+            </div>
+          </div>
+        </section>
+
         <section className="py-20 md:py-24">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-3xl text-center">
@@ -668,11 +756,11 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mb-16 text-center">
               <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
-                From gift link to their fund in under 60 seconds.
+                From gift link to their fund in seconds.
               </h2>
             </FadeIn>
             <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
@@ -685,7 +773,7 @@ export default function Home() {
                 {
                   icon: TrendingUp,
                   title: "2. You share the link.",
-                  desc: "Send it in a text, an email, or a group chat. Put the QR code on a birthday invitation. Or share the fund code verbally. Anyone can gift in 60 seconds. No account required.",
+                  desc: "Send it in a text, an email, or a group chat. Put the QR code on a birthday invitation. Or share the fund code verbally. Anyone can gift in seconds. No account required.",
                 },
                 {
                   icon: Shield,
@@ -715,13 +803,13 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-5xl rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
               <div className="grid items-center gap-8 md:grid-cols-2">
                 <div>
                   <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
-                    Your family can send a gift that lasts in 60 seconds.
+                    Your family can send a gift that lasts, in seconds.
                   </h2>
                   <p className="mb-4 leading-relaxed text-muted-foreground">
                     No app. No account. No knowledge of investing required.
@@ -730,20 +818,19 @@ export default function Home() {
                     Just a tap, a payment, and a gift that actually grows.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                  <p className="mb-2 text-sm font-medium text-foreground">Gift preview</p>
-                  <p className="text-lg font-semibold text-foreground">Your $50 is now invested in Emma&apos;s future with Kiddo.</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Gift page. Amount. Note. Apple Pay. A confirmation that feels like a real gift.
-                  </p>
-                  <p className="mt-4 text-xs text-muted-foreground">Invested in Emma&apos;s future with Kiddo.</p>
-                </div>
+                <EmbeddedDemo
+                  src="/theo-rivera"
+                  poster="/product/giftflow.webp"
+                  alt="A private gift link: pick an amount, leave a note, and the gift goes straight into the child's fund. No account needed."
+                  caption="This is a real, live gift page. Try it."
+                  tilt="right"
+                />
               </div>
             </FadeIn>
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-5xl rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
               <div className="grid items-center gap-8 md:grid-cols-2">
@@ -756,7 +843,7 @@ export default function Home() {
                     The lesson no classroom teaches.
                   </h2>
                   <p className="mb-4 leading-relaxed text-muted-foreground">
-                    When a child watches their own Disney or Apple shares grow, investing stops being abstract. It becomes personal.
+                    Once investing is live, a child watches their own Disney or Apple shares grow, and investing stops being abstract. It becomes personal.
                   </p>
                   <p className="mb-4 leading-relaxed text-muted-foreground">
                     Kiddo shows children what they own, explains the companies behind it in plain language, and helps parents turn gifts into real money conversations over time.
@@ -773,18 +860,13 @@ export default function Home() {
                     </Link>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                  <p className="mb-2 text-sm font-medium text-primary">Kiddo explains</p>
-                  <h3 className="font-heading text-xl font-semibold text-foreground">You own a piece of Disney.</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    Disney makes movies, parks, and shows. When Disney does well, your fund can grow too. That is what owning a stock means.
-                  </p>
-                  <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-                    <p>Ages 5 to 8: wonder and recognition</p>
-                    <p>Ages 9 to 13: simple investing explanations</p>
-                    <p>Ages 14 to 17: real participation and stock suggestions</p>
-                  </div>
-                </div>
+                <EmbeddedDemo
+                  src="/demo/kidview/theo-rivera"
+                  poster="/product/kidview.webp"
+                  alt="The child's own view: their balance, who helped build the fund, and the companies they own, in plain language."
+                  caption="This is the real Kid View. Tap in."
+                  tilt="right"
+                />
               </div>
             </FadeIn>
           </div>
@@ -800,7 +882,7 @@ export default function Home() {
             asking the parent to evaluate features. See the new
             section in this file for the actual implementation. */}
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mb-14 text-center">
               <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
@@ -823,7 +905,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-5xl rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
               <div className="grid items-center gap-8 md:grid-cols-2">
@@ -849,23 +931,18 @@ export default function Home() {
                     </Link>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                  <p className="text-sm font-medium text-primary">Age-18 moment</p>
-                  <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">
-                    What they actually receive
-                  </h3>
-                  <div className="mt-4 space-y-3 text-sm leading-7 text-muted-foreground">
-                    <p>Every gift note is still there.</p>
-                    <p>Every family milestone still means something.</p>
-                    <p>The account arrives as a story they can actually read.</p>
-                  </div>
-                </div>
+                <ProductFrame
+                  src="/product/age18.webp"
+                  alt="The age-of-majority handoff: the projected value, what transfers, and the family record of who showed up."
+                  caption="The handoff. What transfers, and who showed up."
+                  tilt="right"
+                />
               </div>
             </FadeIn>
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mb-14 text-center">
               <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
@@ -903,7 +980,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-3xl text-center">
               <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
@@ -947,7 +1024,7 @@ export default function Home() {
         {/* Cost of waiting — the "why now" beat just before the closing CTA.
             Same honest frame as the at-18 calculator (time, never fear); a fixed
             relatable scenario, real numbers, calculator one tap away. */}
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-2xl">
               <div
@@ -998,7 +1075,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-2xl text-center">
               <h2 className="mb-6 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">

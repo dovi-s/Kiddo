@@ -36,7 +36,7 @@ export class WebhookHandlers {
   // sector tilt. The VGT tech sleeve was removed (the hardest allocation line to
   // defend as non-advice); VGT stays available only as an explicit user CUSTOM
   // pick, never a Kiddo-chosen default. Weights match the documented 90/75/60%
-  // equity gradient used client-side (Dashboard/Settings) and in the Dunphy seed.
+  // equity gradient used client-side (Dashboard/Settings) and in the Rivera seed.
   private static readonly DEFAULT_AUTO_STRATEGIES: Record<string, { label: string; allocations: Record<string, number> }> = {
     growth: {
       label: 'Growth Mix',
@@ -91,7 +91,12 @@ export class WebhookHandlers {
     return allowed ? normalized : null;
   }
 
-  private static async reconcileFundFromGifts(fundId?: string | null): Promise<void> {
+  // PUBLIC (was private): the gift-claim endpoint must re-reconcile the ORIGINAL
+  // fund after moving a gift to a new fund, or the original stays credited while
+  // the target is also credited = double-count (security audit 2026-06-15, CRITICAL).
+  // Idempotent: recomputes pendingBalance + contributorCount from the fund's actual
+  // remaining pending/processing gifts, so calling it after a move drops the moved gift.
+  static async reconcileFundFromGifts(fundId?: string | null): Promise<void> {
     if (!fundId) return;
     const fund = await storage.getFund(fundId);
     if (!fund) return;

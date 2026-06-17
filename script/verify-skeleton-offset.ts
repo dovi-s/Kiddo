@@ -14,7 +14,7 @@ mkdirSync(outDir, { recursive: true });
 async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  await context.request.post(`${baseUrl}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  await context.request.post(`${baseUrl}/api/auth/login`, { data: { email: "marcus@riverafamily.com", password: "riverafamily" } });
   const page = await context.newPage();
 
   // Warm auth + the app shell first (Settings) so AppLoadingScreen — the

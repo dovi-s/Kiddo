@@ -4,13 +4,13 @@ import { users, funds } from "../shared/schema";
 import { eq, inArray } from "drizzle-orm";
 
 const DEMO_EMAILS = [
-  "phil@dunphyfamily.com",
-  "claire@dunphyfamily.com",
-  "jay@dunphyfamily.com",
-  "gloria@dunphyfamily.com",
-  "mitchell@dunphyfamily.com",
-  "cameron@dunphyfamily.com",
-  "manny@dunphyfamily.com",
+  "marcus@riverafamily.com",
+  "elena@riverafamily.com",
+  "robert@riverafamily.com",
+  "sofia@riverafamily.com",
+  "david@riverafamily.com",
+  "chris@riverafamily.com",
+  "leo@riverafamily.com",
 ];
 
 async function main() {

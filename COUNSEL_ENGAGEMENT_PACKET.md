@@ -251,6 +251,17 @@ Please address each **in writing**:
    the **off-session charge date, not the SetupIntent date** (IRC §2511), no
    Form 709 ambiguity.
 
+**Operational vs. legal — gates 2 and 4 are APPROVALS, not opinions (advisory-panel
+sharpening 2026-06-16).** Gates 1, 3, 5 are *counsel opinions*. But gates 2 (BD multi-
+gifter AML) and 4 (Stripe) are live *gatekeepers who must affirmatively say yes BEFORE
+the flag flips* — and the failure mode is asymmetric: if the BD's AML team flags the
+multi-contributor surge, or Stripe's policy team rejects the off-session-gifting use
+case, *after* launch, gifts get **charged-but-orphaned** (the gifter is debited, the
+investment never lands) — a silent cascade of chargebacks, support fires, and
+consumer-protection exposure. So treat 2 and 4 as production blockers requiring written
+sign-off from the BD's AML desk and Stripe Compliance specifically, not just a lawyer's
+read of whether they'd be permissible.
+
 Nothing flips the `GIFTER_CAPTURE_AT_INTENT` flag until these five land in
 writing. The **code is complete**: the card is auto-deleted at 60-day expiry, the
 off-session charge is idempotent, decline-retry dunning + orphan monitoring +

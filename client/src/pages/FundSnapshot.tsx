@@ -256,7 +256,7 @@ export default function FundSnapshot() {
   // Age18Plan / GiftSuccess already use. Fall back to the state statutory
   // default only when no election was made (stored value is the schema
   // default of 18), preserving the state-variance fix for funds that never
-  // set an explicit age. Without this, an elected-21 fund (every Dunphy
+  // set an explicit age. Without this, an elected-21 fund (every Rivera
   // demo fund) showed "Est. at 18" here while the rest of the app said 21.
   const storedMajorityAge = Number((fund as any)?.majorityAge);
   const fundMajorityAge = fund

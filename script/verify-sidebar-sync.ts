@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// Verify the desktop sidebar follows fund switches (no "stuck on Luke" desync).
+// Verify the desktop sidebar follows fund switches (no "stuck on Theo" desync).
 // Three cases: (A) cold deep-link ?fund=X seeds the sidebar; (B) an active-fund
 // change event with a STALE URL (the reported bug) still moves the sidebar;
 // (C) a real URL ?fund change moves it. Throwaway diagnostic.
@@ -32,36 +32,36 @@ async function main() {
   try {
     await page.goto(BASE, { waitUntil: "domcontentloaded" });
     await page.evaluate(async () => {
-      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "claire@dunphyfamily.com", password: "dunphyfamily" }) });
+      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "elena@riverafamily.com", password: "riverafamily" }) });
     });
 
-    // A) Cold deep-link to Alex seeds the sidebar from the URL.
+    // A) Cold deep-link to Nora seeds the sidebar from the URL.
     await page.goto(`${BASE}/dashboard?fund=${ALEX}`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-testid='sidebar-fund-switcher']", { timeout: 20_000 });
-    const aOk = await waitForName(page, "Alex");
-    rec("A. deep-link ?fund=Alex seeds sidebar", aOk, await sidebarText(page));
+    const aOk = await waitForName(page, "Nora");
+    rec("A. deep-link ?fund=Nora seeds sidebar", aOk, await sidebarText(page));
 
-    // B) THE BUG: land on ?fund=Luke, then fire an active-fund change to Alex
+    // B) THE BUG: land on ?fund=Theo, then fire an active-fund change to Nora
     //    WITHOUT changing the URL (mimics DashboardLab's render-time
-    //    setActiveFundId / a replaceState switch). Sidebar must follow to Alex.
+    //    setActiveFundId / a replaceState switch). Sidebar must follow to Nora.
     await page.goto(`${BASE}/dashboard?fund=${LUKE}`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-testid='sidebar-fund-switcher']", { timeout: 20_000 });
-    const startedLuke = await waitForName(page, "Luke");
-    rec("B0. starts on Luke (?fund=Luke)", startedLuke, await sidebarText(page));
+    const startedTheo = await waitForName(page, "Theo");
+    rec("B0. starts on Theo (?fund=Theo)", startedTheo, await sidebarText(page));
     await page.evaluate((id) => {
       localStorage.setItem("kiddo_active_fund_id", id);
       window.dispatchEvent(new CustomEvent("kiddo:active-fund-change", { detail: { id } }));
     }, ALEX);
-    const movedToAlex = await waitForName(page, "Alex");
-    const stillHasLuke = /Luke/i.test(await sidebarText(page));
-    rec("B. stale-URL switch event moves sidebar to Alex", movedToAlex && !stillHasLuke, await sidebarText(page));
+    const movedToNora = await waitForName(page, "Nora");
+    const stillHasTheo = /Theo/i.test(await sidebarText(page));
+    rec("B. stale-URL switch event moves sidebar to Nora", movedToNora && !stillHasTheo, await sidebarText(page));
 
     // C) A real URL ?fund change (back/forward / deep-link nav) moves it.
     await page.goto(`${BASE}/dashboard?fund=${LUKE}`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-testid='sidebar-fund-switcher']", { timeout: 20_000 });
-    await waitForName(page, "Luke");
+    await waitForName(page, "Theo");
     await page.goto(`${BASE}/dashboard?fund=${ALEX}`, { waitUntil: "domcontentloaded" });
-    const cOk = await waitForName(page, "Alex");
+    const cOk = await waitForName(page, "Nora");
     rec("C. real URL ?fund change moves sidebar", cOk, await sidebarText(page));
   } finally {
     await browser.close();

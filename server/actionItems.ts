@@ -61,7 +61,7 @@ export async function deriveActionItemsForUser(
 ): Promise<ActionItem[]> {
   const out: ActionItem[] = [];
 
-  // Demo accounts skip action-item derivation entirely. The Dunphy
+  // Demo accounts skip action-item derivation entirely. The Rivera
   // demo is showcase-mode — the visitor is here to see what a
   // fully-set-up Kiddo dashboard feels like, not the new-customer
   // onboarding state. KYC nudges, bank-link prompts, "activate
@@ -69,7 +69,7 @@ export async function deriveActionItemsForUser(
   // action-items / setup-progress derivations and are noise inside
   // the demo. Locked 2026-05-21 after the demo dashboard surfaced
   // four separate setup-incomplete nudges (link bank, finish setup,
-  // activate investing, etc.) on Phil's seeded Family-tier account —
+  // activate investing, etc.) on Marcus's seeded Family-tier account —
   // none of which apply to a sandboxed demo.
   if ((user as any)?.isDemoAccount) {
     return out;

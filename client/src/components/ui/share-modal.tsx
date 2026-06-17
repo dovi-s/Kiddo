@@ -272,7 +272,7 @@ function getEventTone(recipientName: string, page: SharePage): EventTone {
 
 function getShareText(recipientName: string, page: SharePage): string {
   const tone = getEventTone(recipientName, page);
-  return `${tone.shareLine} Takes 60 seconds. No account needed.\n\n${page.url}`;
+  return `${tone.shareLine} Takes seconds. No account needed.\n\n${page.url}`;
 }
 
 function getEmailSubject(recipientName: string, page: SharePage): string {
@@ -282,7 +282,7 @@ function getEmailSubject(recipientName: string, page: SharePage): string {
 function getEmailBody(recipientName: string, page: SharePage): string {
   const first = recipientName.split(" ")[0];
   const tone = getEventTone(recipientName, page);
-  return `Hi there,\n\n${tone.emailOpening}\n\nInstead of a traditional gift, you can invest directly in ${first}'s future through Kiddo. It takes 60 seconds and no account is needed. Every dollar becomes a real investment.\n\n👉 ${page.url}\n\n${first} will see your name in their Memory Book, a permanent record of everyone who showed up for them.\n\nWith love 💚`;
+  return `Hi there,\n\n${tone.emailOpening}\n\nInstead of a traditional gift, you can invest directly in ${first}'s future through Kiddo. It takes seconds and no account is needed. Every dollar becomes a real investment.\n\n👉 ${page.url}\n\n${first} will see your name in their Memory Book, a permanent record of everyone who showed up for them.\n\nWith love 💚`;
 }
 
 // ─── Inline SVG icons for platforms ────────────────────────────────────────
@@ -678,13 +678,20 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     const dataUrl = await getQrDataUrl();
     if (!dataUrl) { toast({ title: "QR not ready", variant: "destructive" }); setPrinting(false); return; }
     const pageLabel = selected.isPermanent ? "Gift anytime" : selected.label;
+    // HTML-escape any user-controlled value before it goes into document.write —
+    // a child name / event label like `</title><script>…` would otherwise execute
+    // in the print window (security audit 2026-06-15, XSS). CSS gradient + the QR
+    // data-URL are NOT escaped (escaping would corrupt them) and aren't user text.
+    const esc = (s: unknown) =>
+      String(s ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
     const win = window.open("", "_blank", "width=800,height=1100");
     if (!win) { toast({ title: "Pop-up blocked", description: "Allow pop-ups to print the flyer.", variant: "destructive" }); setPrinting(false); return; }
     win.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Gift ${recipientName}</title>
+  <title>Gift ${esc(recipientName)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -714,17 +721,17 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
   <div class="page">
     <div class="hero">
       <p class="hero-eyebrow">Investment gift</p>
-      <p class="hero-name">${recipientName}</p>
+      <p class="hero-name">${esc(recipientName)}</p>
       <p class="hero-sub">Give a gift that grows into a real investment.</p>
     </div>
     <div class="body">
-      ${pageLabel && !selected.isPermanent ? `<p class="event-label">${pageLabel}</p>` : ""}
+      ${pageLabel && !selected.isPermanent ? `<p class="event-label">${esc(pageLabel)}</p>` : ""}
       <div class="qr-wrap"><img src="${dataUrl}" alt="QR code" /></div>
       <p class="scan-cta">Scan to give a gift that grows</p>
-      <p class="scan-sub">Scan the QR code or visit the link below to send ${recipientName} a gift. Once investing is live, it's invested in real stock. No account needed.</p>
+      <p class="scan-sub">Scan the QR code or visit the link below to send ${esc(recipientName)} a gift. Once investing is live, it's invested in real stock. No account needed.</p>
       <div class="divider"></div>
-      <p class="url-chip">${selected.url}</p>
-      ${exportGiftCode ? `<p class="code-line">No camera handy? Enter code <strong>${exportGiftCode}</strong> at ${codeLookupDisplay}</p>` : ""}
+      <p class="url-chip">${esc(selected.url)}</p>
+      ${exportGiftCode ? `<p class="code-line">No camera handy? Enter code <strong>${esc(exportGiftCode)}</strong> at ${esc(codeLookupDisplay)}</p>` : ""}
     </div>
     <div class="footer">
       <span class="footer-logo">Kiddo</span>

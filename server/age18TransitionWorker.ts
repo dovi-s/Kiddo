@@ -226,8 +226,8 @@ async function loadDueFunds(): Promise<{
         AND f.status = 'active'
         AND u.email IS NOT NULL
         -- Demo-safety: never fire real age-of-majority emails for demo
-        -- funds. The Dunphy seed puts Alex ~30 days from 21 (inside the
-        -- T-30 window), which would email phil@dunphyfamily.com for real.
+        -- funds. The Rivera seed puts Nora ~30 days from 21 (inside the
+        -- T-30 window), which would email marcus@riverafamily.com for real.
         -- The demo showcases the handoff via the interactive claim flow +
         -- seeded state, not via this background worker's live emails.
         AND COALESCE(u.is_demo_account, false) = false

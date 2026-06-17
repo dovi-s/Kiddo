@@ -48,7 +48,7 @@ function getChartRangeLabel(range: ChartRange): string {
 
 // Occasion-name display note: a strip-the-"{child}'s"-prefix experiment on the
 // occasion tiles was REVERTED 2026-06-07 — it made the tile say "Birthday"
-// while the quick link / gifter page / detail still said "Luke's Birthday"
+// while the quick link / gifter page / detail still said "Theo's Birthday"
 // (same occasion, two names — founder caught it). Full name everywhere now;
 // the tile's 2-line clamp + title tooltip handle length.
 // (2026-06-07, founder: long occasion names truncate.)
@@ -699,7 +699,7 @@ const HERO_PROJECTION_START_DELAY_MS =
   HERO_ROLL_START_DELAY_MS + HERO_ROLL_DURATION_MS + HERO_PROJECTION_BEAT_MS;
 const HERO_CASCADE_SETTLED_MS = HERO_PROJECTION_START_DELAY_MS + HERO_ROLL_DURATION_MS;
 // The "while you were away" digest reveals just after the cascade settles — the
-// capstone that ATTRIBUTES the roll ("$50 from Manny, $120 in market growth").
+// capstone that ATTRIBUTES the roll ("$50 from Leo, $120 in market growth").
 const HERO_DIGEST_REVEAL_MS = HERO_CASCADE_SETTLED_MS + 150;
 // The ancillary banner stack follows the digest by a beat, so they sequence
 // (number cascade → recap → celebrations) instead of all arriving at once.
@@ -708,8 +708,8 @@ const HERO_BANNERS_REVEAL_MS = HERO_DIGEST_REVEAL_MS + 300;
 // reveals to the hero roll ACTUALLY starting (`balanceAnimating`). When a roll
 // arms but never starts (the known "sometimes it doesn't roll" flake) or snaps
 // unexpectedly, that anchor never fires and the catch-up cards stay stranded
-// hidden for the whole visit — the bug behind "Alex never gets the digest" and
-// "Luke's digest is gone after switching away and back". This net force-reveals
+// hidden for the whole visit — the bug behind "Nora never gets the digest" and
+// "Theo's digest is gone after switching away and back". This net force-reveals
 // after a generous bound (well past the slowest legit cascade, even with start-
 // delay + slow-frame lag) so the cards always appear and then persist until
 // dismissed, exactly like the co-parent banner. In the happy path the cascade
@@ -790,11 +790,54 @@ function LabCollapse({
     window.addEventListener("kiddo:lab-collapse-open", handler as EventListener);
     return () => window.removeEventListener("kiddo:lab-collapse-open", handler as EventListener);
   }, [openKey]);
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Open = reveal-if-needed. Close = stay put. (Sections stay independent —
+  // opening one never touches another; you can have them all open at once.)
+  //
+  // When a section is opened low in the viewport, its freshly revealed content
+  // can fall below the fold (and behind the floating mobile nav), so you'd have
+  // to manually scroll to see what you just opened. So: after the 0.34s expand
+  // settles, if the section is NOT already comfortably in view, glide its HEADER
+  // to rest just under the sticky app bar — anchoring the thing you tapped, with
+  // the content revealing beneath it. If it's already fully visible we do
+  // nothing: auto-scrolling an already-visible section is a yank (the classic
+  // accordion anti-pattern) and the page should never grab the wheel for no
+  // reason. On CLOSE we deliberately never scroll — the header stays exactly
+  // where it is and content collapses up beneath it (the removed content sits
+  // below the header, so the browser keeps your anchor stable on its own). The
+  // asymmetry is the craft: reveal on the way out, hold still on the way back.
+  const revealIfNeeded = () => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const header = document.querySelector('[data-testid="app-header"]') as HTMLElement | null;
+    const topInset = header?.offsetHeight ?? 0;
+    const nav = document.querySelector(".mobile-nav-shell") as HTMLElement | null;
+    const bottomInset = nav ? Math.max(0, window.innerHeight - nav.getBoundingClientRect().top) : 0;
+    const rect = el.getBoundingClientRect();
+    const topGap = 12;
+    const fullyVisible = rect.top >= topInset && rect.bottom <= window.innerHeight - bottomInset;
+    if (fullyVisible) return; // already comfortable — don't move things that were fine
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    window.scrollBy({ top: rect.top - topInset - topGap, behavior: reduce ? "auto" : "smooth" });
+  };
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      // Wait for the height-auto expand (0.34s) to settle before measuring,
+      // else the section still reads ~0px tall and "fully visible" misfires.
+      window.setTimeout(revealIfNeeded, 380);
+    }
+  };
+
   return (
-    <div style={{ marginTop }}>
+    <div ref={wrapRef} style={{ marginTop }}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         aria-expanded={open}
         data-testid={testid}
         className="lab-tap"
@@ -1213,7 +1256,7 @@ function stripStockSuffix(name?: string | null): string {
 
 // gifterShortName + WEAK_NAME_LEADERS now live in @/lib/gifter-name (imported
 // above) so the Memory Book shares the exact same rule — it previously used a
-// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Phil's"
+// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Marcus's"
 // the Dashboard never showed.
 
 // Humanize a future countdown. A graduation 4 years out reading "1459 days away"
@@ -1333,7 +1376,7 @@ function getGiftDisplayAmountForTransaction(transaction: DashboardTransaction, g
 
 // Default a parent into their first OWNED, non-transferred fund — never a
 // handed-off / previous_owner fund. A parent shouldn't open straight into the
-// kid's graduated account, and in the seeded demo the graduated fund (Haley) is
+// kid's graduated account, and in the seeded demo the graduated fund (Mia) is
 // created FIRST, so a naive funds[0] lands there. Falls back to funds[0] only
 // when every fund is shared/transferred (e.g. a fully-graduated household).
 function pickDefaultFundId(funds: any[]): string {
@@ -1410,7 +1453,7 @@ export default function DashboardLab() {
     // (DesktopSidebar / AppHeader / MobileNav resolve the active fund from the
     // ?fund param), so an in-page fund switch updated the dashboard body but left
     // the sidebar pinned to the previous fund's name, balance, and quick links
-    // ("stuck on Luke even after switching to Alex", founder-reported 2026-06-12).
+    // ("stuck on Theo even after switching to Nora", founder-reported 2026-06-12).
     setLocation(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { replace: true });
   };
   const [copiedLink, setCopiedLink] = useState(false);
@@ -2327,7 +2370,7 @@ export default function DashboardLab() {
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
   // Replay the lab's signature ENTRANCE beats on a FUND SWITCH so switching to
-  // (say) Alex reads as Alex's fund LANDING, not a silent data swap: the faces
+  // (say) Nora reads as Nora's fund LANDING, not a silent data swap: the faces
   // cascade + the chart wipe re-fire (the hero count-up already re-rolls on the
   // value change). The faces' reset is INSTANT (duration 0 — see their
   // transition), so snapping them hidden then re-showing next frame replays a
@@ -2909,7 +2952,7 @@ export default function DashboardLab() {
     [memoryEntriesForFund, user?.id],
   );
 
-  // Gifter-identity doorway (founder catch 2026-06-05: Jay — a years-long
+  // Gifter-identity doorway (founder catch 2026-06-05: Robert — a years-long
   // gifter with zero custodial funds — logged in and saw a blank draft fund
   // with no acknowledgment of his actual life in the product: "where is the
   // data?"). His data lives behind /api/gifter-account/dashboard (the
@@ -3737,9 +3780,9 @@ export default function DashboardLab() {
     // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
     // (top-center). This bottom-right GiftReceivedToast is the real-product
     // PLG nudge — firing BOTH meant two different gifts announced at once in
-    // two places ("Manny added $50" top-center + "Phil just gifted $100"
+    // two places ("Leo added $50" top-center + "Marcus just gifted $100"
     // bottom-right). The earlier fix only excluded `demo-` OVERLAY gifts, but
-    // every demo fund also has SEEDED gifts dated today (Phil's monthly
+    // every demo fund also has SEEDED gifts dated today (Marcus's monthly
     // auto-invest), which are real ids and slipped through. Suppress this
     // toast entirely for demo accounts so the demo shows ONE arrival beat.
     // (Founder catch 2026-06-04, follow-up.) Real accounts keep the card.
@@ -3882,7 +3925,7 @@ export default function DashboardLab() {
       if (status === "failed" || status === "refunded") continue;
       const rawName = displayGifterName(g.senderName, (g as any).isAnonymous);
       // Group by stable IDENTITY (email-when-present), not raw name — so the
-      // same person signing "Gloria Pritchett" then "Grandma" is ONE row, and
+      // same person signing "Sofia Rivera" then "Grandma" is ONE row, and
       // two different people who share a name stay separate. Anonymous + no-email
       // groupings are unchanged. See gifterIdentityKey. (founder catch 2026-06-08)
       const key = gifterIdentityKey(g.senderName, (g as any).senderEmail, (g as any).isAnonymous);
@@ -3992,7 +4035,7 @@ export default function DashboardLab() {
   // ── "On this day" gift anniversary (founder-locked 2026-06-04) ──
   // The relationship version of fintech's "feel time": when a gift was given
   // on TODAY's date in a previous year, one card in the hero cycler becomes
-  // "Gloria gave $50 three years ago today" with the REAL current value of
+  // "Sofia gave $50 three years ago today" with the REAL current value of
   // that exact gift (its actual shares at the live price — same honest math
   // as the Memory Book's now-worth lines). Composes entirely from data we
   // already load; nothing is projected, nothing is promised. Memory-machine
@@ -4457,7 +4500,7 @@ export default function DashboardLab() {
     if (isReadOnlyFund) return;
     // GLOBAL monthly key, not per-fund (founder catch 2026-06-04: "I keep
     // getting it, 3 times on the same page"). The old per-fund key meant a
-    // Family parent tabbing Luke → Alex → Haley got THREE modals back to
+    // Family parent tabbing Theo → Nora → Mia got THREE modals back to
     // back — same pitch, three funds, one browsing session. One smart nudge
     // per month per PERSON is the contract; which fund earns it is just
     // whichever qualified first. (Also makes demo reseeds irrelevant — new
@@ -4977,7 +5020,7 @@ export default function DashboardLab() {
   //   P0  Where it began / Today (the spine — never dropped)
   //   P1  The first gift (name + amount — the origin beat, the brand moment)
   //   P2  Recurring begins (the discipline moment) · The biggest gift yet
-  //   P3  The top occasion ("Luke's 10th Birthday · $415 gifted here") ·
+  //   P3  The top occasion ("Theo's 10th Birthday · $415 gifted here") ·
   //       The Memory Book begins (first saved memory)
   //   P4  The two biggest threshold crossings ("Crossed $10k")
   // Selection: when a rich fund overflows the 8-caption budget, drop the
@@ -5065,7 +5108,7 @@ export default function DashboardLab() {
     // The occasion people showed up for — top by gift volume. Anchored at the
     // MEDIAN timestamp of ITS OWN gifts (gifts.eventId attribution), NOT the
     // event date: birthday occasions are routinely FUTURE-dated while their
-    // gifts have already landed (the demo's exact shape — "Luke's 14th
+    // gifts have already landed (the demo's exact shape — "Theo's 14th
     // Birthday, Nov 2026" with $2,415 already gifted). The story moment is
     // when the crowd showed up, which is always in the past and always on
     // the drawn line. Falls back to a past event date when no gifts carry
@@ -6432,7 +6475,7 @@ export default function DashboardLab() {
           );
         })()}
 
-        {/* SetupProgressNudge hidden for demo accounts — the Dunphy
+        {/* SetupProgressNudge hidden for demo accounts — the Rivera
             demo is showcase mode, not new-customer onboarding mode.
             Setup tasks (link bank / activate investing / complete
             profile) are seeded as already-done conceptually; the
@@ -6788,7 +6831,7 @@ export default function DashboardLab() {
                 .lab-hero-cta-row { flex-direction: row; flex-wrap: wrap; align-items: center; }
               }
               /* Hero meta block (2026-06-07, founder: "is the identity still on
-                 two rows on mobile?"). The fund identity (avatar + "Luke's Fund
+                 two rows on mobile?"). The fund identity (avatar + "Theo's Fund
                  · UTMA · Active") and the gift-count pill shared one row. On a
                  narrow phone they couldn't both fit: the name either wrapped to
                  two ragged lines (no nowrap) or, with nowrap, truncated and lost
@@ -6799,7 +6842,7 @@ export default function DashboardLab() {
                  (>=640px) restores the single side-by-side row, where there's
                  room for both. */
               /* TITLE / SUBTITLE, the arrangement that ends the cycling
-                 (2026-06-07 final). The identity ("Luke's Fund · UTMA") and
+                 (2026-06-07 final). The identity ("Theo's Fund · UTMA") and
                  the gift-count can't share one phone row without the account
                  TYPE truncating to make room for the count — and the type is
                  identity-critical, the count supplementary, so UTMA must never
@@ -7087,7 +7130,7 @@ export default function DashboardLab() {
                       </div>
                       {(() => {
                         // The gifter doorway — see the gifterPeek query def.
-                        // "You've given 7 gifts to Luke, Alex & Haley" answers
+                        // "You've given 7 gifts to Theo, Nora & Mia" answers
                         // "where is the data?" in one sentence and the tap
                         // lands on /my-gifts with the cache already warm.
                         const gFunds = (gifterPeek?.funds || []).filter((f) => (f?.giftCount || 0) > 0);
@@ -7097,7 +7140,7 @@ export default function DashboardLab() {
                         const kidNames = gFunds
                           .map((f) => String(f.childFirstName || f.childName || "").trim().split(/\s+/)[0])
                           .filter(Boolean);
-                        // Name every kid up to three ("Alex, Haley & Luke") —
+                        // Name every kid up to three ("Nora, Mia & Theo") —
                         // hiding exactly ONE name behind "& 1 more" was absurd
                         // (founder saw it live). Compression starts at four.
                         const kidsLabel = kidNames.length === 1 ? kidNames[0]
@@ -7545,7 +7588,7 @@ export default function DashboardLab() {
                                           2026-06-07 (founder: "must fit one row on
                                           mobile"): with it the sentence wrapped on a
                                           phone for any normal name; without it the line
-                                          is just the fact ("Phil added $100.") and always
+                                          is just the fact ("Marcus added $100.") and always
                                           fits. The warmth stays in the eyebrow ("Latest
                                           gift"), the "Went into …" destination below, and
                                           the gold-flash moment; "future" lives all over
@@ -7591,7 +7634,7 @@ export default function DashboardLab() {
                                           "{g.message}"
                                         </p>
                                       ) : giftEventName ? (
-                                        // Then the occasion ("Luke's Birthday") — still
+                                        // Then the occasion ("Theo's Birthday") — still
                                         // specific to this gift.
                                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
                                           {giftEventName}
@@ -7689,7 +7732,7 @@ export default function DashboardLab() {
                           // lands. Acorns-style: never animates downward, never
                           // shows a skeleton, the parent always sees a number.
                           // LAB: lead with the TANGIBLE future, the at-majority
-                          // handoff ("$49,828 when Luke turns 21"), not the
+                          // handoff ("$49,828 when Theo turns 21"), not the
                           // abstract "$920k at 65". The emotional pull, the
                           // billion-dollar-way framing: a warm "on track"
                           // statement, not a bare number-with-a-far-off-age.
@@ -7705,9 +7748,9 @@ export default function DashboardLab() {
                             ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
                             ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
                           ]);
-                          // Honesty gate (founder catch 2026-06-05): Phil viewing
-                          // Haley's HANDED-OFF fund saw "On track for $1,492,705
-                          // when Haley turns 21" — she's a graduate PAST 21, and
+                          // Honesty gate (founder catch 2026-06-05): Marcus viewing
+                          // Mia's HANDED-OFF fund saw "On track for $1,492,705
+                          // when Mia turns 21" — she's a graduate PAST 21, and
                           // that number was the AT-65 projection wearing the
                           // at-majority label (the fallback swapped the number
                           // but not the words). The at-majority framing is only
@@ -7721,8 +7764,8 @@ export default function DashboardLab() {
                           // below can test whether it is genuinely meaningful.
                           const heroAtMajProjection = projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj });
                           // Near-handoff flatness gate (founder catch 2026-06-09):
-                          // Phil viewing Alex's fund 30 days from his 21st saw "On
-                          // track for $39,154 when Alex turns 21" — barely above
+                          // Marcus viewing Nora's fund 30 days from his 21st saw "On
+                          // track for $39,154 when Nora turns 21" — barely above
                           // today's $38,878, because almost no growth runway is left
                           // before handoff. A flat at-majority number reads broken,
                           // so require it to be MEANINGFULLY above today (>10%, the
@@ -7810,7 +7853,7 @@ export default function DashboardLab() {
 
                         {/* Send-to-a-friend — the gifter loop's adult turn.
                             ONLY on a personal, adult-OWNED fund (isOwnerMode =
-                            owner + transferred, e.g. Haley after her handoff).
+                            owner + transferred, e.g. Mia after her handoff).
                             A minor's UTMA is irrevocable and for the child's
                             benefit, so "send out of it" must NEVER appear on a
                             custodial fund; an adult's own Personal account can.
@@ -7863,7 +7906,7 @@ export default function DashboardLab() {
                 side of the generational loop: the person who just finished one
                 handoff is the most likely to start the next. Persistent + dignified,
                 no action required, never naggy. Renders for any post-handoff parent
-                (real, or in the demo Phil viewing Haley's transferred fund). */}
+                (real, or in the demo Marcus viewing Mia's transferred fund). */}
             {isPreviousOwner && (
               <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="card-parent-handoff-moment">
                 <div className="flex items-start gap-3">
@@ -8110,10 +8153,10 @@ export default function DashboardLab() {
               // Parent-mode rows ("Your recurring / Your one-time") are VIEWER-KEYED:
               // only money THIS viewer actually sent. Previously "Your recurring"
               // summed ALL custodian recurring — correct only while the viewer WAS
-              // the (sole) custodian. A co-admin (Claire) saw Phil's $100/mo labeled
+              // the (sole) custodian. A co-admin (Elena) saw Marcus's $100/mo labeled
               // "Your recurring investments" (founder catch 2026-06-04), and the
-              // OTHER account-holder's one-time money landed in NO row at all (Phil
-              // never saw Mom's additions; Claire never saw Dad's) — a silent
+              // OTHER account-holder's one-time money landed in NO row at all (Marcus
+              // never saw Mom's additions; Elena never saw Dad's) — a silent
               // reconciliation hole for any two-contributor family. The other
               // holder's money now gets its own named row below.
               const yourAutoInvestTotal = sumAmt(recurringRows.filter((g) => senderOf(g) === ownerEmail));
@@ -8137,7 +8180,7 @@ export default function DashboardLab() {
               ));
               const otherHolderGifterParam = otherHolderSenderNames.length === 1 ? otherHolderSenderNames[0] : null;
               // Owner-mode (post-handoff) split: what the custodian parent(s) put
-              // in BEFORE handoff vs. what the owner (e.g. Haley) adds herself.
+              // in BEFORE handoff vs. what the owner (e.g. Mia) adds herself.
               // Reserves "Your additions" for the owner's own money and credits
               // the rest to the parent. (Owner-set recurring isn't built yet, so
               // yourAdditionsTotal is 0 today, but the wiring is ready for it.)
@@ -8179,7 +8222,7 @@ export default function DashboardLab() {
               // Owner mode (post-handoff): prefer the previous custodian's
               // "what your kids call you" label (server-supplied from their
               // Account-settings preferredName) so it reads "Invested by Dad"
-              // not "Invested by Phil". Falls back to the derived first name
+              // not "Invested by Marcus". Falls back to the derived first name
               // when the custodian never set one — no hardcoding.
               const ownerCustodianLabel = isOwnerMode ? String((activeFund as any)?.previousOwnerCallMe || "").trim() : "";
               const custodianLabel = ownerCustodianLabel
@@ -8232,7 +8275,7 @@ export default function DashboardLab() {
               // THE VIEWER. Viewer-keyed for the same reason as the rows above:
               // this date renders under "YOUR recurring investments", and the
               // fund-scoped list contains every account-holder's schedules — a
-              // $0-recurring co-admin (Claire) would otherwise read the
+              // $0-recurring co-admin (Elena) would otherwise read the
               // custodian's next charge date as her own ("Your recurring ·
               // starts Jun 18"). Same-family follow-up to the 2026-06-04
               // viewer-keying fix.
@@ -8706,9 +8749,9 @@ export default function DashboardLab() {
                     : (() => {
                         const raw = String(activeOccasion.name || "Occasion").trim();
                         // Keep the FULL name (no "{child}'s" strip — founder call);
-                        // just never cut mid-word. "Luke's Birthday" (the common
+                        // just never cut mid-word. "Theo's Birthday" (the common
                         // case) now fits; only a longer name truncates, and only at
-                        // a word boundary, so it's recoverable not "Luke's Bi…".
+                        // a word boundary, so it's recoverable not "Theo's Bi…".
                         // (Exact pill width may want a founder eye on a long name.)
                         if (raw.length <= 18) return raw;
                         const cut = raw.slice(0, 18);
@@ -9843,7 +9886,7 @@ export default function DashboardLab() {
                                           you": a graduated owner's OWN buys land in this same
                                           bucket, and "picked just for you" reads off when she
                                           did the picking herself. "Hand-picked" covers both
-                                          the gifter-picked history (Gloria's DIS) and her own
+                                          the gifter-picked history (Sofia's DIS) and her own
                                           picks without losing warmth. Parent view keeps the
                                           stronger "Picked just for {child}" — there the pickers
                                           are always OTHER people, so it's precisely true. */}
@@ -10100,7 +10143,7 @@ export default function DashboardLab() {
                 >
                   {/* LAB: family as a HERO MOMENT, not a small label (the
                       critique). The belonging beat: "N people are building
-                      Luke's future" - the thing a bank can't have. BUT calibrate
+                      Theo's future" - the thing a bank can't have. BUT calibrate
                       to honesty: lead with the COUNT only when we can actually
                       show the people (named-heavy). When most gifters are
                       anonymous (real-account edge case - e.g. 10 of 14 anon),
@@ -10725,7 +10768,7 @@ export default function DashboardLab() {
                 // letting the number do it, and because it was recency-gated
                 // its disappearance after a lapse read as quiet judgment. The
                 // count never judges. Viewer-keyed like the collapse stat
-                // (Claire sees HER count, Phil his — and previous-owner Phil
+                // (Elena sees HER count, Marcus his — and previous-owner Marcus
                 // on a handed-off fund sees his full era). Hidden until the
                 // habit is real (6+ investments spanning 18+ months) so a new
                 // parent isn't shown "2 investments since 2026" dressed as a
@@ -12181,11 +12224,11 @@ export default function DashboardLab() {
                           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
                           overflow: "hidden", marginBottom: 2 }}
                           // FULL name, not stripped (2026-06-07 revert): a
-                          // strip-the-"Luke's" experiment made the tile say
+                          // strip-the-"Theo's" experiment made the tile say
                           // "Birthday" while the quick link / gifter page /
-                          // detail still said "Luke's Birthday" — same occasion,
+                          // detail still said "Theo's Birthday" — same occasion,
                           // two names (founder caught it). Consistency wins; the
-                          // 2-line clamp already makes "Luke's Birthday" fit, so
+                          // 2-line clamp already makes "Theo's Birthday" fit, so
                           // the strip wasn't even needed. title = full name so a
                           // genuinely-long custom name's ellipsis is recoverable
                           // on hover (and tap opens the full detail).
@@ -12257,7 +12300,7 @@ export default function DashboardLab() {
                           {/* capFirst title-cases EVERY word (it's a name
                               formatter — "mary jane" → "Mary Jane"), which
                               turned the no-name fallback into "Your Child's"
-                              (founder saw it on Jay's draft fund). Names keep
+                              (founder saw it on Robert's draft fund). Names keep
                               capFirst; the fallback phrase caps only its
                               first letter. */}
                           {recipientFirstNameDisplay ? capFirst(childFirst) : "Your child"}'s birthday coming up? Saving for their first car?
@@ -12775,7 +12818,7 @@ export default function DashboardLab() {
                                         const gAmt = parseFloat(String(g.netAmount || g.amount || "0"));
                                         // Year included: annual gifters (e.g. a grandparent who
                                         // gives every birthday) otherwise render as identical-looking
-                                        // rows ("Cameron Tucker · Nov 20 · $75" twice) that read as a
+                                        // rows ("Chris Bennett · Nov 20 · $75" twice) that read as a
                                         // duplicate bug. The year is what distinguishes them.
                                         const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : null;
                                         const isLast = gi === Math.min(evGifts.length, evGiftsVisible) - 1;
@@ -13106,7 +13149,7 @@ export default function DashboardLab() {
                 letter editor, "what happens at majority"). All future-tense and
                 parent-facing, and moot once the handoff has happened. Hide it for
                 ANY viewer of an already-transferred fund — not just the owner: a
-                previous owner (Phil viewing Haley's handed-off fund) or a co-parent
+                previous owner (Marcus viewing Mia's handed-off fund) or a co-parent
                 would otherwise see a future "turns 21 / the day it becomes theirs"
                 countdown to an event that already happened. Gate on the fund's
                 transferredAt (the canonical "handed off" signal), which also covers
@@ -13115,7 +13158,7 @@ export default function DashboardLab() {
             {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
             // LAB: handoff section animates in on MOUNT (not whileInView) so it is
             // never blank-until-scroll (founder call 2026-06-12), with a two-beat
-            // stagger — the sentence lands first ("The day it all becomes Luke's."),
+            // stagger — the sentence lands first ("The day it all becomes Theo's."),
             // a breath, then the card rises under it. The sentence IS the emotional
             // payload; giving it its own beat makes the section read instead of
             // just appear.

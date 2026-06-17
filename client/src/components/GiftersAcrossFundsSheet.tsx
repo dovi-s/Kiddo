@@ -20,6 +20,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFramerSheetDrag } from "@/lib/use-framer-sheet-drag";
 import { ChevronDown } from "lucide-react";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { useQuery } from "@tanstack/react-query";
@@ -168,6 +169,9 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
     return (colorIndex: number) => fundPillColors[colorIndex % fundPillColors.length];
   }, []);
 
+  // Swipe-down-to-dismiss (mobile) — grab the handle in the sticky header.
+  const { dragProps, handle } = useFramerSheetDrag(onClose);
+
   return (
     <AnimatePresence>
       {open && (
@@ -186,10 +190,12 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            {...dragProps}
             className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] max-h-[85dvh] overflow-y-auto bg-background rounded-t-3xl shadow-2xl md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:max-w-lg md:w-full"
             data-testid="gifters-sheet"
           >
             <div className="sticky top-0 bg-background/85 backdrop-blur-lg rounded-t-3xl z-10">
+              {handle}
               <div className="flex items-center justify-between p-5 pb-3">
                 <div>
                   <p className="kiddo-section-label">Across all funds</p>

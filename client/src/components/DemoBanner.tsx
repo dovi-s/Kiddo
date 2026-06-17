@@ -63,7 +63,7 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
 
   const isDemoUser = Boolean((user as any)?.isDemoAccount);
   // Show ONLY on authenticated app surfaces — where the demo user is
-  // actually looking at the seeded Dunphy data (Dashboard, Memory Book,
+  // actually looking at the seeded Rivera data (Dashboard, Memory Book,
   // Activity, Settings, /my-gifts, Kid View, etc.). Everything else is
   // a public / front-door page (marketing, Home, /login, /get-started,
   // claim + gift-checkout flows, ...) where the "amounts reset
@@ -104,7 +104,7 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
           shortened to "Create your own →". 2026-06-07. */}
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:text-sm">
         <p className="leading-snug text-[hsl(var(--kiddo-evergreen))]">
-          <span className="font-semibold">You're in the Dunphy demo.</span>{" "}
+          <span className="font-semibold">You're in the Rivera demo.</span>{" "}
           Amounts reset periodically.
         </p>
         <div className="flex shrink-0 items-center gap-3">

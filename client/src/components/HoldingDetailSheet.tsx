@@ -53,8 +53,8 @@ interface HoldingDetailSheetProps {
   // open for read-only roles; only the parent actions disappear.
   isReadOnly?: boolean;
   // True when the current viewer OWNS this fund post-handoff (the kid, now the
-  // adult owner). Flips third-person child framing ("% of Haley's fund", "chose
-  // AAPL for Haley") to second person ("% of your fund", "chose AAPL for you").
+  // adult owner). Flips third-person child framing ("% of Mia's fund", "chose
+  // AAPL for Mia") to second person ("% of your fund", "chose AAPL for you").
   isOwnerMode?: boolean;
   // True when this ticker is a slice of the active managed mix (VTI/BND/etc).
   // When true, per-ETF actions are replaced by strategy-level actions —
@@ -676,7 +676,7 @@ function HoldingDetailSheetBody({
     basisSlice: number,
   ) => {
     // Group by stable IDENTITY (email-when-present), not display name — so one
-    // person signing different names ("Gloria Pritchett" once, "Grandma" next)
+    // person signing different names ("Sofia Rivera" once, "Grandma" next)
     // is ONE contributor, and two different people who share a name stay
     // separate. Same root fix as the Dashboard roster (gifterIdentityKey,
     // 2026-06-08). BOTH this map and giftDetailsByContributor key on idKey so

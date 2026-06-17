@@ -47,10 +47,16 @@ export default function Legal() {
           </h1>
         </div>
 
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2" role="tablist" aria-label="Legal documents">
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              id={`legal-tab-${tab.id}`}
+              aria-selected={activeTab === tab.id}
+              aria-controls={`legal-panel-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
@@ -59,7 +65,7 @@ export default function Legal() {
               }`}
               data-testid={`button-tab-${tab.id}`}
             >
-              <tab.icon size={15} />
+              <tab.icon size={15} aria-hidden="true" />
               {tab.label}
             </button>
           ))}
@@ -67,10 +73,14 @@ export default function Legal() {
 
         <motion.div
           key={activeTab}
+          role="tabpanel"
+          id={`legal-panel-${activeTab}`}
+          aria-labelledby={`legal-tab-${activeTab}`}
+          tabIndex={0}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12"
+          className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12 focus:outline-none"
         >
           {activeTab === "terms" && (
             <div className="prose prose-sm max-w-none" data-testid="content-terms">

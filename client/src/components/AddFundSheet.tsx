@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCreateFund, useFunds } from "@/hooks/use-funds";
 import { MOTION_DURATION } from "@/lib/motion";
+import { useFramerSheetDrag } from "@/lib/use-framer-sheet-drag";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { getPronouns } from "@/lib/pronouns";
@@ -123,6 +124,9 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
     reset();
     onClose();
   };
+
+  // Swipe-down-to-dismiss (mobile). Grab the handle in the sticky header.
+  const { dragProps, handle } = useFramerSheetDrag(handleClose);
 
   const addChild = () => {
     setChildren([...children, emptyChild(Date.now().toString())]);
@@ -295,9 +299,11 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            {...dragProps}
             className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] max-h-[90dvh] overflow-y-auto bg-background rounded-t-3xl shadow-2xl md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:max-w-lg md:w-full"
           >
             <div className="sticky top-0 bg-background/80 backdrop-blur-lg rounded-t-3xl z-10">
+              {handle}
               <div className="flex items-center justify-between p-5 pb-3">
                 <h2 className="text-lg font-semibold text-foreground">
                   {step === "choose" ? "Add a new fund" : step === "creating" ? "Creating..." : step === "success" ? "All set" : step === "upgrade-family" ? "Upgrade to add more" : step === "culture" ? "Cultural milestones" : "Add a child's fund"}

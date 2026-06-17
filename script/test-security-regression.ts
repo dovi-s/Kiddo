@@ -1,6 +1,6 @@
 // Security regression tests — lock in the audit fixes so they can't
 // silently regress. Exercises the actual DB constraint + storage scoping +
-// the public endpoint shape. Uses the seeded demo funds (Phil's) and only
+// the public endpoint shape. Uses the seeded demo funds (Marcus's) and only
 // creates throwaway rows it deletes afterward (marked @example.com). Run:
 //   npm run test:security-regression
 //
@@ -25,7 +25,7 @@
 //  10. Sealed parent letters never leak off parent surfaces: the PUBLIC
 //      memory endpoint and the gifter dashboard must not return
 //      parent_letter / parent_only / locked kid_at_18 content (2026-06-04).
-//      Uses the seeded Dunphy letters as permanent canaries.
+//      Uses the seeded Rivera letters as permanent canaries.
 //  11. Durable rate limiter enforces its cap (backs the 2FA-login-verify
 //      brute-force guard + /api/reports per-IP/per-target limits, 2026-06-11).
 //  12. CSRF origin decision (evaluateRequestOrigin): cross-site blocked,
@@ -77,7 +77,7 @@ async function main() {
     await pool.end();
   };
 
-  // --- Demo-INDEPENDENT checks (run even when the Dunphy demo isn't seeded) ---
+  // --- Demo-INDEPENDENT checks (run even when the Rivera demo isn't seeded) ---
 
   // Durable rate limiter enforces its cap (2026-06-11). Backs the
   // 2FA-login-verify brute-force guard AND the /api/reports per-IP/per-target
@@ -114,9 +114,9 @@ async function main() {
       evaluateRequestOrigin("not a url", "app.kiddo.com", trusted) === "malformed");
   }
 
-  const [phil] = await db.select().from(users).where(eq(users.email, "phil@dunphyfamily.com")).limit(1);
+  const [phil] = await db.select().from(users).where(eq(users.email, "marcus@riverafamily.com")).limit(1);
   if (!phil) {
-    console.log("Demo not seeded (no phil@dunphyfamily.com); skipping demo-backed checks.");
+    console.log("Demo not seeded (no marcus@riverafamily.com); skipping demo-backed checks.");
     await finish();
     return;
   }
@@ -202,7 +202,7 @@ async function main() {
       const loginRes = await fetch(`${base}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "phil@dunphyfamily.com", password: "dunphyfamily" }),
+        body: JSON.stringify({ email: "marcus@riverafamily.com", password: "riverafamily" }),
       });
       if (loginRes.ok) {
         const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")
@@ -243,8 +243,8 @@ async function main() {
       !isReservedFundSlug(fundA.slug) && !isReservedFundSlug(fundB.slug));
     ok("reserved list flags app/marketing routes (pricing/dashboard/login)",
       isReservedFundSlug("pricing") && isReservedFundSlug("dashboard") && isReservedFundSlug("login"));
-    ok("reserved list does not flag normal fund slugs (haley-dunphy/emma-2)",
-      !isReservedFundSlug("haley-dunphy") && !isReservedFundSlug("emma-2"));
+    ok("reserved list does not flag normal fund slugs (mia-rivera/emma-2)",
+      !isReservedFundSlug("mia-rivera") && !isReservedFundSlug("emma-2"));
 
     // --- 6. Anonymous /api/health deep variants leak no secret-presence /
     //        readiness map (92f096f). Still 200 (deploy smoke needs it). ---
@@ -321,7 +321,7 @@ async function main() {
       const loginRes = await fetch(`${base}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "mitchell@dunphyfamily.com", password: "dunphyfamily" }),
+        body: JSON.stringify({ email: "david@riverafamily.com", password: "riverafamily" }),
       });
       if (loginRes.ok) {
         const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")
@@ -430,8 +430,8 @@ async function main() {
     }
 
     // --- 10. Sealed parent letters never leak off parent surfaces. The demo
-    //         seeds a parent_letter on Alex's fund (visibility kid_at_18,
-    //         "Alex, if you're reading this...") and Haley's ("Haley. It's
+    //         seeds a parent_letter on Nora's fund (visibility kid_at_18,
+    //         "Nora, if you're reading this...") and Mia's ("Mia. It's
     //         yours now.") — permanent canaries. Checks the two surfaces
     //         that leaked on 2026-06-04: the UNAUTHENTICATED public memory
     //         endpoint and the gifter dashboard's "latest moment". ---
@@ -464,7 +464,7 @@ async function main() {
         const gifterLogin = await fetch(`${base}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: "jay@dunphyfamily.com", password: "dunphyfamily" }),
+          body: JSON.stringify({ email: "robert@riverafamily.com", password: "riverafamily" }),
         });
         if (gifterLogin.ok) {
           const cookie = (gifterLogin.headers as any).getSetCookie?.()?.join("; ")
@@ -485,14 +485,14 @@ async function main() {
           console.log(`  - gifter-dashboard letter check skipped (login status ${gifterLogin.status})`);
         }
       } else {
-        console.log("  - sealed-letter canary checks skipped (no Dunphy demo funds)");
+        console.log("  - sealed-letter canary checks skipped (no Rivera demo funds)");
       }
     } catch {
       console.log("  - sealed-letter canary checks skipped (dev server not reachable)");
     }
 
     // --- 13. 2FA enable requires password step-up for password accounts
-    //         (2026-06-11). Phil is a password account → starting setup then
+    //         (2026-06-11). Marcus is a password account → starting setup then
     //         calling /enable WITHOUT a password must be rejected with
     //         needsPassword:true (and must NOT enable 2FA). Best-effort HTTP;
     //         clears phil's pending secret afterward. ---
@@ -501,7 +501,7 @@ async function main() {
       const loginRes = await fetch(`${base}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "phil@dunphyfamily.com", password: "dunphyfamily" }),
+        body: JSON.stringify({ email: "marcus@riverafamily.com", password: "riverafamily" }),
       });
       if (loginRes.ok) {
         const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")
@@ -535,7 +535,7 @@ async function main() {
       const loginRes = await fetch(`${base}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "phil@dunphyfamily.com", password: "dunphyfamily" }),
+        body: JSON.stringify({ email: "marcus@riverafamily.com", password: "riverafamily" }),
       });
       if (loginRes.ok) {
         const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")

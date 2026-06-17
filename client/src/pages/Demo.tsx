@@ -1,14 +1,14 @@
-// Public landing page for the Dunphy family demo. Lists the seven
+// Public landing page for the Rivera family demo. Lists the seven
 // shareable accounts with one-click login buttons that auto-submit
 // the /api/auth/login endpoint with the appropriate email +
 // universal password.
 //
 // Route: /demo. Per DUNPHY_DEMO_SPEC.md.
 //
-// Disclaimer footer satisfies the character-name IP risk noted in
-// the spec (small-risk-rising-with-scale per the spec's Open Questions
-// section). Says "not affiliated with or endorsed by 20th Century
-// Studios or Disney" explicitly. Buys runway if a C&D ever lands.
+// The Rivera family is an original, fictional cast (renamed off the old
+// Modern Family personas to remove the IP exposure per IP_STRATEGY.md), so
+// the footer is a plain "fictional, for illustration" note — no real-show
+// affiliation to disclaim.
 
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -26,7 +26,7 @@ import { ArrowRight, Users, Gift, ShieldCheck, Star, GraduationCap } from "lucid
 import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
 import { usePageSeo } from "@/lib/seo";
 
-const DEMO_PASSWORD = "dunphyfamily";
+const DEMO_PASSWORD = "riverafamily";
 
 type DemoAccount = {
   email: string;
@@ -37,71 +37,60 @@ type DemoAccount = {
 
 const ACCOUNTS: DemoAccount[] = [
   {
-    email: "phil@dunphyfamily.com",
-    display: "Phil Dunphy",
+    email: "marcus@riverafamily.com",
+    display: "Marcus Rivera",
     role: "co-parent",
     oneLiner: "Dad, the co-parent. The same three funds from his own login.",
   },
   {
-    email: "claire@dunphyfamily.com",
-    display: "Claire Dunphy",
+    email: "elena@riverafamily.com",
+    display: "Elena Rivera",
     role: "parent",
     oneLiner: "Mom. The parent dashboard on the Family plan, with all three kids' funds in one place.",
   },
   {
-    email: "jay@dunphyfamily.com",
-    display: "Jay Pritchett",
+    email: "robert@riverafamily.com",
+    display: "Robert Rivera",
     role: "gifter",
     oneLiner: "Grandfather. Big birthday gifts in Google stock.",
   },
   {
-    email: "gloria@dunphyfamily.com",
-    display: "Gloria Pritchett",
+    email: "sofia@riverafamily.com",
+    display: "Sofia Rivera",
     role: "gifter",
-    oneLiner: "Step-grandmother, married to Jay. Disney gifts with notes in Spanish.",
+    oneLiner: "Step-grandmother, married to Robert. Disney gifts with notes in Spanish.",
   },
   {
-    email: "mitchell@dunphyfamily.com",
-    display: "Mitchell Pritchett",
+    email: "david@riverafamily.com",
+    display: "David Rivera",
     role: "gifter",
     oneLiner: "Uncle. A recurring Apple gift every birthday, on autopilot.",
   },
   {
-    email: "cameron@dunphyfamily.com",
-    display: "Cameron Tucker",
+    email: "chris@riverafamily.com",
+    display: "Chris Bennett",
     role: "gifter",
     oneLiner: "Uncle. Disney stock for all three kids. \"Because magic is always a good investment.\"",
   },
   {
-    email: "manny@dunphyfamily.com",
-    display: "Manny Delgado",
+    email: "leo@riverafamily.com",
+    display: "Leo Rivera",
     role: "gifter",
     oneLiner: "Step-uncle, closest to the kids' age. A small Roblox gift.",
   },
   {
-    email: "haley@dunphyfamily.com",
-    display: "Haley Dunphy",
+    email: "mia@riverafamily.com",
+    display: "Mia Rivera",
     role: "graduate",
     oneLiner: "Her own account now, one year after the handoff.",
   },
 ];
 
-// Persona portraits for the demo picker. A face beats a generic icon here — the
-// whole pitch is "step into a family," and a photo makes each persona a person,
-// not a list item. Keyed by email so this stays decoupled from the ACCOUNTS
-// shape. (Internal demo: these are placeholder likenesses; swap for owned/
-// illustrated portraits before the page goes public — see the IP note + the
-// bottom-of-page disclaimer.)
-const PERSONA_PHOTOS: Record<string, string> = {
-  "phil@dunphyfamily.com": "https://pyxis.nymag.com/v1/imgs/1a5/a8b/1a2353ae4dfaf73880973701a654c5fdb8-ty-burrell-modern-family.rsquare.w330.jpg",
-  "claire@dunphyfamily.com": "https://arianadickson.wordpress.com/wp-content/uploads/2014/04/webct_upload_applet.jpg",
-  "jay@dunphyfamily.com": "https://openpsychometrics.org/tests/characters/test-resources/pics/MF/1.jpg",
-  "gloria@dunphyfamily.com": "https://static0.srcdn.com/wordpress/wp-content/uploads/2018/11/Modern-Family-Gloria.jpg?q=50&fit=crop&w=825&dpr=1.5",
-  "mitchell@dunphyfamily.com": "https://i.ytimg.com/vi/hVvQTyeLyp0/maxresdefault.jpg",
-  "cameron@dunphyfamily.com": "https://tvovermind.com/wp-content/uploads/2022/01/Cam-Tucker-750x402.jpg",
-  "manny@dunphyfamily.com": "https://cdn1.edgedatg.com/aws/v2/abc/ModernFamily/person/737059/0742ee201d7c06d751852e65200c9750/362x362-Q90_0742ee201d7c06d751852e65200c9750.jpg",
-  "haley@dunphyfamily.com": "https://cdn.mos.cms.futurecdn.net/RYvAQd4QgRDhP3qKVPEvNK.jpg",
-};
+// Persona portraits for the demo picker. The Rivera family is an original,
+// fictional cast (no real likenesses), so each persona renders as a clean
+// evergreen initials chip via PersonaAvatar's fallback. Keep this map empty
+// until we have owned/illustrated portraits to drop in (keyed by email).
+const PERSONA_PHOTOS: Record<string, string> = {};
 
 // Circular persona portrait with a graceful fallback to initials — the photo
 // URLs are external (flaky), so a broken image degrades to a clean evergreen
@@ -155,18 +144,18 @@ export default function Demo() {
   // per-fund snapshots) on success. Going through fetch directly
   // (the old Demo.tsx pattern) left the previous user's cached funds
   // in localStorage, which caused Demo logins to render the previous
-  // account's funds instead of the Dunphy seed.
+  // account's funds instead of the Rivera seed.
   const { login } = useAuth();
 
   // Generic demo login. After successful auth, parents go to
-  // /dashboard and gifters go to /my-gifts. The "Skip to Haley"
+  // /dashboard and gifters go to /my-gifts. The "Skip to Mia"
   // featured CTA below uses a specialized version that auto-selects
-  // Haley's fund and lands on /age-18-plan.
+  // Mia's fund and lands on /age-18-plan.
   // Pre-seed each fund's count-up cache slightly BELOW its live balance so
   // the very first dashboard open plays the cached→roll moment (founder call
   // 2026-06-04). Demo login clears localStorage, so without this a prospect's
   // first paint has no "last visit" number and the product's best micro-beat
-  // never fires. The demo's fiction is stepping into Claire's life mid-stream —
+  // never fires. The demo's fiction is stepping into Elena's life mid-stream —
   // a synthetic yesterday-number is set dressing: the start is bent ~0.6%,
   // the END is always the true balance. Best-effort; navigation never waits
   // on failure. (The Dashboard's own cache-write keeps re-seeding low for
@@ -211,13 +200,13 @@ export default function Demo() {
     }
   };
 
-  // Featured-walkthrough shortcut: log in as Claire (Mom, the primary custodian
-  // / lead persona), auto-select the approaching-handoff fund (Alex, ~30 days
-  // from majority) as the active fund, land on /age-18-plan. (Haley is now PAST
+  // Featured-walkthrough shortcut: log in as Elena (Mom, the primary custodian
+  // / lead persona), auto-select the approaching-handoff fund (Nora, ~30 days
+  // from majority) as the active fund, land on /age-18-plan. (Mia is now PAST
   // majority — her fund is the graduated adult-account demo, reachable from the
   // dashboard/Kid View.)
-  const FEATURED_EMAIL = "claire@dunphyfamily.com";
-  const FEATURED_SLUG = "alex-dunphy";
+  const FEATURED_EMAIL = "elena@riverafamily.com";
+  const FEATURED_SLUG = "nora-rivera";
   const handleFeaturedShortcut = async () => {
     setLoadingEmail(FEATURED_EMAIL);
     haptic("selection");
@@ -227,7 +216,7 @@ export default function Demo() {
       // walkthrough lands on dashboards too.
       await preSeedDemoRoll();
       // After login (which cleared the previous user's caches), fetch
-      // Claire's funds fresh from server and locate the featured fund by slug.
+      // Elena's funds fresh from server and locate the featured fund by slug.
       const fundsRes = await fetch("/api/funds", { credentials: "include" });
       if (!fundsRes.ok) {
         haptic("success");
@@ -268,7 +257,7 @@ export default function Demo() {
           <div className="mx-auto max-w-3xl text-center">
             <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="demo" />
             <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-              See Kiddo through the <GradientText>Dunphys</GradientText>.
+              See Kiddo through the <GradientText>Riveras</GradientText>.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               A full working demo: real screens, illustrative dollars. Pick any account below to log in. No card needed.
@@ -276,11 +265,11 @@ export default function Demo() {
           </div>
 
           {/* Featured walkthrough — drops the visitor straight on
-              Alex's handoff plan (the /age-18-plan page): the
+              Nora's handoff plan (the /age-18-plan page): the
               centerpiece slider + her dad's sealed letter + the at-21
               handoff countdown. Saves 3 navigation clicks vs the
-              standard "log in as Claire → dashboard → age-18-plan →
-              switch funds" path. (Haley, the older sister, is already
+              standard "log in as Elena → dashboard → age-18-plan →
+              switch funds" path. (Mia, the older sister, is already
               PAST majority — her fund is the graduated adult-account
               demo, reachable from the dashboard.) Sits above
               the per-account login grid so the first-time visitor
@@ -297,14 +286,14 @@ export default function Demo() {
                   </p>
                 </div>
                 <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-                  Alex is weeks from 21.
+                  Nora is weeks from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  {/* "Gloria's notes in Spanish", not "voice memos": the demo-audio
+                  {/* "Sofia's notes in Spanish", not "voice memos": the demo-audio
                       assets don't exist yet (client/public/demo-audio/README.md, IP
                       question pending), so her memos render text-only. Don't promise
                       audio the page can't show; upgrade the word when audio lands. */}
-                  In a few weeks, the fund her mom Claire built becomes hers. This is the handoff page Claire sees: the projection slider, a sealed letter from her dad, Gloria's notes in Spanish, a whole childhood of gifts. Start here.
+                  In a few weeks, the fund her mom Elena built becomes hers. This is the handoff page Elena sees: the projection slider, a sealed letter from her dad, Sofia's notes in Spanish, a whole childhood of gifts. Start here.
                 </p>
               </div>
               <button
@@ -314,7 +303,7 @@ export default function Demo() {
                 className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                 data-testid="demo-featured-shortcut"
               >
-                {loadingEmail === FEATURED_EMAIL ? "Opening…" : "Open Alex's plan"}
+                {loadingEmail === FEATURED_EMAIL ? "Opening…" : "Open Nora's plan"}
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -323,10 +312,10 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
               <Users size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
-              Or start with Claire
+              Or start with Elena
             </h2>
             <p className="text-sm text-muted-foreground">
-              Three kids at three stages: Luke still getting gifts, Alex weeks from taking ownership, and Haley's fund already handed off. The whole arc in one family.
+              Three kids at three stages: Theo still getting gifts, Nora weeks from taking ownership, and Mia's fund already handed off. The whole arc in one family.
             </p>
             {ACCOUNTS.filter((a) => a.role === "parent").map((account) => (
               <button
@@ -357,7 +346,7 @@ export default function Demo() {
               Step into the account she owns now
             </h2>
             <p className="text-sm text-muted-foreground">
-              Haley came of age a year ago, and the fund transferred to her. Log in to see her personal account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Claire's dashboard it's a fund she can no longer touch.
+              Mia came of age a year ago, and the fund transferred to her. Log in to see her personal account: the same fund, now hers to direct, with the whole Memory Book unlocked. From Elena's dashboard it's a fund she can no longer touch.
             </p>
             {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
               <button
@@ -440,7 +429,7 @@ export default function Demo() {
           </section>
 
           <p className="mx-auto mt-10 max-w-3xl text-center text-[11px] leading-relaxed text-muted-foreground">
-            The Dunphy family is a cultural reference used for demonstration purposes. Kiddo is not affiliated with or endorsed by 20th Century Studios, The Walt Disney Company, or the creators of Modern Family.
+            The Rivera family is fictional, created to demonstrate how Kiddo works. Names, gifts, notes, and dollar amounts are illustrative; any resemblance to real people is coincidental.
           </p>
 
           <div className="mt-12 text-center">

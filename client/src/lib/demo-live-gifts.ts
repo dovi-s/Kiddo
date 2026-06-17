@@ -1,10 +1,10 @@
 // Session-scoped "live" demo gifts — the gifts a prospect role-plays SENDING
-// in the Dunphy demo. They're surfaced as fresh "just now" entries in the
+// in the Rivera demo. They're surfaced as fresh "just now" entries in the
 // Memory Book so the gifter loop is felt end-to-end (send it → watch it land),
 // the emotional core of the product.
 //
 // Why sessionStorage and NOT the database: the demo is a SHARED account (every
-// prospect views the same Dunphy funds). Persisting a visitor's sent gift to
+// prospect views the same Rivera funds). Persisting a visitor's sent gift to
 // the DB would let strangers pollute each other's view and invites abuse
 // (arbitrary names/amounts on a public surface). Keeping it client-side and
 // session-scoped means each prospect sees only their own sent gift, it never

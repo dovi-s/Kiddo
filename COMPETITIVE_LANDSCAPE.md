@@ -73,6 +73,32 @@ giving (https://techcrunch.com/2017/11/30/gofundme-drops-5-platform-fee-for-u-s-
 The proven model for monetizing the generous-giver moment instead of charging the
 beneficiary a subscription.
 
+**Alinea: an adjacent adult roboadvisor that runs on DriveWealth and leads with an AI
+feed.** (From its own marketing site, 2026-06; not independently verified.) Alinea is an
+SEC-registered RIA selling managed, expert-built portfolios to adults ("investing as easy
+as texting"), fronted by an AI copilot ("Allie") that explains market moves, Fed actions,
+and trending tickers. Brokerage and custody are **DriveWealth** (member FINRA/SIPC, named
+in its disclosures). Two takeaways. (1) A live RIA runs retail brokerage at small-account
+scale on DriveWealth, a real-world data point for the Alpaca-vs-DriveWealth custodian
+decision. (2) The AI copilot as a market feed is the hook/feed direction
+`EDUCATION_THESIS.md` rejects, so Alinea is a clean education foil ("they teach with an AI
+feed; here the kid's own fund teaches"). Not in our lane: adult-first, no gifter loop, no
+kid custodial, no handoff.
+
+**Rival projection calculators default to inflated returns; ours is already framed
+honestly.** Alinea defaults to S&P 500 historical; Acorns Early defaults to **8% nominal**
+("$5/day from birth could grow to over $71,000 by 18"), with fee drag pushed into a
+disclaimer. Kiddo's `shared/projection.ts` uses **7% real** (after inflation), net of the
+0.10% fee, so our number is smaller but truthful. This is NOT an open todo: the honest
+framing is already shipped across the dashboard hero, the projection modal, the dedicated
+`Projection.tsx` page, and `PROJECTION_DISCLAIMER` (the single-source constant used on the
+handoff/gifter surfaces). The canonical disclaimer even pre-empts the objection
+explicitly: "figures are in today's dollars... The S&P 500 has historically averaged
+closer to 10% before inflation." So the smaller-number gap is already converted into a
+trust signal. Do not add new projection copy (one source of truth lives in
+`shared/projection.ts`); if a naked-number surface is ever found, reuse the constant rather
+than write a new line.
+
 *Could-not-verify flags: exact Acorns Early / Acorns Gold subscription prices (a claimed
 $8/$12 was killed in verification — do not cite); Endowe funding, backers, product launch
 date, and traction metrics; GoFundMe tip-conversion percentages.*
@@ -195,7 +221,10 @@ race; you win a *model* race.
 
 The watch-item is **Greenlight** — the only player with the capital and the install
 base to bolt gifting + custodial investing onto a spending card. If it does, the
-overlap with Kiddo's lane becomes real.
+overlap with Kiddo's lane becomes real. (Update, 2026-06: **Greenlight Gift** is now live,
+but it gifts a Greenlight *subscription*, not money into an invested custodial fund, so
+the full crossover into our lane has not happened yet. The signal to watch is the day
+Greenlight lets someone gift *into an investing account*.)
 
 The defense is **not** a feature race — Kiddo loses a feature race to a $2B war
 chest. The defense is the three things Greenlight cannot copy without inverting its

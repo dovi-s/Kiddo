@@ -58,7 +58,7 @@ interface MilestoneMomentProps {
   recipientName?: string | null;
   // True when the viewer OWNS this fund post-handoff (the kid, now adult owner).
   // The ON-SCREEN moment is shown TO them, so it reads second-person ("Your fund
-  // crossed"). NOTE: the shareable card stays third-person ("Haley's fund") on
+  // crossed"). NOTE: the shareable card stays third-person ("Mia's fund") on
   // purpose — it's an outbound image whose audience is other people.
   isOwnerMode?: boolean;
   // Social proof for the shareable card (optional). Threaded straight through

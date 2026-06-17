@@ -37,8 +37,8 @@ export type EmailDeliveryResult = {
   providerId?: string | null;
 };
 
-// Domains we deliberately never deliver to via a REAL provider. The Dunphy
-// demo accounts live at dunphyfamily.com — a domain WE DO NOT OWN. Demo
+// Domains we deliberately never deliver to via a REAL provider. The Rivera
+// demo accounts live at riverafamily.com — a domain WE DO NOT OWN. Demo
 // lifecycle workers (recurring reminders, anniversaries, age-18, thank-yous,
 // milestone updates) address these accounts, and some of those emails carry
 // BEARER TOKENS (collaborator invites, age-transition invites, kid-view
@@ -49,7 +49,7 @@ export type EmailDeliveryResult = {
 // The guard only fires when a real provider is enabled, so the dev
 // console/outbox transport still shows demo emails for local testing.
 const NEVER_DELIVER_DOMAINS = new Set([
-  "dunphyfamily.com",
+  "riverafamily.com",
   "example.com",
   "example.org",
   "example.net",
@@ -265,7 +265,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryRes
   // Demo/never-deliver domain guard — ONLY when a real provider would fire.
   // Without a provider, sends fall to the local outbox below, which is the
   // desired dev behavior (you can still inspect what a demo persona would
-  // have received). With a provider, delivering to dunphyfamily.com (a
+  // have received). With a provider, delivering to riverafamily.com (a
   // domain we don't own) could hand bearer-token links to a stranger's
   // catch-all and burn sender reputation. See NEVER_DELIVER_DOMAINS above.
   if (postmarkEnabled || sendgridEnabled) {

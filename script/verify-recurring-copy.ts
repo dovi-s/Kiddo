@@ -20,9 +20,9 @@ async function main() {
   try {
     await page.goto(BASE, { waitUntil: "domcontentloaded" });
     await page.evaluate(async () => {
-      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "claire@dunphyfamily.com", password: "dunphyfamily" }) });
+      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "elena@riverafamily.com", password: "riverafamily" }) });
     });
-    await page.goto(`${BASE}/luke-dunphy`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE}/theo-rivera`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-testid='text-heading']", { timeout: 20_000 });
     await page.getByTestId("button-start-gift").first().click();
     await page.waitForTimeout(900);

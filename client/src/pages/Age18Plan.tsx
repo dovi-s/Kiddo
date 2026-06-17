@@ -181,7 +181,7 @@ export default function Age18Plan() {
 
   // Active recurring on THIS fund — used to seed the projection slider's
   // default so the "Projected value at {majority}" centerpiece reflects
-  // the parent's REAL monthly (e.g. Luke's $75/mo), not a hardcoded $50
+  // the parent's REAL monthly (e.g. Theo's $75/mo), not a hardcoded $50
   // that matched no schedule and made this page's headline disagree with
   // the Dashboard's "On track for $X when {child} turns {majority}" number.
   // Same endpoint + monthly-normalization the Dashboard uses.
@@ -328,7 +328,7 @@ export default function Age18Plan() {
   // slider in a sprint; they cannot match the family record next to it.
   //
   // Per the locked decision in DUNPHY_DEMO_SPEC.md and the 2026-05-20
-  // strategic reset: ships inside the public Dunphy demo first, not
+  // strategic reset: ships inside the public Rivera demo first, not
   // into the live product yet. The user.isDemoAccount gate below keeps
   // real customer accounts on the existing 4-row static projection
   // until we're ready to graduate this.
@@ -353,7 +353,7 @@ export default function Age18Plan() {
   }, [activeRecurringMonthly]);
   // When the slider is hidden (yearsLeft < 1), the hero number must
   // NOT silently bake in the slider's $50 default — that'd inflate
-  // Haley's "what you inherit" number by money that doesn't exist.
+  // Mia's "what you inherit" number by money that doesn't exist.
   // Force zero monthly in that branch so the hero shows the honest
   // current-balance-compounded-over-the-remaining-runway value.
   const sliderVisible = yearsLeft >= 1;
@@ -653,7 +653,7 @@ export default function Age18Plan() {
             accounts see the simpler 4-row static projection further
             down. Per the 2026-05-20 strategic decision: this is
             Kiddo's answer to Acorns' Potential slider, and ships in
-            the public Dunphy demo first. */}
+            the public Rivera demo first. */}
         {isDemoUser && totalValue > 0 && (
           <div className="kiddo-card mb-4 overflow-hidden border-2 border-[hsl(var(--kiddo-evergreen)/0.25)]">
             <div className="px-5 pt-5 pb-5">

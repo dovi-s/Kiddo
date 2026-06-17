@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFramerSheetDrag } from "@/lib/use-framer-sheet-drag";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
@@ -222,6 +223,9 @@ export function NoteEditorSheet({
     }
   }
 
+  // Swipe-down-to-dismiss (mobile) — grab the handle at the top of the sheet.
+  const { dragProps, handle } = useFramerSheetDrag(onClose);
+
   return (
     <AnimatePresence>
       {open && (
@@ -241,10 +245,12 @@ export function NoteEditorSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 300 }}
+            {...dragProps}
             className="fixed bottom-0 left-0 right-0 z-[71] bg-background rounded-t-[28px] flex flex-col overflow-hidden"
             style={{ maxHeight: "92dvh" }}
             onClick={(e) => e.stopPropagation()}
           >
+            {handle}
             {showSealedCelebration ? (
               <>
                 {/* Post-save sealed-letter celebration. Renders ONLY

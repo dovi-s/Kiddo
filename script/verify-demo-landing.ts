@@ -22,7 +22,7 @@ async function main() {
   const warm = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await warm.request.get(`${baseUrl}/api/health`, { timeout: 120000 }).catch(() => {});
   const login = await warm.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" }, timeout: 120000,
+    data: { email: "marcus@riverafamily.com", password: "riverafamily" }, timeout: 120000,
   });
   console.log(`login HTTP ${login.status()}`);
   if (login.status() !== 200) { console.log("rate-limited — stopping"); await browser.close(); return; }

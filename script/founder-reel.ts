@@ -4,7 +4,7 @@
 // This is NOT a regression gate. `test:ui:smoke` asserts exact copy/fees/test-ids
 // and is *meant* to rot when the UI changes (you update it with the change). This
 // reel does the opposite job: it just walks the real conversion funnel against the
-// seeded Dunphy demo and dumps clean, funnel-ordered screenshots the founder can
+// seeded Rivera demo and dumps clean, funnel-ordered screenshots the founder can
 // flip through — with almost no assertions, so it keeps working as the UI evolves.
 //
 // Prereqs: a dev server on :5000 (it reuses one if healthy, else spawns) and a
@@ -21,8 +21,8 @@ const outDir = path.join(process.cwd(), "artifacts", "founder-reel");
 const HEALTH_PATH = "/api/health";
 const HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_POLL_MS = 1_000;
-const DEMO_EMAIL = "claire@dunphyfamily.com";
-const DEMO_PASSWORD = "dunphyfamily";
+const DEMO_EMAIL = "elena@riverafamily.com";
+const DEMO_PASSWORD = "riverafamily";
 const DESKTOP = { width: 1440, height: 900 };
 const MOBILE = { width: 390, height: 844 };
 
@@ -122,7 +122,7 @@ async function login(context: BrowserContext) {
   }
 }
 
-// Pull Phil's funds from the live API so fund ids/slugs survive a reseed (they
+// Pull Marcus's funds from the live API so fund ids/slugs survive a reseed (they
 // are random per seed). Prefer a still-owned child fund for the gifter + memory
 // surfaces; fall back to whatever exists.
 async function pickFunds(context: BrowserContext) {
@@ -132,7 +132,7 @@ async function pickFunds(context: BrowserContext) {
   }
   const funds: Array<any> = await res.json();
   if (!Array.isArray(funds) || funds.length === 0) {
-    throw new Error("Claire has no funds — reseed the demo before running the reel.");
+    throw new Error("Elena has no funds — reseed the demo before running the reel.");
   }
   const owned = funds.find((f) => f.status !== "transferred" && f.slug) ?? funds[0];
   return { fundId: owned.id as string, fundSlug: owned.slug as string };
@@ -171,12 +171,12 @@ async function main() {
     await publicCtx.close();
     await authProbe.close();
 
-    // The parent's world — logged in as Claire (3 kids, the seeded demo).
+    // The parent's world — logged in as Elena (3 kids, the seeded demo).
     const authCtx = await browser.newContext({ viewport: DESKTOP });
     await unlockLaunchGate(authCtx);
     await login(authCtx);
 
-    console.log("> Parent surfaces (logged in as Claire):");
+    console.log("> Parent surfaces (logged in as Elena):");
     await capture(authCtx, "04-dashboard", "/dashboard");
     await capture(authCtx, "04-dashboard", "/dashboard", MOBILE);
     await capture(authCtx, "05-memory-book", `/memory/${fundId}`);

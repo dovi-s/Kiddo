@@ -10,7 +10,7 @@ mkdirSync(outDir, { recursive: true });
 async function main() {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1400 } });
-  await ctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  await ctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "marcus@riverafamily.com", password: "riverafamily" } });
   const fundsJson: any = await (await ctx.request.get(`${baseUrl}/api/funds`)).json();
   const list: any[] = Array.isArray(fundsJson) ? fundsJson : fundsJson?.funds || [];
   const luke = list.find((f) => /luke/i.test(String(f.recipientFirstName || f.name || "")));

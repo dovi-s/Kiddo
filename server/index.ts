@@ -294,14 +294,26 @@ app.get("/robots.txt", (req, res) => {
   const lines = [
     "User-agent: *",
     "Allow: /",
+    // Private / app / user-scoped routes — aligned to the real routes in
+    // client/src/App.tsx (2026-06-15). These are also noindex'd client-side, but
+    // a non-JS crawler only sees robots.txt, so the list must be accurate.
     "Disallow: /admin",
     "Disallow: /dashboard",
+    "Disallow: /account",
     "Disallow: /profile",
     "Disallow: /settings",
     "Disallow: /activity",
+    "Disallow: /funds",
+    "Disallow: /gifter",
+    "Disallow: /my-gifts",
+    "Disallow: /tax-documents",
+    "Disallow: /age-18-plan",
+    "Disallow: /transition/",
+    "Disallow: /welcome-at-18",
+    "Disallow: /take-over/",
+    "Disallow: /your-story/",
     "Disallow: /events",
     "Disallow: /event/create",
-    "Disallow: /send",
     "Disallow: /memory/",
     "Disallow: /kid/",
     "Disallow: /claim/",

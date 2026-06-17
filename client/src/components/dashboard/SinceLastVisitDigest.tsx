@@ -3,7 +3,7 @@
 // A returning parent (or a kid logging in after years) gets the balance ROLL
 // (the aggregate delta, felt) and the notification bell (the individual
 // events). This bridges them: one warm line that QUANTIFIES and ATTRIBUTES the
-// gap — "a $50 gift from Manny Delgado, $100 from you, plus $182 in market
+// gap — "a $50 gift from Leo Rivera, $100 from you, plus $182 in market
 // growth." It's the "here's everything you missed" moment, and it shines
 // exactly in the high-activity return (founder ask 2026-06-05).
 //
@@ -32,8 +32,8 @@ import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSe
 const LASTSEEN_PREFIX = "kiddo.fund.lastSeen.v1:";
 // Per-fund, session-persistent DISMISSAL. The digest behaves like the co-parent
 // banner: it persists across navigating away and back, and only leaves when the
-// viewer swipes / X's it -- PER FUND, so dismissing Luke's recap never touches
-// Alex's. (Replaces a single shared `dismissed` flag that leaked across kids AND
+// viewer swipes / X's it -- PER FUND, so dismissing Theo's recap never touches
+// Nora's. (Replaces a single shared `dismissed` flag that leaked across kids AND
 // a GLOBAL demo "shown once" key that let only the first kid viewed in a session
 // ever show the digest.) Demo dismissals stay under the kiddo.demo.* namespace so
 // the demo's cache reset still clears them.
@@ -157,7 +157,7 @@ export function SinceLastVisitDigest({
   // True once the gift list + value are fully loaded, so the digest appears
   // COMPLETE in one shot (no "$182 growth" → "$332 + 2 gifts" flicker).
   ready: boolean;
-  // The headline subject — "Luke's fund" for a parent, "Your fund" for the
+  // The headline subject — "Theo's fund" for a parent, "Your fund" for the
   // grown owner. Makes it a personal update, not a subjectless stat.
   subject?: string;
   // Whether the VIEWER is the person whose recurring auto-invest (the

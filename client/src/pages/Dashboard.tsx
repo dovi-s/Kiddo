@@ -992,7 +992,7 @@ function stripStockSuffix(name?: string | null): string {
 
 // gifterShortName + WEAK_NAME_LEADERS now live in @/lib/gifter-name (imported
 // above) so the Memory Book shares the exact same rule — it previously used a
-// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Phil's"
+// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Marcus's"
 // the Dashboard never showed.
 
 // Humanize a future countdown. A graduation 4 years out reading "1459 days away"
@@ -1124,7 +1124,7 @@ let smartNudgeShownThisSession = false;
 
 // Default a parent into their first OWNED, non-transferred fund — never a
 // handed-off / previous_owner fund. A parent shouldn't open straight into the
-// kid's graduated account, and in the seeded demo the graduated fund (Haley) is
+// kid's graduated account, and in the seeded demo the graduated fund (Mia) is
 // created FIRST, so a naive funds[0] lands there. Falls back to funds[0] only
 // when every fund is shared/transferred (e.g. a fully-graduated household).
 function pickDefaultFundId(funds: any[]): string {
@@ -2293,7 +2293,7 @@ export default function Dashboard() {
     // [you] can always do the roll-in thing?"). The roll's premise is
     // "you've been away; here's what changed" — a real returning parent
     // always has a yesterday-number, and the demo's fiction is stepping
-    // into Phil's life mid-stream, so a synthetic last-visit number is
+    // into Marcus's life mid-stream, so a synthetic last-visit number is
     // set dressing, not a lie: the START is bent, the END is always the
     // true balance, up-only holds by construction. Every fund-tab open
     // in the demo now plays the returning-parent moment; the ambient
@@ -3119,9 +3119,9 @@ export default function Dashboard() {
     // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
     // (top-center). This bottom-right GiftReceivedToast is the real-product
     // PLG nudge — firing BOTH meant two different gifts announced at once in
-    // two places ("Manny added $50" top-center + "Phil just gifted $100"
+    // two places ("Leo added $50" top-center + "Marcus just gifted $100"
     // bottom-right). The earlier fix only excluded `demo-` OVERLAY gifts, but
-    // every demo fund also has SEEDED gifts dated today (Phil's monthly
+    // every demo fund also has SEEDED gifts dated today (Marcus's monthly
     // auto-invest), which are real ids and slipped through. Suppress this
     // toast entirely for demo accounts so the demo shows ONE arrival beat.
     // (Founder catch 2026-06-04, follow-up.) Real accounts keep the card.
@@ -3264,7 +3264,7 @@ export default function Dashboard() {
       if (status === "failed" || status === "refunded") continue;
       const rawName = displayGifterName(g.senderName, (g as any).isAnonymous);
       // Group by stable IDENTITY (email-when-present), not raw name — so the
-      // same person signing "Gloria Pritchett" then "Grandma" is ONE row, and
+      // same person signing "Sofia Rivera" then "Grandma" is ONE row, and
       // two different people who share a name stay separate. Anonymous + no-email
       // groupings are unchanged. See gifterIdentityKey. (founder catch 2026-06-08)
       const key = gifterIdentityKey(g.senderName, (g as any).senderEmail, (g as any).isAnonymous);
@@ -3359,7 +3359,7 @@ export default function Dashboard() {
   // ── "On this day" gift anniversary (founder-locked 2026-06-04) ──
   // The relationship version of fintech's "feel time": when a gift was given
   // on TODAY's date in a previous year, one card in the hero cycler becomes
-  // "Gloria gave $50 three years ago today" with the REAL current value of
+  // "Sofia gave $50 three years ago today" with the REAL current value of
   // that exact gift (its actual shares at the live price — same honest math
   // as the Memory Book's now-worth lines). Composes entirely from data we
   // already load; nothing is projected, nothing is promised. Memory-machine
@@ -3795,7 +3795,7 @@ export default function Dashboard() {
     if (!activeFundId || !hasAutoInvestAccess || !activeAutoInvest || fundHistory.length < 2) return;
     if (isReadOnlyFund) return;
     // Never on the demo (2026-06-07). The nudge's CTA is "adjust YOUR
-    // recurring" — a real-parent control a Dunphy-demo visitor can't
+    // recurring" — a real-parent control a Rivera-demo visitor can't
     // meaningfully perform, and a self-promoting popup is noise on the
     // conversion surface even when it fires exactly once. (Also the demo is
     // where the storage-dedup was failing and producing the 3-at-once.)
@@ -3805,7 +3805,7 @@ export default function Dashboard() {
     if (smartNudgeShownThisSession) return;
     // GLOBAL monthly key, not per-fund (founder catch 2026-06-04: "I keep
     // getting it, 3 times on the same page"). The old per-fund key meant a
-    // Family parent tabbing Luke → Alex → Haley got THREE modals back to
+    // Family parent tabbing Theo → Nora → Mia got THREE modals back to
     // back — same pitch, three funds, one browsing session. One smart nudge
     // per month per PERSON is the contract; which fund earns it is just
     // whichever qualified first. (Also makes demo reseeds irrelevant — new
@@ -5540,7 +5540,7 @@ export default function Dashboard() {
           );
         })()}
 
-        {/* SetupProgressNudge hidden for demo accounts — the Dunphy
+        {/* SetupProgressNudge hidden for demo accounts — the Rivera
             demo is showcase mode, not new-customer onboarding mode.
             Setup tasks (link bank / activate investing / complete
             profile) are seeded as already-done conceptually; the
@@ -5612,7 +5612,7 @@ export default function Dashboard() {
             digest is the highest-frequency top banner (every return visit), so it
             DEFERS to a live event-driven banner — a co-parent acceptance or the
             at-18 welcome — instead of stacking on top of it. Without this the
-            digest and "Claire accepted co-parent" rendered together. Plus-media is
+            digest and "Elena accepted co-parent" rendered together. Plus-media is
             intentionally NOT included (no recency window → would over-suppress; it's
             rare enough to coexist). 2026-06-07. */}
         {!isReadOnlyFund
@@ -6583,7 +6583,7 @@ export default function Dashboard() {
                 side of the generational loop: the person who just finished one
                 handoff is the most likely to start the next. Persistent + dignified,
                 no action required, never naggy. Renders for any post-handoff parent
-                (real, or in the demo Phil viewing Haley's transferred fund). */}
+                (real, or in the demo Marcus viewing Mia's transferred fund). */}
             {isPreviousOwner && (
               <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="card-parent-handoff-moment">
                 <div className="flex items-start gap-3">
@@ -6805,10 +6805,10 @@ export default function Dashboard() {
               // Parent-mode rows ("Your recurring / Your one-time") are VIEWER-KEYED:
               // only money THIS viewer actually sent. Previously "Your recurring"
               // summed ALL custodian recurring — correct only while the viewer WAS
-              // the (sole) custodian. A co-admin (Claire) saw Phil's $100/mo labeled
+              // the (sole) custodian. A co-admin (Elena) saw Marcus's $100/mo labeled
               // "Your recurring investments" (founder catch 2026-06-04), and the
-              // OTHER account-holder's one-time money landed in NO row at all (Phil
-              // never saw Mom's additions; Claire never saw Dad's) — a silent
+              // OTHER account-holder's one-time money landed in NO row at all (Marcus
+              // never saw Mom's additions; Elena never saw Dad's) — a silent
               // reconciliation hole for any two-contributor family. The other
               // holder's money now gets its own named row below.
               const yourAutoInvestTotal = sumAmt(recurringRows.filter((g) => senderOf(g) === ownerEmail));
@@ -6824,7 +6824,7 @@ export default function Dashboard() {
               ));
               const otherHolderLabel = otherHolderNames.length === 1 ? otherHolderNames[0] : "Family";
               // Owner-mode (post-handoff) split: what the custodian parent(s) put
-              // in BEFORE handoff vs. what the owner (e.g. Haley) adds herself.
+              // in BEFORE handoff vs. what the owner (e.g. Mia) adds herself.
               // Reserves "Your additions" for the owner's own money and credits
               // the rest to the parent. (Owner-set recurring isn't built yet, so
               // yourAdditionsTotal is 0 today, but the wiring is ready for it.)
@@ -6866,7 +6866,7 @@ export default function Dashboard() {
               // Owner mode (post-handoff): prefer the previous custodian's
               // "what your kids call you" label (server-supplied from their
               // Account-settings preferredName) so it reads "Invested by Dad"
-              // not "Invested by Phil". Falls back to the derived first name
+              // not "Invested by Marcus". Falls back to the derived first name
               // when the custodian never set one — no hardcoding.
               const ownerCustodianLabel = isOwnerMode ? String((activeFund as any)?.previousOwnerCallMe || "").trim() : "";
               const custodianLabel = ownerCustodianLabel
@@ -6919,7 +6919,7 @@ export default function Dashboard() {
               // THE VIEWER. Viewer-keyed for the same reason as the rows above:
               // this date renders under "YOUR recurring investments", and the
               // fund-scoped list contains every account-holder's schedules — a
-              // $0-recurring co-admin (Claire) would otherwise read the
+              // $0-recurring co-admin (Elena) would otherwise read the
               // custodian's next charge date as her own ("Your recurring ·
               // starts Jun 18"). Same-family follow-up to the 2026-06-04
               // viewer-keying fix.
@@ -7350,8 +7350,8 @@ export default function Dashboard() {
                     : (() => {
                         const raw = String(activeOccasion.name || "Occasion").trim();
                         // Drop the redundant "{child}'s " prefix — this tile already
-                        // lives on that child's dashboard, so "Luke's Birthday" both
-                        // repeated the name AND got hard-sliced mid-word to "Luke's
+                        // lives on that child's dashboard, so "Theo's Birthday" both
+                        // repeated the name AND got hard-sliced mid-word to "Theo's
                         // Bi…". Stripping it leaves the actual occasion ("Birthday"),
                         // which fits clean; only genuinely long custom names still
                         // truncate, at a roomier threshold. 2026-06-08.
@@ -8315,7 +8315,7 @@ export default function Dashboard() {
                                           you": a graduated owner's OWN buys land in this same
                                           bucket, and "picked just for you" reads off when she
                                           did the picking herself. "Hand-picked" covers both
-                                          the gifter-picked history (Gloria's DIS) and her own
+                                          the gifter-picked history (Sofia's DIS) and her own
                                           picks without losing warmth. Parent view keeps the
                                           stronger "Picked just for {child}" — there the pickers
                                           are always OTHER people, so it's precisely true. */}
@@ -10976,7 +10976,7 @@ export default function Dashboard() {
                                         const gAmt = parseFloat(String(g.netAmount || g.amount || "0"));
                                         // Year included: annual gifters (e.g. a grandparent who
                                         // gives every birthday) otherwise render as identical-looking
-                                        // rows ("Cameron Tucker · Nov 20 · $75" twice) that read as a
+                                        // rows ("Chris Bennett · Nov 20 · $75" twice) that read as a
                                         // duplicate bug. The year is what distinguishes them.
                                         const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : null;
                                         const isLast = gi === Math.min(evGifts.length, evGiftsVisible) - 1;
@@ -11297,7 +11297,7 @@ export default function Dashboard() {
                 letter editor, "what happens at majority"). All future-tense and
                 parent-facing, and moot once the handoff has happened. Hide it for
                 ANY viewer of an already-transferred fund — not just the owner: a
-                previous owner (Phil viewing Haley's handed-off fund) or a co-parent
+                previous owner (Marcus viewing Mia's handed-off fund) or a co-parent
                 would otherwise see a future "turns 21 / the day it becomes theirs"
                 countdown to an event that already happened. Gate on the fund's
                 transferredAt (the canonical "handed off" signal), which also covers

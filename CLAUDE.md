@@ -60,7 +60,7 @@ the soul.)
   surrounding voice.
 - **Loop mechanics & moat.** Gifter-as-customer, capture-at-intent, the Memory
   Book switching cost, funded-k as the metric. Don't redesign these.
-- **The demo's *feel*.** The Dunphy demo is the conversion surface; its
+- **The demo's *feel*.** The Rivera demo is the conversion surface; its
   choreography (the count-up roll, the gift moment, the "while you were away"
   digest) is a taste call — build it, show it, let the founder judge tone.
 - **Architecture / data model.** Schema shape, the provider boundaries above, new

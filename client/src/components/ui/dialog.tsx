@@ -2,6 +2,7 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { cn } from "@/lib/utils"
 import { haptic } from "@/lib/haptics"
+import { useSheetDragDismiss } from "@/lib/use-sheet-drag-dismiss"
 
 const Dialog = DialogPrimitive.Root
 
@@ -52,51 +53,17 @@ const DialogContent = React.forwardRef<
   }, [])
 
   // Swipe-down-to-dismiss for the bottom-sheet variant on mobile (founder ask
-  // 2026-06-14: "anything that slides up should slide down to dismiss"). The
-  // drag handle is the ONLY grab zone — a small center strip — so it never fights
-  // the body's scroll (the classic bottom-sheet-vs-scroll conflict). Dragging it
-  // past a threshold animates the sheet the rest of the way down and triggers the
-  // real Radix close (a hidden DialogClose .click()), so onOpenChange + the
-  // slide-out exit fire exactly as they would from the X. Desktop (centered) keeps
-  // no handle. Backdrop-tap + the X button stay as fallbacks regardless.
-  const contentRef = React.useRef<HTMLDivElement | null>(null)
-  const closeRef = React.useRef<HTMLButtonElement | null>(null)
-  const drag = React.useRef({ startY: 0, dy: 0, active: false })
-  const setRefs = (node: HTMLDivElement | null) => {
-    contentRef.current = node
-    if (typeof ref === 'function') ref(node)
-    else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node
-  }
-  const onTouchStart = (e: React.TouchEvent) => {
-    drag.current = { startY: e.touches[0].clientY, dy: 0, active: true }
-    if (contentRef.current) contentRef.current.style.transition = 'none'
-  }
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!drag.current.active) return
-    const dy = Math.max(0, e.touches[0].clientY - drag.current.startY)
-    drag.current.dy = dy
-    if (contentRef.current) contentRef.current.style.transform = `translateY(${dy}px)`
-  }
-  const onTouchEnd = () => {
-    if (!drag.current.active) return
-    const { dy } = drag.current
-    drag.current.active = false
-    const el = contentRef.current
-    if (el) el.style.transition = 'transform 0.22s cubic-bezier(0.16,1,0.3,1)'
-    if (dy > 110) {
-      haptic('selection')
-      if (el) el.style.transform = 'translateY(100%)'
-      window.setTimeout(() => { closeRef.current?.click(); if (el) el.style.transform = '' }, 180)
-    } else if (el) {
-      el.style.transform = 'translateY(0px)'
-    }
-  }
+  // 2026-06-14: "anything that slides up should slide down to dismiss"). Shared
+  // hook: a center-strip drag handle that never fights body scroll and triggers
+  // the real Radix close past a threshold. Desktop (centered) keeps no handle;
+  // backdrop-tap + the X button stay as fallbacks regardless.
+  const { setContentRef, closeRef, handleProps } = useSheetDragDismiss<HTMLDivElement>(ref)
 
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
-        ref={setRefs}
+        ref={setContentRef}
         // Easing via INLINE animation-timing-function (reliably overrides
         // tailwindcss-animate): outExpo on open + close — the same curve as the
         // count-up/chevron — so the subtle zoom-95 scale-in settles on our system
@@ -120,9 +87,7 @@ const DialogContent = React.forwardRef<
             {/* Drag handle — center-only touch zone so it never intercepts a
                 corner close button or steals the body's scroll. Mobile only. */}
             <div
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
+              {...handleProps}
               className="absolute left-1/2 top-0 z-10 flex h-8 w-24 -translate-x-1/2 items-start justify-center pt-2 touch-none cursor-grab active:cursor-grabbing sm:hidden"
               aria-hidden="true"
               data-testid="sheet-drag-handle"

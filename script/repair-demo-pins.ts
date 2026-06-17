@@ -21,7 +21,7 @@ async function main() {
   const pins: string[] = [];
   for (const f of demoFunds) {
     // Oldest EXTERNAL gift entry: gift_message whose gift is neither a parent
-    // recurring cycle (parentContributionId null) nor Phil's own one-time
+    // recurring cycle (parentContributionId null) nor Marcus's own one-time
     // (sender email != phil's). NB: memory_entries has no authorRole column —
     // the seed passes one via `as any` and Postgres silently drops it.
     const [oldest] = await db
@@ -32,7 +32,7 @@ async function main() {
         eq(memoryEntries.fundId, f.id),
         eq(memoryEntries.type, "gift_message"),
         isNull(gifts.parentContributionId),
-        sql`coalesce(${gifts.senderEmail}, '') <> 'phil@dunphyfamily.com'`,
+        sql`coalesce(${gifts.senderEmail}, '') <> 'marcus@riverafamily.com'`,
       ))
       .orderBy(asc(memoryEntries.createdAt))
       .limit(1);

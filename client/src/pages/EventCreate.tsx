@@ -493,11 +493,11 @@ export default function EventCreate() {
                 <p className="text-xs font-medium text-white/70 uppercase tracking-wider">{typeMeta.label}</p>
               ) : null}
               <h2 className="mt-2 font-heading text-2xl font-bold leading-tight">{headline}</h2>
-              <p className="mt-1.5 text-xs font-semibold text-white/85">No account needed. Takes 60 seconds.</p>
+              <p className="mt-1.5 text-xs font-semibold text-white/85">No account needed. Takes seconds.</p>
               <div className="mt-3 grid grid-cols-3 gap-1.5 text-[10px] text-white">
                 <div className="rounded-xl bg-white/15 px-2 py-2 backdrop-blur-sm text-center"><span className="text-base leading-none">🌱</span><p className="mt-0.5 font-semibold">Invested</p></div>
                 <div className="rounded-xl bg-white/15 px-2 py-2 backdrop-blur-sm text-center"><span className="text-base leading-none">🔒</span><p className="mt-0.5 font-semibold">Protected</p></div>
-                <div className="rounded-xl bg-white/15 px-2 py-2 backdrop-blur-sm text-center"><span className="text-base leading-none">⚡</span><p className="mt-0.5 font-semibold">60 seconds</p></div>
+                <div className="rounded-xl bg-white/15 px-2 py-2 backdrop-blur-sm text-center"><span className="text-base leading-none">⚡</span><p className="mt-0.5 font-semibold">Seconds</p></div>
               </div>
               {displayDate && (
                 <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 backdrop-blur-sm px-2.5 py-1">

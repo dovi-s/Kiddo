@@ -71,7 +71,7 @@ export function demoMockCheckoutResponse(returnUrl?: string) {
 }
 
 // ── Demo write-guard ─────────────────────────────────────────────────────────
-// A demo VISITOR logs in as a SHARED demo account (phil@/jay@dunphyfamily.com).
+// A demo VISITOR logs in as a SHARED demo account (phil@/robert@riverafamily.com).
 // The money-flow endpoints already self-sandbox (mock responses above). But the
 // REST of the mutation surface would PERSIST to the shared demo and pollute it
 // for the next visitor — or, worst case, LOCK it (2FA enroll, password change)

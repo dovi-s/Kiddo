@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// Does the "Luke"/Home sidebar item highlight on initial load? Check on
+// Does the "Theo"/Home sidebar item highlight on initial load? Check on
 // /dashboard AND /design-lab. The active class is font-bold + bg rgb(237,244,238)
 // (DesktopSidebar.tsx:712); report whether the Home nav button has it on each.
 import { mkdirSync } from "node:fs";
@@ -33,7 +33,7 @@ async function main() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await ctx.request.get(`${baseUrl}/api/health`, { timeout: 120000 }).catch(() => {});
   const login = await ctx.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" }, timeout: 120000,
+    data: { email: "marcus@riverafamily.com", password: "riverafamily" }, timeout: 120000,
   });
   console.log(`login HTTP ${login.status()}`);
   if (login.status() !== 200) { console.log("rate-limited — stopping"); await browser.close(); return; }

@@ -15,7 +15,7 @@ async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const login = await context.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "jay@dunphyfamily.com", password: "dunphyfamily" },
+    data: { email: "robert@riverafamily.com", password: "riverafamily" },
   });
   if (login.status() !== 200) throw new Error(`login failed: ${login.status()}`);
 

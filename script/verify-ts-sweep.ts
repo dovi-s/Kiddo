@@ -4,7 +4,7 @@
 // H2/H9 (name/message rules on all public text paths), H6/H7 (blocklist on
 // every gift path), H8 (checkout velocity), H4 (kid-view PIN lockout,
 // durable + token-keyed). One-off harness, reusable; assumes `npm run dev`
-// healthy on :5000 + the Dunphy seed. Creates its own throwaway parent+fund
+// healthy on :5000 + the Rivera seed. Creates its own throwaway parent+fund
 // (NON-demo, so validation paths actually execute) and cleans up its
 // blocklist row + rate-limit keys at the end.
 import { db } from "../server/db";

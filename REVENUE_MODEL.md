@@ -120,3 +120,128 @@ the loop UX, measure weekly) and one B2B2C yes.** Stack the brand-safe streams
 (sub + float + sponsorship) underneath, and keep the kid-2.0 funnel as the north
 star that justifies the whole thing existing. The pricing is fine; the **stack
 and the loop** are the company.
+
+---
+
+## 2026-06-15 crystallization — the reframe, the rule, the launch config, the test
+
+*Added after a deep competitor + monetization working session (see
+`COMPETITIVE_LANDSCAPE.md` for the verified facts: Stockpile died of fee-erosion +
+being the BD + no moat; Endowe is a $300-AUM one-person RIA shell; Acorns is the real
+convergent threat; Stash gates kids' custodial behind $12/mo). This section doesn't
+replace the stack above. It sharpens the spine and confirms the launch config.*
+
+**The reframe (the unlock): Kiddo is not a brokerage, it's the emotional-commerce
+company for a child's financial life — a Babylist that recurs for 18 years instead of
+one wedding day.** Brokerages monetize basis points on balances, which is exactly why
+the category is broke at the kid stage. The wedding/baby industries monetize the
+emotional *event* through commerce, sponsorship, keepsakes, and high-value adjacent
+services, and let the transaction be near-free. You own an emotional event that fires
+every birthday, holiday, and milestone for two decades. What users actually want
+underneath all of it: **to turn love into something that lasts, and to not screw up
+their kid's future.** Every dollar flows from serving that love and that fear.
+
+**The spine (one sentence):** free where balances are small and trust is being built,
+paid where balances are real and trust transfers, and **never charge the child's
+balance.** The love is the product; the financial plumbing is the commodity you give
+away.
+
+**The constitution / forbidden list (this protects the moat, it is part of the model):**
+no required subscription on small balances, no silent float (disclose it, ideally share
+yield), no exit/transfer fees, no fractional-liquidation lock-in, no PFOF, no
+gamification of a child's money, no selling children's data, no opt-out tip default.
+Every one is a documented user grievance and a competitor's grave.
+
+### Launch config (CONFIRMED — ship essentially what's already built)
+- **Free** — one kid, fully functional: receives gifts whole, invests, basic Memory
+  Book, the whole loop. Carries only the 0.10%.
+- **Plus (paid, one kid)** — premium extras (recurring, custom mix, co-parent,
+  parent-authored media, richer Memory Book).
+- **Family (paid)** — Plus across all kids in the household.
+- **0.10% AUM on ALL plans, including free.** Negligible in felt terms (~$1/yr on
+  $1,000), honest, and even free funds carry the meter. Sub + tiny AUM is not resented
+  double-dipping because the AUM is invisible and the sub buys distinct value
+  (features + kids), never the right to invest.
+- **Gifters never pay.** Gifting and investing are never gated. Optional honest gifter
+  tip only (modest default, never opt-out-defaulted).
+
+**The 3 conditions that keep this off the Stockpile/Stash side of the line:**
+1. The free tier must be genuinely great, or "free" is a lie and you're a worse Stash.
+2. Paid never gates the core (gifting + investing always free; paid = wants).
+3. Lead with FREE, loudly. "Kiddo is free, the gift always lands whole" is the headline
+   and the live foil vs Stash's $12/mo custodial gate.
+
+### Revenue lines ranked by certainty (sharpening the stack table above)
+1. **The lifetime customer (real engine, slow, certain).** Kid acquired at birth for
+   ~$0, at 18 has no incumbent bank/advisor + 18 years of trust = zero switching cost.
+   Interchange + advisory for decades. The kid-2.0 funnel. The only un-copyable line.
+2. **Someone else pays (sturdiest near-term cash): sponsors + employers (B2B2C),** run
+   as an auction for the emotional inventory. Family gets free money (most-wanted thing),
+   brand pays the CAC. Start selling now; doesn't depend on consumer conversion.
+3. **Emotional-commerce layer (new margin, testable immediately):** the "wrapping
+   economy" (card/book/keepsake at the gift moment, Babylist-style affiliate margin);
+   the **Memory Book as a premium bound artifact at 18** (the emotional-climax upsell,
+   the "Legacy" tier); **tax/FAFSA relief** sold as the cure to a documented pain. None
+   touch the balance.
+4. **Active-want advisory (big IF real, UNPROVEN — do not bank on it):** NOT "convert
+   grandma's nest egg" (most switching-resistant behavior in finance; I over-sold this).
+   Instead answer the question the family is *already asking* — structured
+   intergenerational transfer for the grandparent already trying to pass money down, and
+   life insurance at the new-baby moment (the #1 insurance-buying trigger, large
+   commissions, real want). Sells into an active want = converts far better than a cold
+   AUM pitch. Personal Capital is the precedent AND the warning: it converted at low
+   single digits with paid acquisition + human sales, not a zero-CAC elegant machine.
+5. **The quiet meter:** 0.10% AUM + honest tip. Real only at scale.
+
+### Deferred decisions and their triggers (earn them on data, don't guess)
+- **0.25% AUM is NOT a standalone knob — it rides with the "become the family's advisor
+  / own the RIA" decision** (the RIA fork already flagged above). Decide it AFTER
+  funded-k, on real adult-conversion data. Until then, 0.10%. Don't raise it as a launch
+  tweak (0.25% on a $500 account = $1.25/yr; you'd spend "lowest fee" for nothing).
+- **Emotional-commerce + sponsor lines are cheap experiments the week the loop is live:**
+  a $5 keepsake card in the gift flow (watch attach rate); one brand-sponsored match
+  (watch gift lift). Build the winners.
+
+### The one experiment that decides which company you are
+The number that settles the identity fork (patient lifetime-LTV bet vs advisor-led
+business that makes money in year two): **the rate at which any adult in the loop moves
+REAL money to you** (their own managed account, a recurring plan, a larger contribution).
+It does not exist yet. Instrument it into the loop from day one and measure it the moment
+funded-k is real. >~2-3% to real balances → commit to the advisor model. <~0.5% → you're
+the patient at-18 LTV business + sponsor revenue, and that's a fundraising decision.
+
+**Open founder input (the one thing the model can't reason its way to):** is raising
+capital on the table? That sets the runway for the patient path if the experiment
+disappoints.
+
+**Deck line:** Free for families, the gift always lands whole, and Kiddo earns from
+everyone around the child and from the child once grown, by monetizing love made concrete
+instead of basis points on a balance.
+
+---
+
+## 2026-06-16 refinement — the subscription, resurrected as gifter-funded
+
+The earlier crystallization demoted the subscription. The sponsor-Plus stacking work
+(`SPONSOR_PLUS_STACKING.md`) brings it back in a brand-safe form: the subscription is
+**primarily gifter-funded**. A gifter sponsors the family's premium and it **stacks
+forward indefinitely** (Grandma covers 2026, Aunt May 2027…), so a well-loved family
+never touches the bill. This **converts the single most-hated mechanic — a recurring fee
+on a kid's account (what killed Stockpile) — into a loved one** ("your premium is a gift
+from Grandma"). Same dollars, opposite valence. It's the GoFundMe-tip model applied to
+the subscription: voluntary, generous-moment, someone-other-than-the-family pays =
+squarely accretive + a relationship surface.
+
+So the subscription layer is now three tiers **by WHO pays**:
+1. **Free core — everyone.** Universal, never hated; protects exactly the thinly-
+   supported families a sponsor runway never reaches.
+2. **Gifter-sponsored premium — the primary, on-thesis monetization.** Loved-and-
+   supported kids; both revenue and a relationship moment.
+3. **Family-paid premium — the quiet fallback** for the unsponsored who want extras.
+
+Caveats: it only "goes forever" for kids with generous, plural gifters (hence the free
+core must stay), and the runway is contingent on the next gifter choosing to stack (the
+sponsor-naming renewal reminder re-prompts it). Run the HONEST version — no GoFundMe
+opt-out dark pattern — because these are repeat relationship gifters; an extractive
+default would poison the loop. Wave-2 build; the current non-stacking sponsor-Plus ships
+fine for launch.

@@ -68,7 +68,7 @@ is the recommendation for transactional deliverability + the simpler webhook.
 - No template work (all built + on-brand; the verification email sets the calm
   register every other email follows).
 - No transport code (Postmark + SendGrid both fully implemented).
-- The demo (`dunphyfamily.com`) and `example.*` are hard-blocked from real
+- The demo (`riverafamily.com`) and `example.*` are hard-blocked from real
   delivery even with a provider set (`NEVER_DELIVER_DOMAINS`), so demo workers
   can't leak bearer-token links to a domain we don't own.
 

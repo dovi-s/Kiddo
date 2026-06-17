@@ -23,11 +23,11 @@ async function main() {
   try {
     await page.goto(BASE, { waitUntil: "domcontentloaded" });
     await page.evaluate(async () => {
-      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "claire@dunphyfamily.com", password: "dunphyfamily" }) });
+      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "elena@riverafamily.com", password: "riverafamily" }) });
     });
     // Warm the cache so dashboard-summary is instantly available on the next
     // load — then the ONLY thing delaying the gated CoparentAcceptedBanner
-    // ("Phil accepted your invite") is the ~1.3s hold itself.
+    // ("Marcus accepted your invite") is the ~1.3s hold itself.
     await page.goto(`${BASE}/dashboard?fund=${ALEX}`, { waitUntil: "domcontentloaded" });
     const banner = () => page.getByText(/accepted your invite/i).first();
     await banner().waitFor({ timeout: 20_000 }).catch(() => null);

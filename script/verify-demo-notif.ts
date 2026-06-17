@@ -17,7 +17,7 @@ async function readBadge(page: any): Promise<string> {
 async function main() {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1400 } });
-  await ctx.request.post(`${base}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  await ctx.request.post(`${base}/api/auth/login`, { data: { email: "marcus@riverafamily.com", password: "riverafamily" } });
   const fundsJson: any = await (await ctx.request.get(`${base}/api/funds`)).json();
   const list: any[] = Array.isArray(fundsJson) ? fundsJson : fundsJson?.funds || [];
   const luke = list.find((f) => /luke/i.test(String(f.recipientFirstName || f.name || "")));
@@ -31,23 +31,23 @@ async function main() {
   const lukeBadge = await readBadge(page);
   const body = await page.locator("body").innerText().catch(() => "");
   const digestPresent = /while you were away/i.test(body);
-  const giftMentioned = /Manny|gift from/i.test(body);
-  console.log(`Luke bell badge: "${lukeBadge}"  (expect a small number, not "(none)" or "9+")`);
+  const giftMentioned = /Leo|gift from/i.test(body);
+  console.log(`Theo bell badge: "${lukeBadge}"  (expect a small number, not "(none)" or "9+")`);
   console.log(`  digest card present: ${digestPresent} | recent gift mentioned: ${giftMentioned}`);
   await page.screenshot({ path: path.join(outDir, "luke.png") });
 
-  // Switch to Alex — should reflect Alex's recent (gift from Jay + Co-parent joined).
+  // Switch to Nora — should reflect Nora's recent (gift from Robert + Co-parent joined).
   await page.goto(`${base}/dashboard?fund=${alex.id}`, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.locator('[data-testid^="holding-row-"]').first().waitFor({ state: "visible", timeout: 60000 });
-  // Poll up to ~12s for Alex's cold activities query to load + the badge to paint.
+  // Poll up to ~12s for Nora's cold activities query to load + the badge to paint.
   let alexBadge = "(none)";
   for (let i = 0; i < 12; i++) { await page.waitForTimeout(1000); alexBadge = await readBadge(page); if (alexBadge !== "(none)") break; }
-  console.log(`Alex bell badge: "${alexBadge}"`);
+  console.log(`Nora bell badge: "${alexBadge}"`);
   await page.screenshot({ path: path.join(outDir, "alex.png") });
 
   const n = (s: string) => (s === "9+" ? 99 : parseInt(s, 10) || 0);
   const lukeOk = lukeBadge !== "(none)" && lukeBadge !== "9+" && n(lukeBadge) >= 1 && n(lukeBadge) <= 6;
-  const alexOk = alexBadge !== "9+" && n(alexBadge) <= 6; // Alex bounded too
+  const alexOk = alexBadge !== "9+" && n(alexBadge) <= 6; // Nora bounded too
   console.log(`\n${lukeOk && alexOk ? "PASS" : "FAIL"}: bell opens with a bounded, genuine notification (not empty, not 9+).`);
   await b.close();
   console.log(`screenshots: ${outDir}`);

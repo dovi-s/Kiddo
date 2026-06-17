@@ -1,4 +1,4 @@
-// Reset the Dunphy demo state. Wipes all data tied to demo users, then
+// Reset the Rivera demo state. Wipes all data tied to demo users, then
 // re-runs the seed. Used by:
 //   1. Manual invocation: `npm run reset:dunphys` — when a demo visitor
 //      mutated the seeded data and you want to put it back.
@@ -39,27 +39,34 @@ import {
 } from "../shared/schema";
 import { sql as drizzleSql } from "drizzle-orm";
 import { eq, inArray, or, like } from "drizzle-orm";
-import { runDunphySeed } from "./seed-dunphys";
+import { runRiveraSeed } from "./seed-dunphys";
 
 const DEMO_EMAILS = [
-  "phil@dunphyfamily.com",
-  "claire@dunphyfamily.com",
-  "jay@dunphyfamily.com",
-  "gloria@dunphyfamily.com",
-  "mitchell@dunphyfamily.com",
-  "cameron@dunphyfamily.com",
-  "manny@dunphyfamily.com",
+  "marcus@riverafamily.com",
+  "elena@riverafamily.com",
+  "robert@riverafamily.com",
+  "sofia@riverafamily.com",
+  "david@riverafamily.com",
+  "chris@riverafamily.com",
+  "leo@riverafamily.com",
 ];
 
 async function wipeDemoState(): Promise<void> {
   // 1. Find demo user IDs.
+  // Legacy-aware: the Rivera emails (current demo) PLUS any orphaned pre-rename
+  // "@dunphyfamily.com" accounts, so their stale funds get wiped too and a
+  // Dunphy-era family can never re-orphan. The hard identity scrub of those
+  // legacy rows lives in script/cleanup-legacy-demo.ts (run once).
   const demoUsers = await db.select({ id: users.id, email: users.email })
     .from(users)
-    .where(inArray(users.email, DEMO_EMAILS));
+    .where(or(
+      inArray(users.email, DEMO_EMAILS),
+      like(users.email, "%@dunphyfamily.com"),
+    ));
   const demoUserIds = demoUsers.map((u) => u.id);
 
   if (demoUserIds.length === 0) {
-    console.log("No Dunphy demo users found. Nothing to wipe.");
+    console.log("No Rivera demo users found. Nothing to wipe.");
     return;
   }
 
@@ -67,10 +74,10 @@ async function wipeDemoState(): Promise<void> {
 
   // 2. Find demo fund IDs. Collect by current owner OR previous owner OR the
   //    "-dunphy" slug — NOT just current owner. A fund handed off to a graduated
-  //    demo kid (Haley) is owned by the KID, and across resets the kid's funds
+  //    demo kid (Mia) is owned by the KID, and across resets the kid's funds
   //    were being missed and ORPHANED: each reseed left the old transferred fund
-  //    behind and created a slug-collision dupe (haley-dunphy-2, -3…), so the app
-  //    showed an empty Haley fund while her gifts/activities lived on an orphan.
+  //    behind and created a slug-collision dupe (mia-rivera-2, -3…), so the app
+  //    showed an empty Mia fund while her gifts/activities lived on an orphan.
   //    previousOwnerId (the former custodian, always a demo user) + the slug
   //    pattern (every demo fund is "{kid}-dunphy") make the wipe exhaustive.
   const demoFunds = await db.select({ id: funds.id, name: funds.name })
@@ -79,6 +86,7 @@ async function wipeDemoState(): Promise<void> {
       inArray(funds.userId, demoUserIds),
       inArray(funds.previousOwnerId, demoUserIds),
       like(funds.slug, "%-dunphy%"),
+      like(funds.slug, "%-rivera%"),
     ));
   const demoFundIds = demoFunds.map((f) => f.id);
 
@@ -87,7 +95,7 @@ async function wipeDemoState(): Promise<void> {
   //    after dependents are clear.
   //
   //    Subscriptions table is intentionally NOT wiped — the seed's
-  //    ensurePhilFamilySubscription() upserts it. Wiping the row would
+  //    ensureMarcusFamilySubscription() upserts it. Wiping the row would
   //    cascade onto Stripe IDs the seed sets to null, no real harm.
   //    Keeping the row avoids a needless DELETE.
   if (demoFundIds.length > 0) {
@@ -117,7 +125,7 @@ async function wipeDemoState(): Promise<void> {
     // reseed can leave a memory_entry whose own fundId is no longer in
     // demoFundIds yet whose gift_id still points at a demo gift. That orphan
     // survives the delete above and trips the gifts delete — which aborts the
-    // whole reset before the funds are deleted, so the seed then sees Phil's
+    // whole reset before the funds are deleted, so the seed then sees Marcus's
     // funds and SKIPS (the root cause of "occasions missing" / "data gone").
     // Delete by gift_id to catch the orphans too. Same class of bug + fix as the
     // referral_events.event_id clear below.
@@ -127,7 +135,7 @@ async function wipeDemoState(): Promise<void> {
     // misses a thank_you whose own fund_id drifted out of demoFundIds (or is
     // null) but whose gift_id still points at a demo gift. That orphan survives
     // and trips the gifts delete on thank_yous_gift_id_gifts_id_fk, aborting the
-    // whole reset before funds are deleted (so the seed then sees Phil's funds
+    // whole reset before funds are deleted (so the seed then sees Marcus's funds
     // and SKIPS). Delete by gift_id to catch the orphans too.
     await db.execute(drizzleSql`DELETE FROM thank_yous WHERE gift_id IN (SELECT id FROM gifts WHERE fund_id IN (${idsList}))`);
     await db.delete(gifts).where(inArray(gifts.fundId, demoFundIds));
@@ -147,7 +155,7 @@ async function wipeDemoState(): Promise<void> {
     await db.delete(ageTransitions).where(inArray(ageTransitions.fundId, demoFundIds));
     await db.delete(age18ReminderState).where(inArray(age18ReminderState.fundId, demoFundIds));
     // Wipe co-parent collaborator rows so the seed can re-create them
-    // from a clean slate (Claire's row, anyone else added per-fund).
+    // from a clean slate (Elena's row, anyone else added per-fund).
     await db.delete(fundCollaborators).where(inArray(fundCollaborators.fundId, demoFundIds));
     // Nullable refs (notifications, referral_events, analytics_events,
     // blocked_gifters, gift_intents). The seed doesn't create rows in
@@ -224,11 +232,11 @@ async function wipeDemoState(): Promise<void> {
   //    are stable across resets. Saves a bcrypt pass per user per reset.
 }
 
-export async function resetDunphys(options: { closePool?: boolean } = {}): Promise<void> {
+export async function resetRiveras(options: { closePool?: boolean } = {}): Promise<void> {
   const closePool = options.closePool !== false;
   await wipeDemoState();
   console.log("");
-  await runDunphySeed({ closePool: false });
+  await runRiveraSeed({ closePool: false });
   if (closePool) await pool.end();
 }
 
@@ -242,7 +250,7 @@ const isDirectInvocation = (() => {
 })();
 
 if (isDirectInvocation) {
-  resetDunphys().catch((err) => {
+  resetRiveras().catch((err) => {
     console.error("Reset failed:", err);
     process.exit(1);
   });

@@ -61,6 +61,9 @@ export interface ApiUser {
   firstName: string | null;
   lastName: string | null;
   role?: string;
+  // Present on the demo account; drives the synthetic "while you were away"
+  // baseline so the digest shows on the demo without a prior-session marker.
+  isDemoAccount?: boolean;
 }
 
 export interface ApiFund {
@@ -84,6 +87,9 @@ export interface ApiFund {
   contributorCount: number;
   recipientFirstName: string | null;
   recipientBirthdate: string | null;
+  // The age the child takes control (UTMA majority age — varies by state, 18-21).
+  // The web reads this; native must too, not hardcode 18. Default 18 if absent.
+  majorityAge?: number;
   createdAt: string;
   // accessRole tags this fund row as owned vs collaborated vs
   // transferred. Web dashboard + mobile detail branch on this:
@@ -197,6 +203,9 @@ export interface DashboardGift {
   eventId?: string | null;
   createdAt: string;
   settledAt?: string | null;
+  // Set when this gift is the parent's own recurring auto-invest (not a gift
+  // from someone else). Drives the "while you were away" digest split.
+  parentContributionId?: string | null;
 }
 
 /** A parent's recurring investment schedule (free across all tiers). */
@@ -390,7 +399,26 @@ async function getCachedDeviceId(): Promise<string | null> {
   }
 }
 
-async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+// Default request timeout. Without this, fetch() hangs FOREVER when the host is
+// unreachable (e.g. a physical phone that can't reach the dev server), which is
+// what froze the app on the splash screen. Every request now aborts after this
+// window so callers fail fast and the UI never hangs.
+const DEFAULT_TIMEOUT_MS = 15000;
+
+// Network-reachability signal. apiFetch reports whether the server is reachable
+// (true on any response, false on network error/timeout) so the UI can show a
+// "can't reach the server" banner instead of failing silently. Decoupled via a
+// listener so api.ts has no UI imports.
+let _netListener: ((online: boolean) => void) | null = null;
+export function setNetworkStatusListener(cb: ((online: boolean) => void) | null): void {
+  _netListener = cb;
+}
+
+async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> | undefined),
@@ -417,11 +445,25 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<Respon
     headers["X-Kiddo-Device-Id"] = deviceId;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+      signal: controller.signal,
+    });
+    _netListener?.(true);
+  } catch (err) {
+    // Network failure / timeout / abort — the server is unreachable. Signal the
+    // banner, then rethrow so callers' own error handling still runs.
+    _netListener?.(false);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   const cookie = response.headers.get("set-cookie");
   if (cookie) {
@@ -522,20 +564,235 @@ export async function apiGetDeviceStatus(): Promise<{ revoked: boolean; register
 }
 
 export async function apiGetUser(): Promise<ApiUser | null> {
-  const res = await apiFetch("/api/auth/user");
-  // /api/auth/user returns 200 + null body when not authenticated. The 401
-  // branch is a defensive fallback for the deploy window where an older
-  // server may still be returning 401 — once both halves are deployed, the
-  // 200 + null path is the only one that fires.
-  if (res.status === 401) return null;
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-  const body = (await res.json()) as ApiUser | null;
-  return body;
+  // Never throws. A throw here propagates into App boot() and can leave the app
+  // stuck on the splash screen when the API is slow/unreachable. Any failure
+  // (network, timeout, non-OK) resolves to null = "treat as logged out", so the
+  // UI always advances off splash. Shorter timeout so the splash doesn't linger.
+  try {
+    const res = await apiFetch("/api/auth/user", {}, 9000);
+    // /api/auth/user returns 200 + null body when not authenticated. The 401
+    // branch is a defensive fallback for an older server still returning 401.
+    if (res.status === 401) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as ApiUser | null;
+  } catch {
+    return null;
+  }
+}
+
+// Lightweight reachability probe for the connectivity banner's Retry. Hitting
+// any endpoint updates the network-status listener via apiFetch; we use the
+// cheap health route. Never throws.
+export async function apiHealthPing(): Promise<boolean> {
+  try {
+    const res = await apiFetch("/api/health", {}, 6000);
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function apiGetFunds(): Promise<ApiFund[]> {
   const res = await apiFetch("/api/funds");
   return parseJson<ApiFund[]>(res);
+}
+
+// The canonical activity feed (the SAME source the web /activity page uses).
+// dashboard-summary.transactions is sparse/empty by comparison, so the native
+// Activity tab reads this per-fund feed instead.
+export interface ApiActivity {
+  id: string;
+  fundId: string;
+  type: string;
+  title: string;
+  description?: string | null;
+  amount?: string | null;
+  createdAt: string;
+  status?: string | null;
+  isParentContribution?: boolean;
+  eventName?: string | null;
+}
+
+export async function apiGetActivities(fundId: string): Promise<ApiActivity[]> {
+  const res = await apiFetch(`/api/activities?fundId=${encodeURIComponent(fundId)}`);
+  return parseJson<ApiActivity[]>(res);
+}
+
+// ===== SUBSCRIPTION / PLAN & BILLING =====
+// Mirrors the web Account "Plan" tab. Stripe checkout + the billing portal are
+// web flows (PCI), so checkout/portal calls return a URL the app opens in the
+// browser; cancel / reactivate / downgrade resolve server-side and we refetch.
+
+export type PlanTier = "free" | "starter" | "family" | "legacy";
+
+export interface PlanFit {
+  kind: "downgrade_to_plus" | "no_plan_needed";
+  activeFundCount: number;
+  fund: { id: string; name: string; childName: string | null } | null;
+  renewalDate: string | null;
+}
+
+export interface SponsoredCoverage {
+  tier: PlanTier;
+  sponsorName: string;
+  sponsorEmail: string;
+  expiresAt: string;
+}
+
+export interface SubscriptionInfo {
+  plan: PlanTier;
+  // effectivePlan accounts for per-fund starter memberships; render this, not `plan`.
+  effectivePlan: PlanTier;
+  status: string;
+  currentPeriodEnd: string | null;
+  canceledAt: string | null;
+  starterFundCount: number;
+  activeFamilyYearlyPrice?: number;
+  planFit: PlanFit | null;
+  sponsoredByFund?: Record<string, SponsoredCoverage | null>;
+}
+
+export async function apiGetSubscription(): Promise<SubscriptionInfo> {
+  const res = await apiFetch("/api/subscription");
+  return parseJson<SubscriptionInfo>(res);
+}
+
+export async function apiOpenBillingPortal(
+  input: { plan?: PlanTier | null; fundId?: string | null } = {},
+): Promise<{ url: string; isDemo?: boolean; message?: string | null }> {
+  const res = await apiFetch("/api/subscription/portal", { method: "POST", body: JSON.stringify(input) });
+  return parseJson(res);
+}
+
+export async function apiCancelSubscription(input: {
+  plan?: PlanTier | null;
+  fundId?: string | null;
+  cancelReason?: string | null;
+}): Promise<{ success: boolean; activeUntil?: string | null; alreadyCanceled?: boolean | null }> {
+  const res = await apiFetch("/api/subscription/cancel", { method: "POST", body: JSON.stringify(input) });
+  return parseJson(res);
+}
+
+export async function apiReactivateSubscription(input: {
+  plan?: PlanTier | null;
+  fundId?: string | null;
+}): Promise<{ success: boolean }> {
+  const res = await apiFetch("/api/subscription/reactivate", { method: "POST", body: JSON.stringify(input) });
+  return parseJson(res);
+}
+
+export async function apiDowngradeToPlus(): Promise<{ success: boolean; activeUntil?: string | null }> {
+  const res = await apiFetch("/api/subscription/downgrade-to-plus", { method: "POST", body: JSON.stringify({}) });
+  return parseJson(res);
+}
+
+export async function apiCheckoutStarterPlan(
+  fundId: string,
+  billingInterval: "monthly" | "yearly" = "monthly",
+): Promise<{ url?: string }> {
+  const res = await apiFetch("/api/stripe/checkout/starter-plan", {
+    method: "POST",
+    body: JSON.stringify({ fundId, billingInterval }),
+  });
+  return parseJson(res);
+}
+
+export async function apiCheckoutFamilyPlan(
+  billingInterval: "monthly" | "yearly" = "monthly",
+): Promise<{ url?: string }> {
+  const res = await apiFetch("/api/stripe/checkout/family-plan", {
+    method: "POST",
+    body: JSON.stringify({ billingInterval }),
+  });
+  return parseJson(res);
+}
+
+// ===== PROFILE / ACCOUNT =====
+
+export async function apiUpdateProfile(input: {
+  firstName?: string;
+  lastName?: string;
+  preferredName?: string;
+  profileImageUrl?: string | null;
+}): Promise<ApiUser> {
+  const res = await apiFetch("/api/user/profile", { method: "PATCH", body: JSON.stringify(input) });
+  return parseJson<ApiUser>(res);
+}
+
+export async function apiChangePassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ ok: boolean }> {
+  const res = await apiFetch("/api/user/change-password", { method: "POST", body: JSON.stringify(input) });
+  return parseJson(res);
+}
+
+export async function apiChangeEmail(newEmail: string): Promise<{ ok: boolean }> {
+  const res = await apiFetch("/api/me/change-email", { method: "POST", body: JSON.stringify({ newEmail }) });
+  return parseJson(res);
+}
+
+// ===== RECURRING & PARENT CONTRIBUTIONS =====
+// The parent's own recurring auto-invest (parent_contributions) + gifters'
+// recurring gifts (recurring_gifts). Manage existing ones from the app;
+// "contribute now" opens a Stripe one-time checkout (web/PCI).
+
+export interface RecurringGift {
+  id: string;
+  senderName: string;
+  senderEmail: string | null;
+  amount: string;
+  frequency: string;
+  status: string;
+  nextChargeDate?: string | null;
+  occasionType?: string | null;
+  pauseReason?: string | null;
+  createdAt?: string;
+}
+
+export async function apiGetParentContributions(fundId: string): Promise<ParentContribution[]> {
+  const res = await apiFetch(`/api/funds/${fundId}/parent-contributions`);
+  return parseJson<ParentContribution[]>(res);
+}
+
+export async function apiUpdateParentContribution(
+  id: string,
+  body: { status?: "active" | "paused" | "cancelled"; amount?: number; frequency?: string },
+): Promise<ParentContribution> {
+  const res = await apiFetch(`/api/parent-contributions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return parseJson<ParentContribution>(res);
+}
+
+export async function apiDeleteParentContribution(id: string): Promise<{ ok: boolean }> {
+  const res = await apiFetch(`/api/parent-contributions/${id}`, { method: "DELETE" });
+  return parseJson(res);
+}
+
+export async function apiContributeNow(id: string): Promise<{ url?: string }> {
+  const res = await apiFetch(`/api/parent-contributions/${id}/contribute-now`, {
+    method: "POST",
+    body: JSON.stringify({ clientSource: CLIENT_SOURCE }),
+  });
+  return parseJson(res);
+}
+
+export async function apiGetRecurringGifts(fundId: string): Promise<RecurringGift[]> {
+  const res = await apiFetch(`/api/funds/${fundId}/recurring-gifts`);
+  return parseJson<RecurringGift[]>(res);
+}
+
+export async function apiUpdateRecurringGift(
+  id: string,
+  status: "active" | "paused" | "cancelled",
+): Promise<RecurringGift> {
+  const res = await apiFetch(`/api/recurring-gifts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+  return parseJson<RecurringGift>(res);
 }
 
 // Parent-to-parent "pass it along" analytics (2026-06-04). Fire-and-forget:

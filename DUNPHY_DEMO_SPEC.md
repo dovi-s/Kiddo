@@ -1,9 +1,9 @@
-# Dunphy Family Demo Account Spec
+# Rivera Family Demo Account Spec
 
 > Status: **BUILT and live at `/demo` — this file is the living reference.**
 > A shareable, paper-trading-style demo that lets prospects, press, and
 > onboarding traffic play with a fully-populated Kiddo experience without
-> creating an account. Modeled on the Dunphy family from *Modern Family*
+> creating an account. Modeled on the Rivera family from *Modern Family*
 > because universal recognition, multi-generational, and a built-in
 > age-ladder in one household.
 >
@@ -42,7 +42,7 @@ emergent from **real historical market prices**, not hand-picked numbers.
 - **Verify offline (no DB):** `npm run report:demo-portfolio` prints emergent
   balances, holdings, a real-drawdown chart check (2020 COVID dip is visible),
   and sample "$60 Apple in 2009 → ~$6,900 today" wow lines.
-- **Tuned targets (emergent, not fudged):** Luke ~$22k · Alex ~$52k · Haley
+- **Tuned targets (emergent, not fudged):** Theo ~$22k · Nora ~$52k · Mia
   ~$79k — an ascending "time machine" arc driven by real returns + small,
   realistic gifts (tune via the recurring/birthday amounts in `demo-roster.ts`).
 - **Gift rows** now carry real `sharesAcquired` + `priceAtPurchase` and write
@@ -56,8 +56,8 @@ To re-seed with the new data: `npm run reset:dunphys` then
 
 ## TL;DR (as built)
 
-Eight demo accounts (Phil + Claire + five gifters + Haley the graduate)
-seeded with a realistic Dunphy-family fund state. Auth path same as real
+Eight demo accounts (Marcus + Elena + five gifters + Mia the graduate)
+seeded with a realistic Rivera-family fund state. Auth path same as real
 users but flagged `isDemoAccount: true` in the DB so:
 - No real Stripe charges (`server/demoSandbox.ts` mocks the money flows)
 - No real brokerage orders; all money flows are paper-trading style
@@ -82,8 +82,8 @@ Three jobs only a demo account can do:
    populated fund. Showing an empty Free account underrepresents the
    product; showing a real customer's fund violates privacy.
 3. **The time-machine moment**. The three kids form an ascending arc
-   driven by real historical returns (Luke ~$22k at 13 → Alex ~$52k at
-   20 → Haley ~$79k handed off at 21+): the same product at three points
+   driven by real historical returns (Theo ~$22k at 13 → Nora ~$52k at
+   20 → Mia ~$79k handed off at 21+): the same product at three points
    in time, ~$150k aggregate. That arc plus per-gift "now worth" lines
    ("$60 of Apple in 2009 → ~$6,900 today") is the "lean forward" moment
    for investor / press demos. No real customer's data delivers this on
@@ -92,14 +92,14 @@ Three jobs only a demo account can do:
 
 ---
 
-## The Dunphy family — full structure
+## The Rivera family — full structure
 
 ### Parents (custodian accounts)
 
 | Name | Email | Role | Plan |
 |---|---|---|---|
-| **Phil Dunphy** | `phil@dunphyfamily.com` | Custodian for all three kids | Kiddo Family |
-| **Claire Dunphy** | `claire@dunphyfamily.com` | Co-parent on all three funds | (collaborator, no plan) |
+| **Marcus Rivera** | `marcus@riverafamily.com` | Custodian for all three kids | Kiddo Family |
+| **Elena Rivera** | `elena@riverafamily.com` | Co-parent on all three funds | (collaborator, no plan) |
 
 ### Kids (the lifecycle ladder — source of truth: `script/lib/demo-roster.ts`)
 
@@ -109,9 +109,9 @@ figures below are the ~targets the roster is tuned to, not hardcoded values.
 
 | Name | Age | ~Balance | Strategy | Recurring | Job in the demo |
 |---|---|---|---|---|---|
-| **Luke Dunphy** | 13 | ~$22k | Growth Mix | $100/mo active | The young active fund. Long-horizon projections, smart nudges, the gamer-gift personality (NTDOY/RBLX/MCD). |
-| **Alex Dunphy** | 20 (~30 days from majority 21) | ~$52k | Balanced Mix | $50/mo paused | The approaching-handoff demo. Phil's SEALED letter, ceremony/handoff preview, age-18-plan surfaces. |
-| **Haley Dunphy** | 22 (PAST majority — handed off) | ~$79k | Conservative Mix | ended at handoff | The graduated adult account ("Haley's Fund", accountType Personal). Log in as Haley for the owner view (unlocked letter, kid-2.0 surfaces); as Phil for the previous-owner read-only story view. |
+| **Theo Rivera** | 13 | ~$22k | Growth Mix | $100/mo active | The young active fund. Long-horizon projections, smart nudges, the gamer-gift personality (NTDOY/RBLX/MCD). |
+| **Nora Rivera** | 20 (~30 days from majority 21) | ~$52k | Balanced Mix | $50/mo paused | The approaching-handoff demo. Marcus's SEALED letter, ceremony/handoff preview, age-18-plan surfaces. |
+| **Mia Rivera** | 22 (PAST majority — handed off) | ~$79k | Conservative Mix | ended at handoff | The graduated adult account ("Mia's Fund", accountType Personal). Log in as Mia for the owner view (unlocked letter, kid-2.0 surfaces); as Marcus for the previous-owner read-only story view. |
 
 **Aggregate:** ~$150k emergent across three kids; 19+ gifters per fund's
 "Who loves {kid}" roster. The arc IS the pitch: same product, three
@@ -121,14 +121,14 @@ points in an 18-year relationship.
 
 | Name | Email | Relationship | Demo persona |
 |---|---|---|---|
-| **Jay Pritchett** | `jay@dunphyfamily.com` | Grandfather | Large gift ($500 at Christmas, Google stock). The "cool grandpa" use case. |
-| **Gloria Pritchett** | `gloria@dunphyfamily.com` | Step-grandmother (Jay's wife) | Voice-memo gifter (in Spanish). The multilingual + Memory Book moat demo. |
-| **Mitchell Pritchett** | `mitchell@dunphyfamily.com` | Uncle | Recurring $100/year (Apple). The "set it and forget it" gifter. |
-| **Cameron Tucker** | `cameron@dunphyfamily.com` | Uncle | Photo gifter with note, gives Disney stock to all three kids. The Memory Book emotional layer. |
-| **Manny Delgado** | `manny@dunphyfamily.com` | Step-uncle (Gloria's son) | Young gifter (Roblox stock). The "anyone can gift" angle. |
+| **Robert Rivera** | `robert@riverafamily.com` | Grandfather | Large gift ($500 at Christmas, Google stock). The "cool grandpa" use case. |
+| **Sofia Rivera** | `sofia@riverafamily.com` | Step-grandmother (Robert's wife) | Voice-memo gifter (in Spanish). The multilingual + Memory Book moat demo. |
+| **David Rivera** | `david@riverafamily.com` | Uncle | Recurring $100/year (Apple). The "set it and forget it" gifter. |
+| **Chris Bennett** | `chris@riverafamily.com` | Uncle | Photo gifter with note, gives Disney stock to all three kids. The Memory Book emotional layer. |
+| **Leo Rivera** | `leo@riverafamily.com` | Step-uncle (Sofia's son) | Young gifter (Roblox stock). The "anyone can gift" angle. |
 
 **The one love-mark hidden in the Memory Book:** Cam gave Disney
-stock to all three Dunphy kids with the note
+stock to all three Rivera kids with the note
 *"Because magic is always a good investment. — Cam"*. That single
 entry is the whole product in one quote.
 
@@ -136,17 +136,17 @@ entry is the whole product in one quote.
 
 ## Demo credentials (shareable)
 
-All eight accounts use the same password: **`dunphyfamily`**
+All eight accounts use the same password: **`riverafamily`**
 
 ### On password strength
 
-`dunphyfamily` is 12 characters, no numbers or symbols. It meets
+`riverafamily` is 12 characters, no numbers or symbols. It meets
 Kiddo's current minimum (auth.ts:649 — ≥8 chars, no complexity rules)
 and is intentionally simple for a **public demo credential** where
 the security posture is "the account is read-only, sandboxed, and
 resets nightly — anyone can know the password."
 
-A stronger demo password (`Dunphys2026!`, `dunphy-family-demo-2026`,
+A stronger demo password (`Riveras2026!`, `dunphy-family-demo-2026`,
 etc.) is fine if it reads better in marketing copy, but doesn't add
 real security since the password is shared publicly at `/demo`.
 
@@ -159,14 +159,14 @@ patterns. Not blocking this demo, but flag.
 
 | Login | Password | Job |
 |---|---|---|
-| `phil@dunphyfamily.com` | `dunphyfamily` | Primary demo — parent dashboard, all three kids visible, household view, Family-tier features unlocked |
-| `claire@dunphyfamily.com` | `dunphyfamily` | Co-parent view — read-only on funds Phil owns, but can add Memory Book entries (demonstrates the co-parent flow) |
-| `jay@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard — shows Jay's lifetime gifts across the three kids |
-| `gloria@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard with voice-memo history |
-| `mitchell@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard with the recurring-gift flow visible |
-| `cameron@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard — three Disney gifts (one per kid) prominent |
-| `manny@dunphyfamily.com` | `dunphyfamily` | Gifter dashboard — Roblox + young-gifter angle |
-| `haley@dunphyfamily.com` | `dunphyfamily` | The graduate — post-handoff ADULT OWNER view of her own fund (unlocked letter, owner-mode recurring, kid-2.0 doorway) |
+| `marcus@riverafamily.com` | `riverafamily` | Primary demo — parent dashboard, all three kids visible, household view, Family-tier features unlocked |
+| `elena@riverafamily.com` | `riverafamily` | Co-parent view — read-only on funds Marcus owns, but can add Memory Book entries (demonstrates the co-parent flow) |
+| `robert@riverafamily.com` | `riverafamily` | Gifter dashboard — shows Robert's lifetime gifts across the three kids |
+| `sofia@riverafamily.com` | `riverafamily` | Gifter dashboard with voice-memo history |
+| `david@riverafamily.com` | `riverafamily` | Gifter dashboard with the recurring-gift flow visible |
+| `chris@riverafamily.com` | `riverafamily` | Gifter dashboard — three Disney gifts (one per kid) prominent |
+| `leo@riverafamily.com` | `riverafamily` | Gifter dashboard — Roblox + young-gifter angle |
+| `mia@riverafamily.com` | `riverafamily` | The graduate — post-handoff ADULT OWNER view of her own fund (unlocked letter, owner-mode recurring, kid-2.0 doorway) |
 
 Password meets the auth.ts requirement (≥ 8 chars). Same password
 across accounts because demo creds are shared publicly; security
@@ -217,7 +217,7 @@ export async function resetDemoAccounts() {
     // 1. Find all demo user IDs
     // 2. Delete gifts, holdings, memory_entries, recurring_gifts,
     //    parent_contributions, activities for those users' funds
-    // 3. Re-insert the canonical Dunphy seed data
+    // 3. Re-insert the canonical Rivera seed data
     // 4. Reset fund balances, contributor counts, etc.
   });
 }
@@ -228,24 +228,24 @@ parent-lifecycle-worker, etc.) in `server/index.ts`.
 
 ### Seed data file
 
-`server/demoSeedData.ts` (new file) — the canonical Dunphy state as
+`server/demoSeedData.ts` (new file) — the canonical Rivera state as
 TypeScript. Updated by hand when the demo story needs refreshing.
 Structure:
 
 ```typescript
 export const DUNPHY_SEED = {
-  parents: [/* Phil + Claire users */],
+  parents: [/* Marcus + Elena users */],
   kids: [
     {
-      name: "Haley", age: 18,
+      name: "Mia", age: 18,
       gifts: [/* 47 gift rows across 12 gifters */],
       holdings: [/* Conservative Mix allocation */],
-      memoryEntries: [/* incl. Phil's 247-word letter, Cam's Disney note */],
+      memoryEntries: [/* incl. Marcus's 247-word letter, Cam's Disney note */],
       ...
     },
-    // Alex, Luke
+    // Nora, Theo
   ],
-  gifters: [/* Jay, Gloria, Mitchell, Cameron, Manny users */],
+  gifters: [/* Robert, Sofia, David, Chris, Leo users */],
 };
 ```
 
@@ -254,8 +254,8 @@ export const DUNPHY_SEED = {
 No fork — demo accounts use the regular `/login` endpoint. The
 `isDemoAccount` flag is set at user creation (during seed) and
 checked by the sandbox logic, not the auth flow itself. Means a
-prospect logs in at `kiddofund.com/login` with `phil@dunphyfamily.com`
-/ `dunphyfamily` and lands on the regular Dashboard — but the
+prospect logs in at `kiddofund.com/login` with `marcus@riverafamily.com`
+/ `riverafamily` and lands on the regular Dashboard — but the
 money-flow endpoints sandbox.
 
 ### Demo banner
@@ -263,7 +263,7 @@ money-flow endpoints sandbox.
 Top of every authenticated page when `req.user.isDemoAccount === true`:
 
 ```
-You're in the Dunphy demo. Everything is illustrative.
+You're in the Rivera demo. Everything is illustrative.
 Real funds work the same way; dollar amounts here reset nightly.
 [ Create your own fund → ]
 ```
@@ -276,7 +276,7 @@ saved-toast pattern), not aggressive.
 
 | Path | Job |
 |---|---|
-| `/demo` | Marketing landing for the demo. Quick "click to log in as Phil" / "click to log in as Jay" / etc. Each button auto-fills the login form. |
+| `/demo` | Marketing landing for the demo. Quick "click to log in as Marcus" / "click to log in as Robert" / etc. Each button auto-fills the login form. |
 | `/login` | Regular login. Demo accounts work here too. |
 | Everything else | Regular routes. Demo accounts get sandboxed behavior automatically. |
 
@@ -299,21 +299,21 @@ multi-gifter personas).
   reset)
 - Kid View — real PIN flow, real age-aware copy, real holdings
 - Projection page — real math on the seeded balances
-- The at-majority lifecycle, BOTH SIDES: Alex is ~30 days from majority
-  (sealed letter, handoff preview) and Haley is already handed off (log
-  in as Haley for the real adult-owner experience; as Phil for the real
+- The at-majority lifecycle, BOTH SIDES: Nora is ~30 days from majority
+  (sealed letter, handoff preview) and Mia is already handed off (log
+  in as Mia for the real adult-owner experience; as Marcus for the real
   previous-owner read-only view)
-- Recurring investments — Luke's $100/mo active; Alex's paused; Haley's
+- Recurring investments — Theo's $100/mo active; Nora's paused; Mia's
   ended-at-handoff (read-only treatment). Visitor-created recurring
   reflects via the demo overlay (Scheduled tab, recurring chip)
 - Interactive sandbox: a sent gift lands in the Activity feed + bell +
   Memory Book + rolls the hero; sell moves money to cash; invest-cash
   buys into a holding — all per-tab overlay, all reconciled so
   invested + cash never drifts
-- Co-parent flow — Claire is a seeded co-admin on the minor funds
+- Co-parent flow — Elena is a seeded co-admin on the minor funds
 - Memory Book thank-yous — seeded SENT thank-yous (older gifts) +
   a realistic awaiting backlog (recent + email-less gifts), plus a few
-  pinned entries (first gift, Gloria's voice note)
+  pinned entries (first gift, Sofia's voice note)
 
 ### Doesn't (sandboxed)
 
@@ -322,7 +322,7 @@ multi-gifter personas).
   seed)
 - No real DriveWealth order on invest actions
 - No real ACH withdrawal
-- No real notifications sent to seeded gifter emails (`*@dunphyfamily.com`
+- No real notifications sent to seeded gifter emails (`*@riverafamily.com`
   is a non-routable domain — the gifter-notification-worker should
   skip demo-account funds, OR write to outbox only with no actual
   send)
@@ -335,15 +335,15 @@ Per project-wide locked discipline:
 
 1. **No em-dashes** in any demo copy. Per `feedback_no_emdash.md`.
 2. **Pronouns via `getPronouns()`** on all kid-facing surfaces. Per
-   `project_pronoun_audit_dashboard_locked.md`. Haley = she, Alex =
-   she, Luke = he per the source material.
+   `project_pronoun_audit_dashboard_locked.md`. Mia = she, Nora =
+   she, Theo = he per the source material.
 3. **No "contribute" in UI copy** — use "gift" / "add to" / "invest
    in". Per `feedback_no_contribute_word.md`.
-4. **State-specific UTMA majority age** — Dunphys are LA-based in
-   the source material → California majority age = 21. So Haley's
+4. **State-specific UTMA majority age** — Riveras are LA-based in
+   the source material → California majority age = 21. So Mia's
    handoff fires at 21, NOT 18, in the demo. Reinforces the
    state-specific lesson per `project_state_majority_age_sweep.md`.
-   Set `fund.majorityAge = 21` on each Dunphy fund.
+   Set `fund.majorityAge = 21` on each Rivera fund.
 5. **Memory Book tier policy** — Family plan covers all kids;
    parent-authored media is unlocked. Per the locked 2026-05-13
    Memory Book decision.
@@ -362,7 +362,7 @@ casting + `script/lib/demo-portfolio.ts` engine), NOT a
 `server/demoSeedData.ts`; sandboxing is `server/demoSandbox.ts`; there is
 NO `demoResetWorker` cron — reset is manual via `npm run reset:dunphys`;
 the interactive overlay (`client/src/lib/demo-live-gifts.ts`) and the
-lifecycle staging (Haley handed off) were built on top and are not in the
+lifecycle staging (Mia handed off) were built on top and are not in the
 phases below.
 
 ### Phase 0 — Infrastructure (~1 day)
@@ -375,20 +375,20 @@ phases below.
 
 ### Phase 1 — Seed data (~1-2 days)
 
-- [ ] Write `server/demoSeedData.ts` with the full Dunphy state
+- [ ] Write `server/demoSeedData.ts` with the full Rivera state
 - [ ] Write `server/demoResetWorker.ts` with the nightly reset logic
 - [ ] Hand-curate Cam's three Disney Memory Book entries (one per
       kid) — the "love mark" detail
-- [ ] Hand-curate Phil's 247-word at-18 letter to Haley — the most
+- [ ] Hand-curate Marcus's 247-word at-18 letter to Mia — the most
       emotionally important asset in the demo
-- [ ] Voice-memo placeholders (Gloria in Spanish — record real audio
+- [ ] Voice-memo placeholders (Sofia in Spanish — record real audio
       or use a public-domain spoken-Spanish clip with subtitles)
 
 ### Phase 2 — `/demo` landing page (~0.5 day)
 
 - [ ] Marketing-style page at `/demo` route
 - [ ] Six one-click login buttons for each account
-- [ ] "Why the Dunphys" explainer section
+- [ ] "Why the Riveras" explainer section
 - [ ] Footer linking to "Create your own fund" CTA
 
 ### Phase 3 — Initial deploy + curation pass (~0.5 day)
@@ -409,15 +409,15 @@ phases below.
 
 ## Open questions
 
-1. ~~Should `claire@dunphyfamily.com` be a separate login?~~ RESOLVED
+1. ~~Should `elena@riverafamily.com` be a separate login?~~ RESOLVED
    as built: separate login, seeded as a co-admin collaborator on the
    minor funds. Demonstrates the real co-parent UX.
 
-2. **Voice-memo content for Gloria — IP + copyright situation.**
+2. **Voice-memo content for Sofia — IP + copyright situation.**
    THREE phases of asset, each with different legal posture:
 
    - **Phase A (development placeholder, internal only):** A
-     YouTube clip of Sofía Vergara's Gloria from Modern Family is
+     YouTube clip of Sofía Vergara's Sofia from Modern Family is
      fine as a TEMPORARY placeholder ON THE DEV BOX while we build.
      Not displayed publicly, not committed to the repo, not deployed.
      Pure scaffolding for "does the audio player render correctly,
@@ -448,8 +448,8 @@ phases below.
    DMCA takedown or C&D from Disney's IP team would be embarrassing
    and possibly newsworthy.
 
-3. **Character-name IP risk on the Dunphy / Pritchett / Tucker /
-   Delgado family itself.** Modern Family's character names are
+3. **Character-name IP risk on the Rivera / Rivera / Bennett /
+   Rivera family itself.** Modern Family's character names are
    trademarks of 20th Century Studios / Disney. Using them in a
    public-facing demo is a calculated risk, not a free lunch:
 
@@ -457,26 +457,26 @@ phases below.
      scanning small fintech demos. Realistic exposure is ~0 in
      the first 1,000 users.
    - **Rises with press / scale** — the moment TechCrunch writes
-     about Kiddo and mentions the Dunphy demo, the risk surface
+     about Kiddo and mentions the Rivera demo, the risk surface
      widens. C&D becomes plausible.
    - **Two mitigations if/when this matters:**
-     - Add a footer disclaimer: "The Dunphy family is used as a
+     - Add a footer disclaimer: "The Rivera family is used as a
        cultural reference; Kiddo is not affiliated with or
        endorsed by 20th Century Studios or Disney."
      - Or rename to "The Murphy family" / "The Smith family" /
        homage-but-original character names. Loses the universal-
        recognition benefit but removes the IP question entirely.
-   - **Recommendation:** ship as Dunphys, add the disclaimer,
+   - **Recommendation:** ship as Riveras, add the disclaimer,
      have a 1-hour pre-baked rename script ready in case a C&D
      ever lands. Don't pre-emptively rename — recognition is the
      whole point of using the characters.
 
-3. **The physical book "ordered" state on Haley's account.** If a
+3. **The physical book "ordered" state on Mia's account.** If a
    real "physical book ordering" feature gets built later, this demo
    value gives prospects a sense of what shipped. For now, fake
    status with no real fulfillment.
 
-4. **Does the demo expose the admin tools?** Phil should NOT have
+4. **Does the demo expose the admin tools?** Marcus should NOT have
    admin role — keep admin gated to actual ops. Prospects shouldn't
    see the Admin tab. Verify the `isAdmin: false` is set on the seed.
 
@@ -486,7 +486,7 @@ phases below.
    frequent resets = more compute + more chance of resetting during
    a live walkthrough.
 
-6. **Email domain.** `dunphyfamily.com` must either (a) be a real
+6. **Email domain.** `riverafamily.com` must either (a) be a real
    domain Kiddo owns and parks (recommended — protects the demo
    brand from anyone registering it later) or (b) be a non-existent
    domain that's hardcoded as "demo-safe" in the email worker so
@@ -502,11 +502,11 @@ phases below.
 - Internal: `project_seth_godin_kora_alignment.md` — the customer-
   acquisition discipline (the demo IS the acquisition surface)
 - Internal: `project_state_majority_age_sweep.md` — California
-  majority age = 21 means Haley's handoff fires at 21
+  majority age = 21 means Mia's handoff fires at 21
 - Internal: MEMORY's "Locked Copy Rules" — applies to all demo
   copy
-- External: *Modern Family* IMDb — for fact-checking ages, names,
-  relationships if the seed needs adjustment
+- (The Rivera family is original/fictional — no external reference needed for
+  names or relationships; tune freely in `script/lib/demo-roster.ts`.)
 
 ---
 
@@ -521,5 +521,42 @@ phases below.
 - **Staged-demo expansion** (`DEMO_SANDBOX_PLAN.md`) tracks the
   interactive-overlay roadmap; this file tracks the personas + sandbox
   architecture + locked rules.
-- **Before any press moment:** revisit Open Question 3 (character-name
-  IP) — ship the footer disclaimer, keep the 1-hour rename script ready.
+- **IP status (RESOLVED 2026-06-15):** the cast was renamed off Modern Family
+  to the original, fictional **Rivera family** — the character-name IP risk is
+  closed. Demo footer is now a plain "fictional, illustrative" note (the old
+  "not affiliated with 20th Century Studios / Modern Family" disclaimer was
+  removed; it re-linked the original family back to the IP). Actor photos on the
+  public picker were deleted (`PERSONA_PHOTOS = {}` → initials chips). See
+  memory `project_demo_rivera_rename`.
+
+---
+
+## Adding a second demo family (the drop-in path — "lock the path now")
+
+Founder decision (2026-06-15): keep ONE family now, but make a multi-family
+`/demo` hub **drop-in** later. Families MUST be original/fictional — **never a
+real TV family** (no Modern Family, no Family Guy's Griffins); that's the exact
+IP risk we just removed. Good archetypes, each a different SHAPE so the hub
+teaches "this works for you too": single-parent + one toddler (just-started),
+blended / two-dad, grandparent-led (the highest-LTV "grandma" persona).
+
+To add a family, these are the ONLY touchpoints (no architecture change needed):
+
+1. **Story data** — add the cast (members, kids, gifts, notes, amounts) in
+   `script/lib/demo-roster.ts` (single source of truth; seed + offline report
+   both read it). Use a per-family email domain `@<family>family.com`.
+2. **Seed** — `script/seed-dunphys.ts` writes the roster with
+   `isDemoAccount: true`. That flag — NOT the email domain — is what
+   `server/demoSandbox.ts` uses to sandbox money-flow, so new demo emails are
+   safe automatically.
+3. **Email guard (REQUIRED)** — add the new domain to `NEVER_DELIVER_DOMAINS`
+   in `server/emailDelivery.ts`. This is the ONE domain-based check; miss it and
+   demo lifecycle emails (some carry bearer tokens) could be delivered for real.
+4. **Public picker** — add the family's accounts to `ACCOUNTS` in
+   `client/src/pages/Demo.tsx`. Personas render as initials chips by default.
+5. **Route (when the hub lands)** — `/demo` becomes the family picker;
+   `/demo/<family>` deep-links one. The per-family split is the only new routing.
+
+Full code-parameterization of the seed (one `seed(familyConfig)` entry point) is
+deferred until a 2nd family actually exists (YAGNI — building the abstraction for
+a hypothetical family risks the wrong shape). The list above IS the contract.

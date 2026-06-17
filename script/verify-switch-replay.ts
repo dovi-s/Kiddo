@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// Verify the lab replays its entrance beats on a FUND SWITCH: switch Luke→Alex
+// Verify the lab replays its entrance beats on a FUND SWITCH: switch Theo→Nora
 // and sample the gifter faces' opacity right after. If the cascade re-fires,
 // some faces are mid-animation (opacity < 1) just after the switch; if it
 // doesn't, they're all instantly full-opacity. Also shoots a mid-cascade frame.
@@ -17,13 +17,13 @@ async function main() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   await ctx.request.get(`${baseUrl}/api/health`, { timeout: 120000 }).catch(() => {});
   const login = await ctx.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" }, timeout: 120000,
+    data: { email: "marcus@riverafamily.com", password: "riverafamily" }, timeout: 120000,
   });
   console.log(`login HTTP ${login.status()}`);
   if (login.status() !== 200) { console.log("rate-limited — stopping"); await browser.close(); return; }
   const funds = (await ctx.request.get(`${baseUrl}/api/funds`, { timeout: 120000 }).then((r) => r.json())) as any[];
   const alex = funds.find((f) => /alex/i.test(f?.recipientFirstName || ""));
-  if (!alex) { console.log("no Alex fund"); await browser.close(); return; }
+  if (!alex) { console.log("no Nora fund"); await browser.close(); return; }
 
   const page = await ctx.newPage();
   page.setDefaultTimeout(120000);

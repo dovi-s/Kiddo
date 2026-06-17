@@ -333,7 +333,7 @@ export default function GiveAGift() {
                     onChange={(e) => setGifterName(e.target.value)}
                     autoComplete="name"
                     required
-                    placeholder="Sarah Pritchett"
+                    placeholder="Sarah Rivera"
                   />
                 </div>
                 <div className="space-y-1.5">

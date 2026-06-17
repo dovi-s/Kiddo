@@ -16,9 +16,9 @@ wrong for us; see §4.
 ## 0. TL;DR — the four things that actually matter
 
 1. **🔴 URGENT, ~free to fix: the demo infringes Disney's *Modern Family* IP.**
-   The Dunphy demo *is* the Modern Family cast and family tree (Phil/Claire/
-   Luke/Alex/Haley Dunphy, Jay/Gloria Pritchett, Mitchell/Cameron Tucker, Lily,
-   Manny, Joe). It's our **public-facing conversion surface** (creator links
+   The Rivera demo *is* the Modern Family cast and family tree (Marcus/Elena/
+   Theo/Nora/Mia Rivera, Robert/Sofia Rivera, David/Chris Bennett, Lily,
+   Leo, Joe). It's our **public-facing conversion surface** (creator links
    land there). That's unlicensed commercial use of copyrighted fictional
    characters by the most litigious IP holder on earth. **Rename before any
    public/creator launch.** The relationship *structure* (the part that sells
@@ -46,8 +46,8 @@ wrong for us; see §4.
 
 **The exposure.** `script/seed-dunphys.ts` + the demo populate a faithful
 reproduction of the *Modern Family* character universe — exact names, exact
-relationships (Jay m. Gloria; Manny is Gloria's son; Claire is Jay's daughter
-m. Phil with Haley/Alex/Luke; Mitchell is Jay's son m. Cameron with Lily). The
+relationships (Robert m. Sofia; Leo is Sofia's son; Elena is Robert's daughter
+m. Marcus with Mia/Nora/Theo; David is Robert's son m. Chris with Lily). The
 demo is described in our own code/memos as the **distribution/conversion
 surface** that creator-outreach links point to — i.e. **public marketing**, not
 an internal sandbox.
@@ -71,7 +71,7 @@ names while keeping the **relationship roles** that make the demo sell:
   households (demos cross-family grouping);
 - a **step-grandmother**, **co-parents**, a **graduated/handed-off** young
   adult, an **office/“neighbor/aunt”** one-off gifter, an **anonymous** gift.
-- Keep the *structure*, the gift cadence, the notes (translate Gloria's Spanish
+- Keep the *structure*, the gift cadence, the notes (translate Sofia's Spanish
   notes to an original abuela persona) — just swap the **names**.
 
 **Action:** a `seed-*.ts` rename pass + sweep of persona-specific copy, before

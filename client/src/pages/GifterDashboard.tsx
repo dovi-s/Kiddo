@@ -44,7 +44,7 @@ import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 //
 // 2026-05-31 FIX: this key + the query key were a single CONSTANT, NOT
 // per-user despite the comment above claiming "per-user". So switching
-// accounts (e.g. flipping demo personas Jay → Cameron → Manny) showed the
+// accounts (e.g. flipping demo personas Robert → Chris → Leo) showed the
 // PREVIOUS user's saved-fund cards — identical "$3,250 from you" cards
 // under every persona — until the network refetch landed (and the
 // localStorage initialData re-seeded the stale blob on the next mount).
@@ -192,7 +192,7 @@ function statusLabel(value: string) {
 
 // Card eyebrow label from the server's age phase. Previously this was an
 // inline `childPhase === "teen" ? "Teen fund" : "Child fund"` ternary,
-// which mislabeled a graduated ADULT (server phase "adult", e.g. Haley at
+// which mislabeled a graduated ADULT (server phase "adult", e.g. Mia at
 // 22 past CA majority 21) as a "Child fund" — the oldest recipient reading
 // as a child while the younger two read "Teen". The server already
 // distinguishes "adult" (age >= majority = handed off); honor it here so a
@@ -220,8 +220,8 @@ function phaseLabel(phase: string): string {
 // the kid's UTMA majority. Returns null when there's no birthdate to
 // anchor against, no gifts yet, or the kid is already past majority
 // (no projection horizon). Treatment 3 of the five DUNPHY_DEMO_SPEC.md
-// projection treatments — the "Gloria, you sent $X and it'll be worth
-// ~$Y when Haley turns 21" moment.
+// projection treatments — the "Sofia, you sent $X and it'll be worth
+// ~$Y when Mia turns 21" moment.
 function computeGifterAttribution(fund: GifterFundRow): {
   projected: number;
   yearsAhead: number;
@@ -427,8 +427,8 @@ export default function GifterDashboard() {
   // Group the gifter's funds by FAMILY (server-provided `familyName`, present
   // only when this gifter has gifted to 2+ kids who share a last name). This
   // is for the cross-family super-gifter — the loop's actual engine — who
-  // otherwise faces a flat wall of first-name cards where "just Luke" tells
-  // them nothing. Funds in a family cluster under a "The Dunphy family" header;
+  // otherwise faces a flat wall of first-name cards where "just Theo" tells
+  // them nothing. Funds in a family cluster under a "The Rivera family" header;
   // singletons render headerless (and never expose a last name). Group order
   // follows the server's recency sort — the first fund seen claims the slot, so
   // a family stays anchored to its most recent gift.
@@ -474,7 +474,7 @@ export default function GifterDashboard() {
   }, [data?.funds]);
 
   // Sort control for the cross-family super-gifter (only surfaces at scale — see
-  // the >= 4 gate in the render — so Jay's 3-kid view stays clean). Reorders the
+  // the >= 4 gate in the render — so Robert's 3-kid view stays clean). Reorders the
   // FAMILY groups; "recent" keeps the server's recency order.
   const [groupSort, setGroupSort] = useState<"recent" | "given" | "birthday">("recent");
   const sortedGroups = useMemo<FundGroup[]>(() => {
@@ -1842,7 +1842,7 @@ export default function GifterDashboard() {
                             transferred to the now-grown owner, they manage
                             their own subscription, so the sponsor pill is
                             nonsensical there. This was the "why is Plus only
-                            over Haley?" confusion — her graduated account was
+                            over Mia?" confusion — her graduated account was
                             the lone Free-coverage fund, so it was the only one
                             still showing the pill. 2026-05-31. */}
                         {fund.eligibleForSponsorship && fund.childPhase !== "adult" && (

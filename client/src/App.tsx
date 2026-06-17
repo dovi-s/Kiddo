@@ -22,6 +22,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { Mascot } from "@/components/ui/mascot";
 import { GradientText } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
+import { useStatusBarColor } from "@/hooks/use-status-bar-color";
 import Home from "@/pages/Home";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -852,6 +853,10 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
 function App() {
   const [location] = useLocation();
   const search = useSearch();
+
+  // Tint the status bar / browser chrome to match the top of the current
+  // screen (light-only, so the dark glyphs stay readable). See the hook.
+  useStatusBarColor();
 
   useEffect(() => {
     prefetchCriticalRoutes();

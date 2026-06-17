@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, BookOpen, Eye, Gift } from "lucide-react";
+import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
@@ -38,7 +39,7 @@ export default function About() {
               The check gets lost, the savings bond sits in a drawer for a decade, and the toy breaks in a week.
             </p>
             <p className="mt-4 text-lg md:text-xl font-semibold text-foreground">
-              A gift through Kiddo gets invested and keeps growing.
+              A gift through Kiddo is built to last and grow with them.
             </p>
           </motion.div>
         </div>
@@ -58,6 +59,14 @@ export default function About() {
             </p>
             <p className="text-base md:text-lg font-semibold text-foreground">And it keeps growing.</p>
           </FadeIn>
+          <BrowserFrame
+            src="/product/dashboard-desktop.webp"
+            alt="The Kiddo dashboard: the fund, the gifts, who built it, and what it's on track to be worth, on any device."
+            caption="The real thing, on phone or web."
+            href="/demo"
+            liveLabel="See it live"
+            className="mt-12"
+          />
         </div>
       </section>
 
@@ -104,10 +113,10 @@ export default function About() {
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                The Kid View lets them see their fund: the companies they own and the gifts that built it. They learn how money grows by watching their own money grow.
+                The Kid View lets them see their fund: the companies it follows and the gifts that built it. Once investing is live, they learn how money grows by watching their own fund grow.
               </p>
               <p>
-                A 10-year-old opens the app and sees Disney stock growing. They own a piece of it. Someone in their family put it there for them.
+                A 10-year-old opens the app and sees the Disney stock their family picked for them. Once investing is live, they own a real piece of it. Someone in their family put it there.
               </p>
               <p className="font-medium text-foreground">That moment changes how they think about money for good.</p>
             </div>

@@ -7,17 +7,17 @@ import assert from "node:assert/strict";
 import { gifterIdentityKey } from "../client/src/lib/gifter-name";
 
 // ── THE fix: same email, different names → ONE identity ─────────────────────
-const gloriaFull = gifterIdentityKey("Gloria Pritchett", "gloria@dunphyfamily.com");
-const gloriaGrandma = gifterIdentityKey("Grandma", "gloria@dunphyfamily.com");
-const gloriaAbuela = gifterIdentityKey("Abuela", "gloria@dunphyfamily.com");
+const gloriaFull = gifterIdentityKey("Sofia Rivera", "sofia@riverafamily.com");
+const gloriaGrandma = gifterIdentityKey("Grandma", "sofia@riverafamily.com");
+const gloriaAbuela = gifterIdentityKey("Abuela", "sofia@riverafamily.com");
 assert.equal(gloriaFull, gloriaGrandma, "same email, different names must collapse to one key");
 assert.equal(gloriaFull, gloriaAbuela);
-assert.equal(gloriaFull, "e:gloria@dunphyfamily.com");
+assert.equal(gloriaFull, "e:sofia@riverafamily.com");
 
 // ── Email is case/whitespace robust (so storage normalization + this agree) ──
 assert.equal(
-  gifterIdentityKey("G", "  Gloria@DunphyFamily.com "),
-  gifterIdentityKey("Gloria Pritchett", "gloria@dunphyfamily.com"),
+  gifterIdentityKey("G", "  Sofia@RiveraFamily.com "),
+  gifterIdentityKey("Sofia Rivera", "sofia@riverafamily.com"),
   "email key must be trimmed + lowercased",
 );
 
@@ -36,15 +36,15 @@ assert.notEqual(gifterIdentityKey("The Johnsons", null), gifterIdentityKey("The 
 // ── Anonymous → one shared bucket, NEVER email-keyed ────────────────────────
 assert.equal(gifterIdentityKey("Anonymous", null), "anon");
 assert.equal(gifterIdentityKey("anonymous", null), "anon");
-assert.equal(gifterIdentityKey("Someone who loves Luke", null), "anon");
+assert.equal(gifterIdentityKey("Someone who loves Theo", null), "anon");
 assert.equal(gifterIdentityKey("", null), "anon");
 assert.equal(gifterIdentityKey(null, null), "anon");
-assert.equal(gifterIdentityKey("Gloria", "gloria@x.com", true), "anon", "explicit anonymous flag wins even with name+email");
+assert.equal(gifterIdentityKey("Sofia", "gloria@x.com", true), "anon", "explicit anonymous flag wins even with name+email");
 // Two anonymous gifts (even with different stray emails) share the bucket — the
 // roster shows one "Anonymous", matching prior behavior.
 assert.equal(gifterIdentityKey("Anonymous", "a@x.com"), gifterIdentityKey("Anonymous", "b@x.com"));
 
 // ── A real person with email is distinct from the anonymous bucket ──────────
-assert.notEqual(gifterIdentityKey("Gloria", "gloria@x.com"), "anon");
+assert.notEqual(gifterIdentityKey("Sofia", "gloria@x.com"), "anon");
 
 console.log("gifter identity key tests passed");

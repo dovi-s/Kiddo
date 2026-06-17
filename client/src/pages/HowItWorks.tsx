@@ -6,6 +6,7 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Mascot } from "@/components/ui/mascot";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
   return (
@@ -72,7 +73,7 @@ const giverSteps = [
   },
   {
     icon: Gift,
-    title: "Step 5: Your gift is invested.",
+    title: "Step 5: Your gift joins the fund.",
     body: "The parent is notified. You get a confirmation. The gift becomes part of the child's fund and Memory Book.",
   },
 ];
@@ -130,7 +131,7 @@ export default function HowItWorks() {
               </div>
               <div className="rounded-2xl border border-border bg-card/80 p-4 text-left shadow-premium-sm">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">3. Invest</p>
-                <p className="mt-2 text-sm font-semibold text-foreground">Gifts land in a real account and get invested.</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">Gifts land in a real account, invested when investing is live.</p>
               </div>
             </div>
           </motion.div>
@@ -203,10 +204,16 @@ export default function HowItWorks() {
           <FadeIn className="mt-10 text-center">
             <p className="text-muted-foreground">No account to open, nothing to download. Just a gift that actually grows.</p>
           </FadeIn>
+          <ProductFrame
+            src="/product/mygifts.webp"
+            alt="The gifter's view: every child they've gifted to, the total given, and how each gift kept growing."
+            caption="And the gifter can watch what they gave keep growing."
+            className="mt-12"
+          />
         </div>
       </section>
 
-      <section className="py-20 md:py-28">
+      <section id="mix" className="scroll-mt-24 py-20 md:py-28">
         <div className="mx-auto max-w-5xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
             <div className="grid items-center gap-8 md:grid-cols-2">
@@ -224,21 +231,19 @@ export default function HowItWorks() {
                   Every investment is held in your child&apos;s fund. Most child funds use a UTMA legal structure underneath, which means you manage it until your child reaches adulthood, typically 18 or 21 depending on your state. Then it becomes fully theirs.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                <p className="mb-2 text-sm font-medium text-foreground">Gift flow</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Gift amount received</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Family default applied</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Stock, managed mix, or cash path used</p>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Simple for families. Real brokerage rails when investing is live.
-                </p>
-              </div>
+              <ProductFrame
+                src="/product/dashboard-full.webp"
+                alt="The parent's dashboard: the fund's balance, recent gifts, the projection, and the holdings, scrolling through."
+                caption="The parent's view. Every gift, in one growing fund."
+                mode="scroll"
+                imgHeight={3154}
+              />
             </div>
           </FadeIn>
         </div>
       </section>
 
-      <section className="py-20 md:py-28">
+      <section id="kid-view" className="scroll-mt-24 py-20 md:py-28">
         <div className="mx-auto max-w-5xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
             <div className="grid items-center gap-8 md:grid-cols-2">
@@ -251,7 +256,7 @@ export default function HowItWorks() {
                   What a child sees.
                 </h2>
                 <p className="mb-4 leading-relaxed text-muted-foreground">
-                  When a child is old enough, Kiddo gives them an age-appropriate view of their fund. They see the brands they own, the people who gifted them, and the story being built in their name.
+                  When a child is old enough, Kiddo gives them an age-appropriate view of their fund. They see the brands their fund follows, the people who gifted them, and the story being built in their name.
                 </p>
                 <p className="leading-relaxed text-muted-foreground">
                   The learning happens inside the fund itself, through the companies they already know and the gifts their family already gave, with no separate classroom tab.
@@ -269,7 +274,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      <section className="py-20 md:py-28">
+      <section id="memory" className="scroll-mt-24 py-20 md:py-28">
         <div className="mx-auto max-w-5xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
             <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">

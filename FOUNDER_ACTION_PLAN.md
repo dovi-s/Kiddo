@@ -35,11 +35,18 @@ These two unblock the entire P0 surface. Nothing else matters until they're movi
    - Fill the scorecard → decide → set `CUSTODIAN_PROVIDER` and implement that one
      adapter (the interface + Alpaca client are already built).
 
-3. **IF shipping public stranger photo/voice uploads at launch:** start the
-   **NCMEC + Microsoft PhotoDNA partnership NOW** (months of lead time). The
-   scanner code is a stub that fail-closes, so uploads are *blocked* in prod until
-   a real scanner is wired. **Alternative: gate public uploads OFF at launch** and
-   skip this clock entirely. Decide which.
+3. **Public stranger photo/voice uploads — RECOMMENDED DEFAULT (2026-06-15): gate
+   OFF at launch.** Draw the line at the *sender*, not the feature: ship money gifts,
+   text notes (already safety-screened on all 5 paths), and **parent + invited-family
+   media** ON; gate **public / untrusted-sender media OFF**. This deletes the only
+   months-long clock from the critical path (the NCMEC + Microsoft PhotoDNA
+   partnership) and closes the largest child-safety/CSAM surface (counsel packet
+   Part 11), while keeping the Memory Book emotionally rich (its value is trusted-
+   family media, not strangers). **Fully reversible:** turn public media on later once
+   the real scanner is wired + the sender-trust pre-visibility gate is live. Only
+   choose otherwise (and start the NCMEC/PhotoDNA clock NOW, months of lead time) if
+   stranger-submitted media is core to the launch demo, which it isn't. **Founder:
+   confirm this default.**
 
 ---
 

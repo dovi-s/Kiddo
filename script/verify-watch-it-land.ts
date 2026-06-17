@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 // One-off live verification of the demo gifter loop:
-//   "give Luke a gift, then watch it land"
-// Logs in as the shared demo parent (Claire), exercises the REAL gift-checkout
+//   "give Theo a gift, then watch it land"
+// Logs in as the shared demo parent (Elena), exercises the REAL gift-checkout
 // sandbox endpoint, then drives the actual GiftSuccess -> back-to-dashboard ->
 // "watch it land" beat in a real browser, screenshotting every surface and
 // asserting the loop-closure toast + overlay actually fire. Throwaway; delete
@@ -14,8 +14,8 @@ const BASE = process.env.WIL_BASE_URL || "http://127.0.0.1:5000";
 // Under artifacts/verify-* so it matches .gitignore's `artifacts/verify-*/`
 // rule (kept out of git, no untracked clutter on rerun).
 const OUT = path.join(process.cwd(), "artifacts", "verify-watch-it-land");
-const EMAIL = "claire@dunphyfamily.com";
-const PASSWORD = "dunphyfamily";
+const EMAIL = "elena@riverafamily.com";
+const PASSWORD = "riverafamily";
 
 type Step = { name: string; ok: boolean; notes: string[]; shot?: string };
 const steps: Step[] = [];
@@ -30,13 +30,13 @@ async function shot(page: Page, name: string) {
 async function main() {
   mkdirSync(OUT, { recursive: true });
 
-  // Resolve Luke's live fund id from the public endpoint (no DB import needed).
-  const lukeRes = await fetch(`${BASE}/api/public/funds/luke-dunphy`);
-  if (!lukeRes.ok) throw new Error(`Luke fund not seeded? /api/public/funds/luke-dunphy -> ${lukeRes.status}. Run: npm run seed:dunphys`);
+  // Resolve Theo's live fund id from the public endpoint (no DB import needed).
+  const lukeRes = await fetch(`${BASE}/api/public/funds/theo-rivera`);
+  if (!lukeRes.ok) throw new Error(`Theo fund not seeded? /api/public/funds/theo-rivera -> ${lukeRes.status}. Run: npm run seed:dunphys`);
   const lukeJson: any = await lukeRes.json();
   const LUKE_ID = String(lukeJson?.fund?.id || "");
-  if (!LUKE_ID) throw new Error("Could not resolve Luke fund id");
-  console.log(`> Luke fund id: ${LUKE_ID}`);
+  if (!LUKE_ID) throw new Error("Could not resolve Theo fund id");
+  console.log(`> Theo fund id: ${LUKE_ID}`);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
@@ -47,7 +47,7 @@ async function main() {
   page.on("pageerror", (e) => pageErrors.push(String(e)));
 
   try {
-    // 1) Land + log in as the shared demo parent (Claire).
+    // 1) Land + log in as the shared demo parent (Elena).
     await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 30_000 });
     const login = await page.evaluate(async ({ email, password }) => {
       const r = await fetch("/api/auth/login", {
@@ -59,15 +59,15 @@ async function main() {
       return { status: r.status, body: await r.text() };
     }, { email: EMAIL, password: PASSWORD });
     const isDemoAccount = /"isDemoAccount"\s*:\s*true/.test(login.body);
-    rec({ name: "1. login as demo parent (Claire)", ok: login.status === 200 && isDemoAccount, notes: [`status ${login.status}`, `isDemoAccount=${isDemoAccount}`] });
+    rec({ name: "1. login as demo parent (Elena)", ok: login.status === 200 && isDemoAccount, notes: [`status ${login.status}`, `isDemoAccount=${isDemoAccount}`] });
 
-    // 2) The gifter's landing surface (where the CTA points: /luke-dunphy).
+    // 2) The gifter's landing surface (where the CTA points: /theo-rivera).
     //    waitForSelector actually WAITS for React to paint (isVisible() does not).
-    await page.goto(`${BASE}/luke-dunphy`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(`${BASE}/theo-rivera`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     const landingHeading = await page.waitForSelector("[data-testid='text-heading']", { timeout: 20_000 }).then(() => true).catch(() => false);
     const startGiftVisible = await page.getByTestId("button-start-gift").first().isVisible().catch(() => false);
     const s2 = await shot(page, "02-gift-landing");
-    rec({ name: "2. gift landing page renders (/luke-dunphy)", ok: landingHeading && startGiftVisible, notes: [`heading=${landingHeading}`, `startGiftCTA=${startGiftVisible}`], shot: s2 });
+    rec({ name: "2. gift landing page renders (/theo-rivera)", ok: landingHeading && startGiftVisible, notes: [`heading=${landingHeading}`, `startGiftCTA=${startGiftVisible}`], shot: s2 });
 
     // 2b) Click into the flow in-UI to prove the gifter can actually progress.
     if (startGiftVisible) {
@@ -84,12 +84,12 @@ async function main() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ fundId, amount: 75, senderName: "Gloria", executionModel: "auto" }),
+        body: JSON.stringify({ fundId, amount: 75, senderName: "Sofia", executionModel: "auto" }),
       });
       return { status: r.status, body: await r.json().catch(() => ({})) };
     }, { fundId: LUKE_ID });
     const url: string = checkout.body?.url || "";
-    const sandboxOk = checkout.status === 200 && checkout.body?.isDemo === true && /\/gift\/success\?demo=1/.test(url) && url.includes("senderName=Gloria") && /amount=75/.test(url);
+    const sandboxOk = checkout.status === 200 && checkout.body?.isDemo === true && /\/gift\/success\?demo=1/.test(url) && url.includes("senderName=Sofia") && /amount=75/.test(url);
     rec({ name: "3. live sandbox returns loop URL (no Stripe charge)", ok: sandboxOk, notes: [`isDemo=${checkout.body?.isDemo}`, `url=${url.replace(BASE, "")}`] });
 
     // 4) Follow the sandbox URL — the real GiftSuccess surface for a demo send.
@@ -109,7 +109,7 @@ async function main() {
     const deadline = Date.now() + 12_000;
     while (Date.now() < deadline) {
       const txt = await page.locator("body").innerText().catch(() => "");
-      if (/added\s*\$?75/i.test(txt) && /Luke/i.test(txt) && /future/i.test(txt)) { landed = true; break; }
+      if (/added\s*\$?75/i.test(txt) && /Theo/i.test(txt) && /future/i.test(txt)) { landed = true; break; }
       await page.waitForTimeout(500);
     }
     const s5 = await shot(page, "05-watch-it-land");
@@ -124,12 +124,12 @@ async function main() {
     const memDeadline = Date.now() + 12_000;
     while (Date.now() < memDeadline) {
       const t = await page.locator("body").innerText().catch(() => "");
-      if (/Gloria/i.test(t) && /\b75\b/.test(t)) { inMemory = true; break; }
+      if (/Sofia/i.test(t) && /\b75\b/.test(t)) { inMemory = true; break; }
       await page.waitForTimeout(500);
     }
     const memText = await page.locator("body").innerText().catch(() => "");
     const s6 = await shot(page, "06-memory-book");
-    rec({ name: "6. gift lands in Luke's Memory Book", ok: inMemory, notes: [`gloriaPresent=${/Gloria/i.test(memText)}`, `amount75=${/\b75\b/.test(memText)}`], shot: s6 });
+    rec({ name: "6. gift lands in Theo's Memory Book", ok: inMemory, notes: [`gloriaPresent=${/Sofia/i.test(memText)}`, `amount75=${/\b75\b/.test(memText)}`], shot: s6 });
 
     rec({ name: "0. no uncaught page errors", ok: pageErrors.length === 0, notes: pageErrors.slice(0, 3) });
   } finally {

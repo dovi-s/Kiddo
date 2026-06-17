@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
+import { JsonLd } from "@/components/JsonLd";
 import { ChevronDown, Lock, Search, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KIDDIE_TAX_NOTE } from "@shared/legal-copy";
@@ -29,7 +30,7 @@ const faqItems = [
       <>
         Fidelity and Schwab are great places to hold investments for a child. What they do not give you is
         the gifting ritual. With Kiddo, family and friends can open one link, choose an amount, and give
-        in under a minute. Every gift can be invested, every note can be saved, and birthdays or baby
+        in seconds. Every gift can be invested, every note can be saved, and birthdays or baby
         showers can have a real occasion page instead of another round of checks and Venmos. If you want a
         more occasion-based walkthrough, start with{" "}
         <Link href="/blog/best-way-to-invest-birthday-money-for-kids" className="text-primary hover:underline">
@@ -248,7 +249,7 @@ const faqItems = [
         <br />
         <br />
         Gifts through Kiddo are invested automatically once investing is live, with notes saved permanently. Parents can run occasion
-        pages for specific moments and share a fund link anyone can gift through in under a minute.{" "}
+        pages for specific moments and share a fund link anyone can gift through in seconds.{" "}
         <Link href="/compare/earlybird" className="text-primary hover:underline">
           See the full Kiddo vs EarlyBird comparison &rarr;
         </Link>
@@ -456,8 +457,27 @@ export default function FAQ() {
     );
   });
 
+  // FAQPage structured data — every Q&A as machine-readable text so Google can
+  // surface FAQ rich results. Answers are run through the same plain-text
+  // extractor the search uses, so JSX answers contribute too.
+  const faqJsonLd = useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems
+        .map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: extractAnswerText(item.answer).replace(/\s+/g, " ").trim() },
+        }))
+        .filter((q) => q.acceptedAnswer.text.length > 0),
+    }),
+    [],
+  );
+
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd data={faqJsonLd} id="faq-jsonld" />
       <Nav />
 
       <section className="pb-16 pt-24 md:pb-24 md:pt-32">
@@ -486,10 +506,11 @@ export default function FAQ() {
               transition={{ delay: 0.080, duration: 0.5 }}
               className="relative mb-8"
             >
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
               <input
                 type="text"
                 placeholder="Search questions..."
+                aria-label="Search questions"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-2xl border border-border bg-card py-3.5 pl-12 pr-4 text-foreground placeholder:text-muted-foreground transition-all focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"

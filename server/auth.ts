@@ -1977,6 +1977,16 @@ export function setupAuth(app: Express) {
       return res.status(200).json({ message: "If that email exists, a reset link is on its way." });
     }
     const { email } = parsed.data;
+    // Anti-bombing rate limit (security audit 2026-06-15). Cap per IP AND per
+    // target email so an attacker can't flood an inbox with reset emails or
+    // hammer from one IP. Counted BEFORE the existence check, so a 429 reveals
+    // nothing about whether the email is real (anti-enumeration preserved).
+    const fpIp = req.ip || "unknown";
+    const fpIpOk = await checkRateLimit(`forgot-pw-ip:${fpIp}`, 5, 15 * 60 * 1000);
+    const fpEmailOk = await checkRateLimit(`forgot-pw-email:${email.toLowerCase()}`, 3, 60 * 60 * 1000);
+    if (!fpIpOk || !fpEmailOk) {
+      return res.status(429).json({ message: "Too many requests. Please try again in a little while." });
+    }
     try {
       const userRow = await db
         .select({ id: users.id, deletedAt: users.deletedAt })

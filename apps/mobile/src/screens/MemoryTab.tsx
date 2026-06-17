@@ -6,13 +6,21 @@
 // This rebuild consumes the real GET /api/funds/:fundId/memory feed (the same
 // entries the web renders) on the brand kit.
 
-import React, { useMemo, useState } from "react";
-import { Alert, Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, Image, Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, KInput, Button, Skeleton, haptic, Appear } from "../ui";
-import { API_BASE, formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
+import {
+  API_BASE,
+  WEB_BASE,
+  apiGetMarketQuotes,
+  formatBalance,
+  type ApiFund,
+  type MemoryEntry,
+  type MemoryEntryType,
+} from "../api";
 import { isReadOnlyFund } from "../lib/fund";
 import { looksLikeTestSender } from "../lib/gifters";
 
@@ -71,6 +79,108 @@ function collapseRecurring(entries: MemoryEntry[]): Row[] {
   return rows;
 }
 
+// ─── "Who loves {name}" roster (web parity, the people-first centerpiece) ────
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return ((parts[0][0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+const AVATAR_TINTS = ["#1B3A2D", "#6F4611", "#24543F", "#7A4E00", "#3D5A4A"];
+function tintFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_TINTS[h % AVATAR_TINTS.length];
+}
+function wholeMoney(n: number): string {
+  return "$" + Math.round(n).toLocaleString("en-US");
+}
+
+function WhoLovesRoster({
+  childName,
+  roster,
+}: {
+  childName: string;
+  roster: { name: string; total: number; count: number }[];
+}) {
+  return (
+    <Appear delay={60}>
+      <KiddoCard>
+        <KText variant="heading">Who loves {childName}</KText>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: spacing.sm, marginHorizontal: -4 }}
+          contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 4 }}
+        >
+          {roster.map((p) => (
+            <View key={p.name} style={{ width: 74, alignItems: "center", gap: 3 }}>
+              <View
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: tintFor(p.name),
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <KText variant="label" color="#F8F5F0">
+                  {initialsOf(p.name)}
+                </KText>
+              </View>
+              <KText variant="caption" color={semanticColors.text.primary} style={{ textAlign: "center" }}>
+                {p.name.split(/\s+/)[0]}
+              </KText>
+              <KText variant="caption" color={semanticColors.text.muted} style={{ textAlign: "center" }}>
+                {wholeMoney(p.total)}
+              </KText>
+            </View>
+          ))}
+        </ScrollView>
+      </KiddoCard>
+    </Appear>
+  );
+}
+
+// ─── "Capture a moment" prompts (web parity) ────────────────────────────────
+const MOMENT_PROMPTS = ["First steps", "First word", "Lost a tooth", "Started a sport", "First sleepover", "Something they said"];
+
+function CaptureMoment({ childName, onPick }: { childName: string; onPick: (text: string) => void }) {
+  return (
+    <Appear delay={70}>
+      <KiddoCard>
+        <KText variant="heading">Capture a moment</KText>
+        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: 2, marginBottom: spacing.sm }}>
+          Tap one, then add a note or a photo. {childName} reads it later.
+        </KText>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+          {MOMENT_PROMPTS.map((p) => (
+            <Pressable
+              key={p}
+              onPress={() => {
+                haptic("selection");
+                onPick(p);
+              }}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 999,
+                backgroundColor: "#F6EFE3",
+                borderWidth: 1,
+                borderColor: "#E8DEC9",
+              }}
+            >
+              <KText variant="caption" color={colors.goldInk}>
+                {p}
+              </KText>
+            </Pressable>
+          ))}
+        </View>
+      </KiddoCard>
+    </Appear>
+  );
+}
+
 export interface MemoryTabProps {
   activeFund: ApiFund | null;
   entries: MemoryEntry[];
@@ -100,6 +210,8 @@ export function MemoryTab({
 }: MemoryTabProps) {
   const childName = childNameOf(activeFund);
   const isReadOnly = isReadOnlyFund(activeFund);
+  // A tapped "Capture a moment" prompt; bumping .n re-opens the composer.
+  const [seed, setSeed] = useState<{ text: string; n: number }>({ text: "", n: 0 });
 
   // Hide test/seed-sender gift entries (the "test" gift) so the timeline + cover
   // counts match Home, which already filters them.
@@ -122,6 +234,53 @@ export function MemoryTab({
   }, [visibleEntries]);
 
   const rows = useMemo(() => collapseRecurring(visibleEntries), [visibleEntries]);
+
+  // Live prices for the gift tickers, so entries can show "now worth $X" (web
+  // parity) instead of just a raw share count.
+  const [quotes, setQuotes] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const tickers = Array.from(
+      new Set(
+        visibleEntries
+          .map((e) => (e.gift?.selectedTicker || "").trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    );
+    if (tickers.length === 0) return;
+    let active = true;
+    apiGetMarketQuotes(tickers)
+      .then((qs) => {
+        if (!active) return;
+        const map: Record<string, number> = {};
+        for (const q of qs) if (q.symbol && q.price) map[q.symbol.toUpperCase()] = q.price;
+        setQuotes(map);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [visibleEntries]);
+
+  // "Who loves {name}" — aggregate counting gifts by named sender (sum + count).
+  const roster = useMemo(() => {
+    const map = new Map<string, { name: string; total: number; count: number }>();
+    for (const e of visibleEntries) {
+      const g = e.gift;
+      if (!g) continue;
+      if (NON_COUNTING.has(String(g.status || "").toLowerCase())) continue;
+      const name = (g.senderName || "").trim();
+      if (!name || /^someone\b/i.test(name)) continue;
+      const key = name.toLowerCase();
+      const amt = parseFloat(String(g.netAmount ?? g.amount ?? "0")) || 0;
+      const cur = map.get(key) || { name, total: 0, count: 0 };
+      cur.total += amt;
+      cur.count += 1;
+      map.set(key, cur);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 14);
+  }, [visibleEntries]);
 
   const refresh = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />;
 
@@ -156,12 +315,74 @@ export function MemoryTab({
             />
           </View>
         ) : null}
+
+        {/* hero action buttons (web parity: Share update + Add memory) */}
+        {activeFund && !isReadOnly ? (
+          <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
+            <Pressable
+              onPress={() => {
+                haptic("selection");
+                Share.share({
+                  message: `Follow ${childName}'s fund: ${WEB_BASE}/${activeFund.slug}`,
+                  url: `${WEB_BASE}/${activeFund.slug}`,
+                }).catch(() => {});
+              }}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                backgroundColor: "rgba(14,37,24,0.55)",
+                borderRadius: radius.control,
+                paddingVertical: 12,
+              }}
+            >
+              <Ionicons name="share-social-outline" size={16} color="#F8F5F0" />
+              <KText variant="label" color="#F8F5F0">
+                Share update
+              </KText>
+            </Pressable>
+            {onAddNote ? (
+              <Pressable
+                onPress={() => {
+                  haptic("selection");
+                  setSeed((s) => ({ text: "", n: s.n + 1 }));
+                }}
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  backgroundColor: colors.gold,
+                  borderRadius: radius.control,
+                  paddingVertical: 12,
+                }}
+              >
+                <Ionicons name="add" size={18} color="#38290A" />
+                <KText variant="label" color="#38290A">
+                  Add memory
+                </KText>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
       </KiddoCard>
       </Appear>
 
-      {/* composer — write a note / add a photo (owner / co-admin only) */}
+      {/* who loves {name} — the people-first roster (web parity) */}
+      {roster.length > 0 ? <WhoLovesRoster childName={childName} roster={roster} /> : null}
+
+      {/* composer + capture-a-moment prompts (owner / co-admin only) */}
       {activeFund && !isReadOnly && onAddNote ? (
-        <NoteComposer childName={childName} onAddNote={onAddNote} onAddPhoto={onAddPhoto} />
+        <>
+          <CaptureMoment
+            childName={childName}
+            onPick={(t) => setSeed((s) => ({ text: t, n: s.n + 1 }))}
+          />
+          <NoteComposer childName={childName} onAddNote={onAddNote} onAddPhoto={onAddPhoto} seed={seed} />
+        </>
       ) : null}
 
       {loading ? (
@@ -186,6 +407,7 @@ export function MemoryTab({
               <MemoryCard
                 key={row.entry.id}
                 entry={row.entry}
+                quotes={quotes}
                 onEdit={!isReadOnly ? onEditEntry : undefined}
                 onDelete={!isReadOnly ? onDeleteEntry : undefined}
               />
@@ -204,15 +426,26 @@ function NoteComposer({
   childName,
   onAddNote,
   onAddPhoto,
+  seed,
 }: {
   childName: string;
   onAddNote: (content: string) => Promise<void>;
   onAddPhoto?: (dataUrl: string, caption: string) => Promise<void>;
+  /** A "Capture a moment" prompt; bumping seed.n opens the composer pre-filled. */
+  seed?: { text: string; n: number };
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Apply a tapped capture-moment prompt: open + pre-fill with the starter.
+  useEffect(() => {
+    if (seed && seed.n > 0) {
+      setOpen(true);
+      setText(seed.text);
+    }
+  }, [seed?.n]);
 
   const submit = async () => {
     const content = text.trim();
@@ -415,10 +648,12 @@ function CoverStat({ value, label }: { value: string; label: string }) {
 
 function MemoryCard({
   entry,
+  quotes,
   onEdit,
   onDelete,
 }: {
   entry: MemoryEntry;
+  quotes?: Record<string, number>;
   onEdit?: (id: string, content: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
 }) {
@@ -550,21 +785,45 @@ function MemoryCard({
             />
           ) : null}
 
-          {/* invested-into line for gifts */}
+          {/* invested-into line for gifts: ticker chip + "now worth $X" (web parity) */}
           {isGift && gift!.selectedTicker ? (
-            <View
-              style={{
-                marginTop: spacing.sm,
-                paddingTop: spacing.sm,
-                borderTopWidth: 1,
-                borderTopColor: semanticColors.surface.muted,
-              }}
-            >
-              <KText variant="caption" color={colors.evergreen}>
-                Invested in {gift!.selectedTicker}
-                {gift!.sharesAcquired ? ` · ${parseFloat(gift!.sharesAcquired).toFixed(4)} shares` : ""}
-              </KText>
-            </View>
+            (() => {
+              const ticker = String(gift!.selectedTicker).toUpperCase();
+              const shares = gift!.sharesAcquired ? parseFloat(gift!.sharesAcquired) : 0;
+              const price = quotes?.[ticker];
+              const nowWorth = shares > 0 && price ? shares * price : null;
+              return (
+                <View
+                  style={{
+                    marginTop: spacing.sm,
+                    paddingTop: spacing.sm,
+                    borderTopWidth: 1,
+                    borderTopColor: semanticColors.surface.muted,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: colors.evergreen + "14",
+                      borderRadius: radius.pill,
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <KText variant="caption" color={colors.evergreen}>
+                      {ticker}
+                    </KText>
+                  </View>
+                  <KText variant="caption" color={semanticColors.text.muted} style={{ flex: 1 }}>
+                    {nowWorth != null
+                      ? `Invested · now worth ${formatBalance(nowWorth)}`
+                      : `Invested${shares > 0 ? ` · ${shares.toFixed(4)} shares` : ""}`}
+                  </KText>
+                </View>
+              );
+            })()
           ) : null}
 
           {/* manage (parent-authored entries only) */}

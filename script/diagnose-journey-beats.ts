@@ -1,5 +1,5 @@
 // One-off diagnostic (safe, read-only): print exactly what the "Watch it
-// grow" journey replay has to work with for each Dunphy fund — snapshot span,
+// grow" journey replay has to work with for each Rivera fund — snapshot span,
 // first/biggest gifts, recurring start, occasion gift-attribution — so beat
 // gaps can be diagnosed against REAL data instead of guessed at.
 import { db } from "../server/db";

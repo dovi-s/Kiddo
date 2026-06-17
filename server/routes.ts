@@ -43,6 +43,7 @@ import { getMajorityAgeForState, US_STATES, UTMA_DEFAULT_MAJORITY_AGE } from "@s
 import { recordEvent, eventCtxFromReq } from "./analytics";
 import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
 import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
+import { normalizeImage } from "./imagePipeline";
 import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rateLimiter";
 import { verifyEmailUnsubscribeSignature } from "./emailUnsubscribeToken";
 import { senderNameIssue, giftMessageIssue, sanitizeTranscript, isSenderBlocked, SENDER_BLOCKED_RESPONSE } from "./giftTextSafety";
@@ -608,6 +609,21 @@ export async function registerRoutes(
     }
     return null;
   };
+
+  // Stable, reset-proof entry to the demo Kid View for the marketing site.
+  // The kid-view share token is random per seed, so the marketing pages can't
+  // hardcode it. This resolves the demo fund by its STABLE slug and redirects
+  // to the built-in demo kid-view token (demo-kid-<fundId>, PIN shown), so a
+  // marketing page can embed a LIVE kid view that survives the nightly reset.
+  app.get("/demo/kidview/:slug", async (req, res) => {
+    try {
+      const fund = await storage.getFundBySlug(String(req.params.slug || ""));
+      if (!fund || !(await isDemoKidViewFund(fund.id))) return res.redirect(302, "/demo");
+      return res.redirect(302, `/kid/demo-kid-${fund.id}`);
+    } catch {
+      return res.redirect(302, "/demo");
+    }
+  });
 
   const createKidViewAccessToken = async (fundId: string, shareToken: string) => {
     const store = await loadKidViewStore();
@@ -4259,7 +4275,7 @@ export async function registerRoutes(
           WHERE COALESCE(f.status, 'draft') NOT IN ('draft', 'archived', 'deleted')
             AND f.recipient_birthdate IS NOT NULL
             -- Exclude test/demo-owned funds from the public homepage
-            -- numbers. The Dunphy demo is production-intended + shareable
+            -- numbers. The Rivera demo is production-intended + shareable
             -- with seeded balances, and dev accounts carry junk gifts;
             -- counting either would present fictional traction as real.
             -- Uses the canonical is_test_user / is_demo_account flags
@@ -4580,6 +4596,12 @@ export async function registerRoutes(
 
   app.post('/api/public/fund-code/resolve', async (req, res) => {
     try {
+      // Per-IP rate limit (security audit 2026-06-15) — unauthenticated code
+      // lookup; cap to stop brute-force enumeration of fund codes / DB hammering.
+      const fcIp = (req as any).ip || "unknown";
+      if (!(await checkRateLimit(`fund-code-resolve:${fcIp}`, 20, 10 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many attempts. Please try again in a few minutes." });
+      }
       const inputCode = normalizeGiftCode(req.body?.code);
       if (!inputCode) return res.status(400).json({ error: "Enter a valid fund code." });
 
@@ -4650,6 +4672,15 @@ export async function registerRoutes(
       const requesterName = String(req.body?.requesterName || "").trim();
       if (!parentContact) {
         return res.status(400).json({ error: "A parent email or phone is required." });
+      }
+      // Anti-bombing rate limit (security audit 2026-06-15) — this is an
+      // unauthenticated endpoint that emails a parent, so cap per IP AND per
+      // target contact to stop an attacker flooding an inbox.
+      const giIp = (req as any).ip || "unknown";
+      const giIpOk = await checkRateLimit(`gift-invite-ip:${giIp}`, 8, 15 * 60 * 1000);
+      const giTargetOk = await checkRateLimit(`gift-invite-to:${parentContact.toLowerCase()}`, 3, 60 * 60 * 1000);
+      if (!giIpOk || !giTargetOk) {
+        return res.status(429).json({ error: "Too many requests. Please try again in a little while." });
       }
 
       // Detect contact type. Email gets actual outreach. Anything else
@@ -5502,7 +5533,7 @@ export async function registerRoutes(
           // fetched in the batched Promise.all above.)
           // Entry-level VISIBILITY gate (2026-06-04). The storage helper's
           // locked filters handle junk/moderation, not privacy — without this
-          // gate the gifter dashboard surfaced Phil's SEALED letter ("Alex, if
+          // gate the gifter dashboard surfaced Marcus's SEALED letter ("Nora, if
           // you're reading this you're 21...") as the "Latest Memory Book
           // moment" to every gifter: content even the kid can't see yet.
           // Mirrors the gate on /api/age-transition/:token, plus one stricter
@@ -5525,9 +5556,9 @@ export async function registerRoutes(
           // moment" must be the GIFTER'S OWN note, or a fund-level system /
           // milestone entry (Kiddo-authored, no human author) — NEVER another
           // named person's personal note. Before this, the card surfaced
-          // whatever the single newest broadly-visible entry was, so Jay (a
-          // grandfather) saw Gloria's intimate note to her grandchild
-          // ("pensando en ti hoy mi amor, llamame") and Phil's "love you, dad"
+          // whatever the single newest broadly-visible entry was, so Robert (a
+          // grandfather) saw Sofia's intimate note to her grandchild
+          // ("pensando en ti hoy mi amor, llamame") and Marcus's "love you, dad"
           // contribution note. The "child is loved by many" social proof
           // lives elsewhere (gift counts, thank-yous); this card is the
           // gifter's OWN moment reflected back, which is warmer AND private.
@@ -5686,7 +5717,7 @@ export async function registerRoutes(
               : null,
             // Birthdate + majorityAge added 2026-05-21 so the gifter
             // dashboard can compute per-gift / per-relationship projected
-            // impact ("Your $1,500 to Haley could be worth ~$X when she
+            // impact ("Your $1,500 to Mia could be worth ~$X when she
             // CHILD-EXPOSURE MINIMIZATION (founder T&S call 2026-06-04: a
             // gifter is not family — strangers reach this via a public link;
             // give them only what their function needs). The gifter projection
@@ -5729,12 +5760,12 @@ export async function registerRoutes(
         });
 
       // Family grouping (founder 2026-06-04: the cross-family super-gifter — the
-      // loop's actual engine — needs context; "just Luke doesn't do anything").
+      // loop's actual engine — needs context; "just Theo doesn't do anything").
       // EXPOSE a last name only when the gifter has gifted to 2+ kids who share
       // it: that's a relative who knows the family. A one-off gifter (one fund
       // in a "family") gets familyName=null — no last name leaves the server.
       // Grouped by last name (NOT owner) so siblings stay together even after
-      // one hands off at 18 and gets their own self-owned account (Haley).
+      // one hands off at 18 and gets their own self-owned account (Mia).
       {
         const lastNameCounts = new Map<string, number>();
         for (const row of resolvedFundsPayload) {
@@ -5997,7 +6028,7 @@ export async function registerRoutes(
   // Demo-seeded schedules carry fake Stripe ids ("demo_sub_..." — see
   // script/seed-dunphys.ts). Real Stripe calls on them fail, which 500'd
   // History and hard-502'd Edit for the demo's recurring persona
-  // (Mitchell) — the one persona whose whole point is recurring
+  // (David) — the one persona whose whole point is recurring
   // management. Treat demo ids as Stripe-less everywhere: mutations fall
   // through to the local-only path, history returns empty instead of 500.
   const isDemoStripeSubId = (id: unknown): boolean => String(id || "").startsWith("demo_");
@@ -7413,6 +7444,13 @@ export async function registerRoutes(
 
   app.get('/api/public/funds/:slug', async (req, res) => {
     try {
+      // Per-IP rate limit (security audit 2026-06-15) — unauthenticated fund-page
+      // read; cap to stop slug enumeration / DB DoS while staying generous for
+      // legit gifters viewing a page a few times.
+      const fsIp = (req as any).ip || "unknown";
+      if (!(await checkRateLimit(`public-fund-view:${fsIp}`, 60, 5 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many requests. Please slow down." });
+      }
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.slug);
       let fund = await storage.getFundBySlug(req.params.slug);
       if (!fund && isUUID) fund = await storage.getFund(req.params.slug) ?? undefined;
@@ -7518,7 +7556,7 @@ export async function registerRoutes(
           // Age of majority (18/19/21 per state) so the gift-checkout
           // projection reads "when {child} turns {N}" with the real handoff
           // age. Without it the client's fundMajorityAge falls back to 18 —
-          // wrong for CA's 21 (e.g. Haley showed "turns 18").
+          // wrong for CA's 21 (e.g. Mia showed "turns 18").
           majorityAge: Number((fund as any).majorityAge) || 18,
           // Pricing-v3: tells the gifter UI whether to surface recurring
           // or the reminder-only path. NEVER exposed as the parent's
@@ -7769,8 +7807,8 @@ export async function registerRoutes(
       // Entry-level VISIBILITY gate for the PUBLIC surface (2026-06-04).
       // This endpoint is fully UNAUTHENTICATED, and the meta-level filter
       // below (parseVisibility(entry.visibility) === "public") is useless as
-      // a privacy gate because absent meta defaults to "public" — so Phil's
-      // SEALED letter ("Alex, if you're reading this you're 21...") was
+      // a privacy gate because absent meta defaults to "public" — so Marcus's
+      // SEALED letter ("Nora, if you're reading this you're 21...") was
       // retrievable by anyone with the fund's public link. Same bug class as
       // the gifter-dashboard leak fixed at /api/gifter-account/dashboard;
       // gate mirrors /api/age-transition/:token, with the stricter rule that
@@ -11372,6 +11410,13 @@ export async function registerRoutes(
         return res.status(403).json({ error: 'You do not own this fund' });
       }
 
+      // Capture the ORIGINAL fund BEFORE the move so we can debit it. Without
+      // this, moving a gift that was already credited to its original fund (by
+      // the webhook's completeGiftPostPayment) double-counts the money: the
+      // original stays credited AND the target gets credited (security audit
+      // 2026-06-15, CRITICAL).
+      const originalFundId = gift.fundId;
+
       await storage.updateGift(gift.id, {
         fundId: targetFundId,
         status: 'settled',
@@ -11383,6 +11428,13 @@ export async function registerRoutes(
         pendingBalance: (parseFloat(targetFund.pendingBalance) + giftAmount).toFixed(2),
         contributorCount: targetFund.contributorCount + 1,
       });
+
+      // Re-reconcile the ORIGINAL fund from its remaining gifts, so the moved
+      // gift is removed from its pending balance + contributor count. Idempotent
+      // and authoritative (recomputes from actual gifts) — closes the double-credit.
+      if (originalFundId && originalFundId !== targetFundId) {
+        await WebhookHandlers.reconcileFundFromGifts(originalFundId);
+      }
 
       await storage.createActivity({
         userId,
@@ -11664,7 +11716,7 @@ export async function registerRoutes(
       const userFunds = await storage.getFundsByUser(userId);
       // Coverage is a property of the FUND (the owner's plan), not the viewer
       // (2026-06-04). The map only covered OWNED funds, so a co-parent with no
-      // subscription of her own (Claire) got an empty map and the Dashboard
+      // subscription of her own (Elena) got an empty map and the Dashboard
       // read the owner's Family-covered fund as "uncovered" — upselling her
       // Kiddo+ for a fund the owner already pays for (and a collaborator
       // buying Plus would double-pay the household). Include collaborated
@@ -11775,7 +11827,7 @@ export async function registerRoutes(
       const userFunds = await storage.getFundsByUser(userId);
       // Coverage is a property of the FUND (the owner's plan), not the viewer
       // (2026-06-04). The map only covered OWNED funds, so a co-parent with no
-      // subscription of her own (Claire) got an empty map and the Dashboard
+      // subscription of her own (Elena) got an empty map and the Dashboard
       // read the owner's Family-covered fund as "uncovered" — upselling her
       // Kiddo+ for a fund the owner already pays for (and a collaborator
       // buying Plus would double-pay the household). Include collaborated
@@ -12782,7 +12834,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "That stock isn't available to pick. Choose one from the list." });
       }
 
-      // Demo-fund sandbox: if this is a Dunphy demo fund, return a mock
+      // Demo-fund sandbox: if this is a Rivera demo fund, return a mock
       // success response that completes the flow without hitting Stripe.
       // Per server/demoSandbox.ts + DUNPHY_DEMO_SPEC.md Phase 2. Real
       // funds (the 99.99% case) fall through to the normal Stripe path.
@@ -13817,14 +13869,26 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Image too large. Please use an image under 3MB.' });
       }
 
+      // Normalize before storing: STRIPS EXIF/GPS (child-privacy / COPPA — a
+      // photo of the kid would otherwise carry home coordinates), bakes
+      // orientation, and re-encodes to right-sized webp. A throw means the bytes
+      // aren't a decodable image → reject (never store an unprocessed original on
+      // a child-facing surface). Security audit 2026-06-15 (EXIF leak).
+      let normalized;
+      try {
+        normalized = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
+
       const uploaded = await uploadMemoryFile({
         fundId: req.params.fundId,
-        ext: parsed.ext,
-        mime: parsed.mime,
-        buffer: parsed.buffer,
+        ext: 'webp',
+        mime: 'image/webp',
+        buffer: normalized.full,
       });
 
-      res.json({ url: uploaded.url, mime: parsed.mime, size: parsed.buffer.length });
+      res.json({ url: uploaded.url, mime: 'image/webp', size: normalized.full.length });
     } catch (error) {
       console.error('Error uploading memory photo:', error);
       res.status(500).json({ error: 'Failed to upload memory photo' });
@@ -14002,7 +14066,7 @@ export async function registerRoutes(
       const gifterAvatarByEmail = new Map<string, string | null>();
       // Sender's relationship label (preferredName: "Mom"/"Dad"/...) resolved the
       // same way as the avatar, so the Memory Book labels EACH contributor by THEIR
-      // OWN relationship ("Phil Dunphy (Dad)") instead of the viewer's. Mirrors the
+      // OWN relationship ("Marcus Rivera (Dad)") instead of the viewer's. Mirrors the
       // /gifts endpoint's gifterPreferredName enrichment.
       const gifterPrefNameByEmail = new Map<string, string | null>();
       try {
@@ -15302,7 +15366,7 @@ export async function registerRoutes(
       }
       // Demo funds: the status flip already landed and the mailto fallback
       // below still returns, so the UI confirms "sent" — but DON'T enqueue a
-      // real email. Demo gifters are illustrative (@dunphyfamily.com) and would
+      // real email. Demo gifters are illustrative (@riverafamily.com) and would
       // just bounce. Per server/demoSandbox.ts, demo actions complete the flow
       // without touching real rails.
       const isDemoThankYou = await isDemoFund(req.params.fundId);
@@ -15467,7 +15531,7 @@ export async function registerRoutes(
       const senderNameOnRow = unsentRows[0]?.senderName || null;
 
       // Demo funds: rows are flipped to sent + the mailto fallback returns, but
-      // skip the real email (illustrative @dunphyfamily.com gifters would just
+      // skip the real email (illustrative @riverafamily.com gifters would just
       // bounce). Same demo-safe posture as the per-gift send + demoSandbox.
       const isDemoBulkThankYou = await isDemoFund(req.params.fundId);
       if (!isDemoBulkThankYou) {
@@ -16028,7 +16092,7 @@ export async function registerRoutes(
         return res.status(410).json({ error: "This fund isn't accepting new notes right now." });
       }
       // Demo funds: mock success, write nothing — a visitor's note must never
-      // land in the shared Dunphy data (same discipline as demo money flows).
+      // land in the shared Rivera data (same discipline as demo money flows).
       if (await isDemoFund(fundId)) {
         return res.status(201).json({ ok: true, demo: true, message: "Demo mode. Nothing was saved." });
       }
@@ -16135,7 +16199,7 @@ export async function registerRoutes(
       // the Scheduled tab would lie to the parent about upcoming activity.
       // EXCEPTION: demo funds never touch Stripe, so their seeded gifter
       // recurring carries no subscription id — the guard would wrongly hide it.
-      // Demo money is illustrative anyway, so show it (e.g. Mitchell's annual
+      // Demo money is illustrative anyway, so show it (e.g. David's annual
       // birthday gift lands in the demo's Scheduled tab).
       const userIsDemo = await isDemoUser(userId);
       const reminderConds = [
@@ -17621,7 +17685,7 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
       // Defensive second-line check after the lookup — covers the case
-      // where a Dunphy parent has a real (non-demo-prefix) parent_contributions
+      // where a Rivera parent has a real (non-demo-prefix) parent_contributions
       // row, however unlikely. Same shape as the gift-checkout sandbox.
       if (await isDemoFund(record.fundId)) {
         const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
@@ -19484,7 +19548,7 @@ export async function registerRoutes(
           note: "Closest direct proxy for at-18 retention. Opens = deliberate PIN unlocks (30d); suggest-a-stock = active teen intent. Opens accrue from now, so both read low until real teens engage.",
         },
         caveats: [
-          "Demo (Dunphy) data dominates pre-launch — directional, not precise; the real-user signal emerges post-launch.",
+          "Demo (Rivera) data dominates pre-launch — directional, not precise; the real-user signal emerges post-launch.",
           "Identity proxies (Memory Book richness, gifter density) predict at-18 retention; raw gift count does not.",
           "Memory Book richness counts human notes only (gift messages + parent notes), not auto-milestones.",
         ],
@@ -25075,7 +25139,7 @@ export async function registerRoutes(
             // (client hides the line rather than showing "+$0").
             // Family-tier roll-up signal — comparing inflow across
             // kids tells the family-of-three "Emma got more love
-            // this month, Alex was quieter."
+            // this month, Nora was quieter."
             thisMonthGiftUsd: (thisMonthGiftMap.get(String(f.id)) || 0) > 0
               ? Number((thisMonthGiftMap.get(String(f.id)) || 0).toFixed(2))
               : null,

@@ -450,7 +450,7 @@ export default function Pricing() {
             <div className="text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">How the annual fee works</p>
               <h2 className="mt-3 font-heading text-2xl font-bold text-foreground md:text-3xl">
-                Small. Transparent. Same on every plan.
+                Small, transparent, and the same on every plan.
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 The annual fee is $1 per $1,000 invested, charged only on invested assets once investing is live. Cash sitting in the fund and pending gifts aren't charged. It is prorated daily, so you only pay for the days your assets are invested. It applies on every plan, because it is the fee on the investment itself; a paid subscription is a separate fee for product features.
@@ -544,9 +544,11 @@ export default function Pricing() {
                 className="inline-flex items-center gap-2 text-sm font-medium text-primary"
                 onClick={() => setShowFeeDetails((value) => !value)}
                 data-testid="button-toggle-pricing-fees"
+                aria-expanded={showFeeDetails}
+                aria-controls="pricing-fee-details"
               >
                 How do fees work?
-                <motion.div animate={{ rotate: showFeeDetails ? 180 : 0 }}>
+                <motion.div animate={{ rotate: showFeeDetails ? 180 : 0 }} aria-hidden="true">
                   <ChevronDown className="h-4 w-4" />
                 </motion.div>
               </button>
@@ -555,6 +557,9 @@ export default function Pricing() {
             <AnimatePresence initial={false}>
               {showFeeDetails ? (
                 <motion.div
+                  id="pricing-fee-details"
+                  role="region"
+                  aria-label="How fees work"
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}

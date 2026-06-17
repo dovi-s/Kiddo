@@ -198,7 +198,7 @@ export default function GetStarted() {
   // which stays "free" without a paid sub — verified live), so the "free for 14
   // days" line shows only when the trial really granted, never if it's disabled.
   const { data: subscription } = useSubscription();
-  // A Dunphy demo login is a REAL authenticated session (as phil@dunphyfamily.com
+  // A Rivera demo login is a REAL authenticated session (as marcus@riverafamily.com
   // etc.). For onboarding that must NOT count as "signed in" — otherwise a
   // prospect who explored the demo and then clicked Get Started skips signup
   // entirely and ends up creating a fund under the DEMO account instead of a
@@ -215,7 +215,7 @@ export default function GetStarted() {
   //      don't use useAuth's logout(), which hard-redirects to "/" and would
   //      bounce them off this page; we do the fetch + cache reset inline.)
   //   2. Clear the demo's cached per-user client state — chiefly the active-fund
-  //      id, which Dashboard reads to pick a fund (a demo Luke/Alex/Haley id
+  //      id, which Dashboard reads to pick a fund (a demo Theo/Nora/Mia id
   //      would otherwise survive the redirect-based OAuth signup and briefly
   //      render a demo fund under the new account).
   //   3. Reset the auth query to null so the page re-renders as anonymous.

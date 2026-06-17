@@ -1852,7 +1852,7 @@ export default function GiftCheckout() {
                       {currentOccasion.emoji} Give ${isValidAmount ? activeAmount.toFixed(2) : "..."} to {recipientName}
                       <ArrowRight size={16} className="ml-2" />
                     </Button>
-                    <p className="text-center text-xs text-muted-foreground">No account needed. Takes 60 seconds.</p>
+                    <p className="text-center text-xs text-muted-foreground">No account needed. Takes seconds.</p>
                     {isOccasionEvent && (
                       <p className="text-center text-xs text-muted-foreground/70 leading-relaxed">
                         Your gift goes directly into {recipientName}&apos;s fund. The {(eventData?.event?.name || "occasion").replace(/^\S+['’]s?\s+/, "").toLowerCase().trim() || "occasion"} is just how we&apos;re celebrating it. 🌱
@@ -1922,7 +1922,7 @@ export default function GiftCheckout() {
 
                   {/* Trust badges */}
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    {[{ icon: "🛡", label: "Regulated broker" }, { icon: "⚡", label: "60 seconds" }, { icon: "🎁", label: "Memory Book" }].map(({ icon, label }) => (
+                    {[{ icon: "🛡", label: "Regulated broker" }, { icon: "⚡", label: "Seconds" }, { icon: "🎁", label: "Memory Book" }].map(({ icon, label }) => (
                       <div key={label} className="rounded-2xl border border-border bg-card px-2 py-3">
                         <p className="text-lg leading-none">{icon}</p>
                         <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{label}</p>
@@ -1993,11 +1993,11 @@ export default function GiftCheckout() {
                             <p className="kiddo-section-label text-white/70">Private gift link</p>
                           )}
                           <h1 className="mt-3 font-heading text-4xl md:text-5xl font-bold leading-tight" data-testid="text-heading">{landingHeadline}</h1>
-                          <p className="mt-3 max-w-2xl text-base font-semibold text-white/90">No account needed. Takes 60 seconds.</p>
+                          <p className="mt-3 max-w-2xl text-base font-semibold text-white/90">No account needed. Takes seconds.</p>
                           <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white" data-testid="grid-gift-first-answers">
                             <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🌱</span><p className="mt-1 font-semibold">Invested</p></div>
                             <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🔒</span><p className="mt-1 font-semibold">Secure</p></div>
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">⚡</span><p className="mt-1 font-semibold">60 seconds</p></div>
+                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">⚡</span><p className="mt-1 font-semibold">Seconds</p></div>
                           </div>
                           {eventData.event.name && eventData.event.name !== "Gift anytime" && !eventData.event.isPermanent && (
                             <div className="mt-3 hidden items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1.5 md:inline-flex">

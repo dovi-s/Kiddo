@@ -2,7 +2,7 @@
 // One-off runtime verification of the gifter avatar editor (commit eb2cb61).
 // NOT part of the test suite — drives the real app in chromium and captures
 // screenshots to artifacts/verify-gifter-avatar/. Assumes a healthy dev
-// server on :5000 and the Dunphy demo seed.
+// server on :5000 and the Rivera demo seed.
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -31,7 +31,7 @@ async function main() {
   // Login as the demo gifter via the API (cookie lands in the context) —
   // the established pattern from ui-smoke-playwright.ts.
   const login = await context.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "jay@dunphyfamily.com", password: "dunphyfamily" },
+    data: { email: "robert@riverafamily.com", password: "riverafamily" },
   });
   if (login.status() !== 200) {
     throw new Error(`login failed: ${login.status()} ${await login.text()}`);
@@ -46,10 +46,10 @@ async function main() {
   await page.waitForTimeout(900); // let the hero count-ups settle for the screenshot
   await page.screenshot({ path: shot("1-hero-monogram.png"), fullPage: false });
   const heroText = await page.getByTestId("gifter-hero").innerText();
-  if (!/Welcome back, Jay/.test(heroText)) fail(`hero text unexpected: ${heroText.slice(0, 120)}`);
-  else ok("hero shows 'Welcome back, Jay.' with avatar button");
+  if (!/Welcome back, Robert/.test(heroText)) fail(`hero text unexpected: ${heroText.slice(0, 120)}`);
+  else ok("hero shows 'Welcome back, Robert.' with avatar button");
 
-  // Pre-state: if Jay somehow already has a photo, remove it first so the
+  // Pre-state: if Robert somehow already has a photo, remove it first so the
   // monogram path is exercised deterministically.
   const hasImg = (await avatarBtn.locator("img").count()) > 0;
   if (hasImg) {
@@ -71,11 +71,11 @@ async function main() {
   ok("avatar shows the uploaded photo");
   await page.screenshot({ path: shot("2-hero-photo.png") });
 
-  // 4. Propagation: as PHIL (the parent), Luke's dashboard-summary should
-  //    now enrich Jay's gift rows with gifterAvatarUrl.
+  // 4. Propagation: as PHIL (the parent), Theo's dashboard-summary should
+  //    now enrich Robert's gift rows with gifterAvatarUrl.
   const philCtx = await browser.newContext();
   const philLogin = await philCtx.request.post(`${baseUrl}/api/auth/login`, {
-    data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" },
+    data: { email: "marcus@riverafamily.com", password: "riverafamily" },
   });
   if (philLogin.status() !== 200) fail(`phil login failed: ${philLogin.status()}`);
   const fundsRes = await philCtx.request.get(`${baseUrl}/api/funds`);
@@ -84,16 +84,16 @@ async function main() {
     (f: any) => /luke/i.test(String(f.recipientFirstName || f.name || "")),
   );
   if (!luke) {
-    fail("could not find Luke's fund as Phil");
+    fail("could not find Theo's fund as Marcus");
   } else {
     const summaryRes = await philCtx.request.get(`${baseUrl}/api/funds/${luke.id}/dashboard-summary`);
     const summary = await summaryRes.json();
-    const jayGift = (summary?.gifts || []).find((g: any) => /jay@dunphyfamily/i.test(String(g.senderEmail || "")));
-    if (!jayGift) fail("no Jay gift row found on Luke's summary");
+    const jayGift = (summary?.gifts || []).find((g: any) => /jay@riverafamily/i.test(String(g.senderEmail || "")));
+    if (!jayGift) fail("no Robert gift row found on Theo's summary");
     else if (jayGift.gifterAvatarUrl && String(jayGift.gifterAvatarUrl).startsWith("data:image/")) {
-      ok("PROPAGATION: Jay's gift rows on Luke's fund now carry gifterAvatarUrl (roster + snapshot will render his face)");
+      ok("PROPAGATION: Robert's gift rows on Theo's fund now carry gifterAvatarUrl (roster + snapshot will render his face)");
     } else {
-      fail(`Jay gift row has no gifterAvatarUrl after upload (got: ${String(jayGift.gifterAvatarUrl).slice(0, 40)})`);
+      fail(`Robert gift row has no gifterAvatarUrl after upload (got: ${String(jayGift.gifterAvatarUrl).slice(0, 40)})`);
     }
   }
   await philCtx.close();

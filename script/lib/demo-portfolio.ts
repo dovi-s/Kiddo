@@ -1,4 +1,4 @@
-// Pure (DB-free) financial core for the Dunphy demo seed.
+// Pure (DB-free) financial core for the Rivera demo seed.
 //
 // Turns a gift schedule into REAL share positions using committed historical
 // prices (script/data/historical-prices.json). Every gift buys shares at the

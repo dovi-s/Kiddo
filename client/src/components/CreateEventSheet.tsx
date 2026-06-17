@@ -1069,11 +1069,11 @@ export function CreateEventSheet({
                             {heroHeadline}
                           </p>
                           <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
-                            No account needed. Takes 60 seconds.
+                            No account needed. Takes seconds.
                           </p>
                           {/* Trust badges */}
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 10 }}>
-                            {[["🌱","Invested"],["🔒","Protected"],["⚡","60 seconds"]].map(([icon, label]) => (
+                            {[["🌱","Invested"],["🔒","Protected"],["⚡","Seconds"]].map(([icon, label]) => (
                               <div key={label} style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(4px)", borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
                                 <div style={{ fontSize: 14, lineHeight: 1 }}>{icon}</div>
                                 <div style={{ fontSize: 9.5, fontWeight: 700, color: "white", marginTop: 3 }}>{label}</div>

@@ -26,12 +26,12 @@ function birthdateForAge(years: number, monthsBack = 0): string {
 }
 
 const KIDS: KidStory[] = [
-  { firstName: "Luke", ageYears: 13, birthdate: birthdateForAge(13, 7), recurringAmount: 100, recurringPaused: false, pronoun: "he", majorityAge: 21, strategy: "growth" },
-  { firstName: "Alex", ageYears: 20, birthdate: birthdateForAge(20, 11), recurringAmount: 50, recurringPaused: true, pronoun: "she", majorityAge: 21, strategy: "balanced" },
-  { firstName: "Haley", ageYears: 22, birthdate: birthdateForAge(22, 4), recurringAmount: 85, recurringPaused: true, pronoun: "she", majorityAge: 21, strategy: "conservative" },
+  { firstName: "Theo", ageYears: 13, birthdate: birthdateForAge(13, 7), recurringAmount: 100, recurringPaused: false, pronoun: "he", majorityAge: 21, strategy: "growth" },
+  { firstName: "Nora", ageYears: 20, birthdate: birthdateForAge(20, 11), recurringAmount: 50, recurringPaused: true, pronoun: "she", majorityAge: 21, strategy: "balanced" },
+  { firstName: "Mia", ageYears: 22, birthdate: birthdateForAge(22, 4), recurringAmount: 85, recurringPaused: true, pronoun: "she", majorityAge: 21, strategy: "conservative" },
 ];
 
-const TARGETS: Record<string, number> = { Luke: 22000, Alex: 48000, Haley: 80000 };
+const TARGETS: Record<string, number> = { Theo: 22000, Nora: 48000, Mia: 80000 };
 
 const prices = loadPrices();
 const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -68,7 +68,7 @@ for (const kid of KIDS) {
 
   // Real-drawdown chart check: portfolio value at key months. A REAL curve dips
   // at the 2020 COVID crash and is far below today — proof it's not synthetic.
-  if (kid.firstName === "Haley") {
+  if (kid.firstName === "Mia") {
     const events = buildPortfolio(prices, gifts, rebalances).events;
     console.log("  chart check (real portfolio value at month):");
     for (const k of ["2018-01", "2020-01", "2020-03", "2020-08", "2022-09", "2024-01"]) {

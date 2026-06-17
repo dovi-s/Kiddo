@@ -2,7 +2,7 @@
 // (audit items H2/H9/M4) enforced on every public gifter text path. Two
 // jobs: (1) the contact/link patterns actually catch what they claim,
 // (2) REAL warm gift language never trips them — including every message
-// style the Dunphy demo seeds, which double as canaries for false positives.
+// style the Rivera demo seeds, which double as canaries for false positives.
 //
 // Run: npm run test:gift-text-safety
 
@@ -17,8 +17,8 @@ import { pool } from "../server/db";
 
 // ── Names: real gifter signatures stay legal ───────────────────────────────
 for (const ok of [
-  "Grandma", "Uncle Bob", "Gloria Pritchett", "The Nguyens next door",
-  "Phil's office", "Aunt Pam", "Grandma & Grandpa", "Mr. O'Brien-Smith",
+  "Grandma", "Uncle Bob", "Sofia Rivera", "The Nguyens next door",
+  "Marcus's office", "Aunt Pam", "Grandma & Grandpa", "Mr. O'Brien-Smith",
 ]) {
   assert.equal(senderNameIssue(ok), null, `name should pass: ${ok}`);
 }
@@ -52,7 +52,7 @@ for (const seeded of [
   "because magic is always a good investment",
   "abuela te quiere muchisimo",
   "Apple again. you'll thank me.",
-  "don't tell Mitchell i went bigger this year",
+  "don't tell David i went bigger this year",
   "llamame ok? te amo",
   "another year, another share.",
   "for college. or whatever you choose",
@@ -101,7 +101,7 @@ assert.equal(giftMessageIssue(""), null);
 assert.equal(giftMessageIssue(undefined), null);
 
 // ── Transcripts (M4): machine text is dropped on a hit, kept verbatim otherwise ─
-assert.equal(sanitizeTranscript("Happy birthday Luke, we love you so much"), "Happy birthday Luke, we love you so much");
+assert.equal(sanitizeTranscript("Happy birthday Theo, we love you so much"), "Happy birthday Theo, we love you so much");
 assert.equal(sanitizeTranscript("call me at 555 123 4567 don't tell mom"), null, "contact-pattern transcript must be dropped");
 assert.equal(sanitizeTranscript("visit www.evil.example for a surprise"), null);
 assert.equal(sanitizeTranscript(""), null);

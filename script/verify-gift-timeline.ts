@@ -9,7 +9,7 @@ const OUT = path.join(process.cwd(), "artifacts", "verify-gift-timeline");
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
-  const LUKE = String((await (await fetch(`${BASE}/api/public/funds/luke-dunphy`)).json())?.fund?.id || "");
+  const LUKE = String((await (await fetch(`${BASE}/api/public/funds/theo-rivera`)).json())?.fund?.id || "");
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 430, height: 1200 } });
   await context.addInitScript(() => { try { sessionStorage.setItem("kora-launched", "1"); } catch { /* noop */ } });
@@ -19,9 +19,9 @@ async function main() {
   try {
     await page.goto(BASE, { waitUntil: "domcontentloaded" });
     await page.evaluate(async () => {
-      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "claire@dunphyfamily.com", password: "dunphyfamily" }) });
+      await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email: "elena@riverafamily.com", password: "riverafamily" }) });
     });
-    await page.goto(`${BASE}/gift/success?demo=1&fundId=${LUKE}&amount=75&senderName=Gloria`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE}/gift/success?demo=1&fundId=${LUKE}&amount=75&senderName=Sofia`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-testid='text-success-heading']", { timeout: 20_000 });
     const timelineVisible = await page.getByTestId("gift-status-timeline").isVisible().catch(() => false);
     const txt = await page.getByTestId("gift-status-timeline").innerText().catch(() => "");

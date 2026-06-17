@@ -115,6 +115,60 @@ valid (Alpaca requires the custodian financial profile — income/net-worth/risk
 enable custodial account creation for our sandbox correspondent (firm `frvq`)**, then re-run.
 Fractional-in-custodial (#2) still needs a re-run during market hours once #1 is enabled.
 
+**Update 2026-06-16:** sandbox Broker API keys now configured in `.env`
+(`ALPACA_BROKER_API_KEY`/`ALPACA_BROKER_API_SECRET`; `.env` is gitignored — safe). Smoke
+test re-run **confirms credentials are valid (auth passes)** and **reproduces the same
+`403 {40310000} "creating custodial USA accounts is not enabled"`** — so the ONLY remaining
+sandbox blocker is the per-correspondent custodial entitlement. The smoke script now loads
+`.env` via `dotenv/config` (was reading bare `process.env`). **NEXT (founder action): send the
+drafted email** (`LAUNCH_OUTREACH_EMAILS.md` #4) to enable custodial creation for correspondent
+`frvq`; once enabled, re-run during market hours to settle fractional-in-custodial + the handoff.
+
+### Doc research findings (deep-research run 2026-06-16, 20 claims verified 3-0 against Alpaca's own docs)
+
+**CONFIRMED — de-risks Alpaca:**
+- **Alpaca Securities LLC = BD of record** (Member FINRA/SIPC, carrying/clearing); does account
+  maintenance, reporting, confirms, statements, settlement on partners' behalf → Kiddo need not be
+  a BD. (docs/account-opening, docs/use-cases)
+- **Alpaca custodies + generates monthly statements + handles ALL annual tax reporting** under the
+  MINOR's SSN → Kiddo does NOT generate 1099s/statements. Big compliance offload. (docs/custodial-accounts)
+- **Fractional + notional supported** ("$1 minimum," 9 decimals, 2,000+ equities). (docs/fractional-trading)
+- **Gifter-funding FBO architecture exists:** "send customer deposits in bulk to your firm account
+  first and reconcile later using the Journals API"; firm/FBO account can be the journal source —
+  BUT "we need to review the entire flow first... you may need a local [money-transmission] license."
+  (docs/funding-accounts, learn/journal-cash-securities)
+- **FDIC Sweep EXPLICITLY supports Custodial accounts** (pass-through to $1M, $250k/bank); disclosure =
+  brokerage cash SIPC-not-FDIC, swept cash FDIC-not-SIPC. Enables the shared-yield line. (docs/fdic-sweep-program)
+- **Custodial open flow matches our smoke test** (`minor_identity` fields; KYC on the adult). (docs/custodial-accounts)
+
+**TWO REAL UNKNOWNS — Alpaca docs explicitly DON'T answer; MUST get written confirmation:**
+1. **The at-majority handoff mechanics (#1 risk) — LIKELY DE-RISKED (doc search 2026-06-16).** Two docs
+   together point to SAFE: (a) the at-majority handoff is described as **"the beneficiary assumes full
+   control of the account"** (= in-place, same account, control re-registers → fractional + cost basis
+   PRESERVED), and (b) the **fractional-liquidation rule is specifically for ACATS** — *"if the user is
+   requesting a full [ACATS] transfer... fractional shares... will be liquidated before being sent out"*
+   (docs/us/docs/acat-api) — i.e. liquidation is the **moving-to-ANOTHER-broker** case, NOT the
+   coming-of-age case. Docs STRONGLY IMPLY in-place but don't explicitly say "no liquidation," so confirm
+   ONE sentence with Alpaca: *"Is the age-of-majority transition an in-place re-registration of the same
+   account (preserves fractional + cost basis, no ACATS), and is it Alpaca-driven by DOB/state or
+   platform-triggered?"* **WIND-DOWN IMPLICATION:** an ACATS-OUT to a different broker DOES liquidate
+   fractional → the "if Kiddo shuts down" FAQ can't promise "nothing sold" via ACATS; keep accounts at
+   Alpaca or liquidate-to-cash and say so (align counsel-packet wind-down copy).
+2. **Non-BD + FBO approval:** non-BD tech providers supported "on a CASE-BY-CASE basis, select countries"
+   (= why we're 403'd); FBO gifter-pooling needs Alpaca's flow review + possibly an MTL.
+
+**NEW FRICTION:** Travel Rule enforced on **EVERY incoming deposit regardless of amount** (transmitter
+identity name/acct/address/institution, retained 5yr) on Journals + Instant Funding → AML overhead on
+every small gifter deposit. Shapes the gifter-funding UX. (docs/funding-accounts, docs/instant-funding-1)
+
+**NOT pinned from docs (ask Alpaca/counsel):** exact pricing/minimums/float-share (fee-schedule PDF
+exists, specifics unverified); excluded-states list ("all exc SC/VT" did NOT verify); whether the
+Rebalancing API for model portfolios triggers RIA registration (counsel Part 1).
+
+**Sandbox pre-validation (2026-06-16, `script/alpaca-sandbox-probe.ts`):** auth + regular account open
++ ACH funding all WORK; the fractional buy itself is market-hours-gated (probe auto-re-runs at ET open
+via a background waiter). So make-or-break #1's mechanism (fractional/notional) is being confirmed live.
+
 **📄 DOC FINDINGS round 2 (2026-06-12 — Funding / Rebalancing / SSE / Instant Funding / Market Data):**
 - **🟢 Gifter-funding architecture RESOLVED → Cash Pooling + Journals API.** Alpaca's "Funding Accounts" doc: *"send customer deposits in a bulk to your firm account first and reconcile later using the Journals API"* (= aggregate funding). This is exactly Kiddo's model: collect gifts via Stripe → pool in a Kiddo firm/FBO account → `Journals API` (JNLC) into each kid's custodial account. **Caveat (not new): "you may need a local license… check your counsel"** + **Travel Rule** transmitter info on journals → this is the SAME money-transmission gate already in `COUNSEL_ENGAGEMENT_PACKET` (holding gift funds pre-account), now concretely mapped to the Alpaca funding path. Not a new blocker; the known counsel gate.
 - **🟢 Curated mixes RESOLVED → Portfolio Rebalancing API.** Define Growth/Balanced/Conservative as **Portfolios** (weighted VTI/VXUS/BND), **subscribe** each account, Alpaca auto-runs `invest_cash` (cash >$10 → buys toward target, 9:30-3:30 ET) + `full_rebalance` on drift-band/calendar. Uses **fractional/notional** orders. Min $1/asset, $10 invest_cash. Our gifts ($25-100) + 2-3 assets fit cleanly. (Doc frames it "for investment advisors" — the RIA-vs-tech-partner characterization is still the counsel question, but the *mechanic* is a perfect fit.)

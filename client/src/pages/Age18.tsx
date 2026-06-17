@@ -3,6 +3,7 @@ import { animate, motion, useReducedMotion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, CalendarClock, Gift, GraduationCap, TrendingUp } from "lucide-react";
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export default function Age18() {
   usePageSeo({
     title: "What happens when your child turns 18 | Kiddo",
     description:
-      "At 18, the fund becomes theirs. Here is exactly what happens legally, what your child receives, and how Kiddo makes the handoff matter.",
+      "At 18, the fund becomes theirs. Exactly what happens legally, what your child receives, and how Kiddo makes the handoff matter.",
     ogType: "article",
   });
 
@@ -122,7 +123,7 @@ export default function Age18() {
             At 18, the fund becomes theirs.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-            Everything their family built. Every gift. Every note. Every investment. Theirs. Here is exactly what happens and how Kiddo makes it matter. (In some states the age is 19 or 21; the handoff works the same way.)
+            Everything their family built (every gift, every note, every investment) becomes theirs. Exactly what happens, and how Kiddo makes it matter. (The exact age is 18 to 21 depending on your state; the handoff works the same way.)
           </p>
           <div className="mx-auto mt-8 max-w-3xl rounded-[28px] border border-border bg-card px-6 py-6 text-left shadow-premium-sm">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Most platforms do nothing at 18</p>
@@ -146,7 +147,7 @@ export default function Age18() {
         <div className="mx-auto max-w-4xl px-4">
           <div className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-12">
             <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-              Here is how it actually works.
+              How it actually works.
             </h2>
             <div className="mt-8 space-y-8">
               <div>
@@ -200,6 +201,15 @@ export default function Age18() {
                 </p>
               </div>
             </div>
+
+            <ProductFrame
+              src="/product/age18.webp"
+              alt="The age-of-majority handoff page: the time remaining, the projected value, what transfers to them, and the family record of who showed up."
+              caption="The handoff page itself."
+              href="/demo"
+              liveLabel="See it live"
+              className="mt-12"
+            />
 
             <div className="mt-10 overflow-hidden rounded-3xl bg-primary/5 p-4 sm:p-5 md:p-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -402,7 +412,7 @@ export default function Age18() {
                 </div>
               </div>
               <div className="rounded-3xl border border-border bg-card p-6 shadow-premium-sm">
-                <h3 className="font-heading text-2xl font-semibold text-foreground">Here is something most people do not know.</h3>
+                <h3 className="font-heading text-2xl font-semibold text-foreground">Something most people do not know.</h3>
                 <div className="mt-4 space-y-4 text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
                   <p>
                     Over time, the account becomes more tax-efficient, not less.
@@ -430,7 +440,7 @@ export default function Age18() {
                   What we can do is the years before it. Emma watches the fund grow, sees who showed up for her, learns how investing works from her own money, and reads the notes the people who love her left along the way.
                 </p>
                 <p className="font-medium text-foreground">
-                  So when it becomes hers, it is not a stranger's windfall. It is something she has understood, and felt loved through, for as long as she can remember.
+                  So when it becomes hers, it's something she has understood, and felt loved through, for as long as she can remember.
                 </p>
                 <p>
                   We cannot promise what she will do. We can promise we spent those years preparing her to do it well. That is the whole reason Kiddo exists.

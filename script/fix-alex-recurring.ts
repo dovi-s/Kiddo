@@ -1,6 +1,6 @@
-// One-off: activate the demo Alex's recurring (was seeded "paused" by mistake —
+// One-off: activate the demo Nora's recurring (was seeded "paused" by mistake —
 // a fund 30 days BEFORE the handoff is still actively funding; the worker only
-// auto-pauses AT majority). Targets ONLY slug "alex-dunphy" so no real fund is
+// auto-pauses AT majority). Targets ONLY slug "nora-rivera" so no real fund is
 // touched. The seed file is already fixed; this brings the current demo DB into
 // line without a full ~75-min re-seed. 2026-06-04.
 import "../server/env";
@@ -9,9 +9,9 @@ import { funds, parentContributions } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
 async function main() {
-  const [alex] = await db.select().from(funds).where(eq(funds.slug, "alex-dunphy"));
+  const [alex] = await db.select().from(funds).where(eq(funds.slug, "nora-rivera"));
   if (!alex) {
-    console.log("No alex-dunphy fund found — nothing to do.");
+    console.log("No nora-rivera fund found — nothing to do.");
     return;
   }
   const contribs = await db.select().from(parentContributions).where(eq(parentContributions.fundId, alex.id));
@@ -26,10 +26,10 @@ async function main() {
         .set({ status: "active", pauseReason: null, pausedAt: null, nextRunDate: next } as any)
         .where(eq(parentContributions.id, c.id));
       changed++;
-      console.log(`Activated recurring ${c.id} ($${c.amount}/mo) on Alex's fund ${alex.id}.`);
+      console.log(`Activated recurring ${c.id} ($${c.amount}/mo) on Nora's fund ${alex.id}.`);
     }
   }
-  if (!changed) console.log("Alex's recurring was already active (or handoff-ended) — no change.");
+  if (!changed) console.log("Nora's recurring was already active (or handoff-ended) — no change.");
 }
 
 main()

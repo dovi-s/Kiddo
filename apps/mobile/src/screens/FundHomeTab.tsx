@@ -14,9 +14,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Animated,
   Dimensions,
+  Easing,
   Image,
   Linking,
   Modal,
@@ -28,9 +30,11 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, Skeleton, haptic, Appear } from "../ui";
+import { SinceLastVisitDigest } from "../components/SinceLastVisitDigest";
 import { projectFundValue, ageFromBirthdate } from "../lib/projection";
 import { looksLikeTestSender } from "../lib/gifters";
 import { isReadOnlyFund, isOwnerModeFund } from "../lib/fund";
@@ -85,31 +89,32 @@ function parseBirthdate(birthdate?: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** The calendar date the recipient turns 18, e.g. "Nov 1, 2033". */
-function eighteenthDateLabel(birthdate?: string | null): string | null {
+/** The calendar date the recipient reaches majority. Uses the fund's real
+ *  majorityAge (UTMA age varies by state, 18-21) — NOT a hardcoded 18. */
+function majorityDateLabel(birthdate?: string | null, majorityAge = 18): string | null {
   const birth = parseBirthdate(birthdate);
   if (!birth) return null;
   const d = new Date(birth);
-  d.setFullYear(d.getFullYear() + 18);
+  d.setFullYear(d.getFullYear() + majorityAge);
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-/** Whole days until the recipient turns 18 (null if past or unknown). */
-function daysUntil18(birthdate?: string | null): number | null {
+/** Whole days until the recipient reaches majority (null if past or unknown). */
+function daysUntilMajority(birthdate?: string | null, majorityAge = 18): number | null {
   const birth = parseBirthdate(birthdate);
   if (!birth) return null;
-  const eighteen = new Date(birth);
-  eighteen.setFullYear(eighteen.getFullYear() + 18);
-  const days = Math.ceil((eighteen.getTime() - Date.now()) / 86_400_000);
+  const at = new Date(birth);
+  at.setFullYear(at.getFullYear() + majorityAge);
+  const days = Math.ceil((at.getTime() - Date.now()) / 86_400_000);
   return days > 0 ? days : null;
 }
 
-/** "in 3 years" / "in 8 months" until the recipient turns 18. */
-function countdownTo18(birthdate?: string | null): string | null {
+/** "in 3 years" / "in 8 months" until the recipient reaches majority. */
+function countdownToMajority(birthdate?: string | null, majorityAge = 18): string | null {
   const birth = parseBirthdate(birthdate);
   if (!birth) return null;
   const eighteen = new Date(birth);
-  eighteen.setFullYear(eighteen.getFullYear() + 18);
+  eighteen.setFullYear(eighteen.getFullYear() + majorityAge);
   const days = Math.ceil((eighteen.getTime() - Date.now()) / 86_400_000);
   if (days <= 0) return null;
   const years = Math.floor(days / 365);
@@ -140,14 +145,31 @@ function tintFor(name: string): string {
 
 // ─── count-up balance (the web hero's signature animated reveal) ──────────────
 
+// Keys whose roll has already played this app session. The web hero rolls ONCE
+// PER KID and snaps when you switch back (the founder's locked behavior — no
+// "rolls every switch / goes back down"); we mirror it with a per-key lock.
+const rolledBalanceKeys = new Set<string>();
+let reduceMotionCached = false;
+AccessibilityInfo.isReduceMotionEnabled()
+  .then((v) => {
+    reduceMotionCached = v;
+  })
+  .catch(() => {});
+
 function CountUp({
   value,
   color,
   prefix = "$",
+  rollKey,
+  cents,
 }: {
   value: number;
   color: string;
   prefix?: string;
+  /** Roll once per key (e.g. fund id), then snap on return. Omit = always roll. */
+  rollKey?: string;
+  /** Always show 2 decimals (the web hero shows $23,577.27). */
+  cents?: boolean;
 }) {
   const anim = useRef(new Animated.Value(0)).current;
   const [shown, setShown] = useState(value);
@@ -156,21 +178,35 @@ function CountUp({
   useEffect(() => {
     const from = prev.current;
     prev.current = value;
-    if (Platform.OS === "web") {
-      // Animated listeners + native driver are flaky on rn-web; just set.
+
+    const alreadyRolled = rollKey ? rolledBalanceKeys.has(rollKey) : false;
+    // Snap (no animation) on web, under reduced motion, or when this kid's
+    // balance already rolled once this session.
+    if (Platform.OS === "web" || reduceMotionCached || alreadyRolled) {
       setShown(value);
+      if (rollKey) rolledBalanceKeys.add(rollKey);
       return;
     }
+
     anim.setValue(0);
     const id = anim.addListener(({ value: t }) => setShown(from + (value - from) * t));
-    Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: false }).start();
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 700, // countUp (locked)
+      easing: Easing.bezier(0.16, 1, 0.3, 1), // outExpo (locked)
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished && rollKey) rolledBalanceKeys.add(rollKey);
+    });
     return () => anim.removeListener(id);
-  }, [value]);
+  }, [value, rollKey]);
 
-  const formatted = `${prefix}${Math.round(shown).toLocaleString("en-US")}${
-    // keep cents only when the target has meaningful cents and is small
-    value < 1000 && value % 1 !== 0 ? (shown - Math.floor(shown)).toFixed(2).slice(1) : ""
-  }`;
+  const formatted = cents
+    ? `${prefix}${shown.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `${prefix}${Math.round(shown).toLocaleString("en-US")}${
+        // keep cents only when the target has meaningful cents and is small
+        value < 1000 && value % 1 !== 0 ? (shown - Math.floor(shown)).toFixed(2).slice(1) : ""
+      }`;
 
   return (
     <KText variant="display" color={color} tabular style={{ fontSize: 46, lineHeight: 52 }}>
@@ -228,6 +264,43 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ─── main ─────────────────────────────────────────────────────────────────────
 
+// Compact collapsible card (web parity: a one-line summary + chevron that
+// expands to the detail). Keeps the dashboard scannable instead of a tall scroll.
+function Collapsible({
+  title,
+  summary,
+  summaryColor,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary?: string | null;
+  summaryColor?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Pressable onPress={onToggle}>
+      <KiddoCard>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <KText variant="bodyStrong">{title}</KText>
+            {summary ? (
+              <KText variant="caption" color={summaryColor ?? semanticColors.text.muted} style={{ marginTop: 2 }}>
+                {summary}
+              </KText>
+            ) : null}
+          </View>
+          <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={semanticColors.text.muted} />
+        </View>
+        {open ? <View style={{ marginTop: spacing.sm }}>{children}</View> : null}
+      </KiddoCard>
+    </Pressable>
+  );
+}
+
 export interface FundHomeTabProps {
   activeFund: ApiFund | null;
   summary: DashboardSummary | null;
@@ -240,6 +313,7 @@ export interface FundHomeTabProps {
   onSelectFund: (fund: ApiFund) => void;
   onAddFund: () => void;
   onCreateEvent: () => void;
+  isDemoAccount?: boolean;
 }
 
 export function FundHomeTab(props: FundHomeTabProps) {
@@ -255,8 +329,10 @@ export function FundHomeTab(props: FundHomeTabProps) {
     onSelectFund,
     onAddFund,
     onCreateEvent,
+    isDemoAccount,
   } = props;
 
+  const navigation = useNavigation<any>();
   const childName = childNameOf(activeFund);
   const isReadOnly = isReadOnlyFund(activeFund);
   const isOwnerMode = isOwnerModeFund(activeFund);
@@ -264,6 +340,11 @@ export function FundHomeTab(props: FundHomeTabProps) {
   // the web's per-holding depth surface, instead of navigating away.
   const [selectedHolding, setSelectedHolding] = useState<ApiHolding | null>(null);
   const [projectionOpen, setProjectionOpen] = useState(false);
+  // Sections default COLLAPSED (one summary line + chevron), like web — the
+  // always-expanded ledger/chart/holdings made the dashboard tall and verbose.
+  const [fundSoFarOpen, setFundSoFarOpen] = useState(false);
+  const [growthOpen, setGrowthOpen] = useState(false);
+  const [holdingsOpen, setHoldingsOpen] = useState(false);
   const [age18Open, setAge18Open] = useState(false);
   const [kidViewOpen, setKidViewOpen] = useState(false);
 
@@ -385,8 +466,28 @@ export function FundHomeTab(props: FundHomeTabProps) {
   // a misleading $0 / "+balance growth" next to a real Worth-today. Skeleton instead.
   const summaryReady = !!summary;
   const summaryPending = summaryLoading && !summary;
-  const countdown = countdownTo18(activeFund?.recipientBirthdate);
-  const eighteenthDate = eighteenthDateLabel(activeFund?.recipientBirthdate);
+  // The child's real age of majority (UTMA, varies by state 18-21) — read the
+  // fund's value, never hardcode 18 (the web shows 21 for funds set that way).
+  const majorityAge = Number((activeFund as any)?.majorityAge) || 18;
+  const countdown = countdownToMajority(activeFund?.recipientBirthdate, majorityAge);
+  // Locked projection math (mirror of shared/projection.ts) for the hero
+  // "on track for $X when {name} turns {majorityAge}" pill.
+  const heroProjAge = ageFromBirthdate(activeFund?.recipientBirthdate) ?? 5;
+  const heroProjection = projectFundValue({
+    startingValue: d.totalValue,
+    monthlyContribution: d.monthlyRecurring,
+    yearsAhead: Math.max(0, majorityAge - heroProjAge),
+    contributionYears: Math.max(0, majorityAge - heroProjAge),
+  });
+  const eighteenthDate = majorityDateLabel(activeFund?.recipientBirthdate, majorityAge);
+  // Web-parity "horizon" number: what it could become if left to grow to 33
+  // (contributions still stop at majority). Shown on the handoff card.
+  const horizon33 = projectFundValue({
+    startingValue: d.totalValue,
+    monthlyContribution: d.monthlyRecurring,
+    yearsAhead: Math.max(0, 33 - heroProjAge),
+    contributionYears: Math.max(0, majorityAge - heroProjAge),
+  });
   const activeEvents = events.filter(
     (e) => e.status === "active" && !e.isPermanent && (!activeFund || String(e.fundId) === String(activeFund.id)),
   );
@@ -466,9 +567,9 @@ export function FundHomeTab(props: FundHomeTabProps) {
         </KiddoCard>
       ) : null}
 
-      {/* ── approaching-handoff banner (within 90 days of turning 18) ──────── */}
+      {/* ── approaching-handoff banner (within 90 days of majority) ───────── */}
       {(() => {
-        const days = daysUntil18(activeFund?.recipientBirthdate);
+        const days = daysUntilMajority(activeFund?.recipientBirthdate, majorityAge);
         if (!days || days > 90 || isReadOnly) return null;
         return (
           <Pressable
@@ -490,7 +591,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
                 Handoff in {days} {days === 1 ? "day" : "days"}
               </KText>
               <KText variant="caption" color={semanticColors.text.muted}>
-                {childName} turns 18 on {eighteenthDateLabel(activeFund?.recipientBirthdate)}. Here's what changes.
+                {childName} turns {majorityAge}{eighteenthDate ? ` on ${eighteenthDate}` : ""}. Here's what changes.
               </KText>
             </View>
             <Ionicons name="chevron-forward" size={16} color={semanticColors.text.muted} />
@@ -498,36 +599,61 @@ export function FundHomeTab(props: FundHomeTabProps) {
         );
       })()}
 
+      {/* ── "while you were away" recap (web parity, above the hero) ───────── */}
+      {hasStarted && activeFund ? (
+        <SinceLastVisitDigest
+          subject={`${childName}'s fund`}
+          currentValue={d.totalValue}
+          gifts={summary?.gifts ?? []}
+          fundId={activeFund.id}
+          isDemoAccount={isDemoAccount}
+          viewerIsContributor={!isReadOnly}
+        />
+      ) : null}
+
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <Appear delay={0}>
       <KiddoCard variant="hero">
-        {/* identity row */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <KText variant="eyebrow" color="rgba(248,245,240,0.72)">
+        {/* identity row (web parity: avatar + name · type · ACTIVE) */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: "rgba(248,245,240,0.92)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <KText variant="label" color={colors.evergreen}>
+              {(childName || "?").trim().charAt(0).toUpperCase()}
+            </KText>
+          </View>
+          <KText variant="eyebrow" color="rgba(248,245,240,0.72)" style={{ flex: 1 }}>
             {childName}'s Fund · {String(activeFund.accountType || "UTMA").toUpperCase()}
+            {String(activeFund.status || "").toLowerCase() === "active" ? " · ACTIVE" : ""}
           </KText>
-          {d.peopleCount > 0 ? (
-            <View
-              style={{
-                backgroundColor: "rgba(197,130,30,0.22)",
-                borderRadius: radius.pill,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-              }}
-            >
-              <KText variant="caption" color="#F8D889">
-                {d.gifts.length} {d.gifts.length === 1 ? "gift" : "gifts"} · {d.peopleCount}{" "}
-                {d.peopleCount === 1 ? "person" : "people"}
-              </KText>
-            </View>
-          ) : null}
         </View>
 
+        {/* "TODAY" eyebrow above the balance (web parity) */}
+        <KText variant="eyebrow" color="#F8D889" style={{ marginTop: spacing.md }}>
+          Today
+        </KText>
         {/* balance — always from the fund row (loaded before the summary), so it
-            shows instantly instead of skeletoning while the summary streams in. */}
-        <View style={{ marginTop: spacing.sm }}>
-          <CountUp value={d.totalValue} color={semanticColors.text.inverse} />
+            shows instantly instead of skeletoning while the summary streams in.
+            Cents shown for web parity ($23,577.27). */}
+        <View style={{ marginTop: 2 }}>
+          <CountUp value={d.totalValue} color={semanticColors.text.inverse} rollKey={activeFund.id} cents />
         </View>
+
+        {/* gift count in gold under the balance (web parity, not a corner pill) */}
+        {d.peopleCount > 0 ? (
+          <KText variant="label" color="#F8D889" style={{ marginTop: 2 }}>
+            {d.gifts.length} {d.gifts.length === 1 ? "gift" : "gifts"} · {d.peopleCount}{" "}
+            {d.peopleCount === 1 ? "person" : "people"}
+          </KText>
+        ) : null}
 
         {/* substat */}
         <KText variant="body" color="rgba(248,245,240,0.82)" style={{ marginTop: 2 }}>
@@ -541,7 +667,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
         </KText>
         {countdown && !isReadOnly ? (
           <KText variant="caption" color="rgba(248,245,240,0.6)" style={{ marginTop: 2 }}>
-            {childName} turns 18 in {countdown}
+            {childName} turns {majorityAge} in {countdown}
           </KText>
         ) : null}
 
@@ -550,22 +676,37 @@ export function FundHomeTab(props: FundHomeTabProps) {
           <GiftCarousel gifts={d.recent} childName={childName} />
         ) : null}
 
-        {/* hero CTAs — Share + a projection peek (mirrors the web hero; the old
-            "Open fund" sent users to an obsolete, thinner detail screen — Home IS
-            the fund view now). */}
-        <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
-          {!isReadOnly ? (
-            <Button label="Share" onPress={handleShare} variant="monetization" style={{ flex: 1 }} />
-          ) : null}
-          {hasStarted ? (
-            <Button
-              label="See its future"
-              onPress={() => setProjectionOpen(true)}
-              variant="outline"
-              style={{ flex: 1 }}
-            />
-          ) : null}
-        </View>
+        {/* hero CTAs — full-width gold Share + the "on track" projection pill,
+            mirroring the web hero. */}
+        {!isReadOnly ? (
+          <View style={{ marginTop: spacing.md }}>
+            <Button label={`Share ${childName}'s link`} onPress={handleShare} variant="monetization" fullWidth />
+          </View>
+        ) : null}
+        {hasStarted && heroProjection > d.totalValue ? (
+          <Pressable
+            onPress={() => {
+              haptic("selection");
+              setProjectionOpen(true);
+            }}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: spacing.sm,
+              backgroundColor: "rgba(14,37,24,0.55)",
+              borderRadius: radius.pill,
+              paddingHorizontal: 14,
+              paddingVertical: 11,
+            }}
+          >
+            <Ionicons name="trending-up" size={15} color="#F8D889" />
+            <KText variant="caption" color="#F8D889" style={{ flex: 1 }}>
+              On track for ${Math.round(heroProjection).toLocaleString("en-US")} when {childName} turns {majorityAge}
+            </KText>
+            <Ionicons name="chevron-forward" size={14} color="rgba(248,216,137,0.7)" />
+          </Pressable>
+        ) : null}
       </KiddoCard>
       </Appear>
 
@@ -591,8 +732,17 @@ export function FundHomeTab(props: FundHomeTabProps) {
             activeCount={d.activeRecurring.length}
             pausedCount={d.pausedRecurring.length}
             monthly={d.monthlyRecurring}
+            nextDate={
+              d.activeRecurring
+                .map((c) => c.nextRunDate)
+                .filter(Boolean)
+                .sort()[0] ?? null
+            }
             enabled={d.recurringEnabled}
-            onPress={() => onSelectFund(activeFund)}
+            onPress={() =>
+              activeFund &&
+              navigation.navigate("Recurring", { fundId: activeFund.id, fundName: childName })
+            }
           />
         </Appear>
       ) : null}
@@ -600,53 +750,82 @@ export function FundHomeTab(props: FundHomeTabProps) {
       {/* ── 30-day / fund-so-far summary ───────────────────────────────────── */}
       {hasStarted ? (
         <Appear delay={160}>
-          <SectionLabel>{isOwnerMode ? "Your fund so far" : `${childName}'s fund so far`} 🌱</SectionLabel>
-          <KiddoCard>
-            {!summaryReady ? (
-              summaryPending ? (
-                <View style={{ gap: 12, paddingVertical: 4 }}>
-                  <Skeleton height={16} width="80%" />
-                  <Skeleton height={16} width="60%" />
+          <Pressable
+            onPress={() => {
+              haptic("selection");
+              setFundSoFarOpen((o) => !o);
+            }}
+          >
+            <KiddoCard>
+              {/* collapsed header: title + "+$X grown so far" + chevron (web parity) */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <KText variant="bodyStrong">
+                    {isOwnerMode ? "Your fund so far" : `${childName}'s fund so far`} 🌱
+                  </KText>
+                  {summaryReady && Math.abs(d.growth) >= 1 ? (
+                    <KText
+                      variant="caption"
+                      color={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
+                      style={{ marginTop: 2 }}
+                    >
+                      {d.growth >= 0 ? "+" : "−"}
+                      {formatBalance(Math.abs(d.growth))} grown so far
+                    </KText>
+                  ) : null}
                 </View>
-              ) : null
-            ) : (
-              <>
-                <SummaryRow
-                  label={isOwnerMode ? "Gifts from people who love you" : `Gifts from people who love ${childName}`}
-                  value={formatBalance(d.giftsTotal)}
+                <Ionicons
+                  name={fundSoFarOpen ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={semanticColors.text.muted}
                 />
-                {d.activeRecurring.length > 0 ? (
-                  <SummaryRow
-                    label="Your recurring investments"
-                    value={`${formatBalance(d.monthlyRecurring)}/mo`}
-                  />
-                ) : null}
-                {Math.abs(d.growth) >= 1 ? (
-                  <SummaryRow
-                    label={d.growth >= 0 ? "Market growth" : "Market change"}
-                    value={`${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))}`}
-                    valueColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
-                  />
-                ) : null}
-              </>
-            )}
-            <View
-              style={{
-                borderTopWidth: 1,
-                borderTopColor: semanticColors.surface.muted,
-                marginTop: spacing.sm,
-                paddingTop: spacing.sm,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <KText variant="bodyStrong">Worth today</KText>
-              <KText variant="bodyStrong" tabular>
-                {formatBalance(d.totalValue)}
-              </KText>
-            </View>
-          </KiddoCard>
+              </View>
+
+              {fundSoFarOpen ? (
+                !summaryReady ? (
+                  summaryPending ? (
+                    <View style={{ gap: 12, paddingVertical: 4, marginTop: spacing.sm }}>
+                      <Skeleton height={16} width="80%" />
+                      <Skeleton height={16} width="60%" />
+                    </View>
+                  ) : null
+                ) : (
+                  <View style={{ marginTop: spacing.sm }}>
+                    <SummaryRow
+                      label={isOwnerMode ? "Gifts from people who love you" : `Gifts from people who love ${childName}`}
+                      value={formatBalance(d.giftsTotal)}
+                    />
+                    {d.activeRecurring.length > 0 ? (
+                      <SummaryRow label="Your recurring investments" value={`${formatBalance(d.monthlyRecurring)}/mo`} />
+                    ) : null}
+                    {Math.abs(d.growth) >= 1 ? (
+                      <SummaryRow
+                        label={d.growth >= 0 ? "Market growth" : "Market change"}
+                        value={`${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))}`}
+                        valueColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
+                      />
+                    ) : null}
+                    <View
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor: semanticColors.surface.muted,
+                        marginTop: spacing.sm,
+                        paddingTop: spacing.sm,
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <KText variant="bodyStrong">Worth today</KText>
+                      <KText variant="bodyStrong" tabular>
+                        {formatBalance(d.totalValue)}
+                      </KText>
+                    </View>
+                  </View>
+                )
+              ) : null}
+            </KiddoCard>
+          </Pressable>
         </Appear>
       ) : null}
 
@@ -663,10 +842,10 @@ export function FundHomeTab(props: FundHomeTabProps) {
         </KiddoCard>
       ) : null}
 
-      {/* ── quick links ────────────────────────────────────────────────────── */}
-      <Appear delay={240} style={{ flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" }}>
+      {/* ── quick links (bare icon row, web parity) ────────────────────────── */}
+      <Appear delay={240} style={{ flexDirection: "row", gap: spacing.xs }}>
         {!isReadOnly ? (
-          <QuickLink icon="share-social" label="Share link" gold onPress={handleShare} />
+          <QuickLink icon="share-social-outline" label="Share link" onPress={handleShare} />
         ) : null}
         <QuickLink icon="eye-outline" label="Gifter page" onPress={openGifterPage} />
         {!isOwnerMode ? (
@@ -674,65 +853,97 @@ export function FundHomeTab(props: FundHomeTabProps) {
         ) : null}
         {!isReadOnly ? (
           <QuickLink
-            icon={activeEvent ? "calendar" : "add-circle-outline"}
-            label={activeEvent ? activeEvent.name : "New occasion"}
+            icon={activeEvent ? "calendar-outline" : "calendar-outline"}
+            label={activeEvent ? activeEvent.name : `${childName}'s Birthday`}
             onPress={onCreateEvent}
           />
         ) : null}
       </Appear>
 
-      {/* ── growth chart (only with real summary data; skeleton while pending) ── */}
+      {/* "see it from a gifter's side" hint pill (web parity) */}
+      {!isReadOnly ? (
+        <Pressable
+          onPress={() => {
+            haptic("selection");
+            openGifterPage();
+          }}
+          style={{
+            backgroundColor: semanticColors.surface.muted,
+            borderRadius: radius.inner,
+            paddingVertical: 12,
+            paddingHorizontal: spacing.md,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          <KText variant="caption" color={semanticColors.text.muted} center>
+            See it from a gifter's side: give {childName} a gift, then watch it land
+          </KText>
+          <Ionicons name="arrow-forward" size={14} color={semanticColors.text.muted} />
+        </Pressable>
+      ) : null}
+
+      {/* ── growth chart (collapsible, web parity) ── */}
       {hasStarted && summaryReady ? (
-        <View>
-          <SectionLabel>{isOwnerMode ? "Your growth" : `${childName}'s growth`}</SectionLabel>
-          <KiddoCard>
-            <GrowthChart points={d.history} />
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginTop: spacing.md,
-                paddingTop: spacing.sm,
-                borderTopWidth: 1,
-                borderTopColor: semanticColors.surface.muted,
-              }}
-            >
-              <Metric label="Total gifts" value={formatBalance(d.giftsTotal)} />
-              {Math.abs(d.growth) >= 1 ? (
-                <Metric
-                  label={d.growth >= 0 ? "Growth" : "Change"}
-                  value={`${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))}`}
-                  valueColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
-                />
-              ) : null}
+        <Collapsible
+          title={isOwnerMode ? "Your growth" : `${childName}'s growth`}
+          summary={
+            Math.abs(d.growth) >= 1
+              ? `${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))} growth`
+              : "Tap to see the trend"
+          }
+          summaryColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
+          open={growthOpen}
+          onToggle={() => {
+            haptic("selection");
+            setGrowthOpen((o) => !o);
+          }}
+        >
+          <GrowthChart points={d.history} />
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: spacing.md,
+              paddingTop: spacing.sm,
+              borderTopWidth: 1,
+              borderTopColor: semanticColors.surface.muted,
+            }}
+          >
+            <Metric label="Total gifts" value={formatBalance(d.giftsTotal)} />
+            {Math.abs(d.growth) >= 1 ? (
               <Metric
-                label="Have gifted"
-                value={`${d.peopleCount} ${d.peopleCount === 1 ? "person" : "people"}`}
+                label={d.growth >= 0 ? "Growth" : "Change"}
+                value={`${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))}`}
+                valueColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
               />
-            </View>
-            <Pressable
-              onPress={() => {
-                haptic("selection");
-                setProjectionOpen(true);
-              }}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                marginTop: spacing.sm,
-                paddingTop: spacing.sm,
-                borderTopWidth: 1,
-                borderTopColor: semanticColors.surface.muted,
-              }}
-            >
-              <KText variant="label" color={colors.evergreen}>
-                See what it could become
-              </KText>
-              <Ionicons name="arrow-forward" size={15} color={colors.evergreen} />
-            </Pressable>
-          </KiddoCard>
-        </View>
+            ) : null}
+            <Metric label="Have gifted" value={`${d.peopleCount} ${d.peopleCount === 1 ? "person" : "people"}`} />
+          </View>
+          <Pressable
+            onPress={() => {
+              haptic("selection");
+              setProjectionOpen(true);
+            }}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              marginTop: spacing.sm,
+              paddingTop: spacing.sm,
+              borderTopWidth: 1,
+              borderTopColor: semanticColors.surface.muted,
+            }}
+          >
+            <KText variant="label" color={colors.evergreen}>
+              See what it could become
+            </KText>
+            <Ionicons name="arrow-forward" size={15} color={colors.evergreen} />
+          </Pressable>
+        </Collapsible>
       ) : hasStarted && summaryPending ? (
         <View>
           <SectionLabel>{isOwnerMode ? "Your growth" : `${childName}'s growth`}</SectionLabel>
@@ -742,8 +953,17 @@ export function FundHomeTab(props: FundHomeTabProps) {
 
       {/* ── holdings ───────────────────────────────────────────────────────── */}
       {summary && (d.chosen.length > 0 || d.managed.length > 0) ? (
-        <View>
-          <SectionLabel>{isOwnerMode ? "What you own" : `What ${childName} owns`}</SectionLabel>
+        <Collapsible
+          title={isOwnerMode ? "What you own" : `What ${childName} owns`}
+          summary={`${d.chosen.length + d.managed.length} holding${
+            d.chosen.length + d.managed.length === 1 ? "" : "s"
+          } powering the growth`}
+          open={holdingsOpen}
+          onToggle={() => {
+            haptic("selection");
+            setHoldingsOpen((o) => !o);
+          }}
+        >
           <View style={{ gap: spacing.sm }}>
             {d.chosen.length > 0 ? (
               <>
@@ -768,7 +988,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
               </>
             ) : null}
           </View>
-        </View>
+        </Collapsible>
       ) : hasStarted && summaryLoading ? (
         <Skeleton height={120} rounded={radius.card} />
       ) : null}
@@ -850,6 +1070,16 @@ export function FundHomeTab(props: FundHomeTabProps) {
                   <KText variant="caption" center numberOfLines={1} style={{ marginTop: 4, maxWidth: 64 }}>
                     {c.name.split(" ")[0]}
                   </KText>
+                  {/* per-person date + gift count (web parity) */}
+                  <KText
+                    variant="caption"
+                    center
+                    color={semanticColors.text.muted}
+                    numberOfLines={1}
+                    style={{ fontSize: 10, lineHeight: 13, maxWidth: 64 }}
+                  >
+                    {new Date(c.last).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {c.count}
+                  </KText>
                 </View>
               ))}
               {d.anonCount > 0 ? (
@@ -924,9 +1154,15 @@ export function FundHomeTab(props: FundHomeTabProps) {
             {eighteenthDate}
           </KText>
           <KText variant="body" color="rgba(255,247,232,0.82)" style={{ marginTop: spacing.xs }}>
-            {childName} gets full control at 18. Until then, every gift and note you add is part of the story
+            {childName} gets full control at {majorityAge}. Until then, every gift and note you add is part of the story
             that's waiting for them.
           </KText>
+          {horizon33 > heroProjection ? (
+            <KText variant="caption" color="#F8D889" style={{ marginTop: spacing.sm }}>
+              If {childName} lets it keep growing to 33, it could be about $
+              {Math.round(horizon33).toLocaleString("en-US")}.
+            </KText>
+          ) : null}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.sm }}>
             <KText variant="label" color="#F8D889">See the handoff plan</KText>
             <Ionicons name="arrow-forward" size={15} color="#F8D889" />
@@ -998,6 +1234,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
           startingValue={d.totalValue}
           monthly={d.monthlyRecurring}
           birthdate={activeFund.recipientBirthdate}
+          majorityAge={majorityAge}
           childName={childName}
           isOwnerMode={isOwnerMode}
           onClose={() => setProjectionOpen(false)}
@@ -1008,6 +1245,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
         <Age18PlanSheet
           childName={childName}
           birthdate={activeFund.recipientBirthdate}
+          majorityAge={majorityAge}
           startingValue={d.totalValue}
           monthly={d.monthlyRecurring}
           onClose={() => setAge18Open(false)}
@@ -1146,24 +1384,26 @@ function KidViewPreview({
 function Age18PlanSheet({
   childName,
   birthdate,
+  majorityAge = 18,
   startingValue,
   monthly,
   onClose,
 }: {
   childName: string;
   birthdate?: string | null;
+  majorityAge?: number;
   startingValue: number;
   monthly: number;
   onClose: () => void;
 }) {
-  const date = eighteenthDateLabel(birthdate);
-  const days = daysUntil18(birthdate);
+  const date = majorityDateLabel(birthdate, majorityAge);
+  const days = daysUntilMajority(birthdate, majorityAge);
   const currentAge = ageFromBirthdate(birthdate) ?? 5;
   const projectedAt18 = projectFundValue({
     startingValue,
     monthlyContribution: monthly,
-    yearsAhead: Math.max(0, 18 - currentAge),
-    contributionYears: Math.max(0, 18 - currentAge),
+    yearsAhead: Math.max(0, majorityAge - currentAge),
+    contributionYears: Math.max(0, majorityAge - currentAge),
   });
 
   const changes = [
@@ -1184,7 +1424,7 @@ function Age18PlanSheet({
         <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface.muted, alignSelf: "center", marginBottom: spacing.md }} />
         <KText variant="sectionLabel" color={semanticColors.text.muted}>The handoff</KText>
         <KText variant="title" style={{ marginTop: 4 }}>
-          {childName} turns 18{date ? ` on ${date}` : ""}.
+          {childName} turns {majorityAge}{date ? ` on ${date}` : ""}.
         </KText>
         {days ? (
           <KText variant="body" color={semanticColors.text.muted} style={{ marginTop: 2 }}>
@@ -1200,14 +1440,14 @@ function Age18PlanSheet({
               {formatBalance(projectedAt18)}
             </KText>
             <KText variant="caption" color="rgba(255,247,232,0.78)" style={{ marginTop: 2 }}>
-              at 18, at a 7% average annual return after our 0.10% fee. A projection, not a promise.
+              at {majorityAge}, at a 7% average annual return after our 0.10% fee. A projection, not a promise.
             </KText>
           </KiddoCard>
         ) : null}
 
         {/* what changes */}
         <KText variant="sectionLabel" color={semanticColors.text.muted} style={{ marginTop: spacing.lg, marginBottom: spacing.xs }}>
-          What changes at 18
+          What changes at {majorityAge}
         </KText>
         <KiddoCard>
           {changes.map((c, i) => (
@@ -1234,7 +1474,7 @@ function Age18PlanSheet({
 
         {/* after the handoff */}
         <KiddoCard style={{ marginTop: spacing.md }}>
-          <KText variant="bodyStrong">The money conversation doesn't start at 18.</KText>
+          <KText variant="bodyStrong">The money conversation doesn't start at {majorityAge}.</KText>
           <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: spacing.xs }}>
             The years of gifts and notes are the head start. The handoff is a moment to talk about what it
             took to build, and what they might do with it — not a finish line.
@@ -1254,6 +1494,7 @@ function ProjectionSheet({
   startingValue,
   monthly,
   birthdate,
+  majorityAge = 18,
   childName,
   isOwnerMode,
   onClose,
@@ -1261,12 +1502,13 @@ function ProjectionSheet({
   startingValue: number;
   monthly: number;
   birthdate?: string | null;
+  majorityAge?: number;
   childName: string;
   isOwnerMode: boolean;
   onClose: () => void;
 }) {
   const currentAge = ageFromBirthdate(birthdate) ?? 5;
-  const contributionYears = Math.max(0, 18 - currentAge); // UTMA window (default majority 18)
+  const contributionYears = Math.max(0, majorityAge - currentAge); // contributions stop at majority
   const MILESTONES = [18, 21, 25, 30, 40, 50, 65];
   const ages = MILESTONES.filter((a) => a > currentAge + 0.5);
   const [age, setAge] = useState<number>(ages.find((a) => a >= currentAge + 5) ?? ages[0] ?? 18);
@@ -1535,12 +1777,14 @@ function RecurringChip({
   activeCount,
   pausedCount,
   monthly,
+  nextDate,
   enabled,
   onPress,
 }: {
   activeCount: number;
   pausedCount: number;
   monthly: number;
+  nextDate?: string | null;
   enabled: boolean;
   onPress: () => void;
 }) {
@@ -1549,7 +1793,13 @@ function RecurringChip({
   let text: string;
   let dashed = false;
   if (activeCount > 0) {
-    text = `${formatBalance(monthly)}/mo recurring · ${activeCount} active`;
+    // Show the NEXT run date (web parity), falling back to the active count.
+    const nd = nextDate ? new Date(nextDate) : null;
+    const dateLabel =
+      nd && !Number.isNaN(nd.getTime())
+        ? nd.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : null;
+    text = `${formatBalance(monthly)}/mo recurring · ${dateLabel ? `next ${dateLabel}` : `${activeCount} active`}`;
   } else if (pausedCount > 0) {
     icon = "pause-circle-outline";
     tint = colors.gold;
@@ -1631,6 +1881,7 @@ function Metric({ label, value, valueColor }: { label: string; value: string; va
   );
 }
 
+// Bare icon action (web parity: an even icon ROW under the hero, not boxed cards).
 function QuickLink({
   icon,
   label,
@@ -1649,22 +1900,12 @@ function QuickLink({
         onPress();
       }}
       style={({ pressed }) => [
-        {
-          flexGrow: 1,
-          flexBasis: "30%",
-          alignItems: "center",
-          gap: 6,
-          paddingVertical: spacing.md,
-          borderRadius: radius.inner,
-          backgroundColor: gold ? colors.gold : semanticColors.surface.card,
-          borderWidth: gold ? 0 : 1,
-          borderColor: semanticColors.surface.muted,
-        },
-        pressed ? { opacity: 0.7, transform: [{ scale: 0.97 }] } : null,
+        { flex: 1, alignItems: "center", gap: 5, paddingVertical: spacing.sm },
+        pressed ? { opacity: 0.6 } : null,
       ]}
     >
-      <Ionicons name={icon} size={20} color={gold ? "#38290A" : colors.evergreen} />
-      <KText variant="caption" color={gold ? "#38290A" : semanticColors.text.primary} numberOfLines={1} center>
+      <Ionicons name={icon} size={22} color={colors.evergreen} />
+      <KText variant="caption" color={semanticColors.text.primary} numberOfLines={1} center>
         {label}
       </KText>
     </Pressable>

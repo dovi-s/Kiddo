@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // No-regression check for the gifter-roster re-keying (gifterIdentityKey).
-// The Dunphy demo uses consistent gifter names, so the "who loves Luke" roster
+// The Rivera demo uses consistent gifter names, so the "who loves Theo" roster
 // must look UNCHANGED — same distinct gifters, no crash, names/initials intact.
 // (The dedup itself is proven by test:gifter-identity; the demo can't show a
 // name-variant collapse.)
@@ -13,7 +13,7 @@ mkdirSync(outDir, { recursive: true });
 async function main() {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1500 } });
-  await ctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  await ctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "marcus@riverafamily.com", password: "riverafamily" } });
   const fundsJson: any = await (await ctx.request.get(`${baseUrl}/api/funds`)).json();
   const list: any[] = Array.isArray(fundsJson) ? fundsJson : fundsJson?.funds || [];
   const luke = list.find((f) => /luke/i.test(String(f.recipientFirstName || f.name || "")));
@@ -23,8 +23,8 @@ async function main() {
   await page.locator('[data-testid^="holding-row-"]').first().waitFor({ state: "visible", timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(2000);
   const body = await page.locator("body").innerText().catch(() => "");
-  // The demo's known Luke gifters (consistent names) should all still appear.
-  const expected = ["Gloria", "Mitchell", "Cameron", "Jay", "Manny"];
+  // The demo's known Theo gifters (consistent names) should all still appear.
+  const expected = ["Sofia", "David", "Chris", "Robert", "Leo"];
   const present = expected.filter((n) => body.includes(n));
   console.log("expected gifters present:", present.join(", ") || "(none)");
   // Scroll to the roster + screenshot for an eyeball.

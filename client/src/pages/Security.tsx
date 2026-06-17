@@ -42,12 +42,12 @@ export default function Security() {
               // Kiddo's Stripe — the unconditional claim was false TODAY and
               // is exactly the structure question in COUNSEL_ENGAGEMENT_PACKET
               // Part 2. The architecture statement below is the honest claim.
-              title: "Your child&apos;s investments won&apos;t sit with Kiddo. They&apos;ll sit with a regulated broker-custodian.",
+              title: "Your child's investments won't sit with Kiddo. They'll sit with a regulated broker-custodian.",
               body: "Kiddo is the experience. Our broker-custodian partner holds the investments once your account is open.",
             },
             {
               icon: Shield,
-              title: "What protects your child&apos;s fund",
+              title: "What protects your child's fund",
               body: "Once investing is live, SIPC coverage and FINRA oversight through our broker-dealer partner, plus encrypted data handling and unlisted fund links, sit underneath the product experience.",
             },
             {

@@ -1,4 +1,7 @@
 /* eslint-disable no-console */
+// Load .env so ALPACA_BROKER_API_KEY / _SECRET can live there (the standard place,
+// alongside the app's other secrets) instead of being passed inline every run.
+import "dotenv/config";
 // Alpaca Broker API — custodial make-or-break smoke test.
 //
 // Answers, in ONE command, the two undocumented questions from
@@ -63,7 +66,7 @@ async function main() {
       country: "USA",
     },
     identity: {
-      given_name: "Claire",
+      given_name: "Elena",
       family_name: "Custodian",
       date_of_birth: "1985-01-01",
       tax_id: "676-55-4321",
@@ -97,7 +100,7 @@ async function main() {
       { agreement: "customer_agreement", signed_at: new Date(stamp).toISOString(), ip_address: "127.0.0.1" },
     ],
     minor_identity: {
-      given_name: "Luke",
+      given_name: "Theo",
       family_name: "Custodian",
       email: `kiddo.minor.${stamp}@example.com`,
       date_of_birth: "2015-01-01",
@@ -132,7 +135,7 @@ async function main() {
   let funded = false;
   try {
     const rel = await call("POST", `/v1/accounts/${accountId}/ach_relationships`, {
-      account_owner_name: "Claire Custodian",
+      account_owner_name: "Elena Custodian",
       bank_account_type: "CHECKING",
       bank_account_number: "32100123",
       bank_routing_number: "121000358",

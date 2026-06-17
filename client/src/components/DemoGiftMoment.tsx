@@ -1,7 +1,7 @@
-// DemoGiftMoment — the live "a gift just came in" beat(s) in the Dunphy demo.
+// DemoGiftMoment — the live "a gift just came in" beat(s) in the Rivera demo.
 //
 // Why it exists: the most emotional moment in the product is the parent seeing
-// "Gloria added $75 to Haley's future." Reading about it isn't feeling it. The
+// "Sofia added $75 to Mia's future." Reading about it isn't feeling it. The
 // demo is the distribution/conversion surface (creator outreach links land
 // here), so letting a prospect FEEL that beat is high-leverage — it's the
 // "show, don't tell" of the gifter loop.
@@ -13,7 +13,7 @@
 // gift they just sent. They experience both sides of the loop, and the moment is
 // EARNED by their own action.
 //
-// (A second "generic seeded beat" — an ambient, unprompted gift from Manny/Gloria
+// (A second "generic seeded beat" — an ambient, unprompted gift from Leo/Sofia
 // that fired on a fund-switch or after a dwell — was REMOVED 2026-06-10. It was
 // the one beat that animated a gift that never happened: the roll-in is real
 // (cache -> live) and this beat is the prospect's own real send, but the ambient
@@ -32,7 +32,7 @@
 //   • NO data mutation beyond the recorded session gift — a client-side toast
 //     reusing the app's real toast UI, so it never drifts the (carefully
 //     reconciled) fund balance/counts.
-//   • Honest — it's inside the clearly-"illustrative" Dunphy demo; the
+//   • Honest — it's inside the clearly-"illustrative" Rivera demo; the
 //     loop-closure beat mirrors the gift the prospect literally just sent, and
 //     the generic beat mirrors a real seeded gifter/amount for the active child.
 import { useEffect, useRef } from "react";
@@ -53,7 +53,7 @@ const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess aft
 // AFTER the initial-landing cascade settles, not on top of it: the pre-cache
 // returning-roll PLUS the since-last-visit digest (which reveals ~2.9s). At 3.0s
 // the gift dropped on top of the digest (founder-reported collision, 2026-06-10:
-// "gift from Manny same time as the roll"). 4.8s lands it ~1.5s after the digest
+// "gift from Leo same time as the roll"). 4.8s lands it ~1.5s after the digest
 // settles, so the sequence reads roll, then digest, then gift, one beat at a time.
 // Still filled time, not empty waiting: the cascade plays the whole while.
 // Founder-tunable.
@@ -95,8 +95,8 @@ export function DemoGiftMoment() {
   // just joined, an upcoming occasion (founder 2026-06-08). So instead of marking
   // EVERYTHING read, we stamp "caught up as of the digest's window" (~6 days):
   // the years-old backlog reads as seen, while the genuinely-recent items — the
-  // SAME ones the SinceLastVisitDigest summarizes (e.g. Luke: a gift from Manny;
-  // Alex: a gift from Jay + "Co-parent joined") — stay unread. Bounded (~1–2 per
+  // SAME ones the SinceLastVisitDigest summarizes (e.g. Theo: a gift from Leo;
+  // Nora: a gift from Robert + "Co-parent joined") — stay unread. Bounded (~1–2 per
   // fund after the bell's noise filter), true to each worn fund, and the live gift
   // THIS component lands below adds to it. Once-per-session so reading them sticks;
   // a fresh / incognito session re-experiences it. Real accounts untouched
@@ -199,7 +199,7 @@ export function DemoGiftMoment() {
       }
     }
 
-    // --- Beat 2 (the ambient, unprompted seeded gift from Manny/Gloria) was
+    // --- Beat 2 (the ambient, unprompted seeded gift from Leo/Sofia) was
     // REMOVED 2026-06-10 (founder call). It was the only beat that animated a gift
     // that never happened: the roll-in is real (cache -> live) and beat 1 is the
     // prospect's OWN real send, but beat 2 invented an arrival. That is mild

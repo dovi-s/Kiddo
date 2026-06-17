@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 // Verify the gold gift-dots render correctly across ALL chart ranges on the
 // HoldingDetailSheet (founder ask: "ensure 1D/1W/1M/1Y/ALL have the proper
-// dots"). Opens Alex's AAPL holding, cycles each range, counts the gold
+// dots"). Opens Nora's AAPL holding, cycles each range, counts the gold
 // ReferenceDot circles, and screenshots 1Y + ALL. Expectation: ALL shows the
 // most (every gift), shorter ranges show only gifts inside that window
 // (fewer / possibly zero) — that's correct, not a bug.
@@ -17,17 +17,17 @@ const GOLD = "hsl(43, 75%, 55%)";
 async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  await context.request.post(`${baseUrl}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  await context.request.post(`${baseUrl}/api/auth/login`, { data: { email: "marcus@riverafamily.com", password: "riverafamily" } });
 
-  // Find Alex's fund + its AAPL holding id.
+  // Find Nora's fund + its AAPL holding id.
   const fundsJson: any = await (await context.request.get(`${baseUrl}/api/funds`)).json();
   const fundList: any[] = Array.isArray(fundsJson) ? fundsJson : fundsJson?.funds || [];
   const alex = fundList.find((f) => /alex/i.test(String(f.recipientFirstName || f.name || "")));
-  if (!alex) throw new Error("Alex's fund not found");
+  if (!alex) throw new Error("Nora's fund not found");
   const summary: any = await (await context.request.get(`${baseUrl}/api/funds/${alex.id}/dashboard-summary`)).json();
   const aapl = (summary.holdings || []).find((h: any) => String(h.ticker).toUpperCase() === "AAPL");
-  if (!aapl) throw new Error("AAPL holding not found on Alex's fund");
-  console.log(`Alex fund ${alex.id}, AAPL holding ${aapl.id}\n`);
+  if (!aapl) throw new Error("AAPL holding not found on Nora's fund");
+  console.log(`Nora fund ${alex.id}, AAPL holding ${aapl.id}\n`);
 
   const page = await context.newPage();
   await page.goto(`${baseUrl}/dashboard?fund=${alex.id}`, { waitUntil: "domcontentloaded", timeout: 30000 });

@@ -1141,7 +1141,7 @@ export default function Account() {
 
 
                 {/* Preferred name. NOTE: one field doing two jobs — owner mode
-                    ("What should we call you?", self-name like "Haley") vs parent
+                    ("What should we call you?", self-name like "Mia") vs parent
                     mode ("What do your kids call you?", kid-facing like "Mom").
                     The label flips correctly via isNonParentOwner. Known edge: a
                     BOTH-role user (owns their own fund AND has a kid) gets one

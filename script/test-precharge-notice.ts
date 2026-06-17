@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // Seed-and-run test for the pre-charge heads-up notice (money-flow). Inserts
-// test recurring_gifts into Luke's demo fund, runs processPrechargeNotices, and
+// test recurring_gifts into Theo's demo fund, runs processPrechargeNotices, and
 // asserts: (1) a charge ~2 days out gets noticed + stamped + an outbox email;
 // (2) a second run is idempotent (no re-send); (3) a charge 10 days out is NOT
 // noticed (outside lead window); (4) a reminder-only row (no Stripe sub) is NOT
@@ -29,9 +29,9 @@ async function cleanup() {
 }
 
 async function main() {
-  const lukeRes = await pool.query<{ id: string }>(`SELECT id FROM funds WHERE slug = 'luke-dunphy' LIMIT 1`);
+  const lukeRes = await pool.query<{ id: string }>(`SELECT id FROM funds WHERE slug = 'theo-rivera' LIMIT 1`);
   const fundId = lukeRes.rows[0]?.id;
-  if (!fundId) throw new Error("Luke fund not seeded; run npm run seed:dunphys");
+  if (!fundId) throw new Error("Theo fund not seeded; run npm run seed:dunphys");
 
   await cleanup(); // fresh start
 

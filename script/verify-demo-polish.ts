@@ -14,7 +14,7 @@ mkdirSync(outDir, { recursive: true });
 async function main() {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1500 } });
-  await ctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "phil@dunphyfamily.com", password: "dunphyfamily" } });
+  await ctx.request.post(`${baseUrl}/api/auth/login`, { data: { email: "marcus@riverafamily.com", password: "riverafamily" } });
   const fundsJson: any = await (await ctx.request.get(`${baseUrl}/api/funds`)).json();
   const list: any[] = Array.isArray(fundsJson) ? fundsJson : fundsJson?.funds || [];
   const alex = list.find((f) => /alex/i.test(String(f.recipientFirstName || f.name || "")));
@@ -42,14 +42,14 @@ async function main() {
   await page.waitForTimeout(3500);
   const sheetText = await page.locator("body").innerText().catch(() => "");
   const choseHdr = /people chose AAPL|chose AAPL/i.test(sheetText);
-  const hasRealName = /Mitchell|Phil/.test(sheetText);
+  const hasRealName = /David|Marcus/.test(sheetText);
   // The only realistic leak signature is a raw idKey rendered as a name:
   // "e:<email>@…". (Anonymous renders as "Anonymous", never the "anon" bucket
   // key.) Scoped to that exact shape so the roster's "1 anon." doesn't false-trip.
   const keyLeak = /e:\S+@/.test(sheetText);
   const zeroPeople = /\b0 people chose/i.test(sheetText);
   const taskA = choseHdr && hasRealName && !keyLeak && !zeroPeople;
-  console.log(`(A) "chose AAPL" header: ${choseHdr}; real name (Mitchell/Phil): ${hasRealName}; key-leak: ${keyLeak}; zero-people: ${zeroPeople}`);
+  console.log(`(A) "chose AAPL" header: ${choseHdr}; real name (David/Marcus): ${hasRealName}; key-leak: ${keyLeak}; zero-people: ${zeroPeople}`);
   console.log(`(A) contributor wiring → ${taskA ? "PASS" : "FAIL"}`);
   await page.screenshot({ path: path.join(outDir, "aapl-contributors.png") });
 
