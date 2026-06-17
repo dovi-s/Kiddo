@@ -872,6 +872,16 @@ export default function Activity() {
   const userScopedFeed = useActivities(200, isAuthenticated && !authLoading && !activeFundIsOwned, activeFundIdForActivity);
   const fundScopedFeed = useFundActivities(activeFundIsOwned ? activeFundIdForActivity : undefined, 200);
   const activities = (activeFundIsOwned ? fundScopedFeed.data : userScopedFeed.data) ?? [];
+  // Header label: Activity is per-fund-scoped, so name the kid the way Settings
+  // does ("{child}'s activity") instead of the generic "Your activity". Stays
+  // "Your activity" only when the viewer actually OWNS the active fund (a
+  // post-handoff adult viewing their own) or no child name is available —
+  // matching the per-row "your" vs "{child}'s" flip used throughout this feed.
+  const activeFundForHeader = (allFundsForOwnerMode as any[]).find(
+    (f: any) => String(f?.id) === String(activeFundIdForActivity),
+  );
+  const activeChildFirst = capFirst((activeFundForHeader as any)?.recipientFirstName);
+  const activityHeading = activeFundIsOwned || !activeChildFirst ? "Your activity" : `${activeChildFirst}'s activity`;
   const feedLoading = activeFundIsOwned ? fundScopedFeed.isLoading : userScopedFeed.isLoading;
   const feedError = activeFundIsOwned ? fundScopedFeed.isError : userScopedFeed.isError;
   const refetch = activeFundIsOwned ? fundScopedFeed.refetch : userScopedFeed.refetch;
@@ -1844,7 +1854,7 @@ export default function Activity() {
             Activity
           </p>
           <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight" data-testid="heading-activity">
-            Your activity
+            {activityHeading}
           </h1>
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
             History, pending, and scheduled for this fund.{" "}

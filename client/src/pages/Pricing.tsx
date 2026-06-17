@@ -302,9 +302,9 @@ export default function Pricing() {
                 enough to land here. Capped at 1,000; deal expires when
                 the cap fills. Per project_pricing_v3_pricing_levels.md
                 + project_pre_launch_strategic_frame.md. */}
-            <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4 text-sm leading-relaxed text-foreground">
+            <p className="mx-auto mt-4 max-w-4xl rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4 text-sm leading-relaxed text-foreground">
               <span className="font-semibold">Pre-launch: Founding Members get $19/year Plus, locked in for life.</span>{" "}
-              First 1,000 families. Plus a Founding Member badge, $25 starter credit at launch, and early access to every future Kiddo product.{" "}
+              First 1,000 families. Plus a Founding Member badge, $25 starter credit, and early access to every future product.{" "}
               <Link href="/founding-members" className="font-medium text-primary underline underline-offset-2">
                 Reserve your spot →
               </Link>

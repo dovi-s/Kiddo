@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch, Link } from "wouter";
 import { ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -1151,7 +1152,7 @@ const STRATEGIES = [
     emoji: "📈",
     label: "Growth Mix",
     description: "Long-term growth with broad diversification",
-    bestFor: "Best for children with 10+ years to go.",
+    bestFor: "Best when the money won't be used for 10+ years.",
     minYearsTo18: 10,
     expectedMean: 0.07,
     expectedSigma: 0.16,
@@ -1165,7 +1166,7 @@ const STRATEGIES = [
     emoji: "⚖️",
     label: "Balanced Mix",
     description: "Growth with stability · more bonds to soften ups and downs.",
-    bestFor: "Best for children with 5–10 years to go.",
+    bestFor: "Best when it'll be used in about 5–10 years.",
     minYearsTo18: 5,
     expectedMean: 0.06,
     expectedSigma: 0.12,
@@ -1179,8 +1180,8 @@ const STRATEGIES = [
     key: "conservative",
     emoji: "🛡️",
     label: "Conservative Mix",
-    description: "Capital preservation tilt · protect what's there as 18 approaches.",
-    bestFor: "Best for children approaching 18.",
+    description: "Capital-preservation tilt · more bonds, steadier.",
+    bestFor: "Best when it'll be used within about 5 years.",
     minYearsTo18: 0,
     expectedMean: 0.05,
     expectedSigma: 0.09,
@@ -1341,6 +1342,8 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
     defaultTicker !== (data?.defaultTicker || "DIS") ||
     allowGifterStockPick !== Boolean(data?.allowGifterStockPick) ||
     allowGifterCashGift !== Boolean(data?.allowGifterCashGift);
+  // Warn on tab-close/refresh while a gift-settings change is staged but unsaved.
+  useUnsavedGuard(hasChanged);
 
   const handleSave = async () => {
     setSaving(true);
@@ -1613,6 +1616,8 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
       .join("|");
   const customChanged = serializeCustomRows(customRows) !== serializeCustomRows(initialCustomRows);
   const hasChanged = selected !== (currentStrategy === "auto_invest" ? "growth" : currentStrategy) || (selected === "custom" && customChanged);
+  // Warn on tab-close/refresh while a strategy / custom-mix change is staged but unsaved.
+  useUnsavedGuard(hasChanged);
   const totalCustom = customRows.reduce((sum, row) => sum + (Number.isFinite(row.weight) ? row.weight : 0), 0);
   const customTickerSet = new Set(customRows.map((row) => row.ticker).filter(Boolean));
   const customHasDuplicates = customTickerSet.size !== customRows.filter((row) => row.ticker).length;
@@ -1959,7 +1964,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
                   {inLine
                     ? `${childPossessive} matches the target today.`
-                    : "We don't sell to rebalance. Every sale is a taxable event. Future ETF gifts are weighted toward the underweight side here until the mix lands on target. (Chosen with Love stocks are separate and aren't rebalanced.)"}
+                    : "We don't sell to rebalance. Every sale is a taxable event. Future ETF gifts are weighted toward the underweight side, nudging the mix toward target over time. Existing holdings stay put, so on gifts alone a large fund may not fully get there. (Chosen with Love stocks are separate and aren't rebalanced.)"}
                 </p>
               </div>
             );

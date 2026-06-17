@@ -241,17 +241,25 @@ export default function DashboardTrendChart({
   // ticks by pixels, so the months drift (Jul → Aug → Sep → Oct) and the axis looks
   // irregular. Collapse to the year so a long axis reads clean (2009 · 2011 · … ·
   // 2026). Only when the data spans many years (>= 7 distinct) — so 5Y and shorter
-  // keep their month labels, and at that span the thinned ticks are guaranteed > 1yr
-  // apart, so a year can never repeat. Short ranges pass through unchanged.
+  // keep their month labels. Short ranges pass through unchanged.
   const xTickFormatter = (() => {
     const distinctYears = new Set(
       data.map((d) => (/\b(\d{4})\b/.exec(d.label) || [])[1]).filter(Boolean),
     );
     const collapse = distinctYears.size >= 7;
+    // Recharts thins ticks by pixel gap, THEN formats — so on a dense series two
+    // surviving ticks can land in the same year and both format to e.g. "2017",
+    // making the axis read "2017 2017 2018 2018 …". Dedupe: emit each year once
+    // (ticks format left-to-right), repeats return "" so the (line-less, mark-
+    // less) tick collapses to empty space. Fresh Set per render.
+    const emitted = new Set<string>();
     return (v: string) => {
       if (!collapse) return v;
       const m = /\b(\d{4})\b/.exec(v);
-      return m ? m[1] : v;
+      const year = m ? m[1] : v;
+      if (emitted.has(year)) return "";
+      emitted.add(year);
+      return year;
     };
   })();
 

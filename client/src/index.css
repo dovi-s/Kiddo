@@ -481,6 +481,29 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   70% { opacity: 0; transform: scale(1.18); }
   100% { opacity: 0; transform: scale(1.18); }
 }
+/* Fund-composition / "Last 30 days" breakdown rows (DashboardLab):
+   every row must stay a SINGLE clean line on mobile. A long label like
+   "Gifts from people who love {child}" against a wide amount used to wrap the
+   row onto two lines on narrow screens (founder: "sometimes becomes two rows
+   and shouldn't"). Fix: the label (left) truncates with an ellipsis and the
+   amount (right) never shrinks, so the row can never wrap. Scoped to the
+   breakdown container so it can't touch other rows. The selector specificity
+   (.last30-breakdown > button = 0,1,1) intentionally beats Tailwind's
+   `items-baseline` (0,1,0) so alignment is clean without an inline change, and
+   the span children are flex items (blockified) so text-overflow:ellipsis
+   applies. */
+.last30-breakdown > button {
+  align-items: center;
+}
+.last30-breakdown > button > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.last30-breakdown > button > span:last-child {
+  flex-shrink: 0;
+}
 /* Print stylesheet — sophisticated parents (or their CPAs) Cmd/Ctrl+P
    the Tax Documents page at year-end to attach to the kid's tax
    records. The screen-side chrome (AppHeader, MobileNav, sidebar)

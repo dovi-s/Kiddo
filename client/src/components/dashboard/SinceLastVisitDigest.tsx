@@ -400,7 +400,7 @@ export function SinceLastVisitDigest({
           >
             While you were away
           </p>
-          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground leading-snug">
+          <h2 className="font-heading text-[clamp(15px,4.3vw,20px)] font-semibold text-foreground leading-snug">
             {subject} is up {fmtMoney0(digest.delta)} since {fmtShortDate(digest.sinceTs)}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>

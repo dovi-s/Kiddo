@@ -385,6 +385,27 @@ wired:
   needs to be live on the FAQ at launch-with-custody — but cannot ship until the
   custodian name + ACAT mechanics are real.
 
+**Q6a — Cash-float / shared-yield on idle custodial cash (NOT launch-gating; answer
+while custody is on the table).** The custodian (e.g. Alpaca) pays interest (~3.6%)
+on uninvested cash sitting in the FDIC-sweep program, and that program covers
+custodial accounts. Our **pinned stance** (`REVENUE_MODEL.md`): the yield accrues to
+the **child** (shared-yield, disclosed), with at most a thin *disclosed* spread to
+Kiddo — never silently pocketed (taxing a minor's money is off the table on brand
+grounds). Questions:
+1. On a **minor's UTMA/UGMA custodial** account, is paying yield to the beneficiary
+   on idle cash clean, and does Kiddo **retaining a disclosed slice of the spread**
+   create any adviser/custody/fee characterization problem (and does it touch the
+   Part 1 RIA determination)?
+2. What **disclosure** does the cash-sweep require — specifically that swept cash is
+   **FDIC pass-through, NOT SIPC**, and that "neither Kiddo nor the custodian is a
+   bank"? We need the exact present-tense wording counsel will bless before any
+   "your child's cash earns X%" copy ships (pairs with the copy blessing above).
+3. Any state-level wrinkle (interest-on-others'-funds / escheatment) we're missing.
+
+This is a thin, post-custody revenue line, not a launch blocker — folded in here so
+the answer arrives **bundled with custody** and it's a same-day flip later, rather
+than a second engagement.
+
 ---
 
 # Part 7 — Geographic scope: can we launch nationally, or state-by-state? (Securities / Licensing)

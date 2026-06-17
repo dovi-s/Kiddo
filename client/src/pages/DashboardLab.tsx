@@ -177,6 +177,7 @@ import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/
 import { KidAt18WelcomeBanner, isKidAt18WelcomeBannerDismissed } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner, isCoparentAcceptedBannerDismissed } from "@/components/dashboard/CoparentAcceptedBanner";
 import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
+import { BirthdayMomentBanner } from "@/components/dashboard/BirthdayMomentBanner";
 import { gifterShortName, gifterIdentityKey } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
@@ -4503,7 +4504,7 @@ export default function DashboardLab() {
         const nudgeChild = recipientFirstNameDisplay || "their fund";
         const title =
           payload.scenario === "outperforming"
-            ? `${nudgeChild}'s fund is up ${payload.returnPct}% 🌱`
+            ? `${nudgeChild}'s fund is up ${payload.returnPct}% since it started 🌱`
             : payload.scenario === "consistent"
               ? `${payload.streakMonths} months, every cycle 🌱`
               : payload.milestoneAmt
@@ -6569,6 +6570,17 @@ export default function DashboardLab() {
             bannersRevealed latch above. The SinceLastVisitDigest above keeps
             its own (later) hold and stays outside this wrapper. */}
         {bannersRevealed && (<>
+        {/* Birthday moment — parent view only (the at-18 welcome below owns the
+            owner/handoff case). Proactive sibling of the away-digest: turns the
+            #1 gifting moment into a Share nudge. */}
+        {!isOwnerMode && (
+          <BirthdayMomentBanner
+            fundId={activeFundId}
+            childFirstName={recipientFirstNameDisplay}
+            birthdate={(activeFund as any)?.recipientBirthdate}
+            onShare={() => setShareModalOpen(true)}
+          />
+        )}
         <KidAt18WelcomeBanner
           kidClaimedAt={isOwnerMode ? ((dashboardSummary as any)?.kidClaimedAt as string | null | undefined) : null}
           fundId={activeFundId}
@@ -8362,7 +8374,7 @@ export default function DashboardLab() {
                       </p>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 last30-breakdown">
                       {/* Gifts row navigates to Memory Book. Pronoun pulled
                           from getPronouns(activeFund.pronoun).object so the
                           line respects the fund's setting (was previously
@@ -8954,7 +8966,7 @@ export default function DashboardLab() {
                     LabCollapse header right above. The open header IS the section
                     title; the chart opens straight into its range controls. */}
                 <div className="flex flex-wrap items-center justify-start gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
-                  <div className="flex flex-wrap items-center gap-1">
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
                     {(["1W", "1M", "YTD", "1Y", "5Y", "ALL"] as const).map((r) => (
                       <button
                         key={r}
@@ -9652,7 +9664,7 @@ export default function DashboardLab() {
                       ? `${formatCurrency(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
                       : `All of ${childFirst === "them" ? "the gifts are" : `${childFirst}'s gifts are`} invested. Nothing pending.`,
                   managed: `${formatCurrency(managedVal)} in a diversified managed mix.`,
-                  chosen: `${formatCurrency(chosenVal)} chosen with love by people who care about ${childFirst === "them" ? "their" : childFirst + "'s"} future.`,
+                  chosen: `${formatCurrency(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
                 };
 
                 return (
@@ -9770,7 +9782,7 @@ export default function DashboardLab() {
                                       <div className="flex items-center gap-1.5 min-w-0">
                                         <p className="truncate text-sm font-bold text-foreground">{dNameDisplay}</p>
                                       </div>
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="text-xs text-muted-foreground truncate">
                                         {sharesLbl ?? `Part of ${childPoss}`}
                                         {pctLbl && sharesLbl && <span className="ml-1.5 text-muted-foreground/60">· {pctLbl}</span>}
                                         {pctLbl && !sharesLbl && <span>{pctLbl}</span>}
@@ -9796,7 +9808,7 @@ export default function DashboardLab() {
                                     >
                                       <p className="text-sm font-bold text-foreground">{formatCurrency(hValue)}</p>
                                       {hCost > 0 && Math.abs(hGain) > 0.01 && (
-                                        <p className={`text-xs font-semibold tabular-nums whitespace-nowrap ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        <p className={`text-[11px] font-semibold tabular-nums whitespace-nowrap ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
                                           {hGain >= 0 ? "+" : ""}{formatCurrency(hGain)} ({hGain >= 0 ? "+" : ""}{hGainPct.toFixed(2)}%)
                                         </p>
                                       )}
@@ -11204,8 +11216,8 @@ export default function DashboardLab() {
                             const adds = projectFundValue({ startingValue: 0, monthlyContribution: combinedMonthly, yearsAhead: yrsAhead, contributionYears: yrsAhead });
                             if (!(adds >= 100)) return null;
                             return (
-                              <p className="mt-1 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)]">
-                                🌱 together on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
+                              <p className="mt-1 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)] whitespace-nowrap">
+                                together on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
                               </p>
                             );
                           })()}
@@ -11384,8 +11396,8 @@ export default function DashboardLab() {
                                       const adds = projectFundValue({ startingValue: 0, monthlyContribution: rowMonthly, yearsAhead: yrsAhead, contributionYears: yrsAhead });
                                       if (!(adds >= 100)) return null;
                                       return (
-                                        <p className="mt-0.5 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)]">
-                                          🌱 on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
+                                        <p className="mt-0.5 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)] whitespace-nowrap">
+                                          on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
                                         </p>
                                       );
                                     })()}
@@ -12503,7 +12515,7 @@ export default function DashboardLab() {
                         phones — copy unchanged. */}
                     {activeEvents.length > 0 && (
                       <p style={{ fontSize: "clamp(10.5px, 3vw, 12px)", fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
-                        Every occasion goes into the same one fund. Nothing is set aside. 🌱
+                        Every occasion goes into the same fund. Nothing is set aside.
                       </p>
                     )}
 
@@ -15760,6 +15772,8 @@ export default function DashboardLab() {
             fundAllTimeReturnPct={displayGainPct || undefined}
             fundMonthReturnPct={fundMonthReturnPct}
             fundAgeYears={fundAgeYears}
+            yearsToMajority={age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : undefined}
+            majorityAge={age18Transition?.majorityAge}
           />
         );
       })()}

@@ -3843,7 +3843,7 @@ export default function Dashboard() {
         const nudgeChild = recipientFirstNameDisplay || "their fund";
         const title =
           payload.scenario === "outperforming"
-            ? `${nudgeChild}'s fund is up ${payload.returnPct}% 🌱`
+            ? `${nudgeChild}'s fund is up ${payload.returnPct}% since it started 🌱`
             : payload.scenario === "consistent"
               ? `${payload.streakMonths} months, every cycle 🌱`
               : payload.milestoneAmt

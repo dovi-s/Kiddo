@@ -1093,7 +1093,7 @@ export default function ActivateInvesting() {
                   {
                     id: "conservative",
                     label: STRATEGY_LABEL.conservative,
-                    description: "Capital preservation tilt. Steadier as the handoff nears",
+                    description: "Capital preservation tilt. Steadier, for money you'll use soon",
                     icon: <ShieldCheck size={20} />,
                     tag: null,
                     locked: false,
