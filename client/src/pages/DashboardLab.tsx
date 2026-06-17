@@ -187,6 +187,7 @@ import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
+import { investingLiveCopy } from "@shared/legal-copy";
 import {
   calculateKoraContributionFee,
   calculatePaymentProcessingFee,
@@ -8323,7 +8324,11 @@ export default function DashboardLab() {
                   // a different growth definition that drifts by uninvested
                   // cash/realized bits — founder saw "+$9,553 grown so far"
                   // collapse open to "Market growth +$9,603.39".
-                  stat={Number.isFinite(marketGrowth30) && marketGrowth30 >= 1 ? `+$${Math.round(marketGrowth30).toLocaleString("en-US")} grown so far` : "Gifts, growth, and where it all went"}
+                  // Investing isn't live (INVESTING_LIVE=false) — this growth is
+                  // real-priced but on SIMULATED holdings. Tag it "(preview)" until
+                  // custody is live so it doesn't read as realized, live earnings.
+                  // Auto-drops the tag at the atomic flip.
+                  stat={Number.isFinite(marketGrowth30) && marketGrowth30 >= 1 ? `+$${Math.round(marketGrowth30).toLocaleString("en-US")} ${investingLiveCopy("grown so far", "grown so far (preview)")}` : "Gifts, growth, and where it all went"}
                 >
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
@@ -8938,7 +8943,7 @@ export default function DashboardLab() {
                 // today's sell re-shuffling isn't growth — hide rather than lie.
                 if (todaysSellTotal > 0 && Math.abs(move - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) return "The full chart over time";
                 if (Math.abs(move) < 1) return "The full chart over time";
-                return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}`;
+                return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} ${investingLiveCopy("this month", "this month (preview)")} ${move >= 0 ? "↗" : "↘"}`;
               })()}
             >
             <motion.section
@@ -9440,7 +9445,11 @@ export default function DashboardLab() {
               testid="lab-portfolio-details"
               icon={PieChart}
               title={isOwnerMode ? "What you own" : recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}
-              stat={holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} powering the growth` : "The mix powering the growth"}
+              // "powering the growth" implies an ACTIVE, live-investing engine.
+              // Investing isn't live yet (INVESTING_LIVE=false) — holdings are a
+              // real-priced simulation — so when pending, drop the live claim and
+              // just name the mix. Auto-flips to the dynamic copy at custody time.
+              stat={holdings.length > 0 ? `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} ${investingLiveCopy("powering the growth", "in the mix")}` : investingLiveCopy("The mix powering the growth", "The investment mix")}
             >
             <motion.section
               ref={holdingsSectionRef}
