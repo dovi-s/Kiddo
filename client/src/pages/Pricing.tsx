@@ -139,7 +139,7 @@ const pricingFaqs = [
   },
   {
     question: "What's the annual fee on invested assets?",
-    answer: "$1 per year for every $1,000 invested. It applies only to invested assets once investing is live, not cash or pending gifts.",
+    answer: "$1 a year per $1,000 invested. It applies only to invested assets once investing is live, not cash or pending gifts.",
   },
   {
     question: "Is there a free trial?",
@@ -418,7 +418,7 @@ Pricing you can see clearly.
                         <li className="list-disc">ACH bank transfer: 0.8%, capped at $5.00</li>
                         <li className="list-disc">PayPal: 3.49% + $0.49</li>
                       </ul>
-                      <p><span className="font-semibold text-foreground">Invested assets.</span> $1 per year per $1,000 invested, charged only on invested assets once investing is live.</p>
+                      <p><span className="font-semibold text-foreground">Invested assets.</span> $1 a year per $1,000 invested, charged only on invested assets once investing is live.</p>
                       <p>Hosts can choose to absorb processing fees on behalf of their gifters in fund settings. All fees are shown in full before checkout.</p>
                       <p className="text-xs">Investments are not FDIC insured, not bank guaranteed, and may lose value.</p>
                     </div>

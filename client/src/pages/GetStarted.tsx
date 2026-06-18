@@ -806,7 +806,7 @@ export default function GetStarted() {
                 <h1 className="font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
                   The gift they'll still have at 18.
                 </h1>
-                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in seconds. No app, no account, nothing to download.</p>
+                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once and share one link. Anyone in your family can gift real stock in seconds, with no account or download needed.</p>
               </AnimatedBlock>
               <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
