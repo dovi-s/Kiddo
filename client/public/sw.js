@@ -10,7 +10,7 @@
 //    produce new filenames, so there is no stale-asset risk).
 //  • Push + notificationclick handlers: ready for web push once a subscription
 //    + VAPID keys + backend send are wired.
-const CACHE = "kiddo-v1";
+const CACHE = "kiddo-v2";
 const SHELL = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
