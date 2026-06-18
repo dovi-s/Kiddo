@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { ShieldCheck, ShieldOff, Copy, Check } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 async function postJson(url: string, body?: unknown) {
   const res = await fetch(url, {
@@ -58,6 +59,7 @@ export function TwoFactorCard() {
   const enableMutation = useMutation({
     mutationFn: () => postJson("/api/auth/2fa/enable", { code: code.trim(), currentPassword: password }),
     onSuccess: (d) => {
+      if (demoBlocked(d, toast)) return;
       haptic("success");
       setBackupCodes(Array.isArray(d?.backupCodes) ? d.backupCodes : []);
       setCode("");
@@ -82,7 +84,8 @@ export function TwoFactorCard() {
 
   const disableMutation = useMutation({
     mutationFn: () => postJson("/api/auth/2fa/disable", { code: code.trim() }),
-    onSuccess: () => {
+    onSuccess: (d) => {
+      if (demoBlocked(d, toast)) return;
       haptic("success");
       reset();
       queryClient.invalidateQueries({ queryKey: ["/api/auth/2fa/status"] });

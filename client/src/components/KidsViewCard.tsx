@@ -32,6 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -106,6 +107,7 @@ export function KidsViewCard({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save PIN.");
+      if (demoBlocked(data, toast)) { setShowPinManager(false); return; }
       haptic("success");
       toast({ title: "PIN saved", description: "Kid's View is active with the new PIN." });
       setNewPin("");
@@ -127,6 +129,7 @@ export function KidsViewCard({
       const res = await fetch(`/api/funds/${fund.id}/kid-view-link`, { method: "POST", credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Kid View is not set up yet.");
+      if (demoBlocked(data, toast)) return;
       await navigator.clipboard.writeText(data.shareLink);
       haptic("success");
       toast({ title: "Kid View link copied!", description: "Share this link and PIN with your child." });

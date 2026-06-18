@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, useSearch, Link } from "wouter";
+import { demoBlocked } from "@/lib/demo-block";
 // Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md. The three
 // row-types it was used for (Kid suggestion / Subscription / Age-18 invite)
 // now use semantically-correct icons: Lightbulb (gentle nudge), CreditCard
@@ -477,6 +478,12 @@ function rewriteLegacyAutoInvestTitle(t: string | null | undefined): string {
   // the feed. Server now writes "Memory Book entry edited"; this
   // rewrite normalizes legacy rows. Locked 2026-05-20.
   if (t === "Memory entry edited") return "Memory Book entry edited";
+  // Verb normalization: older parent-contribution rows stored "You added $X"
+  // (and the co-parent "{Name} added $X"); the seed/server/webhook now write
+  // "You contributed $X". Normalize at display so the feed never mixes "added"
+  // and "contributed" for the same parent-into-mix action. Locked 2026-06-17.
+  const added = t.match(/^(You|.+?) added (\$[\d,]+(?:\.\d{2})?)$/);
+  if (added) return `${added[1]} contributed ${added[2]}`;
   return t;
 }
 
@@ -532,6 +539,10 @@ function rewriteLegacyDescription(d: string | null | undefined): string | null {
   // Also fold the spaced-hyphen variant ("1 - 2 business days") that
   // appeared in a handful of even-older rows.
   out = out.replace(/\b1\s*-\s*2 business days\b/g, "1 to 2 business days");
+  // Managed-mix label alignment: older rows stored "the full mix"; the seed/
+  // server now write "the diversified mix". Normalize so a parent scanning the
+  // feed never sees the same destination labeled two ways. Locked 2026-06-17.
+  out = out.replace(/\bthe full mix\b/g, "the diversified mix");
   return out;
 }
 
@@ -945,6 +956,8 @@ export default function Activity() {
         },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       await refetch();
     } catch (err) {
       console.error("[activity] review suggestion failed:", err);
@@ -1075,7 +1088,8 @@ export default function Activity() {
       }
       return res.json();
     },
-    onSuccess: (_data: unknown, variables: { id: string; status: "active" | "paused" }) => {
+    onSuccess: (data: any, variables: { id: string; status: "active" | "paused" }) => {
+      if (demoBlocked(data, toast)) return;
       void queryClient.invalidateQueries({ queryKey: ["/api/me/scheduled"] });
       void queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
@@ -1102,7 +1116,8 @@ export default function Activity() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (demoBlocked(data, toast)) return;
       void queryClient.invalidateQueries({ queryKey: ["/api/me/scheduled"] });
       void queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({ title: "Schedule cancelled", description: "The recurring investment won't run again." });
@@ -1144,7 +1159,8 @@ export default function Activity() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (demoBlocked(data, toast)) return;
       void queryClient.invalidateQueries({ queryKey: ["/api/me/scheduled"] });
       // Kind-neutral copy: this mutation stops BOTH reminder-only cadences
       // (we stop emailing) and auto-charge subscriptions (Stripe sub is
@@ -2576,13 +2592,23 @@ export default function Activity() {
                     const sn = typeof (meta as any).senderName === "string" ? (meta as any).senderName.trim() : "";
                     return sn ? sn.split(/\s+/)[0] : "Your parent";
                   })();
-                  const effectiveTitle = ownerViewingParentContrib
-                    ? `${parentContribName} added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
+                  // Verb unified to "contributed" (matches the seed/server +
+                  // webhook titles) so the feed never mixes "added" and
+                  // "contributed" for the same parent-into-mix action.
+                  const rawEffectiveTitle = ownerViewingParentContrib
+                    ? `${parentContribName} contributed $${(amtNum != null ? amtNum : 0).toFixed(2)}`
                     : overrideToParentContrib
-                      ? `You added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
+                      ? `You contributed $${(amtNum != null ? amtNum : 0).toFixed(2)}`
                       : rewriteLegacyAutoInvestTitle(item.title);
+                  // The "+$X" amount badge already states the figure, so drop a
+                  // trailing dollar amount from the title on gift/contribution
+                  // rows — otherwise a contribution names the amount twice ("You
+                  // contributed $100" + "+$100"), which gift rows never did.
+                  const effectiveTitle = isGiftOrContrib
+                    ? rawEffectiveTitle.replace(/ \$[\d,]+(?:\.\d{2})?$/, "")
+                    : rawEffectiveTitle;
                   const effectiveDescription = overrideToParentContrib
-                    ? (ticker ? `Investing into ${ticker}` : "Investing across the full mix")
+                    ? (ticker ? `Investing into ${ticker}` : "Investing across the diversified mix")
                     : rewriteSettlementSentence(rewriteLegacyDescription(item.description), item.createdAt);
                   // Hoisted kid-suggestion state so the Approve/Decline bar
                   // renders OUTSIDE the expanded panel (always visible on
@@ -2916,7 +2942,11 @@ export default function Activity() {
                                 </span>
                               ) : null;
                             })()}
-                            {childLabel && (
+                            {/* Per-row child chip is redundant when the whole
+                                page is already scoped to one fund (the header
+                                reads "{child}'s activity"). Only show it on a
+                                cross-fund feed, where it disambiguates kids. */}
+                            {childLabel && !activeFundIdForActivity && (
                               <span style={{
                                 fontSize: 9.5, fontWeight: 700, borderRadius: 999, padding: "2px 6px",
                                 background: "rgba(26,61,43,0.08)", color: "rgb(26,61,43)",
@@ -3275,7 +3305,7 @@ export default function Activity() {
                                     arrow form so the parent can SEE the
                                     change without parsing prose. Per the
                                     strategy emoji map (Conservative
-                                    🛡️ / Balanced ⚖️ / Growth 📈 / Custom 🎯),
+                                    🛡️ / Balanced ⚖️ / Growth 📈 / Custom 🎛️),
                                     centralized in @/lib/strategy.
                                     Never on gifter or Memory Book surfaces —
                                     those are different philosophies. */}
@@ -3937,7 +3967,7 @@ export default function Activity() {
                                 // a Family-plan-specific distinction (shared
                                 // strategy across kids) that carries real
                                 // load-bearing information for Family parents.
-                                "into the full mix";
+                                "into the diversified mix";
                           const isExpanded = expandedScheduledId === String(c.id);
                           const note = typeof c.note === "string" && c.note.trim() ? c.note.trim() : null;
                           const idStr = String(c.id);
@@ -4515,7 +4545,7 @@ export default function Activity() {
               : // See comment on the strategyLabel twin in this file
                 // (~line 3360) — "managed mix" unified to "diversified
                 // mix" 2026-05-20. Same reasoning applies here.
-                "into the full mix";
+                "into the diversified mix";
           const isPaused = schedule.status === "paused";
           // Payment method + next-charge info now lands in the hero
           // (subtitle + stats grid) instead of a recursive Scheduled tab
@@ -4685,7 +4715,7 @@ export default function Activity() {
             ...row,
             type: "parent_contribution" as any,
             title: `You added ${amtStr}`,
-            description: ticker ? `Investing into ${ticker}` : "Investing across the full mix",
+            description: ticker ? `Investing into ${ticker}` : "Investing across the diversified mix",
           };
         };
         const allContribRows = allFeed.filter(isParentContribRow).map(applyParentContribDisplay);

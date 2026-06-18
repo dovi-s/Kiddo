@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { User, Camera, ChevronLeft, Settings, LogOut, Crown } from "lucide-react";
@@ -74,6 +75,7 @@ export default function Profile() {
         });
         const payload = await res.json().catch(() => ({}));
         if (res.ok) {
+          if (demoBlocked(payload, toast)) { setUploadingPhoto(false); return; }
           const updatedUser = payload;
           queryClient.setQueryData(["/api/auth/user"], updatedUser);
           haptic("success");
@@ -106,7 +108,8 @@ export default function Profile() {
         body: JSON.stringify({ firstName, lastName }),
       });
       if (res.ok) {
-        const updatedUser = await res.json();
+        const updatedUser = await res.json().catch(() => null);
+        if (demoBlocked(updatedUser, toast)) { setEditingName(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updatedUser);
         haptic("success");
         toast({ title: "Name updated" });

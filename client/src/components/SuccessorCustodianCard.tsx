@@ -27,6 +27,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 
 // Local SectionCard mirroring the one Settings.tsx defines. Keeping a
 // local copy avoids exporting Settings's internal helper from a 5900-
@@ -109,6 +110,8 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
         }),
       });
       if (!res.ok) throw new Error("save failed");
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setEditOpen(false); return; }
       haptic("success");
       toast({ title: currentName ? "Successor updated" : "Successor saved", description: `${trimmedName} will step in if anything happens to you.` });
       setEditOpen(false);
@@ -136,6 +139,8 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
         }),
       });
       if (!res.ok) throw new Error("remove failed");
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setEditOpen(false); return; }
       haptic("success");
       toast({ title: "Successor removed" });
       setEditOpen(false);

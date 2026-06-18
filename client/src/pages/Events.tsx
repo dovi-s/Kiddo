@@ -22,6 +22,7 @@ import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useEvents, useUpdateEvent } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked, isDemoBlockedError } from "@/lib/demo-block";
 import { EventGateModal } from "@/components/EventGateModal";
 import { MascotMoment } from "@/components/ui/mascot-moment";
 import { GoalCard, EventPassBadge } from "@/components/ui/premium-themes";
@@ -315,8 +316,9 @@ export default function Events() {
           body: JSON.stringify({ dataUrl }),
         });
         if (res.ok) {
-          const { url } = await res.json();
-          setEditImageUrl(url);
+          const data = await res.json().catch(() => null);
+          if (demoBlocked(data, toast)) { setImageUploading(false); return; }
+          setEditImageUrl(data?.url);
           haptic("success");
         } else {
           toast({ title: "Image upload failed", variant: "destructive" });
@@ -350,6 +352,8 @@ export default function Events() {
         body: JSON.stringify(updates),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) { setSaving(false); return; }
         queryClient.invalidateQueries({ queryKey: ["/api/events"] });
         // Drop the dashboard-summary cache for this fund too — Dashboard
         // event tiles render from dashboard-summary.events, not from
@@ -1110,7 +1114,11 @@ export default function Events() {
                                             haptic("success");
                                             toast({ title: isPaused ? "Event resumed. Gift link is live again." : "Event paused. Gift link is offline." });
                                           },
-                                          onError: () => {
+                                          onError: (err) => {
+                                            if (isDemoBlockedError(err)) {
+                                              toast({ title: "Not saved in the demo", description: (err as any).demoMessage || "Changes save in your own fund." });
+                                              return;
+                                            }
                                             toast({ title: "Could not update event", variant: "destructive" });
                                           },
                                         }

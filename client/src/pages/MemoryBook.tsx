@@ -3718,7 +3718,14 @@ export default function MemoryBook() {
                   const isPinned = featuredOnly && !isAwaiting;
                   const isAll = !isAwaiting && !isPinned && activeFilter === "all" && thankYouFilter === "all";
                   return (
-                    <div className="flex flex-wrap gap-2" data-testid="memory-primary-filter-bar">
+                    <div className="flex items-center gap-2" data-testid="memory-primary-filter-bar">
+                      {/* Primary lens chips scroll horizontally on a narrow
+                          phone; the More/Hide-filters toggle is a pinned
+                          sibling (shrink-0, right side) so it never scrolls
+                          out of reach. Previously the toggle rode inside the
+                          scroll row and only right-aligned at sm+, so on
+                          mobile it could sit off-screen past the chips. */}
+                      <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0 sm:flex-wrap sm:overflow-visible" style={{ scrollbarWidth: "none" }}>
                       <button
                         onClick={() => {
                           setActiveFilter("all");
@@ -3781,10 +3788,11 @@ export default function MemoryBook() {
                         Awaiting thanks
                       </button>
                       )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => setMoreFiltersOpen((v) => !v)}
-                        className="ml-auto rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                        className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
                         data-testid="button-memory-more-filters"
                         aria-expanded={moreFiltersOpen}
                       >
@@ -3801,8 +3809,14 @@ export default function MemoryBook() {
                     the parent opts in to power-user controls. */}
                 {moreFiltersOpen && (
                   <div className="space-y-3 rounded-2xl border border-border/60 bg-background/40 px-3 py-3" data-testid="memory-more-filters">
-                    <div className="flex flex-wrap gap-2" data-testid="memory-filter-bar">
-                      <span className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground self-center mr-1">Type:</span>
+                    {/* Pinned label + horizontal-scroll chips: each filter
+                        group stays a single tidy line on mobile (label fixed
+                        left, chips scroll) instead of ragged-wrapping to two
+                        rows. Nothing is permanently hidden — the track
+                        scrolls. */}
+                    <div className="flex items-center gap-2" data-testid="memory-filter-bar">
+                      <span className="shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground mr-1">Type:</span>
+                      <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
                       {[
                         { key: "all", label: "All" },
                         { key: "gift_message", label: "Gifts" },
@@ -3823,10 +3837,12 @@ export default function MemoryBook() {
                           {opt.label}
                         </button>
                       ))}
+                      </div>
                     </div>
                     {canModerateMemory && (activeFilter === "all" || activeFilter === "gift_message") && (
-                      <div className="flex flex-wrap gap-2" data-testid="memory-thankyou-filter-bar">
-                        <span className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground self-center mr-1">Thanks:</span>
+                      <div className="flex items-center gap-2" data-testid="memory-thankyou-filter-bar">
+                        <span className="shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground mr-1">Thanks:</span>
+                        <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
                         {[
                           { key: "all", label: "All" },
                           { key: "awaiting", label: "Awaiting" },
@@ -3846,6 +3862,7 @@ export default function MemoryBook() {
                             {opt.label}
                           </button>
                         ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -3922,7 +3939,7 @@ export default function MemoryBook() {
                         the side-eye. */}
                     <button
                       onClick={() => { haptic("medium"); setBookPageIndex(0); setBookSlideDirection(0); setBookOpen(true); }}
-                      className="h-11 inline-flex items-center gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      className="h-11 ml-auto inline-flex items-center gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                       data-testid="button-open-book-view"
                     >
                       <BookOpen size={12} />
@@ -4606,36 +4623,51 @@ export default function MemoryBook() {
                                     entries. Closes Apple App Store guideline 1.2
                                     requirement (UGC apps must have a report mechanism)
                                     and the "reporting OPEN" gap flagged in
-                                    project_child_safety_architecture.md. Mailto pattern
-                                    mirrors Activity.tsx's transaction-issue reports —
-                                    uses the locked support@kiddofund.com escalation
-                                    path. Server-side T&S queue work (POST /api/reports +
-                                    admin moderation) exists per project_ts_queue_architecture.md;
-                                    a future polish pass could wire this menu item to
-                                    that structured endpoint instead of mailto. */}
+                                    project_child_safety_architecture.md. Wired 2026-06-16
+                                    to the structured T&S queue (POST /api/reports +
+                                    admin moderation, per project_ts_queue_architecture.md) —
+                                    replaced the old mailto so Report works without a mail
+                                    client (rate-limited per-IP + per-target server-side). */}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onSelect={(e) => {
+                                  onSelect={async (e) => {
                                     e.preventDefault();
                                     const sender = entry.gift?.senderName || "anonymous gifter";
-                                    const dateStr = entry.createdAt
-                                      ? new Date(entry.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-                                      : "(date unavailable)";
-                                    const subject = `Report a Memory Book entry · from ${sender}`;
-                                    const body = [
-                                      `Hi Kiddo team,`,
-                                      ``,
-                                      `I want to report a Memory Book entry:`,
-                                      ``,
-                                      `From: ${sender}`,
-                                      `Date: ${dateStr}`,
-                                      `Entry ID: ${entry.id}`,
-                                      fundId ? `Fund ID: ${fundId}` : "",
-                                      ``,
-                                      `What's wrong: `,
-                                      ``,
-                                    ].filter(Boolean).join("\n");
-                                    window.location.href = `mailto:support@kiddofund.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                    // In-app report → POST /api/reports (T&S moderation
+                                    // queue, rate-limited per-IP + per-target). Replaces
+                                    // the old mailto so Report works everywhere — no mail
+                                    // client needed. Demo-aware (server returns
+                                    // {saved:false}; this is raw fetch so we detect it).
+                                    const reason = window.prompt(`Report this entry from ${sender}. What's wrong?`);
+                                    if (reason == null) return; // cancelled
+                                    if (reason.trim().length < 3) {
+                                      toast({ title: "Tell us briefly what's wrong", variant: "destructive" });
+                                      return;
+                                    }
+                                    try {
+                                      const res = await fetch("/api/reports", {
+                                        method: "POST",
+                                        credentials: "include",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                          targetType: "memory_entry",
+                                          targetId: entry.id,
+                                          reason: reason.trim(),
+                                          context: { sender, fundId, createdAt: entry.createdAt },
+                                        }),
+                                      });
+                                      const data = await res.json().catch(() => null);
+                                      if (data && data.saved === false) {
+                                        toast({ title: "Not saved in the demo", description: data.message || "Reports work in your own fund." });
+                                      } else if (res.ok) {
+                                        haptic("success");
+                                        toast({ title: "Reported", description: "Thanks — our team will review it." });
+                                      } else {
+                                        toast({ title: data?.error || "Could not submit report", variant: "destructive" });
+                                      }
+                                    } catch {
+                                      toast({ title: "Could not submit report", variant: "destructive" });
+                                    }
                                   }}
                                   data-testid={`menu-report-memory-${entry.id}`}
                                 >

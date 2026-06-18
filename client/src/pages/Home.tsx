@@ -220,7 +220,7 @@ const BENTO_TILES: BentoTile[] = [
     title: "Customize the mix",
     body: "Pick the holdings the fund follows. Conservative, balanced, growth, or your own. Not a black box.",
     // Strategy labels + emoji are CANONICAL (lib/strategy.ts): Growth Mix 📈,
-    // Balanced Mix ⚖️, Conservative Mix 🛡️, Custom 🎯. This block previously
+    // Balanced Mix ⚖️, Conservative Mix 🛡️, Custom 🎛️. This block previously
     // drifted (⚖️ on Conservative, off-canon 🌿 on Balanced) AND carried two
     // claims the self-directed posture forbids: "Default for most parents"
     // (fabricated majority + a steer) and "fits the 0-10 age bracket"
@@ -228,12 +228,12 @@ const BENTO_TILES: BentoTile[] = [
     // "Recommended for {child}" badge, in marketing form). Neutral menu
     // descriptors only; the parent chooses. Fixed 2026-06-03.
     modalLead:
-      "Choose the mix you want: Growth Mix 📈, Balanced Mix ⚖️, Conservative Mix 🛡️, or your own 🎯 Custom. Your pick shapes your child's financial foundation for years. The fund's holdings rebalance toward the target on every gift, and every allocation decision is shown with the percentages and the reason. Not a black box.",
+      "Choose the mix you want: Growth Mix 📈, Balanced Mix ⚖️, Conservative Mix 🛡️, or your own 🎛️ Custom. Your pick shapes your child's financial foundation for years. The fund's holdings rebalance toward the target on every gift, and every allocation decision is shown with the percentages and the reason. Not a black box.",
     modalDetails: [
       "Growth Mix 📈. Equity-heavy, built for long horizons.",
       "Balanced Mix ⚖️. Vanguard total stock + total international + bonds.",
       "Conservative Mix 🛡️. Bond-weighted, lower volatility, built for shorter horizons.",
-      "Custom 🎯. Build your own mix from VTI, VXUS, BND, VGT, VUG, VYM, SCHD, and QQQ. Plus-tier feature.",
+      "Custom 🎛️. Build your own mix from VTI, VXUS, BND, VGT, VUG, VYM, SCHD, and QQQ. Plus-tier feature.",
       "Switch any time; new gifts steer the mix back toward your target.",
     ],
     modalCallout: { label: "Rebalancing", value: "contribution-based, no drift selling" },

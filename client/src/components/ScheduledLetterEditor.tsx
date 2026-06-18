@@ -43,6 +43,8 @@ import { haptic } from "@/lib/haptics";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "./MemoryMediaPicker";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { capFirst } from "@/lib/format-name";
+import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 export type ScheduledLetterEntry = {
   id: string;
@@ -252,6 +254,8 @@ export function ScheduledLetterEditor({
         setSaving(false);
         return;
       }
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setSaving(false); return; }
       haptic("success");
       onSaved?.();
       // Edit mode: skip the celebration sheet and close cleanly. The

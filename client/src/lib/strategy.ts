@@ -29,12 +29,14 @@ export const STRATEGY_SHORT: Record<StrategyKey, string> = {
 };
 
 // Emoji read semantically: chart-up = growth, scales = balance, shield =
-// capital preservation. (Previously the scales sat on Conservative and the
-// brand sprout on Balanced, both off; the sprout is the product mark and
-// shouldn't be spent on a single tier.)
+// capital preservation, control sliders = "set your own mix". (Previously the
+// scales sat on Conservative and the brand sprout on Balanced, both off; the
+// sprout is the product mark and shouldn't be spent on a single tier. Custom
+// was 🎯 but a bullseye reads "goal/aim", not "build your own"; 🎛️ literally
+// means "adjust the levels", matching "pick your own ETFs and weights".)
 export const STRATEGY_EMOJI: Record<StrategyKey, string> = {
   growth: "📈",
   balanced: "⚖️",
   conservative: "🛡️",
-  custom: "🎯",
+  custom: "🎛️",
 };

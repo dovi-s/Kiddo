@@ -25,6 +25,7 @@ import type { ActionItem } from "@shared/action-items";
 import { useActionItems } from "@/hooks/use-action-items";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { toastDemoBlocked } from "@/lib/demo-block";
 
 type Props = {
   item: ActionItem;
@@ -55,6 +56,7 @@ export function ActionItemCard({ item, compact = false }: Props) {
         description: `We'll bring "${item.title}" back in 24 hours.`,
       });
     } catch (err) {
+      if (toastDemoBlocked(err, toast)) return;
       toast({
         title: "Couldn't snooze",
         description: (err as any)?.message || "Try again.",

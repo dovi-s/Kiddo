@@ -8,6 +8,7 @@ import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { recordDemoBuy } from "@/lib/demo-live-gifts";
+import { demoBlocked } from "@/lib/demo-block";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 import { projectFundValue } from "@shared/projection";
@@ -230,6 +231,8 @@ export function InvestCashModal({
         body: JSON.stringify({ autoInvestEnabled: enabled }),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         await refetchPrefs();
         toast({
           title: enabled ? "Investing future gifts automatically" : "Future gifts will sit as cash",

@@ -9,6 +9,7 @@ import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { haptic } from "@/lib/haptics";
 import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 import { toast } from "@/hooks/use-toast";
+import { isDemoBlockedError } from "@/lib/demo-block";
 import { Calendar } from "@/components/ui/calendar";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -494,6 +495,10 @@ export function CreateEventSheet({
       }
     } catch (err: any) {
       setUploadingImage(false);
+      if (isDemoBlockedError(err)) {
+        toast({ title: "Not saved in the demo", description: err.demoMessage || "Changes save in your own fund." });
+        return;
+      }
       toast({ title: "Couldn't save", description: err.message, variant: "destructive" });
     }
   }

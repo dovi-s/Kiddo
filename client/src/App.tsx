@@ -10,6 +10,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { getActiveFundId } from "@/hooks/use-active-fund";
 import { RealtimeProvider } from "@/lib/realtime-context";
 import { Toaster } from "@/components/ui/toaster";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { DemoGiftMoment } from "@/components/DemoGiftMoment";
 import { DemoActionMoment } from "@/components/DemoActionMoment";
 import { IdleLogout } from "@/components/IdleLogout";
@@ -22,7 +23,6 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { Mascot } from "@/components/ui/mascot";
 import { GradientText } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
-import { useStatusBarColor } from "@/hooks/use-status-bar-color";
 import Home from "@/pages/Home";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -854,10 +854,6 @@ function App() {
   const [location] = useLocation();
   const search = useSearch();
 
-  // Tint the status bar / browser chrome to match the top of the current
-  // screen (light-only, so the dark glyphs stay readable). See the hook.
-  useStatusBarColor();
-
   useEffect(() => {
     prefetchCriticalRoutes();
     // Warm-data Layer 3, web half (WARM_DATA_AND_LOCK_SPEC): in PARALLEL with
@@ -974,6 +970,9 @@ function App() {
               </a>
               <SeoManager />
               <Toaster />
+              {/* Custom pull-to-refresh — standalone PWA only (browsers keep
+                  their native gesture). Inert + renders null in a browser tab. */}
+              <PullToRefresh />
               {/* Demo-only: one live "a gift just came in" beat ~15s after the
                   parent lands on their dashboard, so a prospect feels the
                   gifter-loop payoff. Headless; no-op for non-demo accounts. */}

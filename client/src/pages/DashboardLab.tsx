@@ -10034,7 +10034,7 @@ export default function DashboardLab() {
                                   etc.), and the current preset rides as
                                   a parenthetical with the locked strategy
                                   emoji (🛡️ Conservative · ⚖️ Balanced ·
-                                  📈 Growth · 🎯 Custom). The structural
+                                  📈 Growth · 🎛️ Custom). The structural
                                   cue (this bucket is platform-managed vs
                                   the gifter-picked "Chosen with love"
                                   pair) is carried by the strategy emoji

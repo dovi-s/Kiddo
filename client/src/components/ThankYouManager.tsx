@@ -5,6 +5,7 @@ import { Heart, Check, CheckCheck, Edit3, Send, RefreshCw, X } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import type { ThankYou } from "@shared/schema";
 
 interface ThankYouManagerProps {
@@ -38,6 +39,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
       return res.json();
     },
     onSuccess: (data) => {
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
       haptic("success");
       toast({ title: "Thank-yous generated", description: `${data.generated} new draft${data.generated !== 1 ? "s" : ""} created` });
@@ -58,7 +60,8 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
       if (!res.ok) throw new Error("Failed to update");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
     },
     onError: () => {
@@ -76,6 +79,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
       return res.json();
     },
     onSuccess: async (data) => {
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
       if (data.deliveryMethod === "email" && data.deliveryUrl) {
         window.location.href = data.deliveryUrl;

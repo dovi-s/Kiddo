@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -111,6 +112,9 @@ function EmailPreferenceCenterCard({ hasChildFund }: { hasChildFund: boolean }) 
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  // The optional-email toggles default ON and live behind a disclosure, so the
+  // Notifications tab opens calm instead of as a wall of ~9 switches.
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,25 +167,59 @@ function EmailPreferenceCenterCard({ hasChildFund }: { hasChildFund: boolean }) 
             </p>
           </div>
         </div>
-        <div className="mt-5 space-y-3">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading preferences…</p>
-          ) : (
-            EMAIL_PREFERENCE_CATEGORIES
-              .filter((cat) => hasChildFund || !OWNER_HIDDEN_EMAIL_PREFS.has(cat.key))
-              .map((cat) => (
-              <NotificationSwitchRow
-                key={cat.key}
-                title={cat.label}
-                body={!hasChildFund && OWNER_EMAIL_PREF_DESC[cat.key] ? OWNER_EMAIL_PREF_DESC[cat.key] : cat.description}
-                checked={isEnabled(cat.key)}
-                onCheckedChange={(next) => void togglePreference(cat.key, next)}
-                disabled={saving === cat.key}
-                testId={`row-email-pref-${cat.key}`}
-              />
-            ))
-          )}
-        </div>
+        {(() => {
+          const visibleCats = EMAIL_PREFERENCE_CATEGORIES.filter(
+            (cat) => hasChildFund || !OWNER_HIDDEN_EMAIL_PREFS.has(cat.key),
+          );
+          const enabledCount = visibleCats.filter((cat) => isEnabled(cat.key)).length;
+          return (
+            <>
+              {/* Disclosure: these emails are all on by default, so the summary
+                  carries the state and the toggles stay one tap away — the tab
+                  no longer opens as a wall of switches. */}
+              <button
+                type="button"
+                onClick={() => setOptionsOpen((o) => !o)}
+                aria-expanded={optionsOpen}
+                className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.46)] px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                data-testid="button-email-prefs-toggle"
+              >
+                <span className="text-sm font-semibold text-foreground">
+                  {optionsOpen ? "Hide email options" : "Customize emails"}
+                  {!loading && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {enabledCount} of {visibleCats.length} on
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className="shrink-0 text-muted-foreground"
+                  style={{ transform: optionsOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}
+                />
+              </button>
+              {optionsOpen && (
+                <div className="mt-3 space-y-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">Loading preferences…</p>
+                  ) : (
+                    visibleCats.map((cat) => (
+                      <NotificationSwitchRow
+                        key={cat.key}
+                        title={cat.label}
+                        body={!hasChildFund && OWNER_EMAIL_PREF_DESC[cat.key] ? OWNER_EMAIL_PREF_DESC[cat.key] : cat.description}
+                        checked={isEnabled(cat.key)}
+                        onCheckedChange={(next) => void togglePreference(cat.key, next)}
+                        disabled={saving === cat.key}
+                        testId={`row-email-pref-${cat.key}`}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </SectionCard>
   );
@@ -1142,7 +1180,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 // converges to the mean over longer horizons (sigma / sqrt(years)). Always paired with
 // the standard "past performance does not guarantee future results" disclaimer.
 // Canonical strategy emojis (per project locked emoji map):
-//   📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎯 Custom
+//   📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎛️ Custom
 // Surface the emoji on each card title for instant differentiation
 // (matches the chip on the holdings header, the StrategyIcon on the
 // recurring schedule cards, and the per-strategy register elsewhere).
@@ -1193,7 +1231,7 @@ const STRATEGIES = [
   },
   {
     key: "custom",
-    emoji: "🎯",
+    emoji: "🎛️",
     label: "Custom ETF Mix",
     // Explicit "ETFs only" framing — addresses the architectural-rule
     // confusion ("can I add stocks to this?"). Pairs with the
@@ -1365,6 +1403,7 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
         toast({ title: "Could not update gifting rules", description: payload.error || "Please try again", variant: "destructive" });
         return;
       }
+      if (demoBlocked(payload, toast)) return;
       haptic("success");
       toast({ title: "Gifting rules updated", description: "Future gifts will follow these defaults." });
       onSuccess();
@@ -1385,9 +1424,6 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
         <p className="kiddo-section-label">Default path for new gifts</p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Pick one {familyDefaultLabel}. Most gifts follow this. Gifter stock picks or cash gifts only happen if you allow those overrides below.
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          If a gifter chooses a stock, it applies only to that gift. Your {familyDefaultLabel} stays the same for future gifts.
         </p>
       </div>
 
@@ -1682,6 +1718,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
       });
       const data = await res.json();
       if (res.ok) {
+        if (demoBlocked(data, toast)) return;
         haptic("success");
         if (selected === "custom") {
           setInitialCustomRows(customRows);
@@ -1760,8 +1797,8 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2 flex-wrap">
-                    {/* Canonical strategy emoji — matches the locked map
-                        (📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎯
+                    {/* Canonical strategy emoji, matches the locked map
+                        (📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎛️
                         Custom). Helps the eye distinguish options at a
                         glance instead of having to read each label. */}
                     {strategy.emoji && (
@@ -2000,7 +2037,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                   </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                  Projections are hypothetical and based on historical market data. Past performance does not guarantee future results. Investing involves risk. But so does a gift card.
+                  Projections are hypothetical and based on historical market data. Past performance does not guarantee future results. Investing involves risk.
                 </p>
               </div>
             );
@@ -2454,7 +2491,7 @@ function KidOwnerTaxSection() {
   const updateEarnedIncome = async (hasIncome: boolean, bracket: string | null) => {
     setBusy(true);
     try {
-      await fetch("/api/users/me/earned-income", {
+      const res = await fetch("/api/users/me/earned-income", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -2463,6 +2500,8 @@ function KidOwnerTaxSection() {
           estimatedIncomeBracket: bracket,
         }),
       });
+      const body = await res.json().catch(() => null);
+      if (demoBlocked(body, toast)) return;
       await refetch();
     } finally {
       setBusy(false);
@@ -2473,12 +2512,14 @@ function KidOwnerTaxSection() {
     setBusy(true);
     try {
       const next = !data.rothIraInterestAt;
-      await fetch("/api/users/me/roth-interest", {
+      const res = await fetch("/api/users/me/roth-interest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ interested: next }),
       });
+      const body = await res.json().catch(() => null);
+      if (demoBlocked(body, toast)) return;
       await refetch();
       toast({
         title: next ? "You're on the list" : "Removed from waiting list",
@@ -3013,6 +3054,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save settings");
+      if (demoBlocked(data, toast)) throw new Error("__DEMO_NOOP__");
       return data;
     },
     onSuccess: () => {
@@ -3020,6 +3062,7 @@ const [editFundName, setEditFundName] = useState("");
       void queryClient.invalidateQueries({ queryKey: ["/api/funds", selectedSettingsFundId, "gifter-notifications"] });
     },
     onError: (error: any) => {
+      if (error?.message === "__DEMO_NOOP__") return; // demoBlocked already toasted
       toast({ title: "Could not save settings", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -3037,6 +3080,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update subscriber");
+      if (demoBlocked(data, toast)) throw new Error("__DEMO_NOOP__");
       return data;
     },
     onSuccess: (_data, vars) => {
@@ -3059,6 +3103,7 @@ const [editFundName, setEditFundName] = useState("");
       }
     },
     onError: (error: any) => {
+      if (error?.message === "__DEMO_NOOP__") return; // demoBlocked already toasted
       toast({ title: "Could not update", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -3080,6 +3125,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save setting");
+      if (demoBlocked(data, toast)) throw new Error("__DEMO_NOOP__");
       return data;
     },
     // Optimistic update — the toggle should feel instant. Previously
@@ -3120,6 +3166,7 @@ const [editFundName, setEditFundName] = useState("");
       if (context?.previous) {
         queryClient.setQueryData(["/api/funds"], context.previous);
       }
+      if (error?.message === "__DEMO_NOOP__") return; // demoBlocked already toasted; optimistic toggle rolled back above
       toast({ title: "Could not save setting", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -3812,6 +3859,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       if (res.ok) {
         const body = await res.json().catch(() => ({} as any));
+        if (demoBlocked(body, toast)) return;
         queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
         if (body?.forcedPrivate) {
           toast({
@@ -3839,6 +3887,8 @@ const [editFundName, setEditFundName] = useState("");
     try {
       const res = await fetch(`/api/bank-accounts/${id}`, { method: "DELETE", credentials: "include" });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
         toast({ title: "Bank account removed" });
       }
@@ -3858,6 +3908,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update default bank.");
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       toast({ title: "Default bank updated" });
     } catch (error) {
@@ -3944,6 +3995,7 @@ const [editFundName, setEditFundName] = useState("");
         toast({ title: "Could not update fund", description: data?.error || "Please try again", variant: "destructive" });
         return;
       }
+      if (demoBlocked(data, toast)) return;
 
       setEditFundOpen(false);
       setEditingFund(null);
@@ -3967,12 +4019,13 @@ const [editFundName, setEditFundName] = useState("");
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (demoBlocked(data, toast)) return;
         haptic("success");
         toast({ title: "Invite sent!", description: `${email} has been invited as ${role}` });
         queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "collaborators"] });
       } else {
-        const data = await res.json();
         toast({ title: "Could not send invite", description: data.error || "Please try again", variant: "destructive" });
       }
     } catch {
@@ -4921,21 +4974,6 @@ const [editFundName, setEditFundName] = useState("");
                     testId="row-parent-birthday-dormant"
                   />
                 </div>
-                <div className="hidden">
-                  {[
-                    ["Activation nudges", "Follow-ups on days 1, 3, and 7 after fund creation."],
-                    ["Milestone emails", "When the first gift lands and when a fund crosses $100, $500, and $1,000."],
-                    ["Birthday & dormant reminders", "Before a birthday and after a long quiet stretch."],
-                  ].map(([title, body]) => (
-                    <div key={title} className="flex gap-3">
-                      <span className="mt-0.5 text-[hsl(var(--kiddo-gold))]">✦</span>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </SectionCard>
 
@@ -4986,18 +5024,6 @@ const [editFundName, setEditFundName] = useState("");
                       testId="row-gifter-age18-notification"
                     />
                   )}
-                </div>
-                <div className="hidden">
-                  {[
-                    ["Birthday reminders", `Annual reminder on ${recipientFirstNameDisplay || "your child"}'s birthday with a one-tap gift-back path.`],
-                    ["Memory Book sharing", "Lets you send warm parent-written updates. 0 of 4 used this year."],
-                    [age18NotificationTitle, age18NotificationBody],
-                  ].map(([title, body]) => (
-                    <div key={title} className="py-4 first:pt-0 last:pb-0">
-                      <p className="text-sm font-bold text-foreground">{title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             </SectionCard>
@@ -5199,7 +5225,7 @@ const [editFundName, setEditFundName] = useState("");
                     {activeRecurring.length === 0 ? (
                       <>
                         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                          Set up automatic monthly contributions from the dashboard. {primaryFundIsOwnerHeld ? "Your" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The")} fund grows on its own rhythm.
+                          Set up automatic monthly contributions from the dashboard.
                         </p>
                         <Link href="/dashboard">
                           <Button variant="outline" size="sm" className="mt-4 rounded-xl" data-testid="link-recurring-dashboard-empty">

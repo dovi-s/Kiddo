@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { haptic } from "@/lib/haptics";
 import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -278,6 +279,7 @@ function GifterHeroAvatar({ user }: { user: any }) {
       });
       const payload = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (demoBlocked(payload, toast)) return;
         queryClient.setQueryData(["/api/auth/user"], payload);
         haptic("success");
         toast(
@@ -535,6 +537,8 @@ export default function GifterDashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Cancel failed");
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({ title: "Recurring cancelled", description: "No further charges will fire." });
       queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/recurring"] });
@@ -567,6 +571,8 @@ export default function GifterDashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({
         title: currentlyFollowing ? "Updates off" : "Following updates",
@@ -616,6 +622,8 @@ export default function GifterDashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({
         title: pause ? "Recurring paused" : "Recurring resumed",
@@ -659,6 +667,7 @@ export default function GifterDashboard() {
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
+      if (demoBlocked(payload, toast)) return;
       haptic("success");
       toast({ title: "Recurring updated", description: `Now ${fmtMoney(amountNum)} ${editFrequency} to ${sch.fundName}, starting next cycle.` });
       setEditingId(null);
@@ -736,6 +745,7 @@ export default function GifterDashboard() {
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(payload?.error || "Could not save this fund.");
         if (!cancelled) {
+          if (demoBlocked(payload, toast)) return;
           haptic("success");
           toast({ title: "Fund saved", description: `${payload?.childName || "This fund"} is now in your gifter dashboard.` });
           queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/dashboard"] });

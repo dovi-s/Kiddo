@@ -7,6 +7,8 @@ import { haptic } from "@/lib/haptics";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "./MemoryMediaPicker";
 import { getPronouns, type Pronouns } from "@/lib/pronouns";
 import { capFirst } from "@/lib/format-name";
+import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 // Prompts factory — parameterized on fund pronouns so "What you hope she
 // does with it" becomes "What you hope they do with it" for they/them
@@ -169,8 +171,9 @@ export function NoteEditorSheet({
     setSaving(true);
     haptic("medium");
     try {
+      let res: Response;
       if (existingEntry?.id) {
-        await fetch(`/api/memory/${existingEntry.id}`, {
+        res = await fetch(`/api/memory/${existingEntry.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -183,7 +186,7 @@ export function NoteEditorSheet({
           }),
         });
       } else {
-        await fetch(`/api/funds/${fundId}/memory`, {
+        res = await fetch(`/api/funds/${fundId}/memory`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -204,6 +207,8 @@ export function NoteEditorSheet({
           }),
         });
       }
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setSaving(false); return; }
       haptic("success");
       onSaved?.();
       // First-time save fires the sealed celebration; edits just

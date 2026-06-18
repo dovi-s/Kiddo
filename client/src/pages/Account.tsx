@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { Button } from "@/components/ui/button";
 import { FounderBadge } from "@/components/ui/founder-badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -71,6 +72,12 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setError(body?.error || "Could not request the change. Try again.");
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      if (data?.demo === true && data?.saved === false) {
+        // Demo no-op: don't advance to the "check both inboxes" success screen.
+        setError(data?.message || "Email changes save in your own account.");
         return;
       }
       setSubmitted(true);
@@ -773,6 +780,7 @@ export default function Account() {
         });
         const payload = await res.json().catch(() => ({}));
         if (res.ok) {
+          if (demoBlocked(payload, toast)) { setUploadingPhoto(false); return; }
           queryClient.setQueryData(["/api/auth/user"], payload);
           haptic("success");
           toast({ title: "Photo updated" });
@@ -800,7 +808,8 @@ export default function Account() {
         body: JSON.stringify({ firstName, lastName }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setEditingName(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         haptic("success");
         toast({ title: "Name updated" });
@@ -824,7 +833,8 @@ export default function Account() {
         body: JSON.stringify({ preferredName: preferredName.trim() }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setSavingPreferredName(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         haptic("success");
         toast({ title: "Saved" });
@@ -855,7 +865,8 @@ export default function Account() {
         }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setSavingTrustedContact(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         haptic("success");
         toast({ title: "Trusted contact saved" });
@@ -886,7 +897,8 @@ export default function Account() {
         }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setSavingTrustedContact(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         setTrustedContactName("");
         setTrustedContactEmail("");
@@ -922,6 +934,7 @@ export default function Account() {
       });
       const payload = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (demoBlocked(payload, toast)) { setSavingPassword(false); return; }
         haptic("success");
         toast({ title: "Password updated" });
         setChangingPassword(false);

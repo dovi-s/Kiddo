@@ -14,6 +14,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useEvents } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
+import { isDemoBlockedError } from "@/lib/demo-block";
 import { EventGateModal } from "@/components/EventGateModal";
 import { ThemeSelector, themes } from "@/components/ui/premium-themes";
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
@@ -315,6 +316,10 @@ export default function EventCreate() {
       });
       setLocation("/events");
     } catch (err: any) {
+      if (isDemoBlockedError(err)) {
+        toast({ title: "Not saved in the demo", description: err.demoMessage || "Changes save in your own fund." });
+        return;
+      }
       console.error('[event create] error:', err);
       toast({ title: isSavingsGoal ? "Could not create goal" : "Could not create event", description: err.message || "Please try again", variant: "destructive" });
     }

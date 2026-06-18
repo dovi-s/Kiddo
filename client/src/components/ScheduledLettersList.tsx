@@ -27,6 +27,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Image as ImageIcon, Video, Mic, Trash2, Pencil, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 type MemoryEntryRow = {
   id: string;
@@ -163,12 +165,14 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
       // is filtered out of the scheduled list above (kidVisibility !==
       // 'sealed' after the patch). Cleaner than a hard DELETE — keeps
       // the parent's authorship history intact even after cancellation.
-      await fetch(`/api/memory/${encodeURIComponent(entryId)}`, {
+      const res = await fetch(`/api/memory/${encodeURIComponent(entryId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ kidVisibility: "parent_only" }),
       });
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setCancellingId(null); return; }
       haptic("success");
       void queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
     } catch {
@@ -187,10 +191,12 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
     setCancellingId(seriesId);
     haptic("medium");
     try {
-      await fetch(`/api/funds/${encodeURIComponent(fundId)}/sealed-series/${encodeURIComponent(seriesId)}`, {
+      const res = await fetch(`/api/funds/${encodeURIComponent(fundId)}/sealed-series/${encodeURIComponent(seriesId)}`, {
         method: "DELETE",
         credentials: "include",
       });
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setCancellingId(null); return; }
       haptic("success");
       void queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
     } catch {

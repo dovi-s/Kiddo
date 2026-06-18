@@ -282,6 +282,12 @@
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: 0;
     overflow-x: hidden;
+    /* Kill accidental DOUBLE-TAP zoom (the "weird, I can drag the whole page
+       around" gesture — a zoomed page pans in every direction). `manipulation`
+       still allows scrolling AND pinch-zoom, so the low-vision pinch-zoom we
+       deliberately keep (see index.html viewport note) is preserved. Bonus:
+       removes the 300ms tap delay, so taps feel snappier. */
+    touch-action: manipulation;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-semibold;
@@ -1007,6 +1013,20 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 .momentum-scroll {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+}
+
+/* Installed-PWA (standalone) viewport lock. In a browser tab the chrome
+   constrains the page and provides native pull-to-refresh. In a standalone PWA
+   there's no chrome, so the page rubber-bands and can be dragged around in every
+   direction (founder report). Lock overscroll in standalone ONLY — Safari in a
+   tab keeps its native bounce + pull-to-refresh untouched. (A branded
+   pull-to-refresh for standalone has to be JS; the OS gives no native gesture
+   here once we lock it, and standalone never had one to begin with.) */
+@media all and (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior: none;
+  }
 }
 
 /* Subtle grain texture */

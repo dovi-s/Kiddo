@@ -17,6 +17,7 @@ import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { ProcessingState, SuccessState } from "@/components/ui/gemini";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { KORA_STARTER_MONTHLY } from "@shared/monetization";
 import { prefetchDashboard } from "@/lib/prefetch";
 import { getActiveFundId } from "@/hooks/use-active-fund";
@@ -1376,6 +1377,8 @@ export default function ActivateInvesting() {
                           }),
                         });
                         if (!res.ok) throw new Error("save failed");
+                        const data = await res.json().catch(() => null);
+                        if (demoBlocked(data, toast)) return;
                         haptic("success");
                         setSuccessorSaved(true);
                         toast({

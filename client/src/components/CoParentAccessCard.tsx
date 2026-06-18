@@ -49,6 +49,7 @@ import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 
@@ -156,6 +157,8 @@ export function CoParentAccessCard({
         credentials: "include",
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         queryClient.invalidateQueries({ queryKey: ["/api/funds", fund.id, "collaborators"] });
         toast({ title: "Collaborator removed" });
       } else {
@@ -324,11 +327,11 @@ export function CoParentAccessCard({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-foreground">{ownerName}</p>
+              {/* "Primary custodian · Full control" already names the role, so
+                  the separate "Primary" badge that used to sit here was the word
+                  twice over — dropped it. */}
               <p className="text-xs text-muted-foreground">Primary custodian · Full control</p>
             </div>
-            <span className="shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">
-              Primary
-            </span>
           </div>
         </div>
 
