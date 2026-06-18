@@ -207,7 +207,7 @@ function TabBar({ active, onPress }: { active: Tab; onPress: (tab: Tab) => void 
               <Ionicons
                 name={(isActive ? tab.iconActive : tab.icon) as any}
                 size={isGift ? 22 : 20}
-                color={isGift ? "#3D2B09" : isActive ? colors.evergreen : "#8B948C"}
+                color={isGift ? semanticColors.native.goldInkDeep : isActive ? colors.evergreen : semanticColors.native.textFaint}
               />
             </View>
             <Text style={[tabStyles.tabLabel, isActive && tabStyles.tabLabelActive, isGift && tabStyles.tabLabelGift]}>
@@ -466,13 +466,13 @@ function AccountTab({
                 alignItems: "center",
                 paddingVertical: 9,
                 borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: "#EEE8DD",
+                borderTopColor: semanticColors.native.border,
               }}
             >
-              <Text style={{ color: "#5E675F", fontSize: 14 }}>{label}</Text>
+              <Text style={{ color: semanticColors.native.textSecondary, fontSize: 14 }}>{label}</Text>
               <Text
                 style={{
-                  color: label === "Status" && statusRaw === "active" ? "#1A7F47" : colors.ink,
+                  color: label === "Status" && statusRaw === "active" ? semanticColors.ledger.positive : colors.ink,
                   fontSize: 14,
                   fontWeight: "700",
                 }}
@@ -496,11 +496,11 @@ function AccountTab({
                 alignItems: "center",
                 paddingVertical: 11,
                 borderTopWidth: 1,
-                borderTopColor: "#EEE8DD",
+                borderTopColor: semanticColors.native.border,
               }}
             >
               <Text style={{ color: colors.evergreen, fontSize: 14, fontWeight: "700" }}>{label}</Text>
-              <Ionicons name="chevron-forward" size={16} color="#8B948C" />
+              <Ionicons name="chevron-forward" size={16} color={semanticColors.native.textFaint} />
             </Pressable>
           ))}
         </View>
@@ -641,7 +641,7 @@ function AccountTab({
       {/* Build marker — confirms the phone is running the latest bundle (vs a
           stale Expo Go cache). Bump BUILD_TAG whenever you want a fresh check. */}
       <Text
-        style={{ textAlign: "center", color: "#A9AFA6", fontSize: 12, marginTop: spacing.md, marginBottom: 4 }}
+        style={{ textAlign: "center", color: semanticColors.native.textWhisper, fontSize: 12, marginTop: spacing.md, marginBottom: 4 }}
       >
         Kiddo native · build {BUILD_TAG}
         {"\n"}fonts: {areFontsLoaded() ? "loaded ✓" : `FALLBACK ${fontLoadError ?? "…"}`}
@@ -767,11 +767,11 @@ function EventComposer({
 
       <View style={styles.formCard}>
         <Text style={styles.inputLabel}>Event name</Text>
-        <TextInput value={name} onChangeText={setName} placeholder="Emma's Birthday" placeholderTextColor="#8B948C" style={styles.input} />
+        <TextInput value={name} onChangeText={setName} placeholder="Emma's Birthday" placeholderTextColor={semanticColors.native.textFaint} style={styles.input} />
         <Text style={styles.inputLabel}>Date</Text>
-        <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8B948C" keyboardType="numbers-and-punctuation" style={styles.input} />
+        <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor={semanticColors.native.textFaint} keyboardType="numbers-and-punctuation" style={styles.input} />
         <Text style={styles.inputLabel}>Goal</Text>
-        <TextInput value={goal} onChangeText={setGoal} placeholder="Optional" placeholderTextColor="#8B948C" keyboardType="decimal-pad" style={styles.input} />
+        <TextInput value={goal} onChangeText={setGoal} placeholder="Optional" placeholderTextColor={semanticColors.native.textFaint} keyboardType="decimal-pad" style={styles.input} />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
 
@@ -1004,7 +1004,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
                   onPress={() => setSelectedFundId(f.id)}
                   style={[tabStyles.fundPill, isActive ? tabStyles.fundPillActive : tabStyles.fundPillIdle]}
                 >
-                  <Text style={[tabStyles.fundPillText, { color: isActive ? "#F8F5F0" : "#5E675F" }]}>
+                  <Text style={[tabStyles.fundPillText, { color: isActive ? colors.cream : semanticColors.native.textSecondary }]}>
                     {getChildName(f)}
                   </Text>
                 </Pressable>
@@ -1014,8 +1014,8 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
               onPress={onAddFund}
               style={[tabStyles.fundPill, tabStyles.fundPillIdle, { flexDirection: "row", gap: 3 }]}
             >
-              <Ionicons name="add" size={15} color="#5E675F" />
-              <Text style={[tabStyles.fundPillText, { color: "#5E675F" }]}>Add</Text>
+              <Ionicons name="add" size={15} color={semanticColors.native.textSecondary} />
+              <Text style={[tabStyles.fundPillText, { color: semanticColors.native.textSecondary }]}>Add</Text>
             </Pressable>
           </ScrollView>
         ) : null}
@@ -1195,7 +1195,7 @@ function SettingsRow({ title, value, onPress }: { title: string; value: string; 
       <Text style={styles.settingsTitle}>{title}</Text>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "60%" }}>
         <Text style={styles.settingsValue} numberOfLines={1}>{value}</Text>
-        {onPress ? <Ionicons name="chevron-forward" size={15} color="#8B948C" /> : null}
+        {onPress ? <Ionicons name="chevron-forward" size={15} color={semanticColors.native.textFaint} /> : null}
       </View>
     </>
   );
@@ -1210,7 +1210,7 @@ function SettingsRow({ title, value, onPress }: { title: string; value: string; 
 const switcher = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
   sheet: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: semanticColors.surface.raised,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: spacing.lg,
@@ -1218,7 +1218,7 @@ const switcher = StyleSheet.create({
     gap: 4,
     ...elevate({ y: -8, blur: 24, opacity: 0.14, color: colors.ink }),
   },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#DDD8D0", alignSelf: "center", marginBottom: spacing.sm },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.native.handle, alignSelf: "center", marginBottom: spacing.sm },
   heading: { color: colors.ink, fontSize: 17, fontWeight: "800", marginBottom: spacing.sm },
   row: {
     flexDirection: "row",
@@ -1226,15 +1226,15 @@ const switcher = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0EDE8",
+    borderBottomColor: semanticColors.native.divider,
   },
-  rowActive: { backgroundColor: "#F8F4EE", marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg, borderRadius: 0 },
-  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: "#DDD8D0", backgroundColor: "transparent" },
+  rowActive: { backgroundColor: semanticColors.native.fillCream, marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg, borderRadius: 0 },
+  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: semanticColors.native.handle, backgroundColor: "transparent" },
   dotActive: { borderColor: colors.evergreen, backgroundColor: colors.evergreen },
   rowInfo: { flex: 1, gap: 2 },
   rowName: { color: colors.ink, fontSize: 16, fontWeight: "700" },
   rowNameActive: { color: colors.evergreen, fontWeight: "800" },
-  rowBal: { color: "#6B7280", fontSize: 13, fontWeight: "600" },
+  rowBal: { color: semanticColors.native.textNeutral, fontSize: 13, fontWeight: "600" },
   addRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1248,7 +1248,7 @@ const tabStyles = StyleSheet.create({
   // Fund switcher pills (web parity: filled active / outline idle, not underline).
   fundPill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   fundPillActive: { backgroundColor: colors.evergreen },
-  fundPillIdle: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: "#E5DDD4" },
+  fundPillIdle: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border },
   fundPillText: { fontSize: 14, fontWeight: "700" },
   bar: {
     flexDirection: "row",
@@ -1274,11 +1274,11 @@ const tabStyles = StyleSheet.create({
     height: 44,
     borderRadius: 14,
     backgroundColor: colors.gold,
-    ...elevate({ y: 5, blur: 10, opacity: 0.2, color: "#3D2B09" }),
+    ...elevate({ y: 5, blur: 10, opacity: 0.2, color: semanticColors.native.goldInkDeep }),
   },
-  tabLabel: { fontSize: 10, fontWeight: "600", color: "#8B948C" },
+  tabLabel: { fontSize: 10, fontWeight: "600", color: semanticColors.native.textFaint },
   tabLabelActive: { color: colors.evergreen, fontWeight: "800" },
-  tabLabelGift: { color: "#3D2B09", fontWeight: "800" },
+  tabLabelGift: { color: semanticColors.native.goldInkDeep, fontWeight: "800" },
 });
 
 const styles = StyleSheet.create({
@@ -1300,7 +1300,7 @@ const styles = StyleSheet.create({
   headerKiddo: { color: colors.evergreen, fontSize: 12, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" },
   fundSwitcherBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   fundSwitcherName: { color: colors.ink, fontSize: 17, fontWeight: "800", lineHeight: 22 },
-  headerTabLabel: { color: "#8B948C", fontSize: 13, fontWeight: "700" },
+  headerTabLabel: { color: semanticColors.native.textFaint, fontSize: 13, fontWeight: "700" },
 
   // Back nav
   backTap: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingVertical: 4 },
@@ -1309,10 +1309,10 @@ const styles = StyleSheet.create({
 
   // Loading / error
   center: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 10 },
-  loadingText: { color: "#6B7280", fontSize: 14 },
-  errorBox: { backgroundColor: "#FEF2F2", borderRadius: 22, padding: spacing.lg, gap: spacing.sm },
-  errorTitle: { color: "#991B1B", fontSize: 18, fontWeight: "900" },
-  errorText: { color: "#B91C1C", fontSize: 14, lineHeight: 20 },
+  loadingText: { color: semanticColors.native.textNeutral, fontSize: 14 },
+  errorBox: { backgroundColor: semanticColors.danger.background, borderRadius: 22, padding: spacing.lg, gap: spacing.sm },
+  errorTitle: { color: semanticColors.danger.text, fontSize: 18, fontWeight: "900" },
+  errorText: { color: semanticColors.buttonIntent.destructive, fontSize: 14, lineHeight: 20 },
 
   // Hero card
   heroCard: {
@@ -1323,127 +1323,131 @@ const styles = StyleSheet.create({
     ...elevate({ y: 14, blur: 24, opacity: 0.12, color: colors.ink }),
   },
   heroLabel: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "700" },
+  // White-on-evergreen hero amount: keep white (text.inverse cream would cut contrast).
   heroAmount: { color: "#FFFFFF", fontSize: 44, lineHeight: 50, fontWeight: "900" },
-  heroGain: { color: "#F8D889", fontSize: 15, fontWeight: "800" },
+  heroGain: { color: semanticColors.native.goldHighlight, fontSize: 15, fontWeight: "800" },
   heroSubline: { color: "rgba(255,255,255,0.72)", fontSize: 14, lineHeight: 20, fontWeight: "600", marginTop: 4 },
 
   // Action row
   actionRow: { flexDirection: "row", gap: spacing.sm },
   primaryAction: { flex: 1.35, flexDirection: "row", backgroundColor: colors.gold, borderRadius: 999, paddingVertical: 15, alignItems: "center", justifyContent: "center" },
-  primaryActionText: { color: "#38290A", fontSize: 15, fontWeight: "900" },
-  secondaryAction: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 999, paddingVertical: 15, alignItems: "center", borderWidth: 1, borderColor: "#EEE8DD" },
+  primaryActionText: { color: semanticColors.native.goldInkDeeper, fontSize: 15, fontWeight: "900" },
+  secondaryAction: { flex: 1, backgroundColor: semanticColors.surface.raised, borderRadius: 999, paddingVertical: 15, alignItems: "center", borderWidth: 1, borderColor: semanticColors.native.border },
   secondaryActionText: { color: colors.ink, fontSize: 15, fontWeight: "800" },
 
   // Section
   section: { gap: spacing.sm },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "900" },
-  sectionCta: { color: "#8B948C", fontSize: 12, fontWeight: "700" },
+  sectionCta: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "700" },
 
   // Soft card
-  softCard: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: "#EEE8DD" },
+  softCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: semanticColors.native.border },
   softTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
-  softBody: { color: "#6B7280", fontSize: 14, lineHeight: 20 },
+  softBody: { color: semanticColors.native.textNeutral, fontSize: 14, lineHeight: 20 },
 
   // List row
-  listRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
-  rowMark: { width: 34, height: 34, borderRadius: 10, backgroundColor: "#F6EFE3", alignItems: "center", justifyContent: "center" },
+  listRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
+  rowMark: { width: 34, height: 34, borderRadius: 10, backgroundColor: semanticColors.native.fillWarm, alignItems: "center", justifyContent: "center" },
   flexOne: { flex: 1, minWidth: 0 },
   rowTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
-  rowBody: { color: "#6B7280", fontSize: 13, lineHeight: 18, marginTop: 2 },
-  rowRight: { color: "#8B948C", fontSize: 12, fontWeight: "700" },
+  rowBody: { color: semanticColors.native.textNeutral, fontSize: 13, lineHeight: 18, marginTop: 2 },
+  rowRight: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "700" },
 
   // Event preview
-  eventPreview: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: colors.evergreen + "30" },
+  eventPreview: { backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: colors.evergreen + "30" },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   eventName: { flex: 1, color: colors.ink, fontSize: 15, fontWeight: "900" },
   liveBadge: { backgroundColor: colors.evergreen + "18", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   liveBadgeText: { color: colors.evergreen, fontSize: 11, fontWeight: "900" },
-  eventMeta: { color: "#5E675F", fontSize: 13, fontWeight: "700" },
-  eventDate: { color: "#8B948C", fontSize: 12, fontWeight: "600" },
+  eventMeta: { color: semanticColors.native.textSecondary, fontSize: 13, fontWeight: "700" },
+  eventDate: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "600" },
 
   textAction: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingVertical: 8, paddingHorizontal: 2 },
   textActionText: { color: colors.evergreen, fontSize: 14, fontWeight: "800" },
 
   // Countdown
-  countdownCard: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: spacing.lg, gap: 4, borderWidth: 1, borderColor: "#EEE8DD" },
-  countdownLabel: { color: "#6B7280", fontSize: 13, fontWeight: "800" },
+  countdownCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 22, padding: spacing.lg, gap: 4, borderWidth: 1, borderColor: semanticColors.native.border },
+  countdownLabel: { color: semanticColors.native.textNeutral, fontSize: 13, fontWeight: "800" },
   countdownValue: { color: colors.ink, fontSize: 22, fontWeight: "900" },
-  countdownBody: { color: "#6B7280", fontSize: 14, lineHeight: 20 },
+  countdownBody: { color: semanticColors.native.textNeutral, fontSize: 14, lineHeight: 20 },
 
   // Next step card
-  nextStepCard: { backgroundColor: "#FFFFFF", borderRadius: 24, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.gold + "55" },
+  nextStepCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 24, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.gold + "55" },
   nextStepEyebrow: { color: colors.gold, fontSize: 12, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" },
   nextStepTitle: { color: colors.ink, fontSize: 24, lineHeight: 29, fontWeight: "900" },
-  nextStepBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
+  nextStepBody: { color: semanticColors.native.textSecondary, fontSize: 15, lineHeight: 23 },
 
   // Empty hero
-  emptyHero: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
+  emptyHero: { backgroundColor: semanticColors.surface.raised, borderRadius: 28, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
   emptyTitle: { color: colors.ink, fontSize: 28, lineHeight: 32, fontWeight: "900" },
-  emptyBody: { color: "#6B7280", fontSize: 16, lineHeight: 24 },
+  emptyBody: { color: semanticColors.native.textNeutral, fontSize: 16, lineHeight: 24 },
 
   // Buttons
   primaryBtn: { backgroundColor: colors.evergreen, borderRadius: 999, paddingVertical: 16, alignItems: "center" },
+  // White-on-evergreen button text: keep white (text.inverse cream would cut contrast).
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
   primarySmallBtn: { alignSelf: "flex-start", backgroundColor: colors.evergreen, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 16 },
+  // White-on-evergreen button text: keep white.
   primarySmallBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "900" },
 
   // Memory
-  memoryCover: { backgroundColor: "#2F3B34", borderRadius: 28, padding: spacing.xl, gap: spacing.md },
-  memoryEyebrow: { color: "#F8D889", fontSize: 12, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" },
-  memoryTitle: { color: "#FFF7E8", fontSize: 30, lineHeight: 34, fontWeight: "900" },
+  memoryCover: { backgroundColor: semanticColors.native.surfaceDeep, borderRadius: 28, padding: spacing.xl, gap: spacing.md },
+  memoryEyebrow: { color: semanticColors.native.goldHighlight, fontSize: 12, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" },
+  memoryTitle: { color: semanticColors.native.creamOnDeep, fontSize: 30, lineHeight: 34, fontWeight: "900" },
   memoryBody: { color: "rgba(255,247,232,0.8)", fontSize: 16, lineHeight: 24 },
   memoryStats: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   statPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  // White-on-dark-card stat value: keep white (creamOnDeep would warm it).
   statValue: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
   statLabel: { color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: "700" },
-  memoryEmpty: { backgroundColor: "#FFFDF8", borderRadius: 24, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: "#E7D9C5" },
+  memoryEmpty: { backgroundColor: semanticColors.native.fillCard, borderRadius: 24, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: semanticColors.native.borderWarm },
   memoryEmptyTitle: { color: colors.ink, fontSize: 24, fontWeight: "900" },
-  memoryEmptyBody: { color: "#6B7280", fontSize: 15, lineHeight: 23 },
+  memoryEmptyBody: { color: semanticColors.native.textNeutral, fontSize: 15, lineHeight: 23 },
   memoryNoteBtn: { alignSelf: "flex-start", backgroundColor: colors.gold, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 18 },
-  memoryNoteText: { color: "#3D2B09", fontWeight: "900" },
+  memoryNoteText: { color: semanticColors.native.goldInkDeep, fontWeight: "900" },
   memoryList: { gap: spacing.sm },
   chapterTitle: { color: colors.ink, fontSize: 18, fontWeight: "900", marginTop: spacing.xs },
-  memoryGiftCard: { backgroundColor: "#FFFDF8", borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: "#E7D9C5" },
+  memoryGiftCard: { backgroundColor: semanticColors.native.fillCard, borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.native.borderWarm },
   memoryGiftFrom: { color: colors.ink, fontSize: 17, fontWeight: "900" },
-  memoryGiftDate: { color: "#8B948C", fontSize: 12, fontWeight: "700" },
-  memoryQuote: { color: "#3F3A33", fontSize: 16, lineHeight: 25, fontStyle: "italic" },
+  memoryGiftDate: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "700" },
+  memoryQuote: { color: semanticColors.native.textQuote, fontSize: 16, lineHeight: 25, fontStyle: "italic" },
   memoryGiftAmount: { color: colors.ink, fontSize: 22, fontWeight: "900" },
-  memoryProvenance: { borderTopWidth: 1, borderTopColor: "#E7D9C5", paddingTop: spacing.sm },
-  memoryProvenanceText: { color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "800" },
+  memoryProvenance: { borderTopWidth: 1, borderTopColor: semanticColors.native.borderWarm, paddingTop: spacing.sm },
+  memoryProvenanceText: { color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "800" },
 
   // Gift tab
   giftHero: {
-    backgroundColor: "#2F3B34",
+    backgroundColor: semanticColors.native.surfaceDeep,
     borderRadius: 30,
     padding: spacing.xl,
     gap: spacing.md,
     ...elevate({ y: 14, blur: 24, opacity: 0.12, color: colors.ink }),
   },
-  giftEyebrow: { color: "#F8D889", fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  giftTitle: { color: "#FFF7E8", fontSize: 28, lineHeight: 33, fontWeight: "900" },
+  giftEyebrow: { color: semanticColors.native.goldHighlight, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  giftTitle: { color: semanticColors.native.creamOnDeep, fontSize: 28, lineHeight: 33, fontWeight: "900" },
   giftBody: { color: "rgba(255,247,232,0.8)", fontSize: 15, lineHeight: 23 },
   giftUrlBox: { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 14, paddingHorizontal: spacing.md, paddingVertical: 13 },
-  giftUrlText: { color: "#FFF7E8", fontSize: 13, fontWeight: "800" },
+  giftUrlText: { color: semanticColors.native.creamOnDeep, fontSize: 13, fontWeight: "800" },
   giftPrimaryBtn: { flexDirection: "row", backgroundColor: colors.gold, borderRadius: 999, paddingVertical: 16, alignItems: "center", justifyContent: "center" },
-  giftPrimaryBtnText: { color: "#3D2B09", fontSize: 16, fontWeight: "900" },
+  giftPrimaryBtnText: { color: semanticColors.native.goldInkDeep, fontSize: 16, fontWeight: "900" },
   giftSecondaryBtn: { alignItems: "center", paddingVertical: 4 },
-  giftSecondaryBtnText: { color: "#FFF7E8", fontSize: 14, fontWeight: "800" },
-  giftTrustStrip: { flexDirection: "row", alignItems: "flex-start", backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
-  giftTrustText: { flex: 1, color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "600" },
+  giftSecondaryBtnText: { color: semanticColors.native.creamOnDeep, fontSize: 14, fontWeight: "800" },
+  giftTrustStrip: { flexDirection: "row", alignItems: "flex-start", backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
+  giftTrustText: { flex: 1, color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   giftLoopNudge: { backgroundColor: colors.evergreen + "0E", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: colors.evergreen + "22", alignItems: "center" },
   giftLoopText: { color: colors.evergreen, fontSize: 15, fontWeight: "800", textAlign: "center" },
 
   // Growth tab
-  growthHero: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.xl, gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
-  growthLabel: { color: "#6B7280", fontSize: 12, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
+  growthHero: { backgroundColor: semanticColors.surface.raised, borderRadius: 28, padding: spacing.xl, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.native.border },
+  growthLabel: { color: semanticColors.native.textNeutral, fontSize: 12, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
   growthAmount: { color: colors.ink, fontSize: 42, lineHeight: 48, fontWeight: "900" },
-  growthBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
-  growthTrack: { height: 8, borderRadius: 999, backgroundColor: "#EFE7DA", overflow: "hidden", marginTop: 4 },
+  growthBody: { color: semanticColors.native.textSecondary, fontSize: 15, lineHeight: 23 },
+  growthTrack: { height: 8, borderRadius: 999, backgroundColor: semanticColors.native.track, overflow: "hidden", marginTop: 4 },
   growthFill: { height: "100%", borderRadius: 999, backgroundColor: colors.evergreen },
-  growthMeta: { color: "#8B948C", fontSize: 12, fontWeight: "800" },
-  growthTrustBox: { backgroundColor: "#F8F4EC", borderRadius: 16, padding: spacing.md, borderWidth: 1, borderColor: "#E7D9C5" },
-  growthTrustText: { color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "600" },
+  growthMeta: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "800" },
+  growthTrustBox: { backgroundColor: semanticColors.native.fillCream, borderRadius: 16, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.borderWarm },
+  growthTrustText: { color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "600" },
 
   // Settings / Account
   settingsRow: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, flexDirection: "row", justifyContent: "space-between", gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.surface.muted },
@@ -1471,21 +1475,23 @@ const styles = StyleSheet.create({
   toggleBtn: { borderRadius: radius.pill, backgroundColor: semanticColors.surface.muted, paddingVertical: 8, paddingHorizontal: 14 },
   toggleBtnOn: { backgroundColor: colors.evergreen },
   toggleText: { color: semanticColors.text.muted, fontSize: 12, fontWeight: "900" },
+  // White-on-evergreen (toggle on): keep white.
   toggleTextOn: { color: "#FFFFFF" },
-  signOutBtn: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, alignItems: "center", borderWidth: 1, borderColor: "#E4B8B0" },
-  signOutText: { color: "#B23B2E", fontSize: 15, fontWeight: "800" },
+  signOutBtn: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, alignItems: "center", borderWidth: 1, borderColor: semanticColors.native.signOutBorder },
+  signOutText: { color: semanticColors.native.signOut, fontSize: 15, fontWeight: "800" },
 
   // Event composer
   composerWrap: { padding: spacing.md, gap: spacing.md, paddingBottom: 32 },
   composerLead: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: "900" },
   typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  typeChip: { backgroundColor: "#FFFFFF", borderRadius: 999, paddingHorizontal: 15, paddingVertical: 12, borderWidth: 1, borderColor: "#EEE8DD" },
+  typeChip: { backgroundColor: semanticColors.surface.raised, borderRadius: 999, paddingHorizontal: 15, paddingVertical: 12, borderWidth: 1, borderColor: semanticColors.native.border },
   typeChipActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },
   typeChipText: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  // White-on-evergreen (active chip): keep white.
   typeChipTextActive: { color: "#FFFFFF" },
-  formCard: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
+  formCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.native.border },
   inputLabel: { color: colors.ink, fontSize: 13, fontWeight: "900", marginTop: 4 },
-  input: { minHeight: 52, borderRadius: 14, borderWidth: 1.5, borderColor: "#E5DDD0", paddingHorizontal: spacing.md, color: colors.ink, fontSize: 16, backgroundColor: "#FFFDF8" },
+  input: { minHeight: 52, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 16, backgroundColor: semanticColors.native.fillCard },
   secondaryFullBtn: { alignItems: "center", paddingVertical: 12 },
   secondaryFullBtnText: { color: colors.ink, fontSize: 15, fontWeight: "800" },
   disabled: { opacity: 0.6 },

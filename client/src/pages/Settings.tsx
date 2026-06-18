@@ -4977,6 +4977,15 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </SectionCard>
 
+            {/* Gifter-notification controls are owner-only on the server
+                (PATCH .../gifter-notifications/settings + the subscriber
+                remove POST both gate on req.fundAccessRole === 'owner').
+                Hide both cards for a co-parent (co-admin) so they don't hit
+                a wall of dead toggles that 403 on use. Same pattern as the
+                Money tab + the Gifts-tab owner-only sections. The co-parent
+                keeps their own Email preferences + lifecycle toggles above
+                (user-scoped, not fund-owner-scoped). */}
+            {!primaryFundIsCoAdmin && (<>
             <SectionCard>
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Notifications for people who gifted</h2>
@@ -5115,6 +5124,7 @@ const [editFundName, setEditFundName] = useState("");
                 })()}
               </div>
             </SectionCard>
+            </>)}
 
             <SectionCard>
               <div className="p-5">

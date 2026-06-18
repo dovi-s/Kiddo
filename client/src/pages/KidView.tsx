@@ -402,7 +402,6 @@ export default function KidView() {
   const [suggestionReason, setSuggestionReason] = useState("");
   const [savingSuggestion, setSavingSuggestion] = useState(false);
   const [annualGiftEstimate, setAnnualGiftEstimate] = useState(500);
-  const [languageMode, setLanguageMode] = useState<KidLanguageMode>("younger");
 
   const { data: meta, isLoading: metaLoading, isError: metaError } = useQuery<KidViewMeta>({
     queryKey: ["kid-view-meta", token],
@@ -584,14 +583,13 @@ export default function KidView() {
   const [showAllMemories, setShowAllMemories] = useState(false);
   const visibleMemories = showAllMemories ? cleanedMemories : cleanedMemories.slice(0, MEMORY_PREVIEW);
 
-  useEffect(() => {
-    if (!content) return;
-    if (content.phase === "teen") {
-      setLanguageMode("older");
-      return;
-    }
-    setLanguageMode((content.age || 0) >= 9 ? "older" : "younger");
-  }, [content]);
+  // Language mode is purely derived from the loaded fund: teens and kids
+  // 9+ get the "older" framing, younger kids get the warmer one. Derived
+  // during render (not via state + effect) so an older/teen fund never
+  // flashes a frame of younger-mode copy on first paint while an effect
+  // catches up. There is no manual toggle, so no state is needed.
+  const languageMode: KidLanguageMode =
+    content?.phase === "teen" || (content?.age || 0) >= 9 ? "older" : "younger";
 
   const shareUrl = useMemo(() => {
     if (!content?.fund?.slug || typeof window === "undefined") return "";

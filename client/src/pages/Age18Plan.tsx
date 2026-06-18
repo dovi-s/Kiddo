@@ -553,6 +553,22 @@ export default function Age18Plan() {
             Locked 2026-05-18 per user feedback "needs a back button
             top left." */}
 
+        {/* Post-handoff owner context. The rest of this page is written for
+            the custodian PREPARING for the handoff, so for someone who now
+            owns the fund it can read as the wrong audience. Rather than
+            re-voice every heading/checklist/FAQ (a founder-owned copy pass,
+            like TaxDocuments got), surface a calm banner that names the
+            audience and reframes the page as a record of what was planned.
+            isOwnerMode = transferredAt && accessRole === "owner". */}
+        {isOwnerMode && (
+          <div className="kiddo-card p-4 mb-5 border-2 border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.04)]">
+            <p className="text-sm font-semibold text-foreground">This fund is yours now.</p>
+            <p className="text-sm text-muted-foreground mt-1 leading-snug">
+              This page was written to help the custodian plan for the handoff, so some of it still speaks to them. It is here as a record of what was set up for you.
+            </p>
+          </div>
+        )}
+
         {/* Page title */}
         <div className="mb-6">
           <h1 className="font-heading text-2xl font-bold text-foreground">

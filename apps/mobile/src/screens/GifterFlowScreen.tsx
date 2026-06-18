@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, radius, spacing } from "@kora/tokens";
+import { colors, radius, semanticColors, spacing } from "@kora/tokens";
 import type { PublicGiftDestination } from "@kora/types";
 import { formatCurrencyWhole, onboardingStockChoices } from "@kora/utils";
 import { apiCreateGiftCheckout } from "../api";
@@ -23,12 +23,12 @@ function StockLogo({ ticker, size = 32, active = false }: { ticker: string; size
   if (failed) {
     return (
       <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: active ? "rgba(255,255,255,0.2)" : colors.gold + "20", alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ fontSize: 9, fontWeight: "700", color: active ? "#F8D889" : colors.gold }}>{upper.slice(0, 4)}</Text>
+        <Text style={{ fontSize: 9, fontWeight: "700", color: active ? semanticColors.native.goldHighlight : colors.gold }}>{upper.slice(0, 4)}</Text>
       </View>
     );
   }
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: active ? "rgba(255,255,255,0.3)" : "#E5E0D8" }}>
+    <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", backgroundColor: semanticColors.surface.raised, borderWidth: 1, borderColor: active ? "rgba(255,255,255,0.3)" : semanticColors.native.borderLogo }}>
       <Image
         source={{ uri: `https://assets.parqet.com/logos/symbol/${upper}?format=jpg` }}
         style={{ width: size, height: size }}
@@ -345,67 +345,72 @@ function FeeRow({ label, value, strong }: { label: string; value: string; strong
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FAF8F4" },
+  screen: { flex: 1, backgroundColor: semanticColors.native.screen },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  heroCard: { borderRadius: 28, overflow: "hidden", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#EEE8DD" },
+  heroCard: { borderRadius: 28, overflow: "hidden", backgroundColor: semanticColors.surface.raised, borderWidth: 1, borderColor: semanticColors.native.border },
   heroImage: { width: "100%", height: 190 },
-  heroArt: { width: "100%", height: 160, backgroundColor: "#F6EFE3" },
+  heroArt: { width: "100%", height: 160, backgroundColor: semanticColors.native.fillWarm },
   heroContent: { padding: spacing.lg, gap: spacing.sm },
   eyebrow: { color: colors.evergreen, textTransform: "uppercase", letterSpacing: 1.4, fontSize: 12, fontWeight: "900" },
   title: { fontSize: 30, lineHeight: 36, fontWeight: "900", color: colors.ink },
-  body: { fontSize: 16, lineHeight: 24, color: "#5E675F" },
-  meta: { color: "#7C847D", fontSize: 13, fontWeight: "800" },
-  card: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
+  body: { fontSize: 16, lineHeight: 24, color: semanticColors.native.textSecondary },
+  meta: { color: semanticColors.native.textMeta, fontSize: 13, fontWeight: "800" },
+  card: { backgroundColor: semanticColors.surface.raised, borderRadius: 28, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
   sectionTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: "900" },
-  sectionBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
+  sectionBody: { color: semanticColors.native.textSecondary, fontSize: 15, lineHeight: 23 },
   settlingNote: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 8 },
   amountGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  amountBtn: { width: "47%", borderWidth: 1, borderColor: "#DED7CA", borderRadius: 20, paddingVertical: 18, paddingHorizontal: 12, backgroundColor: "#FAF7F1", gap: 4 },
+  amountBtn: { width: "47%", borderWidth: 1, borderColor: semanticColors.native.borderInput, borderRadius: 20, paddingVertical: 18, paddingHorizontal: 12, backgroundColor: semanticColors.native.fill, gap: 4 },
   amountBtnActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },
   amountValue: { color: colors.ink, fontWeight: "900", fontSize: 22 },
+  // White-on-evergreen (active pill): keep white — text.inverse is cream and would cut contrast.
   amountValueActive: { color: "#FFFFFF" },
-  amountShares: { color: "#6B7280", fontSize: 12, fontWeight: "700" },
+  amountShares: { color: semanticColors.native.textNeutral, fontSize: 12, fontWeight: "700" },
   amountSharesActive: { color: "rgba(255,255,255,0.78)" },
-  hint: { color: "#6B7280", fontSize: 13, fontWeight: "700" },
+  hint: { color: semanticColors.native.textNeutral, fontSize: 13, fontWeight: "700" },
   primaryBtn: { borderRadius: 999, backgroundColor: colors.evergreen, paddingVertical: 16, alignItems: "center" },
   primaryBtnDisabled: { opacity: 0.7 },
+  // White-on-evergreen button text: keep white (text.inverse cream would cut contrast).
   primaryBtnText: { color: "#FFFFFF", fontWeight: "900", fontSize: 16 },
   secondaryBtn: { alignItems: "center", paddingVertical: 8 },
   secondaryBtnText: { color: colors.ink, fontWeight: "800" },
   stockGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  stockCard: { width: "47%", backgroundColor: "#FAF7F1", borderRadius: 18, borderWidth: 1, borderColor: "#DED7CA", padding: spacing.md, gap: 3 },
+  stockCard: { width: "47%", backgroundColor: semanticColors.native.fill, borderRadius: 18, borderWidth: 1, borderColor: semanticColors.native.borderInput, padding: spacing.md, gap: 3 },
   stockCardActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },
   stockTicker: { color: colors.evergreen, fontSize: 13, fontWeight: "900" },
-  stockTickerActive: { color: "#F8D889" },
+  stockTickerActive: { color: semanticColors.native.goldHighlight },
   stockName: { color: colors.ink, fontSize: 15, fontWeight: "900" },
+  // White-on-evergreen (active card): keep white.
   stockNameActive: { color: "#FFFFFF" },
-  stockReason: { color: "#6B7280", fontSize: 12, lineHeight: 16 },
+  stockReason: { color: semanticColors.native.textNeutral, fontSize: 12, lineHeight: 16 },
   stockReasonActive: { color: "rgba(255,255,255,0.78)" },
-  previewCard: { backgroundColor: "#F6EFE3", borderRadius: 18, padding: spacing.md, gap: 4 },
+  previewCard: { backgroundColor: semanticColors.native.fillWarm, borderRadius: 18, padding: spacing.md, gap: 4 },
   previewText: { color: colors.ink, fontSize: 15, fontWeight: "900" },
-  previewFine: { color: "#6B7280", fontSize: 12, lineHeight: 17 },
-  input: { borderWidth: 1.5, borderColor: "#DED7CA", borderRadius: 18, paddingHorizontal: spacing.md, paddingVertical: 14, fontSize: 15, color: colors.ink, backgroundColor: "#FAF7F1" },
+  previewFine: { color: semanticColors.native.textNeutral, fontSize: 12, lineHeight: 17 },
+  input: { borderWidth: 1.5, borderColor: semanticColors.native.borderInput, borderRadius: 18, paddingHorizontal: spacing.md, paddingVertical: 14, fontSize: 15, color: colors.ink, backgroundColor: semanticColors.native.fill },
   messageInput: { minHeight: 96, textAlignVertical: "top" },
   methodList: { gap: spacing.sm },
-  methodCard: { backgroundColor: "#FAF7F1", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: "#DED7CA" },
+  methodCard: { backgroundColor: semanticColors.native.fill, borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.borderInput },
   methodCardActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },
   methodTitle: { color: colors.ink, fontSize: 15, fontWeight: "900" },
+  // White-on-evergreen (active method): keep white.
   methodTitleActive: { color: "#FFFFFF" },
-  methodBody: { color: "#6B7280", fontSize: 12, fontWeight: "700", marginTop: 2 },
+  methodBody: { color: semanticColors.native.textNeutral, fontSize: 12, fontWeight: "700", marginTop: 2 },
   methodBodyActive: { color: "rgba(255,255,255,0.78)" },
-  feeBox: { backgroundColor: "#F8F3EA", borderRadius: 20, padding: spacing.md, gap: spacing.sm },
+  feeBox: { backgroundColor: semanticColors.native.fillCream, borderRadius: 20, padding: spacing.md, gap: spacing.sm },
   feeRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md },
-  feeLabel: { color: "#5E675F", fontSize: 14, fontWeight: "700" },
+  feeLabel: { color: semanticColors.native.textSecondary, fontSize: 14, fontWeight: "700" },
   feeValue: { color: colors.ink, fontSize: 14, fontWeight: "800" },
   feeStrong: { color: colors.ink, fontSize: 16, fontWeight: "900" },
   coverRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
-  checkbox: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: "#C9BFAE", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+  checkbox: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: semanticColors.native.borderCheckbox, alignItems: "center", justifyContent: "center", backgroundColor: semanticColors.surface.raised },
   checkboxOn: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },
+  // White-on-evergreen (checked): keep white.
   checkboxText: { color: "#FFFFFF", fontSize: 13, fontWeight: "900" },
-  coverText: { flex: 1, color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "700" },
-  feeDivider: { height: 1, backgroundColor: "#E5DDD0" },
-  feeNote: { color: "#6B7280", fontSize: 11, lineHeight: 16 },
-  error: { color: "#B42318", fontSize: 13 },
-  legalLine: { color: "#6B7280", fontSize: 11, lineHeight: 17, textAlign: "center" },
+  coverText: { flex: 1, color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "700" },
+  feeDivider: { height: 1, backgroundColor: colors.border },
+  feeNote: { color: semanticColors.native.textNeutral, fontSize: 11, lineHeight: 16 },
+  error: { color: semanticColors.native.errorText, fontSize: 13 },
+  legalLine: { color: semanticColors.native.textNeutral, fontSize: 11, lineHeight: 17, textAlign: "center" },
   confirmTitle: { color: colors.ink, fontSize: 22, lineHeight: 28, fontWeight: "900" },
 });
