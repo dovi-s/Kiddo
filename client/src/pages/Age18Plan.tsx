@@ -654,7 +654,7 @@ export default function Age18Plan() {
             down. Per the 2026-05-20 strategic decision: this is
             Kiddo's answer to Acorns' Potential slider, and ships in
             the public Rivera demo first. */}
-        {totalValue > 0 && (
+        {isDemoUser && totalValue > 0 && (
           <div className="kiddo-card mb-4 overflow-hidden border-2 border-[hsl(var(--kiddo-evergreen)/0.25)]">
             <div className="px-5 pt-5 pb-5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
@@ -1081,42 +1081,6 @@ export default function Age18Plan() {
             </div>
           </div>
         </div>
-
-        {/* Growth projections — the static 4-row table. Hidden for
-            demo users, who get the Combined Emotional + Financial
-            Projection slider card up top instead (showing both would
-            be the same number twice). Live customer accounts still
-            see this until the slider graduates out of demo. */}
-        {!isDemoUser && totalValue > 0 && yearsLeft > 0 && (
-          <div className="kiddo-card mb-4 overflow-hidden">
-            <div className="p-5">
-              <h2 className="text-base font-bold text-foreground mb-1">What the fund could look like at {majorityAge}</h2>
-              <p className="text-xs text-muted-foreground mb-4">
-                Starting from {formatCurrency(totalValue)} &middot; assumes 7% yearly average*
-              </p>
-              <div className="space-y-2">
-                {projections.map((p, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3 ${
-                      i === 0 ? "bg-[hsl(var(--kiddo-evergreen)/0.08)]" : "bg-muted/40"
-                    }`}
-                  >
-                    <p className="text-xs text-muted-foreground leading-snug">{p.label}</p>
-                    <p
-                      className="text-sm font-bold text-foreground font-heading tabular-nums"
-                      aria-live={projectionsAnimating[i] ? "off" : "polite"}
-                      aria-label={formatCurrency(p.value)}
-                    >{formatCurrency(animatedProjections[i] ?? p.value)}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
-                *{KIDDO_PROJECTION_DISCLAIMER} Illustrative only. Past performance does not guarantee future results. Kiddo does not provide investment advice.
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* FAQ */}
         <div className="kiddo-card mb-4 overflow-hidden">
