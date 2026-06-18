@@ -33,11 +33,11 @@ const GIFTING_OCCASION_TYPES = [
 
 const SAVINGS_GOAL_TYPES = [
   { value: "college", label: "College", icon: GraduationCap, color: "text-violet-500 bg-violet-50 dark:bg-violet-950/30", description: "Tuition, housing, and everything it takes." },
-  { value: "car", label: "First car", icon: Car, color: "text-sky-500 bg-sky-50 dark:bg-sky-950/30", description: "The freedom to go anywhere." },
+  { value: "car", label: "First car", icon: Car, color: "text-sky-500 bg-sky-50 dark:bg-sky-950/30", description: "Toward their first car." },
   { value: "home", label: "First home", icon: Home, color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30", description: "A down payment starts here." },
-  { value: "travel", label: "Gap year", icon: Plane, color: "text-amber-500 bg-amber-50 dark:bg-amber-950/30", description: "A trip. A year. A memory." },
-  { value: "business", label: "Business", icon: Briefcase, color: "text-blue-500 bg-blue-50 dark:bg-blue-950/30", description: "Seed capital for something real." },
-  { value: "emergency", label: "Emergency fund", icon: Shield, color: "text-red-500 bg-red-50 dark:bg-red-950/30", description: "The safety net that changes everything." },
+  { value: "travel", label: "Gap year", icon: Plane, color: "text-amber-500 bg-amber-50 dark:bg-amber-950/30", description: "A gap year to explore." },
+  { value: "business", label: "Business", icon: Briefcase, color: "text-blue-500 bg-blue-50 dark:bg-blue-950/30", description: "A start on their first venture." },
+  { value: "emergency", label: "Emergency fund", icon: Shield, color: "text-red-500 bg-red-50 dark:bg-red-950/30", description: "A cushion for the unexpected." },
   { value: "custom", label: "Custom goal", icon: Star, color: "text-pink-500 bg-pink-50 dark:bg-pink-950/30", description: "Something specific to them." },
 ] as const;
 
@@ -604,7 +604,7 @@ export default function EventCreate() {
           >
             <div className="mb-8">
               <h1 className="font-heading text-2xl font-bold text-foreground">What are you creating?</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Two different things. Two different flows. Both live inside the same fund.</p>
+              <p className="mt-1 text-sm text-muted-foreground">A gifting occasion or a savings goal, both inside the same fund.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
@@ -618,7 +618,7 @@ export default function EventCreate() {
                   <PartyPopper size={22} />
                 </div>
                 <p className="font-heading text-base font-bold text-foreground">Gifting occasion</p>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">Birthday, holiday, graduation, new arrival. Let your people show up.</p>
+                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">Let your people show up for the big moments.</p>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {["Birthday", "Holiday", "Graduation", "Baby shower"].map(t => (
                     <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{t}</span>

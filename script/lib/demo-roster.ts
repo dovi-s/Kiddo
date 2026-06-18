@@ -37,7 +37,7 @@ export type GiftSpec = {
   // groups it (e.g. "Birthday · N gifts"). Only true GIFTING occasions —
   // NOT fund savings-goals like College Fund, whose dashboard progress is the
   // whole fund and would clash with a gift-attribution total.
-  occasion?: "birthday";
+  occasion?: "birthday" | "holiday";
 };
 
 export type KidStory = {
@@ -202,6 +202,9 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
       selectedTicker: jayManagedMix ? undefined : "GOOGL",
       message: jayManagedMix ? "Don't put it all in one basket, kid. Grandpa" : msg,
       createdAt: isChristmas ? onMonth(a, 11, 22) : onMonth(a, birthMonth, 25),
+      // Grandpa's "Merry Christmas" gifts cluster into the Holiday occasion; his
+      // birthday-month gifts stay in the main fund (unchanged).
+      occasion: isChristmas ? "holiday" : undefined,
     });
   }
 
@@ -388,6 +391,8 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
       message: t.message,
       isAnonymous: t.name === "Anonymous",
       createdAt: onMonth(Math.min(fundAge, t.yearsAgo), t.month, t.day),
+      // December (month 11) one-offs are holiday gifts → the Holiday occasion.
+      occasion: t.month === 11 ? "holiday" : undefined,
     });
   }
 

@@ -134,7 +134,12 @@ export function TrustMicroStrip() {
   // Single source for the three claims so the mobile (stacked) and desktop
   // (one inline row) layouts can't drift. Wording is locked custody-honesty /
   // brand copy: kept verbatim in BOTH layouts, never trimmed to fit.
-  const sipc = "SIPC up to $500,000";
+  // HONESTY: investing is NOT live yet (INVESTING_LIVE=false, custodian stub),
+  // so the SIPC line MUST stay conditioned ("once investing is live"). A bare
+  // "SIPC up to $500,000" reads as present-tense protection that isn't true
+  // today. FLIP CHECKLIST: drop the "once investing is live" qualifier when
+  // INVESTING_LIVE flips true.
+  const sipc = "SIPC up to $500,000 once investing is live";
   const brokerDealer = "Our broker-dealer partner · Member FINRA/SIPC";
   const noFees = "No hidden charges. Ever.";
   return (

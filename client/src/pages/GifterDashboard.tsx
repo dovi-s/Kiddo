@@ -819,7 +819,7 @@ export default function GifterDashboard() {
           <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
               <p className="text-sm font-medium text-primary">Gifter account</p>
-              <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">Save the children you gift to often.</h1>
+              <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">Keep the kids you gift to in one place.</h1>
               <p className="mt-3 text-muted-foreground">
                 Keep favorite fund links in one place, see your gifting history, and come back in one tap for the next birthday or holiday.
               </p>

@@ -654,7 +654,7 @@ export default function Age18Plan() {
             down. Per the 2026-05-20 strategic decision: this is
             Kiddo's answer to Acorns' Potential slider, and ships in
             the public Rivera demo first. */}
-        {isDemoUser && totalValue > 0 && (
+        {totalValue > 0 && (
           <div className="kiddo-card mb-4 overflow-hidden border-2 border-[hsl(var(--kiddo-evergreen)/0.25)]">
             <div className="px-5 pt-5 pb-5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">

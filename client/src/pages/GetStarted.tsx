@@ -810,7 +810,7 @@ export default function GetStarted() {
                   <br />
                   Kiddo gifts last.
                 </h1>
-                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in under a minute. No app, no account, nothing to download.</p>
+                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in seconds. No app, no account, nothing to download.</p>
               </AnimatedBlock>
               <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
@@ -1281,8 +1281,8 @@ export default function GetStarted() {
             <div className="flex flex-1 flex-col">
               <AnimatedBlock><ScreenLead title="What should gifts do by default?" description="Pick the family default for new gifts. Gifter overrides only appear later if you allow them in settings." /></AnimatedBlock>
               <AnimatedBlock className="mt-8 space-y-4">
-                <button onClick={() => { haptic("selection"); setInvestment("sp500"); }} className={`get-started-choice ${investment === "sp500" ? "get-started-choice--active" : ""}`} data-testid="option-investment-sp500"><div className="flex items-center gap-3"><span className="text-xl">📈</span><p className="text-lg font-semibold text-foreground">Managed mix</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">A broad-market ETF mix you choose. Refine it any time in settings.</p></button>
-                <button onClick={() => { haptic("selection"); setInvestment("stock"); }} className={`get-started-choice ${investment === "stock" ? "get-started-choice--active" : ""}`} data-testid="option-investment-stock"><div className="flex items-center gap-3"><span className="text-xl">⭐</span><p className="text-lg font-semibold text-foreground">One default stock</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Every gift follows one stock unless you later allow a gifter override.</p></button>
+                <button onClick={() => { haptic("selection"); setInvestment("sp500"); }} className={`get-started-choice ${investment === "sp500" ? "get-started-choice--active" : ""}`} data-testid="option-investment-sp500"><div className="flex items-center gap-3"><span className="text-xl">📈</span><p className="text-lg font-semibold text-foreground">Diversified mix</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">A broad-market ETF mix you choose. Refine it any time in settings.</p></button>
+                <button onClick={() => { haptic("selection"); setInvestment("stock"); }} className={`get-started-choice ${investment === "stock" ? "get-started-choice--active" : ""}`} data-testid="option-investment-stock"><div className="flex items-center gap-3"><span className="text-xl">📌</span><p className="text-lg font-semibold text-foreground">One default stock</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Every gift follows one stock unless you later allow a gifter override.</p></button>
                 {investment === "stock" && (
                   <div className="get-started-panel space-y-4">
                     <div className="relative">

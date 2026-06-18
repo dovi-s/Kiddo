@@ -2753,8 +2753,8 @@ export default function GiftCheckout() {
                       {checkoutPreviewStock
                         ? <>{checkoutPreviewStock.symbol} · ~{checkoutEstimatedSharesLabel} shares</>
                         : effectiveExecutionModel === "family"
-                          ? <>Fund cash &mdash; the family invests it when ready</>
-                          : <>{strategyLabel} mix &mdash; invested automatically</>}
+                          ? <>Fund cash · the family invests it when ready</>
+                          : <>{strategyLabel} mix · invested automatically</>}
                     </p>
                   </div>
                 </div>

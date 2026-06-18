@@ -949,12 +949,27 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // GOAL"), so it's removed. The catch-all "Gift anytime" permanent event stays
   // the main page; real per-occasion gift tracking (how much + who gave) lives
   // on actual OCCASIONS like Birthday, which is exactly what a parent wants.
-  const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null }> = [
+  // Next Dec 25 for the Holiday occasion's countdown.
+  const holidayBaseYear = new Date().getUTCFullYear();
+  const dec25 = new Date(Date.UTC(holidayBaseYear, 11, 25, 12, 0, 0));
+  const nextHoliday = dec25.getTime() > Date.now() ? dec25 : new Date(Date.UTC(holidayBaseYear + 1, 11, 25, 12, 0, 0));
+
+  const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null; occasionTag: "birthday" | "holiday" }> = [
     // Generic "Birthday" (not "14th Birthday") so the Memory Book can group ALL
     // years of birthday gifts under it without the ordinal reading wrong on an
     // old gift. The dashboard still uses eventDate for the next-birthday countdown.
-    { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
+    { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null, occasionTag: "birthday" },
   ];
+  // Holiday occasion — added ONLY when genuinely populated (Grandpa's Christmas +
+  // December one-offs: The Johnsons, Marcus's office, Uncle Joe, the book club), so
+  // it never reads as the stark-empty tile that killed the old Graduation occasion
+  // (see the note above). The realistic "main vs occasion" second beat: birthdays
+  // are the big annual wave, the holidays a smaller real cluster; everything else
+  // lands in the main fund. Models the founder's "when do they send to main vs an
+  // occasion" question with TWO populated occasions instead of one.
+  if (externalGifts.filter((g) => g.occasion === "holiday").length >= 2) {
+    occasions.push({ name: `${kid.firstName}'s Holidays`, slug: `${kid.slug}-holiday-${nextHoliday.getUTCFullYear()}`, eventType: "holiday", eventDate: nextHoliday, goalAmount: null, occasionTag: "holiday" });
+  }
   // NOTE: a forward-looking "Graduation" occasion was seeded here, but it landed
   // with ZERO gifts (no historical gift carried occasion:"graduation"), so it
   // rendered as a stark-empty tile next to the populated Birthday — and its
@@ -972,10 +987,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // College Fund / Graduation stay pure dashboard GOALS, not gift buckets. The
   // events table stores giftCount/giftVolume as counters (not a JOIN), so we set
   // them on the event row AND stamp eventId on the gifts.
-  const birthdayGifts = externalGifts.filter((g) => g.occasion === "birthday");
-  const birthdayGiftVolume = birthdayGifts.reduce((s, g) => s + g.amount, 0);
   for (const o of occasions) {
-    const isBirthdayOccasion = o.eventType === "birthday";
+    const occGifts = externalGifts.filter((g) => g.occasion === o.occasionTag);
+    const occVolume = occGifts.reduce((s, g) => s + g.amount, 0);
     const [insertedEvent] = await db.insert(events).values({
       fundId: fund.id,
       userId: parentUserId,
@@ -985,8 +999,8 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       eventDate: o.eventDate,
       goalAmount: o.goalAmount != null ? o.goalAmount.toFixed(2) : null,
       status: "active",
-      giftCount: isBirthdayOccasion ? birthdayGifts.length : 0,
-      giftVolume: isBirthdayOccasion ? birthdayGiftVolume.toFixed(2) : "0.00",
+      giftCount: occGifts.length,
+      giftVolume: occVolume.toFixed(2),
     } as any).returning();
     // Paired activity for the occasion (seeded as a domain row but never an
     // activity, so the feed never showed "Occasion"). 2026-06-07.
@@ -995,10 +1009,10 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       description: `Set up ${o.name}.`,
       createdAt: new Date(fundCreatedAt.getTime() + 36 * 60 * 60 * 1000),
     } as any);
-    if (isBirthdayOccasion && birthdayGifts.length > 0) {
+    if (occGifts.length > 0) {
       await db.update(gifts)
         .set({ eventId: insertedEvent.id })
-        .where(inArray(gifts.id, birthdayGifts.map((g) => g.giftId)));
+        .where(inArray(gifts.id, occGifts.map((g) => g.giftId)));
     }
   }
 
