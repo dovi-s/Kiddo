@@ -113,6 +113,14 @@ export function investingLiveCopy(liveText: string, pendingText: string): string
 //     estimate already route through investingLiveCopy), FundSnapshot, FAQ,
 //     Pricing, Login, Legal, CalculatorAt18, HowItWorks, Home, GiftSuccess,
 //     Claim, Account, Footer, ui/education, ui/ux-foundations.
+//   ⚠️ KidView — currently UNCONDITIONED, not just a re-read item. The
+//     COMPANY_EXPLAINERS dictionary states present-tense ownership ("You own a
+//     tiny piece of Disney…", ~41 strings) and the "What you own" section
+//     headers do NOT route through investingLiveCopy. In-app post-funding
+//     surface, so it only deceives a real kid if the kid view is reachable
+//     before INVESTING_LIVE flips — confirm that gating, OR condition the
+//     section header (one hedge there scopes every per-stock explainer below).
+//     See HONESTY_PRESENT_TENSE_AUDIT.md.
 //   mobile: GiftTab, GifterFlowScreen, DashboardScreen.
 //   server: gifterNotificationWorker, templates/baseTemplate, templates/giftReceived,
 //     templates/largeGiftAlert, templates/taxSeasonPrep, routes.ts (KYC
