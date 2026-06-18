@@ -25,7 +25,11 @@ import { useAuth } from "@/hooks/use-auth";
 // one lightweight /api/auth/user fetch per public-page visit.
 export function Nav() {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  // A demo session counts as authenticated, but it is NOT the visitor's real
+  // account — so don't promise them "your dashboard." Send them back to the demo
+  // (honest, keeps their place); the page body's CTAs carry the real conversion.
+  const isDemo = !!(user as any)?.isDemoAccount;
 
   return (
     <motion.nav
@@ -78,7 +82,7 @@ export function Nav() {
           {isAuthenticated ? (
             <Link href="/dashboard">
               <Button size="sm" variant="outline" data-testid="button-back-to-dashboard-nav" onClick={() => haptic('light')}>
-                Back to your dashboard
+                {isDemo ? "Back to the demo" : "Back to your dashboard"}
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -113,7 +117,7 @@ export function Nav() {
                 {isAuthenticated ? (
                   <Link href="/dashboard">
                     <Button className="w-full" variant="outline" onClick={() => setIsOpen(false)} data-testid="button-back-to-dashboard-sheet">
-                      Back to your dashboard
+                      {isDemo ? "Back to the demo" : "Back to your dashboard"}
                       <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                     </Button>
                   </Link>
