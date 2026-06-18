@@ -28,8 +28,8 @@ const pillars = [
 const architecture = [
   "Custodial structure: the fund is opened in the child's name under a custodial framework, typically UTMA.",
   "Private distribution: fund links are invitation-driven, not publicly searchable.",
-  // TODO(founder): verify at-rest encryption on Supabase DB + Storage before claiming it.
-  "Data handling: information is encrypted in transit, and stored access is restricted.",
+  // At-rest encryption is provided by Supabase (Postgres + Storage, AES-256 at the platform level). In-transit is TLS.
+  "Data handling: information is encrypted in transit and at rest.",
   "Checkout clarity: the gift amount and any fees are shown before anyone pays.",
 ] as const;
 
