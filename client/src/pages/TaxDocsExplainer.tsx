@@ -32,11 +32,9 @@ export default function TaxDocsExplainer() {
   return (
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <main className="kiddo-canvas px-4 py-6 space-y-6 max-w-2xl mx-auto">
-        <Link href="/tax-documents">
-          <a className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={14} />
-            Back to tax documents
-          </a>
+        <Link href="/tax-documents" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft size={14} />
+          Back to tax documents
         </Link>
 
         <header className="space-y-2">
