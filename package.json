@@ -80,6 +80,7 @@
     "dependencies": {
         "@capacitor/android": "^8.4.0",
         "@capacitor/core": "^8.4.0",
+        "@capacitor/haptics": "^8.0.2",
         "@capacitor/ios": "^8.4.0",
         "@fontsource-variable/bricolage-grotesque": "^5.2.10",
         "@fontsource-variable/dm-sans": "^5.2.8",
