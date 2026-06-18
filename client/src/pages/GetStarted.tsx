@@ -800,15 +800,11 @@ export default function GetStarted() {
                     (reported: "kiddo logo twice, top of page and middle"). Every
                     other onboarding step shows only the header mark; welcome now
                     matches. */}
-                {/* Headline: emotional brand promise condensed. The contrast
-                    structure ("X disappear. Y last.") names the alternative
-                    (cash) and the upgrade (a permanent record of investments)
-                    in 6 words. Functional headlines like "Set up the gift
-                    link first" don't make that case — they describe a task. */}
+                {/* Headline: emotional brand promise. Names the keystone
+                    moment (the at-18 handoff) and the permanence of the gift,
+                    without a contrast/antithesis structure. */}
                 <h1 className="font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
-                  Cash gifts disappear.
-                  <br />
-                  Kiddo gifts last.
+                  The gift they'll still have at 18.
                 </h1>
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in seconds. No app, no account, nothing to download.</p>
               </AnimatedBlock>
@@ -934,7 +930,7 @@ export default function GetStarted() {
                     <div className="get-started-choice__icon text-xl">🙋</div>
                     <div className="flex items-center gap-3">
                       <p className="text-lg font-semibold text-foreground">For myself.</p>
-                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon · see the idea →</span>
+                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">See the idea →</span>
                     </div>
                   </div>
                 </button>
