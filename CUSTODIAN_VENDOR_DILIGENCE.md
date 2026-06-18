@@ -124,6 +124,13 @@ sandbox blocker is the per-correspondent custodial entitlement. The smoke script
 drafted email** (`LAUNCH_OUTREACH_EMAILS.md` #4) to enable custodial creation for correspondent
 `frvq`; once enabled, re-run during market hours to settle fractional-in-custodial + the handoff.
 
+**Update 2026-06-18:** re-ran `npm run smoke:alpaca-custodial` — STILL the same
+`403 {40310000} "creating custodial USA accounts is not enabled"` (auth valid, keys good).
+So the correspondent-`frvq` custodial entitlement is STILL not granted: the
+`LAUNCH_OUTREACH_EMAILS.md` #4 enablement email either hasn't been sent or hasn't been
+actioned by Alpaca yet. Until it is, make-or-break #1 and #2 stay untestable. This is the
+single open action on the Alpaca track (founder send, no code).
+
 ### Doc research findings (deep-research run 2026-06-16, 20 claims verified 3-0 against Alpaca's own docs)
 
 **CONFIRMED — de-risks Alpaca:**
