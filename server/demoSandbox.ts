@@ -117,6 +117,13 @@ const DEMO_BLOCKED_POST_PATTERNS: RegExp[] = [
   /^\/api\/funds\/[^/]+\/thank-yous\/generate$/,
   // Kid View
   /^\/api\/funds\/[^/]+\/kid-view-link$/,
+  // Banking — NEVER link a real bank to the shared demo account. A demo visitor
+  // completing Plaid would persist a real person's bank details on the demo user,
+  // visible to the next visitor (a privacy leak, not just state pollution).
+  // PATCH/DELETE on bank-accounts are already caught as hard writes; these cover
+  // the POSTs: Plaid link-token + exchange-public-token, and bank-account create.
+  /^\/api\/plaid(\/|$)/,
+  /^\/api\/bank-accounts(\/|$)/,
 ];
 
 export function blockDemoMutations(req: any, res: any, next: any) {
