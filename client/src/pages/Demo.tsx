@@ -251,10 +251,10 @@ export default function Demo() {
             <div className="mx-auto max-w-3xl text-center">
               <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Choose an angle</p>
               <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
-                The same family, seen from three different lives.
+                The same family, from three points of view.
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-                Start with the parent, the grown-up child, or one of the people who gives. Each login reveals a different truth about the same product.
+                Start with the parent, the grown-up child, or one of the people who gives. Each login shows the same product from their side.
               </p>
             </div>
 
