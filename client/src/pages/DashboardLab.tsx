@@ -186,6 +186,7 @@ import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
 import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
+import { demoBlocked } from "@/lib/demo-block";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
@@ -5514,6 +5515,8 @@ export default function DashboardLab() {
         body: JSON.stringify({ autoInvestEnabled: enabled }),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         await refetchInvestPrefs();
         toast({
           title: enabled ? "Recurring investment turned on" : "Recurring investment turned off",
@@ -5551,6 +5554,7 @@ export default function DashboardLab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save Kid View settings.");
+      if (demoBlocked(data, toast)) return;
       setKidViewPin("");
       queryClient.invalidateQueries({ queryKey: ["/api/funds", activeFundId, "kid-view-settings"] });
       if (kidViewEnabled) {
@@ -5623,6 +5627,11 @@ export default function DashboardLab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update suggestion.");
+      if (demoBlocked(data, toast)) {
+        // Roll back the optimistic flip — nothing was persisted in the demo.
+        setSuggestionPending(prev => { const n = { ...prev }; delete n[suggestionId]; return n; });
+        return;
+      }
       // Invalidate the canonical key — sidebar now shares this key (was
       // -sidebar-suffixed previously), so a single invalidate refreshes
       // both the dashboard config sheet AND the sidebar suggestions count.
@@ -5668,6 +5677,9 @@ export default function DashboardLab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save recurring investment.");
+      // EDIT path only: the demo server no-ops a PATCH. The CREATE path has an
+      // intentional demo overlay below (recordDemoRecurring), so leave it.
+      if (isEditing && demoBlocked(data, toast)) return;
       haptic("success");
       // Demo: record the set-up into the overlay so it shows as an ACTIVE
       // schedule (bumps the recurring chip count + monthly total + adds a row) —
@@ -5742,6 +5754,8 @@ export default function DashboardLab() {
         }),
       });
       if (!res.ok) throw new Error();
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return false;
       haptic("success");
       setAutoInvestNoteSaved(true);
       void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
@@ -5954,6 +5968,13 @@ export default function DashboardLab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update plan.");
+      if (demoBlocked(data, toast)) {
+        // Demo no-op: revert the optimistic card + cache flips (same as the catch).
+        setOptimisticContribStatus(s => { const n = { ...s }; delete n[planId]; return n; });
+        if (prevContribs !== undefined) queryClient.setQueryData(contribsKey, prevContribs);
+        if (prevSummary !== undefined) queryClient.setQueryData(summaryKey, prevSummary);
+        return;
+      }
       haptic(status === "active" ? "success" : "light");
       toast({
         title:
@@ -5994,26 +6015,26 @@ export default function DashboardLab() {
     try {
       const parentName = (user as any)?.preferredName?.trim() ||
         [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "A parent";
-      if (parentLetter?.id) {
-        await fetch(`/api/memory/${parentLetter.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ content: letterDraft.trim() }),
-        });
-      } else {
-        await fetch(`/api/funds/${activeFundId}/memory`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            type: "parent_letter",
-            content: letterDraft.trim(),
-            authorName: parentName,
-            fundId: activeFundId,
-          }),
-        });
-      }
+      const letterRes = parentLetter?.id
+        ? await fetch(`/api/memory/${parentLetter.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ content: letterDraft.trim() }),
+          })
+        : await fetch(`/api/funds/${activeFundId}/memory`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              type: "parent_letter",
+              content: letterDraft.trim(),
+              authorName: parentName,
+              fundId: activeFundId,
+            }),
+          });
+      const letterData = await letterRes.json().catch(() => null);
+      if (demoBlocked(letterData, toast)) return;
       haptic("success");
       // The parent-letter + authored-count both derive from the single
       // ["memory", activeFundId] query now (2026-06-04 dedup) — invalidate it.
@@ -6036,6 +6057,8 @@ export default function DashboardLab() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("delete failed");
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({ title: "Letter cleared", description: "You can write a new one anytime." });
       void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
@@ -6569,11 +6592,24 @@ export default function DashboardLab() {
             moving on load, then these arrive one calm beat later. See the
             bannersRevealed latch above. The SinceLastVisitDigest above keeps
             its own (later) hold and stays outside this wrapper. */}
-        {bannersRevealed && (<>
+        {bannersRevealed && (() => {
+          // Celebration cap: when a RARE lifetime moment is live (the kid claimed
+          // the fund at majority, or a co-parent just accepted), suppress the
+          // lesser celebrations below (birthday nudge, first-media, milestone) so
+          // the big moment stands alone instead of stacking 3-4 banners. Reuses
+          // the exact eligibility the away-digest already trusts (above) — no new
+          // or duplicated component logic; the rare banners still render (they win
+          // the slot), only the lesser ones yield. See lib/dashboard-banners.ts.
+          const hasRareCelebration =
+            (isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt
+              && !isKidAt18WelcomeBannerDismissed(activeFundId))
+            || (activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance
+              && !isCoparentAcceptedBannerDismissed(activeFundId, (dashboardSummary as any)?.coparentAcceptance?.collaboratorId));
+          return (<>
         {/* Birthday moment — parent view only (the at-18 welcome below owns the
             owner/handoff case). Proactive sibling of the away-digest: turns the
             #1 gifting moment into a Share nudge. */}
-        {!isOwnerMode && (
+        {!isOwnerMode && !hasRareCelebration && (
           <BirthdayMomentBanner
             fundId={activeFundId}
             childFirstName={recipientFirstNameDisplay}
@@ -6618,7 +6654,7 @@ export default function DashboardLab() {
             so it can bleed to a non-owner viewing the same fund on a shared
             browser / persona-switch — the same leak the at-18 welcome banner
             had. The accessRole signal is per-viewer and doesn't bleed. */}
-        {activeFundAccessRole === 'owner' && (
+        {activeFundAccessRole === 'owner' && !hasRareCelebration && (
           <PlusFirstMediaCelebrationBanner
             plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
             fundId={activeFundId}
@@ -6696,6 +6732,7 @@ export default function DashboardLab() {
             confetti restraint and the threshold-specific emotional
             anchor (community-college, state-school-year, etc.) honor
             the locked discipline against AI-slop celebrations. */}
+        {!hasRareCelebration && (
         <MilestoneMoment
           isOwnerMode={isOwnerMode}
           currentValue={rawTotalValue}
@@ -6707,7 +6744,9 @@ export default function DashboardLab() {
           }).length}
           peopleCount={contributorCount}
         />
-        </>)}
+        )}
+        </>);
+        })()}
 
         {/* Closed-fund banner — calm, action-bearing. Renders when the
             active fund is in the 'closed' state. Mirror of the Settings
@@ -9357,6 +9396,8 @@ export default function DashboardLab() {
                     }),
                   ]);
                   if (!strategyRes.ok) throw new Error("strategy update failed");
+                  const strategyData = await strategyRes.json().catch(() => null);
+                  if (demoBlocked(strategyData, toast)) return;
                   // Optimistically hide the banner the moment we know the strategy update succeeded.
                   setNudgeOptimisticallyDismissed(prev => {
                     const next = new Set(prev);
@@ -15739,6 +15780,8 @@ export default function DashboardLab() {
                 body: JSON.stringify({ email, role }),
               });
               if (res.ok) {
+                const data = await res.json().catch(() => null);
+                if (demoBlocked(data, toast)) return;
                 haptic("success");
                 toast({ title: "Invite sent!", description: `${email} has been invited as ${role}` });
               } else {
