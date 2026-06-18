@@ -7427,30 +7427,15 @@ export default function DashboardLab() {
                             Growing for {recipientFirstNameDisplay || "them"}
                           </span>
                         )}
-                        {cash > 0 && (
-                          isReadOnlyFund ? (
-                            // View-only collaborators AND previous owners
-                            // (post-handoff parents) see the cash figure but
-                            // not a clickable invest button — the action would
-                            // 403 server-side anyway, and rendering a dead CTA
-                            // is worse UX than rendering an informational stat.
-                            <span
-                              style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", fontWeight: 600, marginLeft: 4 }}
-                              data-testid="text-hero-cash-stat-readonly"
-                            >
-                              {formatCurrency(cash)} cash
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
-                              style={{ fontSize: 11.5, color: "hsl(var(--kiddo-gold-light) / 0.85)", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer", marginLeft: 4 }}
-                              data-testid="button-hero-cash-stat"
-                            >
-                              {formatCurrency(cash)} cash
-                            </button>
-                          )
-                        )}
+                        {/* Hero "$X cash" stat REMOVED 2026-06-17 (founder
+                            catch: "$50 cash seems odd in the hero"). It was a
+                            metrics-shaped number in the emotional-anchor hero —
+                            the same reason the gain pill + "$X invested" were
+                            already pulled above — AND redundant: the cash is
+                            inside the balance total, and the dedicated "Cash is
+                            waiting" card below is the proper, actionable home for
+                            it (readonly funds don't need a breakout they can't
+                            act on; it's still in their total). */}
                       </div>
 
                       {/* Settling row - shown whenever there's pending cash */}
