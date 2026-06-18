@@ -30,10 +30,10 @@ before investing is live**:
 
 | File:line | Exact copy | Note | Sev |
 |---|---|---|---|
-| `GiftCheckout.tsx:1488` | "Give {nm} a gift that actually grows, in real stocks invested in their name." (birthday) | Gifter-facing occasion sub. Naked present tense. | HIGH |
-| `GiftCheckout.tsx:1489` | "Start them off right with a real investment in their name." (baby shower) | Same. | HIGH |
-| `GiftCheckout.tsx:1494` | "Give a gift that actually grows, in real stocks invested in their name." (fallback) | Same. | HIGH |
-| `FundSnapshot.tsx:690` | Title: "{name}'s fund is invested in real markets." | **Self-contradiction** — the body one line below already says "Once investing is live, every gift is invested…". Shared/printable. Easiest, clearest fix of the set. | HIGH |
+| ~~`GiftCheckout.tsx:1488`~~ ✅ | "Give {nm} a gift that actually grows, in real stocks invested in their name." (birthday) | **FIXED** — routed through `investingLiveCopy()`; custodian-agnostic so it joins the atomic flip. | HIGH |
+| ~~`GiftCheckout.tsx:1489`~~ ✅ | "Start them off right with a real investment in their name." (baby shower) | **FIXED** — same. | HIGH |
+| ~~`GiftCheckout.tsx:1494`~~ ✅ | "Give a gift that actually grows, in real stocks invested in their name." (fallback) | **FIXED** — same. | HIGH |
+| ~~`FundSnapshot.tsx:690`~~ ✅ | Title: "{name}'s fund is invested in real markets." | **FIXED** — routed through `investingLiveCopy()` (pending: "…will invest in real markets once investing is live"), so the title no longer contradicts its own body. | HIGH |
 | `About.tsx:110` | Heading: "They watch it grow, in shares they actually own." | Body (L119) is correctly conditioned ("Once investing is live…"), but the **heading** stands naked above it. | HIGH |
 | `Compare.tsx:395` | Row label: "Invests in real stocks" (Kiddo = Yes vs savings = No) | Reads as a present capability claim in the comparison grid. | LOW |
 | `HowItWorks.tsx:216` | "Small gifts still become real ownership." | Preceded by "when that gift is invested…" (L215); sentence itself reads unconditional. | LOW |

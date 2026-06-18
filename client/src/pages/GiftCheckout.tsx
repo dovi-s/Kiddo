@@ -1485,13 +1485,13 @@ export default function GiftCheckout() {
       if (re.test(n)) return meta;
     }
     const byType: Record<string, OccasionMeta> = {
-      birthday:    { emoji: "🎂", headline: `It's ${nm}'s Birthday!`, sub: `Give ${nm} a gift that actually grows, in real stocks invested in their name.`, notePlaceholder: `Leave ${nm} a birthday message...` },
-      baby_shower: { emoji: "🍼", headline: `Welcome ${nm} to the world!`, sub: `Start them off right with a real investment in their name.`, notePlaceholder: `Leave a warm welcome note...` },
+      birthday:    { emoji: "🎂", headline: `It's ${nm}'s Birthday!`, sub: investingLiveCopy(`Give ${nm} a gift that actually grows, in real stocks invested in their name.`, `Give ${nm} a gift that grows for their future, invested in their name once investing is live.`), notePlaceholder: `Leave ${nm} a birthday message...` },
+      baby_shower: { emoji: "🍼", headline: `Welcome ${nm} to the world!`, sub: investingLiveCopy(`Start them off right with a real investment in their name.`, `Start them off right with a fund in their name, invested once investing is live.`), notePlaceholder: `Leave a warm welcome note...` },
       graduation:  { emoji: "🎓", headline: `Congrats, ${nm}!`, sub: `A graduation gift that grows over time. Start it now.`, notePlaceholder: `Leave ${nm} a congratulations message...` },
       holiday:     { emoji: "🎁", headline: `A Gift for ${nm}'s Future!`, sub: `This season, give something that keeps growing.`, notePlaceholder: `Season's greetings to ${nm}...` },
       just_because:{ emoji: "💚", headline: `Surprise ${nm}!`, sub: `A gift they'll thank you for in 15 years.`, notePlaceholder: `Leave ${nm} a note...` },
     };
-    return byType[eventData?.event?.eventType || ""] || { emoji: "🎁", headline: `A gift for ${nm}'s future`, sub: `Give a gift that actually grows, in real stocks invested in their name.`, notePlaceholder: `Leave ${nm} a note...` };
+    return byType[eventData?.event?.eventType || ""] || { emoji: "🎁", headline: `A gift for ${nm}'s future`, sub: investingLiveCopy(`Give a gift that actually grows, in real stocks invested in their name.`, `Give a gift that grows for their future, invested in their name once investing is live.`), notePlaceholder: `Leave ${nm} a note...` };
   })();
 
   return (

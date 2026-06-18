@@ -9,6 +9,7 @@ import { useFunds } from "@/hooks/use-funds";
 import { useCountUp } from "@/hooks/use-count-up";
 import { getMajorityAgeForState, US_STATES } from "@shared/utma";
 import { projectFundValue } from "@shared/projection";
+import { investingLiveCopy } from "@shared/legal-copy";
 import type { Fund, Holding, Gift } from "@shared/schema";
 
 // ── Print-ready snapshot of a single fund ─────────────────────────────────────
@@ -687,7 +688,7 @@ export default function FundSnapshot() {
 
         {/* What this means / disclosure */}
         <div className="snapshot-disclosure">
-          <p className="snapshot-disclosure-title">{displayName}'s fund is invested in real markets.</p>
+          <p className="snapshot-disclosure-title">{investingLiveCopy(`${displayName}'s fund is invested in real markets.`, `${displayName}'s fund will invest in real markets once investing is live.`)}</p>
           <p className="snapshot-disclosure-body">
             Once investing is live, every gift is invested in publicly-traded stocks through <strong>our broker-dealer partner</strong>, Member FINRA / SIPC.
             {stateName && (
