@@ -33,6 +33,13 @@ export type DemoLiveGift = {
   // in a holding or in the cash bucket.
   executionModel?: string | null;
   message?: string;
+  // Media the gifter attached at checkout. The upload already stored the file
+  // (returns a URL); these carry that URL through the demo loop so the gift's
+  // "just now" Memory Book entry actually SHOWS the photo/video/voice instead of
+  // dropping it (the gifter watches the exact gift — media and all — land).
+  photoUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
   createdAt: string; // ISO
 };
 

@@ -240,6 +240,10 @@ export default function GiftSuccess() {
       // "cash" (a one-time add-cash) lands in cash, not a holding.
       executionModel: params.get("execModel") || undefined,
       message: params.get("message") || undefined,
+      // Carry the attached media so it lands in the "just now" Memory Book entry.
+      photoUrl: params.get("photoUrl") || undefined,
+      videoUrl: params.get("videoUrl") || undefined,
+      audioUrl: params.get("audioUrl") || undefined,
     })
   }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup, params])
 

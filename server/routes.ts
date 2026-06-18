@@ -12855,9 +12855,12 @@ export async function registerRoutes(
         if (typeof executionModel === "string" && executionModel) demoQs.set("execModel", executionModel);
         // Carry which media the gifter attached at checkout so the success page
         // reflects it instead of re-prompting "add a photo/video/voice".
-        if (photoUrl) demoQs.set("hasPhoto", "1");
-        if (videoUrl) demoQs.set("hasVideo", "1");
-        if (audioUrl) demoQs.set("hasAudio", "1");
+        // Carry both the flag (success page "already added" state) AND the
+        // actual URL (so the demo's "just now" Memory Book entry shows the
+        // media, not just acknowledges it). The upload already stored the file.
+        if (photoUrl) { demoQs.set("hasPhoto", "1"); demoQs.set("photoUrl", String(photoUrl)); }
+        if (videoUrl) { demoQs.set("hasVideo", "1"); demoQs.set("videoUrl", String(videoUrl)); }
+        if (audioUrl) { demoQs.set("hasAudio", "1"); demoQs.set("audioUrl", String(audioUrl)); }
         return res.json({
           url: `${baseUrl}/gift/success?${demoQs.toString()}`,
           sessionId: `demo_${Date.now()}`,
