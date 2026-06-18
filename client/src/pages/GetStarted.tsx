@@ -804,7 +804,7 @@ export default function GetStarted() {
                     moment (the at-18 handoff) and the permanence of the gift,
                     without a contrast/antithesis structure. */}
                 <h1 className="font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
-                  The gift they'll still have at 18.
+                  The gift they'll still have at&nbsp;18.
                 </h1>
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once and share one link. Anyone in your family can gift real stock in seconds, with no account or download needed.</p>
               </AnimatedBlock>
