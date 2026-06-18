@@ -81,7 +81,7 @@ const trustBullets = [
 const promiseBullets = [
   "Free to start",
   "No account needed for gifting",
-  "Built for families, not traders",
+  "Built for the long term",
 ] as const;
 
 export default function Home() {
