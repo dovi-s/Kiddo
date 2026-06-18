@@ -171,11 +171,7 @@ Pricing you can see clearly.
               <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
                 Gifts stay whole. The only fee is $1 a year per $1,000 invested, once investing is live.
               </p>
-              <div className="mx-auto mt-6 max-w-3xl rounded-[1.5rem] border border-border bg-card/80 px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-                <span className="font-medium text-foreground">No platform fee on gifts.</span> Kiddo earns from optional subscriptions and an annual fee of
-                {" "} $1 per $1,000 invested, charged only on invested assets once investing is live.
-              </div>
-              <div className="mx-auto mt-4 max-w-3xl rounded-[1.5rem] border border-border bg-card px-5 py-4 text-sm leading-relaxed text-muted-foreground">
+              <div className="mx-auto mt-6 max-w-3xl rounded-[1.5rem] border border-border bg-card px-5 py-4 text-sm leading-relaxed text-muted-foreground">
                 <span className="font-medium text-foreground">Every new account gets 14 days of Plus, free.</span> Try the premium features before deciding. No
                 credit card required.
               </div>
@@ -267,7 +263,7 @@ Pricing you can see clearly.
                       </ul>
 
                       <p className="-mt-4 mb-8 text-xs leading-relaxed text-muted-foreground/70">
-                        Annual fee: $1/year per $1,000 invested, charged only on invested assets.
+                        Plus the same small investment fee on every plan, explained below.
                       </p>
 
                       <Link href="/get-started">

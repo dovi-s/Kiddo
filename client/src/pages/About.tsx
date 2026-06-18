@@ -113,10 +113,10 @@ export default function About() {
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                The Kid View lets them see their fund: the companies it follows and the gifts that built it. Once investing is live, they learn how money grows by watching their own fund grow.
+                The Kid View lets them see their fund: the companies it follows and the gifts that built it.
               </p>
               <p>
-                A 10-year-old opens the app and sees the Disney stock their family picked for them. Once investing is live, they own a real piece of it. Someone in their family put it there.
+                Once investing is live, a 10-year-old can open the app, see the Disney stock their family picked, and own a real piece of it. Watching their own fund grow is how they learn the way money works over time. Someone in their family put it there.
               </p>
               <p className="font-medium text-foreground">That moment changes how they think about money for good.</p>
             </div>
