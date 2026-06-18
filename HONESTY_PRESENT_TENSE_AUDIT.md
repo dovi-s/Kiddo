@@ -52,7 +52,7 @@ before investing is live**:
 
 | File | Scope | Note |
 |---|---|---|
-| `KidView.tsx` | `COMPANY_EXPLAINERS` dict (~41 "You own a tiny piece of …" strings) + "What you own" / "What you own right now" section headers (L552, L1190, L1669) | **Not on the flip checklist until now.** No global hedge anywhere on the page. Cleanest fix: condition the **section header** once — that single hedge scopes every per-stock explainer below it, leaving the beloved per-stock copy untouched. Added to the FLIP CHECKLIST in `legal-copy.ts` with a ⚠️. |
+| `KidView.tsx` ✅ | `COMPANY_EXPLAINERS` dict (~41 "You own a tiny piece of …" strings) + "What you own" / "What you own right now" section headers (L1190, L1669) | **ADDRESSED** — a pre-flip caption (`{!INVESTING_LIVE && …}`) now sits under each holdings header: younger view "Once your fund starts investing, these become real pieces you own."; teen view "Once investing is live, these become real shares you own." It scopes all 41 per-stock claims and auto-hides at flip, leaving the beloved per-stock copy untouched. Also added to the FLIP CHECKLIST in `legal-copy.ts`. (Render-verified by code inspection: `INVESTING_LIVE=false`; demo PIN keypad resisted headless automation, so no screenshot.) |
 | Dashboard / DashboardLab | growth / holdings framing | Already partly hedged via `investingLiveCopy()`; see existing memory note on the investing-live hedge gap. |
 
 ---

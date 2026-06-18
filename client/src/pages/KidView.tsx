@@ -18,6 +18,7 @@ import { friendlyHoldingName } from "@/lib/ticker-names";
 import { useCountUp } from "@/hooks/use-count-up";
 import { ReportContentButton } from "@/components/ReportContentButton";
 import { projectFundValue, utmaContributionYearsRemaining } from "@shared/projection";
+import { INVESTING_LIVE } from "@shared/legal-copy";
 
 type KidViewMeta = {
   childName: string;
@@ -391,6 +392,7 @@ function projectFutureValue(
 
 export default function KidView() {
   const { fundId: token } = useParams<{ fundId: string }>();
+  const KID_PIN_LENGTH = 4;
   const [pin, setPin] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(() => {
     if (!token || typeof window === "undefined") return null;
@@ -422,6 +424,73 @@ export default function KidView() {
     enabled: !!token && !!accessToken,
     retry: false,
   });
+
+  // PIN unlock — extracted so BOTH the on-screen numpad and a hardware
+  // keyboard reach the same submit path. Previously a digit only registered
+  // via onClick, so a kid on a Chromebook/iPad-with-keyboard or on assistive
+  // tech could never enter the PIN at all (WCAG 2.1.1). Keep submitPin pure;
+  // the haptic-light + 120ms delay (so the 4th dot paints before the request)
+  // lives in handlePinKey to preserve the original feel.
+  const submitPin = useCallback(async (nextPin: string) => {
+    try {
+      const res = await fetch(`/api/kid-view/${token}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: nextPin }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "That PIN did not work.");
+      haptic("success");
+      setAccessToken(data.accessToken);
+      window.sessionStorage.setItem(`kid-view-access:${token}`, data.accessToken);
+    } catch (error) {
+      haptic("error");
+      const msg = error instanceof Error ? error.message : "Try again.";
+      const isWrongPin = msg.toLowerCase().includes("match") || msg.toLowerCase().includes("pin");
+      toast({
+        title: isWrongPin ? "Wrong PIN" : "Could not unlock",
+        description: msg,
+        variant: "destructive",
+      });
+      setPin("");
+    }
+  }, [token, toast]);
+
+  const handlePinKey = useCallback((key: string) => {
+    if (key === "backspace") {
+      setPin((p) => p.slice(0, -1));
+      return;
+    }
+    if (!/^[0-9]$/.test(key)) return;
+    setPin((p) => {
+      if (p.length >= KID_PIN_LENGTH) return p;
+      const next = p + key;
+      if (next.length === KID_PIN_LENGTH) {
+        haptic("light");
+        window.setTimeout(() => submitPin(next), 120);
+      }
+      return next;
+    });
+  }, [submitPin]);
+
+  // The PIN gate is shown whenever there is no access token / content (and the
+  // meta query resolved). While it is up, let a hardware keyboard drive it.
+  const pinGateActive = !metaLoading && !metaError && (!accessToken || !content);
+  useEffect(() => {
+    if (!pinGateActive) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        handlePinKey(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        handlePinKey("backspace");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pinGateActive, handlePinKey]);
 
   const growthSummary = useMemo(() => {
     const balance = Number(content?.fund?.balance || 0);
@@ -798,7 +867,6 @@ export default function KidView() {
   }
 
   if (!accessToken || !content) {
-    const PIN_LENGTH = 4;
     const pinDigits = pin.split("");
     const numpadKeys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
     return (
@@ -814,11 +882,13 @@ export default function KidView() {
               : "Enter your PIN to open your fund."}
           </p>
 
-          {/* PIN dots */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+          {/* PIN dots — aria-live so assistive tech confirms each digit landed */}
+          <div className="flex items-center justify-center gap-4 mb-8" role="status" aria-live="polite">
+            <span className="sr-only">{pinDigits.length} of {KID_PIN_LENGTH} digits entered</span>
+            {Array.from({ length: KID_PIN_LENGTH }).map((_, i) => (
               <div
                 key={i}
+                aria-hidden="true"
                 className={`w-4 h-4 rounded-full border-2 transition-all duration-150 ${
                   i < pinDigits.length
                     ? "bg-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen))] scale-110"
@@ -828,58 +898,24 @@ export default function KidView() {
             ))}
           </div>
 
-          {/* Numpad */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Numpad — also driven by a hardware keyboard (see handlePinKey effect) */}
+          <div className="grid grid-cols-3 gap-3" role="group" aria-label="PIN keypad">
             {numpadKeys.map((key, idx) => {
               if (key === "") return <div key={idx} />;
+              const isBackspace = key === "⌫";
               return (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => {
-                    if (key === "⌫") {
-                      setPin((p) => p.slice(0, -1));
-                    } else if (pin.length < PIN_LENGTH) {
-                      const next = pin + key;
-                      setPin(next);
-                      if (next.length === PIN_LENGTH) {
-                        haptic("light");
-                        setTimeout(() => {
-                          (async () => {
-                            try {
-                              const res = await fetch(`/api/kid-view/${token}/unlock`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ pin: next }),
-                              });
-                              const data = await res.json().catch(() => ({}));
-                              if (!res.ok) throw new Error(data?.error || "That PIN did not work.");
-                              haptic("success");
-                              setAccessToken(data.accessToken);
-                              window.sessionStorage.setItem(`kid-view-access:${token}`, data.accessToken);
-                            } catch (error) {
-                              haptic("error");
-                              const msg = error instanceof Error ? error.message : "Try again.";
-                              const isWrongPin = msg.toLowerCase().includes("match") || msg.toLowerCase().includes("pin");
-                              toast({
-                                title: isWrongPin ? "Wrong PIN" : "Could not unlock",
-                                description: msg,
-                                variant: "destructive",
-                              });
-                              setPin("");
-                            }
-                          })();
-                        }, 120);
-                      }
-                    }
-                  }}
+                  aria-label={isBackspace ? "Delete last digit" : `Enter ${key}`}
+                  onClick={() => handlePinKey(isBackspace ? "backspace" : key)}
                   className={`h-16 rounded-2xl text-xl font-semibold transition-all active:scale-95 ${
-                    key === "⌫"
+                    isBackspace
                       ? "text-muted-foreground bg-muted/40 hover:bg-muted/60"
                       : "bg-white border border-border shadow-sm text-foreground hover:bg-muted/20"
                   }`}
                 >
-                  {key}
+                  <span aria-hidden="true">{key}</span>
                 </button>
               );
             })}
@@ -1187,7 +1223,10 @@ export default function KidView() {
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.42 }}
             className="rounded-[24px] border border-border/60 bg-white p-5 mb-4"
           >
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">What you own right now</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">What you own right now</p>
+            {!INVESTING_LIVE && (
+              <p className="text-[13px] leading-relaxed text-muted-foreground/80 mb-3">Once your fund starts investing, these become real pieces you own.</p>
+            )}
             <div className="space-y-2.5">
               {content.holdings.map((holding, idx) => {
                 const explainer = getCompanyExplainer(holding.ticker, holding.name);
@@ -1334,8 +1373,8 @@ export default function KidView() {
                     // today (visibility='kid_at_18' on the entry, became
                     // visible only at majority age). Soft kiddo-gold border
                     // + small "Saved for today" pill so the kid can spot
-                    // these as they scroll the feed — pairs with the
-                    // celebration card's "✨ N memories were saved
+                    // these as they scroll the feed, pairing with the
+                    // celebration card's "N memories were saved
                     // specifically for today" copy above.
                     const isUnlockedAt18 = entry.visibility === "kid_at_18";
                     return (
@@ -1668,6 +1707,9 @@ export default function KidView() {
                     <BadgeCheck className="h-4 w-4 text-primary" />
                     <h2 className="font-heading text-2xl font-semibold text-foreground">What you own</h2>
                   </div>
+                  {!INVESTING_LIVE && (
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Once investing is live, these become real shares you own.</p>
+                  )}
                   <div className="mt-4 space-y-3">
                     {content.holdings.map((holding) => {
                       // Suppress "Gain $0.00" — when there's no gain (test data
