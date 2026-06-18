@@ -78,7 +78,7 @@ import {
   TrendingUp,
   ArrowUp,
   ArrowDown,
-  Banknote,
+  Coins,
   Gift,
   Share2,
   Hash,
@@ -7280,14 +7280,11 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="relative shrink-0">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-gold)/0.25)] bg-[hsl(var(--kiddo-gold)/0.12)]">
-                          {/* Banknote, not TrendingUp. Icons identify
-                              the noun ("this card is about cash"),
-                              not the verb ("...that could grow").
-                              Also matches the InvestCashModal that
-                              opens on tap — Banknote is used there
-                              for the cash row, so the card→modal
-                              transition reads as one surface. */}
-                          <Banknote size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
+                          {/* Coins (the NOUN: "this card is about cash"),
+                              not TrendingUp (the verb). 20px fills the 40px
+                              chip with proper weight; a flat Banknote at 17px
+                              read undersized + generic. */}
+                          <Coins size={20} className="text-[hsl(var(--kiddo-evergreen))]" />
                         </div>
                       </div>
                       <div className="min-w-0">
