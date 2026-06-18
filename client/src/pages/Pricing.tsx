@@ -590,17 +590,6 @@ export default function Pricing() {
         </div>
       </section>
 
-      <section className="pb-12">
-        <div className="mx-auto max-w-4xl px-4">
-          <FadeIn className="rounded-2xl bg-card p-8 text-center shadow-premium-sm">
-            <p className="mx-auto max-w-2xl text-lg italic text-foreground">
-              &quot;I upgraded to Kiddo+ after the first month. The Memory Book with photos and voice memos was what sold me. My daughter is going to read this stuff at 18.&quot;
-            </p>
-            <p className="mt-4 text-sm text-muted-foreground">Illustrative: why parents upgrade to Kiddo+</p>
-          </FadeIn>
-        </div>
-      </section>
-
       {/* Locked refusals trust panel. Added 2026-05-20 per the
           wow-factor analysis: the list of things Kiddo refuses to
           charge for is itself a trust signal that competitors

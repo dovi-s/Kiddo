@@ -302,12 +302,6 @@ const faqItems = [
     answer: "Yes. If the account generates taxable activity, the brokerage side of the experience provides the relevant tax documents. Parents should expect standard year-end reporting when it applies.",
   },
   {
-    id: "financial-aid",
-    category: "Taxes",
-    question: "Could this affect financial aid?",
-    answer: "It can, because child-fund assets are generally treated differently from 529 assets in aid calculations. For many families, the balances start small enough that the practical impact is limited, but it is still worth understanding before the fund gets large.",
-  },
-  {
     id: "turns-18",
     category: "Account Basics",
     question: "What happens when my child turns 18?",
