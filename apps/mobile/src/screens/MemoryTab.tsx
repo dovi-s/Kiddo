@@ -195,6 +195,8 @@ export interface MemoryTabProps {
   onEditEntry?: (id: string, content: string) => Promise<void>;
   /** Delete a parent-authored entry. */
   onDeleteEntry?: (id: string) => Promise<void>;
+  /** Start the create-fund flow (shown in the no-fund first-run state). */
+  onAddFund?: () => void;
 }
 
 export function MemoryTab({
@@ -207,6 +209,7 @@ export function MemoryTab({
   onAddPhoto,
   onEditEntry,
   onDeleteEntry,
+  onAddFund,
 }: MemoryTabProps) {
   const childName = childNameOf(activeFund);
   const isReadOnly = isReadOnlyFund(activeFund);
@@ -283,6 +286,27 @@ export function MemoryTab({
   }, [visibleEntries]);
 
   const refresh = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />;
+
+  // No fund yet: the Memory Book can't exist without one. Mirror the Activity
+  // tab's first-run state (consistent messaging + a create-fund CTA) rather than
+  // the "once the link is shared" copy, which wrongly implies a fund already
+  // exists.
+  if (!activeFund) {
+    return (
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.md }} refreshControl={refresh}>
+        <View style={{ paddingTop: spacing.xl, gap: spacing.sm }}>
+          <KText variant="title">The Memory Book starts with a gift.</KText>
+          <KText variant="body" color={semanticColors.text.muted}>
+            Create a fund and share the link. Every gift, note, and photo lands here and builds the story
+            over the years.
+          </KText>
+          {onAddFund ? (
+            <Button label="Start a fund" onPress={onAddFund} size="lg" style={{ marginTop: spacing.sm }} />
+          ) : null}
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

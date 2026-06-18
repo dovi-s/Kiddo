@@ -88,7 +88,7 @@ export function AddFundScreen({ onBack, onCreated }: AddFundScreenProps) {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 40) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

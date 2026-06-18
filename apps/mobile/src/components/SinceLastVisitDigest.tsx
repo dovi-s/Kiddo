@@ -228,7 +228,13 @@ export function SinceLastVisitDigest({
             </KText>
           ) : null}
         </View>
-        <Pressable onPress={() => setDismissed(true)} hitSlop={10} style={{ padding: 2 }}>
+        <Pressable
+          onPress={() => setDismissed(true)}
+          hitSlop={10}
+          style={{ padding: 2 }}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss"
+        >
           <Ionicons name="close" size={18} color={semanticColors.text.muted} />
         </Pressable>
       </View>

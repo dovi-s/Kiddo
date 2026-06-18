@@ -346,6 +346,12 @@ function AccountTab({
             deviceName,
             platform: Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web",
           });
+          // Reload the list AFTER registration resolves. The bioEnabled
+          // effect fires loadTrustedDevices() the moment we flip the flag
+          // above, which races ahead of this register call and loads an
+          // empty list — leaving "Face ID is ON" with no devices shown.
+          // Re-loading here guarantees the just-registered device appears.
+          await loadTrustedDevices();
         } catch {
           // Non-fatal.
         }
@@ -554,6 +560,12 @@ function AccountTab({
             on this device. Lets the user see + revoke biometric on
             other devices where they've enabled Face ID. Per
             FACE_ID_SPEC.md (trusted devices panel item). */}
+        {bioEnabled && trustedDevices.length === 0 && (
+          <View style={[styles.pushCard, { marginTop: spacing.sm }]}>
+            <Text style={styles.pushTitle}>Devices using Face ID</Text>
+            <Text style={styles.pushBody}>Devices will appear here once registered.</Text>
+          </View>
+        )}
         {bioEnabled && trustedDevices.length > 0 && (
           <View style={[styles.pushCard, { marginTop: spacing.sm }]}>
             <Text style={styles.pushTitle}>Devices using Face ID</Text>
@@ -965,7 +977,12 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
             )}
           </View>
           {/* profile/account icon (web parity, replaces the page-name label) */}
-          <Pressable onPress={() => setTab("settings")} hitSlop={10}>
+          <Pressable
+            onPress={() => setTab("settings")}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+          >
             <Ionicons name="person-circle-outline" size={30} color={colors.evergreen} />
           </Pressable>
         </View>
@@ -1028,6 +1045,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           loading={loading || memoryLoading}
           refreshing={refreshing}
           onRefresh={handleRefresh}
+          onAddFund={onAddFund}
           onAddNote={
             activeFund
               ? async (content: string) => {

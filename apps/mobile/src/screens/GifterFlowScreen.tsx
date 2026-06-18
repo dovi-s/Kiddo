@@ -150,7 +150,10 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.xxl) },
+      ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
@@ -175,7 +178,13 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
           <Text style={styles.sectionTitle}>How much?</Text>
           <View style={styles.amountGrid}>
             {AMOUNTS.map((value) => (
-              <Pressable key={value} onPress={() => setAmount(value)} style={[styles.amountBtn, amount === value && styles.amountBtnActive]}>
+              <Pressable
+                key={value}
+                onPress={() => setAmount(value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: amount === value }}
+                style={[styles.amountBtn, amount === value && styles.amountBtnActive]}
+              >
                 <Text style={[styles.amountValue, amount === value && styles.amountValueActive]}>{formatCurrencyWhole(value)}</Text>
                 <Text style={[styles.amountShares, amount === value && styles.amountSharesActive]}>
                   about {sharesFor(value, selectedTicker)} shares
@@ -202,7 +211,13 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
             {onboardingStockChoices.map((choice) => {
               const active = choice.ticker === selectedTicker;
               return (
-                <Pressable key={choice.ticker} onPress={() => setSelectedTicker(choice.ticker)} style={[styles.stockCard, active && styles.stockCardActive]}>
+                <Pressable
+                  key={choice.ticker}
+                  onPress={() => setSelectedTicker(choice.ticker)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: active }}
+                  style={[styles.stockCard, active && styles.stockCardActive]}
+                >
                   <StockLogo ticker={choice.ticker} size={32} active={active} />
                   <Text style={[styles.stockTicker, active && styles.stockTickerActive]}>{choice.ticker}</Text>
                   <Text style={[styles.stockName, active && styles.stockNameActive]}>{choice.name}</Text>
@@ -219,9 +234,9 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
             <Text style={styles.previewFine}>Approximate only. Prices move. Investing involves risk.</Text>
           </View>
 
-          <TextInput value={senderName} onChangeText={setSenderName} placeholder="Your name (optional)" placeholderTextColor="#8B948C" style={styles.input} />
-          <TextInput value={message} onChangeText={setMessage} placeholder={`Write something ${childName} will read later`} placeholderTextColor="#8B948C" style={[styles.input, styles.messageInput]} multiline />
-          <TextInput value={senderEmail} onChangeText={setSenderEmail} placeholder="Email for receipt (optional)" placeholderTextColor="#8B948C" autoCapitalize="none" keyboardType="email-address" style={styles.input} />
+          <TextInput value={senderName} onChangeText={setSenderName} placeholder="Your name (optional)" placeholderTextColor={colors.muted} accessibilityLabel="Your name (optional)" style={styles.input} />
+          <TextInput value={message} onChangeText={setMessage} placeholder={`Write something ${childName} will read later`} placeholderTextColor={colors.muted} accessibilityLabel={`A message for ${childName}`} style={[styles.input, styles.messageInput]} multiline />
+          <TextInput value={senderEmail} onChangeText={setSenderEmail} placeholder="Email for receipt (optional)" placeholderTextColor={colors.muted} accessibilityLabel="Email for receipt (optional)" autoCapitalize="none" keyboardType="email-address" style={styles.input} />
 
           <Pressable onPress={() => setStep("payment")} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>Review gift</Text>
@@ -308,7 +323,12 @@ function PaymentChoice({
   onPress: (id: PaymentMethod) => void;
 }) {
   return (
-    <Pressable onPress={() => onPress(id)} style={[styles.methodCard, active && styles.methodCardActive]}>
+    <Pressable
+      onPress={() => onPress(id)}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: active }}
+      style={[styles.methodCard, active && styles.methodCardActive]}
+    >
       <Text style={[styles.methodTitle, active && styles.methodTitleActive]}>{title}</Text>
       <Text style={[styles.methodBody, active && styles.methodBodyActive]}>{body}</Text>
     </Pressable>
@@ -332,13 +352,13 @@ const styles = StyleSheet.create({
   heroArt: { width: "100%", height: 160, backgroundColor: "#F6EFE3" },
   heroContent: { padding: spacing.lg, gap: spacing.sm },
   eyebrow: { color: colors.evergreen, textTransform: "uppercase", letterSpacing: 1.4, fontSize: 12, fontWeight: "900" },
-  title: { fontSize: 32, lineHeight: 36, fontWeight: "900", color: colors.ink },
+  title: { fontSize: 30, lineHeight: 36, fontWeight: "900", color: colors.ink },
   body: { fontSize: 16, lineHeight: 24, color: "#5E675F" },
   meta: { color: "#7C847D", fontSize: 13, fontWeight: "800" },
   card: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
   sectionTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: "900" },
   sectionBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
-  settlingNote: { color: "#8B948C", fontSize: 12, lineHeight: 17, marginTop: 8 },
+  settlingNote: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 8 },
   amountGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   amountBtn: { width: "47%", borderWidth: 1, borderColor: "#DED7CA", borderRadius: 20, paddingVertical: 18, paddingHorizontal: 12, backgroundColor: "#FAF7F1", gap: 4 },
   amountBtnActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },

@@ -26,8 +26,8 @@ function fullDate(value?: string | null): string {
 // Map a transaction type to an icon, tint, and whether it reduces the balance.
 function present(type: string): { icon: any; tint: string; negative: boolean } {
   const t = type.toLowerCase();
-  if (t.includes("withdraw") || t.includes("debit")) return { icon: "arrow-up-circle", tint: "#C0392B", negative: true };
-  if (t.includes("fee")) return { icon: "remove-circle", tint: "#C0392B", negative: true };
+  if (t.includes("withdraw") || t.includes("debit")) return { icon: "arrow-up-circle", tint: semanticColors.ledger.negative, negative: true };
+  if (t.includes("fee")) return { icon: "remove-circle", tint: semanticColors.ledger.negative, negative: true };
   // Sell — holdings converted to cash WITHIN the fund (a reallocation, not money
   // leaving). Checked explicitly: "sell" matched none of the cases below and
   // fell through to the gift default, so a sale rendered with a gift icon.
@@ -245,10 +245,10 @@ export function ActivityTab({
                     borderRadius: 999,
                     backgroundColor: active ? colors.evergreen : "transparent",
                     borderWidth: active ? 0 : 1.5,
-                    borderColor: "#E5DDD4",
+                    borderColor: colors.border,
                   }}
                 >
-                  <KText variant="caption" color={active ? "#F8F5F0" : semanticColors.text.muted}>
+                  <KText variant="caption" color={active ? semanticColors.text.inverse : semanticColors.text.muted}>
                     {label}
                   </KText>
                 </Pressable>
@@ -291,7 +291,7 @@ function MoneyStat({ label, value, positive }: { label: string; value: string; p
       <KText
         variant="bodyStrong"
         tabular
-        color={positive ? "#1A7F47" : semanticColors.text.primary}
+        color={positive ? semanticColors.ledger.positive : semanticColors.text.primary}
         style={{ marginTop: 1 }}
       >
         {value}
@@ -303,8 +303,8 @@ function MoneyStat({ label, value, positive }: { label: string; value: string; p
 // Small status chip ("Invested" / "Pending"), mirroring the web feed rows.
 function statusChip(status?: string | null): { label: string; bg: string; fg: string } | null {
   const s = String(status || "").toLowerCase();
-  if (s === "settled" || s === "invested") return { label: "Invested", bg: "#E7F0E9", fg: "#1A7F47" };
-  if (s === "pending" || s === "processing" || s === "host_hold") return { label: "Pending", bg: "#FBEFD6", fg: "#6F4611" };
+  if (s === "settled" || s === "invested") return { label: "Invested", bg: semanticColors.ledger.positiveSoft, fg: semanticColors.ledger.positive };
+  if (s === "pending" || s === "processing" || s === "host_hold") return { label: "Pending", bg: semanticColors.ledger.pendingSoft, fg: semanticColors.ledger.pendingText };
   return null;
 }
 
@@ -347,7 +347,7 @@ function ActRow({ a }: { a: ApiActivity }) {
           </View>
         </View>
         {amt > 0 ? (
-          <KText variant="bodyStrong" tabular color={p.negative ? "#C0392B" : "#1A7F47"}>
+          <KText variant="bodyStrong" tabular color={p.negative ? semanticColors.ledger.negative : semanticColors.ledger.positive}>
             {p.negative ? "−" : "+"}
             {formatBalance(amt)}
           </KText>

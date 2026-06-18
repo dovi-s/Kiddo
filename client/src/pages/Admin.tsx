@@ -50,6 +50,16 @@ function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+// Some mutation endpoints answer 200 OK with { saved:false } / { ok:false } /
+// { updated:false } when nothing actually changed (a demo/no-op account, or a
+// write that matched no row). Treat that as a failure so action handlers don't
+// report fake success.
+function assertServerSaved(body: any) {
+  if (body && (body.saved === false || body.ok === false || body.updated === false)) {
+    throw new Error(body.message || body.error || "The server did not apply the change.");
+  }
+}
+
 function toRowsPayload<T = any>(payload: any): { rows: T[]; degraded?: boolean; queryErrors?: string[] } {
   if (Array.isArray(payload)) return { rows: payload };
   return {
@@ -158,7 +168,11 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  // The anchor must be in the DOM for the click to trigger a download in
+  // Firefox/Safari; a detached anchor's click is a silent no-op there.
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 }
 
@@ -344,7 +358,10 @@ function RowActionsMenu({ children, label = "Open actions" }: { children: ReactN
 function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoint: string; onClose: () => void }) {
   const [showRaw, setShowRaw] = useState(false);
   const { user } = useAuth();
-  const isSuperAdmin = Boolean((user as any)?.isSuperAdmin);
+  // Match the rest of the panel: super-admin is recognized by the flag OR the
+  // email allow-list. Using the bare flag here left email-only super-admins
+  // with these action buttons disabled while enabled everywhere else.
+  const isSuperAdmin = isSuperAdminUser(user as any);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useQuery<any>({
     queryKey: [endpoint],
@@ -396,6 +413,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body as any)?.error || "Update failed");
+    assertServerSaved(body);
   };
 
   const postJson = async (url: string) => {
@@ -405,6 +423,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body as any)?.error || "Action failed");
+    assertServerSaved(body);
   };
 
   const renderTable = (
@@ -1139,23 +1158,31 @@ export default function Admin() {
     );
   }
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: "overview", label: "Overview", icon: TrendingUp },
-    { id: "funnels", label: "Funnels", icon: Activity },
-    { id: "access-review", label: "Access Review", icon: Shield },
-    { id: "loops", label: "Loops", icon: Activity },
-    { id: "users", label: "Users", icon: Users },
-    { id: "funds", label: "Funds", icon: Wallet },
-    { id: "assets", label: "Assets", icon: BarChart3 },
-    { id: "gifts", label: "Gifts", icon: Gift },
-    { id: "gifters", label: "Gifters", icon: Users },
-    { id: "transactions", label: "Transactions", icon: CreditCard },
-    { id: "moderation", label: "Moderation", icon: Shield },
-    { id: "ops", label: "Ops", icon: RefreshCw },
-    { id: "integrations", label: "Integrations", icon: Activity },
-    { id: "deliverability", label: "Deliverability", icon: Activity },
-    { id: "audit", label: "Audit", icon: Shield },
-    { id: "config", label: "Config", icon: Shield },
+  // Grouped for scannability. Order + `group` only drive the visual clustering
+  // of the tab bar — the tab ids, the activeTab switch, and the deep-link
+  // allow-list are unchanged, so routing/deep-links are unaffected.
+  const tabs: { id: Tab; label: string; icon: any; group: string }[] = [
+    // Growth & loop
+    { id: "overview", label: "Overview", icon: TrendingUp, group: "Growth" },
+    { id: "funnels", label: "Funnels", icon: Activity, group: "Growth" },
+    { id: "loops", label: "Loops", icon: Activity, group: "Growth" },
+    // Accounts & money
+    { id: "users", label: "Users", icon: Users, group: "Money" },
+    { id: "funds", label: "Funds", icon: Wallet, group: "Money" },
+    { id: "gifts", label: "Gifts", icon: Gift, group: "Money" },
+    { id: "gifters", label: "Gifters", icon: Users, group: "Money" },
+    { id: "transactions", label: "Transactions", icon: CreditCard, group: "Money" },
+    { id: "assets", label: "Assets", icon: BarChart3, group: "Money" },
+    // Trust & safety
+    { id: "moderation", label: "Moderation", icon: Shield, group: "Safety" },
+    { id: "access-review", label: "Access Review", icon: Shield, group: "Safety" },
+    { id: "audit", label: "Audit", icon: Shield, group: "Safety" },
+    // Ops & infra
+    { id: "ops", label: "Ops", icon: RefreshCw, group: "Ops" },
+    { id: "integrations", label: "Integrations", icon: Activity, group: "Ops" },
+    { id: "deliverability", label: "Deliverability", icon: Activity, group: "Ops" },
+    // Config
+    { id: "config", label: "Config", icon: Shield, group: "Config" },
   ];
 
   return (
@@ -1180,21 +1207,28 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => goTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid={`tab-${tab.id}`}
-              >
-                <tab.icon size={15} />
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map((tab, i) => {
+              const startsGroup = i > 0 && tabs[i - 1].group !== tab.group;
+              return (
+                <div key={tab.id} className="flex items-center">
+                  {startsGroup && (
+                    <span className="mx-1.5 h-5 w-px shrink-0 self-center bg-border/70" aria-hidden="true" />
+                  )}
+                  <button
+                    onClick={() => goTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    <tab.icon size={15} />
+                    {tab.label}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </header>
@@ -1303,7 +1337,7 @@ function DeliverabilityTab() {
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
+      ) : error ? null : (
         <>
           <section>
             <h3 className="text-sm font-semibold text-foreground mb-3">Active suppressions ({activeRows.length})</h3>
@@ -1383,6 +1417,10 @@ function DeliverabilityTab() {
 function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, string>) => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Must stay ABOVE the early `if (isLoading) return` below — a hook after a
+  // conditional return changes the hook count between renders and crashes with
+  // "Rendered more hooks than during the previous render."
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const isSuperAdmin = isSuperAdminUser(user as any);
   // Overview panels are all-time aggregates; they do NOT need second-by-second
   // freshness. Auto-polling (15-60s) + refetchOnWindowFocus across 13 panels
@@ -2270,6 +2308,23 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         </div>
       </section>
 
+      {/* Deep diagnostics — collapsed by default so the dashboard stays
+          glanceable. The cards above are the at-a-glance health; everything
+          below is the drill-down (UX, checkout, cohorts, pending-by-fund,
+          ops, webhooks, Stripe). */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowDiagnostics((v) => !v)}
+          className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          data-testid="toggle-diagnostics"
+        >
+          {showDiagnostics ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {showDiagnostics ? "Hide" : "Show"} detailed diagnostics
+        </button>
+      </div>
+      {showDiagnostics && (
+        <>
       <section>
         <h2 className="font-heading text-lg font-semibold mb-4 flex items-center gap-2" data-testid="heading-ux-scorecard">
           <BarChart3 size={18} />
@@ -2307,19 +2362,19 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         </div>
         <div className="grid md:grid-cols-3 gap-3 mt-3">
           <PercentBar
-            label="Visit ? Share"
+            label="Visit -> Share"
             pct={visitToSharePct}
             sub={`${fmtNum(checkoutShares30d)} / ${fmtNum(checkoutVisits30d)}`}
             color="blue"
           />
           <PercentBar
-            label="Share ? Checkout Start"
+            label="Share -> Checkout Start"
             pct={shareToCheckoutStartPct}
             sub={`${fmtNum(checkoutStarts30d)} / ${fmtNum(checkoutShares30d)}`}
             color="purple"
           />
           <PercentBar
-            label="Checkout Start ? Complete"
+            label="Checkout Start -> Complete"
             pct={checkoutStartToCompletePct}
             sub={`${fmtNum(checkoutCompletes30d)} / ${fmtNum(checkoutStarts30d)}`}
             color="green"
@@ -2345,7 +2400,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         </div>
         <div className="grid md:grid-cols-3 gap-3 mt-3">
           <PercentBar
-            label="Checkout Start ? Complete"
+            label="Checkout Start -> Complete"
             pct={Number(checkoutDiag?.completionRatePct || 0)}
             sub={`${fmtNum(checkoutCompletes)} / ${fmtNum(checkoutStarts)}`}
             color="green"
@@ -2357,7 +2412,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             color="blue"
           />
           <PercentBar
-            label="Complete Checkout ? Invested"
+            label="Complete Checkout -> Invested"
             pct={investmentsFromCheckoutPct}
             sub={`${fmtNum(checkoutGiftsInvested)} invested vs ${fmtNum(checkoutCompletes)} complete`}
             color="purple"
@@ -2570,6 +2625,8 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
           </div>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }
@@ -3745,6 +3802,14 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           />
         )}
       </div>
+
+      {/* Feature flags, Stripe products, and cultural stats belong to the
+          Config tab. They were previously mis-rendered inside
+          AdminDeletePreviewModal, which made them reachable only by opening a
+          user delete dialog. Restored to their intended home here. */}
+      <FeatureFlagsSection canEdit={isSuperAdmin} />
+      <StripeProductsSection canEdit={isSuperAdmin} />
+      <CulturalStatsSection />
     </div>
   );
 }
@@ -3907,16 +3972,12 @@ function AdminDeletePreviewModal({
           )}
         </div>
       </div>
-
-      <FeatureFlagsSection />
-      <StripeProductsSection />
-      <CulturalStatsSection />
     </div>
   );
 }
 
 // ─── Feature flags section (Config tab) ───────────────────────────
-function FeatureFlagsSection() {
+function FeatureFlagsSection({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery<{ flags: any[]; suggestions: any[] }>({
     queryKey: ["/api/admin/feature-flags"],
@@ -3934,6 +3995,7 @@ function FeatureFlagsSection() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-flags"] }),
+    onError: (err: any) => window.alert(`Could not update flag: ${err?.message || "unknown error"}`),
   });
   const deleteFlag = useMutation({
     mutationFn: async (key: string) => {
@@ -3944,6 +4006,7 @@ function FeatureFlagsSection() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-flags"] }),
+    onError: (err: any) => window.alert(`Could not delete flag: ${err?.message || "unknown error"}`),
   });
   const [newKey, setNewKey] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -3957,6 +4020,11 @@ function FeatureFlagsSection() {
           <p className="text-xs text-muted-foreground mt-0.5">Runtime-toggleable booleans. Code reads <code className="text-[10px]">isFeatureEnabled('key', false)</code>. Cache TTL is 5s, so toggles propagate within seconds.</p>
         </div>
       </div>
+      {!canEdit && (
+        <p className="mb-3 rounded border border-border/60 bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+          Read-only. Flipping production feature flags requires super-admin.
+        </p>
+      )}
       {isLoading ? <div className="text-xs text-muted-foreground">Loading…</div> : (
         <div className="space-y-2">
           {flags.map((f) => (
@@ -3972,10 +4040,10 @@ function FeatureFlagsSection() {
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">Updated {fmtDateTime(f.updated_at)} by {f.updated_by_email || f.updated_by || "system"}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => upsertFlag.mutate({ key: f.key, enabled: !f.enabled, description: f.description })} className="text-[11px] px-2.5 py-1 rounded border border-border hover:bg-muted">
+                <button disabled={!canEdit} onClick={() => upsertFlag.mutate({ key: f.key, enabled: !f.enabled, description: f.description })} className="text-[11px] px-2.5 py-1 rounded border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
                   {f.enabled ? "Turn off" : "Turn on"}
                 </button>
-                <button onClick={() => { if (window.confirm(`Delete flag '${f.key}'?`)) deleteFlag.mutate(f.key); }} className="text-[11px] text-red-700 hover:underline">
+                <button disabled={!canEdit} onClick={() => { if (window.confirm(`Delete flag '${f.key}'?`)) deleteFlag.mutate(f.key); }} className="text-[11px] text-red-700 hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline">
                   Delete
                 </button>
               </div>
@@ -3991,7 +4059,7 @@ function FeatureFlagsSection() {
                       <code className="text-[11px] font-bold">{f.key}</code>
                       <p className="text-[10px] text-muted-foreground">{f.description}</p>
                     </div>
-                    <button onClick={() => upsertFlag.mutate({ key: f.key, enabled: f.enabled, description: f.description })} className="shrink-0 text-[11px] px-2 py-1 rounded border border-primary text-primary hover:bg-primary/10">
+                    <button disabled={!canEdit} onClick={() => upsertFlag.mutate({ key: f.key, enabled: f.enabled, description: f.description })} className="shrink-0 text-[11px] px-2 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed">
                       Create ({f.enabled ? "on" : "off"})
                     </button>
                   </div>
@@ -4005,7 +4073,7 @@ function FeatureFlagsSection() {
               <input value={newKey} onChange={(e) => setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))} placeholder="flag_key" className="h-8 rounded border border-border bg-background px-2 text-xs w-44 font-mono" />
               <input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="What does it do?" className="h-8 rounded border border-border bg-background px-2 text-xs flex-1 min-w-44" />
               <button
-                disabled={!newKey.trim()}
+                disabled={!canEdit || !newKey.trim()}
                 onClick={() => { upsertFlag.mutate({ key: newKey.trim(), enabled: false, description: newDesc.trim() || undefined }); setNewKey(""); setNewDesc(""); }}
                 className="text-[11px] px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-50"
               >
@@ -4020,7 +4088,7 @@ function FeatureFlagsSection() {
 }
 
 // ─── Stripe products section (Config tab) ─────────────────────────
-function StripeProductsSection() {
+function StripeProductsSection({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery<{ products: any[] }>({
     queryKey: ["/api/admin/stripe/products"],
@@ -4059,6 +4127,7 @@ function StripeProductsSection() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/stripe/products"] }),
+    onError: (err: any) => window.alert(`Could not update product: ${err?.message || "unknown error"}`),
   });
   const products = asArray<any>(data?.products);
   return (
@@ -4068,7 +4137,9 @@ function StripeProductsSection() {
           <h3 className="text-sm font-semibold">Stripe products</h3>
           <p className="text-xs text-muted-foreground mt-0.5">Live from Stripe: products + prices used for subscriptions and one-off charges. Create new ones here when launching a tier; archive retired ones to hide from new signups (existing subscribers unaffected).</p>
         </div>
-        <button onClick={() => setShowCreate(v => !v)} className="text-[11px] px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10">{showCreate ? "Cancel" : "+ New product"}</button>
+        {canEdit
+          ? <button onClick={() => setShowCreate(v => !v)} className="text-[11px] px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10">{showCreate ? "Cancel" : "+ New product"}</button>
+          : <span className="text-[10px] text-muted-foreground">Super-admin only</span>}
       </div>
       {showCreate && (
         <div className="mb-3 rounded border border-primary/30 bg-primary/5 p-3 space-y-2">
@@ -4083,7 +4154,7 @@ function StripeProductsSection() {
               <option value="year">/year</option>
             </select>
             <button
-              disabled={!name.trim() || !unitAmount.trim() || createProduct.isPending}
+              disabled={!canEdit || !name.trim() || !unitAmount.trim() || createProduct.isPending}
               onClick={() => createProduct.mutate()}
               className="text-xs px-3 py-1.5 rounded border border-primary bg-primary text-white disabled:opacity-50"
             >
@@ -4117,8 +4188,9 @@ function StripeProductsSection() {
                   )}
                 </div>
                 <button
+                  disabled={!canEdit}
                   onClick={() => { if (window.confirm(`${p.active ? "Archive" : "Unarchive"} '${p.name}'?`)) archiveProduct.mutate({ id: p.id, unarchive: !p.active }); }}
-                  className="shrink-0 text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                  className="shrink-0 text-[11px] px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {p.active ? "Archive" : "Unarchive"}
                 </button>
@@ -4276,7 +4348,9 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       "bank_accounts",
       "joined",
     ];
-    const rows = users.map((u: any) => [
+    // Export what's on screen (honors search/KYC/plan filters) and is built
+    // from the array-guarded list, so it can't crash on a {rows} payload.
+    const rows = filteredUsers.map((u: any) => [
       u.email,
       u.first_name,
       u.last_name,
@@ -4999,10 +5073,16 @@ function TransactionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   });
 
   const giftTx = visibleTx.filter((t: any) => String(t.type || "").toLowerCase() === "gift");
-  const grossCharged = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.gross_charged ?? t.amount ?? 0), 0);
   const totalNetToFund = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.net_amount), 0);
   const totalStripeFees = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.processing_fee), 0);
   const totalKoraFees = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.kora_fee), 0);
+  // What gifters actually paid on their card. Gifts are "whole" — the full gift
+  // reaches the fund as net, and Stripe + Kiddo fees are charged ON TOP. The
+  // server's gross_charged for a gift equals the gift face value (== net), not
+  // the card total, so derive the card total from its parts rather than
+  // mislabeling net as "gross charged" (which made the old reconciliation
+  // identity Net+Stripe+Kiddo impossible to balance).
+  const totalChargedToCard = totalNetToFund + totalStripeFees + totalKoraFees;
 
   const handleExportTransactions = () => {
     const headers = [
@@ -5145,13 +5225,13 @@ function TransactionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Gross Charged" value={fmt(grossCharged)} icon={CreditCard} color="primary" sub="Gift transactions" />
+        <StatCard label="Charged to Cards" value={fmt(totalChargedToCard)} icon={CreditCard} color="primary" sub="Gift + fees gifters paid" />
         <StatCard label="Net to Fund" value={fmt(totalNetToFund)} icon={Wallet} color="blue" sub="Gift amount invested" />
         <StatCard label="Stripe Fees" value={fmt(totalStripeFees)} icon={CreditCard} color="red" sub="Payment processing" />
         <StatCard label="Kiddo Fees" value={fmt(totalKoraFees)} icon={TrendingUp} color="green" sub="Kiddo service fees" />
       </div>
       <div className="text-xs text-muted-foreground bg-card border border-border/50 rounded-lg px-3 py-2">
-        Reconciliation: Gross Charged ({fmt(grossCharged)}) = Net to Fund ({fmt(totalNetToFund)}) + Stripe Fees ({fmt(totalStripeFees)}) + Kiddo Fees ({fmt(totalKoraFees)}).
+        Reconciliation: Charged to cards ({fmt(totalChargedToCard)}) = Net to Fund ({fmt(totalNetToFund)}) + Stripe Fees ({fmt(totalStripeFees)}) + Kiddo Fees ({fmt(totalKoraFees)}).
       </div>
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
         {showAdvanced && (
@@ -5570,9 +5650,11 @@ function ModerationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Unblock failed");
+      assertServerSaved(data);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/blocked-gifters"] }),
+    onError: (err: any) => window.alert(`Could not unblock: ${err?.message || "unknown error"}`),
   });
 
   const handleBlockFromQueue = (email: string | null, reason: string) => {
@@ -5623,12 +5705,14 @@ function ModerationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to flag entry");
+      assertServerSaved(data);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [memoryUrl] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/moderation/queue"] });
     },
+    onError: (err: any) => window.alert(`Could not flag entry: ${err?.message || "unknown error"}`),
   });
 
   // The four queue actions. Confirmation lives inside the handler so the
@@ -6158,9 +6242,12 @@ function LoopsTab() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update");
-      return res.json();
+      const body = await res.json().catch(() => ({}));
+      assertServerSaved(body);
+      return body;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/recurring?limit=200"] }),
+    onError: (err: any) => window.alert(`Could not update schedule: ${err?.message || "unknown error"}`),
   });
 
   const revokeKidView = useMutation({
@@ -6170,9 +6257,17 @@ function LoopsTab() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to revoke");
-      return res.json();
+      const body = await res.json().catch(() => ({}));
+      // A failed revoke MUST NOT report success — this gates a child's PIN
+      // access. The server returns { revoked:false } when no token matched.
+      assertServerSaved(body);
+      if (body && body.revoked === false) {
+        throw new Error("No active kid-view token matched. Access was NOT revoked; refresh and retry.");
+      }
+      return body;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/kid-views"] }),
+    onError: (err: any) => window.alert(`Could not revoke kid view: ${err?.message || "unknown error"}`),
   });
 
   const recRows = asArray<any>(recurringData?.rows);

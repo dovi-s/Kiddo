@@ -182,14 +182,14 @@ function formatGoalAmount(val: string): string {
   return `$${n.toLocaleString()}`;
 }
 
-// Kiddo design tokens
-const G = "rgb(26,61,43)";           // forest green
-const GOLD = "rgb(184,121,26)";       // kiddo gold
-const CREAM = "rgb(249,248,246)";     // warm cream (modal bg)
-const INK = "rgb(26,23,16)";          // near-black
-const MUTED = "rgba(26,23,16,0.5)";   // warm gray
-const BORDER = "rgba(26,23,16,0.12)"; // subtle border
-const INPUT_BG = "rgb(245,244,240)";  // input background
+// Kiddo design tokens (canonical, sourced from index.css)
+const G = "hsl(var(--kiddo-evergreen))";        // forest green
+const GOLD = "hsl(var(--kora-gold))";           // kiddo gold
+const CREAM = "hsl(var(--kiddo-cream))";        // warm cream (modal bg)
+const INK = "hsl(var(--foreground))";           // near-black
+const MUTED = "hsl(var(--foreground) / 0.5)";   // warm gray
+const BORDER = "hsl(var(--foreground) / 0.12)"; // subtle border
+const INPUT_BG = "hsl(var(--muted))";           // input background
 
 const S = {
   input: (focused?: boolean): React.CSSProperties => ({
@@ -1091,7 +1091,7 @@ export function CreateEventSheet({
                             </div>
                           )}
                           {/* Gift CTA */}
-                          <div style={{ marginTop: 14, background: "rgb(184,121,26)", borderRadius: 12, padding: "11px 16px", textAlign: "center" }}>
+                          <div style={{ marginTop: 14, background: GOLD, borderRadius: 12, padding: "11px 16px", textAlign: "center" }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>
                               🎁 {childFirstName ? `Gift ${childFirstName}` : "Gift now"}
                             </span>

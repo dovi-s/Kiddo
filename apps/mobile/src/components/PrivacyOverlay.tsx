@@ -75,5 +75,5 @@ const styles = StyleSheet.create({
     pointerEvents: "auto",
   },
   logo: { fontSize: 44, fontWeight: "800", color: colors.evergreen },
-  tagline: { fontSize: 16, color: "#6B7280", marginTop: 8 },
+  tagline: { fontSize: 16, color: colors.muted, marginTop: 8 },
 });

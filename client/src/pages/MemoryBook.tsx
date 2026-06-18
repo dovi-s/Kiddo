@@ -3421,7 +3421,7 @@ export default function MemoryBook() {
 
             {shouldPromptFirstParentEntry && (
               <EnlighteningReveal delay={0.05}>
-                <div className="mb-5 overflow-hidden rounded-3xl border border-[hsl(var(--kiddo-gold)/0.32)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.12),#fff_54%,hsl(var(--kiddo-evergreen)/0.06))] p-5 shadow-premium-sm" data-testid="memory-first-parent-prompt">
+                <div className="mb-5 overflow-hidden rounded-3xl border border-[hsl(var(--kiddo-gold)/0.32)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.12),hsl(var(--card))_54%,hsl(var(--kiddo-evergreen)/0.06))] p-5 shadow-premium-sm" data-testid="memory-first-parent-prompt">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="max-w-xl">
                       <p className="kiddo-section-label">First page</p>

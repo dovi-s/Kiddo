@@ -802,7 +802,7 @@ export default function Age18Plan() {
                 teaser audited out 2026-05-11 (see comments in "Your
                 note" and "Memory Book" cards below): authorial prose
                 styled as a quote with no source, marketing voice on a
-                product surface. The three ✅ bullets below already
+                product surface. The three check bullets below already
                 say the same thing (Legal control transfers, UTMA law,
                 nothing automatic) without the serif-italic register
                 or the borrowed-authority quote marks. */}
@@ -820,7 +820,7 @@ export default function Age18Plan() {
                   : "Nothing happens automatically.",
               ].map((line, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className="text-sm mt-0.5 shrink-0">✅</span>
+                  <Check size={15} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
                   <p className="text-sm text-muted-foreground leading-snug">{line}</p>
                 </div>
               ))}
@@ -884,7 +884,7 @@ export default function Age18Plan() {
                   onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
                   className="inline-flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/60 hover:bg-muted transition-colors rounded-full px-4 py-2"
                 >
-                  ✉️ Edit →
+                  <Mail size={13} /> Edit →
                 </button>
               </div>
             ) : (
@@ -896,7 +896,7 @@ export default function Age18Plan() {
                   className="rounded-full text-xs h-9 px-5"
                   onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
                 >
-                  ✉️ Write {isOwnerMode ? "your" : childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
+                  <Mail size={13} /> Write {isOwnerMode ? "your" : childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
                 </Button>
               </div>
             )}
@@ -1081,6 +1081,42 @@ export default function Age18Plan() {
             </div>
           </div>
         </div>
+
+        {/* Growth projections — the static 4-row table. Hidden for
+            demo users, who get the Combined Emotional + Financial
+            Projection slider card up top instead (showing both would
+            be the same number twice). Live customer accounts still
+            see this until the slider graduates out of demo. */}
+        {!isDemoUser && totalValue > 0 && yearsLeft > 0 && (
+          <div className="kiddo-card mb-4 overflow-hidden">
+            <div className="p-5">
+              <h2 className="text-base font-bold text-foreground mb-1">What the fund could look like at {majorityAge}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                Starting from {formatCurrency(totalValue)} &middot; assumes 7% yearly average*
+              </p>
+              <div className="space-y-2">
+                {projections.map((p, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between rounded-xl px-4 py-3 ${
+                      i === 0 ? "bg-[hsl(var(--kiddo-evergreen)/0.08)]" : "bg-muted/40"
+                    }`}
+                  >
+                    <p className="text-xs text-muted-foreground leading-snug">{p.label}</p>
+                    <p
+                      className="text-sm font-bold text-foreground font-heading tabular-nums"
+                      aria-live={projectionsAnimating[i] ? "off" : "polite"}
+                      aria-label={formatCurrency(p.value)}
+                    >{formatCurrency(animatedProjections[i] ?? p.value)}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+                *{KIDDO_PROJECTION_DISCLAIMER} Illustrative only. Past performance does not guarantee future results. Kiddo does not provide investment advice.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* FAQ */}
         <div className="kiddo-card mb-4 overflow-hidden">

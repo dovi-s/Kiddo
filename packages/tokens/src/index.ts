@@ -82,6 +82,17 @@ export const semanticColors = {
     text: "#991B1B",
   },
   focus: "#1B3A2D", // evergreen focus ring
+  // Activity-ledger status colors (mobile Activity/Memory feeds). Distinct from
+  // the `success`/`danger` alert groups above: these are the tints the
+  // transaction rows + status chips were tuned to, kept as named tokens so the
+  // feeds stop inlining raw hex without shifting their visual result.
+  ledger: {
+    positive: "#1A7F47", // money in / market growth / invested amounts
+    positiveSoft: "#E7F0E9", // "Invested" chip background
+    negative: "#C0392B", // withdrawals / fees (money out)
+    pendingSoft: "#FBEFD6", // "Pending" chip background
+    pendingText: "#6F4611", // "Pending" chip text (gold-ink)
+  },
 };
 
 export const spacing = {

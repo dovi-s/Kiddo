@@ -425,7 +425,17 @@ export default function Age18Welcome() {
                 <ToggleBtn active={hasJob === true} onClick={() => setHasJob(true)}>
                   Yes
                 </ToggleBtn>
-                <ToggleBtn active={hasJob === false} onClick={() => setHasJob(false)}>
+                <ToggleBtn
+                  active={hasJob === false}
+                  onClick={() => {
+                    // Clear any previously-picked bracket when switching to
+                    // "Not yet" — the bracket field hides, but a stale value
+                    // would otherwise still feed the server's tax math.
+                    // Mirrors Settings.tsx updateEarnedIncome(false, null).
+                    setHasJob(false);
+                    setBracket(null);
+                  }}
+                >
                   Not yet
                 </ToggleBtn>
               </div>

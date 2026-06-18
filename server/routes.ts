@@ -22730,14 +22730,20 @@ export async function registerRoutes(
       const id = String(req.params.id);
       const adminId = (req.user as any).id;
       const reason = String(req.body?.reason || '').trim().slice(0, 500);
-      await db.execute(sql`
+      const result = await db.execute(sql`
         UPDATE blocked_gifters
         SET unblocked_at = NOW(),
             unblocked_by_user_id = ${adminId}
         WHERE id = ${id} AND unblocked_at IS NULL
       `);
-      await writeAudit(req, 'admin_gifter_unblocked', 'blocked_gifters', id, { reason });
-      res.json({ ok: true });
+      // rowCount === 0 means no matching still-blocked row (wrong id, or
+      // already unblocked). Report that honestly so the admin isn't told an
+      // unblock succeeded when nothing changed.
+      const unblocked = (((result as any)?.rowCount ?? 0) as number) > 0;
+      if (unblocked) {
+        await writeAudit(req, 'admin_gifter_unblocked', 'blocked_gifters', id, { reason });
+      }
+      res.json({ ok: unblocked, unblocked });
     } catch (error) {
       console.error('Error unblocking gifter:', error);
       res.status(500).json({ error: 'Failed to unblock gifter' });
@@ -22789,6 +22795,11 @@ export async function registerRoutes(
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'Nothing to update' });
       const updated = await storage.updateParentContribution(id, updates);
+      // updateParentContribution returns undefined when no row matched the id.
+      // Don't audit or report success for a no-op write.
+      if (!updated) {
+        return res.status(404).json({ error: 'No recurring schedule matched that id', updated: false });
+      }
       await writeAudit(req, 'admin_recurring_updated', 'parent_contributions', id, updates);
       res.json(updated);
     } catch (error) {
@@ -22884,14 +22895,19 @@ export async function registerRoutes(
       const kidViewPath = path.join(process.cwd(), '.local', 'kid-view.json');
       const raw = await fs.readFile(kidViewPath, 'utf-8').catch(() => '{}');
       const store = JSON.parse(raw);
-      if (store?.byFundId?.[fundId]) {
+      // Whether a token actually existed for this fund. Revoking gates a
+      // child's PIN access, so a no-match must NOT report success — the admin
+      // needs to know the token wasn't here (stale list / race / stored
+      // elsewhere) rather than believe access was cut.
+      const existed = Boolean(store?.byFundId?.[fundId]);
+      if (existed) {
         store.byFundId[fundId].enabled = false;
         store.byFundId[fundId].shareToken = null;
         store.byFundId[fundId].updatedAt = new Date().toISOString();
         await fs.writeFile(kidViewPath, JSON.stringify(store, null, 2), 'utf-8');
       }
-      await writeAudit(req, 'admin_kid_view_revoked', 'kid_views', fundId);
-      res.json({ ok: true });
+      await writeAudit(req, 'admin_kid_view_revoked', 'kid_views', fundId, { revoked: existed });
+      res.json({ ok: true, revoked: existed });
     } catch (error) {
       console.error('Error revoking kid view:', error);
       res.status(500).json({ error: 'Failed to revoke kid view' });
@@ -23578,6 +23594,10 @@ export async function registerRoutes(
 
   app.put('/api/admin/feature-flags/:key', isAdmin, async (req: any, res) => {
     try {
+      // Flipping production feature flags is a privileged action — gate it
+      // behind super-admin, matching the investment-config editor. Plain
+      // admins can still read flags (GET stays isAdmin-only).
+      if (!requireSuperAdmin(req, res)) return;
       const key = String(req.params.key || "").trim().toLowerCase();
       if (!/^[a-z0-9_]+$/.test(key) || key.length > 64) {
         return res.status(400).json({ error: 'Flag key must be lowercase alphanumeric+underscore, ≤64 chars.' });
@@ -23610,6 +23630,7 @@ export async function registerRoutes(
 
   app.delete('/api/admin/feature-flags/:key', isAdmin, async (req: any, res) => {
     try {
+      if (!requireSuperAdmin(req, res)) return;
       const key = String(req.params.key || "").trim().toLowerCase();
       await db.execute(sql`DELETE FROM feature_flags WHERE key = ${key}`);
       const { invalidateFlagCache } = await import("./featureFlags");
@@ -23663,6 +23684,8 @@ export async function registerRoutes(
 
   app.post('/api/admin/stripe/products', isAdmin, async (req: any, res) => {
     try {
+      // Creating live Stripe billing products is privileged — super-admin only.
+      if (!requireSuperAdmin(req, res)) return;
       const name = String(req.body?.name || "").trim();
       const description = String(req.body?.description || "").trim();
       const unitAmount = parseInt(String(req.body?.unitAmount || "0"), 10);
@@ -23688,6 +23711,7 @@ export async function registerRoutes(
 
   app.post('/api/admin/stripe/products/:id/archive', isAdmin, async (req: any, res) => {
     try {
+      if (!requireSuperAdmin(req, res)) return;
       const id = String(req.params.id);
       const stripe = await getUncachableStripeClient();
       const updated = await stripe.products.update(id, { active: false });
@@ -23701,6 +23725,7 @@ export async function registerRoutes(
 
   app.post('/api/admin/stripe/products/:id/unarchive', isAdmin, async (req: any, res) => {
     try {
+      if (!requireSuperAdmin(req, res)) return;
       const id = String(req.params.id);
       const stripe = await getUncachableStripeClient();
       const updated = await stripe.products.update(id, { active: true });

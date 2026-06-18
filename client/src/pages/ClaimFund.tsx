@@ -66,6 +66,12 @@ export default function ClaimFund() {
     haptic("medium");
     setSubmitting(true);
     setError(null);
+    // Hard timeout on the highest-stakes request in the product. Without it,
+    // a hung connection leaves the kid staring at a "Claiming..." spinner
+    // forever at the moment they take ownership of their fund. ~30s then
+    // abort, show a kid-readable message, and re-enable retry.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
     try {
       const res = await fetch(`/api/kid-view/${encodeURIComponent(token)}/claim-account`, {
         method: "POST",
@@ -77,6 +83,7 @@ export default function ClaimFund() {
           password,
           firstName: firstName.trim() || undefined,
         }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -93,8 +100,14 @@ export default function ClaimFund() {
       setClaimedName(claimedFirstName);
       setSubmitting(false);
     } catch (err: any) {
-      setError(err?.message || "Network error. Try again.");
+      if (err?.name === "AbortError") {
+        setError("This is taking too long. Check your connection and try again.");
+      } else {
+        setError(err?.message || "Network error. Try again.");
+      }
       setSubmitting(false);
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
@@ -164,7 +177,7 @@ export default function ClaimFund() {
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.22)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+            className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.22)_0%,hsl(var(--card))_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
             role="status"
             aria-live="polite"
           >
@@ -222,7 +235,7 @@ export default function ClaimFund() {
               <div className="flex items-start gap-2.5">
                 <Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" strokeWidth={2.5} aria-hidden="true" />
                 <p className="text-sm text-foreground/85 leading-relaxed">
-                  <span className="font-semibold text-foreground">The only ongoing charge: 10 cents per $100 invested per year, or $1 a year per $1,000.</span> That's it. No subscription. No platform fee.
+                  <span className="font-semibold text-foreground">The only ongoing charge: $1 a year for every $1,000 invested.</span> That's it. No subscription, no platform fee.
                 </p>
               </div>
             </motion.div>
@@ -327,7 +340,7 @@ export default function ClaimFund() {
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]"
+          className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,hsl(var(--card))_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]"
         >
           <motion.div
             initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}

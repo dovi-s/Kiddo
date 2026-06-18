@@ -340,7 +340,7 @@ export default function AgeTransitionInvite() {
                 style={{
                   borderColor: "rgba(140,30,30,0.32)",
                   background:
-                    "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, #fff 60%, rgba(140,30,30,0.04) 100%)",
+                    "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, hsl(var(--card)) 60%, rgba(140,30,30,0.04) 100%)",
                 }}
                 data-testid="age-transition-sealed-letter"
               >
@@ -399,7 +399,7 @@ export default function AgeTransitionInvite() {
               style={{
                 borderColor: "hsl(var(--kiddo-gold) / 0.30)",
                 background:
-                  "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, #fff 60%, hsl(var(--kiddo-gold) / 0.10) 100%)",
+                  "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, hsl(var(--card)) 60%, hsl(var(--kiddo-gold) / 0.10) 100%)",
               }}
               data-testid="age-transition-parent-letter"
             >

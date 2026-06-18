@@ -369,8 +369,12 @@ input:focus, textarea:focus, select:focus {
   transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
 }
 input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:disabled) {
-  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.08);
-  border-color: hsl(var(--kora-evergreen) / 0.4);
+  /* Soft brand glow stays, but the FOCUS BORDER goes full evergreen (it was
+     being diluted to 0.4 here, overriding input.tsx's focus:border-primary).
+     A full-evergreen 2px border on cream is ~12:1 — well past WCAG 2.4.7's
+     3:1 — so keyboard focus is unmistakable without a heavy ring. */
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.18);
+  border-color: hsl(var(--kora-evergreen));
   outline: none;
 }
 
@@ -382,7 +386,9 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 [role="switch"]:focus-visible {
-  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.1);
+  /* A switch has no border to lean on, so the ring itself must clear WCAG.
+     Evergreen at 0.55 over cream is ~3.4:1 (vs the old 0.1 ≈ 1.2:1). */
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.55);
   outline: none;
 }
 
@@ -1177,17 +1183,6 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 }
 .tap-bounce:active {
   transform: scale(0.92);
-}
-
-/* Premium visual effects */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.dark .glass-effect {
-  background: rgba(20, 30, 25, 0.8);
 }
 
 /* Subtle gradient overlay for premium feel */

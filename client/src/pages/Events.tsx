@@ -221,10 +221,6 @@ export default function Events() {
     ? Number.POSITIVE_INFINITY
     : 1;
   const canCreateAnotherEvent = activeCustomEventCount < activeEventLimit;
-  const pendingEventPass: { count: number } | null = null;
-  const pendingEventPassSessionId = "";
-  const setPendingEventPassSessionId = (_value: string) => {};
-  const setShowEventPassSuccess = (_value: boolean) => {};
   const fundLookup = Object.fromEntries(funds.map(f => [f.id, f]));
   const fundEventCounts = events.reduce<Record<string, number>>((acc, event) => {
     const key = event.fundId || "unknown";
@@ -565,65 +561,6 @@ export default function Events() {
           </div>
         </div>
 
-        {false && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
-            data-testid="event-pass-ready-banner"
-          >
-            <p className="text-sm font-medium text-emerald-800">Kiddo Occasion saved successfully</p>
-            <p className="text-xs text-emerald-700 mt-1">
-              You can apply it now when creating an event, or keep it saved for later.
-            </p>
-            {(pendingEventPass?.count || 0) > 1 && (
-              <p className="text-[11px] text-emerald-700 mt-1">
-                You currently have {pendingEventPass?.count} saved Kiddo Occasion credits.
-              </p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                data-testid="button-event-pass-create-now"
-                onClick={() => {
-                  haptic("selection");
-                  window.location.href = `/event/create?eventPass=purchased&session_id=${encodeURIComponent(pendingEventPassSessionId)}`;
-                }}
-              >
-                Create event now
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                data-testid="button-event-pass-hide-banner"
-                onClick={() => {
-                  haptic("light");
-                  setShowEventPassSuccess(false);
-                }}
-              >
-                I’ll do this later
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                data-testid="button-event-pass-clear-saved"
-                onClick={() => {
-                  haptic("light");
-                  try {
-                    window.localStorage.removeItem("koraPendingEventPassSessionId");
-                  } catch {
-                    // noop
-                  }
-                  setPendingEventPassSessionId("");
-                  setShowEventPassSuccess(false);
-                  toast({ title: "Saved premium coverage cleared" });
-                }}
-              >
-                Clear saved boost
-              </Button>
-            </div>
-          </motion.div>
-        )}
         {events.length > 0 && (
           <div className="mb-5 space-y-3">
             <p className="text-xs text-muted-foreground" data-testid="text-events-context-summary">
@@ -868,7 +805,7 @@ export default function Events() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 mt-2 text-sm" data-testid={`text-gift-stats-${event.id}`}>
-                            <TrendingUp size={14} className="text-primary" />
+                            <Gift size={14} className="text-primary" />
                             <span className="font-medium text-foreground">${raised.toFixed(0)} raised</span>
                             <span className="text-muted-foreground">from {giftCount} {giftCount === 1 ? "gift" : "gifts"}</span>
                           </div>

@@ -5247,6 +5247,9 @@ export default function Dashboard() {
       <AppHeader />
 
       <main className="kiddo-canvas px-4 py-6 space-y-6" id="dashboard-main-content">
+        <h1 className="sr-only">
+          {isOwnerMode ? "Your fund" : `${recipientFirstNameDisplay || "Your child"}'s fund`}
+        </h1>
         {/* Fund switcher tabs — fast-switch between child funds for
             multi-fund parents (Family-tier). Renders nothing for
             single-fund parents (the AppHeader dropdown is still the

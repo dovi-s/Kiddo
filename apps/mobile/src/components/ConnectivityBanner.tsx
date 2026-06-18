@@ -6,7 +6,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, spacing, radius } from "@kora/tokens";
+import { colors, semanticColors, spacing, radius } from "@kora/tokens";
 import { KText } from "../ui";
 import { apiHealthPing, setNetworkStatusListener } from "../api";
 
@@ -65,7 +65,7 @@ export function ConnectivityBanner() {
     >
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <KText variant="caption" color="#F8F5F0">
+          <KText variant="caption" color={semanticColors.text.inverse}>
             Can't reach Kiddo. Check your connection.
           </KText>
           {__DEV__ ? (
@@ -75,7 +75,7 @@ export function ConnectivityBanner() {
           ) : null}
         </View>
         <Pressable onPress={retry} hitSlop={10} style={styles.retry}>
-          <KText variant="caption" color="#EDC164">
+          <KText variant="caption" color={colors.goldLight}>
             {checking ? "Checking..." : "Retry"}
           </KText>
         </Pressable>

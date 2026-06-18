@@ -1351,7 +1351,7 @@ function KidViewPreview({
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <KText variant="eyebrow" color="rgba(248,245,240,0.6)">Preview of {childName}'s view</KText>
-            <Pressable onPress={onClose} hitSlop={10}>
+            <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={24} color="rgba(255,255,255,0.8)" />
             </Pressable>
           </View>
