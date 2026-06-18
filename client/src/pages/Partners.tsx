@@ -22,7 +22,7 @@ const WHAT_KIDDO_IS = [
     body: "A custodial UTMA investment account for the child. Real ownership, no spending restrictions, fully theirs at the state's age of majority.",
   },
   {
-    title: "Anyone can give in a minute",
+    title: "Anyone can give in seconds",
     body: "A shareable gift link, with no account needed to give. Grandparents, aunts, and friends all add to the same fund, and every gift carries a note in the Memory Book.",
   },
   {
@@ -35,7 +35,7 @@ export default function Partners() {
   usePageSeo({
     title: "Partner with Kiddo | For organizations that reach new families",
     description:
-      "Kiddo gives families a head-start investment fund that anyone can add to in about a minute. If your organization reaches new families, let's talk.",
+      "Kiddo gives families a head-start investment fund that anyone can add to in seconds. If your organization reaches new families, let's talk.",
     robots: "noindex,nofollow",
     ogType: "website",
   });
@@ -51,8 +51,8 @@ export default function Partners() {
             You reach new families. We help them start.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Kiddo is a custodial investment account for a child that anyone who loves them can add to in about a
-            minute. If your organization touches families at the start of a child's life, that is the moment a head
+            Kiddo is a custodial investment account for a child that anyone who loves them can add to in seconds.
+            If your organization touches families at the start of a child's life, that is the moment a head
             start matters most.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

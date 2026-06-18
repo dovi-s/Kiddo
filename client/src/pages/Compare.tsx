@@ -930,46 +930,6 @@ function ComparisonHub() {
       </section>
 
       <section className="pb-16 md:pb-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <FadeIn className="overflow-hidden rounded-3xl border border-border bg-card shadow-premium-sm">
-            <div className="border-b border-border bg-muted/30 px-6 py-5">
-              <h2 className="font-heading text-2xl font-semibold text-foreground">Quick skim: who does what best?</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                If you do not want to open six tabs, this is the fast answer. Kiddo wins when the job is getting family and friends to invest through a link that actually gets used.
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-muted/20 text-foreground">
-                  <tr>
-                    <th className="px-5 py-4 font-medium">Product</th>
-                    <th className="px-5 py-4 font-medium">Best for</th>
-                    <th className="px-5 py-4 font-medium">Shareable gifting link</th>
-                    <th className="px-5 py-4 font-medium">No account needed to give</th>
-                    <th className="px-5 py-4 font-medium">Memory Book / emotional layer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hubSnapshotRows.map((row) => {
-                    const isKiddo = row.product === "Kiddo";
-                    return (
-                      <tr key={row.product} className={`border-t border-border ${isKiddo ? "bg-primary/5" : ""}`}>
-                        <td className={`px-5 py-4 font-medium ${isKiddo ? "text-primary" : "text-foreground"}`}>{row.product}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-foreground" : "text-muted-foreground"}`}>{row.bestFor}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-primary" : "text-muted-foreground"}`}>{row.giftingLink}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-primary" : "text-muted-foreground"}`}>{row.noAccountGift}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-primary" : "text-muted-foreground"}`}>{row.memoryBook}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="pb-16 md:pb-20">
         <div className="mx-auto max-w-7xl px-4">
           <FadeIn className="overflow-hidden rounded-3xl border border-border bg-card shadow-premium-sm">
             <div className="border-b border-border bg-muted/30 px-6 py-5">

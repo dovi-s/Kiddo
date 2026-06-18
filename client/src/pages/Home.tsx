@@ -375,35 +375,6 @@ function ProductBento() {
   );
 }
 
-const testimonials = [
-  {
-    quote:
-      "I sent the link to our family group chat before Emma's birthday. By the end of the week, 14 people had gifted. Every single one of them is now invested in her future.",
-    attribution: "Illustrative: the family group-chat effect",
-  },
-  {
-    quote:
-      "My parents are in their 70s and not great with technology. They gifted my son through Kiddo in seconds. I could not believe it.",
-    attribution: "Illustrative: why grandparents find it easy",
-  },
-  {
-    quote:
-      "I used to give checks that I knew would just get deposited and forgotten. Now I give Disney stock. It feels completely different.",
-    attribution: "Illustrative: from forgettable checks to real stock",
-  },
-];
-
-
-const comparisonRows = [
-  { label: "Anyone can gift in seconds", savings: "No", plan529: "No", kora: "Yes" },
-  { label: "Invests automatically", savings: "No", plan529: "Sometimes", kora: "Yes" },
-  { label: "No restrictions on how money is used", savings: "Yes", plan529: "No", kora: "Yes" },
-  { label: "Helps children learn how investing works", savings: "No", plan529: "No", kora: "Yes" },
-  { label: "Memory Book of every gift", savings: "No", plan529: "No", kora: "Yes" },
-  { label: "No account needed to give", savings: "No", plan529: "No", kora: "Yes" },
-  { label: "Free to start", savings: "Yes", plan529: "Yes", kora: "Yes" },
-];
-
 export default function Home() {
   const reduceMotion = useReducedMotion();
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -884,29 +855,6 @@ export default function Home() {
 
         <section className="py-14 md:py-20">
           <div className={SECTION_MAX}>
-            <FadeIn className="mb-14 text-center">
-              <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
-                How the first few gifts tend to go.
-              </h2>
-              <p className="mx-auto max-w-2xl text-muted-foreground">
-                It&apos;s the loop the whole product is built around: once family sees the link, it clicks.
-              </p>
-            </FadeIn>
-            <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
-              {testimonials.map((item, index) => (
-                <FadeIn key={item.attribution} delay={index * 0.08}>
-                  <div className="h-full rounded-2xl bg-card p-7 shadow-premium-sm">
-                    <p className="mb-4 leading-relaxed text-foreground">&quot;{item.quote}&quot;</p>
-                    <p className="text-sm text-muted-foreground">{item.attribution}</p>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-14 md:py-20">
-          <div className={SECTION_MAX}>
             <FadeIn className="mx-auto max-w-5xl rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
               <div className="grid items-center gap-8 md:grid-cols-2">
                 <div>
@@ -949,28 +897,10 @@ export default function Home() {
                 Why not just use a savings account?
               </h2>
             </FadeIn>
-            <FadeIn delay={0.08} className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border bg-card shadow-premium-sm">
-              {/* Horizontal scroll on phones so the 4-column comparison stays
-                  readable instead of crushing to ~90px columns. min-width keeps
-                  each column legible; on desktop it fits within max-w-5xl. */}
-              <div className="overflow-x-auto">
-                <div className="min-w-[600px]">
-                  <div className="grid grid-cols-4 border-b border-border bg-muted/20 text-sm font-medium text-foreground">
-                    <div className="p-4"></div>
-                    <div className="p-4">Savings account</div>
-                    <div className="p-4">529 plan</div>
-                    <div className="p-4">Kiddo</div>
-                  </div>
-                  {comparisonRows.map((row) => (
-                    <div key={row.label} className="grid grid-cols-4 border-b border-border text-sm last:border-b-0">
-                      <div className="p-4 font-medium text-foreground">{row.label}</div>
-                      <div className="p-4 text-muted-foreground">{row.savings}</div>
-                      <div className="p-4 text-muted-foreground">{row.plan529}</div>
-                      <div className="p-4 text-muted-foreground">{row.kora}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <FadeIn delay={0.08} className="mx-auto max-w-2xl text-center">
+              <p className="text-lg leading-relaxed text-muted-foreground">
+                A savings account keeps cash safe but flat, and a 529 locks it to school. Kiddo is built for long-run investing, lets anyone add to it, and becomes theirs to use for anything at 18.
+              </p>
             </FadeIn>
             <FadeIn delay={0.12} className="mt-6 text-center">
               <Link href="/compare" className="text-sm font-medium text-primary hover:underline">
@@ -994,10 +924,7 @@ export default function Home() {
                 <p>Private fund links. Not searchable. Not public.</p>
                 <p>Fees shown in full before every checkout.</p>
               </div>
-              <div className="mt-8">
-                <TrustMicroStrip />
-              </div>
-              <div className="mt-5 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+              <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
                 <Link href="/security" className="transition-colors hover:text-foreground">How we protect your child&apos;s fund</Link>
               </div>
             </FadeIn>

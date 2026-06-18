@@ -89,7 +89,7 @@ export default function About() {
               <p>Every gift, every note, every person who showed up for your kid gets captured in the Memory Book.</p>
               <p>A living record of everyone who believed in them before they even knew what a stock was.</p>
               <p className="font-medium text-foreground">
-                It is the most differentiated feature in Kiddo. Every gift and note is kept with the account, as a story they can read.
+                Every gift and note is kept with the account, as a story they can read.
               </p>
             </div>
           </FadeIn>
