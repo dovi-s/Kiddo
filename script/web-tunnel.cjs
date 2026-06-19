@@ -34,7 +34,12 @@ console.log(`[web:tunnel] exposing http://localhost:${port} via a Cloudflare qui
 console.log("[web:tunnel] keep `npm run dev` running in another terminal. Ctrl+C here to stop the tunnel.");
 console.log("[web:tunnel] look for the https://<random>.trycloudflare.com URL below, then open it on your phone.\n");
 
-const child = spawn(exe, ["tunnel", "--url", `http://localhost:${port}`, "--no-autoupdate"], {
+// --protocol http2 forces the TCP transport instead of cloudflared's default
+// QUIC (UDP 7844). On networks that block/throttle QUIC, the default silently
+// retry-loops ("control stream encountered a failure while serving") and the
+// tunnel keeps dying within hours — http2 is reliable there. (Diagnosed
+// 2026-06-19 after every quick tunnel kept dropping with that exact error.)
+const child = spawn(exe, ["tunnel", "--url", `http://localhost:${port}`, "--protocol", "http2", "--no-autoupdate"], {
   stdio: "inherit",
   shell: false,
 });
