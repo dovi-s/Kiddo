@@ -168,9 +168,10 @@
   --kiddo-border: 33 24% 86%;           /* #E5DDD4 */
   --kiddo-border-light: 33 24% 86% / 0.6; /* faded variant for inner row dividers */
   
-  --background: 40 32% 95%;            /* Warm cream canvas — deepened 97->95% so the
-                                          near-white cards (99%) read as lifted surfaces
-                                          (paper-on-warm-desk depth) instead of cream-on-cream flat */
+  --background: 38 8% 98%;             /* De-beiged near-white canvas. Saturation cut hard
+                                          (32% -> 8%) because the "beige feeling" is saturation,
+                                          not lightness — this is perceptibly cleaner/whiter, not
+                                          a subtle tone nudge. Faintly warm so it isn't clinical. */
   --foreground: 150 15% 12%;           /* Near-black ink */
   
   /* Mobile-first touch targets */
