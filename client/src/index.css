@@ -294,13 +294,16 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-semibold;
-    letter-spacing: 0;
+    /* Slight negative tracking on headings only (body stays at 0). Large display
+       type reads tight + crafted when letters are pulled in a hair; flat 0 was an
+       accreted default. Premium-type discipline; scales by heading size below. */
+    letter-spacing: -0.011em;
   }
   h1 {
-    letter-spacing: 0;
+    letter-spacing: -0.025em;
   }
   h2 {
-    letter-spacing: 0;
+    letter-spacing: -0.018em;
   }
   button, [role="button"], .btn {
     cursor: pointer;
@@ -1316,7 +1319,9 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 
 .font-heading {
   font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
-  letter-spacing: -0.01em;
+  /* -0.018em: large display type (the balance number, section headings) reads
+     tighter + more crafted. Was -0.01em; the body sledgehammer keeps text at 0. */
+  letter-spacing: -0.018em;
 }
 
 .kiddo-canvas {
