@@ -35,7 +35,7 @@ before investing is live**:
 | ~~`GiftCheckout.tsx:1489`~~ ✅ | "Start them off right with a real investment in their name." (baby shower) | **FIXED** — same. | HIGH |
 | ~~`GiftCheckout.tsx:1494`~~ ✅ | "Give a gift that actually grows, in real stocks invested in their name." (fallback) | **FIXED** — same. | HIGH |
 | ~~`FundSnapshot.tsx:690`~~ ✅ | Title: "{name}'s fund is invested in real markets." | **FIXED** — routed through `investingLiveCopy()` (pending: "…will invest in real markets once investing is live"), so the title no longer contradicts its own body. | HIGH |
-| `About.tsx:110` | Heading: "They watch it grow, in shares they actually own." | Body (L119) is correctly conditioned ("Once investing is live…"), but the **heading** stands naked above it. | HIGH |
+| ~~`About.tsx:110`~~ ✅ | Heading: "They watch it grow, in shares they actually own." | **FIXED** — routed through `investingLiveCopy()`. The founder's exact brand line is preserved for the live state; pending uses future tense ("Real shares they'll watch grow and truly own.") with no repeated "investing is live" so it doesn't re-create the body's hedge pile-up. | HIGH |
 | `Compare.tsx:395` | Row label: "Invests in real stocks" (Kiddo = Yes vs savings = No) | Reads as a present capability claim in the comparison grid. | LOW |
 | `HowItWorks.tsx:216` | "Small gifts still become real ownership." | Preceded by "when that gift is invested…" (L215); sentence itself reads unconditional. | LOW |
 

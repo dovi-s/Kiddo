@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { Button } from "@/components/ui/button";
 import { FounderMedia } from "@/components/ui/founder-media";
+import { investingLiveCopy } from "@shared/legal-copy";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -107,7 +108,7 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Kid View</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  They watch it grow, in shares they actually own.
+                  {investingLiveCopy("They watch it grow, in shares they actually own.", "Real shares they'll watch grow and truly own.")}
                 </h2>
               </div>
             </div>
