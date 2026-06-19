@@ -120,12 +120,63 @@ const DEMO_BLOCKED_POST_PATTERNS: RegExp[] = [
   // demo for everyone after them (bug found 2026-06-18: a sell in the demo
   // saved for all demo users). The 2026-06-05 audit predated investing being
   // clickable in the demo. Block the whole money-mutation cluster.
+  // NOTE: /api/withdrawals and /api/funds/:id/auto-invest ALSO self-mock via
+  // isDemoFund (early {isDemo} return before any write), but list them here too
+  // so the block is belt-and-suspenders and independent of the inline check.
   /^\/api\/holdings\/sell$/,
   /^\/api\/funds\/[^/]+\/liquidate$/,
   /^\/api\/funds\/[^/]+\/auto-invest$/,
+  /^\/api\/withdrawals$/,
   /^\/api\/funds\/activate$/,
   /^\/api\/funds\/activate-pending-drafts$/,
   /^\/api\/funds\/[^/]+\/parent-contributions$/,
+  // Pulls 14 days of real Stripe checkout sessions and may persist them onto the
+  // demo fund (real money state reaching the shared demo). Owner-only, and the
+  // demo user IS the demo fund owner, so it's reachable.
+  /^\/api\/funds\/[^/]+\/reconcile-stripe-gifts$/,
+  // Releasing a held large gift credits the demo fund balance + flips gift state.
+  /^\/api\/funds\/[^/]+\/large-gift-holds\/[^/]+\/release$/,
+  // Claiming a gift debits the source fund and credits the target — a real
+  // balance/holding mutation on the shared demo.
+  /^\/api\/gifts\/[^/]+\/claim$/,
+  // Fund lifecycle — creating, closing, deleting, reopening funds all persist on
+  // the SHARED demo account, so a visitor could spawn/destroy demo funds for
+  // everyone after them. (POST /api/funds/:id/delete is a POST, not DELETE, so
+  // it is NOT caught by the blanket hard-write block above.)
+  /^\/api\/funds$/,
+  /^\/api\/funds\/[^/]+\/close$/,
+  /^\/api\/funds\/[^/]+\/delete$/,
+  /^\/api\/funds\/[^/]+\/reopen$/,
+  // SSN persists onto the demo fund (raw SQL UPDATE) — and writing a real SSN to
+  // the shared demo would be a privacy leak, like the bank-link case below.
+  /^\/api\/funds\/[^/]+\/recipient-ssn$/,
+  // Dismissing a nudge persists dismissedNudges on the shared demo fund.
+  /^\/api\/funds\/[^/]+\/dismiss-nudge$/,
+  // KYC submit writes kycStatus on the shared demo user (+ may activate a fund).
+  /^\/api\/kyc\/submit$/,
+  // Previous-owner access toggles persist on the shared demo fund (updateFund).
+  /^\/api\/funds\/[^/]+\/(revoke-previous-owner-access|previous-owner-live-access)$/,
+  // Age-transition lifecycle — preview/invite/verify/claim/complete/handoff all
+  // persist the age-transition record (and some send real email / queue a real
+  // custodian transfer) on the shared demo fund.
+  /^\/api\/funds\/[^/]+\/age-transition\/(preview-link|invite-link|handoff|verify-email-link)$/,
+  /^\/api\/age-transition\/[^/]+\/(claim|complete)$/,
+  // Device + push registration persists tokens tied to the shared demo user.
+  /^\/api\/mobile-push\/(register|test)$/,
+  /^\/api\/me\/trusted-devices$/,
+  /^\/api\/me\/trusted-devices\/[^/]+\/revoke$/,
+  // Subscription state mutations on the shared demo user (cancel/reactivate/
+  // overlap-cleanup persist subscription + membership rows; downgrade/portal
+  // self-mock via isDemoUser but block here too for independence). NOT blocking
+  // /api/subscription/sync-stripe — it's a POST-as-read the dashboard calls to
+  // refresh subscription state (idempotent ensureSubscription, no pollution).
+  /^\/api\/subscription\/(cancel|reactivate|cancel-starter-overlaps|downgrade-to-plus|portal)$/,
+  // Collaborator invitation accept/decline persist collaborator rows on the
+  // shared demo fund.
+  /^\/api\/invitations\/[^/]+\/(accept|decline)$/,
+  // Monetization telemetry inserts an activities row per call for the shared
+  // demo user — unbounded growth + pollution of the demo's activity table.
+  /^\/api\/monetization\/triggers$/,
   // Kid View
   /^\/api\/funds\/[^/]+\/kid-view-link$/,
   // Banking — NEVER link a real bank to the shared demo account. A demo visitor
