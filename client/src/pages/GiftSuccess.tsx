@@ -152,6 +152,10 @@ export default function GiftSuccess() {
   // Resolved fast from the public-funds call below, with gift-summary
   // as a backstop. Empty string = no photo on file → sprout fallback.
   const [childPhotoUrl, setChildPhotoUrl] = useState("")
+  // Public/gifter media uploads gated OFF at launch (server flag
+  // PUBLIC_MEDIA_UPLOADS_ENABLED). When false, hide the "add media" picker so
+  // the gifter never hits a dead button; the note path stays. See publicMediaFlag.ts.
+  const [gifterMediaEnabled, setGifterMediaEnabled] = useState(false)
   const [hasMessage, setHasMessage] = useState(false)
   const [hasPhoto, setHasPhoto] = useState(false)
   const [hasVideo, setHasVideo] = useState(false)
@@ -434,6 +438,7 @@ export default function GiftSuccess() {
         if (data?.fund?.slug) { setFundSlug(data.fund.slug); setShareReady(true) }
         else if (!fundSlugParam) setShareReady(false)
         if (data?.fund?.childPhotoUrl) setChildPhotoUrl(String(data.fund.childPhotoUrl))
+        setGifterMediaEnabled(Boolean(data?.fund?.gifterMediaEnabled))
         if (!fundNameParam && data?.fund?.recipientFirstName) setFundNameState(String(data.fund.recipientFirstName))
       })
       .catch(() => { if (!fundSlugParam) setShareReady(false) })
@@ -1441,7 +1446,7 @@ export default function GiftSuccess() {
                     className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))] resize-none"
                     data-testid="input-note-text"
                   />
-                  {fundId && !isAnonymous ? (
+                  {fundId && !isAnonymous && gifterMediaEnabled ? (
                     // MemoryMediaPicker uses the public upload endpoints
                     // (no auth required) when uploadEndpointPrefix is
                     // overridden — gifters aren't signed in. Voice is

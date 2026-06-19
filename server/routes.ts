@@ -43,6 +43,7 @@ import { getMajorityAgeForState, US_STATES, UTMA_DEFAULT_MAJORITY_AGE } from "@s
 import { recordEvent, eventCtxFromReq } from "./analytics";
 import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
 import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
+import { isPublicMediaUploadsEnabled } from "./publicMediaFlag";
 import { normalizeImage } from "./imagePipeline";
 import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rateLimiter";
 import { verifyEmailUnsubscribeSignature } from "./emailUnsubscribeToken";
@@ -7582,6 +7583,13 @@ export async function registerRoutes(
           // feature up with zero further code. Per the 2026-06-04 guestbook
           // safety model (text-only until then).
           guestbookMediaEnabled: getActiveScannerName() !== "noop",
+          // Public / gifter media uploads (photo/video/voice on the public gift
+          // link). Gated OFF at launch (PUBLIC_MEDIA_UPLOADS_ENABLED, default
+          // false) per the 2026-06-18 founder decision — untrusted-sender media
+          // is the largest child-safety surface. The client hides the media
+          // picker when false so a gifter never hits a dead button; the upload
+          // routes refuse server-side regardless. See server/publicMediaFlag.ts.
+          gifterMediaEnabled: isPublicMediaUploadsEnabled(),
         },
         availability,
         permanentEventSlug: permanentEvent?.slug,
@@ -8608,6 +8616,13 @@ export async function registerRoutes(
 
   app.post('/api/public/funds/:id/memory/upload-photo', async (req, res) => {
     try {
+      // Gifter (public/unauthenticated) media is gated OFF at launch
+      // (PUBLIC_MEDIA_UPLOADS_ENABLED, default false). Honest refusal so the
+      // client can hide the picker; the scanner fail-closed below stays as
+      // defense in depth. See server/publicMediaFlag.ts.
+      if (!isPublicMediaUploadsEnabled()) {
+        return res.status(403).json({ error: 'media_uploads_disabled', message: 'Photo, video, and voice gifts are not available yet. You can still add a written note.' });
+      }
       const fund = await storage.getFund(req.params.id);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
@@ -8690,6 +8705,12 @@ export async function registerRoutes(
 
   app.post('/api/public/funds/:id/memory/upload-video', async (req, res) => {
     try {
+      // Gifter media gated OFF at launch (PUBLIC_MEDIA_UPLOADS_ENABLED, default
+      // false). Honest refusal; the prod fail-closed below stays as defense in
+      // depth. See server/publicMediaFlag.ts.
+      if (!isPublicMediaUploadsEnabled()) {
+        return res.status(403).json({ error: 'media_uploads_disabled', message: 'Photo, video, and voice gifts are not available yet. You can still add a written note.' });
+      }
       const fund = await storage.getFund(req.params.id);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
@@ -8747,6 +8768,12 @@ export async function registerRoutes(
 
   app.post('/api/public/funds/:id/memory/upload-audio', async (req, res) => {
     try {
+      // Gifter media gated OFF at launch (PUBLIC_MEDIA_UPLOADS_ENABLED, default
+      // false). Honest refusal; the prod fail-closed below stays as defense in
+      // depth. See server/publicMediaFlag.ts.
+      if (!isPublicMediaUploadsEnabled()) {
+        return res.status(403).json({ error: 'media_uploads_disabled', message: 'Photo, video, and voice gifts are not available yet. You can still add a written note.' });
+      }
       const fund = await storage.getFund(req.params.id);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 

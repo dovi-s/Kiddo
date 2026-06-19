@@ -171,6 +171,10 @@ interface PublicEventData {
     creatorIsFounder?: boolean;
     childPhotoUrl?: string | null;
     pronoun?: string | null;
+    // Public/gifter media uploads gated OFF at launch (server flag
+    // PUBLIC_MEDIA_UPLOADS_ENABLED). When false we hide the media picker so a
+    // gifter never hits a dead button; text notes stay. See publicMediaFlag.ts.
+    gifterMediaEnabled?: boolean;
     // True once the fund has been handed off and the now-adult owns it
     // (server: Boolean(fund.transferredAt)). Flips the gift page to owner-aware
     // framing (no childhood "turns N" milestone; forward-arc projection).
@@ -2828,7 +2832,7 @@ export default function GiftCheckout() {
                       requiresPlus={true} based on parent's effective
                       plan; that's the actual Plus differential, NOT
                       this surface. */}
-                  {fundId && !isAnonymous && (
+                  {fundId && !isAnonymous && eventData?.fund?.gifterMediaEnabled && (
                     <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.42)] p-4" data-testid="section-memory-attachment">
                       <label className="text-sm font-semibold text-foreground">
                         Add a photo, video, or voice note <span className="font-normal text-muted-foreground">(optional)</span>
