@@ -1,4 +1,5 @@
 import type { Fund } from "@shared/schema";
+import { investingLiveCopy } from "@shared/legal-copy";
 
 export type SetupStep = {
   key: "fund" | "recipient" | "investing" | "bank" | "profile";
@@ -65,12 +66,26 @@ export function buildSetupProgress({ fund, hasBank, hasProfile }: BuildSetupProg
     },
     {
       key: "investing",
-      label: investingDone ? "First gifts can go straight into real stocks" : "Activate investing so first gifts go straight into real stocks",
+      // HONESTY: the ✓ means investing is ACTIVATED for this fund (status
+      // "active"), but gifts sit as cash until INVESTING_LIVE flips (custodian
+      // is still a stub). So the present-tense "go straight into real stocks"
+      // is only true once live — route it through investingLiveCopy() like
+      // every other real-stocks surface (GiftCheckout, FundSnapshot, About).
+      label: investingDone
+        ? investingLiveCopy(
+            "First gifts go straight into real stocks",
+            "First gifts buy real stocks once investing goes live",
+          )
+        : "Activate investing so first gifts go straight into real stocks",
       done: investingDone,
     },
     {
       key: "bank",
-      label: bankDone ? "Full fund protection is in place" : "Link withdrawals to unlock full fund protection",
+      // Linking a Plaid bank is the WITHDRAWAL/payout rail for the at-18
+      // handoff — not "fund protection" (custody/SIPC protection comes from the
+      // custodian, not from linking a payout bank). Match the honest framing
+      // the action-item card already uses for the same action.
+      label: bankDone ? "Withdrawals are linked for the age-18 handoff" : "Link a withdrawal bank for the age-18 handoff",
       done: bankDone,
     },
     {

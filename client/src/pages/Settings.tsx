@@ -5271,7 +5271,7 @@ const [editFundName, setEditFundName] = useState("");
                   {bankAccounts.length === 0 ? "No bank accounts linked yet." : `${bankAccounts.length} bank account${bankAccounts.length === 1 ? "" : "s"} linked.`}
                 </p>
                 <p className={`mt-1 text-sm font-semibold ${bankAccounts.length > 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kiddo-gold-ink))]"}`}>
-                  {bankAccounts.length > 0 ? "Withdrawals are connected." : "Link withdrawals to unlock full fund protection."}
+                  {bankAccounts.length > 0 ? "Withdrawals are linked for the age-18 handoff." : "Link a withdrawal bank for the age-18 handoff."}
                 </p>
                 {bankAccounts.length > 0 && (
                   <div className="mt-4 space-y-2" data-testid="settings-money-bank-list">
