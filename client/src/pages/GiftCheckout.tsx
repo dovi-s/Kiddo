@@ -2728,7 +2728,7 @@ export default function GiftCheckout() {
               )}
               <div className="kiddo-card p-5 md:p-6">
                 <p className="text-sm font-medium text-[hsl(var(--kiddo-evergreen))]">Almost there.</p>
-                <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground">They will read your note, and the investment keeps growing alongside it.</h1>
+                <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground">{investingLiveCopy("They will read your note, and the investment keeps growing alongside it.", "They will read your note, and once investing is live the gift grows alongside it.")}</h1>
                 {/* Investment preview compressed: was a big 3-stat block
                     (Gift amount / Invested / Est. shares or Destination)
                     plus a paragraph plus a logo. The Order Summary card

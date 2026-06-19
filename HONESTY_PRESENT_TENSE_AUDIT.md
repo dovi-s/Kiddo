@@ -30,7 +30,7 @@ before investing is live**:
 
 | File:line | Exact copy | Note | Sev |
 |---|---|---|---|
-| `GiftCheckout.tsx:2731` ⏳ | Payment-step H1: "They will read your note, and the investment keeps growing alongside it." | **PENDING** (found 2026-06-18 by driving the gift flow; static audit missed it). Present-tense growth claim on the payment surface. NOT auto-fixed: the file had founder WIP (`gifterMediaEnabled`) so editing would bundle it. Ready fix (custodian-agnostic, same paved path): wrap in `investingLiveCopy("They will read your note, and the investment keeps growing alongside it.", "They will read your note, and once investing is live the gift grows alongside it.")`. | HIGH |
+| ~~`GiftCheckout.tsx:2731`~~ ✅ | Payment-step H1: "They will read your note, and the investment keeps growing alongside it." | **FIXED** (found 2026-06-18 by driving the gift flow; static audit missed it). Routed through `investingLiveCopy()` once the founder's `gifterMediaEnabled` WIP was committed (1ac1b54) and the file was clean. | HIGH |
 | ~~`GiftCheckout.tsx:1488`~~ ✅ | "Give {nm} a gift that actually grows, in real stocks invested in their name." (birthday) | **FIXED** — routed through `investingLiveCopy()`; custodian-agnostic so it joins the atomic flip. | HIGH |
 | ~~`GiftCheckout.tsx:1489`~~ ✅ | "Start them off right with a real investment in their name." (baby shower) | **FIXED** — same. | HIGH |
 | ~~`GiftCheckout.tsx:1494`~~ ✅ | "Give a gift that actually grows, in real stocks invested in their name." (fallback) | **FIXED** — same. | HIGH |
