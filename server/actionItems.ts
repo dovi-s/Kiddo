@@ -299,8 +299,9 @@ export async function deriveActionItemsForUser(
   }
 
   // User-scoped fund_setup items: bank, profile. Anchor to primary
-  // fund for snooze. Bank gates withdrawals and full SIPC protection;
-  // profile gates the Memory Book "from:" attribution.
+  // fund for snooze. Bank is the withdrawal/payout rail for the at-18
+  // handoff (NOT custody/SIPC protection, which comes from the
+  // custodian); profile gates the Memory Book "from:" attribution.
   if (primaryFund && !hasBank) {
     const snoozeMap = readSnoozeMap(primaryFund);
     const snoozedUntil = isSnoozedNow(snoozeMap, "bank_not_linked");
