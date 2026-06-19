@@ -1,0 +1,8 @@
+{
+  "//": "Backend dev watcher. We run plain `tsx` (NOT `tsx watch`): tsx's own watcher deadlocks with Vite's cold-start dep optimizer in middleware mode (server hangs at setupVite, never binds the port). nodemon restarts at the process level instead, which sidesteps that. See project_dev_server_tsx_watch_vite_deadlock memory. Client edits are NOT watched here — Vite middleware handles frontend HMR.",
+  "watch": ["server", "shared", "packages"],
+  "ext": "ts,js,json",
+  "ignore": ["client/**", "dist/**", "node_modules/**", "apps/mobile/**", ".local/**", "**/*.test.ts", "**/*.spec.ts"],
+  "exec": "tsx server/index.ts",
+  "delay": 300
+}
