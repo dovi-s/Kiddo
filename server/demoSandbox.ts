@@ -115,6 +115,17 @@ const DEMO_BLOCKED_POST_PATTERNS: RegExp[] = [
   /^\/api\/funds\/[^/]+\/thank-yous\/[^/]+\/send$/,
   /^\/api\/funds\/[^/]+\/thank-yous\/bulk-send$/,
   /^\/api\/funds\/[^/]+\/thank-yous\/generate$/,
+  // Money / investing actions — these persist holdings + balances on the
+  // SHARED demo fund, so a demo visitor selling or deploying cash pollutes the
+  // demo for everyone after them (bug found 2026-06-18: a sell in the demo
+  // saved for all demo users). The 2026-06-05 audit predated investing being
+  // clickable in the demo. Block the whole money-mutation cluster.
+  /^\/api\/holdings\/sell$/,
+  /^\/api\/funds\/[^/]+\/liquidate$/,
+  /^\/api\/funds\/[^/]+\/auto-invest$/,
+  /^\/api\/funds\/activate$/,
+  /^\/api\/funds\/activate-pending-drafts$/,
+  /^\/api\/funds\/[^/]+\/parent-contributions$/,
   // Kid View
   /^\/api\/funds\/[^/]+\/kid-view-link$/,
   // Banking — NEVER link a real bank to the shared demo account. A demo visitor
