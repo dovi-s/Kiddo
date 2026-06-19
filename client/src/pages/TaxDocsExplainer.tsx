@@ -229,12 +229,12 @@ export default function TaxDocsExplainer() {
           }
         />
 
-        {/* The GIVER's side. This page is reachable by any signed-in account
+        {/* The GIFTER's side. This page is reachable by any signed-in account
             (incl. gifter personas - founder caught Jay reading it 2026-06-04),
             and everything above speaks to the fund's owner. One short section
             answers the question a generous grandparent actually has, instead
             of leaving them to misread the kiddie-tax math as theirs. Numbers:
-            2025 annual gift-tax exclusion is $19,000 per giver per recipient;
+            2025 annual gift-tax exclusion is $19,000 per gifter per recipient;
             above it, Form 709 uses the lifetime exemption - a form, not a
             bill, for nearly everyone. */}
         <Section

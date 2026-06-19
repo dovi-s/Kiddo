@@ -615,11 +615,6 @@ export default function KidView() {
     const possessive = `${realName}${realName.endsWith("s") ? "'" : "'s"}`;
     document.title = `${possessive} View | Kiddo`;
   }, [meta?.childName, content?.fund?.recipientFirstName]);
-  const introCopy = content?.phase === "teen"
-    ? "This is your fund. What you own, who helped build it, and what it could grow into."
-    : content?.fund && Number(content.fund.balance) > 0
-      ? `Your fund is worth ${fmtMoney(content.fund.balance)} right now. That is real money in real companies.`
-      : "Your family started this for you. Every gift that comes in goes here and starts growing.";
   const growthCopy = growthSummary.gain > 0
     ? isYoungerMode
       ? `Your fund has grown by ${fmtMoney(growthSummary.gain)} so far. The gifts people gave you are making more money on their own.`
@@ -635,9 +630,6 @@ export default function KidView() {
     : "If gifts keep coming in each year and the investments keep compounding, this fund can look very different by the time you are older.";
   const companiesHeading = content?.phase === "teen" || !isYoungerMode ? "What these companies do" : "Companies you partly own";
   const giftsHeading = isYoungerMode ? "Gifts from people who love you" : "Who helped build your fund";
-  const giftsSubcopy = isYoungerMode
-    ? "Every single one of them chose to give you something that grows."
-    : "Every gift here is part of the story of how your fund got started.";
 
   const handleShareFund = async () => {
     if (!shareUrl) {
