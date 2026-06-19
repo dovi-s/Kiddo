@@ -92,7 +92,6 @@ const APP_SURFACE_EXACT = new Set<string>([
   "/design-lab", // redesign fork of /dashboard — same demo chrome (banner, etc.)
   "/activity",
   "/events",
-  "/event/create",
   "/settings",
   "/account",
   "/profile",

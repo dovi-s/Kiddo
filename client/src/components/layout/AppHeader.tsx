@@ -35,7 +35,6 @@ const PAGE_TITLES: Record<string, string> = {
 
 function getPageTitle(location: string): string {
   if (location.startsWith("/memory")) return "Memory Book";
-  if (location.startsWith("/event/create")) return "New Event";
   if (location.startsWith("/events")) return "Occasions";
   if (location.startsWith("/dashboard")) return "Home";
   // /design-lab is the dashboard redesign sandbox — same AppHeader, same

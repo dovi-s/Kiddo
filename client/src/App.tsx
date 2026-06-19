@@ -54,7 +54,6 @@ const AuthMagic = lazy(() => import("@/pages/AuthMagic"));
 const FounderClaim = lazy(() => import("@/pages/FounderClaim"));
 const ConfirmEmailChange = lazy(() => import("@/pages/ConfirmEmailChange"));
 const CancelEmailChange = lazy(() => import("@/pages/CancelEmailChange"));
-const EventCreate = lazy(() => import("@/pages/EventCreate"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
 const CalculatorAt18 = lazy(() => import("@/pages/CalculatorAt18"));
@@ -343,7 +342,6 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/activity") return { ...genericPrivate, title: "Activity | Kiddo", description: "Review recent gifts, updates, and account activity." };
   if (pathname.startsWith("/activity/")) return { ...genericPrivate, title: "Activity Detail | Kiddo", description: "Detailed activity record." };
   if (pathname === "/events") return { ...genericPrivate, title: "Events | Kiddo", description: "Create and manage gifting events for your fund." };
-  if (pathname === "/event/create") return { ...genericPrivate, title: "Create Event | Kiddo", description: "Set up a new gifting event in Kiddo." };
   if (pathname.startsWith("/claim/")) return { ...genericPrivate, title: "Claim Gift | Kiddo", description: "Claim and verify your gift." };
   if (pathname === "/onboard") return { ...genericPrivate, title: "Onboarding | Kiddo", description: "Finish account setup and fund preferences." };
   if (pathname === "/activate") return { ...genericPrivate, title: "Activate Investing | Kiddo", description: "Complete investing activation for your fund." };
@@ -603,7 +601,6 @@ function prefetchCriticalRoutes() {
     import("@/pages/Activity");
     import("@/pages/MemoryBook");
     import("@/pages/MemoryRedirect");
-    import("@/pages/EventCreate");
     import("@/pages/ActivateInvesting");
     import("@/pages/Login");
     import("@/pages/GetStarted");
@@ -770,7 +767,6 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/activity"><ProtectedRoute><Activity /></ProtectedRoute></Route>
           <Route path="/activity/:id"><ProtectedRoute><ActivityDetail /></ProtectedRoute></Route>
           <Route path="/events">{() => { window.location.replace("/dashboard"); return null; }}</Route>
-          <Route path="/event/create"><ProtectedRoute><EventCreate /></ProtectedRoute></Route>
           <Route path="/claim/:token"><Claim /></Route>
           <Route path="/take-over/:token"><ClaimFund /></Route>
           <Route path="/invitations/:token"><InvitationAccept /></Route>
