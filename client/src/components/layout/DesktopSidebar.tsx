@@ -400,7 +400,17 @@ export function DesktopSidebar() {
       label: "New occasion",
       href: null,
       external: false,
-      onClick: () => window.dispatchEvent(new CustomEvent("kiddo:create-event")),
+      // Only the dashboard listens for kiddo:create-event, so off-dashboard
+      // the bare dispatch fired into the void (button did nothing). Mirror the
+      // Kid's View link: navigate to the dashboard with a deep-link param that
+      // opens the create-occasion sheet there.
+      onClick: () => {
+        if (location.startsWith("/dashboard")) {
+          window.dispatchEvent(new CustomEvent("kiddo:create-event"));
+        } else {
+          setLocation("/dashboard?openCreateEvent=1");
+        }
+      },
     },
     featuredEvent && {
       id: "active-event",

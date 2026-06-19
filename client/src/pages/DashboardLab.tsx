@@ -3567,6 +3567,22 @@ export default function DashboardLab() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, kidViewSettings?.enabled]);
 
+  // Sidebar "New occasion" from non-dashboard page navigates here with ?openCreateEvent=1.
+  // Wait for the fund to load before consuming the param so the coverage gate
+  // (covered → sheet, uncovered → gate) decides against real data, not a
+  // half-loaded fund.
+  useEffect(() => {
+    const params = new URLSearchParams(search || "");
+    if (params.get("openCreateEvent") !== "1") return;
+    if (!activeFund?.id) return;
+    const next = new URLSearchParams(search || "");
+    next.delete("openCreateEvent");
+    const nextSearch = next.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
+    if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, activeFund?.id, isFundCovered, isOwnerMode]);
+
   // Notification deep link: ?openAutoInvest=1
   useEffect(() => {
     const params = new URLSearchParams(search || "");
@@ -5212,6 +5228,15 @@ export default function DashboardLab() {
     hasBank: bankAccounts.length > 0,
     hasProfile: Boolean(user?.firstName?.trim()),
   });
+  // When the bank is the SOLE remaining setup step, the checklist nudge is pure
+  // duplication of the dedicated "Link a bank for withdrawals" action card (same
+  // ask, same screen). Let the action card be the single prompt then; the
+  // checklist still earns its place when multiple steps remain. If the user
+  // snoozes the action card, hiding this too respects "remind me tomorrow"
+  // rather than re-nagging with the twin below.
+  const onlyBankSetupLeft =
+    setup.nextAction === "link_bank" &&
+    setup.steps.filter((s) => !s.done).every((s) => s.key === "bank");
   const fundCreatedTs = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : 0;
   const fundAgeDays =
     Number.isFinite(fundCreatedTs) && fundCreatedTs > 0
@@ -6486,7 +6511,7 @@ export default function DashboardLab() {
             nudge would otherwise show "4 of 5 complete" against
             tasks that don't apply to a sandboxed account. Locked
             2026-05-21 with the demo polish pass. */}
-        {!(user as any)?.isDemoAccount && !authLoading && !fundsLoading && !bankLoading && setup.percent < 100 && (
+        {!(user as any)?.isDemoAccount && !authLoading && !fundsLoading && !bankLoading && setup.percent < 100 && !onlyBankSetupLeft && (
           <SetupProgressNudge
             title="Finish the few things behind the gift link"
             subtitle="This is the quiet setup that lets gifts move cleanly."
