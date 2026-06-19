@@ -101,8 +101,8 @@ export function Nav() {
 
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" data-testid="button-mobile-menu" aria-label="Open menu">
+                <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px]">
