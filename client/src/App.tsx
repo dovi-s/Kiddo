@@ -297,7 +297,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/at-18-calculator") {
     return {
       title: "UTMA Calculator: What investing for a kid becomes by 18 | Kiddo",
-      description: "Honest math for parents and grandparents investing for a child. See how consistent monthly investing through a UTMA grows over the years to age 18. Kiddo's annual fee ($1/yr per $1,000 invested) already netted from the projection.",
+      description: "Honest math for parents and grandparents: see how consistent monthly investing through a custodial UTMA grows for a child by age 18.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -305,7 +305,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/robux-vs-utma" || pathname === "/robux-vs-utma") {
     return {
       title: "Robux vs UTMA: What your kid's monthly Roblox spend could become by 18 | Kiddo",
-      description: "Real math: the same monthly dollars going into Robux versus going into a custodial UTMA investment account. Adjust monthly spend and your kid's age to see the difference at 18. Honest 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
+      description: "Real math: the same monthly dollars spent on Robux versus invested in a custodial UTMA. Adjust the spend and your kid's age to see the difference by 18.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -313,7 +313,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/trump-account-vs-utma" || pathname === "/trump-account-vs-utma") {
     return {
       title: "Trump Account vs UTMA: which is for your kid? | Kiddo",
-      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA. The federal account is index-only, capped at $5,000/yr, and locked until 59½; a UTMA holds real companies, has no cap, and is fully theirs at 18. See which does which job, and why most families want both. 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
+      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA: the caps, the lockups, what each is built for, and why many families want both.",
       robots: "index, follow",
       ogType: "website",
     };
