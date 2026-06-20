@@ -2790,6 +2790,8 @@ const [editFundName, setEditFundName] = useState("");
   });
 
   const primaryFund = (selectedSettingsFundId && funds.find((f: any) => String(f.id) === String(selectedSettingsFundId))) || funds[0];
+  // Fund's actual UTMA majority age (18/21/25 by state) for handoff copy.
+  const primaryFundMajorityAge = Number((primaryFund as any)?.majorityAge) || 18;
   // Display-capitalized kid first name. Used everywhere primaryFund's
   // name is rendered to user-facing copy. Form/state usages (the
   // Edit-fund modal, editingFund, editRecipientName, raw `fund?.`
@@ -5271,7 +5273,7 @@ const [editFundName, setEditFundName] = useState("");
                   {bankAccounts.length === 0 ? "No bank accounts linked yet." : `${bankAccounts.length} bank account${bankAccounts.length === 1 ? "" : "s"} linked.`}
                 </p>
                 <p className={`mt-1 text-sm font-semibold ${bankAccounts.length > 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kiddo-gold-ink))]"}`}>
-                  {bankAccounts.length > 0 ? "Withdrawals are linked for the age-18 handoff." : "Link a withdrawal bank for the age-18 handoff."}
+                  {bankAccounts.length > 0 ? `Withdrawals are linked for the age-${primaryFundMajorityAge} handoff.` : `Link a withdrawal bank for the age-${primaryFundMajorityAge} handoff.`}
                 </p>
                 {bankAccounts.length > 0 && (
                   <div className="mt-4 space-y-2" data-testid="settings-money-bank-list">

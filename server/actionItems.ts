@@ -303,6 +303,10 @@ export async function deriveActionItemsForUser(
   // handoff (NOT custody/SIPC protection, which comes from the
   // custodian); profile gates the Memory Book "from:" attribution.
   if (primaryFund && !hasBank) {
+    // Use the fund's actual UTMA majority age (18 in most states, 21/25 in
+    // some) so this copy matches the dashboard hero ("turns 21") instead of
+    // hardcoding 18 and contradicting it on a 21-state fund.
+    const majorityAge = Number((primaryFund as any).majorityAge) || 18;
     const snoozeMap = readSnoozeMap(primaryFund);
     const snoozedUntil = isSnoozedNow(snoozeMap, "bank_not_linked");
     if (!snoozedUntil) {
@@ -312,7 +316,7 @@ export async function deriveActionItemsForUser(
         fundId: primaryFund.id,
         fundLabel: fundLabel(primaryFund),
         title: "Link a bank for withdrawals",
-        description: "Required for cashing out at the age-18 handoff. Plaid-backed, view-only access.",
+        description: `Required for cashing out at the age-${majorityAge} handoff. Plaid-backed, view-only access.`,
         ctaLabel: "Link bank",
         // Bank linking lives in Settings money tab today. The earlier
         // /settings?bank=1 path didn't specify the tab, so the user

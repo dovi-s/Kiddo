@@ -48,6 +48,9 @@ export function buildSetupProgress({ fund, hasBank, hasProfile }: BuildSetupProg
   const recipientDone = !recipientRequired || hasRecipientDetails(fund);
   const investingDone = isInvestingActivated(fund);
   const bankDone = hasBank;
+  // Actual UTMA majority age for this fund (18/21/25 by state), so the bank
+  // copy matches the dashboard hero instead of hardcoding 18.
+  const majorityAge = Number((fund as any)?.majorityAge) || 18;
 
   const steps: SetupStep[] = [
     {
@@ -85,7 +88,7 @@ export function buildSetupProgress({ fund, hasBank, hasProfile }: BuildSetupProg
       // handoff — not "fund protection" (custody/SIPC protection comes from the
       // custodian, not from linking a payout bank). Match the honest framing
       // the action-item card already uses for the same action.
-      label: bankDone ? "Withdrawals are linked for the age-18 handoff" : "Link a withdrawal bank for the age-18 handoff",
+      label: bankDone ? `Withdrawals are linked for the age-${majorityAge} handoff` : `Link a withdrawal bank for the age-${majorityAge} handoff`,
       done: bankDone,
     },
     {
