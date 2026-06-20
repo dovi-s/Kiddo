@@ -11686,8 +11686,8 @@ export default function DashboardLab() {
                             : activeAutoInvest
                             ? "Add outside your regular schedule anytime."
                             : isOwnerMode
-                              ? `A bonus. A good month. Just because. 🌱`
-                              : `A birthday. A milestone. Just because. 🌱`}
+                              ? `For a bonus, or any month worth marking. 🌱`
+                              : `For a birthday, or any moment worth marking. 🌱`}
                         </p>
                       </div>
                     )}
