@@ -13292,7 +13292,7 @@ export default function DashboardLab() {
                       </p>
                       {age18Transition && totalValue === 0 && (
                         <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", marginTop: 6 }}>
-                          🌱 {age18Transition.countdownLabel} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
+                          🌱 {age18Transition.countdownLabel.replace(` until age ${age18Transition.majorityAge}`, "")} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
                         </p>
                       )}
                       {totalValue > 0 && age18Transition && (() => {
