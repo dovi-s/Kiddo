@@ -41,6 +41,7 @@ import { inArray, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import net from "net";
+import crypto from "crypto";
 import { checkRateLimit } from "./rateLimiter";
 
 const app = express();
@@ -48,6 +49,68 @@ const httpServer = createServer(app);
 const uploadsPath = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+// --- Private site lock (optional preview gating) ----------------------------
+// OFF by default. Set SITE_LOCK_KEY to make the WHOLE deployed site reachable
+// only by you — useful for a private kiddofund.com preview before public
+// launch. Flow:
+//   1. Visit https://<host>/?unlock=<SITE_LOCK_KEY> once. We set an httpOnly
+//      cookie and redirect to a clean URL (the key never lingers in the bar).
+//   2. That cookie lets you back in from then on, from ANY device or network —
+//      so it survives a dynamic home IP, unlike a raw IP allowlist.
+// Optionally also allow fixed IPs via SITE_LOCK_ALLOW_IPS (comma-separated).
+// (IP matching is reliable only when the app is hit directly; behind a proxying
+// CDN like Cloudflare, req.ip is the CDN edge — use the cookie path there, or
+// gate at the CDN.) /api/health stays open so the host's liveness probe passes.
+// Everyone else gets a bare 404 (no hint the app exists). Unset SITE_LOCK_KEY
+// to lift the gate at launch — one env var, no redeploy of code.
+if (process.env.SITE_LOCK_KEY) {
+  const lockKey = process.env.SITE_LOCK_KEY;
+  const allowIps = new Set(parseEnvList(process.env.SITE_LOCK_ALLOW_IPS));
+  const COOKIE_NAME = "kf_unlock";
+  const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+  const safeEqual = (a: string, b: string): boolean => {
+    const ab = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ab.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ab, bb);
+  };
+  const readCookie = (header: string | undefined, name: string): string | undefined => {
+    if (!header) return undefined;
+    for (const part of header.split(";")) {
+      const eq = part.indexOf("=");
+      if (eq === -1) continue;
+      if (part.slice(0, eq).trim() === name) {
+        return decodeURIComponent(part.slice(eq + 1).trim());
+      }
+    }
+    return undefined;
+  };
+
+  app.use((req, res, next) => {
+    if (req.path === "/api/health") return next();
+
+    const ip = req.ip || req.socket.remoteAddress || "";
+    if (allowIps.size > 0 && allowIps.has(ip)) return next();
+
+    const provided = typeof req.query.unlock === "string" ? req.query.unlock : "";
+    if (provided && safeEqual(provided, lockKey)) {
+      res.cookie(COOKIE_NAME, lockKey, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: ONE_YEAR_MS,
+      });
+      return res.redirect(req.path); // strip ?unlock= from the address bar
+    }
+
+    const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
+    if (cookie && safeEqual(cookie, lockKey)) return next();
+
+    return res.status(404).send("Not found");
+  });
 }
 // SECURITY (PII): /uploads (local-disk dev/fallback path) holds children's
 // Memory Book media, child hero photos, and gift media. Some of it is
