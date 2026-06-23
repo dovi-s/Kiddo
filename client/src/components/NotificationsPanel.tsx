@@ -1061,7 +1061,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
               width: "min(380px, 100vw)",
               height: "100dvh",
               maxHeight: "100dvh",
-              boxShadow: "-4px 0 40px rgba(26,23,16,0.18)",
+              boxShadow: "-4px 0 40px hsl(var(--kiddo-ink) / 0.18)",
             }}
             data-testid="notifications-panel"
           >
@@ -1074,7 +1074,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 800, color: "#1A1710", lineHeight: "20px" }}>
+                  <h2 style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 800, color: "hsl(var(--kiddo-ink))", lineHeight: "20px" }}>
                     Notifications
                   </h2>
                   {(unreadCount + actionItemCount) > 0 && (
@@ -1190,8 +1190,8 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 <div
                   style={{
                     padding: "10px 16px 14px",
-                    borderBottom: "1px solid rgba(26,23,16,0.07)",
-                    background: "rgba(26,23,16,0.015)",
+                    borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.07)",
+                    background: "hsl(var(--kiddo-ink) / 0.015)",
                   }}
                 >
                   <ActionItemList
@@ -1270,7 +1270,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         padding: "14px 22px",
                         gap: 12,
                         background: rowBg,
-                        borderBottom: "1px solid rgba(26,23,16,0.06)",
+                        borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.06)",
                         cursor: "pointer",
                         transition: "background 0.2s",
                         opacity: opts.dim ? 0.72 : 1,
@@ -1304,7 +1304,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                               (the vast majority) are unaffected, only the rare
                               long one gets a clean "…" cap so every row has a
                               predictable max height. */}
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1A1710", lineHeight: "17px", flex: 1, minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: "17px", flex: 1, minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
                             {activity.title}
                           </p>
                           {isUnread && (
@@ -1391,7 +1391,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.05 } }}
                       className="flex flex-col items-center justify-center h-40 gap-2 px-6 text-center"
                     >
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#1A1710" }}>Nothing needs your attention</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>Nothing needs your attention</p>
                       <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px" }}>
                         Gifts arriving, milestones crossed, or anything that needs a decision will show up here.
                       </p>
@@ -1430,10 +1430,10 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         style={{
                           width: "100%",
                           padding: "11px 22px",
-                          background: "rgba(26,23,16,0.03)",
+                          background: "hsl(var(--kiddo-ink) / 0.03)",
                           border: "none",
-                          borderTop: "1px solid rgba(26,23,16,0.07)",
-                          borderBottom: "1px solid rgba(26,23,16,0.07)",
+                          borderTop: "1px solid hsl(var(--kiddo-ink) / 0.07)",
+                          borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.07)",
                           fontSize: 11.5,
                           fontWeight: 700,
                           color: "#6F6860",
@@ -1505,7 +1505,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         >
                           🌱
                         </motion.div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A1710" }}>You're all caught up</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>You're all caught up</p>
                         <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px" }}>
                           Past notifications stay below. Full history lives in Activity.
                         </p>
@@ -1516,10 +1516,10 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         style={{
                           width: "100%",
                           padding: "11px 22px",
-                          background: "rgba(26,23,16,0.03)",
+                          background: "hsl(var(--kiddo-ink) / 0.03)",
                           border: "none",
-                          borderTop: "1px solid rgba(26,23,16,0.07)",
-                          borderBottom: "1px solid rgba(26,23,16,0.07)",
+                          borderTop: "1px solid hsl(var(--kiddo-ink) / 0.07)",
+                          borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.07)",
                           fontSize: 11.5,
                           fontWeight: 700,
                           color: "#6F6860",
@@ -1577,7 +1577,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         // muted-evergreen tint deepens slightly on cursor
                         // approach — same Apple Settings register as the
                         // sidebar fund switcher button.
-                        className="block w-full bg-[rgba(26,61,43,0.04)] border-0 border-t border-b border-t-[rgba(26,23,16,0.06)] border-b-[rgba(26,23,16,0.06)] text-left cursor-pointer transition-colors hover:bg-[rgba(26,61,43,0.08)] focus-visible:bg-[rgba(26,61,43,0.08)] focus-visible:outline-none"
+                        className="block w-full bg-[rgba(26,61,43,0.04)] border-0 border-t border-b border-t-[hsl(var(--kiddo-ink) / 0.06)] border-b-[hsl(var(--kiddo-ink) / 0.06)] text-left cursor-pointer transition-colors hover:bg-[rgba(26,61,43,0.08)] focus-visible:bg-[rgba(26,61,43,0.08)] focus-visible:outline-none"
                         style={{
                           padding: "12px 22px",
                           fontSize: 12,
@@ -1596,7 +1596,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         // tappable. Border-bottom appears only when expanded
                         // so the divider isn't redundant with the closed
                         // state's already-implicit top edge.
-                        className={`flex w-full items-center justify-between gap-2 bg-transparent border-0 border-t border-t-[rgba(26,23,16,0.07)] text-left cursor-pointer transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none ${showRead ? "border-b border-b-[rgba(26,23,16,0.07)]" : ""}`}
+                        className={`flex w-full items-center justify-between gap-2 bg-transparent border-0 border-t border-t-[hsl(var(--kiddo-ink) / 0.07)] text-left cursor-pointer transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none ${showRead ? "border-b border-b-[hsl(var(--kiddo-ink) / 0.07)]" : ""}`}
                         style={{
                           padding: "11px 22px",
                           fontSize: 11.5,
@@ -1711,7 +1711,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 don't have context for" handoff. */}
             {!shouldSuppressFundChrome(location) && (
               <div style={{
-                borderTop: "1.5px solid rgba(26,23,16,0.10)",
+                borderTop: "1.5px solid hsl(var(--kiddo-ink) / 0.10)",
                 paddingTop: 11,
                 paddingLeft: 22,
                 paddingRight: 22,

@@ -1,4 +1,8 @@
-﻿import { Fragment, lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
+// DASHBOARD LAB — clean fork of Dashboard.tsx (reset 2026-06-04 after the
+// blind redesign attempts read worse, not better). Pristine baseline =
+// the real dashboard. Next design comes from a tool/designer that can SEE
+// and iterate; I implement it here. Throwaway: delete when done.
+﻿import { Fragment, lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback, type ComponentType, type ReactNode } from "react";
 
 function stripHtml(str: string | null | undefined): string {
   if (!str) return "";
@@ -41,10 +45,19 @@ function getChartRangeLabel(range: ChartRange): string {
     case "5Y": return "Past 5 years";
   }
 }
+
+// Occasion-name display note: a strip-the-"{child}'s"-prefix experiment on the
+// occasion tiles was REVERTED 2026-06-07 — it made the tile say "Birthday"
+// while the quick link / gifter page / detail still said "Theo's Birthday"
+// (same occasion, two names — founder caught it). Full name everywhere now;
+// the tile's 2-line clamp + title tooltip handle length.
+// (2026-06-07, founder: long occasion names truncate.)
+// (removed 2026-06-07 — see note above; full name everywhere, clamp + tooltip
+// handle length.)
 import { Link, useLocation, useSearch } from "wouter";
 import { ADD_FUND_EVENT, ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig, useReducedMotion, type Variants } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -71,7 +84,6 @@ import { EventGateModal } from "@/components/EventGateModal";
 // further down). The orphaned component file remains in repo as a
 // potential future surface.
 import { InvestCashModal, type CashContext } from "@/components/InvestCashModal";
-import { ProjectionTrajectoryChart } from "@/components/ProjectionTrajectoryChart";
 import { GiftReceivedToast } from "@/components/ui/plg-loops";
 import { isGiftToastDismissed, markGiftToastDismissed } from "@/lib/gift-toast-dismissed";
 import {
@@ -81,6 +93,7 @@ import {
   Coins,
   Gift,
   Share2,
+  Send,
   Hash,
   Calendar,
   BookOpen,
@@ -111,7 +124,12 @@ import {
   CalendarClock,
   History,
   ChevronRight,
+  ChevronDown,
+  Mail,
   X,
+  PieChart,
+  HandCoins,
+  Play,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
@@ -127,12 +145,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { haptic } from "@/lib/haptics";
+import { GIFTER_AVATAR_COLORS, gifterAvatarColorIdx } from "@/lib/gifter-avatar";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getPronouns } from "@/lib/pronouns";
 import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
+import { useCountUp } from "@/hooks/use-count-up";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
 import { toast } from "@/hooks/use-toast";
@@ -154,9 +174,10 @@ import type { SharePage } from "@/components/ui/share-modal";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
-import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
-import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
+import { KidAt18WelcomeBanner, isKidAt18WelcomeBannerDismissed } from "@/components/dashboard/KidAt18WelcomeBanner";
+import { CoparentAcceptedBanner, isCoparentAcceptedBannerDismissed } from "@/components/dashboard/CoparentAcceptedBanner";
 import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
+import { BirthdayMomentBanner } from "@/components/dashboard/BirthdayMomentBanner";
 import { gifterShortName, gifterIdentityKey } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
@@ -165,9 +186,11 @@ import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
 import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
+import { demoBlocked } from "@/lib/demo-block";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
+import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
 import {
   calculateKoraContributionFee,
   calculatePaymentProcessingFee,
@@ -180,6 +203,7 @@ import {
 import { calculateDashboardMoneyMath } from "@shared/dashboard-money-math";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
+import { effectiveOccasionDate } from "@shared/occasions";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 // Cultural-traditions UI + suggestion interleaving fully removed from the
@@ -187,7 +211,7 @@ import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 // (lib/cultural-calendar.ts) is preserved for a proper post-launch home inside
 // the occasion-create flow; the dashboard no longer imports it.
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
-import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, readDemoLiveGiftsForFund, recordDemoLiveGift, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { publishFundLiveValue } from "@/lib/fund-live-value";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 // Dead-import audit 2026-05-25: QRCodeSVG was previously imported here
@@ -330,8 +354,7 @@ const STATIC_TICKER_META: Record<string, { name: string; emoji: string }> = {
   ADBE:  { name: "Adobe",      emoji: "🎨" },
   TSLA:  { name: "Tesla",      emoji: "🚗" },
   Z:     { name: "Zillow",     emoji: "🏠" },
-  // Roster 2026-06-09 additions + MSFT/MCD (which were offered but absent here,
-  // so their warm emoji only resolved once a live quote loaded).
+  // Roster 2026-06-09 additions + MSFT/MCD (kept in sync with Dashboard.tsx).
   MSFT:  { name: "Microsoft",  emoji: "🧱" },
   MCD:   { name: "McDonald's", emoji: "🍟" },
   MAT:   { name: "Mattel",     emoji: "🧸" },
@@ -524,8 +547,8 @@ function pickActiveOccasion(events: any[]): any | null {
   const isGifting = (e: any) => String(e?.eventCategory || "gifting_occasion") !== "savings_goal";
   const dated = active
     .filter(e => e.eventDate && isGifting(e))
-    .map(e => ({ e, days: Math.ceil((new Date(e.eventDate).getTime() - now) / 86400000) }))
-    .filter(({ days }) => days >= 0)
+    .map(e => { const d = effectiveOccasionDate(e); return { e, days: d ? Math.ceil((d.getTime() - now) / 86400000) : Number.POSITIVE_INFINITY }; })
+    .filter(({ days }) => days >= 0 && Number.isFinite(days))
     .sort((a, b) => a.days - b.days);
   if (dated.length > 0) return dated[0].e;
   const undatedGifting = active
@@ -633,6 +656,70 @@ const FUND_BALANCE_CACHE_PREFIX = "kiddo.fund.balance.v1:";
 // the new projection — same emotional anchor as the balance, different
 // time horizon.
 const FUND_PROJECTION_AT_65_CACHE_PREFIX = "kiddo.fund.projectionAt65.v1:";
+const FUND_PROJECTION_AT_MAJ_CACHE_PREFIX = "kiddo.fund.projectionAtMaj.v1:";
+
+// Demo-only: how far BELOW the true value to seed the count-up's prior, so every
+// demo cold-load plays an Acorns-style roll-up to the real number. A REAL user's
+// prior is their genuine last-visit value, so their roll is the REAL delta
+// (market + gifts together, exactly like Acorns) — always honest, never chosen.
+// The demo has no real "yesterday" (its holdings are frozen), so it synthesizes
+// one, read as "while you were away, growth + contributions landed". The END is
+// ALWAYS the true value, so up-only honesty holds. Synthesized FRESH from live
+// on every cold load (NOT read from the persisted cache — that's what made the
+// roll fire only the first time), so it rolls every single open. Balance AND
+// projection share this ONE factor so they climb in lockstep — this is the
+// single dial. 0.96 = prior ~4% under live (~$900 on a $23k fund): a clearly
+// visible climb sized like a real gift/recurring + market landing, not a 2%
+// twitch, yet modest enough not to look cartoonish. Toward 1.0 = gentler,
+// lower = punchier.
+const DEMO_ROLL_UNDERSEED_FACTOR = 0.96;
+
+// ── Hero cold-load cascade — ONE timeline, single source of truth ──────────────
+// Every beat below is derived from these three base values, in ms from the
+// data-ready anchor (when the roll/digest first can run). These were drifting
+// across two files (the "while you were away" digest had its own hardcoded
+// 2900ms that fell mid-roll once the linger changed) — deriving everything from
+// one place is what keeps the choreography honest when a base value is tuned.
+//
+// LINGER on the old (cached / prior) number, static and readable, BEFORE the
+// count-up climbs — the Acorns "here's where you were… now watch it grow" beat.
+// During this delay `useCountUp` holds the display at the `from` value, so the
+// parent reads the old number, THEN sees the climb. (This only feels good
+// because the roll that follows is real now — the old hold read as
+// "sit-then-nudge" purely because the roll after it was broken and snapped.)
+// NOTE the card fades in over the first ~540ms (220ms delay + 320ms), so part of
+// this is the number arriving; the rest is the crisp static read before the
+// climb. Tunable: THE "how long do I sit on the old number" dial.
+const HERO_ROLL_START_DELAY_MS = 850;
+// The balance / projection climb duration (the focal duration-ladder rung).
+const HERO_ROLL_DURATION_MS = 1200;
+// Gap after the balance settles before the projection climbs — so the focal
+// number lands first and the projection reads as a deliberate SECOND reveal,
+// not a competing simultaneous roll.
+const HERO_PROJECTION_BEAT_MS = 250;
+// Derived: when the projection starts, and when the whole number cascade has
+// settled. Everything ancillary (the "while you were away" digest, the banner
+// stack) lands AFTER this so the roll is the first and only thing moving.
+const HERO_PROJECTION_START_DELAY_MS =
+  HERO_ROLL_START_DELAY_MS + HERO_ROLL_DURATION_MS + HERO_PROJECTION_BEAT_MS;
+const HERO_CASCADE_SETTLED_MS = HERO_PROJECTION_START_DELAY_MS + HERO_ROLL_DURATION_MS;
+// The "while you were away" digest reveals just after the cascade settles — the
+// capstone that ATTRIBUTES the roll ("$50 from Leo, $120 in market growth").
+const HERO_DIGEST_REVEAL_MS = HERO_CASCADE_SETTLED_MS + 150;
+// The ancillary banner stack follows the digest by a beat, so they sequence
+// (number cascade → recap → celebrations) instead of all arriving at once.
+const HERO_BANNERS_REVEAL_MS = HERO_DIGEST_REVEAL_MS + 300;
+// Guaranteed-reveal safety net. The cascade above anchors the digest/banner
+// reveals to the hero roll ACTUALLY starting (`balanceAnimating`). When a roll
+// arms but never starts (the known "sometimes it doesn't roll" flake) or snaps
+// unexpectedly, that anchor never fires and the catch-up cards stay stranded
+// hidden for the whole visit — the bug behind "Nora never gets the digest" and
+// "Theo's digest is gone after switching away and back". This net force-reveals
+// after a generous bound (well past the slowest legit cascade, even with start-
+// delay + slow-frame lag) so the cards always appear and then persist until
+// dismissed, exactly like the co-parent banner. In the happy path the cascade
+// has already revealed and anchored, so the net is a no-op.
+const HERO_REVEAL_SAFETY_NET_MS = HERO_ROLL_START_DELAY_MS + HERO_BANNERS_REVEAL_MS + 2000;
 
 function readCachedFundValue(fundId: string): number | null {
   // Per-fund balance key is written on every successful load - more current than funds list.
@@ -647,6 +734,120 @@ function readCachedProjectionAt65(fundId: string): number | null {
   const cached = readLocalCache<number>(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${fundId}`);
   if (cached != null && Number.isFinite(cached) && cached > 0) return cached;
   return null;
+}
+
+function readCachedProjectionAtMaj(fundId: string): number | null {
+  const cached = readLocalCache<number>(`${FUND_PROJECTION_AT_MAJ_CACHE_PREFIX}${fundId}`);
+  if (cached != null && Number.isFinite(cached) && cached > 0) return cached;
+  return null;
+}
+
+// Roll-up for the hero's SHORTHAND projection ("~$51k"). A plain count-up of a
+// shorthand number is lame — a ~4% delta is only ~2 integer steps. And per-digit
+// reels float apart at the font's digit metrics. So this rolls the WHOLE number:
+// a masked window over a column of full integer rows (49, 50, 51 …) that slides
+// UPWARD (growth) and decelerates onto the value, finished by a one-shot gold
+// settle glow. Each row is a normally-kerned number, so it's tight by construction
+// at any font. Pre-cache: the seed paints instantly, then climbs after the balance
+// + cents settle. Reduced-motion renders the final number statically.
+function HeroProjectionSpin({
+  seedValue,
+  finalValue,
+  animateKey,
+  startDelay = HERO_PROJECTION_START_DELAY_MS,
+  spinToken = 0,
+}: {
+  seedValue: number | null;
+  finalValue: number;
+  animateKey: string;
+  // Stagger before the climb. First-view uses the canonical cascade gap; a gift
+  // beat passes a LONGER delay so the projection rolls AFTER the balance has
+  // finished climbing the +$gift (founder: chip → balance → projection, in order).
+  startDelay?: number;
+  // Bumped once per gift beat. Triggers a fresh spin (to the new, higher value)
+  // even when finalK changes a frame before the beat's longer delay is in scope,
+  // and — being increment-only — never re-fires when the beat merely ENDS.
+  spinToken?: number;
+}) {
+  const prefersReduced = useReducedMotion();
+  const finalK = Math.max(0, Math.round(finalValue / 1000));
+  const seedKRaw = seedValue != null && seedValue > 0 ? Math.round(seedValue / 1000) : finalK;
+  let seedK = Math.max(0, Math.min(seedKRaw, finalK));
+  // Bound the climb to a consistent 3–8 steps so the roll reads as a satisfying spin
+  // at ANY scale: a tiny live delta gets padded up to 3 (the "~" makes the slightly
+  // longer wind-up an honest flourish), and a large one (e.g. the at-65 fallback,
+  // ~$920k) is capped so it doesn't blur through dozens of rows.
+  if (finalK - seedK < 3) seedK = Math.max(0, finalK - 3);
+  if (finalK - seedK > 8) seedK = finalK - 8;
+  const [rolled, setRolled] = useState(false);
+  // Last ~$Xk we actually rolled TO, and the last fund key — so we can tell a
+  // genuine climb from a no-op. A gift that doesn't move the rounded value (e.g.
+  // +$50 on ~$51k) must NOT fake a roll back-and-forth.
+  const shownKRef = useRef<number | null>(null);
+  const prevKeyRef = useRef(animateKey);
+  useEffect(() => {
+    const keyChanged = prevKeyRef.current !== animateKey;
+    prevKeyRef.current = animateKey;
+    const first = shownKRef.current == null;
+    const grew = !first && finalK > (shownKRef.current as number);
+    // Spin only when there's something to reveal: a new fund/first view, or the
+    // projection actually CLIMBED to a higher ~$Xk (a gift that moved it). A gift
+    // that left the rounded value unchanged is a no-op here. Deliberately keyed off
+    // `spinToken` (bumped at the gift beat's START, when the longer post-balance
+    // delay is in scope) and NOT `finalK` — so the value updating a frame early
+    // can't fire the spin at the short first-view delay and land it mid-balance-roll.
+    if (!first && !keyChanged && !grew) { shownKRef.current = finalK; return; }
+    shownKRef.current = finalK;
+    setRolled(false);
+    const t = window.setTimeout(() => setRolled(true), startDelay);
+    return () => window.clearTimeout(t);
+    // finalK + startDelay intentionally read from the closure, NOT deps: finalK in
+    // deps would fire at the short first-view delay a frame before the gift token,
+    // and startDelay flips back on beat-end (a spurious re-arm). spinToken (start-
+    // only) + animateKey are the correct triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animateKey, spinToken]);
+
+  const CELL = 1.2; // em — window + row height; scales with the responsive font
+
+  if (prefersReduced || finalK <= 0) {
+    return <>{`~$${finalK}k`}</>;
+  }
+
+  const rows: number[] = [];
+  for (let v = seedK; v <= finalK; v++) rows.push(v);
+  const span = rows.length - 1;
+  const durationMs = 760 + span * 80;
+  return (
+    <span aria-label={`~$${finalK}k`} style={{ display: "inline-flex", alignItems: "baseline", fontVariantNumeric: "tabular-nums" }}>
+      <span aria-hidden>~$</span>
+      <span
+        aria-hidden
+        style={{
+          display: "inline-block",
+          height: `${CELL}em`,
+          overflow: "hidden",
+          verticalAlign: "baseline",
+          // Gold settle glow once the climb lands.
+          animation: rolled ? `lab-proj-glow 0.85s ease-out ${durationMs}ms 1` : "none",
+        }}
+      >
+        <span
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            transform: `translateY(${rolled ? -(span * CELL) : 0}em)`,
+            transition: `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+          }}
+        >
+          {rows.map((v, i) => (
+            <span key={i} style={{ height: `${CELL}em`, lineHeight: `${CELL}em` }}>{v}</span>
+          ))}
+        </span>
+      </span>
+      <span aria-hidden>k</span>
+    </span>
+  );
 }
 
 function readCachedDashboardSummary(fundId: string): DashboardSummary | undefined {
@@ -667,6 +868,179 @@ function SkeletonBlock({ className = "" }: { className?: string }) {
     />
   );
 }
+
+// LAB: a controlled collapse so closing is as smooth as opening (native
+// <details> snaps shut - no exit animation). Same look as the rows it
+// replaces: white card, a BARE evergreen lucide icon (no grey chip),
+// title + glanceable stat, a chevron that rotates. Height + opacity
+// animate BOTH directions via AnimatePresence. Tactile (lab-tap),
+// reduced-motion handled by framer.
+function LabCollapse({
+  icon: Icon,
+  title,
+  stat,
+  marginTop = 16,
+  testid,
+  openKey,
+  children,
+}: {
+  icon: ComponentType<{ size?: number; strokeWidth?: number; style?: any }>;
+  title: ReactNode;
+  stat: ReactNode;
+  marginTop?: number;
+  testid?: string;
+  // When set, this collapse opens itself on a "kiddo:lab-collapse-open" event
+  // whose detail.key matches — so a jump-link elsewhere (e.g. the fund-so-far
+  // "recurring" row) can OPEN this section before scrolling to a target inside
+  // it. Without this, a closed collapse removes its content from the DOM
+  // (AnimatePresence), so the scroll had nothing to land on (founder: "the
+  // jump links don't work unless I manually open the dropdown first").
+  openKey?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!openKey) return;
+    // `e: any` — `Event` in this module is the Drizzle occasion type, not the
+    // DOM Event, so the DOM typing would collide. detail.key is the contract.
+    const handler = (e: any) => {
+      if (e?.detail?.key === openKey) setOpen(true);
+    };
+    window.addEventListener("kiddo:lab-collapse-open", handler as EventListener);
+    return () => window.removeEventListener("kiddo:lab-collapse-open", handler as EventListener);
+  }, [openKey]);
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Open = reveal-if-needed. Close = stay put. (Sections stay independent —
+  // opening one never touches another; you can have them all open at once.)
+  //
+  // When a section is opened low in the viewport, its freshly revealed content
+  // can fall below the fold (and behind the floating mobile nav), so you'd have
+  // to manually scroll to see what you just opened. So: after the 0.34s expand
+  // settles, if the section is NOT already comfortably in view, glide its HEADER
+  // to rest just under the sticky app bar — anchoring the thing you tapped, with
+  // the content revealing beneath it. If it's already fully visible we do
+  // nothing: auto-scrolling an already-visible section is a yank (the classic
+  // accordion anti-pattern) and the page should never grab the wheel for no
+  // reason. On CLOSE we deliberately never scroll — the header stays exactly
+  // where it is and content collapses up beneath it (the removed content sits
+  // below the header, so the browser keeps your anchor stable on its own). The
+  // asymmetry is the craft: reveal on the way out, hold still on the way back.
+  const revealIfNeeded = () => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const header = document.querySelector('[data-testid="app-header"]') as HTMLElement | null;
+    const topInset = header?.offsetHeight ?? 0;
+    const nav = document.querySelector(".mobile-nav-shell") as HTMLElement | null;
+    const bottomInset = nav ? Math.max(0, window.innerHeight - nav.getBoundingClientRect().top) : 0;
+    const rect = el.getBoundingClientRect();
+    const topGap = 12;
+    const fullyVisible = rect.top >= topInset && rect.bottom <= window.innerHeight - bottomInset;
+    if (fullyVisible) return; // already comfortable — don't move things that were fine
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    window.scrollBy({ top: rect.top - topInset - topGap, behavior: reduce ? "auto" : "smooth" });
+  };
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      // Wait for the height-auto expand (0.34s) to settle before measuring,
+      // else the section still reads ~0px tall and "fully visible" misfires.
+      window.setTimeout(revealIfNeeded, 380);
+    }
+  };
+
+  return (
+    <div ref={wrapRef} style={{ marginTop }}>
+      <button
+        type="button"
+        onClick={handleToggle}
+        aria-expanded={open}
+        data-testid={testid}
+        className="lab-tap"
+        style={{
+          width: "100%", textAlign: "left", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          // Tightened 2026-06-23 (founder: collapsed rows read airy/loose, esp. on
+          // desktop — ~100px of mostly-empty air per one-line section). 20/18 → 13/12
+          // packs the closed list tighter per row while staying a comfortable tap
+          // target (~57px) and keeping the dividers + open-state breathing room.
+          padding: "13px 2px 12px",
+          // STAGING de-card (the #1 generated-dashboard tell was "everything is a
+          // floating shadowed pill"). Sections are no longer boxes — each header is
+          // a flush, editorial list row separated by ONE hairline divider, so the
+          // page reads as ranked zones held apart by whitespace, not card soup.
+          // Open state warms the title + chevron only: no box, no shadow, no lid.
+          background: "transparent",
+          border: "none",
+          borderTop: "1px solid hsl(var(--kiddo-border) / 0.7)",
+          borderRadius: 0,
+          boxShadow: "none",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <Icon size={18} strokeWidth={1.75} style={{ color: open ? "hsl(var(--kiddo-evergreen))" : "hsl(var(--kiddo-evergreen) / 0.65)", flexShrink: 0 }} />
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 15.5, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))" }}>{title}</span>
+            {/* STAGING: the closed-state stat is a PREVIEW of what's inside. Once
+                open, the content carries that number (e.g. the "Market growth" row),
+                so showing it in the header too is duplication — hide it when open. */}
+            {!open && <span style={{ display: "block", fontSize: 12, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>{stat}</span>}
+          </span>
+        </span>
+        {/* Open/close indicator: a chevron that flips ▼ (closed, "expand") → ▲
+            (open, "collapse") and shifts muted-ink → evergreen as it opens, so it
+            reads ACTIVE in sync with the open-state tint + border. Same expo easing
+            as the rest of the lab's motion. Chevron (NOT ＋/−) on purpose: "+"
+            means ADD / create everywhere else in the app (＋ New occasion, Add an
+            investment, add a fund), so a "+" here would misread as "add to this
+            section" — worst on the sections that actually have add-actions inside.
+            A chevron only ever means expand/collapse. The craft is in the motion +
+            the activation, not a novel symbol. */}
+        <ChevronDown
+          size={18}
+          aria-hidden
+          style={{
+            flexShrink: 0,
+            color: open ? "hsl(var(--kiddo-evergreen))" : "rgba(26,23,16,0.4)",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform .26s cubic-bezier(0.16,1,0.3,1), color .26s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="lab-collapse-content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            {/* STAGING: flush content flows beneath the divider header with a
+                calm beat of air (the header is no longer a lid, so no hugging). */}
+            <div style={{ marginTop: 10, paddingBottom: 6 }}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Occasion tiles (and handoff-section blocks) cascade as VARIANT CHILDREN of
+// their section's whileInView: the section declares hidden/show variants with
+// staggerChildren, and each tile carries these variants WITHOUT its own
+// initial/animate — framer propagates the section's state down through plain
+// DOM wrappers, so tiles deep inside the horizontal scroll row still ride it.
+// Result: the row rises in left-to-right as the section enters view, and
+// replays with it (once:false). Same craft register as the faces cascade.
+const LAB_TILE_VARIANTS: Variants = {
+  hidden: { opacity: 0, y: 10, scale: 0.97 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] } },
+};
 
 // Per-fund local-storage latch for SSN collection. We set this to the
 // fund id immediately after a successful POST. The dashboard then hides
@@ -787,7 +1161,7 @@ function SsnCollectionNudge({
       toast({
         title: `${childFirst}'s SSN saved`,
         description: hasMultipleFunds
-          ? `Locked in for ${childFirst}'s UTMA. Each child's account and 1099 stay separate.`
+          ? `Locked in for ${childFirst}'s UTMA account. Each child's account stays separate, and the IRS issues 1099s per account.`
           : `Locked in for tax reporting. We don't store the full digits at rest.`,
       });
       setSsn("");
@@ -1042,22 +1416,9 @@ type GifterProfile = {
 // Other accent uses of gold (recurring ↻ badge, first-gifter ⭐ badge,
 // strategy chip dot) are kept — those are small, intentional one-time
 // signals, not ambient surface color.
-const GIFTER_AVATAR_COLORS = [
-  { bg: "rgb(26,61,43)",   text: "white" }, // Evergreen (brand primary — fine on small avatars)
-  { bg: "rgb(180,90,60)",  text: "white" }, // Terracotta (was brand gold — replaced)
-  { bg: "rgb(67,101,82)",  text: "white" }, // Sage green
-  { bg: "rgb(90,65,45)",   text: "white" }, // Coffee brown
-  { bg: "rgb(58,55,92)",   text: "white" }, // Indigo
-  { bg: "rgb(110,70,95)",  text: "white" }, // Plum
-  { bg: "rgb(70,95,120)",  text: "white" }, // Slate blue
-  { bg: "rgb(40,95,100)",  text: "white" }, // Deep teal
-];
-
-function gifterColorIdx(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0x7fffffff;
-  return h % GIFTER_AVATAR_COLORS.length;
-}
+// GIFTER_AVATAR_COLORS + the per-person hash now live in @/lib/gifter-avatar so
+// the dashboard roster and the Memory Book draw the SAME color for the SAME
+// person. (Imported above.)
 
 function getTransactionTimestamp(transaction?: DashboardTransaction | null): number {
   const raw = transaction?.completedAt || transaction?.createdAt;
@@ -1110,18 +1471,6 @@ function getGiftDisplayAmountForTransaction(transaction: DashboardTransaction, g
   return Number.isFinite(netAmount) ? netAmount : parseFloat(transaction.amount || "0");
 }
 
-// Smart-nudge session guard — MODULE scope on purpose (2026-06-07). The
-// nudge's dedup used to lean entirely on a localStorage key; when storage
-// silently no-ops (private mode, blocked storage, or a demo that resets it),
-// the claim never lands and EVERY pending timer toasts — the "3 at once" bug.
-// A module-level flag is claimed synchronously by the first timer to fire and
-// is immune to storage failures AND to multiple Dashboard mounts in one tab
-// (a useRef would reset per-mount; this survives the whole session). It's the
-// in-memory FIRST line of dedup; the 30-day localStorage key remains the
-// cross-session backstop. Resets only on a full page reload, which is the
-// correct "once per session" contract.
-let smartNudgeShownThisSession = false;
-
 // Default a parent into their first OWNED, non-transferred fund — never a
 // handed-off / previous_owner fund. A parent shouldn't open straight into the
 // kid's graduated account, and in the seeded demo the graduated fund (Mia) is
@@ -1133,12 +1482,49 @@ function pickDefaultFundId(funds: any[]): string {
   return (owned ?? list[0])?.id ?? "";
 }
 
-export default function Dashboard() {
+// STAGING: distinct-but-on-brand occasion covers. The shared lib (event-cover-themes.ts)
+// deliberately unified to ONE warm cover because per-type SATURATED hues (purple grad,
+// blue baby-shower) read as an off-brand "rainbow". That was a real problem — but it
+// OVERCORRECTED to "every tile identical / stamped from a mold". The fix isn't random
+// hues (recreates the rainbow); it's differentiating with the BRAND's OWN palette
+// (gold + evergreen) plus muted warm neutrals, EVERY one fading to cream → cohesive AND
+// authored. Birthday-gold vs Holiday-evergreen reads distinct precisely because those
+// are the two brand colors. Photos still override (the upload always wins). Staging-only
+// so the live lib's documented behavior is untouched until blessed.
+const STG_COVER_BG: Record<string, string> = {
+  gold:       "linear-gradient(135deg, hsl(var(--kiddo-gold) / 0.20), hsl(var(--kiddo-cream)))",
+  evergreen:  "linear-gradient(135deg, hsl(152 33% 42% / 0.16), hsl(var(--kiddo-cream)))",
+  terracotta: "linear-gradient(135deg, hsl(16 52% 56% / 0.16), hsl(var(--kiddo-cream)))",
+  sand:       "linear-gradient(135deg, hsl(38 50% 55% / 0.20), hsl(var(--kiddo-cream)))",
+  clay:       "linear-gradient(135deg, hsl(6 40% 60% / 0.15), hsl(var(--kiddo-cream)))",
+};
+const STG_TYPE_TONE: Record<string, keyof typeof STG_COVER_BG> = {
+  birthday: "gold", custom: "gold", diwali: "gold", quinceanera: "gold",
+  holiday: "evergreen", christmas: "evergreen", hanukkah: "evergreen", lunar_new_year: "evergreen",
+  kwanzaa: "evergreen", easter: "evergreen", juneteenth: "evergreen",
+  graduation: "sand", college: "sand", bar_mitzvah: "sand", bat_mitzvah: "sand",
+  baby_shower: "clay", just_because: "clay", baptism: "clay", first_communion: "clay", confirmation: "clay",
+  car: "terracotta", home: "terracotta", travel: "terracotta", business: "terracotta", emergency: "terracotta",
+};
+function stagingCoverBg(eventType?: string | null, savingsGoalType?: string | null, suggestionKey?: string | null): string {
+  const k = String(suggestionKey || "").toLowerCase();
+  const g = String(savingsGoalType || "").toLowerCase();
+  const t = String(eventType || "").toLowerCase();
+  const tone = STG_TYPE_TONE[k] || STG_TYPE_TONE[g] || STG_TYPE_TONE[t] || "gold";
+  return STG_COVER_BG[tone];
+}
+
+export default function DashboardStaging() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  // Honor the OS reduce-motion setting for the gift-arc travel (the balance
+  // breath is a CSS keyframe already guarded by an @media block). Reduced =
+  // the chip fades in place near the number, no flight (WCAG 2.3.3: opacity is
+  // fine, sustained translate/scale is what we drop).
+  const reduceMotion = useReducedMotion();
   // Demo sandbox: re-derive the holdings overlay when a gift is recorded
   // in-place so the hero rolls + "What X owns" updates immediately.
   const demoOverlayVersion = useDemoOverlayVersion();
@@ -1195,7 +1581,14 @@ export default function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     if (id) params.set("fund", id); else params.delete("fund");
     const qs = params.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    // Route the URL change through wouter (replace: true = no new history entry)
+    // rather than window.history.replaceState, which bypasses wouter's router.
+    // A raw replaceState left useSearch() STALE in the chrome that reads it
+    // (DesktopSidebar / AppHeader / MobileNav resolve the active fund from the
+    // ?fund param), so an in-page fund switch updated the dashboard body but left
+    // the sidebar pinned to the previous fund's name, balance, and quick links
+    // ("stuck on Theo even after switching to Nora", founder-reported 2026-06-12).
+    setLocation(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { replace: true });
   };
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedGiftCode, setCopiedGiftCode] = useState(false);
@@ -1387,6 +1780,22 @@ export default function Dashboard() {
       onetime: "card-one-time-contribution-v2",
       cash: "button-invest-cash",
     };
+    // OPEN the collapse that holds the target before scrolling — a closed
+    // LabCollapse removes its content from the DOM, so the scroll had nothing
+    // to land on (founder: jump links did nothing unless the dropdown was
+    // already open). recurring + one-time live in the "Your part" collapse;
+    // cash lives in the "fund so far" collapse (same one the links sit in, so
+    // it's already open — dispatching is harmless/idempotent). scrollToTestId
+    // polls for up to 6s, so the just-mounted target is caught the moment the
+    // section expands; open + smooth-scroll run together and read as one move.
+    const openKeyByTarget: Record<typeof target, string> = {
+      recurring: "yourpart",
+      onetime: "yourpart",
+      cash: "summary",
+    };
+    try {
+      window.dispatchEvent(new CustomEvent("kiddo:lab-collapse-open", { detail: { key: openKeyByTarget[target] } }));
+    } catch { /* event dispatch best-effort */ }
     haptic("selection");
     setSummaryHaloTarget(target);
     const cancel = scrollToTestId(testIdByTarget[target], {
@@ -1483,6 +1892,131 @@ export default function Dashboard() {
   // slice. It also matches the "Growth · All-time" stat shown beside it. A
   // parent who wants recent detail taps 1W/1M; the default is the story.
   const [chartRange, setChartRange] = useState<ChartRange>("ALL");
+  // LAB: chart scroll-replay (the light, reliable way). The chart sits inside
+  // the collapse where framer's whileInView never fires (twice clipped it
+  // invisible). So the clip draw-in fires on MOUNT via `animate` (guaranteed
+  // visible - open/close always works), and THIS callback-ref IntersectionObserver
+  // replays the wipe via a fire-and-forget WAAPI el.animate() whenever the
+  // chart RE-enters view. (Used to bump a React key → remounted the whole
+  // chart mid-scroll → visible jank on mobile.) A callback ref (not a useInView
+  // hook) survives the collapse open/close remounts. The observer's first
+  // (initial) callback is skipped so it never double-draws on top of the mount
+  // draw. Visibility can't regress: it's driven by mount, and a finished WAAPI
+  // animation stops applying, so the chart can't stick clipped.
+  // "Watch it grow" journey replay (founder-approved 2026-06-05; affordance
+  // kept QUIET): the ALL chart re-draws slowly (~8s, linear so caption timing
+  // maps to x-position) while caption beats pinned to REAL moments fade
+  // through — where it began, the first gift, threshold crossings, today.
+  // Eight years of love in eight seconds; the Memory Book moat as motion.
+  // The play handler + beats live near trendData (they need it); the wipe
+  // machinery lives in chartScrollRef. These refs bridge the two:
+  // chartWipePlayRef exposes playWipe (with duration/easing overrides)
+  // outward, and cancelJourneyRef lets ANY wipe start cancel a running
+  // journey's caption timers (the wipe itself is cancel()ed inside playWipe).
+  const [journeyCaption, setJourneyCaption] = useState<{ label: string; sub?: string } | null>(null);
+  const [journeyPlaying, setJourneyPlaying] = useState(false);
+  const journeyTimersRef = useRef<number[]>([]);
+  const cancelJourneyRef = useRef<(() => void) | null>(null);
+  const chartWipePlayRef = useRef<((opts?: { duration?: number; easing?: string }) => void) | null>(null);
+  const chartObsRef = useRef<IntersectionObserver | null>(null);
+  const chartScrollRef = useCallback((el: HTMLDivElement | null) => {
+    chartObsRef.current?.disconnect();
+    chartObsRef.current = null;
+    chartWipePlayRef.current = null;
+    if (!el) return;
+    // The wipe is a COMPOSITOR-ONLY counter-transform pair, not clip-path.
+    // clip-path animates on the main thread and repaints the chart SVG every
+    // frame — fired mid-momentum-scroll (exactly when the main thread is
+    // busiest) the reveal edge advanced in irregular steps, which read as
+    // "shaky/jittery" next to the GPU-smooth scroll. Instead: the MOVER (an
+    // overflow-hidden box) slides translateX(-100%)→0 while the INNER chart
+    // counter-slides +100%→0. The transforms cancel, so the chart stays
+    // pixel-still under a sweeping reveal edge — same look, but transform
+    // animations run on the GPU and stay smooth during scroll. Both tracks
+    // share one timing function and start in the same task, so they can't
+    // tear. `overflow: hidden` is applied only WHILE wiping and released
+    // after, so nothing (tooltips, ping dot) is ever clipped at rest.
+    //
+    // Safety (the blank-chart doctrine): the chart renders with NO transform
+    // — fully visible by default. The wipe is fire-and-forget WAAPI on top;
+    // finished or cancelled animations stop applying, and the overflow
+    // release is token-guarded, so visibility can never regress. No
+    // el.animate support → no wipe, chart simply stays visible.
+    const mover = el.querySelector<HTMLElement>("[data-chart-wipe-mover]");
+    const inner = el.querySelector<HTMLElement>("[data-chart-wipe-inner]");
+    let movAnim: Animation | null = null;
+    let innAnim: Animation | null = null;
+    let wipeToken = 0;
+    const playWipe = (opts?: { duration?: number; easing?: string }) => {
+      // ANY wipe start (mount draw, scroll-replay, or a fresh journey) cancels
+      // a running journey's caption timers — captions must never narrate a
+      // wipe that's been replaced.
+      cancelJourneyRef.current?.();
+      if (!mover || !inner || typeof mover.animate !== "function") return;
+      // Reduced-motion: no wipe at all — the chart's resting state is fully
+      // visible (the safety doctrine), so skipping is automatically correct.
+      if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const token = ++wipeToken;
+      movAnim?.cancel();
+      innAnim?.cancel();
+      mover.style.overflow = "hidden";
+      const timing: KeyframeAnimationOptions = { duration: opts?.duration ?? 850, easing: opts?.easing ?? "cubic-bezier(0.16, 1, 0.3, 1)" };
+      movAnim = mover.animate([{ transform: "translateX(-100%)" }, { transform: "translateX(0px)" }], timing);
+      innAnim = inner.animate([{ transform: "translateX(100%)" }, { transform: "translateX(0px)" }], timing);
+      const release = () => { if (token === wipeToken) mover.style.overflow = ""; };
+      Promise.all([movAnim.finished, innAnim.finished]).then(release, release);
+    };
+    // Expose for the journey replay (and any future choreography).
+    chartWipePlayRef.current = playWipe;
+    // Mount draw — fires on every (re)mount: initial load, collapse reopen.
+    playWipe();
+    if (typeof IntersectionObserver === "undefined") return;
+    // ARMED gating (the anti-jitter): replay ONLY after the chart has FULLY
+    // left the viewport. A bare threshold re-fired on every 15% crossing —
+    // slow scrolls hovering at the boundary, the collapse's own height
+    // animation, and mobile URL-bar show/hide (viewport resize) each stacked
+    // a fresh wipe onto the running one. Full-exit arming = one wipe per
+    // genuine "scrolled away and came back". Starts unarmed: the mount draw
+    // owns the first reveal (initial callback can't double-draw on top of it).
+    let armed = false;
+    const obs = new IntersectionObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      if (!entry.isIntersecting) { armed = true; return; } // fully out of view → arm the next replay
+      if (!armed || entry.intersectionRatio < 0.15) return;
+      armed = false;
+      playWipe();
+    }, { threshold: [0, 0.15] });
+    obs.observe(el);
+    chartObsRef.current = obs;
+  }, []);
+  // LAB: faces cascade on FIRST sight + every scroll-back — visibility-driven.
+  // The previous key-remount replay had an ugly initial-load failure: the faces
+  // mounted below the fold, the mount `animate` cascaded INVISIBLY off-screen,
+  // so on the way down you'd see fully-opaque static faces enter the viewport
+  // and then blink out to re-cascade at the observer threshold. Now each face
+  // renders hidden and animates in only while `facesInView` is true, so the
+  // first thing you ever see IS the roll-in (initial load, first scroll-down,
+  // every scroll-back) — no remounts, no <img> reloads, no blink. Hysteresis
+  // via two thresholds: show at ≥25% visible, reset only when fully off-screen,
+  // so hovering at the boundary can't flicker them. Safety: if
+  // IntersectionObserver is unavailable the faces just render visible.
+  const [facesInView, setFacesInView] = useState(false);
+  const facesObsRef = useRef<IntersectionObserver | null>(null);
+  const facesScrollRef = useCallback((el: HTMLDivElement | null) => {
+    facesObsRef.current?.disconnect();
+    facesObsRef.current = null;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") { setFacesInView(true); return; }
+    const obs = new IntersectionObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.25) setFacesInView(true);
+      else if (!entry.isIntersecting) setFacesInView(false);
+    }, { threshold: [0, 0.25] });
+    obs.observe(el);
+    facesObsRef.current = obs;
+  }, []);
   const [previewFundId, setPreviewFundId] = useState<string>("");
   const [autoInvestModalOpen, setAutoInvestModalOpen] = useState(false);
   const [autoInvestUpgradeOpen, setAutoInvestUpgradeOpen] = useState(false);
@@ -1615,6 +2149,10 @@ export default function Dashboard() {
   const [oneTimeExecutionModel, setOneTimeExecutionModel] = useState<"auto" | "pick" | "cash">("auto");
   const [oneTimeTicker, setOneTimeTicker] = useState("");
   const [oneTimePaymentMethod, setOneTimePaymentMethod] = useState<"apple_pay" | "card" | "cashapp" | "paypal" | "bank">("apple_pay");
+  // STAGING: confirm-step payment picker collapsed by default. The 5-method fee table was
+  // dumped on the confirm step (over-disclosure); now "Change" on the summary's funding row
+  // reveals it. One default method + total shows up front; alternatives on demand.
+  const [oneTimeShowRails, setOneTimeShowRails] = useState(false);
   const [oneTimeMemoryNote, setOneTimeMemoryNote] = useState("");
   const [oneTimeNoteSaved, setOneTimeNoteSaved] = useState(false);
   const [oneTimeMedia, setOneTimeMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
@@ -1762,7 +2300,9 @@ export default function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     if (fallback) params.set("fund", fallback); else params.delete("fund");
     const qs = params.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    // wouter nav (see selectFund) so the corrected ?fund propagates to the
+    // sidebar/header chrome, not just the dashboard body.
+    setLocation(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { replace: true });
     // Also blow away the per-fund local caches keyed by the stale ID
     // so the next page load doesn't briefly render against ghost data
     // either. The funds-list cache itself stays valid (the funds query
@@ -1787,29 +2327,9 @@ export default function Dashboard() {
     effectivePlanRef.current = effectivePlan;
   }, [effectivePlan]);
 
-  // Send a real, fund-less account to onboarding — but ONLY once the funds
-  // list is confirmed empty by an ACTUAL server fetch. The old guard gated on
-  // `!fundsLoading`, which is false during the window where the query is
-  // showing empty initialData (status 'success' + isLoading false) while the
-  // network fetch is still in flight (initialDataUpdatedAt: 0 here). That
-  // window bounced demo personas (who always have seeded funds) and real
-  // users mid-load to /get-started "randomly", depending purely on whether
-  // the fetch had resolved when the effect ran — the reported "I open the
-  // demo and it throws me to Get Started" bug. Now:
-  //   • fundsDataUpdatedAt > 0  → the network fetch actually resolved (not
-  //     just cached initialData), so funds.length === 0 is the truth.
-  //   • !fundsFetching          → no fetch in flight that could fill it.
-  //   • !isDemoAccount          → a demo persona is NEVER sent to signup
-  //     (defense in depth: a spurious bounce now also destroys the demo
-  //     session on GetStarted arrival, so the cost of a false positive rose).
-  useEffect(() => {
-    if (isDemoAccount) return;
-    if (authLoading || !isAuthenticated) return;
-    if (fundsFetching || fundsDataUpdatedAt === 0) return;
-    if (funds.length === 0) {
-      setLocation("/get-started");
-    }
-  }, [isDemoAccount, authLoading, isAuthenticated, fundsFetching, fundsDataUpdatedAt, funds.length, setLocation]);
+  // The fund-less redirect (onboarding vs. the gifter doorway) is now GIFTER-aware
+  // and lives BELOW, after the gifterPeek query, so it can route a fund-less gifter
+  // to their gifts instead of bouncing them to parent onboarding. Moved 2026-06-10.
 
   useEffect(() => {
     let canceledEffect = false;
@@ -1987,6 +2507,45 @@ export default function Dashboard() {
   const activeFundId = (selectedOwnedByUser ? selectedFundId : pickDefaultFundId(funds)) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
+  // Replay the lab's signature ENTRANCE beats on a FUND SWITCH so switching to
+  // (say) Nora reads as Nora's fund LANDING, not a silent data swap: the faces
+  // cascade + the chart wipe re-fire (the hero count-up already re-rolls on the
+  // value change). The faces' reset is INSTANT (duration 0 — see their
+  // transition), so snapping them hidden then re-showing next frame replays a
+  // clean staggered cascade with no fade-out.
+  //
+  // Two-step on purpose: the new fund's gifter data loads ASYNC, so firing on
+  // the id change alone races an empty roster (the cascade has nothing to play).
+  // So: MARK pending on the switch here, then FIRE once `gifterRoster` settles to
+  // the new fund's people (the effect by that memo, below). Skips first load
+  // (mount draw + first in-view cascade own that) and off-screen faces (the
+  // observer handles those).
+  const prevSwitchFundRef = useRef(activeFundId);
+  const pendingSwitchCascadeRef = useRef(false);
+  const facesInViewLiveRef = useRef(facesInView);
+  facesInViewLiveRef.current = facesInView;
+  useEffect(() => {
+    if (prevSwitchFundRef.current === activeFundId) return;
+    prevSwitchFundRef.current = activeFundId;
+    if (activeFundId) pendingSwitchCascadeRef.current = true;
+  }, [activeFundId]);
+
+  // Replicate a fund "click" once on first load. On a fresh load the active fund
+  // is RESOLVED (funds[0] fallback, its dashboard shows) but never SELECTED — the
+  // URL ?fund=, the shared store, and selectedFundId were all empty — so the
+  // chrome menu (header switcher + sidebar + mobile) showed NOTHING highlighted
+  // until the user manually clicked a fund. A click runs selectFund, which is the
+  // only thing that sets all three. Do it here so the active fund highlights on
+  // first paint, matching the post-click state. Once-only via the ref.
+  const didInitialSelectRef = useRef(false);
+  useEffect(() => {
+    if (didInitialSelectRef.current || !activeFundId) return;
+    didInitialSelectRef.current = true;
+    const paramFund = new URLSearchParams(window.location.search).get("fund");
+    if (paramFund === activeFundId && getActiveFundId() === activeFundId) return;
+    selectFund(activeFundId);
+  }, [activeFundId]);
+
   // Idle-time prefetch of next-likely pages — relocated here from
   // earlier in the function body 2026-05-21 so it can gate on the
   // validated activeFundId. The parent on Dashboard will probably
@@ -2003,8 +2562,7 @@ export default function Dashboard() {
       prefetchMemoryBook(queryClient, activeFundId);
       prefetchActivity(queryClient, 50);
       // Warm the lazy Recharts chunk during idle so the trend chart paints from
-      // cache the instant its data is ready — instead of arriving last (the
-      // "blank box, then it rolls in" the chunk download otherwise causes).
+      // cache the instant its data is ready (no "blank box, then it rolls in").
       void import("@/components/DashboardTrendChart");
     });
     return cancel;
@@ -2073,16 +2631,17 @@ export default function Dashboard() {
   // viewer case is the existing collaborator role.
   const isReadOnlyFund = isViewerOnly || isPreviousOwner;
   const isSharedFund = activeFundAccessRole !== 'owner';
-  // Post-handoff KEEPSAKE for the previous owner — see DashboardLab for the full
-  // rationale. After handoff the fund is the now-adult's private account; the
-  // parent's view shows the frozen value-at-handoff ("what you handed them on
-  // {date}"), not her live balance. NULL valueAtTransfer = legacy transfer →
-  // fall back to a clearly-labeled live value, not a misleading "Today".
+  // Post-handoff KEEPSAKE for the previous owner (the parent who handed it off).
+  // After handoff the fund is the now-adult's PRIVATE account; the parent's view
+  // shows the frozen value-at-handoff ("what you handed them on {date}"), not the
+  // adult's live balance. valueAtTransfer is captured in both handoff doors; NULL
+  // = legacy transfer predating the column → fall back to a clearly-labeled live
+  // value ("{name}'s balance now") rather than a misleading "Today".
   const handoffKeepsakeValue = (activeFund as any)?.valueAtTransfer != null
     ? parseFloat(String((activeFund as any).valueAtTransfer))
     : null;
-  // ...unless the now-adult opted to share it live (Phase 2) — then the previous
-  // owner sees the live fund again.
+  // ...unless the now-adult opted to share it live (Phase 2). Then the previous
+  // owner sees the live fund again, as before the keepsake default.
   const showHandoffKeepsake = isPreviousOwner
     && handoffKeepsakeValue != null
     && Number.isFinite(handoffKeepsakeValue)
@@ -2138,6 +2697,37 @@ export default function Dashboard() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   });
+
+  // LAB warm-data (Layer 2, no lock screen needed): once the active fund has
+  // settled, idle-prefetch every OTHER fund's dashboard-summary into the React
+  // Query cache AND localStorage. Switching kids is then instant - no cold
+  // fetch, no empty-state flash - and the demo's "switch = a gift rolls in"
+  // beat lands with zero lag. requestIdleCallback so it never competes with
+  // the active fund's own render/fetch; the cleanup cancels a stale warm-up.
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary || funds.length < 2) return;
+    const others = funds.filter((f: any) => f?.id && f.id !== activeFundId);
+    if (others.length === 0) return;
+    const warm = () => {
+      others.forEach((f: any) => {
+        void queryClient.prefetchQuery({
+          queryKey: ["/api/funds", f.id, "dashboard-summary"],
+          queryFn: async () => {
+            const res = await fetch(`/api/funds/${f.id}/dashboard-summary`, { credentials: "include" });
+            if (!res.ok) throw new Error("prefetch failed");
+            const data = await res.json();
+            try { writeLocalCache(`${DASHBOARD_SUMMARY_CACHE_PREFIX}${f.id}`, data); } catch { /* cache best-effort */ }
+            return data;
+          },
+          staleTime: FUND_ACTIVE_STALE_MS,
+        });
+      });
+    };
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: any) => number);
+    const cancel = (window as any).cancelIdleCallback as undefined | ((id: number) => void);
+    const id = ric ? ric(warm, { timeout: 2500 }) : window.setTimeout(warm, 1200);
+    return () => { if (ric && cancel) cancel(id as number); else window.clearTimeout(id as number); };
+  }, [activeFundId, dashboardSummary, funds, queryClient]);
 
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
@@ -2235,21 +2825,114 @@ export default function Dashboard() {
     return sum + parseFloat(f.balance || "0") + parseFloat(f.pendingBalance || "0") + parseFloat((f as any).cashBalance || "0");
   }, 0);
   const prevValueRef = useRef(rawTotalValue);
+  // The roll's "from" (welcome-back prior):
+  //  - Demo: a synthetic prior a visible step below live. CAPTURED ONCE per fund,
+  //    the first render its real value is ready (dashboardSummary loaded + a real
+  //    activeFundId), then FROZEN. This is load-bearing: recomputing live*0.96
+  //    every render made the seed THRASH as the fund's data settled in steps (and
+  //    briefly applied under the empty "" fund id before activeFundId resolved),
+  //    which re-armed the roll's paint gate over and over and made it fire
+  //    inconsistently — "sometimes it rolls" / "fresh incognito doesn't". A frozen
+  //    prior can't thrash, so each kid rolls once, cleanly, the first time it's
+  //    opened. The END is always the true live value, so up-only honesty holds.
+  //  - Real: the genuine last-visit value from warm-data cache → the roll is the
+  //    REAL delta (market + gifts together, Acorns-style), or an honest snap on a
+  //    true first visit / a quiet unchanged return (no fabricated roll).
+  const demoBalancePriorByFundRef = useRef<Record<string, number>>({});
+  if (
+    isDemoAccount && activeFundId && dashboardSummary &&
+    rawTotalValue > 0 && demoBalancePriorByFundRef.current[activeFundId] == null
+  ) {
+    demoBalancePriorByFundRef.current[activeFundId] = rawTotalValue * DEMO_ROLL_UNDERSEED_FACTOR;
+  }
+  const demoBalancePrior =
+    isDemoAccount && activeFundId ? (demoBalancePriorByFundRef.current[activeFundId] ?? null) : null;
+  // STAGING hero "settle" easing — a deliberate TWO-STAGE deceleration so the climb
+  // keeps slowing the whole way and the cents land softest of all ("gradually toward
+  // the end, then even more for the cents"):
+  //   • t < BREAK: ease-out QUART over the whole-DOLLAR climb — a strong, deepening
+  //     deceleration, so the number is already crawling by the time the dollars rest.
+  //   • t ≥ BREAK: ease-out QUAD over the leftover sliver — the CENTS decelerate again
+  //     into a soft landing (not a constant linear tick). Two ease-outs, not a power
+  //     curve over the whole thing: a single steep curve flattens so hard the last
+  //     cents FREEZE; splitting it lets each stage decelerate within its own range
+  //     without stalling. The velocity dip at BREAK IS the beat — dollars settle, then
+  //     the cents ease in. P (where the dollars finish) is derived per-roll so it
+  //     tracks the demo value as it drifts with prices; memoized for stable identity.
+  const heroSettleEase = useMemo(() => {
+    const seed = isDemoAccount ? demoBalancePrior : cachedHeroFundValue;
+    const live = rawTotalValue;
+    const span = typeof seed === "number" && Number.isFinite(seed) ? live - seed : 0;
+    let P = 0.9997;
+    if (span > 1 && typeof seed === "number") {
+      P = Math.min(0.99985, Math.max(0.985, (Math.floor(live) - seed) / span));
+    }
+    const BREAK = 0.62;
+    return (t: number) => {
+      if (t <= 0) return 0;
+      if (t >= 1) return 1;
+      if (t < BREAK) { const u = t / BREAK; return P * (1 - Math.pow(1 - u, 4)); }
+      const v = (t - BREAK) / (1 - BREAK);
+      return P + (1 - P) * (1 - Math.pow(1 - v, 2));
+    };
+  }, [isDemoAccount, demoBalancePrior, cachedHeroFundValue, rawTotalValue]);
   const {
     displayValue: displayHeroBalance,
     delta: rawSinceLastVisitDelta,
     shouldAnimate: showFresheningCue,
     isAnimating: balanceAnimating,
+    isRolling: balanceRolling,
+    locked: balanceLocked,
   } = useCachedFirstNumber({
-    seedValue: cachedHeroFundValue,
+    seedValue: isDemoAccount ? demoBalancePrior : cachedHeroFundValue,
     liveValue: rawTotalValue,
-    // 1200ms (vs the hook's 900ms default) — the hero balance is the focal
-    // count-up element; the longer ladder rung gives the parent time to
-    // perceive the rise from cached → live. Per
+    // The hero balance is the focal count-up element; the longer ladder rung
+    // gives the parent time to perceive the rise from cached → live. Per
     // project_count_up_animation_consistency.md: "Duration ladder + 'from'
     // anchor rules" — hero balances are the slowest tier in the ladder.
-    duration: 1200,
+    duration: HERO_ROLL_DURATION_MS,
+    // Linger on the old number, then climb. See HERO_ROLL_START_DELAY_MS.
+    startDelay: HERO_ROLL_START_DELAY_MS,
+    // Roll ONCE per kid: each fund rolls the first time you open it this session,
+    // then snaps on every return (switching back to a kid you've seen, polls).
+    rollKey: activeFundId,
+    // Persist the lock across route nav (Memory Book -> back) so returning to the
+    // dashboard snaps instead of replaying the roll. Own scope so it doesn't
+    // cross-lock with the projection.
+    lockScope: "hero-balance",
+    // STAGING: cents roll at full precision (not snap) and settle last via the
+    // stronger quart ease-out — the "come to rest" finish. The cents-treatment in
+    // the render (small + dimmed) keeps the in-flight cents a quiet blur that
+    // resolves clearly at the end.
+    precision: 2,
+    easing: heroSettleEase,
   });
+
+  // Hero balance never overflows on mobile (2026-06-07, founder: "will it fit
+  // at millions?"). formatCurrency always shows cents, so a 7-figure value
+  // ("$1,234,567.89", ~13 glyphs) would blow past a phone column at the clamp's
+  // mobile size. Drop the cents at scale (>= $100k): on a six/seven-figure
+  // balance cents are noise anyway, and "$1,234,568" (~10 glyphs) fits. Small
+  // balances keep cents (the count-up's charm). A count-up crossing $100k flips
+  // the format once — harmless. The projection pills already use no-cents.
+  const formatHeroBalance = (v: number) =>
+    Math.abs(v) >= 100000
+      ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v)
+      : formatCurrency(v);
+
+  // Length-aware hero font (2026-06-07): the clamp handles WIDTH, but a very
+  // long number needs a smaller ceiling so it fits even on a 320px phone.
+  // Sized off the LIVE/destination value's length (not the animating value) so
+  // the font is stable through the whole count-up — it never resizes mid-roll
+  // (intermediate count-up values are shorter, so they fit the final size).
+  // Realistic seven figures get the comfortable middle tier; eight/nine figures
+  // (fantasy for a kid's fund, but now bulletproof) get the smallest.
+  const heroBalanceFontSize = (() => {
+    const len = formatHeroBalance(rawTotalValue).length;
+    if (len >= 12) return "clamp(2.3rem, 9.5vw, 54px)"; // $100M+
+    if (len >= 10) return "clamp(2.7rem, 11vw, 60px)";  // $1M–$99M
+    return "clamp(3.1rem, 12vw, 64px)";                  // up to $999,999
+  })();
 
   // (The old presentational "demo gift landed" hero-roll signal was retired in
   // the demo-sandbox work: a recorded demo gift now lands in a holding, so the
@@ -2271,37 +2954,134 @@ export default function Dashboard() {
   // surface where there's no scrub-aware hero.
   const [scrubbedTrendPoint, setScrubbedTrendPoint] = useState<DashboardTrendPoint | null>(null);
   const isScrubbing = scrubbedTrendPoint !== null;
+  // STAGING smoothness: scrubbing the chart calls back on every category the finger
+  // crosses, and each call set state in this 16k-line component → a full-dashboard
+  // re-render per move = visible jank on a fast drag over a dense range. Coalesce to
+  // ONE update per animation frame (60fps ceiling); release (null) stays immediate so
+  // the hero snaps back the instant the finger lifts, no trailing frame.
+  const scrubRafRef = useRef<number | null>(null);
+  const pendingScrubRef = useRef<DashboardTrendPoint | null>(null);
+  const handleScrub = useCallback((point: DashboardTrendPoint | null) => {
+    if (point === null) {
+      if (scrubRafRef.current != null) { cancelAnimationFrame(scrubRafRef.current); scrubRafRef.current = null; }
+      setScrubbedTrendPoint(null);
+      return;
+    }
+    pendingScrubRef.current = point;
+    if (scrubRafRef.current != null) return; // a frame is already scheduled
+    scrubRafRef.current = requestAnimationFrame(() => {
+      scrubRafRef.current = null;
+      setScrubbedTrendPoint(pendingScrubRef.current);
+    });
+  }, []);
   const sinceLastVisitDelta = Math.abs(rawSinceLastVisitDelta) >= 0.01 ? rawSinceLastVisitDelta : 0;
   // Update prevValueRef AFTER render so MilestoneMoment sees the old value during the render it compares
   useEffect(() => {
     prevValueRef.current = rawTotalValue;
   }, [rawTotalValue]);
-  // Persist the live balance per-fund so the next session seeds the count-up from the last known value.
-  // GUARDED on dashboardSummary being resolved (2026-06-04 perfection pass):
-  // in the window where the fund row has loaded but the summary (holdings)
-  // hasn't, rawTotalValue = 0 invested + pending + cash — a low-but-positive
-  // PARTIAL total. Writing that would poison the seed, and the next session
-  // would "roll up" from a number the fund was never actually at — a fake
-  // gain, the one dishonesty this animation must never produce. The window
-  // only exists on cold caches (first visit, post-demo-login clear), which
-  // is precisely when the seed is being established.
+
+  // Hold the ancillary banner stack (welcome / co-parent / Plus celebrations /
+  // recurring nudge / upgrade prompt / milestone) until the hero count-up has
+  // settled, so the load reads as ONE clean beat — the old cached number rolls
+  // up to the new live number — and everything else arrives after, never on top
+  // of the roll. Generalizes the SinceLastVisitDigest's own reveal-hold to the
+  // whole stack so "roll first, the rest after" is a system property, not a
+  // per-component accident (founder call 2026-06-12). Lands at
+  // HERO_BANNERS_REVEAL_MS — after the whole number cascade settles AND the
+  // "while you were away" recap, so the order is roll → recap → celebrations.
+  // Latched PER-FUND via a ref so the steady 30s dashboard-summary poll (a new
+  // object each refetch) can't re-hold and flicker the banners; a genuine fund
+  // switch (activeFundId change) re-holds once.
+  // ANCHORED TO THE ROLL'S ACTUAL START (`balanceAnimating`), not to data-ready.
+  // The digest used its own data-ready timer, which on a slow machine landed
+  // DURING the (projection) roll — the roll can start late and run on slower
+  // frames, so a fixed offset from data-ready drifts into the cascade. Anchoring
+  // both reveals to when the roll actually begins makes them trail the cascade no
+  // matter the machine. Fallback: a fund that does NOT roll (switch-back to a kid
+  // you've seen, or a quiet no-change visit) reveals after a short settle so the
+  // recap still appears. Per-fund so the 30s poll can't re-flicker.
+  const [bannersRevealed, setBannersRevealed] = useState(false);
+  const [digestRevealed, setDigestRevealed] = useState(false);
+  const cascadeAnchoredForFundRef = useRef<string | null>(null);
+  const cascadeTimersRef = useRef<number[]>([]);
+  const cascadeFallbackTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    setBannersRevealed(false);
+    setDigestRevealed(false);
+    cascadeAnchoredForFundRef.current = null;
+    cascadeTimersRef.current.forEach((id) => window.clearTimeout(id));
+    cascadeTimersRef.current = [];
+    if (cascadeFallbackTimerRef.current) {
+      window.clearTimeout(cascadeFallbackTimerRef.current);
+      cascadeFallbackTimerRef.current = null;
+    }
+    // Arm the guaranteed-reveal net (see HERO_REVEAL_SAFETY_NET_MS): if neither
+    // the roll-anchored path nor the no-roll fallback resolves — a roll that
+    // armed but never started — force the reveal so the catch-up cards can never
+    // be stranded hidden. Pushed into cascadeTimersRef so the next fund switch
+    // clears it; the captured fundId guard stops it acting on a stale fund.
+    const fundForNet = activeFundId;
+    if (fundForNet) {
+      cascadeTimersRef.current.push(
+        window.setTimeout(() => {
+          if (cascadeAnchoredForFundRef.current === fundForNet) return; // cascade already revealed
+          cascadeAnchoredForFundRef.current = fundForNet;
+          setDigestRevealed(true);
+          setBannersRevealed(true);
+        }, HERO_REVEAL_SAFETY_NET_MS),
+      );
+    }
+  }, [activeFundId]);
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary) return;
+    if (cascadeAnchoredForFundRef.current === activeFundId) return;
+    // A roll is coming (`showFresheningCue`) or in progress (`balanceAnimating`)
+    // → cancel any pending no-roll fallback so it can NEVER fire during a roll
+    // (the bug a slow CPU exposed: the roll starts late, the fallback fires first).
+    if (balanceAnimating || showFresheningCue) {
+      if (cascadeFallbackTimerRef.current) {
+        window.clearTimeout(cascadeFallbackTimerRef.current);
+        cascadeFallbackTimerRef.current = null;
+      }
+    }
+    if (balanceAnimating) {
+      // Roll has actually started — anchor the reveals HERE (timers survive later
+      // dep changes; cleared only on a fund switch).
+      cascadeAnchoredForFundRef.current = activeFundId;
+      cascadeTimersRef.current.push(
+        window.setTimeout(() => setDigestRevealed(true), HERO_DIGEST_REVEAL_MS),
+        window.setTimeout(() => setBannersRevealed(true), HERO_BANNERS_REVEAL_MS),
+      );
+      return;
+    }
+    if (showFresheningCue) return; // roll is coming — wait for it to actually start
+    // No roll for this fund. `balanceLocked` = a switch-back to a kid you've
+    // already seen (definitely no roll) → reveal promptly. Otherwise a quiet
+    // no-change real visit → reveal after a longer settle. Either way the timer is
+    // cancelled above the instant a roll appears, so it can't fire mid-roll.
+    if (cascadeFallbackTimerRef.current == null) {
+      cascadeFallbackTimerRef.current = window.setTimeout(() => {
+        cascadeAnchoredForFundRef.current = activeFundId;
+        setDigestRevealed(true);
+        setBannersRevealed(true);
+      }, balanceLocked ? 400 : 1200);
+    }
+  }, [activeFundId, dashboardSummary, balanceAnimating, showFresheningCue, balanceLocked]);
+
+  // Persist the TRUE live balance per-fund so the next session's cold-load roll
+  // starts from this genuine last-visit value (real users) — the demo ignores
+  // this cache and synthesizes its prior fresh from live, so one honest path
+  // serves both. GUARDED on dashboardSummary being resolved (2026-06-04): in the
+  // window where the fund row has loaded but the summary (holdings) hasn't,
+  // rawTotalValue = 0 invested + pending + cash — a low-but-positive PARTIAL
+  // total. Writing that would poison the seed, and the next session would "roll
+  // up" from a number the fund was never actually at — a fake gain, the one
+  // dishonesty this animation must never produce.
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
-    // DEMO accounts persist a seed ~0.6% BELOW live (founder call
-    // 2026-06-04: "should the demo have a lower cached amount always so
-    // [you] can always do the roll-in thing?"). The roll's premise is
-    // "you've been away; here's what changed" — a real returning parent
-    // always has a yesterday-number, and the demo's fiction is stepping
-    // into Marcus's life mid-stream, so a synthetic last-visit number is
-    // set dressing, not a lie: the START is bent, the END is always the
-    // true balance, up-only holds by construction. Every fund-tab open
-    // in the demo now plays the returning-parent moment; the ambient
-    // DemoGiftMoment beat separately demos live ARRIVAL. Real accounts:
-    // exact live value, untouched.
-    const seedToStore = isDemoAccount ? rawTotalValue * 0.994 : rawTotalValue;
-    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, seedToStore);
-  }, [activeFundId, rawTotalValue, dashboardSummary, isDemoAccount]);
+    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, rawTotalValue);
+  }, [activeFundId, rawTotalValue, dashboardSummary]);
 
   // Per-fund cached seed for the hero's "$X at 65" projection peek. Same
   // Acorns-style pattern as the balance: paint the last known projection
@@ -2364,6 +3144,58 @@ export default function Dashboard() {
     ).length,
     [memoryEntriesForFund, user?.id],
   );
+
+  // Gifter-identity doorway (founder catch 2026-06-05: Robert — a years-long
+  // gifter with zero custodial funds — logged in and saw a blank draft fund
+  // with no acknowledgment of his actual life in the product: "where is the
+  // data?"). His data lives behind /api/gifter-account/dashboard (the
+  // /my-gifts surface); the PARENT dashboard only knows funds you custody,
+  // and the nav has no gifts entry. When the account looks like a non-parent
+  // (no funded funds), peek at the gifter summary; if they've actually
+  // gifted, the empty-state hero opens the right door instead of treating
+  // them as a brand-new parent. Real parents never fire this request, and
+  // the query key matches /my-gifts exactly so the tap lands on a warm cache.
+  const looksLikeNonParent = !fundsLoading && fundsSuccess && funds.every((f: any) => getFundTotalValue(f) <= 0);
+  const { data: gifterPeek, isFetched: gifterPeekFetched } = useQuery<{
+    summary?: { totalGifted?: number };
+    funds?: Array<{ giftCount?: number; totalGifted?: number; childFirstName?: string | null; childName?: string | null }>;
+  }>({
+    queryKey: ["/api/gifter-account/dashboard", (user as any)?.id],
+    queryFn: async () => {
+      const res = await fetch("/api/gifter-account/dashboard", { credentials: "include" });
+      if (!res.ok) return {} as any;
+      return res.json();
+    },
+    enabled: isAuthenticated && looksLikeNonParent,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
+  // Fund-less redirect, single source of truth (moved here 2026-06-10 so it is
+  // GIFTER-aware: gifterPeek + looksLikeNonParent are declared just above). Once the
+  // funds list is confirmed empty by a real server fetch (fundsDataUpdatedAt>0 and
+  // not in flight — same guards as the prior version, which fixed the "demo throws
+  // me to Get Started" race):
+  //   - a GIFTER (no custodial fund but HAS given gifts) -> /my-gifts, their gifts
+  //     surface, NOT the empty parent shell with its phantom "your child turns 18".
+  //   - a real fund-less PARENT -> /get-started (onboarding), unchanged.
+  //   - a demo persona is NEVER sent to signup (a bounce destroys the demo session);
+  //     only the /my-gifts doorway, a normal logged-in route, can fire for a demo.
+  // We wait for the gifter-peek to resolve (it only fetches for non-parents) so a
+  // gifter is never bounced to onboarding before we know they are one. A parent
+  // never reaches here at all (funds.length>0 returns above).
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    if (fundsFetching || fundsDataUpdatedAt === 0) return;
+    if (funds.length !== 0) return;
+    if (looksLikeNonParent && !gifterPeekFetched) return;
+    if ((gifterPeek?.funds || []).some((f) => (f?.giftCount || 0) > 0)) {
+      setLocation("/my-gifts");
+      return;
+    }
+    if (isDemoAccount) return;
+    setLocation("/get-started");
+  }, [authLoading, isAuthenticated, fundsFetching, fundsDataUpdatedAt, funds.length, looksLikeNonParent, gifterPeekFetched, gifterPeek, isDemoAccount, setLocation]);
 
   const { data: giftCodeData } = useQuery<{ code: string; lookupUrl: string }>({
     queryKey: ["/api/funds", activeFundId, "gift-code"],
@@ -2495,9 +3327,11 @@ export default function Dashboard() {
     enabled: !!activeFundId && dashboardSummaryError,
   });
   const giftsRaw: GiftType[] = dashboardSummary?.gifts ?? giftsFetched;
-  // Keepsake (mirror of DashboardLab): the previous owner sees gifts only up to
-  // the handoff — no post-handoff gift activity or private notes to the now-adult.
-  // No-op for everyone else.
+  // Keepsake: the previous owner sees the fund as they knew it AS CUSTODIAN —
+  // gifts up to the handoff, nothing after. Stops post-handoff gift activity
+  // (and the private notes those gifts carry to the now-adult) from surfacing on
+  // their frozen view: the latest-gift row, the gifter roster, and the counts
+  // all cap at handoff. No-op for everyone else.
   const gifts: GiftType[] = useMemo(() => {
     if (!showHandoffKeepsake || !(activeFund as any)?.transferredAt) return giftsRaw;
     const cutoff = new Date((activeFund as any).transferredAt).getTime();
@@ -2935,6 +3769,22 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, kidViewSettings?.enabled]);
 
+  // Sidebar "New occasion" from non-dashboard page navigates here with ?openCreateEvent=1.
+  // Wait for the fund to load before consuming the param so the coverage gate
+  // (covered → sheet, uncovered → gate) decides against real data, not a
+  // half-loaded fund.
+  useEffect(() => {
+    const params = new URLSearchParams(search || "");
+    if (params.get("openCreateEvent") !== "1") return;
+    if (!activeFund?.id) return;
+    const next = new URLSearchParams(search || "");
+    next.delete("openCreateEvent");
+    const nextSearch = next.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
+    if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, activeFund?.id, isFundCovered, isOwnerMode]);
+
   // Notification deep link: ?openAutoInvest=1
   useEffect(() => {
     const params = new URLSearchParams(search || "");
@@ -2996,7 +3846,7 @@ export default function Dashboard() {
     return map;
   }, [dashboardThankYous]);
 
-  const { data: rawParentContributions = [], refetch: refetchParentContributions } = useQuery<ParentContribution[]>({
+  const { data: rawParentContributions = [], refetch: refetchParentContributions, isLoading: parentContributionsLoading } = useQuery<ParentContribution[]>({
     queryKey: ["/api/funds", activeFundId, "parent-contributions"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${activeFundId}/parent-contributions`, { credentials: "include" });
@@ -3015,6 +3865,17 @@ export default function Dashboard() {
   );
   const activeAutoInvest = parentContributions.find((c) => c.status === "active");
   const pausedAutoInvest = parentContributions.find((c) => c.status === "paused");
+
+  // LAB: the dashboard mounts before the per-fund queries resolve, so the
+  // recurring line, the at-majority projection, and the collapse stats briefly
+  // compute from EMPTY arrays - "Set up recurring", a too-low projection, a
+  // bogus "+$22,743 this month". Those are WRONG money numbers that then jump.
+  // This gate (true once the recurring + summary data that makes them correct
+  // is in) lets us show a calm skeleton instead of a wrong value meanwhile.
+  // For a fund with genuinely no recurring the queries still resolve (to
+  // empty), so the gate opens and the honest "no recurring" state shows.
+  const recurringDataReady = !activeFundId || (!recurringLoading && !parentContributionsLoading);
+  const heroDataReady = recurringDataReady && (!activeFundId || !!dashboardSummary);
 
   // ===== Detail history modal (per-schedule + all-contributions) =====
   // Same generic modal Activity uses, mounted at Dashboard's page root so
@@ -3116,6 +3977,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (giftToastDismissed || !gifts.length) return;
+    // Hold the gift toast — and the coverage-upgrade modal it triggers 900ms
+    // later — until the hero value roll has SETTLED (the same `bannersRevealed`
+    // gate, 1300ms, re-held on fund switch). Without this, a return visit with
+    // a recent gift slides a toast in bottom-right and can pop the coverage
+    // modal over the hero mid-count-up, stealing the one focal moment.
+    // `recentGiftForToast` is what BOTH the toast render and the coverage-modal
+    // timer key off, so this single guard gates both. (founder: "no
+    // distractions" during the load roll, 2026-06-12.)
+    if (!bannersRevealed) return;
     // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
     // (top-center). This bottom-right GiftReceivedToast is the real-product
     // PLG nudge — firing BOTH meant two different gifts announced at once in
@@ -3165,7 +4035,7 @@ export default function Dashboard() {
       // canonical surfacing.
       markGiftToastDismissed(String(recent.id || ""));
     }
-  }, [gifts, giftToastDismissed, isDemoAccount]);
+  }, [gifts, giftToastDismissed, isDemoAccount, bannersRevealed]);
 
   // (Removed: the effect that surfaced `pendingGiftNotice`. See note on
   // the deleted state above — the banner pattern was the wrong shape for
@@ -3257,7 +4127,7 @@ export default function Dashboard() {
     const map = new Map<string, GifterProfile>();
     // Most-recent gift timestamp per identity, so a collapsed (email-keyed)
     // gifter displays their LATEST self-identification rather than whichever
-    // name happened to be processed first. 2026-06-08.
+    // name happened to be processed first. Ported from Dashboard (e750ad0).
     const nameMsByKey = new Map<string, number>();
     for (const g of gifts) {
       const status = String(g.status || "").toLowerCase();
@@ -3312,7 +4182,7 @@ export default function Dashboard() {
       p.initials = parts.length >= 2
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : p.name.slice(0, 2).toUpperCase();
-      p.colorIdx = gifterColorIdx(p.name);
+      p.colorIdx = gifterAvatarColorIdx(p.name);
     }
     // Sort by RECENCY (most recent gift first), not total amount. Sorting
     // by amount made the most generous gifter appear first — leaderboard
@@ -3325,27 +4195,30 @@ export default function Dashboard() {
       const tb = b.lastGiftDate ? new Date(b.lastGiftDate).getTime() : 0;
       return tb - ta;
     });
-    // De-collide avatar colors so two gifters in the displayed (recency) order
-    // never share a background while the palette has room (the user-reported
-    // "orange twice"). Greedy: keep the name's stable hash color when it's
-    // still free, else take the next unused palette slot. Repeats only when
-    // there are more gifters than palette colors (unavoidable; "unique if
-    // possible"). Deterministic per render.
-    const usedColors = new Set<number>();
-    for (const gifter of sortedRoster) {
-      let idx = gifter.colorIdx;
-      if (usedColors.size < GIFTER_AVATAR_COLORS.length) {
-        let tries = 0;
-        while (usedColors.has(idx) && tries < GIFTER_AVATAR_COLORS.length) {
-          idx = (idx + 1) % GIFTER_AVATAR_COLORS.length;
-          tries++;
-        }
-      }
-      gifter.colorIdx = idx;
-      usedColors.add(idx);
-    }
+    // NOTE: we intentionally do NOT de-collide colors by display order anymore.
+    // The old greedy "next free slot" pass made a gifter's color depend on who
+    // else was in THIS list and in what order, so the same person came out a
+    // different color in the Memory Book (different membership/sort) — the exact
+    // cross-surface mismatch we're fixing. Color is now a pure per-identity hash
+    // (see @/lib/gifter-avatar), identical everywhere. The enlarged palette
+    // keeps accidental same-color repeats rare.
     return sortedRoster;
   }, [gifts]);
+
+  // Fire the pending fund-switch entrance replay (armed above on the id change)
+  // now that gifterRoster has SETTLED to the newly-switched fund's people — so
+  // the faces cascade has real faces to animate instead of racing an empty
+  // mid-load roster. Replays the chart wipe too; the count-up already re-rolls.
+  useEffect(() => {
+    if (!pendingSwitchCascadeRef.current) return;
+    pendingSwitchCascadeRef.current = false;
+    chartWipePlayRef.current?.();
+    if (!facesInViewLiveRef.current) return;
+    setFacesInView(false);
+    const r = requestAnimationFrame(() => setFacesInView(true));
+    return () => cancelAnimationFrame(r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gifterRoster]);
 
   const recentGiftsFeed = useMemo(() => {
     return [...gifts]
@@ -3443,9 +4316,10 @@ export default function Dashboard() {
     // raw newest-first dump. Dedup by sender (each person's most-recent gift
     // only), cap 5 — otherwise a parent's repeating recurring deposit, or any
     // one prolific gifter, fills all 5 cards with the same "X added $Y" line and
-    // the strip reads as an echo. General, NOT demo-specific. Index 0 stays the
-    // genuine latest gift, so the arrival cue + "Latest gift" eyebrow (keyed off
-    // recentGiftsFeed[0]) are unaffected. Kept in sync with DashboardLab.
+    // the strip reads as an echo. General, NOT demo-specific: any fund where one
+    // source gives often gets a varied strip of different people. Index 0 stays
+    // the genuine latest gift, so the new-gift arrival cue + "Latest gift"
+    // eyebrow (both keyed off recentGiftsFeed[0]) are unaffected.
     const seen = new Set<string>();
     const deduped: typeof recentGiftsFeed = [];
     for (const g of recentGiftsFeed) {
@@ -3548,6 +4422,7 @@ export default function Dashboard() {
     lastSeenGiftIdRef.current = acked;
     setNewGiftFlash(false);
     setPendingFlashId(null);
+    setFlashGifterName(null);
   }, [activeFundId]);
 
   // Detect a genuinely new gift and queue it; the firing effect below decides
@@ -3566,18 +4441,136 @@ export default function Dashboard() {
     setPendingFlashId(String(latestGiftId));
   }, [latestGiftId, activeFundId]);
 
+  // DEMO parity: client-side demo gifts (one-time adds, loop-closure sends) never
+  // enter the server `gifts` feed, so the production detector above never sees
+  // them — the demo's whole point is to FEEL a gift land, so the beat must fire
+  // there too. This watches the session overlay's newest gift for the active
+  // fund and queues the SAME flash. Still earned-only + honest: it fires on the
+  // prospect's OWN just-recorded action (never an invented arrival), and the
+  // per-fund baseline acks any pre-existing overlay gift silently on first view.
+  const newestDemoGift = useMemo(
+    () => (isDemoAccount && activeFundId ? readDemoLiveGiftsForFund(activeFundId, true)[0] ?? null : null),
+    [isDemoAccount, activeFundId, demoOverlayVersion],
+  );
+  const pendingDemoGiftRef = useRef<any>(null);
+  const demoGiftSeenRef = useRef<{ fundId: string; key: string } | null>(null);
+  useEffect(() => {
+    if (!isDemoAccount || !activeFundId) return;
+    const newest = newestDemoGift;
+    const key = newest ? String(newest.createdAt || "") : "";
+    const seen = demoGiftSeenRef.current;
+    // First look at this fund (or a fund switch): baseline silently — EXCEPT a
+    // gift recorded in the last ~20s, which means the prospect JUST sent it and
+    // is returning to watch it land (the loop-closure remounts the dashboard).
+    // THAT one still pulses, with the gifter's name — the attributed "watch it
+    // land" beat. This is the only path that shows a NAME on the pulse: in-place
+    // dashboard adds are the viewer's own money (name suppressed downstream), so
+    // without this the pulse would never say who. Pre-existing (older) overlay
+    // gifts still baseline silently — never an invented arrival.
+    if (!seen || seen.fundId !== activeFundId) {
+      demoGiftSeenRef.current = { fundId: activeFundId, key };
+      const ts = newest?.createdAt ? new Date(newest.createdAt).getTime() : 0;
+      const justSent = ts > 0 && Date.now() - ts < 20000;
+      if (justSent && key) {
+        pendingDemoGiftRef.current = newest;
+        setPendingFlashId(`demo-${key}`);
+      }
+      return;
+    }
+    if (!key || key === seen.key) return;
+    demoGiftSeenRef.current = { fundId: activeFundId, key };
+    pendingDemoGiftRef.current = newest;
+    setPendingFlashId(`demo-${key}`);
+  }, [newestDemoGift, isDemoAccount, activeFundId]);
+
+  // The gift-lands choreography's SECOND limb: the sender's face in the
+  // "people building {child}'s future" roster blooms (gold ring + gentle
+  // scale, CSS keyframes) during the same window the balance rolls gold —
+  // the loop made visible: gift arrives → number rises → the PERSON glows.
+  // Named gifters only (the anonymous cluster stays quiet), and the bloom's
+  // animation-delay lets the eye land on the hero first. Cleared with the
+  // same window + on fund switch.
+  const [flashGifterName, setFlashGifterName] = useState<string | null>(null);
+  // The gift-lands choreography's THIRD limb: the landed amount ARCS up from the
+  // peopled caption into the balance (Disney principle 7), and the balance gives
+  // ONE secondary gold breath as it merges (principle 8). EARNED-ONLY by design —
+  // it shares the exact `newGiftFlash` gate as the roll + face bloom, which only
+  // fires on a genuinely NEW gift (baseline-acked on first view), never on load
+  // or fund-switch. So it can never animate an arrival that didn't happen — the
+  // same honesty rule that retired the old ambient beat (see DemoGiftMoment.tsx).
+  // Shows the REAL amount + sender (or just the amount when anonymous).
+  const [flashGiftAmount, setFlashGiftAmount] = useState<number | null>(null);
+  // Bumped once per gift beat (in the firing effect) → tells HeroProjectionSpin to
+  // re-roll the "potential" up to its new value AFTER the balance has climbed, so
+  // the cascade reads in order: chip → balance rolls → projection rolls.
+  const [giftSpinToken, setGiftSpinToken] = useState(0);
+
   // Fire the queued cue once the tab is visible AND the hero is on screen.
   useEffect(() => {
     if (!pendingFlashId || !activeFundId) return;
     if (!heroTabVisible || !heroInView) return;
-    lastSeenGiftIdRef.current = pendingFlashId;
-    try { safeLocalSet(`${HERO_ACK_PREFIX}${activeFundId}`, pendingFlashId); } catch { /* ignore */ }
+    // Demo flashes use a `demo-` id and resolve from the overlay (not the server
+    // feed); don't write them into the production ack/lastSeen state.
+    const isDemoFlash = pendingFlashId.startsWith("demo-");
+    if (!isDemoFlash) {
+      lastSeenGiftIdRef.current = pendingFlashId;
+      try { safeLocalSet(`${HERO_ACK_PREFIX}${activeFundId}`, pendingFlashId); } catch { /* ignore */ }
+    }
     setHeroGiftIdx(0);
     setNewGiftFlash(true);
+    // Cascade the projection AFTER the balance roll (sequenced, not simultaneous).
+    setGiftSpinToken((n) => n + 1);
+    // Capture the landing gift's sender for the face bloom. Anonymous gifts
+    // have no face to bloom — leave null. Demo gifts resolve from the overlay ref.
+    const landed = isDemoFlash
+      ? pendingDemoGiftRef.current
+      : recentGiftsFeed.find((g) => String(g.id) === pendingFlashId) as any;
+    const senderName = landed && !landed.isAnonymous ? String(landed.senderName || "").trim() : "";
+    // Suppress attribution when the contribution is the VIEWER's OWN (a parent
+    // one-time add / their recurring), so the chip reads a clean "+$50" instead
+    // of the odd "+$50 · You". The peopled beat is for OTHER people showing up;
+    // your own money needs no "· name". Server gifts expose parentContributionId
+    // / senderEmail / source; the demo overlay only has a name, so also match the
+    // viewer's own name + the generic self labels. (Also nulls the face bloom —
+    // correct: there's no gifter face in the roster for your own deposit.)
+    const viewerEmail = String((user as any)?.email || "").trim().toLowerCase();
+    const sn = senderName.toLowerCase();
+    const selfNames = [String((user as any)?.preferredName || ""), String(user?.firstName || ""), "you", "a parent"]
+      .map((n) => n.trim().toLowerCase()).filter(Boolean);
+    const isOwnContribution = Boolean(landed?.parentContributionId)
+      || String(landed?.source || "") === "recurring_worker"
+      || (!!landed?.senderEmail && String(landed.senderEmail).trim().toLowerCase() === viewerEmail)
+      || (!!sn && selfNames.includes(sn));
+    setFlashGifterName(senderName && !isOwnContribution ? senderName : null);
+    // Capture the amount for the arc chip (positive contributions only — the
+    // beat is always an inbound gain; never animate a non-positive delta).
+    const landedAmt = landed ? parseFloat(String(landed.amount ?? "").replace(/[^0-9.]/g, "")) : NaN;
+    setFlashGiftAmount(Number.isFinite(landedAmt) && landedAmt > 0 ? landedAmt : null);
     setPendingFlashId(null);
-    const t = setTimeout(() => setNewGiftFlash(false), 3800);
+    const t = setTimeout(() => { setNewGiftFlash(false); setFlashGifterName(null); setFlashGiftAmount(null); }, 4800);
     return () => clearTimeout(t);
-  }, [pendingFlashId, heroTabVisible, heroInView, activeFundId]);
+  }, [pendingFlashId, heroTabVisible, heroInView, activeFundId, recentGiftsFeed]);
+
+  // Gift-lands "roll the +$X" (founder, 2026-06-23: "does the balance roll the
+  // additional $50?"). The once-per-kid hero roll (useCachedFirstNumber) is
+  // LOCKED after first view, so a later gift would otherwise SNAP the total. This
+  // dedicated count-up rolls the hero number from the PRE-gift total up to the new
+  // total IN SYNC with the chip merging — so the gift visibly climbs into the
+  // number instead of jumping. flashGiftAmount is the exact gift, so
+  // (rawTotalValue − amount) is the precise old total. While the chip holds low +
+  // readable (~0→1.9s) the number sits at the old total; then it climbs (~1.9→3.0s)
+  // as the chip rises and dissolves in. Outside a gift beat the locked hook's
+  // value renders (seamless — the roll ends exactly on it). useCountUp holds at
+  // `from` while disabled, so there's no pre-snap to the new total.
+  const giftBeatActive = !isScrubbing && newGiftFlash && flashGiftAmount != null && rawTotalValue > 0;
+  const { value: giftRollValue } = useCountUp({
+    from: giftBeatActive ? Math.max(0, rawTotalValue - (flashGiftAmount ?? 0)) : rawTotalValue,
+    to: rawTotalValue,
+    duration: 1100,
+    startDelay: 1900,
+    enabled: giftBeatActive,
+    precision: 2,
+  });
 
   // Carousel container height: locks to the ACTIVE page's offsetHeight, with
   // a CSS `transition: height 0.22s ease` on the container animating between
@@ -3690,10 +4683,13 @@ export default function Dashboard() {
   const settling = pendingBalance;
   const uninvestedCash = cash + settling;
   const totalValue = invested + pendingBalance + cashBalance;
-  // Post-handoff keepsake freeze (mirror of DashboardLab). For the previous
-  // owner: growthCurrentValue replaces the live total in growth stats, and
-  // keepsakeHistoryCutoffMs caps the chart/scrub at handoff — so the parent
-  // never sees the now-adult's post-handoff trajectory. No-op for everyone else.
+  // Keepsake "current value" + history cutoff for the post-handoff previous
+  // owner. For everyone else these are exactly totalValue / null (no-ops), so
+  // the growth math and chart are untouched. For the previous owner they freeze
+  // the fund AS OF HANDOFF: growthCurrentValue replaces the live total in every
+  // growth stat, and keepsakeHistoryCutoffMs caps the chart + scrub at the
+  // handoff date — so the parent never sees the now-adult's post-handoff
+  // trajectory, only the fund they handed over.
   const growthCurrentValue = showHandoffKeepsake && handoffKeepsakeValue != null ? handoffKeepsakeValue : totalValue;
   const keepsakeHistoryCutoffMs = showHandoffKeepsake && (activeFund as any)?.transferredAt
     ? new Date((activeFund as any).transferredAt).getTime()
@@ -3701,8 +4697,8 @@ export default function Dashboard() {
   // Publish the hero's computed live total so the sidebar quotes the SAME
   // number (it has no holdings query; server fund.balance is
   // settlement-synced, not price-synced — see lib/fund-live-value.ts).
-  // Mirrors DashboardLab. Gated on the summary being loaded so a half-loaded
-  // zero is never published over a real value.
+  // Gated on the summary being loaded so a half-loaded zero is never
+  // published over a real value.
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     publishFundLiveValue(queryClient, activeFundId, totalValue);
@@ -3753,39 +4749,91 @@ export default function Dashboard() {
     });
   }, [totalValue, age18Transition, parentContributions]);
 
+  // Mirror the balance's prior — CAPTURED ONCE per fund + frozen (same reason as
+  // the balance: a per-render live*factor seed thrashes and makes the roll fire
+  // inconsistently). So the at-65 peek climbs in lockstep with the hero balance.
+  const demoProjectionPriorByFundRef = useRef<Record<string, number>>({});
+  if (
+    isDemoAccount && activeFundId && dashboardSummary &&
+    heroProjectedAt65 > 0 && demoProjectionPriorByFundRef.current[activeFundId] == null
+  ) {
+    demoProjectionPriorByFundRef.current[activeFundId] = heroProjectedAt65 * DEMO_ROLL_UNDERSEED_FACTOR;
+  }
+  const demoProjectionPrior =
+    isDemoAccount && activeFundId ? (demoProjectionPriorByFundRef.current[activeFundId] ?? null) : null;
   const {
     displayValue: displayHeroProjectedAt65,
   } = useCachedFirstNumber({
-    seedValue: cachedHeroProjectionAt65,
+    seedValue: isDemoAccount ? demoProjectionPrior : cachedHeroProjectionAt65,
     liveValue: heroProjectedAt65,
-    // 1200ms matches the hero balance — both numbers belong to the same
-    // focal hero moment and ride the same duration ladder rung
-    // (per project_count_up_animation_consistency.md).
-    duration: 1200,
+    // Matches the hero balance — both numbers belong to the same focal hero
+    // moment and ride the same duration ladder rung.
+    duration: HERO_ROLL_DURATION_MS,
     // STAGGER (2026-06-04, founder UX catch): the balance and the projection
-    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor.
-    // The projection now holds at its value until the hero balance has settled
-    // (1200ms) plus a beat, then rolls — focal number lands first, then the
-    // projection follows. Sequential and intentional. Beat widened 150ms -> 250ms
-    // (1350 -> 1450) on a founder pass: at 150ms the projection trod on the
-    // balance's heels; 250ms lets it read as a deliberate SECOND reveal without
-    // any dead time. Perceptual + tunable — nudge up if it should breathe more.
-    startDelay: 1450,
+    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor. The
+    // projection now holds until the balance has settled plus a beat, then rolls
+    // — focal number lands first, projection follows. Derived from the one
+    // cascade timeline (linger + balance climb + beat).
+    startDelay: HERO_PROJECTION_START_DELAY_MS,
+    // Roll once per kid, in lockstep with the balance.
+    rollKey: activeFundId,
+    // Persist across route nav like the balance, under its own scope.
+    lockScope: "hero-projection",
   });
 
-  // Persist the live projection per-fund so the next session seeds the
-  // count-up from the last known projection. Same pattern as the balance
-  // cache write above — including the dashboardSummary guard, because the
-  // projection derives from totalValue and inherits the same partial-load
-  // poison window (see the balance write's comment).
+  // Persist the TRUE live projection per-fund so the next session's cold-load
+  // roll starts from the genuine last-visit projection (real users); the demo
+  // synthesizes its prior fresh from live, same as the balance. Same
+  // dashboardSummary guard as the balance write — the projection derives from
+  // totalValue and inherits the same partial-load poison window.
   useEffect(() => {
     if (!activeFundId || !dashboardSummary) return;
     if (!heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
-    // Demo under-seed matches the balance write above so the hero and the
-    // at-65 peek roll together — one number rolling while its sibling sits
-    // still would read as a glitch, not a moment.
-    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, isDemoAccount ? heroProjectedAt65 * 0.994 : heroProjectedAt65);
-  }, [activeFundId, heroProjectedAt65, dashboardSummary, isDemoAccount]);
+    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, heroProjectedAt65);
+  }, [activeFundId, heroProjectedAt65, dashboardSummary]);
+
+  // ── At-majority projection roll (2026-06-23, founder: "potential can pre-cache
+  // then roll too"). Mirrors the at-65 block above + the hero balance: paint the
+  // last value instantly, then count UP to the fresh one, staggered after the
+  // balance so the focal number lands first. Math kept IDENTICAL to the hero CTA's
+  // inline at-majority compute (active parent + active gifter-sub recurring,
+  // two-phase to majority) so the rolled value LANDS exactly on the displayed
+  // "~$Xk at {age}" and agrees with the showAtMajority gate.
+  const heroProjectedAtMaj = useMemo(() => {
+    const yrs = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+    const monthly = sumMonthlyEquivalent([
+      ...(parentContributions as any[]).filter((c) => String(c?.status || "").toLowerCase() === "active"),
+      ...(recurringGifts as any[]).filter((rg) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
+    ]);
+    return projectFundValue({ startingValue: totalValue, monthlyContribution: monthly, yearsAhead: yrs, contributionYears: yrs });
+  }, [totalValue, age18Transition, parentContributions, recurringGifts]);
+  // Demo prior — captured once per fund + frozen (same reason as balance/at-65).
+  const demoAtMajPriorByFundRef = useRef<Record<string, number>>({});
+  if (
+    isDemoAccount && activeFundId && dashboardSummary &&
+    heroProjectedAtMaj > 0 && demoAtMajPriorByFundRef.current[activeFundId] == null
+  ) {
+    demoAtMajPriorByFundRef.current[activeFundId] = heroProjectedAtMaj * DEMO_ROLL_UNDERSEED_FACTOR;
+  }
+  const demoAtMajPrior =
+    isDemoAccount && activeFundId ? (demoAtMajPriorByFundRef.current[activeFundId] ?? null) : null;
+  const cachedHeroProjectionAtMaj = useMemo(
+    () => (activeFundId ? readCachedProjectionAtMaj(activeFundId) : null),
+    [activeFundId],
+  );
+  // Seed for the odometer spin-up: paint this instantly (pre-cache), then the
+  // HeroProjectionSpin component spins the digits up to heroProjectedAtMaj. Demo
+  // synthesizes a prior just under live; real users get their genuine last-visit
+  // projection from cache. (The at-maj number rides the custom digit-spin instead
+  // of the value count-up, so it doesn't need useCachedFirstNumber.)
+  const atMajSeedValue = isDemoAccount ? demoAtMajPrior : cachedHeroProjectionAtMaj;
+  // Persist the TRUE live at-majority projection so the next cold-load seeds from
+  // the genuine last-visit number (real users); demo synthesizes its prior fresh.
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary) return;
+    if (!heroProjectedAtMaj || !Number.isFinite(heroProjectedAtMaj) || heroProjectedAtMaj <= 0) return;
+    writeLocalCache(`${FUND_PROJECTION_AT_MAJ_CACHE_PREFIX}${activeFundId}`, heroProjectedAtMaj);
+  }, [activeFundId, heroProjectedAtMaj, dashboardSummary]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
   // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.
@@ -3794,15 +4842,6 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeFundId || !hasAutoInvestAccess || !activeAutoInvest || fundHistory.length < 2) return;
     if (isReadOnlyFund) return;
-    // Never on the demo (2026-06-07). The nudge's CTA is "adjust YOUR
-    // recurring" — a real-parent control a Rivera-demo visitor can't
-    // meaningfully perform, and a self-promoting popup is noise on the
-    // conversion surface even when it fires exactly once. (Also the demo is
-    // where the storage-dedup was failing and producing the 3-at-once.)
-    if (isDemoAccount) return;
-    // In-memory dedup: once shown this session, never schedule again. This is
-    // the storage-independent guard; see smartNudgeShownThisSession above.
-    if (smartNudgeShownThisSession) return;
     // GLOBAL monthly key, not per-fund (founder catch 2026-06-04: "I keep
     // getting it, 3 times on the same page"). The old per-fund key meant a
     // Family parent tabbing Theo → Nora → Mia got THREE modals back to
@@ -3828,34 +4867,28 @@ export default function Dashboard() {
     const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
     const fireNudge = (payload: SmartNudgePayload) => {
       nudgeTimer = setTimeout(() => {
-        // Claim-before-show dedup. The IN-MEMORY flag is the primary guard
-        // (2026-06-07, "3 at once"): claimed synchronously before the toast, so
-        // if multiple timers are pending (storage no-op'd the localStorage
-        // claim, or multiple mounts), the first to fire shows it and the rest
-        // bail — regardless of whether storage works. JS is single-threaded, so
-        // the first callback fully claims the slot before the next runs. The
-        // localStorage key stays as the 30-day cross-session backstop.
-        if (smartNudgeShownThisSession) return;
-        const prevShown = localStorage.getItem(NUDGE_KEY);
-        if (prevShown && Date.now() - parseInt(prevShown, 10) < 30 * 24 * 60 * 60 * 1000) return;
-        smartNudgeShownThisSession = true;
-        safeLocalSet(NUDGE_KEY, String(Date.now()));
-        const nudgeChild = recipientFirstNameDisplay || "their fund";
+        // Tightened 2026-06-22 (founder: the old nudge read "so AI and long").
+        // ONE specific, human line — dropped the generic "keeps compounding for
+        // years" filler description, the 🌱, and the braggy precise "77.2%"
+        // (rounded now). "so far" not "since it started" (honest + no
+        // mis-attribution to a co-parent viewer). The action carries the ask; the
+        // live projection lives in the editor it opens, so the toast stays one line.
+        const name = recipientFirstNameDisplay;
+        const fundLabel = name ? `${name}'s fund` : "The fund";
         const title =
           payload.scenario === "outperforming"
-            ? `${nudgeChild}'s fund is up ${payload.returnPct}% since it started 🌱`
+            ? `${fundLabel} has grown ${Math.round(Number(payload.returnPct) || 0)}% so far.`
             : payload.scenario === "consistent"
-              ? `${payload.streakMonths} months, every cycle 🌱`
+              ? `${payload.streakMonths} months, never missed a cycle.`
               : payload.milestoneAmt
-                ? `${nudgeChild} just crossed ${formatCurrency(payload.milestoneAmt)} 🌱`
-                : `${nudgeChild}'s fund is growing 🌱`;
+                ? `${name || "The fund"} just passed ${formatCurrency(payload.milestoneAmt)}.`
+                : `${fundLabel} is growing.`;
         toast({
           title,
-          description: "A little more each month compounds for years.",
-          duration: 10000, // a soft nudge needs time to read + tap; not the 4.5s default
+          duration: 8000,
           action: (
             <ToastAction
-              altText="Adjust recurring investment"
+              altText="Add a little more to the recurring investment"
               onClick={() => {
                 haptic("medium");
                 if (payload.doubledAmt) setAutoInvestAmount(String(payload.doubledAmt));
@@ -3864,10 +4897,11 @@ export default function Dashboard() {
                 setAutoInvestModalOpen(true);
               }}
             >
-              Adjust recurring
+              Add a little more
             </ToastAction>
           ),
         });
+        safeLocalSet(NUDGE_KEY, String(Date.now()));
       }, 8000);
     };
 
@@ -4011,7 +5045,7 @@ export default function Dashboard() {
       });
       return cancelNudgeTimer;
     }
-  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund, isDemoAccount]);
+  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
 
   const cashContext: CashContext = (() => {
     if (activeFund?.status !== "active") return "kyc_pending";
@@ -4103,8 +5137,9 @@ export default function Dashboard() {
   const lifetimeContribPrincipal = dashboardMoneyMath.lifetimeContributionPrincipal;
   const totalReturnPctVsContributions = lifetimeContribPrincipal > 0 ? (totalReturnVsContributions / lifetimeContribPrincipal) * 100 : 0;
   const usableFundHistory = useMemo(() => {
-    // Keepsake cap: previous owner's chart + history-derived stats stop at the
-    // handoff date (mirror of DashboardLab). No-op (null cutoff) for everyone else.
+    // Keepsake cap: the previous owner's chart + every history-derived stat stop
+    // at the handoff date, so the now-adult's post-handoff trajectory is never
+    // exposed. No-op (null cutoff) for everyone else.
     const capped = keepsakeHistoryCutoffMs != null
       ? fundHistory.filter((point) => {
           const ts = new Date(point.snapshotDate || 0).getTime();
@@ -4187,8 +5222,8 @@ export default function Dashboard() {
       // there ONLY when the fund was born inside the window. The old
       // anchor-at-range-cutoff prepended "$0 thirty days ago" onto a
       // years-old $22k fund — a false cliff at the left edge that exaggerated
-      // the period's growth. Funds older than the window now start at their
-      // real range-start value. (Mirrors the same fix in DashboardLab.tsx.)
+      // the period's growth (and poisoned the "this month" collapse stat).
+      // Funds older than the window now start at their real range-start value.
       const baselineTs =
         chartRange === "ALL"
           ? (Number.isFinite(createdTs) ? createdTs : NaN)
@@ -4219,15 +5254,16 @@ export default function Dashboard() {
       .sort((a, b) => a.ts - b.ts);
 
     const prefiltered = cutoff ? points.filter((p) => p.ts >= cutoff) : points;
-    // UNIFORM TIME RESOLUTION (mirrors DashboardLab, founder catch
-    // 2026-06-05). Snapshots are stored at mixed resolution — monthly deep
-    // history, weekly last year, daily last month — and the chart spaces
-    // points by INDEX (recharts category axis), so the dense recent points
-    // hogged ~45% of the ALL chart's width: a 17-year fund looked like its
-    // story began ~2024. Resample to one point per period, sized by the SPAN
-    // (not the range button, so a young fund's ALL view keeps its dailies):
-    // >2.5y → monthly, >200d → weekly, else untouched. Keeps the LAST point
-    // of each period (today's hard anchor survives as the final point).
+    // UNIFORM TIME RESOLUTION (founder catch 2026-06-05: "it started 2024?").
+    // Snapshots are stored at mixed resolution — monthly deep history, weekly
+    // last year, daily last month — and the chart spaces points by INDEX
+    // (recharts category axis), so the dense recent points hogged ~45% of the
+    // ALL chart's width: a 17-year fund looked like its story began ~2024,
+    // and the journey replay blew through eight years in three seconds.
+    // Resample to one point per period, sized by the SPAN (not the range
+    // button, so a young fund's ALL view keeps its dailies): >2.5y → monthly,
+    // >200d → weekly, else untouched. Keeps the LAST point of each period
+    // (today's hard anchor survives as the final point).
     const spanMs = prefiltered.length >= 2 ? prefiltered[prefiltered.length - 1].ts - prefiltered[0].ts : 0;
     const bucketOf = spanMs > 2.5 * 365.25 * 86400000
       ? (ts: number) => { const d = new Date(ts); return `${d.getUTCFullYear()}-${d.getUTCMonth()}`; }
@@ -4239,31 +5275,19 @@ export default function Dashboard() {
       : prefiltered;
 
     if (filtered.length >= 2) {
-      const earliestGift = [...gifts].sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
-      const firstGiftSender = earliestGift ? displayGifterName(earliestGift.senderName, (earliestGift as any).isAnonymous) : null;
-      const firstGiftAmount = earliestGift ? parseFloat(earliestGift.netAmount || earliestGift.amount || "0") : 0;
-      let firstNonZeroFound = false;
-      // Chart markers are deliberately limited to the ONE origin beat — the
-      // first gift ("$50 from Grandpa"). Money-milestone dots ("Passed $1,000")
-      // were removed 2026-06-01 (founder call): on a young fund the line is
-      // mostly accumulated deposits, so a "Passed $X" pin celebrates "enough
-      // people gave," dressed as growth — gamified, not identity. The milestone
-      // CELEBRATION still fires on the smart-nudge card (MONEY_CROSS_THRESHOLDS
-      // is still used there); it just isn't pinned to the line. Clean line + one
-      // origin dot — the brand moment ("watch it land"), nothing else.
-      const rows = filtered.map((p) => {
-        const isFirstNonZero = !firstNonZeroFound && p.value > 0;
-        if (isFirstNonZero) firstNonZeroFound = true;
-        return {
-          ts: p.ts,
-          label: formatLabel(p.date),
-          principal: p.principal,
-          value: p.value,
-          event: isFirstNonZero
-            ? { label: "First gift", detail: firstGiftSender && firstGiftAmount > 0 ? `${formatCurrency(firstGiftAmount)} from ${firstGiftSender}` : "" }
-            : undefined,
-        };
-      });
+      // No chart dots. The origin "first gift" dot was removed 2026-06-08
+      // (founder call): it sat at the line's liftoff — i.e. it marked where the
+      // line already obviously begins — so at rest it was redundant. The origin
+      // STORY ("$X from {name}") still plays as a caption in the "Watch it grow"
+      // journey (journeyBeats builds "The first gift" straight from `gifts`),
+      // where it adds what the line can't. (Money-milestone dots were already
+      // dropped 2026-06-01; this clears the last one for a clean line.)
+      const rows = filtered.map((p) => ({
+        ts: p.ts,
+        label: formatLabel(p.date),
+        principal: p.principal,
+        value: p.value,
+      }));
       return addZeroBaseline(rows as Parameters<typeof addZeroBaseline>[0]);
     }
 
@@ -4284,21 +5308,14 @@ export default function Dashboard() {
       const baselineRow = Number.isFinite(baselineTs) && baselineTs < filteredGiftPoints[0].ts
         ? [{ ts: baselineTs, label: formatLabel(new Date(baselineTs)), principal: 0, value: 0, event: undefined }]
         : [];
-      const giftRows = filteredGiftPoints.map((g, i) => {
+      const giftRows = filteredGiftPoints.map((g) => {
         cumulative += g.net;
         const val = Math.min(cumulative, principalBasis > 0 ? principalBasis : totalValue);
-        const senderLabel = displayGifterName(g.senderName, (g as any).isAnonymous);
         return {
           ts: g.ts,
           label: formatLabel(new Date(g.ts)),
           principal: val,
           value: val,
-          // Only the origin beat gets a dot — matches the snapshot path above.
-          // Per-gift "Gift" dots were dropped 2026-06-01 to keep one clean
-          // origin marker instead of a dot per contribution.
-          event: i === 0
-            ? { label: "First gift", detail: `${formatCurrency(g.net)} from ${senderLabel}` }
-            : undefined,
         };
       });
       return [...baselineRow, ...giftRows];
@@ -4346,11 +5363,235 @@ export default function Dashboard() {
     return "waiting";
   }, [usableFundHistory, gifts, chartRange, activeFund?.createdAt]);
 
+  // ── "Watch it grow" journey replay ──────────────────────────────────────
+  // The fund's WHOLE story narrated from REAL data, ALL range only — the
+  // Memory Book rendered as motion. Beat sources (v2, founder: "is it meant
+  // to show the gifts and recurring and occasions and memories?" — yes):
+  //   P0  Where it began / Today (the spine — never dropped)
+  //   P1  The first gift (name + amount — the origin beat, the brand moment)
+  //   P2  Recurring begins (the discipline moment) · The biggest gift yet
+  //   P3  The top occasion ("Theo's 10th Birthday · $415 gifted here") ·
+  //       The Memory Book begins (first saved memory)
+  //   P4  The two biggest threshold crossings ("Crossed $10k")
+  // Selection: when a rich fund overflows the 8-caption budget, drop the
+  // HIGHEST priority number first (garnish), never the spine. v1 dropped
+  // beats that sat within 6% of the timeline of each other — which silently
+  // deleted the FIRST GIFT (it lives right next to "Where it began") and ate
+  // clustered milestones; clustering is now handled by TIME-spacing in
+  // playJourney (captions queue ≥950ms apart, lagging the reveal edge when
+  // beats bunch) instead of deletion. Under 3 beats or 6 points the story
+  // isn't worth narrating → the affordance hides. Reduced-motion: hidden.
+  const JOURNEY_MS = 9000;
+  const journeyBeats = useMemo(() => {
+    if (chartRange !== "ALL" || trendData.length < 6) return [];
+    // EARNED, not ambient (2026-06-05 fund-matrix audit): a nine-second
+    // ceremonial replay of a six-day-old flat line cheapens the feature — it
+    // should be dormant at activation and BLOOM as the fund ages (first
+    // anniversary energy, retention not activation). 120-day minimum span.
+    const journeySpanDays = (trendData[trendData.length - 1].ts - trendData[0].ts) / 86400000;
+    if (!(journeySpanDays >= 120)) return [];
+    // Memorialized funds: an upbeat "Watch it grow" on a memorial is a tone
+    // hazard — gated off until the founder decides deliberately (it could be
+    // the most beautiful surface in the product, but not by accident).
+    if (isMemorialized) return [];
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return [];
+    const n = trendData.length;
+    type Beat = { frac: number; label: string; sub?: string; priority: number };
+    const beats: Beat[] = [];
+    const fmt0 = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
+    // The wipe edge sweeps POINT-INDEX space (recharts category axis), so a
+    // timestamp maps to the nearest point's index fraction — not raw time.
+    const fracForTs = (ts: number) => {
+      let idx = 0;
+      for (let i = 0; i < n; i++) { if (trendData[i].ts <= ts) idx = i; else break; }
+      return idx / (n - 1);
+    };
+
+    beats.push({ frac: 0, label: "Where it began", sub: trendData[0].label, priority: 0 });
+    beats.push({ frac: 1, label: "Today", sub: fmt0(totalValue), priority: 0 });
+
+    const giftRows = [...gifts]
+      .map((g: any) => ({
+        ts: g.createdAt ? new Date(String(g.createdAt)).getTime() : 0,
+        amt: parseFloat(String(g.netAmount || g.amount || "0")) || 0,
+        name: displayGifterName(g.senderName, (g as any).isAnonymous),
+        recurring: !!(g as any).parentContributionId,
+      }))
+      .filter((g) => Number.isFinite(g.ts) && g.ts > 0 && g.amt > 0)
+      .sort((a, b) => a.ts - b.ts);
+    const firstGift = giftRows[0];
+    if (firstGift) {
+      beats.push({
+        frac: fracForTs(firstGift.ts),
+        label: "The first gift",
+        sub: firstGift.name && firstGift.name !== "Anonymous" ? `${fmt0(firstGift.amt)} from ${firstGift.name}` : fmt0(firstGift.amt),
+        priority: 1,
+      });
+    }
+
+    const firstRecurring = [...parentContributions]
+      .map((c: any) => ({
+        ts: c.createdAt ? new Date(String(c.createdAt)).getTime() : 0,
+        amt: parseFloat(String(c.amount || "0")) || 0,
+        freq: String(c.frequency || "monthly").toLowerCase(),
+      }))
+      .filter((c) => Number.isFinite(c.ts) && c.ts > 0 && c.amt > 0)
+      .sort((a, b) => a.ts - b.ts)[0];
+    if (firstRecurring) {
+      const per = firstRecurring.freq === "weekly" ? "week" : firstRecurring.freq === "yearly" ? "year" : firstRecurring.freq === "daily" ? "day" : "month";
+      beats.push({ frac: fracForTs(firstRecurring.ts), label: "Recurring begins", sub: `${fmt0(firstRecurring.amt)}/${per}`, priority: 2 });
+    }
+
+    // Biggest one-time gift — only when it's a real moment ($100+) and not
+    // the first gift retold.
+    const biggest = giftRows.filter((g) => !g.recurring).sort((a, b) => b.amt - a.amt)[0];
+    if (biggest && biggest.ts !== firstGift?.ts && biggest.amt >= 100) {
+      beats.push({
+        frac: fracForTs(biggest.ts),
+        label: "The biggest gift yet",
+        sub: biggest.name && biggest.name !== "Anonymous" ? `${fmt0(biggest.amt)} from ${biggest.name}` : fmt0(biggest.amt),
+        priority: 2,
+      });
+    }
+
+    // The occasion people showed up for — top by gift volume. Anchored at the
+    // MEDIAN timestamp of ITS OWN gifts (gifts.eventId attribution), NOT the
+    // event date: birthday occasions are routinely FUTURE-dated while their
+    // gifts have already landed (the demo's exact shape — "Theo's 14th
+    // Birthday, Nov 2026" with $2,415 already gifted). The story moment is
+    // when the crowd showed up, which is always in the past and always on
+    // the drawn line. Falls back to a past event date when no gifts carry
+    // the attribution.
+    const t0 = trendData[0].ts;
+    const nowTs = Date.now();
+    const giftTsByEvent = new Map<string, number[]>();
+    for (const g of gifts as any[]) {
+      const eid = String((g as any).eventId || "");
+      const gts = g.createdAt ? new Date(String(g.createdAt)).getTime() : 0;
+      if (!eid || !(gts > 0) || gts > nowTs) continue;
+      const arr = giftTsByEvent.get(eid);
+      if (arr) arr.push(gts); else giftTsByEvent.set(eid, [gts]);
+    }
+    const topOccasion = [...activeEvents, ...archivedEvents]
+      .map((e: any) => {
+        const own = (giftTsByEvent.get(String(e.id)) || []).sort((a, b) => a - b);
+        const anchor = own.length
+          ? own[Math.floor(own.length / 2)]
+          : (e.eventDate ? new Date(String(e.eventDate)).getTime() : 0);
+        return { ts: anchor, name: String(e.name || ""), vol: parseFloat(String(e.giftVolume || "0")) || 0 };
+      })
+      .filter((e) => Number.isFinite(e.ts) && e.ts > t0 && e.ts <= nowTs && e.vol > 0 && e.name)
+      .sort((a, b) => b.vol - a.vol)[0];
+    if (topOccasion) {
+      beats.push({ frac: fracForTs(topOccasion.ts), label: topOccasion.name, sub: `${fmt0(topOccasion.vol)} gifted here`, priority: 3 });
+    }
+
+    // The Memory Book begins — first saved memory of any kind. Skipped when
+    // it's the SAME moment as the first gift (gift notes auto-become memory
+    // entries, so for most funds they coincide — one moment, one caption).
+    const firstMemoryTs = (memoryEntriesForFund || [])
+      .map((m: any) => (m?.createdAt ? new Date(String(m.createdAt)).getTime() : 0))
+      .filter((ts) => Number.isFinite(ts) && ts > 0)
+      .sort((a, b) => a - b)[0];
+    if (firstMemoryTs) {
+      const f = fracForTs(firstMemoryTs);
+      const fgFrac = firstGift ? fracForTs(firstGift.ts) : -1;
+      if (Math.abs(f - fgFrac) > 0.03) {
+        beats.push({ frac: f, label: "The Memory Book begins", priority: 3 });
+      }
+    }
+
+    const thresholds = [1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000];
+    const crossed: Beat[] = [];
+    for (const t of thresholds) {
+      const idx = trendData.findIndex((p, i) => p.value >= t && (i === 0 || trendData[i - 1].value < t));
+      if (idx > 0) crossed.push({ frac: idx / (n - 1), label: `Crossed ${t >= 1000 ? `$${t / 1000}k` : `$${t}`}`, priority: 4 });
+    }
+    beats.push(...crossed.slice(-2));
+
+    // Budget: chronological order, then trim from the garnish end.
+    beats.sort((a, b) => a.frac - b.frac || a.priority - b.priority);
+    const MAX_BEATS = 8;
+    while (beats.length > MAX_BEATS) {
+      let worstIdx = -1;
+      let worstP = 0;
+      beats.forEach((b, i) => { if (b.priority > worstP) { worstP = b.priority; worstIdx = i; } });
+      if (worstIdx < 0) break; // only the spine left — never drop it
+      beats.splice(worstIdx, 1);
+    }
+    return beats;
+  }, [chartRange, trendData, totalValue, gifts, parentContributions, activeEvents, archivedEvents, memoryEntriesForFund, isMemorialized]);
+
+  const cancelJourney = useCallback(() => {
+    journeyTimersRef.current.forEach((t) => window.clearTimeout(t));
+    journeyTimersRef.current = [];
+    setJourneyCaption(null);
+    setJourneyPlaying(false);
+  }, []);
+  useEffect(() => {
+    cancelJourneyRef.current = cancelJourney;
+    return () => { cancelJourneyRef.current = null; cancelJourney(); };
+  }, [cancelJourney]);
+  // A range or fund switch mid-journey must stop the narration — the chart
+  // under the captions is no longer the story they were scheduled against.
+  useEffect(() => { cancelJourney(); }, [chartRange, activeFundId, cancelJourney]);
+
+  const playJourney = () => {
+    if (journeyBeats.length < 3 || !chartWipePlayRef.current) return;
+    haptic("light");
+    // The wipe FIRST (it cancels any prior journey's timers via
+    // cancelJourneyRef), THEN this journey's own caption schedule.
+    chartWipePlayRef.current({ duration: JOURNEY_MS, easing: "linear" });
+    setJourneyPlaying(true);
+    // TIME-spacing, not deletion: each caption fires at its timeline position
+    // but never sooner than 950ms after the previous one — when beats bunch
+    // (a steep growth year), the narration simply lags the reveal edge a
+    // touch and catches up, one calm pill at a time. The tail may run a beat
+    // past the draw; "Today" still lands last and lingers.
+    //
+    // CAPTION EXPIRY (founder catch 2026-06-05: "it says Crossed $10k at the
+    // $20k mark"): a caption is true the instant it fires, but the edge keeps
+    // racing — left up for a long gap (10k crossed at 6.3s, Today at 9s), it
+    // reads stale against a line that's moved on. Each caption now clears
+    // after 1.4s UNLESS its successor replaces it sooner; the final beat
+    // keeps the existing linger-then-clear.
+    const MIN_CAPTION_GAP = 950;
+    const CAPTION_TTL = 1400;
+    let lastAt = -Infinity;
+    const fireAts: number[] = journeyBeats.map((b) => {
+      const at = Math.max(Math.round(b.frac * JOURNEY_MS), lastAt + MIN_CAPTION_GAP);
+      lastAt = at;
+      return at;
+    });
+    const timers: number[] = [];
+    journeyBeats.forEach((b, i) => {
+      timers.push(window.setTimeout(() => setJourneyCaption({ label: b.label, sub: b.sub }), fireAts[i]));
+      const nextAt = i + 1 < fireAts.length ? fireAts[i + 1] : Infinity;
+      const isLast = i === journeyBeats.length - 1;
+      if (!isLast && nextAt - fireAts[i] > CAPTION_TTL) {
+        timers.push(window.setTimeout(() => setJourneyCaption(null), fireAts[i] + CAPTION_TTL));
+      }
+    });
+    // Let "Today" linger a beat past whichever fired last, then clear.
+    timers.push(window.setTimeout(() => { setJourneyCaption(null); setJourneyPlaying(false); }, Math.max(JOURNEY_MS, lastAt) + 2400));
+    journeyTimersRef.current = timers;
+  };
+
   const setup = buildSetupProgress({
     fund: activeFund || null,
     hasBank: bankAccounts.length > 0,
     hasProfile: Boolean(user?.firstName?.trim()),
   });
+  // When the bank is the SOLE remaining setup step, the checklist nudge is pure
+  // duplication of the dedicated "Link a bank for withdrawals" action card (same
+  // ask, same screen). Let the action card be the single prompt then; the
+  // checklist still earns its place when multiple steps remain. If the user
+  // snoozes the action card, hiding this too respects "remind me tomorrow"
+  // rather than re-nagging with the twin below.
+  const onlyBankSetupLeft =
+    setup.nextAction === "link_bank" &&
+    setup.steps.filter((s) => !s.done).every((s) => s.key === "bank");
   const fundCreatedTs = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : 0;
   const fundAgeDays =
     Number.isFinite(fundCreatedTs) && fundCreatedTs > 0
@@ -4654,6 +5895,8 @@ export default function Dashboard() {
         body: JSON.stringify({ autoInvestEnabled: enabled }),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         await refetchInvestPrefs();
         toast({
           title: enabled ? "Recurring investment turned on" : "Recurring investment turned off",
@@ -4691,6 +5934,7 @@ export default function Dashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save Kid View settings.");
+      if (demoBlocked(data, toast)) return;
       setKidViewPin("");
       queryClient.invalidateQueries({ queryKey: ["/api/funds", activeFundId, "kid-view-settings"] });
       if (kidViewEnabled) {
@@ -4763,6 +6007,11 @@ export default function Dashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update suggestion.");
+      if (demoBlocked(data, toast)) {
+        // Roll back the optimistic flip — nothing was persisted in the demo.
+        setSuggestionPending(prev => { const n = { ...prev }; delete n[suggestionId]; return n; });
+        return;
+      }
       // Invalidate the canonical key — sidebar now shares this key (was
       // -sidebar-suffixed previously), so a single invalidate refreshes
       // both the dashboard config sheet AND the sidebar suggestions count.
@@ -4808,6 +6057,9 @@ export default function Dashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save recurring investment.");
+      // EDIT path only: the demo server no-ops a PATCH. The CREATE path has an
+      // intentional demo overlay below (recordDemoRecurring), so leave it.
+      if (isEditing && demoBlocked(data, toast)) return;
       haptic("success");
       // Demo: record the set-up into the overlay so it shows as an ACTIVE
       // schedule (bumps the recurring chip count + monthly total + adds a row) —
@@ -4882,6 +6134,8 @@ export default function Dashboard() {
         }),
       });
       if (!res.ok) throw new Error();
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return false;
       haptic("success");
       setAutoInvestNoteSaved(true);
       void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
@@ -4962,6 +6216,53 @@ export default function Dashboard() {
   const handleStartOneTimeContribution = async () => {
     const amt = parseFloat(oneTimeAmount);
     if (isNaN(amt) || amt < 5 || !activeFundId) return;
+    // DEMO: land it client-side instead of hitting the real checkout/redirect
+    // (2026-06-07). Gifts (GiftSuccess) and recurring already record a
+    // sessionStorage overlay so the prospect SEES their action land; the
+    // dashboard one-time was the one path that didn't — it went to the mocked
+    // gift checkout and the contribution never visibly arrived. Now it records
+    // a demo live gift (sender = the parent), so the hero balance rolls, "What
+    // {child} owns" updates, and — because the overlay carries `message` — the
+    // note even appears in the Memory Book. executionModel routes it to a
+    // holding (auto/pick) or cash, same as a real contribution. Session-scoped,
+    // never persisted, evaporates on tab close. Then fire the same conversion
+    // beat recurring uses. No real memory POST, no real Stripe.
+    if (isDemoAccount) {
+      const parentName = (user as any)?.preferredName?.trim()
+        || [user?.firstName, user?.lastName].filter(Boolean).join(" ")
+        || (isOwnerMode ? "You" : "A parent");
+      recordDemoLiveGift({
+        fundId: String(activeFundId),
+        senderName: parentName,
+        amount: String(amt),
+        executionModel: oneTimeExecutionModel,
+        ticker: oneTimeExecutionModel === "pick" && oneTimeTicker ? oneTimeTicker : undefined,
+        message: oneTimeMemoryNote.trim() || undefined,
+      });
+      haptic("success");
+      // FEEDBACK FIX (2026-06-22): the one-time invest closed the modal with NO explicit
+      // confirmation — the only signal was the background hero roll, which (rightly) doesn't
+      // read as "it worked." Fire a clear success toast so the action visibly lands. (Founder
+      // caught this completing the flow with no indication.)
+      toast({
+        title: `${formatCurrency(amt)} added to ${isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund`,
+        description: oneTimeExecutionModel === "pick" && oneTimeTicker
+          ? `Buying ${oneTimeTicker.toUpperCase()}.`
+          : oneTimeExecutionModel === "cash"
+            ? "Held as cash to invest from the dashboard later."
+            : "Into the growth mix.",
+      });
+      try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "onetime", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
+      // Close + reset the modal (mirrors the dialog's own onOpenChange reset).
+      setOneTimeModalOpen(false);
+      setOneTimeStep("amount");
+      setOneTimePaymentMethod("apple_pay");
+      setOneTimeShowRails(false);
+      setOneTimeMemoryNote("");
+      setOneTimeNoteSaved(false);
+      setOneTimeMedia(EMPTY_MEMORY_MEDIA);
+      return;
+    }
     setStartingOneTime(true);
     haptic("medium");
     try {
@@ -5060,6 +6361,13 @@ export default function Dashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update plan.");
+      if (demoBlocked(data, toast)) {
+        // Demo no-op: revert the optimistic card + cache flips (same as the catch).
+        setOptimisticContribStatus(s => { const n = { ...s }; delete n[planId]; return n; });
+        if (prevContribs !== undefined) queryClient.setQueryData(contribsKey, prevContribs);
+        if (prevSummary !== undefined) queryClient.setQueryData(summaryKey, prevSummary);
+        return;
+      }
       haptic(status === "active" ? "success" : "light");
       toast({
         title:
@@ -5100,26 +6408,26 @@ export default function Dashboard() {
     try {
       const parentName = (user as any)?.preferredName?.trim() ||
         [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "A parent";
-      if (parentLetter?.id) {
-        await fetch(`/api/memory/${parentLetter.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ content: letterDraft.trim() }),
-        });
-      } else {
-        await fetch(`/api/funds/${activeFundId}/memory`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            type: "parent_letter",
-            content: letterDraft.trim(),
-            authorName: parentName,
-            fundId: activeFundId,
-          }),
-        });
-      }
+      const letterRes = parentLetter?.id
+        ? await fetch(`/api/memory/${parentLetter.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ content: letterDraft.trim() }),
+          })
+        : await fetch(`/api/funds/${activeFundId}/memory`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              type: "parent_letter",
+              content: letterDraft.trim(),
+              authorName: parentName,
+              fundId: activeFundId,
+            }),
+          });
+      const letterData = await letterRes.json().catch(() => null);
+      if (demoBlocked(letterData, toast)) return;
       haptic("success");
       // The parent-letter + authored-count both derive from the single
       // ["memory", activeFundId] query now (2026-06-04 dedup) — invalidate it.
@@ -5142,6 +6450,8 @@ export default function Dashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("delete failed");
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({ title: "Letter cleared", description: "You can write a new one anytime." });
       void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
@@ -5240,23 +6550,93 @@ export default function Dashboard() {
     }
   };
 
-  const isPageLoading = fundsLoading;
+  // LAB: ONE loading transition, not two. `fundsLoading` alone opened the page
+  // the moment the funds LIST landed, while dashboard-summary (+ recurring)
+  // was still in flight on a cold load — so the page popped from skeleton to
+  // a half-ready mix of pulses and fallback labels ("The full chart over
+  // time"), then settled again: the founder's "weird in-between loading
+  // phase". Now the calm page skeleton holds until the data is actually
+  // there, then reveals ONCE with every number real — and the motion beats
+  // (count-up, faces cascade, chart wipe) all fire on real data. Warm loads
+  // are untouched: localStorage initialData makes heroDataReady true at
+  // first render, so this gate adds zero delay there. Escape hatch: if the
+  // summary query ERRORS, open the page anyway (the per-spot fallback
+  // queries + pulses take over) — never a stuck skeleton.
+  const isPageLoading = fundsLoading || (!!activeFundId && !heroDataReady && !dashboardSummaryError);
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+    // Reduced-motion parity: MotionConfig "user" makes EVERY framer animation
+    // on this page respect the OS prefers-reduced-motion setting (transforms
+    // and layout motion are dropped; safe opacity fades remain). The two
+    // non-framer mechanisms gate themselves: the WAAPI chart wipe checks
+    // matchMedia inside playWipe, and the CSS tile-reveal/pulses are killed
+    // in the reduced-motion media block of the lab <style>.
+    <MotionConfig reducedMotion="user">
+    <div className="kiddo-app-page staging-root md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
 
-      <main className="kiddo-canvas px-4 py-6 space-y-6" id="dashboard-main-content">
+      {/* Desktop width cap (2026-06-22, founder: "on desktop there are issues").
+          The page is mobile-first single-column; with no cap the content area
+          stretched to ~1120px, so the full-bleed hero became a wide green band
+          with the balance stranded left and the projection stranded right over
+          a dead middle, and every section below over-stretched. Centering a
+          comfortable reading column fixes the whole page at once. This is a
+          layout constraint, NOT the paused IA/desktop-grid re-architecture —
+          mobile is untouched (cap only applies at md+). */}
+      <main className="kiddo-canvas px-4 py-6 space-y-6 md:!max-w-[760px] md:mx-auto" id="dashboard-main-content">
+        {/* (Removed the temp ▶ Test +$50 / +$2,500 floating dev buttons — staging-only
+            cascade-test triggers, deleted 2026-06-23 per founder.) */}
+        {/* ===== STAGING DESIGN SYSTEM (the foundation all four design leads
+            demanded). Replaces the 24-font-size / 11-shadow / 10-radius chaos with
+            real tokens. Everything in the rebuilt surfaces snaps to these:
+            6-step type scale, 4pt spacing, 2 radii, 2 evergreen-tinted elevations.
+            Color semantics: evergreen = structure, gold = earned (growth + love). */}
+        <style>{`
+          .staging-root {
+            --st-display: 56px; --st-title: 28px; --st-body-lg: 18px;
+            --st-body: 15px; --st-label: 13px; --st-micro: 11px;
+            --st-s1: 4px; --st-s2: 8px; --st-s3: 16px; --st-s4: 24px; --st-s5: 40px; --st-s6: 64px;
+            --st-radius: 16px; --st-radius-pill: 999px;
+            --st-rest: 0 1px 2px rgba(27,58,45,0.06);
+            --st-lift: 0 8px 24px rgba(27,58,45,0.12);
+          }
+          /* Desktop header alignment (2026-06-22). <main> is capped to a
+             centered 760px reading column (see the cap a few lines below), but
+             the sticky AppHeader is a full-width bar with its content pinned to
+             the far edges — so the fund dropdown sat ~190px left of the content's
+             left edge and the actions ~190px right of its right edge, and nothing
+             lined up vertically (the "only the header is stretched" look). Cap the
+             header to the SAME 760px centered column at md+ so the bar, hero, and
+             every section share one left + right edge. Mobile keeps the full-width
+             header (no cap below 768px). Scoped to .staging-root — no other page
+             is touched. The hero's green chrome still reads seamless because the
+             hero is the same 760 column directly beneath. */
+          @media (min-width: 768px) {
+            .staging-root > header[data-testid="app-header"] {
+              max-width: 760px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+          }
+          .st-display { font-family: "Bricolage Grotesque Variable","Bricolage Grotesque",system-ui; font-size: var(--st-display); line-height: 1.02; font-weight: 600; letter-spacing: -0.02em; }
+          .st-title { font-family: "Bricolage Grotesque Variable","Bricolage Grotesque",system-ui; font-size: var(--st-title); line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; }
+          .st-body-lg { font-size: var(--st-body-lg); line-height: 1.45; font-weight: 500; }
+          .st-body { font-size: var(--st-body); line-height: 1.5; }
+          .st-label { font-size: var(--st-label); line-height: 1.3; font-weight: 500; }
+          .st-micro { font-size: var(--st-micro); line-height: 1.25; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+          /* Standalone-section divider — gives the non-collapsible sections (roster,
+             occasions, handoff) the same hairline top-divider the LabCollapse headers
+             have, so the whole page reads as one consistent rhythm of dividered
+             sections (no section looks "attached" to the one above it). */
+          .st-section { border-top: 1px solid hsl(var(--kiddo-border) / 0.7); padding-top: 22px; }
+        `}</style>
         <h1 className="sr-only">
           {isOwnerMode ? "Your fund" : `${recipientFirstNameDisplay || "Your child"}'s fund`}
         </h1>
-        {/* Fund switcher tabs — fast-switch between child funds for
-            multi-fund parents (Family-tier). Renders nothing for
-            single-fund parents (the AppHeader dropdown is still the
-            "add a second fund" path). The dropdown stays alongside
-            for FundsOverview + jump-to-any-fund affordances. Locked
-            2026-05-26. */}
-        <FundTabs funds={funds} activeFundId={selectedFundId} />
+        {/* STAGING: above-hero fund switcher REMOVED — it was the redundant 3rd
+            switcher (header dropdown covers mobile, desktop sidebar covers desktop).
+            "Whole family at a glance" warmth, if wanted, belongs inside the people-
+            first hero, not a chrome strip duplicating the header. */}
 
         {/* Approaching-18 prep banner. Renders when the kid's
             majority date is within the 90-day window but hasn't
@@ -5270,29 +6650,1262 @@ export default function Dashboard() {
             Hidden when daysUntil18 <= 0 (already at/past majority;
             the kid's claim flow takes over) or > 90 (too early,
             would become wallpaper). */}
-        {age18Transition && age18Transition.daysUntil18 > 0 && age18Transition.daysUntil18 <= 90 && (
-          <button
-            type="button"
-            onClick={() => { haptic("selection"); setLocation("/age-18-plan"); }}
-            className="w-full rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
-            data-testid="dashboard-approaching-18-banner"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
-                  Handoff in {age18Transition.daysUntil18 === 1 ? "1 day" : `${age18Transition.daysUntil18} days`}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)}.
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Walk through what's about to change and what to prep.
-                </p>
-              </div>
-              <ChevronRight size={18} className="shrink-0 mt-1 text-[hsl(var(--kiddo-evergreen))]" aria-hidden />
+        {/* STAGING: the handoff "Needs You" banner MOVED below the hero (it used to render
+            HERE, above it). Now lives just before the two-action row — the first thing
+            below the hero. Banner-taxonomy plan: nothing above the hero. */}
+        {/* STAGING: the ENTIRE above-hero banner zone (coverage notice, first-gift ceremony, setup nudge, birthday / kid-welcome / plus-media / milestone celebrations, recurring + Plus-upgrade prompts, closed-fund notice) RELOCATED to BELOW the hero — see the matching block after the co-parent card. The hero is now the first thing rendered; nothing sits above it. The Plus funnel moved too: pre-hero was friction-before-value; contextual/below-hero converts better. (2026-06-22) */}
+        {isPageLoading ? (
+          <div className="space-y-4">
+            <SkeletonBlock className="h-48 w-full" />
+            <div className="flex gap-3">
+              <SkeletonBlock className="h-10 flex-1" />
+              <SkeletonBlock className="h-10 flex-1" />
+              <SkeletonBlock className="h-10 flex-1" />
             </div>
-          </button>
-        )}
+            {/* Mirror the collapse rows below the hero so the held skeleton
+                reads as the page taking shape, not a stub (the skeleton now
+                holds through the whole cold load - see isPageLoading). */}
+            <SkeletonBlock className="h-[72px] w-full" />
+            <SkeletonBlock className="h-[72px] w-full" />
+            <SkeletonBlock className="h-[72px] w-full" />
+          </div>
+        ) : (
+          <>
+            {/* LAB premium micro-interactions (calm register, never garish).
+                The collapse rows are now the <LabCollapse> component (controlled
+                open+close via framer); only the tactile press (.lab-tap) and the
+                faces cascade live here now. Respects prefers-reduced-motion. */}
+            <style>{`
+              /* Tactile press on any tappable surface: lift on hover, spring
+                 in on click. The "satisfying click" the founder loved. */
+              .lab-tap { transition: transform .14s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, filter .2s ease; }
+              .lab-tap:hover { transform: translateY(-1.5px); filter: brightness(1.04); }
+              .lab-tap:active { transform: translateY(0) scale(0.96); }
+              /* ── PRIMARY hero CTA: the full tactile cluster ───────────────
+                 Bare .lab-tap gives press-squash only. The highest-intent
+                 actions (Share, Send) earn the rest of Disney's touch
+                 principles that make a control feel ALIVE to the finger:
+                 • ANTICIPATION  — a hover / focus-visible wind-up (lift + warm).
+                   focus-visible matters: touch + keyboard get no :hover, so
+                   without it those users get zero anticipation.
+                 • SQUASH & STRETCH — press compresses vertically and bulges
+                   slightly wide (volume kept), vs lab-tap's uniform scale-down.
+                 • SLOW-OUT spring — a crisp ease-IN on press but a back-out
+                   OVERSHOOT on release (a different curve per direction; the
+                   settle-past-rest a single :active transition cannot make).
+                 Touch-first: the press IS the anticipation on no-hover devices.
+                 Additive — .lab-tap (founder-tuned) is left untouched. */
+              .lab-cta-primary {
+                transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                            box-shadow .22s ease, filter .22s ease;
+                will-change: transform;
+              }
+              .lab-cta-primary:hover { transform: translateY(-2px); filter: brightness(1.05); }
+              .lab-cta-primary:focus-visible { transform: translateY(-2px); }
+              .lab-cta-primary:active {
+                transform: translateY(1px) scale(1.025, 0.93);
+                transition: transform .09s cubic-bezier(0.4, 0, 0.6, 1), filter .09s ease;
+                filter: brightness(0.99);
+              }
+              /* One-shot "ready, tap me" settle cue — fires ONCE as the hero
+                 finishes its load cascade (heroDataReady), then never again.
+                 A single gentle rise + gold warmth that invites the primary
+                 action without nagging (no loop — an infinite pulse reads as
+                 an alarm, not an invitation; same restraint as the milestone
+                 one-shot). Keyframe restates the Share pill's inline rest
+                 shadow so it returns cleanly when the animation ends. */
+              @keyframes lab-cta-ready {
+                0%   { transform: translateY(0);    box-shadow: 0 1px 2px rgba(14,37,24,0.22), 0 5px 14px rgba(14,37,24,0.16), inset 0 1px 0 rgba(255,255,255,0.18); }
+                45%  { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(14,37,24,0.22), 0 10px 26px hsl(43 85% 50% / 0.34), inset 0 1px 0 rgba(255,255,255,0.22); }
+                100% { transform: translateY(0);    box-shadow: 0 1px 2px rgba(14,37,24,0.22), 0 5px 14px rgba(14,37,24,0.16), inset 0 1px 0 rgba(255,255,255,0.18); }
+              }
+              .lab-cta-ready { animation: lab-cta-ready 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s 1; }
+              /* One-shot gold settle glow fired by HeroProjectionSpin once the
+                 digits land — the "earned" gold brand color, single iteration. */
+              @keyframes lab-proj-glow {
+                0%, 100% { text-shadow: none; }
+                45%      { text-shadow: 0 0 16px hsl(43 90% 55% / 0.5); }
+              }
+              /* Gift-lands limb 4: the balance's SECONDARY breath (principle 8)
+                 as the +$X arc merges in. One soft gold swell, single iteration —
+                 never a loop (would read as an alarm, not an acknowledgment).
+                 Applied to a PLAIN wrapper (not the framer balance node) so it
+                 never fights framer's inline transform. ~0.5s delay so it peaks as
+                 the arc lands (~0.9s). Reduced motion drops it (guard below). */
+              @keyframes lab-balance-bloom {
+                0%   { transform: scale(1); }
+                45%  { transform: scale(1.035); }
+                100% { transform: scale(1); }
+              }
+              .lab-balance-bloom { animation: lab-balance-bloom 1.05s cubic-bezier(0.16,1,0.3,1) 2.85s 1; transform-origin: left center; }
+              /* (The "Who loves" faces cascade + hover are now framer
+                 whileInView/whileHover on each <motion.button>, so they replay
+                 reliably every time the row re-enters view and never stick
+                 blank. No CSS needed for them anymore.) */
+              /* Gift-lands choreography, limb 2: the sender's face blooms while
+                 the hero balance rolls gold. Gold ring swells + a gentle lift,
+                 twice, then back to rest. animation-delay 0.45s so the eye
+                 lands on the hero number first, then finds the person. The
+                 inline boxShadow (owner/recurring rings) resumes when the
+                 animation ends (fill: none). */
+              @keyframes kiddo-face-bloom {
+                0%   { box-shadow: 0 0 0 0 hsl(43, 85%, 50% / 0), 0 3px 10px rgba(26,23,16,0.13); transform: scale(1); }
+                35%  { box-shadow: 0 0 0 7px hsl(43, 85%, 50% / 0.42), 0 6px 18px rgba(26,23,16,0.20); transform: scale(1.10); }
+                100% { box-shadow: 0 0 0 0 hsl(43, 85%, 50% / 0), 0 3px 10px rgba(26,23,16,0.13); transform: scale(1); }
+              }
+              .kiddo-face-bloom { animation: kiddo-face-bloom 1.15s cubic-bezier(0.16,1,0.3,1) 0.45s 2; }
+              /* Hero card breathing room (2026-06-07, founder: "incredibly
+                 crammed on mobile"). The padding was a FIXED 28px regardless
+                 of viewport — on a 360px phone that ate 56px of width, forcing
+                 the fund-identity row and the gift-count pill into a cramped
+                 fight on one line. Mobile-first: tighter side padding so the
+                 content column is wider, larger radius restraint; the desktop
+                 values (the look the founder already blessed) restore at
+                 >=640px. Only the lab hero opts in via .lab-hero-card. */
+              .lab-hero-card { padding: 22px 18px 20px; border-radius: 24px; }
+              /* Occasions row — mobile: a horizontal scroll-row of fixed 140px
+                 tiles. Desktop: a grid that FILLS the column width (the fixed
+                 scroll-row left a dead gap on wide screens). The >* rule beats
+                 the tiles' inline width:140 so they stretch to their grid cell. */
+              @media (min-width: 768px) {
+                .kv2c { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; overflow: visible !important; padding-bottom: 0 !important; }
+                .kv2c > * { width: auto !important; min-width: 0 !important; }
+              }
+              @media (min-width: 640px) {
+                .lab-hero-card { padding: 28px 28px 26px; border-radius: 28px; }
+              }
+              /* Hero CTA row (2026-06-07, founder: "this is two rows?"). The
+                 Share button + the projection pill share one flex row. On
+                 desktop they sit side by side; on mobile they can't fit, so
+                 the projection wrapped to a RAGGED second line (short gold
+                 pill, then a long pill alone) that read as "didn't fit," not
+                 "designed." Mobile now stacks them DELIBERATELY: two clean
+                 full-width rows, content centered. Desktop (>=640px) restores
+                 the side-by-side row. */
+              /* STAGING: one row on mobile too (Share left, quiet projection link
+                 right). The old column-stack was from when the projection was a
+                 full-width pill; as a quiet link it belongs inline. */
+              .lab-hero-cta-row { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+              @media (min-width: 640px) {
+                /* Desktop: GROUP the Share button + projection link on the left
+                   (gap, not space-between) so they don't strand to opposite edges
+                   of the wider hero with dead green between them. The right side is
+                   then intentional negative space under the gold glow, an editorial
+                   asymmetric hero — not a layout accident. (Mobile keeps
+                   space-between: at phone width they sit naturally close.) */
+                .lab-hero-cta-row { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 24px; }
+              }
+              /* Hero meta block (2026-06-07, founder: "is the identity still on
+                 two rows on mobile?"). The fund identity (avatar + "Theo's Fund
+                 · UTMA · Active") and the gift-count pill shared one row. On a
+                 narrow phone they couldn't both fit: the name either wrapped to
+                 two ragged lines (no nowrap) or, with nowrap, truncated and lost
+                 "· Active". Neither is acceptable for the fund's own name. Now
+                 mobile stacks them — the identity gets a FULL-WIDTH row of its
+                 own (so the name fits on one clean line, no wrap, no truncation)
+                 and the gift count sits deliberately on the line below. Desktop
+                 (>=640px) restores the single side-by-side row, where there's
+                 room for both. */
+              /* TITLE / SUBTITLE, the arrangement that ends the cycling
+                 (2026-06-07 final). The identity ("Theo's Fund · UTMA") and
+                 the gift-count can't share one phone row without the account
+                 TYPE truncating to make room for the count — and the type is
+                 identity-critical, the count supplementary, so UTMA must never
+                 be the thing sacrificed. So: avatar + a text column; the
+                 identity is the title line (full width of the column → "·
+                 UTMA" never truncates), the gift-count is a quiet muted
+                 subtitle beneath it (plain text, not a pill). Standard
+                 contact-card pattern: shows everything, truncates nothing, at
+                 every width. .lab-hero-meta is the avatar+column row;
+                 .lab-hero-meta-col is the text column. */
+              .lab-hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+              .lab-hero-meta-col { min-width: 0; flex: 1; }
+              @media (prefers-reduced-motion: reduce) {
+                .lab-tap { transition: none !important; animation: none !important; }
+                .lab-cta-primary,
+                .lab-cta-primary:hover,
+                .lab-cta-primary:focus-visible,
+                .lab-cta-primary:active { transition: none !important; transform: none !important; }
+                .lab-cta-ready { animation: none !important; }
+                .lab-balance-bloom { animation: none !important; }
+                /* Recent-gifter ring pulse, the face bloom, and the chart's
+                   live-dot ping are CSS animations (framer's MotionConfig can't
+                   reach them). Static ring/dot remain — only the motion is
+                   dropped. */
+                .kiddo-gifter-avatar-pulse { animation: none !important; }
+                .kiddo-face-bloom { animation: none !important; }
+                .animate-ping { animation: none !important; opacity: 0 !important; }
+              }
+            `}</style>
+            {/* STAGING hero — FULL-BLEED moment (variant 2). Breaks out of the
+                main's px-4 + top py-6 so the evergreen owns the top of the
+                content edge-to-edge (under the cream AppHeader), with the next
+                section lifting over its bottom (negative margin on the section
+                below is applied at the page level). The count-up + all hero
+                states + the responsive .lab-hero CSS are untouched — only the
+                container chrome (full-bleed, depth gradient, no card shadow). */}
+            <motion.section
+              className="-mx-4 -mt-6"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div
+                className="lab-hero-card"
+                style={{
+                  // Full-bleed. The TOP tone is flat hsl(158 45% 19%) — the exact
+                  // color of the chameleon header above — so the bar flows
+                  // seamlessly into the hero (no gold-wash tint at the seam),
+                  // then deepens to evergreen-deep down the panel. No card radius
+                  // or shadow — the hero IS the top of the page, not a pill on it.
+                  background:
+                    "linear-gradient(180deg, hsl(158 45% 19%) 0%, hsl(var(--kiddo-evergreen)) 46%, hsl(var(--kiddo-evergreen-deep)) 100%)",
+                  position: "relative",
+                  overflow: "hidden",
+                  borderRadius: 0,
+                  boxShadow: "none",
+                }}
+                data-testid="hero-card"
+              >
+                {/* Decorative orbs removed 2026-05-12. The two fully-rounded
+                    ambient-highlight circles (200px white-tint top-right +
+                    240px gold-tint bottom-left) read as AI-generated landing
+                    page decoration and violated the locked
+                    Apple-Settings register + the Mario-star framing
+                    ("if it shows up on every screen, nobody cares"). The
+                    green evergreen→evergreen-deep gradient IS the visual
+                    anchor; meaningful negative space carries more weight
+                    than decorative fill. See feedback_no_ai_slop.md and
+                    feedback_animation_primitives.md for the locked rules. */}
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  {/* Fund identity row. Optional 32px child-avatar glyph
+                      to the left of the name lockup — small enough to
+                      stay in the iOS Contacts / Messages register
+                      (identity mark, not hero image), large enough to
+                      personalize the most-visited surface in the app.
+                      Renders only when the parent has explicitly set a
+                      child photo; falls back to the colored-initial
+                      pattern (same primitive as "Who Loves Emma" + the
+                      Memory Book gifter roster). Dark hero background
+                      gets a subtle white ring to lift the avatar from
+                      the gradient. The avatar is a glyph, not a tap
+                      target — taps on this row still belong to the
+                      fund-name dropdown / share affordance. */}
+                  {/* Identity row — bottom margin bumped from 6 to 14 so the
+                      32px child avatar doesn't crowd the 50px balance
+                      directly below. Old gap read as cramped because the
+                      avatar's bottom landed within ~6px of the balance's
+                      cap-line. 14 gives the balance proper breathing room
+                      without separating the two surfaces too far. */}
+                  {/* alignItems center (2026-06-07, founder "are these lined
+                      up perfectly?"): was flex-start, which floated the
+                      gift-count pill to the TOP of the row while the avatar +
+                      identity center together — the pill read as sitting higher
+                      than the identity text. Centering aligns all three on one
+                      axis. */}
+                  <div className="lab-hero-meta">
+                      {/* Mobile-only — desktop already carries fund
+                          identity in the DesktopSidebar's nav and fund
+                          switcher, so a glyph here would be redundant
+                          chrome. md:hidden hides it at the >=768px
+                          breakpoint where the sidebar takes over. */}
+                      {(() => {
+                        const childPhotoUrl = (activeFund as any)?.childPhotoUrl as string | null | undefined;
+                        // PHOTO-OR-NOTHING (2026-06-23, founder): with no child photo
+                        // we render NO avatar (was a generic initial-in-a-circle). The
+                        // "T" only echoed the name right beside it ("Theo's future") and
+                        // read as a templated default; dropping it makes a real photo an
+                        // EARNED personal touch and lets the name carry identity alone.
+                        if (!childPhotoUrl) return null;
+                        return (
+                            <div
+                              aria-hidden
+                              className="md:hidden"
+                              style={{
+                                width: 32, height: 32, flexShrink: 0,
+                                borderRadius: "50%",
+                                overflow: "hidden",
+                                boxShadow: "0 0 0 2px rgba(255,255,255,0.30), 0 1px 4px rgba(0,0,0,0.18)",
+                                background: "rgba(255,255,255,0.10)",
+                              }}
+                            >
+                              {/* Load hints added 2026-05-20 per user
+                                  report ('the photo is taking a long
+                                  time to load'). This is the focal-
+                                  point image of the Dashboard hero,
+                                  above the fold, on the most-visited
+                                  surface. fetchPriority='high' tells
+                                  the browser to prioritize this image
+                                  over other resource fetches on the
+                                  page. decoding='async' moves the
+                                  decode off the main thread so it
+                                  does not block other rendering.
+                                  loading='eager' is explicit (default
+                                  for above-the-fold, but clearer
+                                  here). See feedback_image_load_hints
+                                  _pattern.md for the canonical
+                                  treatment of focal-point images. */}
+                              <img
+                                src={childPhotoUrl}
+                                alt=""
+                                loading="eager"
+                                decoding="async"
+                                fetchPriority="high"
+                                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                              />
+                            </div>
+                          );
+                      })()}
+                      <div className="lab-hero-meta-col">
+                      {/* STAGING emotional moment, beat 1: lead with the CHILD as
+                          identity ("Theo's future"), not "Fund · UTMA" chrome — a
+                          warm Bricolage line bound to the big number directly
+                          below. The account type is demoted to a quiet legitimacy
+                          sub-label (kept for trust, no longer the headline). */}
+                      <div className="font-heading" data-testid="text-fund-hero-label" style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "white", lineHeight: 1.1, minWidth: 0, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" as const }}>
+                        {isOwnerMode ? "Your future" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s future` : (activeFund?.name || "Your fund")}
+                      </div>
+                      {/* STAGING: account type (UTMA / Personal) cut from the hero — it's
+                          chrome the header already carries ("UTMA · Active"), and the hero
+                          is the emotional surface, not an account-details panel. Only a
+                          NON-default status (Draft / Closed) still surfaces here, as a real
+                          exception worth flagging. Active fund → no sub-label (hero = 3 rows). */}
+                      {(() => {
+                        const st = String(activeFund?.status || "active").toLowerCase();
+                        if (!st || st === "active") return null;
+                        const isDraft = st === "draft";
+                        const label = st.charAt(0).toUpperCase() + st.slice(1);
+                        return (
+                          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: isDraft ? "hsl(43, 85%, 68%)" : "rgba(255,255,255,0.8)", marginTop: 3, whiteSpace: "nowrap" as const }}>
+                            {label}
+                          </div>
+                        );
+                      })()}
+                      </div>
+                  </div>
+
+                  {/* Fund-switch skeleton: when dashboard-summary is loading AND
+                      the funds-list balance says this fund has real data, render
+                      a brief skeleton instead of flashing stale numbers from the
+                      previous fund or a wrong "Ready for the first gift" empty
+                      state. Brand-new funds (balance==0) skip this and
+                      land directly on the empty hero — that's the correct state
+                      for them and the optimistic create flow.
+
+                      DEMO EXCEPTION (2026-06-04, founder: "the main value rolls
+                      in ~6-7s, should come right after the chart"): the skeleton
+                      held the hero blank for the FULL dashboard-summary load —
+                      ~6s on the dev/demo remote DB — because it waits for the
+                      precise holdings-sum. But for demo funds `f.balance`
+                      already EQUALS the holdings market-value sum (verified), so
+                      `invested` falls back to it and the hero can paint the
+                      correct value the moment /api/funds lands (~1s), then roll
+                      to the (identical) fresh value. The skeleton only protects
+                      REAL funds, whose f.balance is a cost-basis-style field
+                      that would flash low then jump — so it stays for them. */}
+                  {dashboardSummaryLoading && !dashboardSummary && !isDemoAccount && getFundTotalValue(activeFund) > 0 ? (
+                    <>
+                      <div style={{ marginBottom: 10 }} data-testid="hero-loading-skeleton">
+                        <div className="animate-pulse rounded-lg" style={{ width: 180, height: 44, background: "rgba(255,255,255,0.10)", marginBottom: 10 }} />
+                        <div className="animate-pulse rounded-full" style={{ width: 110, height: 18, background: "hsl(var(--kiddo-gold) / 0.18)", marginBottom: 18 }} />
+                        <div className="animate-pulse rounded-2xl" style={{ width: "100%", height: 88, background: "rgba(255,255,255,0.05)" }} />
+                      </div>
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
+                        Loading {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your"} fund…
+                      </p>
+                    </>
+                  ) : totalValue === 0 && gifts.length === 0 ? (
+                    <>
+                      <div className="font-heading" style={{ fontSize: 46, fontWeight: 700, color: "white", letterSpacing: "-1.5px", lineHeight: 1, marginBottom: 8 }} data-testid="text-total-balance">
+                        $0.00
+                      </div>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>
+                        Ready for the first gift.
+                      </p>
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.55, marginBottom: 22 }}>
+                        Share {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to get started.
+                      </p>
+                      {/* Acknowledge any scheduled recurring investment.
+                          Without this, the empty state reads as "nothing
+                          is happening" even when the parent has set up a
+                          recurring that's about to fire. Calm honesty per
+                          locked Kiddo register: the share CTA still
+                          headlines (gifter loop is the moat), but the
+                          parent's own setup work gets acknowledged. */}
+                      {(() => {
+                        // parentContributions is already scoped to activeFundId
+                        // via the useQuery key, so no per-fund filter needed.
+                        const fundRecurring = parentContributions.find((c) => c.status === "active");
+                        if (!fundRecurring) return null;
+                        const amt = parseFloat(String(fundRecurring.amount || "0"));
+                        if (!Number.isFinite(amt) || amt <= 0) return null;
+                        const freq = String(fundRecurring.frequency || "monthly").toLowerCase();
+                        const freqLabel =
+                          freq === "weekly" ? "week"
+                            : freq === "yearly" || freq === "annual" || freq === "annually" ? "year"
+                              : freq === "daily" ? "day"
+                                : "month";
+                        const nextDate = fundRecurring.nextRunDate ? new Date(fundRecurring.nextRunDate) : null;
+                        const nextLabel = nextDate && !Number.isNaN(nextDate.getTime())
+                          ? nextDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+                          : null;
+                        return (
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", marginBottom: 16 }}>
+                            Your ${amt.toFixed(0)}/{freqLabel} recurring fires{nextLabel ? ` next on ${nextLabel}` : " on schedule"}.
+                          </p>
+                        );
+                      })()}
+                      {age18Transition && age18Transition.daysUntil18 > 0 && (
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 14, marginBottom: 18 }}>
+                          {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)} · {age18Transition.countdownLabel}
+                        </p>
+                      )}
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
+                        {!isReadOnlyFund && (
+                          <button
+                            onClick={() => { haptic("medium"); handleShareLink(); }}
+                            data-testid="button-empty-state-share-link"
+                            className="rounded-full"
+                            style={{
+                              padding: "10px 20px", fontSize: 13, background: "hsl(var(--kiddo-gold))",
+                              color: "white", border: "none",
+                              fontWeight: 700, cursor: "pointer",
+                              display: "inline-flex", alignItems: "center", gap: 6,
+                            }}
+                          >
+                            <Share2 size={13} color="white" />
+                            Share
+                          </button>
+                        )}
+                      </div>
+                      {(() => {
+                        // The gifter doorway — see the gifterPeek query def.
+                        // "You've given 7 gifts to Theo, Nora & Mia" answers
+                        // "where is the data?" in one sentence and the tap
+                        // lands on /my-gifts with the cache already warm.
+                        const gFunds = (gifterPeek?.funds || []).filter((f) => (f?.giftCount || 0) > 0);
+                        const gCount = gFunds.reduce((s, f) => s + (f.giftCount || 0), 0);
+                        if (gCount <= 0) return null;
+                        const gTotal = gifterPeek?.summary?.totalGifted ?? gFunds.reduce((s, f) => s + (f.totalGifted || 0), 0);
+                        const kidNames = gFunds
+                          .map((f) => String(f.childFirstName || f.childName || "").trim().split(/\s+/)[0])
+                          .filter(Boolean);
+                        // Name every kid up to three ("Nora, Mia & Theo") —
+                        // hiding exactly ONE name behind "& 1 more" was absurd
+                        // (founder saw it live). Compression starts at four.
+                        const kidsLabel = kidNames.length === 1 ? kidNames[0]
+                          : kidNames.length === 2 ? `${kidNames[0]} & ${kidNames[1]}`
+                          : kidNames.length === 3 ? `${kidNames[0]}, ${kidNames[1]} & ${kidNames[2]}`
+                          : kidNames.length > 3 ? `${kidNames[0]}, ${kidNames[1]} & ${kidNames.length - 2} more`
+                          : `${gFunds.length} ${gFunds.length === 1 ? "kid" : "kids"}`;
+                        const fmtG = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => { haptic("selection"); setLocation("/my-gifts"); }}
+                            data-testid="button-empty-state-gifter-doorway"
+                            className="lab-tap"
+                            style={{
+                              marginTop: 18, width: "100%", textAlign: "left",
+                              background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.20)",
+                              borderRadius: 16, padding: "14px 16px", cursor: "pointer",
+                            }}
+                          >
+                            <p style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 3 }}>
+                              Looking for your gifts?
+                            </p>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.5 }}>
+                              You've given {gCount} {gCount === 1 ? "gift" : "gifts"}{gTotal > 0 ? ` (${fmtG.format(gTotal)})` : ""} to {kidsLabel}. See them grow →
+                            </p>
+                          </button>
+                        );
+                      })()}
+                    </>
+                  ) : (
+                    <>
+                      {/* "Today" kicker — creates timeframe symmetry with the
+                          "$X at 65" projection button below. Without it, the
+                          parent has to triangulate that the big white number
+                          is the present-day balance vs the long-horizon
+                          projection. Same micro-label register used by the
+                          "Latest gift" / "Recent gift" labels in the gift
+                          strip below — calm Settings-app uppercase, muted
+                          on the green hero. Intentionally NOT labeled
+                          "Emma's fund value" or "Kiddo value" — those clutter
+                          the anchor number and read as Acorns/Mint chrome. */}
+                      {/* Kicker swaps from "Today" to the scrubbed date
+                          while the parent is dragging through the chart.
+                          Same uppercase Settings-app register either way
+                          — the visual continuity is what makes the swap
+                          feel native instead of a separate tooltip
+                          surface. transition smooths the cross-fade so
+                          rapid scrubbing doesn't flicker. */}
+                      {/* STAGING: the default "Today" kicker is cut — the number is
+                          obviously the current value, so the label added nothing. The
+                          kicker still renders for the states where it carries real info:
+                          chart-scrub (scrubbed date), handoff, and previous-owner. */}
+                      {(() => {
+                        const kicker = isScrubbing
+                          ? scrubbedTrendPoint!.label
+                          : showHandoffKeepsake
+                            ? `Handed off · ${handoffDateLabel}`
+                            : isPreviousOwner
+                              ? `${recipientFirstNameDisplay || "Their"}'s balance now`
+                              : null;
+                        if (!kicker) return null;
+                        return (
+                          <div
+                            style={{
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              color: "rgba(255,255,255,0.6)",
+                              textTransform: "uppercase" as const,
+                              letterSpacing: "0.08em",
+                              marginBottom: 6,
+                              transition: "color 0.2s",
+                            }}
+                            data-testid="text-hero-balance-today-kicker"
+                          >
+                            {kicker}
+                          </div>
+                        );
+                      })()}
+                      {/* Shared-fund badge. Appears only when the active fund
+                          is one the parent was invited to (not their own).
+                          Sits between the kicker and the balance so it's
+                          read as context BEFORE the number, not as a
+                          decoration after. Viewer / co-admin distinction
+                          is reserved for the Settings page; the hero just
+                          says "this isn't your fund originally." */}
+                      {isSharedFund && (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "3px 10px",
+                            marginBottom: 8,
+                            borderRadius: 9999,
+                            background: "rgba(255,255,255,0.12)",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            color: "rgba(255,255,255,0.78)",
+                            letterSpacing: "0.03em",
+                          }}
+                          data-testid="badge-shared-fund"
+                        >
+                          {isPreviousOwner
+                            ? `📦 Transferred to ${recipientFirstNameDisplay || "them"} · view only`
+                            : `🤝 Shared with you${isViewerOnly ? " · view-only" : ""}`}
+                        </div>
+                      )}
+                      {/* Owner-side ownership record — the symmetric counterpart to
+                          the previous owner's "Transferred to X · view only" badge.
+                          The at-18 welcome banner is one-time (~60d after claim), so
+                          a settled adult owner otherwise had no persistent marker that
+                          this account became theirs. Derived from transferredAt. */}
+                      {isOwnerMode && (activeFund as any)?.transferredAt && (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "3px 10px",
+                            marginBottom: 8,
+                            borderRadius: 9999,
+                            background: "rgba(255,255,255,0.12)",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            color: "rgba(255,255,255,0.78)",
+                            letterSpacing: "0.03em",
+                          }}
+                          data-testid="badge-owner-took-ownership"
+                        >
+                          📦 You took ownership · {new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        </div>
+                      )}
+                      {/* Balance — uses brand serif via .font-heading instead of
+                          a hardcoded Lora override. The flash color uses the
+                          --kiddo-gold-light token for the freshening cue.
+                          During chart scrub, the balance shows the scrubbed
+                          historical value AND the freshening cue is
+                          suppressed (the value change is the user's intent,
+                          not a system event — animating it would be confusing
+                          theatre). aria-live flips to "off" during scrub OR
+                          during the count-up animation so screen readers
+                          don't fire 60 announcements per second while
+                          either kind of value-change is happening. When the
+                          animation settles, aria-live returns to "polite"
+                          and the final value is announced exactly once.
+                          Pattern locked in `project_count_up_animation_consistency.md`. */}
+                      {/* Stagger reveal added 2026-05-12 — the balance fades in
+                          AFTER the parent hero card has settled + the kicker /
+                          shared-badge above are already visible. Creates the
+                          Apple-cinematic "everything settles, then the hero
+                          number reveals last with count-up" moment per the
+                          user's locked intuition. 220ms delay matches the
+                          hero card's own fade-in finish; the count-up
+                          (1200ms) then runs as the focal animation. Per
+                          feedback_animation_primitives.md: staged reveals +
+                          count-ups are approved primitives. Skipped on chart-
+                          scrub (the value swap there is user-driven, not
+                          system-driven, so the stagger would feel like lag). */}
+                      {/* Relative breath-wrapper for the gift-lands beat: hosts
+                          the +$X arc overlay and carries the secondary scale
+                          breath (a PLAIN div, so the CSS animation never fights
+                          framer's inline transform on the balance node itself). */}
+                      <div
+                        className={!isScrubbing && newGiftFlash && flashGiftAmount ? "lab-balance-bloom" : undefined}
+                        style={{ position: "relative", width: "fit-content" }}
+                      >
+                      <motion.div
+                        ref={heroBalanceRef}
+                        className="font-heading"
+                        initial={isScrubbing ? false : { opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.32, delay: 0.22, ease: "easeOut" }}
+                        style={{
+                          // LAB move 1: DOMINANT hero. The critique's "willing
+                          // to dedicate half the screen to the number." 50 -> 64,
+                          // tighter tracking. One object, decisively the king.
+                          // FLUID + length-aware (2026-06-07): clamp scales by
+                          // viewport WIDTH (dominant on desktop, never cramped on
+                          // mobile, no breakpoint jump); heroBalanceFontSize
+                          // lowers the ceiling for long numbers (millions+) so
+                          // they fit even a 320px phone. Sized off the live value
+                          // so it's stable through the count-up. See its def.
+                          fontSize: heroBalanceFontSize,
+                          fontWeight: 700,
+                          // Gold while the number is ACTIVELY climbing, OR a new
+                          // gift just arrived. Keyed off `balanceRolling` (not the
+                          // whole animating beat), so the old number sits WHITE
+                          // during the linger and only WARMS to gold as it actually
+                          // rolls up — then eases back to white on landing (the
+                          // `transition` below). The gold tracks the growth, not the
+                          // static prior. The newGiftFlash window holds the cue lit
+                          // ~3.8s after an arrival so it isn't blink-and-miss.
+                          color: !isScrubbing && ((balanceRolling && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
+                          letterSpacing: "-1.5px",
+                          lineHeight: 1,
+                          marginBottom: 4,
+                          filter: !isScrubbing && ((balanceRolling && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
+                          transition: "color 0.55s ease, filter 0.55s ease",
+                        }}
+                        data-testid="text-total-balance"
+                        aria-live={isScrubbing || balanceAnimating ? "off" : "polite"}
+                      >
+                        {/* STAGING: dollars dominant, cents small + dimmed (the Apple-Card /
+                            Robinhood treatment) — a refinement of the existing number, not a
+                            new element. The roll still drives displayHeroBalance; we only
+                            re-split the formatted string each frame. */}
+                        {(() => {
+                          const v = isScrubbing ? scrubbedTrendPoint!.value : showHandoffKeepsake ? handoffKeepsakeValue : (giftBeatActive ? giftRollValue : displayHeroBalance);
+                          const s = formatHeroBalance(v);
+                          const dot = s.lastIndexOf(".");
+                          if (dot < 0 || s.length - dot !== 3) return s;
+                          return (<>{s.slice(0, dot)}<span style={{ fontSize: "0.5em", fontWeight: 700, opacity: 0.6 }}>{s.slice(dot)}</span></>);
+                        })()}
+                      </motion.div>
+
+                      {/* Gift-lands limb 3: the ARC (principle 7). A gold "+$X ·
+                          {Gifter}" chip rises on a curved path from the peopled
+                          caption UP into the balance and dissolves in — the loop
+                          made physical, value flowing from the person to the
+                          number. EARNED-only (shares newGiftFlash, the genuinely-
+                          new-gift gate), real amount + sender, always an inbound
+                          gain. MotionConfig reducedMotion="user" auto-collapses
+                          the path to a quiet fade. aria-hidden — the balance's
+                          aria-live already announces the new total. */}
+                      <AnimatePresence>
+                        {!isScrubbing && newGiftFlash && flashGiftAmount && (
+                          <motion.div
+                            key="hero-gift-arc"
+                            aria-hidden
+                            data-testid="hero-gift-arc"
+                            style={{
+                              position: "absolute", left: 0, top: 0, zIndex: 3,
+                              pointerEvents: "none", whiteSpace: "nowrap",
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              padding: "4px 11px", borderRadius: 9999,
+                              background: "linear-gradient(180deg,#e7a93a,hsl(var(--kiddo-gold)))",
+                              color: "#2a1c06", fontSize: 13, fontWeight: 800,
+                              boxShadow: "0 6px 16px hsl(var(--kiddo-evergreen-deep) / 0.45)",
+                            }}
+                            initial={reduceMotion ? { opacity: 0, y: 52, scale: 0.96 } : { opacity: 0, x: 0, y: 66, scale: 0.72 }}
+                            animate={
+                              reduceMotion
+                                ? { opacity: [0, 1, 1, 0] }
+                                : {
+                                    // Appear LOW (at the peopled caption) and hold a
+                                    // beat so the eye reads "+$X from the people"
+                                    // BEFORE it lifts and dissolves into the number —
+                                    // the arc was previously rising before it was even
+                                    // visible. x bows out then back = the curve.
+                                    opacity: [0, 1, 1, 1, 0],
+                                    x: [0, 18, 24, 12, 4],
+                                    y: [66, 50, 46, -6, -12],
+                                    scale: [0.72, 1.05, 1.0, 0.96, 0.9],
+                                  }
+                            }
+                            transition={
+                              reduceMotion
+                                ? { duration: 3.0, ease: ["easeOut", "linear", "easeIn"], times: [0, 0.12, 0.78, 1] }
+                                // Per-SEGMENT easing (one per gap) so `times` map directly and the
+                                // low "hold" actually holds ~1.6s (readable). A single bezier ease
+                                // front-loaded the whole timeline, so the chip rushed the hold and
+                                // spent most of its life slow-fading/dim. Now: pop up (easeOut) →
+                                // hold low + opaque (linear) → rise into the number (easeIn) → settle.
+                                : { duration: 3.2, ease: ["easeOut", "linear", [0.4, 0, 0.6, 1], "easeOut"], times: [0, 0.1, 0.62, 0.88, 1] }
+                            }
+                          >
+                            {"+" + new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: Number.isInteger(flashGiftAmount) ? 0 : 2 }).format(flashGiftAmount)}
+                            {flashGifterName && <span style={{ fontWeight: 600, opacity: 0.82 }}>· {flashGifterName.split(/\s+/)[0]}</span>}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      </div>
+
+                      {/* Social-proof caption — the balance's attribution. Pairs
+                          the number with WHO built it, which is Kiddo's structural
+                          edge over every "me + my money" app: the value is
+                          PEOPLED. Promoted here from a quiet 11.5px line buried in
+                          the identity row (both responsive variants removed) so
+                          anchor #1 reads "$X, built by real people," not a figure
+                          with a footnote. Tight top gap so it reads as the
+                          number's caption, NOT a competing block, consistent with
+                          the two-anchors-plus-whisper hero. Same copy as before;
+                          only weight + position upgraded. Hidden while scrubbing
+                          (a historical value has no "today" roster) and on empty
+                          funds (validCount 0). */}
+                      {!isScrubbing && (() => {
+                        const validCount = gifts.filter(g => {
+                          const s = String(g.status || "").toLowerCase();
+                          return s !== "failed" && s !== "refunded";
+                        }).length;
+                        if (validCount <= 0) return null;
+                        return (
+                          <p
+                            style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.6)", letterSpacing: "0.01em", marginTop: 2, marginBottom: 16 }}
+                            data-testid="text-hero-social-proof"
+                          >
+                            {validCount} {validCount === 1 ? "gift" : "gifts"}
+                            {contributorCount > 0 && (
+                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
+                            )}
+                          </p>
+                        );
+                      })()}
+
+                      {/* LAB: hero growth sparkline REMOVED. It used
+                          preserveAspectRatio="none" to fill width, which stretched
+                          the end-dot into an ellipse and distorted the curve. It
+                          was also redundant with the full "growth" chart (one tap
+                          away in the collapse) - so the cleaner move is no
+                          mini-chart in the hero at all (subtraction). */}
+
+                      {/* Hero gain pill removed — the +$X all-time gain (and its
+                          percent) was duplicating what the lifetime stats row's
+                          "Growth" card already shows below. The hero stays as
+                          the emotional anchor surface (balance · recent gift ·
+                          share · projection); the metrics-shaped numbers live
+                          in the metrics row and on the chart's range pill.
+                          What stays here: the "$X invested" informational
+                          fallback when the parent has invested but hasn't yet
+                          accrued meaningful gain, and the empty-state warmth
+                          ("Growing for {child}") for brand-new funds. */}
+                      {/* "$X invested" fallback dropped — when balance == invested
+                          (the common no-gain case) it was restating the balance
+                          number directly above. When balance > invested or
+                          balance < invested, the lifetime stats row's Growth
+                          card already carries that delta. The hero stays as
+                          the emotional anchor; metrics-shaped numbers live in
+                          the metrics row. Only the truly-empty fund still
+                          shows the "Growing for {child}" warmth, and the
+                          settling-cash button still appears alongside when
+                          there's cash in flight. */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                        {invested === 0 && rawTotalValue === 0 && (
+                          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
+                            Growing for {recipientFirstNameDisplay || "them"}
+                          </span>
+                        )}
+                        {/* Hero "$X cash" stat REMOVED 2026-06-17 (founder
+                            catch: "$50 cash seems odd in the hero"). It was a
+                            metrics-shaped number in the emotional-anchor hero —
+                            the same reason the gain pill + "$X invested" were
+                            already pulled above — AND redundant: the cash is
+                            inside the balance total, and the dedicated "Cash is
+                            waiting" card below is the proper, actionable home for
+                            it (readonly funds don't need a breakout they can't
+                            act on; it's still in their total). */}
+                      </div>
+
+                      {/* Settling row - shown whenever there's pending cash */}
+                      {settling > 0 && (
+                        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                          <div className="rounded-full" style={{
+                            display: "inline-flex", alignItems: "center", gap: 6,
+                            background: "hsl(var(--kiddo-gold-light) / 0.12)", border: "1px solid hsl(var(--kiddo-gold-light) / 0.25)",
+                            padding: "4px 12px",
+                          }}>
+                            <span style={{ fontSize: 10, lineHeight: 1 }}>🌱</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--kiddo-gold-light) / 0.9)" }}>
+                              {formatCurrency(settling)} settling
+                            </span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 400 }}>
+                              · 1–2 business days
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CTA row. Share button hidden for read-only roles
+                          (viewers + previous owners post-handoff). For a
+                          previous owner, the gift link is the kid's now;
+                          a Share affordance pointing at their old fund
+                          would invite gifts that go to a fund they no
+                          longer control. Cleaner to hide entirely than
+                          to leave a 403-bound dead CTA. */}
+                      <div className="lab-hero-cta-row">
+                        {!isReadOnlyFund && (
+                          <button
+                            onClick={() => { haptic("medium"); handleShareLink(); }}
+                            data-testid="button-hero-share-link"
+                            className={`lab-cta-primary${heroDataReady ? " lab-cta-ready" : ""}`}
+                            style={{
+                              // copy: de-AI'd primary action. Dropped the same-hue
+                              // glow (a generated-UI tell, and the card already had
+                              // its glow removed per founder) for a neutral grounded
+                              // lift + a subtle lit-from-above inset highlight, and
+                              // tightened the full pill to the Apple-Settings radius.
+                              padding: "13px 24px", fontSize: 14,
+                              background: "hsl(var(--kiddo-gold))", color: "white",
+                              border: "none", borderRadius: 14,
+                              fontWeight: 700, letterSpacing: "-0.01em", cursor: "pointer",
+                              // justifyContent centers the icon+label when the
+                              // button stretches full-width in the mobile
+                              // column; no-op at natural width on desktop.
+                              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+                              boxShadow: "0 1px 2px rgba(14,37,24,0.22), 0 5px 14px rgba(14,37,24,0.16), inset 0 1px 0 rgba(255,255,255,0.18)",
+                            }}
+                          >
+                            <Share2 size={15} color="white" />
+                            Share {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} link
+                          </button>
+                        )}
+                        {(() => {
+                          // LAB: until the recurring data lands, the projection
+                          // computes from $0/mo and reads far too low, then jumps.
+                          // Show a calm pulse placeholder (the skeleton the founder
+                          // likes, sized to the pill) instead of a wrong number.
+                          if (!heroDataReady) {
+                            return (
+                              <div className="animate-pulse" aria-hidden style={{ height: 40, width: 220, maxWidth: "100%", borderRadius: 9999, background: "rgba(255,255,255,0.12)" }} />
+                            );
+                          }
+                          // Hero CTA = the long-horizon emotional anchor. Math
+                          // (two-phase contribution + compound, 7% yearly average,
+                          // UTMA-aware: contributions stop at 18) lives in the
+                          // `heroProjectedAt65` useMemo at the top of this
+                          // component so the cached-first-number hook can drive
+                          // the count-up animation. `displayHeroProjectedAt65`
+                          // paints the LAST cached projection instantly on load
+                          // and animates UP to the new value when fresher data
+                          // lands. Acorns-style: never animates downward, never
+                          // shows a skeleton, the parent always sees a number.
+                          // LAB: lead with the TANGIBLE future, the at-majority
+                          // handoff ("$49,828 when Theo turns 21"), not the
+                          // abstract "$920k at 65". The emotional pull, the
+                          // billion-dollar-way framing: a warm "on track"
+                          // statement, not a bare number-with-a-far-off-age.
+                          const yrsToMaj = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+                          // Use the EXACT canonical at-majority math (same as the
+                          // handoff "On track for $X" + Projection page + worker):
+                          // sum ALL active recurring (parent + gifter-with-sub) via
+                          // sumMonthlyEquivalent, two-phase with contributions
+                          // stopping at majority. Earlier this used a single
+                          // recurring's raw amount, so the hero and handoff numbers
+                          // disagreed on a fund with 2 recurring. Now identical.
+                          const heroMonthly = sumMonthlyEquivalent([
+                            ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                            ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
+                          ]);
+                          // Honesty gate (founder catch 2026-06-05): Marcus viewing
+                          // Mia's HANDED-OFF fund saw "On track for $1,492,705
+                          // when Mia turns 21" — she's a graduate PAST 21, and
+                          // that number was the AT-65 projection wearing the
+                          // at-majority label (the fallback swapped the number
+                          // but not the words). The at-majority framing is only
+                          // honest when that moment is genuinely AHEAD: fund not
+                          // transferred, transition data present, >~1 month out.
+                          // Otherwise the pill says what the number actually is
+                          // — the long horizon, "at 65" — which is also the
+                          // right emotional anchor for an adult-owned fund
+                          // (kid-2.0 keeps growing; parent-2.0 posture).
+                          // At-majority projection, computed up front so the gate
+                          // below can test whether it is genuinely meaningful.
+                          const heroAtMajProjection = projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj });
+                          // Near-handoff flatness gate (founder catches: 2026-06-09
+                          // Nora near-flat; 2026-06-16 Emma). Show the at-majority
+                          // number ONLY when real GROWTH runway makes it compelling —
+                          // not when it's merely inflated by ongoing contributions.
+                          // The old test (at-maj > today * 1.1) was fooled by deposits:
+                          // Emma ($1,967 → $2,401, ~6mo from 18) cleared it on the
+                          // $50/mo recurring alone (+~17%) while actual market growth
+                          // was only ~$84 (~4%), so the hero showed a flat, unexciting
+                          // "$2,401 at 18". Measure the GROWTH portion — the projection
+                          // minus a 0%-return, contributions-only baseline — and require
+                          // it to be meaningful vs today (≥10%); otherwise anchor to the
+                          // long-horizon "at 65" number. (Normal case still leads with
+                          // at-majority, per the design-lab hero decision.)
+                          const noReturnAtMaj = projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrsToMaj, contributionYears: yrsToMaj, annualReturnRate: 0, netAumFee: false });
+                          const atMajGrowthPortion = heroAtMajProjection - noReturnAtMaj;
+                          const showAtMajority = !Boolean((activeFund as any)?.transferredAt)
+                            && !!age18Transition
+                            && yrsToMaj > 0.08
+                            && totalValue > 0
+                            && atMajGrowthPortion > totalValue * 0.10;
+                          // at-65 fallback still rides the value count-up; the at-majority
+                          // shorthand renders the odometer spin-up (HeroProjectionSpin) in
+                          // the JSX below, so for that branch atMaj is just the static
+                          // landing value (used only by the non-spin fmt fallbacks).
+                          const atMaj = showAtMajority ? heroAtMajProjection : displayHeroProjectedAt65;
+                          const heroMajAge = age18Transition?.majorityAge || 18;
+                          const heroChildN = isOwnerMode ? "you" : (recipientFirstNameDisplay || "them");
+                          // "~" signals an estimate, matching the sibling projections
+                          // ("~$11,483 by 21", "~$113,833 to 33"). A market projection
+                          // shown as a flat "$51,113" implies a precision the market
+                          // can't promise; the tilde keeps every forward number honest.
+                          const fmtMaj = "~" + new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(atMaj);
+                          // copy: rounded short form for the quiet projection link (~$51k).
+                          // The "~" is the MINIMAL honest hedge — one character. A market
+                          // projection can't be shown as a flat promise (founder/legal), so
+                          // SOME estimate signal stays; the tilde is more "cut" than a word
+                          // ("about"/"potential") and safer than nothing (a bare number
+                          // implies a certainty markets don't give).
+                          const fmtMajShort = atMaj >= 1000 ? "~$" + Math.round(atMaj / 1000) + "k" : fmtMaj;
+                          // Birthday-aware beat (founder-approved, 2026-06-05):
+                          // on the child's birthday ONLY, the projection pill
+                          // warms — gold-tinted border + soft glow — and the 🌱
+                          // does one gentle grow-in. Quiet, classy, zero noise
+                          // the other 364 days. Date-only birthdate parses as
+                          // UTC midnight, so compare its UTC month/day against
+                          // the family's LOCAL today.
+                          const isChildBirthdayToday = (() => {
+                            const raw = (activeFund as any)?.recipientBirthdate;
+                            if (!raw) return false;
+                            const d = new Date(String(raw));
+                            if (!Number.isFinite(d.getTime())) return false;
+                            const now = new Date();
+                            return d.getUTCMonth() === now.getMonth() && d.getUTCDate() === now.getDate();
+                          })();
+                          return (
+                            <button
+                              onClick={() => {
+                                haptic("selection");
+                                if (activeFundId) setLocation(`/projection/${activeFundId}`);
+                              }}
+                              data-testid="button-hero-view-fund"
+                              className="lab-tap"
+                              title={isChildBirthdayToday && !isOwnerMode ? `It's ${recipientFirstNameDisplay || "their"} birthday 🎂` : "See the full projection"}
+                              style={{
+                                // copy: un-pilled so Share is the only "button" - the
+                                // projection now reads as a quiet tappable line.
+                                background: "transparent",
+                                border: "none",
+                                boxShadow: "none",
+                                borderRadius: 9999,
+                                // Keep the projection line ONE row on narrow phones
+                                // (was wrapping to two on some devices). Tighter
+                                // padding/gap + a viewport-responsive font that shrinks
+                                // so even long values/names fit a single line; paired
+                                // with whiteSpace:nowrap on the text span below.
+                                padding: "10px 16px",
+                                fontSize: "clamp(10.5px, 3.3vw, 13px)",
+                                fontWeight: 600,
+                                color: "rgba(255,255,255,0.94)",
+                                cursor: "pointer",
+                                // Centers content when the pill stretches
+                                // full-width in the mobile column; no-op at
+                                // natural width on desktop.
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                                maxWidth: "100%",
+                                transition: "background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease",
+                              }}
+                            >
+                              {/* TrendingUp anchors this as the GROWTH projection — same
+                                  icon as the "growth" section below. WHITE, not gold, on
+                                  purpose: the hero's one gold anchor is the Share button, so
+                                  a 2nd gold mark would split the focus. White keeps the
+                                  growth-stat polish while the Share button stays the sole
+                                  gold. Replaces the generic → (the pill is clearly tappable). */}
+                              <TrendingUp size={14} strokeWidth={2} aria-hidden style={{ color: "rgba(255,255,255,0.88)", flexShrink: 0 }} />
+                              <span style={{ minWidth: 0, whiteSpace: "nowrap" }}>
+                                <span style={{ fontWeight: 800 }}>
+                                  {showAtMajority && heroAtMajProjection >= 1000 ? (
+                                    <HeroProjectionSpin
+                                      seedValue={atMajSeedValue}
+                                      finalValue={heroAtMajProjection}
+                                      animateKey={activeFundId || ""}
+                                      spinToken={giftSpinToken}
+                                      startDelay={giftBeatActive ? 3250 : HERO_PROJECTION_START_DELAY_MS}
+                                    />
+                                  ) : fmtMajShort}
+                                </span>{" "}
+                                {showAtMajority ? <>at {heroMajAge}</> : <>at 65</>}
+                              </span>
+                            </button>
+                          );
+                        })()}
+
+                        {/* Send-to-a-friend — the gifter loop's adult turn.
+                            ONLY on a personal, adult-OWNED fund (isOwnerMode =
+                            owner + transferred, e.g. Mia after her handoff).
+                            A minor's UTMA is irrevocable and for the child's
+                            benefit, so "send out of it" must NEVER appear on a
+                            custodial fund; an adult's own Personal account can.
+                            Routes to the honesty-fenced concept preview
+                            (/p2p-preview, "concept preview, no real money moves")
+                            because the real send is gated on live custody (the
+                            stock leg) + money-transmitter licensing (the cash
+                            leg) per P2P_STOCK_SETTLE_SPEC.md. The preview "gets
+                            it all": the recipient's cash-or-stock choice AND the
+                            licensing caveat, so the affordance never implies a
+                            live P2P feature. marginLeft:auto floats it to the
+                            row's right edge on desktop; in the mobile column it
+                            just stacks full-width like the others. */}
+                        {isOwnerMode && (
+                          <button
+                            onClick={() => { haptic("selection"); setLocation("/p2p-preview"); }}
+                            data-testid="button-hero-send-friend"
+                            className="lab-cta-primary"
+                            aria-label="Send a friend cash or stock"
+                            title="Send a friend cash or stock (concept preview)"
+                            style={{
+                              marginLeft: "auto",
+                              flexShrink: 0,
+                              width: 42,
+                              height: 42,
+                              background: "rgba(255,255,255,0.12)",
+                              border: "1px solid rgba(255,255,255,0.22)",
+                              borderRadius: 9999,
+                              color: "rgba(255,255,255,0.94)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Send size={16} color="rgba(255,255,255,0.94)" />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.section>
+
+            {/* SinceLastVisitDigest — relocated here (was wedged above the hero)
+                so the evergreen header flows straight into the evergreen hero with
+                no cream banner between them. Reveal is timer-latched, so moving it
+                here is purely visual; it now recaps "while you were away" just
+                below the number instead of above it. */}
+            {!isReadOnlyFund
+              && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance
+                  && !isCoparentAcceptedBannerDismissed(activeFundId, (dashboardSummary as any)?.coparentAcceptance?.collaboratorId))
+              && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt
+                  && !isKidAt18WelcomeBannerDismissed(activeFundId))
+              && (
+              <SinceLastVisitDigest
+                fundId={activeFundId}
+                currentValue={rawTotalValue}
+                gifts={gifts as any}
+                isDemoAccount={isDemoAccount}
+                ready={Boolean(dashboardSummary)}
+                revealed={digestRevealed}
+                subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
+                viewerIsContributor={activeFundAccessRole === 'owner' && !isOwnerMode}
+              />
+            )}
+
+            {/* Parent's "your part of the story" moment. Post-handoff the parent
+                becomes a previous owner (read-only); the cold "transferred · view
+                only" hero badge is otherwise the only acknowledgment. This calm
+                card honors the years they tended the fund and plants the PARENT
+                side of the generational loop: the person who just finished one
+                handoff is the most likely to start the next. Persistent + dignified,
+                no action required, never naggy. Renders for any post-handoff parent
+                (real, or in the demo Marcus viewing Mia's transferred fund). */}
+            {isPreviousOwner && (
+              <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="card-parent-handoff-moment">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.12)] text-[hsl(var(--kiddo-evergreen))]">
+                    <Heart size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-heading text-base font-semibold text-foreground">Your part of the story</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      It's {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} now, but you're the one who built it up over the years, and that doesn't change. When you're ready to do this for another kid, you already know how.
+                    </p>
+                    {/* Visibility-state clarity: post-handoff the former custodian's view
+                        is the NEW OWNER's to control (PreviousCustodianAccessCard) —
+                        default is a frozen keepsake, the owner can opt them into the live
+                        fund or remove access entirely. The parent's view never said which
+                        state it was in or that it's the owner's choice; a parent could
+                        assume the live view is automatic/permanent. This calm sub-line
+                        names the state + that the owner controls it (a warm signal when
+                        live: they chose to keep you in). Founder-owned handoff feel. */}
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground/80">
+                      {showHandoffKeepsake
+                        ? `You're seeing ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund the way you handed it over. ${recipientFirstNameDisplay || "They"} can choose to share it live anytime.`
+                        : `${recipientFirstNameDisplay || "They"} chose to keep sharing it with you live, so you can keep watching it grow. It's ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} to change anytime.`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* The loop's second turn — post-handoff ADULT OWNER only (isOwnerMode).
+                The person who lived the whole 18-year arc is the warmest possible next
+                custodian; this is the doorway to starting a fund for THEIR kid (the
+                same Family-tier funnel — the loop closes generationally). Calm and
+                optional, never a paywall — the agency lines in YourStory/Age18Welcome
+                plant the intent; this is the door. Mutually exclusive with the
+                previous-owner card above. */}
+            {isOwnerMode && (
+              <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.30)] bg-[hsl(var(--kiddo-gold)/0.06)] p-5" data-testid="card-start-a-fund-doorway">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.15)] text-[hsl(var(--kiddo-gold-ink))]">
+                    <Sprout size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-heading text-base font-semibold text-foreground">Start one for someone you love</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      Someone started this for you before you could ask. When there's a kid you want to show up for, you already know how: quietly, early, for years.
+                    </p>
+                    {/* Logged-in owner → open the add-a-child sheet inline via
+                        the canonical ADD_FUND_EVENT (same path as the header /
+                        sidebar / funds-overview triggers), NOT the public
+                        /get-started onboarding funnel. handleAddFund opens the
+                        AddFundSheet (free for the first kid; the gate now
+                        correctly ignores their own owner fund). */}
+                    <button
+                      type="button"
+                      onClick={() => { haptic("selection"); window.dispatchEvent(new CustomEvent(ADD_FUND_EVENT)); }}
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:opacity-75"
+                      data-testid="button-start-a-fund-doorway"
+                    >
+                      Start a fund
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Glanceable recurring-status chip — "what's on" without scrolling
+                to the recurring card. Tap to manage (jumps + halos the recurring
+                section). Reflects the VIEWER'S OWN schedules (a graduated owner
+                sees their own, not the parent's handed-off plan), so the empty
+                state reads as an invitation to start their own. Hidden for
+                read-only viewers (previous owner / viewer) — they can't manage. */}
+            {/* STAGING: handoff "Needs You" — MOVED here from ABOVE the hero (where it sat
+                in the pre-hero banner pile). Now it's the first thing BELOW the hero: the
+                top-priority alert. Only fires <90 days from majority. Per the banner-taxonomy
+                plan — nothing above the hero; one Needs-You slot below it. */}
+            {age18Transition && age18Transition.daysUntil18 > 0 && age18Transition.daysUntil18 <= 90 && (
+              <button
+                type="button"
+                onClick={() => { haptic("selection"); setLocation("/age-18-plan"); }}
+                className="mt-4 w-full rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
+                data-testid="dashboard-approaching-18-banner"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
+                      Handoff in {age18Transition.daysUntil18 === 1 ? "1 day" : `${age18Transition.daysUntil18} days`}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)}.
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Walk through what's about to change and what to prep.
+                    </p>
+                  </div>
+                  <ChevronRight size={18} className="shrink-0 mt-1 text-[hsl(var(--kiddo-evergreen))]" aria-hidden />
+                </div>
+              </button>
+            )}
+
+            {/* "Cash is waiting" — the primary MONEY-ACTION, placed in the Needs-You
+                zone right below the hero (after the handoff alert) instead of stranded
+                mid-story between the collapsed view-sections. Always-visible (an action,
+                never hidden in a collapse), calm ("some, all, or none"), conditional on
+                idle cash. Relocated 2026-06-23. */}
+            {uninvestedCash > 0 && !isReadOnlyFund && (
+              <motion.section
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.010 }}
+                className="mt-4"
+              >
+                {/* Self-contained CARD (not the flush .st-section hairline) so it sits as
+                    a clean tile in the Needs-You card zone alongside the digest + handoff
+                    alert — no lone top-only divider line. */}
+                <button
+                  type="button"
+                  onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
+                  className="w-full rounded-2xl border border-[hsl(var(--kiddo-border)/0.9)] bg-white p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.04)]"
+                  style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "cash")}
+                  data-testid="button-invest-cash"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-gold)/0.25)] bg-[hsl(var(--kiddo-gold)/0.12)]">
+                          {/* Coins (NOUN: "this card is about cash"), not TrendingUp. */}
+                          <Coins size={20} className="text-[hsl(var(--kiddo-evergreen))]" />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+                          {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
+                        </p>
+                        <p className="text-xl font-bold text-foreground font-heading">{formatCurrency(uninvestedCash)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
+                          {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
+                          {cashContext === "gifts_settled" && "Choose how much to invest."}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Evergreen primary-CTA pill, NOT gold — gold's solid-pill weight is
+                        reserved for Share. */}
+                    <div className="shrink-0 whitespace-nowrap rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1.5 text-xs font-semibold text-white">
+                      Review options
+                    </div>
+                  </div>
+                </button>
+              </motion.section>
+            )}
+            {/* STAGING: co-parent celebration MOVED below the hero (was above it). Kept as the
+                celebration CARD on purpose — the founder deliberately chose a banner over a
+                fleeting toast for this emotional beat (see CoparentAcceptedBanner header). The
+                fix was never the treatment, only the placement: below the hero, not before it. */}
+            {activeFundAccessRole === 'owner' && (
+              <CoparentAcceptedBanner
+                acceptance={(dashboardSummary as any)?.coparentAcceptance}
+                fundId={activeFundId}
+                childFirstName={recipientFirstNameDisplay}
+              />
+            )}
+            {/* STAGING: relocated above-hero banner zone — celebrations, nudges,
+                notices, and the Plus funnel now render HERE, below the hero (not before it). */}
         {coverageReturnNotice && (
           <div
             className={`rounded-2xl border p-4 shadow-premium-sm ${
@@ -5550,7 +8163,7 @@ export default function Dashboard() {
             nudge would otherwise show "4 of 5 complete" against
             tasks that don't apply to a sandboxed account. Locked
             2026-05-21 with the demo polish pass. */}
-        {!(user as any)?.isDemoAccount && !authLoading && !fundsLoading && !bankLoading && setup.percent < 100 && (
+        {!(user as any)?.isDemoAccount && !authLoading && !fundsLoading && !bankLoading && setup.percent < 100 && !onlyBankSetupLeft && (
           <SetupProgressNudge
             title="Finish the few things behind the gift link"
             subtitle="This is the quiet setup that lets gifts move cleanly."
@@ -5608,30 +8221,62 @@ export default function Dashboard() {
             === 'owner'), which does NOT bleed — so it's the reliable guard.
             The banner is inherently owner-only ("this is YOUR fund"), so this
             is correct-by-construction, not just defensive. */}
-        {/* "While you were away" returning-user digest — quantifies + attributes
-            the gap since the last visit (gifts + growth). Owner/co-parent funds
-            only (not a read-only previous-owner / viewer surface). 2026-06-05. */}
-        {/* Banner coordination (mirrors DashboardLab): the "while you were away"
-            digest is the highest-frequency top banner (every return visit), so it
-            DEFERS to a live event-driven banner — a co-parent acceptance or the
-            at-18 welcome — instead of stacking on top of it. Without this the
-            digest and "Elena accepted co-parent" rendered together. Plus-media is
-            intentionally NOT included (no recency window → would over-suppress; it's
-            rare enough to coexist). 2026-06-07. */}
-        {!isReadOnlyFund
-          && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance)
-          && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt)
-          && (
-          <SinceLastVisitDigest
+        {/* "While you were away" returning-user digest — quantifies +
+            attributes the gap since the last visit (gifts + growth). Built on
+            the real Dashboard by a parallel session 2026-06-05; pulled into
+            the lab 2026-06-07 during the main-vs-lab drift reconciliation so
+            /design-lab (and the eventual port) doesn't ship without the
+            returning-user catch-up beat. Owner/co-parent funds only — never a
+            read-only previous-owner / viewer surface. */}
+        {/* ONE "what's new" beat per load (2026-06-07, founder: "do too many
+            things happen at once?"). The routine "while you were away" digest
+            YIELDS when a rarer, more emotional lifetime-celebration banner is
+            present this load — a co-parent joining or the at-18 handoff is the
+            bigger headline, and stacking the digest under it was two
+            catch-up banners at once. Yields only WHILE that banner is actually
+            showing: the gate ANDs the server signal with "not yet dismissed"
+            (the banners' own localStorage predicates). Without that, dismissing
+            the celebration left a dead zone — the banner gone but the digest
+            still suppressed by the still-present signal — so for the rest of the
+            30-day (co-parent) / 60-day (claim) window NEITHER catch-up card
+            showed and a real gift recap was silently swallowed. Plus-media isn't
+            included (no recency window → would over-suppress) and is rare enough
+            to coexist. */}
+        {/* SinceLastVisitDigest RELOCATED to just below the hero (see after the
+            hero <motion.section>) so the evergreen header flows directly into the
+            evergreen hero with no cream banner wedged between them. Its reveal is
+            timer-latched (digestRevealed), so position is purely visual. */}
+
+        {/* Ancillary banner stack — held until the hero count-up settles
+            (bannersRevealed, ~1.3s) so the roll is the FIRST and only thing
+            moving on load, then these arrive one calm beat later. See the
+            bannersRevealed latch above. The SinceLastVisitDigest above keeps
+            its own (later) hold and stays outside this wrapper. */}
+        {bannersRevealed && (() => {
+          // Celebration cap: when a RARE lifetime moment is live (the kid claimed
+          // the fund at majority, or a co-parent just accepted), suppress the
+          // lesser celebrations below (birthday nudge, first-media, milestone) so
+          // the big moment stands alone instead of stacking 3-4 banners. Reuses
+          // the exact eligibility the away-digest already trusts (above) — no new
+          // or duplicated component logic; the rare banners still render (they win
+          // the slot), only the lesser ones yield. See lib/dashboard-banners.ts.
+          const hasRareCelebration =
+            (isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt
+              && !isKidAt18WelcomeBannerDismissed(activeFundId))
+            || (activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance
+              && !isCoparentAcceptedBannerDismissed(activeFundId, (dashboardSummary as any)?.coparentAcceptance?.collaboratorId));
+          return (<>
+        {/* Birthday moment — parent view only (the at-18 welcome below owns the
+            owner/handoff case). Proactive sibling of the away-digest: turns the
+            #1 gifting moment into a Share nudge. */}
+        {!isOwnerMode && !hasRareCelebration && (
+          <BirthdayMomentBanner
             fundId={activeFundId}
-            currentValue={rawTotalValue}
-            gifts={gifts as any}
-            isDemoAccount={isDemoAccount}
-            ready={Boolean(dashboardSummary)}
-            subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
+            childFirstName={recipientFirstNameDisplay}
+            birthdate={(activeFund as any)?.recipientBirthdate}
+            onShare={() => setShareModalOpen(true)}
           />
         )}
-
         <KidAt18WelcomeBanner
           kidClaimedAt={isOwnerMode ? ((dashboardSummary as any)?.kidClaimedAt as string | null | undefined) : null}
           fundId={activeFundId}
@@ -5649,13 +8294,7 @@ export default function Dashboard() {
             nonsense for the collaborator themselves, yet it was rendering on the
             co-parent's OWN dashboard. The server should also scope coparentAcceptance to
             the owner; this is the client guard. 2026-05-31, founder-reported. */}
-        {activeFundAccessRole === 'owner' && (
-          <CoparentAcceptedBanner
-            acceptance={(dashboardSummary as any)?.coparentAcceptance}
-            fundId={activeFundId}
-            childFirstName={recipientFirstNameDisplay}
-          />
-        )}
+        {/* STAGING: co-parent celebration MOVED below the hero (rendered here before). */}
 
         {/* Plus first-media unlock celebration — wired 2026-05-23 per
             Tier-2 deferred item #2. Fires once across the parent's
@@ -5669,7 +8308,7 @@ export default function Dashboard() {
             so it can bleed to a non-owner viewing the same fund on a shared
             browser / persona-switch — the same leak the at-18 welcome banner
             had. The accessRole signal is per-viewer and doesn't bleed. */}
-        {activeFundAccessRole === 'owner' && (
+        {activeFundAccessRole === 'owner' && !hasRareCelebration && (
           <PlusFirstMediaCelebrationBanner
             plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
             fundId={activeFundId}
@@ -5747,6 +8386,7 @@ export default function Dashboard() {
             confetti restraint and the threshold-specific emotional
             anchor (community-college, state-school-year, etc.) honor
             the locked discipline against AI-slop celebrations. */}
+        {!hasRareCelebration && (
         <MilestoneMoment
           isOwnerMode={isOwnerMode}
           currentValue={rawTotalValue}
@@ -5758,6 +8398,9 @@ export default function Dashboard() {
           }).length}
           peopleCount={contributorCount}
         />
+        )}
+        </>);
+        })()}
 
         {/* Closed-fund banner — calm, action-bearing. Renders when the
             active fund is in the 'closed' state. Mirror of the Settings
@@ -5802,838 +8445,13 @@ export default function Dashboard() {
 
 
 
-        {isPageLoading ? (
-          <div className="space-y-4">
-            <SkeletonBlock className="h-48 w-full" />
-            <div className="flex gap-3">
-              <SkeletonBlock className="h-10 flex-1" />
-              <SkeletonBlock className="h-10 flex-1" />
-              <SkeletonBlock className="h-10 flex-1" />
-            </div>
-          </div>
-        ) : (
-          <>
-            <motion.section
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div
-                className="shadow-premium-lg"
-                style={{
-                  background: "linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
-                  borderRadius: "var(--radius-container)",
-                  padding: "28px 28px 24px",
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-                data-testid="hero-card"
-              >
-                {/* Decorative orbs removed 2026-05-12. The two fully-rounded
-                    ambient-highlight circles (200px white-tint top-right +
-                    240px gold-tint bottom-left) read as AI-generated landing
-                    page decoration and violated the locked
-                    Apple-Settings register + the Mario-star framing
-                    ("if it shows up on every screen, nobody cares"). The
-                    green evergreen→evergreen-deep gradient IS the visual
-                    anchor; meaningful negative space carries more weight
-                    than decorative fill. See feedback_no_ai_slop.md and
-                    feedback_animation_primitives.md for the locked rules. */}
-                <div style={{ position: "relative", zIndex: 1 }}>
-                  {/* Fund identity row. Optional 32px child-avatar glyph
-                      to the left of the name lockup — small enough to
-                      stay in the iOS Contacts / Messages register
-                      (identity mark, not hero image), large enough to
-                      personalize the most-visited surface in the app.
-                      Renders only when the parent has explicitly set a
-                      child photo; falls back to the colored-initial
-                      pattern (same primitive as "Who Loves Emma" + the
-                      Memory Book gifter roster). Dark hero background
-                      gets a subtle white ring to lift the avatar from
-                      the gradient. The avatar is a glyph, not a tap
-                      target — taps on this row still belong to the
-                      fund-name dropdown / share affordance. */}
-                  {/* Identity row — bottom margin bumped from 6 to 14 so the
-                      32px child avatar doesn't crowd the 50px balance
-                      directly below. Old gap read as cramped because the
-                      avatar's bottom landed within ~6px of the balance's
-                      cap-line. 14 gives the balance proper breathing room
-                      without separating the two surfaces too far. */}
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-                      {/* Mobile-only — desktop already carries fund
-                          identity in the DesktopSidebar's nav and fund
-                          switcher, so a glyph here would be redundant
-                          chrome. md:hidden hides it at the >=768px
-                          breakpoint where the sidebar takes over. */}
-                      {(() => {
-                        const childPhotoUrl = (activeFund as any)?.childPhotoUrl as string | null | undefined;
-                        const childInitial = (recipientFirstNameDisplay || activeFund?.name || "").trim().slice(0, 1).toUpperCase() || "•";
-                        if (childPhotoUrl) {
-                          return (
-                            <div
-                              aria-hidden
-                              className="md:hidden"
-                              style={{
-                                width: 32, height: 32, flexShrink: 0,
-                                borderRadius: "50%",
-                                overflow: "hidden",
-                                boxShadow: "0 0 0 2px rgba(255,255,255,0.30), 0 1px 4px rgba(0,0,0,0.18)",
-                                background: "rgba(255,255,255,0.10)",
-                              }}
-                            >
-                              {/* Load hints added 2026-05-20 per user
-                                  report ('the photo is taking a long
-                                  time to load'). This is the focal-
-                                  point image of the Dashboard hero,
-                                  above the fold, on the most-visited
-                                  surface. fetchPriority='high' tells
-                                  the browser to prioritize this image
-                                  over other resource fetches on the
-                                  page. decoding='async' moves the
-                                  decode off the main thread so it
-                                  does not block other rendering.
-                                  loading='eager' is explicit (default
-                                  for above-the-fold, but clearer
-                                  here). See feedback_image_load_hints
-                                  _pattern.md for the canonical
-                                  treatment of focal-point images. */}
-                              <img
-                                src={childPhotoUrl}
-                                alt=""
-                                loading="eager"
-                                decoding="async"
-                                fetchPriority="high"
-                                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                              />
-                            </div>
-                          );
-                        }
-                        return (
-                          <div
-                            aria-hidden
-                            className="md:hidden"
-                            style={{
-                              width: 32, height: 32, flexShrink: 0,
-                              borderRadius: "50%",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              background: "rgba(255,255,255,0.12)",
-                              color: "rgba(255,255,255,0.92)",
-                              fontSize: 13, fontWeight: 700,
-                              boxShadow: "0 0 0 1.5px rgba(255,255,255,0.22)",
-                            }}
-                          >
-                            {childInitial}
-                          </div>
-                        );
-                      })()}
-                      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
-                        {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
-                        {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
-                        {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
-                      </div>
-                    </div>
-                    {/* Gift-count pill MOVED to the balance's caption below, to
-                        mirror DashboardLab: the peopled stat (Kiddo's structural
-                        edge over "me + my money" apps) belongs paired with the
-                        number, not as a chip in the identity row. Kept in sync
-                        for the pending lab->main port. */}
-                  </div>
-
-                  {/* Fund-switch skeleton: when dashboard-summary is loading AND
-                      the funds-list balance says this fund has real data, render
-                      a brief skeleton instead of flashing stale numbers from the
-                      previous fund or a wrong "Ready for the first gift" empty
-                      state. Brand-new funds (balance==0) skip this and
-                      land directly on the empty hero — that's the correct state
-                      for them and the optimistic create flow.
-
-                      DEMO EXCEPTION (2026-06-04, founder: "the main value rolls
-                      in ~6-7s, should come right after the chart"): the skeleton
-                      held the hero blank for the FULL dashboard-summary load —
-                      ~6s on the dev/demo remote DB — because it waits for the
-                      precise holdings-sum. But for demo funds `f.balance`
-                      already EQUALS the holdings market-value sum (verified), so
-                      `invested` falls back to it and the hero can paint the
-                      correct value the moment /api/funds lands (~1s), then roll
-                      to the (identical) fresh value. The skeleton only protects
-                      REAL funds, whose f.balance is a cost-basis-style field
-                      that would flash low then jump — so it stays for them. */}
-                  {dashboardSummaryLoading && !dashboardSummary && !isDemoAccount && getFundTotalValue(activeFund) > 0 ? (
-                    <>
-                      <div style={{ marginBottom: 10 }} data-testid="hero-loading-skeleton">
-                        <div className="animate-pulse rounded-lg" style={{ width: 180, height: 44, background: "rgba(255,255,255,0.10)", marginBottom: 10 }} />
-                        <div className="animate-pulse rounded-full" style={{ width: 110, height: 18, background: "hsl(var(--kiddo-gold) / 0.18)", marginBottom: 18 }} />
-                        <div className="animate-pulse rounded-2xl" style={{ width: "100%", height: 88, background: "rgba(255,255,255,0.05)" }} />
-                      </div>
-                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginTop: 4 }}>
-                        Loading {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your"} fund…
-                      </p>
-                    </>
-                  ) : totalValue === 0 && gifts.length === 0 ? (
-                    <>
-                      <div className="font-heading" style={{ fontSize: 46, fontWeight: 700, color: "white", letterSpacing: "-1.5px", lineHeight: 1, marginBottom: 8 }} data-testid="text-total-balance">
-                        $0.00
-                      </div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>
-                        Ready for the first gift.
-                      </p>
-                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.55, marginBottom: 22 }}>
-                        Share {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to get started.
-                      </p>
-                      {/* Acknowledge any scheduled recurring investment.
-                          Without this, the empty state reads as "nothing
-                          is happening" even when the parent has set up a
-                          recurring that's about to fire. Calm honesty per
-                          locked Kiddo register: the share CTA still
-                          headlines (gifter loop is the moat), but the
-                          parent's own setup work gets acknowledged. */}
-                      {(() => {
-                        // parentContributions is already scoped to activeFundId
-                        // via the useQuery key, so no per-fund filter needed.
-                        const fundRecurring = parentContributions.find((c) => c.status === "active");
-                        if (!fundRecurring) return null;
-                        const amt = parseFloat(String(fundRecurring.amount || "0"));
-                        if (!Number.isFinite(amt) || amt <= 0) return null;
-                        const freq = String(fundRecurring.frequency || "monthly").toLowerCase();
-                        const freqLabel =
-                          freq === "weekly" ? "week"
-                            : freq === "yearly" || freq === "annual" || freq === "annually" ? "year"
-                              : freq === "daily" ? "day"
-                                : "month";
-                        const nextDate = fundRecurring.nextRunDate ? new Date(fundRecurring.nextRunDate) : null;
-                        const nextLabel = nextDate && !Number.isNaN(nextDate.getTime())
-                          ? nextDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                          : null;
-                        return (
-                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 16 }}>
-                            Your ${amt.toFixed(0)}/{freqLabel} recurring fires{nextLabel ? ` next on ${nextLabel}` : " on schedule"}.
-                          </p>
-                        );
-                      })()}
-                      {age18Transition && age18Transition.daysUntil18 > 0 && (
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 14, marginBottom: 18 }}>
-                          {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)} · {age18Transition.countdownLabel}
-                        </p>
-                      )}
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                        {!isReadOnlyFund && (
-                          <button
-                            onClick={() => { haptic("medium"); handleShareLink(); }}
-                            data-testid="button-empty-state-share-link"
-                            className="rounded-full"
-                            style={{
-                              padding: "10px 20px", fontSize: 13, background: "hsl(var(--kiddo-gold))",
-                              color: "white", border: "none",
-                              fontWeight: 700, cursor: "pointer",
-                              display: "inline-flex", alignItems: "center", gap: 6,
-                            }}
-                          >
-                            <Share2 size={13} color="white" />
-                            Share
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* "Today" kicker — creates timeframe symmetry with the
-                          "$X at 65" projection button below. Without it, the
-                          parent has to triangulate that the big white number
-                          is the present-day balance vs the long-horizon
-                          projection. Same micro-label register used by the
-                          "Latest gift" / "Recent gift" labels in the gift
-                          strip below — calm Settings-app uppercase, muted
-                          on the green hero. Intentionally NOT labeled
-                          "Emma's fund value" or "Kiddo value" — those clutter
-                          the anchor number and read as Acorns/Mint chrome. */}
-                      {/* Kicker swaps from "Today" to the scrubbed date
-                          while the parent is dragging through the chart.
-                          Same uppercase Settings-app register either way
-                          — the visual continuity is what makes the swap
-                          feel native instead of a separate tooltip
-                          surface. transition smooths the cross-fade so
-                          rapid scrubbing doesn't flicker. */}
-                      <div
-                        style={{
-                          fontSize: 10.5,
-                          fontWeight: 700,
-                          color: "rgba(255,255,255,0.42)",
-                          textTransform: "uppercase" as const,
-                          letterSpacing: "0.08em",
-                          marginBottom: 6,
-                          transition: "color 0.2s",
-                        }}
-                        data-testid="text-hero-balance-today-kicker"
-                      >
-                        {isScrubbing
-                          ? scrubbedTrendPoint!.label
-                          : showHandoffKeepsake
-                            ? `Handed off · ${handoffDateLabel}`
-                            : isPreviousOwner
-                              ? `${recipientFirstNameDisplay || "Their"}'s balance now`
-                              : "Today"}
-                      </div>
-                      {/* Shared-fund badge. Appears only when the active fund
-                          is one the parent was invited to (not their own).
-                          Sits between the kicker and the balance so it's
-                          read as context BEFORE the number, not as a
-                          decoration after. Viewer / co-admin distinction
-                          is reserved for the Settings page; the hero just
-                          says "this isn't your fund originally." */}
-                      {isSharedFund && (
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "3px 10px",
-                            marginBottom: 8,
-                            borderRadius: 9999,
-                            background: "rgba(255,255,255,0.12)",
-                            border: "1px solid rgba(255,255,255,0.18)",
-                            fontSize: 10.5,
-                            fontWeight: 600,
-                            color: "rgba(255,255,255,0.78)",
-                            letterSpacing: "0.03em",
-                          }}
-                          data-testid="badge-shared-fund"
-                        >
-                          {isPreviousOwner
-                            ? `📦 Transferred to ${recipientFirstNameDisplay || "them"} · view only`
-                            : `🤝 Shared with you${isViewerOnly ? " · view-only" : ""}`}
-                        </div>
-                      )}
-                      {/* Owner-side ownership record — the symmetric counterpart to
-                          the previous owner's "Transferred to X · view only" badge.
-                          The at-18 welcome banner is one-time (~60d after claim), so
-                          a settled adult owner otherwise had no persistent marker that
-                          this account became theirs. Derived from transferredAt. */}
-                      {isOwnerMode && (activeFund as any)?.transferredAt && (
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "3px 10px",
-                            marginBottom: 8,
-                            borderRadius: 9999,
-                            background: "rgba(255,255,255,0.12)",
-                            border: "1px solid rgba(255,255,255,0.18)",
-                            fontSize: 10.5,
-                            fontWeight: 600,
-                            color: "rgba(255,255,255,0.78)",
-                            letterSpacing: "0.03em",
-                          }}
-                          data-testid="badge-owner-took-ownership"
-                        >
-                          📦 You took ownership · {new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                        </div>
-                      )}
-                      {/* Balance — uses brand serif via .font-heading instead of
-                          a hardcoded Lora override. The flash color uses the
-                          --kiddo-gold-light token for the freshening cue.
-                          During chart scrub, the balance shows the scrubbed
-                          historical value AND the freshening cue is
-                          suppressed (the value change is the user's intent,
-                          not a system event — animating it would be confusing
-                          theatre). aria-live flips to "off" during scrub OR
-                          during the count-up animation so screen readers
-                          don't fire 60 announcements per second while
-                          either kind of value-change is happening. When the
-                          animation settles, aria-live returns to "polite"
-                          and the final value is announced exactly once.
-                          Pattern locked in `project_count_up_animation_consistency.md`. */}
-                      {/* Stagger reveal added 2026-05-12 — the balance fades in
-                          AFTER the parent hero card has settled + the kicker /
-                          shared-badge above are already visible. Creates the
-                          Apple-cinematic "everything settles, then the hero
-                          number reveals last with count-up" moment per the
-                          user's locked intuition. 220ms delay matches the
-                          hero card's own fade-in finish; the count-up
-                          (1200ms) then runs as the focal animation. Per
-                          feedback_animation_primitives.md: staged reveals +
-                          count-ups are approved primitives. Skipped on chart-
-                          scrub (the value swap there is user-driven, not
-                          system-driven, so the stagger would feel like lag). */}
-                      <motion.div
-                        ref={heroBalanceRef}
-                        className="font-heading"
-                        initial={isScrubbing ? false : { opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.32, delay: 0.22, ease: "easeOut" }}
-                        style={{
-                          fontSize: 50,
-                          fontWeight: 700,
-                          // Gold while EITHER the count-up is running OR a new gift
-                          // just arrived. The newGiftFlash window holds the cue lit
-                          // for ~3.8s after arrival so the gold-glow moment isn't
-                          // blink-and-miss. Count-up duration bumped to 1200ms
-                          // 2026-05-12 (was 900ms default) — hero balance is the
-                          // focal element on the duration ladder.
-                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
-                          letterSpacing: "-1.5px",
-                          lineHeight: 1,
-                          marginBottom: 4,
-                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
-                          transition: "color 0.55s ease, filter 0.55s ease",
-                        }}
-                        data-testid="text-total-balance"
-                        aria-live={isScrubbing || balanceAnimating ? "off" : "polite"}
-                      >
-                        {isScrubbing
-                          ? formatCurrency(scrubbedTrendPoint!.value)
-                          : showHandoffKeepsake
-                            ? formatCurrency(handoffKeepsakeValue)
-                            : formatCurrency(displayHeroBalance)}
-                      </motion.div>
-
-                      {/* Social-proof caption — the balance's attribution. Pairs
-                          the number with WHO built it (Kiddo's structural edge
-                          over every "me + my money" app: the value is PEOPLED).
-                          Promoted from a gold chip in the identity row so anchor
-                          #1 reads "$X, built by real people," not a figure with a
-                          footnote. Mirrors DashboardLab; kept in sync for the
-                          pending port. Same copy pattern; weight + position
-                          upgraded. Hidden while scrubbing and on empty funds. */}
-                      {!isScrubbing && (() => {
-                        const validCount = gifts.filter(g => {
-                          const s = String(g.status || "").toLowerCase();
-                          return s !== "failed" && s !== "refunded";
-                        }).length;
-                        if (validCount <= 0) return null;
-                        return (
-                          <p
-                            style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-gold-light))", letterSpacing: "0.01em", marginTop: 2, marginBottom: 16 }}
-                            data-testid="text-hero-social-proof"
-                          >
-                            {validCount} {validCount === 1 ? "gift" : "gifts"}
-                            {contributorCount > 0 && (
-                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
-                            )}
-                          </p>
-                        );
-                      })()}
-
-                      {/* Hero gain pill removed — the +$X all-time gain (and its
-                          percent) was duplicating what the lifetime stats row's
-                          "Growth" card already shows below. The hero stays as
-                          the emotional anchor surface (balance · recent gift ·
-                          share · projection); the metrics-shaped numbers live
-                          in the metrics row and on the chart's range pill.
-                          What stays here: the "$X invested" informational
-                          fallback when the parent has invested but hasn't yet
-                          accrued meaningful gain, and the empty-state warmth
-                          ("Growing for {child}") for brand-new funds. */}
-                      {/* "$X invested" fallback dropped — when balance == invested
-                          (the common no-gain case) it was restating the balance
-                          number directly above. When balance > invested or
-                          balance < invested, the lifetime stats row's Growth
-                          card already carries that delta. The hero stays as
-                          the emotional anchor; metrics-shaped numbers live in
-                          the metrics row. Only the truly-empty fund still
-                          shows the "Growing for {child}" warmth, and the
-                          settling-cash button still appears alongside when
-                          there's cash in flight. */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                        {invested === 0 && rawTotalValue === 0 && (
-                          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", fontWeight: 500 }}>
-                            Growing for {recipientFirstNameDisplay || "them"}
-                          </span>
-                        )}
-                        {/* Hero "$X cash" stat removed 2026-06-17 (founder
-                            catch). Metrics-shaped number in the emotional hero +
-                            redundant with the balance total and the dedicated
-                            "Cash is waiting" card below. */}
-                      </div>
-
-                      {/* Settling row - shown whenever there's pending cash */}
-                      {settling > 0 && (
-                        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                          <div className="rounded-full" style={{
-                            display: "inline-flex", alignItems: "center", gap: 6,
-                            background: "hsl(var(--kiddo-gold-light) / 0.12)", border: "1px solid hsl(var(--kiddo-gold-light) / 0.25)",
-                            padding: "4px 12px",
-                          }}>
-                            <span style={{ fontSize: 10, lineHeight: 1 }}>🌱</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--kiddo-gold-light) / 0.9)" }}>
-                              {formatCurrency(settling)} settling
-                            </span>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>
-                              · 1–2 business days
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Cycling gift strip */}
-                      {heroCards.length > 0 && (() => {
-                        // Key the card by gift id (with index as fallback) so a
-                        // brand-new gift arriving at index 0 while the user was
-                        // already parked on index 0 still drives an
-                        // enter/exit animation — keying by `heroGiftIdx` alone
-                        // would silently swap the contents and the parent
-                        // would miss the arrival. The card flashes gold only
-                        // when newGiftFlash is true AND the user is looking
-                        // at index 0 (the latest gift); if they manually
-                        // dotted away to an older gift mid-flash, we don't
-                        // mis-paint that older gift as "just arrived."
-                        const cardKey = heroCards[heroGiftIdx]?.id ?? `idx-${heroGiftIdx}`;
-                        const cardIsFlashing = newGiftFlash && heroGiftIdx === 0;
-                        return (
-                        // marginTop gives the now-borderless gift line a clear beat of
-                        // air above so it reads as its own quiet moment between the two
-                        // anchors (rhythm), not a row stacked tight under the balance.
-                        <div style={{ marginTop: 10, marginBottom: 20 }}>
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={cardKey}
-                              // Slow-in entrance when arriving: a gentle scale +
-                              // lift from 0.97 / +4px, eased with the standard
-                              // out-expo curve. This is the approved
-                              // "anticipation + follow-through" primitive — no
-                              // bounce, no sparkle, no reveal-sweep.
-                              initial={{ opacity: 0, scale: cardIsFlashing ? 0.97 : 1, y: cardIsFlashing ? 4 : 0 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: cardIsFlashing ? 0.55 : 0.35, ease: cardIsFlashing ? [0.16, 1, 0.3, 1] : "easeOut" }}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => {
-                                const heroGift = heroCards[heroGiftIdx];
-                                if (!heroGift?.id || !activeFundId) return;
-                                haptic("selection");
-                                setLocation(`/memory/${activeFundId}?gift=${heroGift.id}`);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  const heroGift = heroCards[heroGiftIdx];
-                                  if (!heroGift?.id || !activeFundId) return;
-                                  haptic("selection");
-                                  setLocation(`/memory/${activeFundId}?gift=${heroGift.id}`);
-                                }
-                              }}
-                              style={{
-                                // Gift-as-LINE (2026-06-07): at rest the recent gift is a
-                                // flush whisper between the two hero anchors (Today's $X
-                                // above, "$X at 65" below) — no fill, no border, no box. The
-                                // hero used to read as THREE competing blocks because this
-                                // was the ONLY filled+bordered container in the green field;
-                                // dropping the box lets the two money anchors be the stars
-                                // and this be the quiet story between them. On a NEW gift
-                                // (cardIsFlashing) the founder-tuned moment is preserved: it
-                                // blooms into the gold-edged card + glow for the ~3.8s flash
-                                // window, then settles back to a line. Padding is constant
-                                // and the -10 horizontal bleed cancels it, so the text stays
-                                // flush-left with the balance and NOTHING shifts when it
-                                // blooms/settles — only bg / border / shadow cross-fade.
-                                // Kept in sync with DashboardLab.tsx (port pending).
-                                background: cardIsFlashing ? "rgba(255,255,255,0.12)" : "transparent",
-                                borderRadius: 16,
-                                padding: "8px 10px",
-                                marginLeft: -10,
-                                marginRight: -10,
-                                border: cardIsFlashing
-                                  ? "1px solid hsl(var(--kiddo-gold-light) / 0.55)"
-                                  : "1px solid transparent",
-                                boxShadow: cardIsFlashing
-                                  ? "0 0 22px hsl(var(--kiddo-gold) / 0.30)"
-                                  : "none",
-                                cursor: "pointer",
-                                transition: "background 0.55s ease, border-color 0.55s ease, box-shadow 0.55s ease",
-                              }}
-                              data-testid="card-hero-recent-gift"
-                            >
-                              {(() => {
-                                const g = heroCards[heroGiftIdx];
-                                const ticker = (g as any)?.selectedTicker as string | null | undefined;
-                                const holdingName = ticker
-                                  ? friendlyHoldingName(ticker, holdings.find(h => h.ticker === ticker)?.name)
-                                  : null;
-                                const amt = parseFloat(String(g?.amount || "0"));
-                                const netAmt = parseFloat(String(g?.netAmount || "0"));
-                                const investedAmt = netAmt > 0 ? netAmt : amt;
-                                const giftEventName = g?.eventId
-                                  ? (events.find(e => e.id === g.eventId)?.name ?? null)
-                                  : null;
-                                // Destination derivation. Prior version only showed
-                                // a destination when the gift had a single
-                                // selectedTicker — gifts auto-allocated across the
-                                // managed mix and cash-parked gifts both rendered
-                                // an empty bottom-info row, which read as "this
-                                // gift had less context" even though they were
-                                // identical events. Now: every settled gift gets
-                                // a destination line. Order:
-                                //   1. selectedTicker → specific holding name
-                                //   2. cash-park (explicit or fallback) → "Held as cash"
-                                //   3. anything else settled → "{Child}'s mix"
-                                //   4. still in flight → no line (status pill below
-                                //      already carries that signal in non-hero
-                                //      surfaces; hero stays calm)
-                                const giftStatus = String((g as any)?.status || "").toLowerCase();
-                                const giftExec = String((g as any)?.executionModel || "").toLowerCase();
-                                const isSettled = ["invested", "settled", "completed"].includes(giftStatus);
-                                const childPossessive = recipientFirstNameDisplay
-                                  ? `${recipientFirstNameDisplay}'s`
-                                  : "the";
-                                const destinationName = holdingName
-                                  ? holdingName
-                                  : isSettled
-                                  ? (giftExec === "cash" ? "cash" : `${childPossessive} mix`)
-                                  : null;
-                                const destinationPrefix = destinationName === "cash" ? "Held as " : "Went into ";
-                                // "On this day" anniversary card — the memory-machine
-                                // beat in the cycler rotation. Same card chrome, same
-                                // tap-through to the Memory Book entry; only the story
-                                // changes: when it was given, and what that exact gift
-                                // is worth now (real shares at the live price).
-                                const onThisDay = Boolean((g as any)?.__onThisDay);
-                                const yearsAgo = Number((g as any)?.__yearsAgo || 0);
-                                const otdNowWorth = (g as any)?.__nowWorth as number | null | undefined;
-                                return (
-                                  <>
-                                    <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 3 }}>
-                                      {/* Exact-day match = "On this day"; the demo's
-                                          grace-window match (±week) gets the honest
-                                          eyebrow "From the Memory Book" — which is also
-                                          literally where tapping the card lands. */}
-                                      {onThisDay ? (Number((g as any)?.__daysOff || 0) > 0 ? "From the Memory Book" : "On this day") : heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
-                                    </p>
-                                    <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
-                                      {onThisDay
-                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${formatCurrency(amt)} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago ${Number((g as any)?.__daysOff || 0) > 0 ? "this week" : "today"}.`
-                                        : `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added ${formatCurrency(amt)} to ${isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.`}
-                                    </p>
-                                    {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /
-                                        🌱 Settling / No thanks yet) intentionally dropped from the
-                                        hero. The green section is the parent's emotional/celebratory
-                                        anchor surface — those pills are a task/state register that
-                                        belongs in the Activity feed, the Thank You manager, and the
-                                        bell. Mixing them into the hero converted an emotional surface
-                                        into a partial task list and created light guilt pressure
-                                        ("you haven't thanked uncle yet") at exactly the moment the
-                                        parent should feel good about the fund. Per the bell-vs-tab
-                                        semantic split: hero = anchor, Activity = ledger, bell = needs
-                                        glance. */}
-                                    {/* Bottom info row — height-reserved so a gift with no
-                                        holding / event / message doesn't shrink the card vs gifts
-                                        that have all three. Same render priority as before. */}
-                                    <div style={{ minHeight: 16, marginTop: 8 }}>
-                                      {onThisDay && typeof otdNowWorth === "number" && otdNowWorth > 0 ? (
-                                        // The payoff line: this exact gift's value today.
-                                        // Real shares at the live price; "~" because prices
-                                        // move. Only renders when honestly computable
-                                        // (single-ticker gifts with recorded shares).
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.3 }}>
-                                          Now worth ~{formatCurrency(otdNowWorth)}
-                                          {holdingName ? ` · ${holdingName}` : ""}
-                                        </p>
-                                      ) : g?.message ? (
-                                        // The WORDS first. A gift's actual message is the
-                                        // human, per-gift-VARIED content — promoted ABOVE the
-                                        // destination so the strip reads as people who showed
-                                        // up, not the same "Went into the mix" on every card.
-                                        // One line, truncated. Kept in sync with DashboardLab.
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontStyle: "italic", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                                          "{g.message}"
-                                        </p>
-                                      ) : giftEventName ? (
-                                        // Then the occasion — still specific to this gift.
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
-                                          {giftEventName}
-                                        </p>
-                                      ) : destinationName ? (
-                                        // LAST resort: the destination. True of nearly every
-                                        // gift, so only shown when there's no message and no
-                                        // occasion to say instead. Dollar amount intentionally
-                                        // dropped (the narrative line above already shows it).
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
-                                          {destinationPrefix}{destinationName}
-                                        </p>
-                                      ) : null}
-                                    </div>
-                                  </>
-                                );
-                              })()}
-                            </motion.div>
-                          </AnimatePresence>
-                          {heroCards.length > 1 && (
-                            <div style={{ display: "flex", gap: 5, marginTop: 8, justifyContent: "center" }}>
-                              {heroCards.slice(0, 5).map((_, dotIdx) => (
-                                <button
-                                  key={`dot-${dotIdx}`}
-                                  type="button"
-                                  onClick={() => setHeroGiftIdx(dotIdx)}
-                                  style={{
-                                    width: dotIdx === heroGiftIdx ? 18 : 6,
-                                    height: 6,
-                                    borderRadius: 3,
-                                    background: dotIdx === heroGiftIdx ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.22)",
-                                    border: "none",
-                                    padding: 0,
-                                    cursor: "pointer",
-                                    transition: "all 0.3s ease",
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        );
-                      })()}
-
-                      {/* CTA row. Share button hidden for read-only roles
-                          (viewers + previous owners post-handoff). For a
-                          previous owner, the gift link is the kid's now;
-                          a Share affordance pointing at their old fund
-                          would invite gifts that go to a fund they no
-                          longer control. Cleaner to hide entirely than
-                          to leave a 403-bound dead CTA. */}
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                        {!isReadOnlyFund && (
-                          <button
-                            onClick={() => { haptic("medium"); handleShareLink(); }}
-                            data-testid="button-hero-share-link"
-                            className="kiddo-press"
-                            style={{
-                              padding: "10px 20px", fontSize: 13,
-                              background: "hsl(var(--kiddo-gold))", color: "white",
-                              border: "none", borderRadius: 9999,
-                              fontWeight: 700, cursor: "pointer",
-                              display: "inline-flex", alignItems: "center", gap: 6,
-                            }}
-                          >
-                            <Share2 size={13} color="white" />
-                            Share
-                          </button>
-                        )}
-                        {(() => {
-                          // Hero CTA = the long-horizon emotional anchor. Math
-                          // (two-phase contribution + compound, 7% yearly average,
-                          // UTMA-aware: contributions stop at 18) lives in the
-                          // `heroProjectedAt65` useMemo at the top of this
-                          // component so the cached-first-number hook can drive
-                          // the count-up animation. `displayHeroProjectedAt65`
-                          // paints the LAST cached projection instantly on load
-                          // and animates UP to the new value when fresher data
-                          // lands. Acorns-style: never animates downward, never
-                          // shows a skeleton, the parent always sees a number.
-                          const formatted = new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                            maximumFractionDigits: 0,
-                          }).format(displayHeroProjectedAt65);
-                          return (
-                            <button
-                              onClick={() => {
-                                haptic("selection");
-                                if (activeFundId) setLocation(`/projection/${activeFundId}`);
-                              }}
-                              data-testid="button-hero-view-fund"
-                              style={{
-                                background: "rgba(255,255,255,0.14)",
-                                border: "1px solid rgba(255,255,255,0.28)",
-                                borderRadius: 9999,
-                                padding: "10px 18px",
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: "white",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                              title={`See ${isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} full potential on the projection page`}
-                            >
-                              <span style={{ fontWeight: 800, letterSpacing: "0.01em" }}>{formatted}</span>
-                              <span style={{ opacity: 0.78, fontSize: 11.5, fontWeight: 600 }}>at 65</span>
-                              <span style={{ opacity: 0.85 }}>→</span>
-                            </button>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </motion.section>
-
-            {/* Parent's "your part of the story" moment. Post-handoff the parent
-                becomes a previous owner (read-only); the cold "transferred · view
-                only" hero badge is otherwise the only acknowledgment. This calm
-                card honors the years they tended the fund and plants the PARENT
-                side of the generational loop: the person who just finished one
-                handoff is the most likely to start the next. Persistent + dignified,
-                no action required, never naggy. Renders for any post-handoff parent
-                (real, or in the demo Marcus viewing Mia's transferred fund). */}
-            {isPreviousOwner && (
-              <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="card-parent-handoff-moment">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.12)] text-[hsl(var(--kiddo-evergreen))]">
-                    <Heart size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-heading text-base font-semibold text-foreground">Your part of the story</p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      It's {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "theirs"} now, but you're the one who built it up over the years, and that doesn't change. When you're ready to do this for another kid, you already know how.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* The loop's second turn — post-handoff ADULT OWNER only (isOwnerMode).
-                The person who lived the whole 18-year arc is the warmest possible next
-                custodian; this is the doorway to starting a fund for THEIR kid (the
-                same Family-tier funnel — the loop closes generationally). Calm and
-                optional, never a paywall — the agency lines in YourStory/Age18Welcome
-                plant the intent; this is the door. Mutually exclusive with the
-                previous-owner card above. */}
-            {isOwnerMode && (
-              <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.30)] bg-[hsl(var(--kiddo-gold)/0.06)] p-5" data-testid="card-start-a-fund-doorway">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.15)] text-[hsl(var(--kiddo-gold-ink))]">
-                    <Sprout size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-heading text-base font-semibold text-foreground">Start one for someone you love</p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      Someone started this for you before you could ask. When there's a kid you want to show up for, you already know how: quietly, early, for years.
-                    </p>
-                    {/* Logged-in owner → open the add-a-child sheet inline via
-                        the canonical ADD_FUND_EVENT (same path as the header /
-                        sidebar / funds-overview triggers), NOT the public
-                        /get-started onboarding funnel. handleAddFund opens the
-                        AddFundSheet (free for the first kid; the gate now
-                        correctly ignores their own owner fund). */}
-                    <button
-                      type="button"
-                      onClick={() => { haptic("selection"); window.dispatchEvent(new CustomEvent(ADD_FUND_EVENT)); }}
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:opacity-75"
-                      data-testid="button-start-a-fund-doorway"
-                    >
-                      Start a fund →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Glanceable recurring-status chip — "what's on" without scrolling
-                to the recurring card. Tap to manage (jumps + halos the recurring
-                section). Reflects the VIEWER'S OWN schedules (a graduated owner
-                sees their own, not the parent's handed-off plan), so the empty
-                state reads as an invitation to start their own. Hidden for
-                read-only viewers (previous owner / viewer) — they can't manage. */}
             {!isReadOnlyFund && activeFund && totalValue >= 0 && (() => {
               const mine = (parentContributions || []).filter(
                 (c: any) => c?.userId === (user as any)?.id && c?.pauseReason !== "majority_handoff",
               );
               const active = mine.filter((c: any) => String(c?.status || "").toLowerCase() === "active");
               const paused = mine.filter((c: any) => String(c?.status || "").toLowerCase() === "paused");
-              let icon = <Repeat size={14} />;
-              let label: string;
+              let statusLine: string;
               let toneClass: string;
               let onClick: () => void;
               if (active.length > 0) {
@@ -6641,7 +8459,9 @@ export default function Dashboard() {
                   .map((c: any) => (c?.nextRunDate ? new Date(c.nextRunDate).getTime() : 0))
                   .filter((t: number) => t > 0)
                   .sort((a: number, b: number) => a - b)[0];
-                const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
+                // STAGING: timeZone UTC matches the recurring-section date (a date-only
+                // field shifts back a day in local time → the "Jul 2 vs Jul 3" mismatch).
+                const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : null;
                 const per = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
                 const cadences = new Set(active.map((c: any) => c.frequency || "monthly"));
                 if (active.length === 1 || cadences.size === 1) {
@@ -6650,35 +8470,239 @@ export default function Dashboard() {
                   // equivalent, which for a daily schedule gave a random-looking
                   // "$760.94/mo" that matched nothing else on screen.
                   const total = active.reduce((s: number, c: any) => s + parseFloat(String(c?.amount || "0")), 0);
-                  label = `${formatMoneyFriendly(total)}/${per((active[0] as any)?.frequency)} recurring${active.length > 1 ? ` · ${active.length} active` : ""}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                  statusLine = `${formatMoneyFriendly(total)} a ${per((active[0] as any)?.frequency)}${nextLabel ? ` · next ${nextLabel}` : ""}`;
                 } else {
                   // Mixed cadences ($25/day + $10/year): no honest single amount, so
                   // a combined monthly-equivalent reads as a random number. Show the
                   // count; the per-schedule rows below carry the real amounts.
-                  label = `${active.length} active recurring${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                  statusLine = `${active.length} recurring active${nextLabel ? ` · next ${nextLabel}` : ""}`;
                 }
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)]";
                 onClick = () => summaryScrollTo("recurring");
               } else if (paused.length > 0) {
-                label = "Recurring paused · tap to resume";
+                statusLine = "Recurring paused · tap to resume";
                 toneClass = "text-amber-700 border-amber-300/60 bg-amber-50";
                 onClick = () => summaryScrollTo("recurring");
               } else {
-                label = isOwnerMode ? "Start your own recurring" : "Set up recurring";
+                statusLine = "Set up monthly";
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-dashed border-[hsl(var(--kiddo-evergreen)/0.4)] bg-[hsl(var(--kiddo-evergreen)/0.04)]";
-                onClick = () => { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); };
+                // Consistent with the active/paused states above: this status chip
+                // scrolls to the "Invest in your fund" section (where "+ Add another"
+                // starts recurring) rather than jumping straight to a modal — so one
+                // control behaves one way. (Was: opened the auto-invest modal directly.)
+                onClick = () => summaryScrollTo("recurring");
+              }
+              // LAB: until the recurring data lands, `active`/`paused` are empty
+              // so this falls to "Set up recurring" even when there IS recurring
+              // (a wrong, jumpy CTA). Hold a calm pulse until we actually know.
+              // STAGING: the two ways a parent adds to the fund, side by side, both
+              // one tap. LEFT = the recurring chip → opens the recurring (auto-invest)
+              // modal (the popup we already have); RIGHT = "Add once" → opens the
+              // existing one-time contribution modal. Plain words, obvious actions.
+              const openRecurring = () => {
+                if (hasAutoInvestAccess) { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }
+                else { setAutoInvestUpgradeOpen(true); }
+              };
+              const openOneTime = () => {
+                setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto");
+                setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote("");
+                setOneTimeNoteSaved(false); setOneTimeModalOpen(true);
+              };
+              if (!heroDataReady) {
+                return (
+                  <div className="animate-pulse" aria-hidden style={{ height: 44, width: "100%", maxWidth: "100%", borderRadius: 16, background: "hsl(var(--kiddo-evergreen) / 0.08)", marginTop: 12 }} />
+                );
               }
               return (
-                <button
-                  type="button"
-                  onClick={() => { haptic("selection"); onClick(); }}
-                  data-testid="chip-recurring-status"
-                  className={`mt-3 w-full flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
+                <div className="mt-3 flex items-stretch gap-2">
+                  {/* Recurring — opens the recurring/auto-invest modal */}
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); openRecurring(); }}
+                    data-testid="chip-recurring-status"
+                    className={`flex-1 min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
+                  >
+                    <Repeat size={14} className="shrink-0" />
+                    <span className="flex-1 min-w-0 truncate">{statusLine}</span>
+                  </button>
+                  {/* One-time — opens the existing one-time contribution modal */}
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); openOneTime(); }}
+                    data-testid="chip-add-onetime"
+                    className="shrink-0 flex items-center gap-1.5 rounded-2xl border px-3.5 py-2.5 text-[13px] font-semibold transition-colors text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] hover:bg-[hsl(var(--kiddo-evergreen)/0.1)]"
+                  >
+                    <Plus size={14} className="shrink-0" />
+                    One-time
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Quick links — three preview shortcuts (STAGING: Share dropped — it was
+                a 3rd copy of the hero's Share; and the row MOVED up here to cluster with
+                the hero actions instead of being wedged between the data sections, where
+                it read as belonging to "fund so far").
+                  1. Gifter page    → preview from the gifter's perspective
+                  2. {Child}'s view → preview from the kid's perspective (mobile + KidView page)
+                  3. Occasion       → DYNAMIC: most-relevant active occasion as a one-tap
+                                      preview/share, falling back to the "New occasion"
+                                      creator when no active occasion exists.
+                Hard rule: this row is for PREVIEWS only. Inline actions that already have
+                dedicated dashboard sections (Add investment, Memory Book) belong in those
+                sections — duplicating them here is interaction debt. See
+                feedback_quick_links_principle.md.
+                Mobile renders compact icon+micro-label pills; desktop bumps tile/label
+                sizes via md: classes so the same component breathes on a wider canvas. */}
+            {activeFund && (() => {
+              const childFirst = (recipientFirstNameDisplay || "").trim() || "Kid";
+              const fundSlug = (activeFund as any).slug;
+              const activeOccasion = pickActiveOccasion(events);
+              // Compute a tight "label" for the occasion button.
+              //   ≤7 days: urgency phrasing — "in Xd" or "Tomorrow" or "Today"
+              //   ≤30 days: same urgency phrasing (still feel-it-coming)
+              //   else: short event name (truncated to ~10ch)
+              //   no occasion: "New occasion"
+              const occasionEmoji = activeOccasion ? eventEmoji(activeOccasion.eventType) : null;
+              const occasionDays = activeOccasion?.eventDate
+                ? Math.ceil((new Date(activeOccasion.eventDate).getTime() - Date.now()) / 86400000)
+                : null;
+              const occasionLabel = activeOccasion
+                ? (occasionDays !== null && occasionDays <= 30
+                    ? (occasionDays === 0 ? "Today" : occasionDays === 1 ? "Tomorrow" : `in ${occasionDays}d`)
+                    : (() => {
+                        const raw = String(activeOccasion.name || "Occasion").trim();
+                        // Keep the FULL name (no "{child}'s" strip — founder call);
+                        // just never cut mid-word. "Theo's Birthday" (the common
+                        // case) now fits; only a longer name truncates, and only at
+                        // a word boundary, so it's recoverable not "Theo's Bi…".
+                        // (Exact pill width may want a founder eye on a long name.)
+                        if (raw.length <= 18) return raw;
+                        const cut = raw.slice(0, 18);
+                        const sp = cut.lastIndexOf(" ");
+                        return `${(sp > 6 ? cut.slice(0, sp) : cut).trim()}…`;
+                      })())
+                : "New occasion";
+              const occasionIsImminent = activeOccasion && occasionDays !== null && occasionDays <= 30;
+              const occasionSlug = activeOccasion?.slug;
+              const handleOccasionTap = () => {
+                haptic("selection");
+                if (activeOccasion && fundSlug && occasionSlug) {
+                  // Preview the occasion's public gifter page (e.g. /emma/birthday-2026)
+                  window.open(`/${fundSlug}/${occasionSlug}`, "_blank");
+                } else {
+                  // Empty state → create one. Same affordance, contextual job.
+                  setCreateEventSheetOpen(true);
+                }
+              };
+              // Responsive tile + label classes. Mobile keeps the compact original
+              // sizes; md+ scales up so desktop reads as a proper quick-links panel
+              // instead of a tiny mobile row marooned in white space.
+              const btn = "flex flex-1 min-w-0 flex-col items-center gap-[5px] md:gap-2 py-1 md:py-2 select-none cursor-pointer transition-all active:opacity-50 active:scale-95 bg-transparent border-0";
+              const tile = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-cream))] text-[hsl(var(--kiddo-evergreen))]";
+              const tileGold = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-gold)/0.14)] text-[hsl(var(--kiddo-ink))]";
+              const lbl = "text-[9.5px] md:text-xs font-medium text-muted-foreground leading-tight text-center";
+              const lblGold = "text-[9.5px] md:text-xs font-semibold text-[hsl(var(--kiddo-ink))] leading-tight text-center";
+              return (
+                <motion.section
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, delay: 0.011 }}
+                  // STAGING: separate the PREVIEW links from the contribution actions
+                  // above. The two-action row is mt-3 below the hero (it belongs WITH the
+                  // hero); a wider mt-5 here breaks the "blob of buttons" so the quick
+                  // links read as their own lighter, secondary group — "add to the fund"
+                  // vs "go look at something." Whitespace, not a divider (toolbars don't
+                  // need chrome, and we're cutting it).
+                  // md:hidden — on DESKTOP the sidebar Quick Links own these (same 3
+                  // links), so the in-content row is mobile-only to kill the desktop
+                  // duplication. One quick-links home per breakpoint.
+                  className="mt-5 md:hidden"
                 >
-                  <span className="shrink-0">{icon}</span>
-                  <span className="flex-1 min-w-0 truncate">{label}</span>
-                  <ChevronRight size={15} className="shrink-0 opacity-60" aria-hidden />
-                </button>
+                  <div className="flex w-full">
+                    {/* STAGING: Share pill removed — it was the 3rd copy of Share on
+                        one screen (the hero's gold "Share Theo's link" button + the
+                        header + here). The hero owns Share; this row is now a clean
+                        PREVIEW set: gifter's view / kid's view / the occasion. */}
+                    {/* 2. Gifter page — preview from gifter perspective.
+                        Wouter <Link> for proper SPA nav. Pass props directly on
+                        Link (no inner <a>) so wouter renders one clean anchor
+                        with its own click handler — no merging/race weirdness. */}
+                    {fundSlug ? (
+                      <Link
+                        href={`/${fundSlug}`}
+                        className={btn}
+                        data-testid="pill-gifter-page"
+                        onClick={() => haptic("selection")}
+                      >
+                        <span className={tile}><Eye size={14} className="md:hidden" strokeWidth={2} /><Eye size={18} className="hidden md:block" strokeWidth={2} /></span>
+                        <span className={lbl}>Gifter page</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className={btn}
+                        data-testid="pill-gifter-page"
+                        style={{ pointerEvents: "none", opacity: 0.5 }}
+                      >
+                        <span className={tile}><Eye size={14} className="md:hidden" strokeWidth={2} /><Eye size={18} className="hidden md:block" strokeWidth={2} /></span>
+                        <span className={lbl}>Gifter page</span>
+                      </button>
+                    )}
+                    {/* 3. {Child}'s view — preview from kid perspective + set up
+                        the PIN'd Kid View link. Hidden in owner-mode: the
+                        post-handoff owner IS the (now-adult) kid, so "previewing
+                        their own kid view" / configuring a child link is
+                        nonsensical for them. (Share, gifter-page preview, and
+                        occasions stay — those remain valid post-handoff.) */}
+                    {!isOwnerMode && (
+                      <button type="button" onClick={() => { haptic("selection"); setKidViewConfigStep(kidViewSettings?.enabled ? "done" : "settings"); setKidViewConfigOpen(true); }} className={btn} data-testid="pill-kid-view">
+                        <span className={tile}><Smile size={14} className="md:hidden" strokeWidth={2} /><Smile size={18} className="hidden md:block" strokeWidth={2} /></span>
+                        <span className={`${lbl} w-full`}>{childFirst}'s view</span>
+                      </button>
+                    )}
+                    {/* 4. Occasion — DYNAMIC: wouter <Link> for active occasion
+                        nav (handles SPA routing + cmd/ctrl-click new-tab),
+                        <button> fallback for the empty-state "create new
+                        occasion" sheet trigger. Props on Link directly — no
+                        inner <a> — so wouter manages the single anchor cleanly. */}
+                    {activeOccasion && fundSlug && occasionSlug ? (
+                      <Link
+                        href={`/${fundSlug}/${occasionSlug}`}
+                        className={btn}
+                        data-testid="pill-occasion-active"
+                        aria-label={`Open ${activeOccasion.name || "occasion"} page`}
+                        onClick={() => haptic("selection")}
+                      >
+                        <span className={occasionIsImminent ? tileGold : tile}>
+                          <span className="text-[18px] md:text-[22px] leading-none" aria-hidden="true">{occasionEmoji}</span>
+                        </span>
+                        <span className={occasionIsImminent ? lblGold : lbl}>{occasionLabel}</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleOccasionTap}
+                        className={btn}
+                        data-testid="pill-occasion-new"
+                        aria-label="Create new occasion"
+                      >
+                        <span className={tile}>
+                          {/* CalendarClock replaces Sparkles 2026-05-12 — the
+                              "create new occasion" CTA semantically maps to
+                              the locked "Calendar (event with time)" icon
+                              per feedback_iconography_consistency.md.
+                              Sparkles was AI-slop iconography banned by
+                              feedback_no_ai_slop.md. */}
+                          <CalendarClock size={14} className="md:hidden" strokeWidth={2} />
+                          <CalendarClock size={18} className="hidden md:block" strokeWidth={2} />
+                        </span>
+                        <span className={lbl}>{occasionLabel}</span>
+                      </button>
+                    )}
+                  </div>
+                </motion.section>
               );
             })()}
 
@@ -6806,6 +8830,14 @@ export default function Dashboard() {
                   .filter(Boolean),
               ));
               const otherHolderLabel = otherHolderNames.length === 1 ? otherHolderNames[0] : "Family";
+              // Full sender name for the Memory Book ?gifter= filter, which matches
+              // senderName (not the friendly "Dad" preferredName label above). One
+              // co-contributor → tapping the row opens their contributions filtered
+              // in the Memory Book; multiple → open it unfiltered.
+              const otherHolderSenderNames = Array.from(new Set(
+                otherHolderRows.map((g) => String((g as any).senderName || "").trim()).filter(Boolean),
+              ));
+              const otherHolderGifterParam = otherHolderSenderNames.length === 1 ? otherHolderSenderNames[0] : null;
               // Owner-mode (post-handoff) split: what the custodian parent(s) put
               // in BEFORE handoff vs. what the owner (e.g. Mia) adds herself.
               // Reserves "Your additions" for the owner's own money and credits
@@ -6930,37 +8962,50 @@ export default function Dashboard() {
               const fmtRow = (n: number, signed = false) => {
                 const sign = signed && n > 0 ? "+" : signed && n < 0 ? "−" : "";
                 const v = Math.abs(n);
-                return `${sign}${formatCurrency(v)}`;
+                // STAGING: round breakdown rows to whole dollars (no cents). Summaries
+                // round for scannability + consistency; precise cents live on the hero.
+                return `${sign}${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v)}`;
               };
               const fmtNextDate = (ts: number) =>
                 new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
               return (
+                <>
+                <LabCollapse
+                  marginTop={16}
+                  testid="lab-summary-details"
+                  openKey="summary"
+                  icon={Sprout}
+                  title={isOwnerMode ? "Your fund so far" : `${childPossess} fund so far`}
+                  // The closed-state stat is the summary OF this sheet, so it
+                  // must show the sheet's own "Market growth" number
+                  // (marketGrowth30: totalValue − contribution flows — the
+                  // ledger that sums exactly to "Worth today"). It previously
+                  // used computedInvestedGain (holdings current − cost basis),
+                  // a different growth definition that drifts by uninvested
+                  // cash/realized bits — founder saw "+$9,553 grown so far"
+                  // collapse open to "Market growth +$9,603.39".
+                  // Per-number "(preview)" tags removed — they were inconsistent (only
+                  // on closed collapse stats, gone on open, absent from chart/holdings).
+                  // ONE calm page-level preview line frames all the growth instead
+                  // (rendered below the hero — search "live-priced preview").
+                  stat={Number.isFinite(marketGrowth30) && marketGrowth30 >= 1 ? `+$${Math.round(marketGrowth30).toLocaleString("en-US")} in growth` : "Gifts, growth, and where it all went"}
+                >
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
                   data-testid="section-last-30-summary"
                 >
-                  {/* Visual pairing with the green hero above: cream background instead of
-                      white, evergreen-tinted border, matching shadow. Reads as the same
-                      family as the hero — different section, same warmth. The hero is
-                      evergreen on top; this card sits below as a softer, secondary cousin
-                      in the same color story rather than a generic white tile. */}
-                  <div
-                    className="rounded-3xl p-5"
-                    style={{
-                      background: "hsl(var(--kiddo-cream))",
-                      border: "1px solid hsl(var(--kiddo-evergreen) / 0.18)",
-                      boxShadow: "0 1px 3px rgba(26,67,50,0.06), 0 4px 12px rgba(26,67,50,0.04)",
-                    }}
-                  >
-                    <div className="flex items-baseline justify-between mb-4">
-                      {/* Always "fund so far" — lifetime view permanently
-                          (was "last 30 days" once fund crossed 30 days). */}
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                        {isOwnerMode ? "Your" : childPossess} fund so far <span aria-hidden>🌱</span>
-                      </p>
+                  {/* STAGING Tier 0: flush ledger, no card. Reference data inside a
+                      disclosure doesn't get its own box (containers never nest) —
+                      structure comes from alignment + the total divider, not chrome. */}
+                  <div className="pt-1">
+                    {/* Inner "{child} fund so far 🌱" title removed — it duplicated
+                        the LabCollapse header right above (4th instance of the same
+                        echo as growth/holdings/your-part). The date-range line stays:
+                        it's the unique part, labeling this breakdown's lifespan. */}
+                    <div className="flex items-baseline justify-start mb-4">
                       <p className="text-[10px] text-muted-foreground/60">
                         {/* Year ALWAYS shown 2026-05-23 — was conditionally
                             hidden when fund age < 365d on the theory that
@@ -6968,11 +9013,11 @@ export default function Dashboard() {
                             practice the reader sees "Apr 13" cold and has
                             to guess whether that's this year or last;
                             removing the guess is worth the four chars. */}
-                        {new Date(periodStartMs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} → today
+                        Since {new Date(periodStartMs).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}
                       </p>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 last30-breakdown">
                       {/* Gifts row navigates to Memory Book. Pronoun pulled
                           from getPronouns(activeFund.pronoun).object so the
                           line respects the fund's setting (was previously
@@ -6988,7 +9033,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => { haptic("selection"); setLocation(`/memory/${activeFundId}`); }}
-                        className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                        className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-gifts"
                       >
                         <span className="text-sm text-muted-foreground">
@@ -7001,13 +9046,10 @@ export default function Dashboard() {
                               love them' for Emma's fund). Per the 2026-05-13
                               audit. Falls back to 'your child' when no first
                               name is present (e.g. brand-new fund). */}
-                          Gifts from people who love {isOwnerMode ? "you" : childFirst}
+                          From family & friends
                         </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {fmtRow(giftsRowTotal)}
-                          </span>
-                          <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
+                        <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                          {fmtRow(giftsRowTotal)}
                         </span>
                       </button>
                       {/* Recognition beat (owner view): folding Mom & Dad's years of
@@ -7025,77 +9067,81 @@ export default function Dashboard() {
                           own money — $0 until they start (their parents' years fold
                           into "people who love you" above), so the empty row reads as
                           an invitation to begin their own chapter, not a void. */}
+                      {/* STAGING: "Recurring deposits" + "One-time deposits" merged into
+                          ONE "Your deposits" bucket. The breakdown answers "who built this"
+                          in three buckets (family & friends / you / market); the recurring-
+                          vs-one-time split is detail that lives one tap down in "Your part".
+                          Taps into the recurring section. The no-deposits-yet hints carry. */}
                       <button
                         type="button"
                         onClick={() => summaryScrollTo("recurring")}
-                        className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
-                        data-testid="last30-row-auto"
+                        className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                        data-testid="last30-row-deposits"
                       >
                         <span className="text-sm text-muted-foreground">
-                          Your recurring investments
-                          {/* Parent, no money yet but a schedule queued → "starts {date}". */}
-                          {yourRecurringRowTotal === 0 && !isOwnerMode && nextScheduled && (
+                          Your deposits
+                          {(yourRecurringRowTotal + yourOneTimeTotal) === 0 && !isOwnerMode && nextScheduled && (
                             <span className="text-[11px] text-muted-foreground/70">
                               {" · starts "}{fmtNextDate(nextScheduled.nextTs)}
                             </span>
                           )}
-                          {/* Graduated owner, hasn't started their own yet → invitation. */}
-                          {yourRecurringRowTotal === 0 && isOwnerMode && (
+                          {(yourRecurringRowTotal + yourOneTimeTotal) === 0 && isOwnerMode && (
                             <span className="text-[11px] font-medium text-[hsl(var(--kiddo-evergreen))]">
-                              {" · start your own →"}
+                              {" · start your own"}
                             </span>
                           )}
                         </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {fmtRow(yourRecurringRowTotal)}
-                          </span>
-                          <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => summaryScrollTo("onetime")}
-                        className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
-                        data-testid="last30-row-onetime"
-                      >
-                        <span className="text-sm text-muted-foreground">Your one-time additions</span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {fmtRow(yourOneTimeTotal)}
-                          </span>
-                          <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                        <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                          {fmtRow(yourRecurringRowTotal + yourOneTimeTotal)}
                         </span>
                       </button>
                       {/* The OTHER account-holder's money — the co-parent's view of
                           the custodian's recurring ("Dad's contributions"), or the
                           custodian's view of the co-parent's additions ("Mom's
-                          contributions"). Display-only (no drill-down: the schedule
-                          lists below are viewer-keyed). Owner mode has its own fold
-                          ("Invested by Dad" recognition line), so this row is
-                          parent/co-parent mode only. */}
+                          contributions"). Taps through to the Memory Book filtered to
+                          that person — the same ?gifter= view the "Who loves {child}"
+                          roster opens — so it's clickable like the rows above (those
+                          jump to viewer-keyed page sections; this one has no such
+                          section, so it opens their contribution history instead).
+                          Owner mode has its own fold ("Invested by Dad"), so this row
+                          is parent/co-parent mode only. */}
                       {!isOwnerMode && otherHolderTotal > 0 && (
-                        <div
-                          className="w-full flex items-baseline justify-between py-1.5 px-2 -mx-2 text-left"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            haptic("selection");
+                            if (!activeFundId) return;
+                            setLocation(otherHolderGifterParam
+                              ? `/memory/${activeFundId}?gifter=${encodeURIComponent(otherHolderGifterParam)}`
+                              : `/memory/${activeFundId}`);
+                          }}
+                          className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="last30-row-other-holder"
                         >
                           <span className="text-sm text-muted-foreground">{otherHolderLabel}'s contributions</span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-foreground tabular-nums">
-                              {fmtRow(otherHolderTotal)}
-                            </span>
-                            <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                          <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                            {fmtRow(otherHolderTotal)}
                           </span>
-                        </div>
+                        </button>
                       )}
                       {marketGrowth30 != null && (
                         <button
                           type="button"
                           onClick={() => { haptic("selection"); if (activeFundId) setLocation(`/projection/${activeFundId}`); }}
-                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                          className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="last30-row-growth"
                         >
-                          <span className="text-sm text-muted-foreground">Market growth</span>
+                          {/* Bear-year honesty (2026-06-05, pre-checked since
+                              the demo can't show a down fund): a negative
+                              value under "Market growth" is an oxymoron
+                              ("growth: −$1,200"), so the label flips to
+                              "Market change" — the SAME term the chart's
+                              scrub tooltip already uses for this quantity.
+                              And the tone is calm amber, not alarm red: the
+                              no-greenwashing rule shows the loss plainly,
+                              the love-ledger register refuses to panic over
+                              it (same treatment as the "Now worth" delta). */}
+                          <span className="text-sm text-muted-foreground">{marketGrowth30 >= 0 ? "Market growth" : "Market change"}</span>
                           {/* Chevron signals "navigates to /projection" (the
                               forward-looking "what could this become" page,
                               not a holdings drill-down). Per the locked rule
@@ -7103,11 +9149,8 @@ export default function Dashboard() {
                               (kid-at-18 projection), not BACKWARD (Robinhood
                               performance-attribution). See project_design_lens_kid_at_18.md
                               and feedback_chart_range_stat_behavior.md. */}
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className={`text-sm font-semibold tabular-nums ${marketGrowth30 >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-500"}`}>
-                              {fmtRow(marketGrowth30, true)}
-                            </span>
-                            <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
+                          <span className={`text-sm font-semibold tabular-nums ${marketGrowth30 >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
+                            {fmtRow(marketGrowth30, true)}
                           </span>
                         </button>
                       )}
@@ -7135,22 +9178,22 @@ export default function Dashboard() {
                           // withdrawal rows. If a dedicated withdrawals filter
                           // ships later, swap this URL.
                           onClick={() => { haptic("selection"); setLocation("/activity"); }}
-                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                          className="w-full flex items-baseline justify-between gap-3 py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                           data-testid="lifetime-row-withdrawals"
                         >
                           <span className="text-sm text-muted-foreground">Withdrawals</span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="text-sm font-semibold tabular-nums text-red-500">
-                              −{fmtRow(periodWithdrawals)}
-                            </span>
-                            <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
+                          <span className="text-sm font-semibold tabular-nums text-red-500">
+                            −{fmtRow(periodWithdrawals)}
                           </span>
                         </button>
                       )}
                     </div>
 
-                    {/* Worth today — separated by a divider so it reads
-                        as the sum. Was "Total so far" / "Total this
+                    {/* Worth today — set off by WEIGHT + a wider gap, NOT a hairline:
+                        a divider here mimicked the section-separator lines, so "a line"
+                        meant both "new section" AND "the total" (founder caught it
+                        2026-06-22). The bold label + 2× row-gap reads as the sum on its
+                        own. Was "Total so far" / "Total this
                         month" — relabeled to make it unambiguous: this
                         is the fund's actual current worth, not a running
                         tally.
@@ -7166,19 +9209,15 @@ export default function Dashboard() {
                         for old funds. The Worth today section's other
                         sub-lines (cash status + next-scheduled preview)
                         carry NEW information; the date sub-line did not. */}
-                    <div className="mt-3 pt-3 border-t border-border/50">
+                    <div className="mt-4">
                       <div className="flex items-baseline justify-between">
                         <span className="text-sm font-bold text-foreground">Worth today</span>
-                        {/* Wrap matches the input-row pattern (inline-flex
-                            + gap-1.5 + invisible ChevronRight 14px) so the
-                            right edge of the Worth today number column-aligns
-                            with the right edge of the rows above. */}
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="font-heading text-lg font-bold tabular-nums text-foreground">
-                            {/* Unsigned — Worth today is a TOTAL VALUE, not a delta. */}
-                            {fmtRow(total30)}
-                          </span>
-                          <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                        {/* Right-aligned by the row's justify-between, so the
+                            Worth today number shares the same right edge as the
+                            rows above (which align the same way). */}
+                        <span className="font-heading text-lg font-bold tabular-nums text-foreground">
+                          {/* Unsigned — Worth today is a TOTAL VALUE, not a delta. */}
+                          {fmtRow(total30)}
                         </span>
                       </div>
                       {/* Cash-status sub-detail. Subordinate to Worth today
@@ -7238,261 +9277,84 @@ export default function Dashboard() {
                         className="mt-3 w-full text-center text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         data-testid="lifetime-link-recent"
                       >
-                        Last 30 days ↗
+                        {/* Trailing → = "leaves this page" (the page-wide arrow
+                            grammar, founder-locked 2026-06-05): navigation links
+                            get →; in-place actions/modals get NO arrow; ↗/↘ are
+                            reserved for money direction next to a number. This
+                            one navigates to Activity, so it was wearing the
+                            wrong glyph (↗ = trend). */}
+                        See recent activity →
                       </button>
                     )}
                   </div>
                 </motion.section>
+                </LabCollapse>
+                </>
               );
             })()}
 
-            {uninvestedCash > 0 && !isReadOnlyFund && (
-              <motion.section
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: 0.010 }}
-                // Clear top gap so this action card reads as its OWN block, not a
-                // continuation of the "fund so far" section directly above it.
-                style={{ marginTop: 26 }}
-              >
-                <button
-                  type="button"
-                  onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
-                  className="kiddo-card w-full p-4 text-left transition-all hover:border-[hsl(var(--kiddo-gold)/0.45)]"
-                  style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "cash")}
-                  data-testid="button-invest-cash"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative shrink-0">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-gold)/0.25)] bg-[hsl(var(--kiddo-gold)/0.12)]">
-                          {/* Coins (the NOUN: "this card is about cash"),
-                              not TrendingUp (the verb). 20px fills the 40px
-                              chip with proper weight; a flat Banknote at 17px
-                              read undersized + generic. */}
-                          <Coins size={20} className="text-[hsl(var(--kiddo-evergreen))]" />
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase text-muted-foreground">
-                          {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
-                        </p>
-                        <p className="text-xl font-bold text-foreground font-heading">{formatCurrency(uninvestedCash)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
-                          {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
-                          {cashContext === "gifts_settled" && "Choose how much to invest."}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Evergreen primary-CTA pill, NOT gold. Gold's
-                        Tier-A weight (solid pill, white text) is locked
-                        to Share buttons exclusively — using it for the
-                        cash-invest action dilutes Share's brand
-                        signature. The card already uses gold as a
-                        Tier-B accent (border + icon-background tint
-                        above) which is fine. See feedback in
-                        project_color_palette_60_30_10.md. */}
-                    <div className="shrink-0 whitespace-nowrap rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1.5 text-xs font-semibold text-white">
-                      Review options
-                    </div>
-                  </div>
-                </button>
-              </motion.section>
-            )}
+            {/* "Cash is waiting" action RELOCATED up to the Needs-You zone below the
+                hero (it's the primary money-action; it shouldn't sit stranded mid-story
+                between the collapsed view-sections). See the uninvestedCash card right
+                after the handoff alert. */}
 
-            {/* Quick links — four canonical jobs, always.
-                  1. Share          → loop trigger (the most important action)
-                  2. Gifter page    → preview from the gifter's perspective
-                  3. {Child}'s view → preview from the kid's perspective (mobile + KidView page)
-                  4. Occasion       → DYNAMIC: most-relevant active occasion as a one-tap
-                                      preview/share, falling back to "New occasion ✨"
-                                      creator when no active occasion exists.
-                Hard rule: this row is for PREVIEWS + SHARE shortcuts only. Inline actions
-                that already have dedicated dashboard sections (Add investment, Memory Book)
-                belong in those sections — duplicating them here is interaction debt, not
-                generosity. See feedback_quick_links_principle.md.
-                Mobile renders compact icon+micro-label pills; desktop bumps tile/label
-                sizes via md: classes so the same component breathes on a wider canvas. */}
-            {activeFund && (() => {
-              const childFirst = (recipientFirstNameDisplay || "").trim() || "Kid";
-              const fundSlug = (activeFund as any).slug;
-              const activeOccasion = pickActiveOccasion(events);
-              // Compute a tight "label" for the occasion button.
-              //   ≤7 days: urgency phrasing — "in Xd" or "Tomorrow" or "Today"
-              //   ≤30 days: same urgency phrasing (still feel-it-coming)
-              //   else: short event name (truncated to ~10ch)
-              //   no occasion: "New occasion"
-              const occasionEmoji = activeOccasion ? eventEmoji(activeOccasion.eventType) : null;
-              const occasionDays = activeOccasion?.eventDate
-                ? Math.ceil((new Date(activeOccasion.eventDate).getTime() - Date.now()) / 86400000)
-                : null;
-              const occasionLabel = activeOccasion
-                ? (occasionDays !== null && occasionDays <= 30
-                    ? (occasionDays === 0 ? "Today" : occasionDays === 1 ? "Tomorrow" : `in ${occasionDays}d`)
-                    : (() => {
-                        const raw = String(activeOccasion.name || "Occasion").trim();
-                        // Drop the redundant "{child}'s " prefix — this tile already
-                        // lives on that child's dashboard, so "Theo's Birthday" both
-                        // repeated the name AND got hard-sliced mid-word to "Theo's
-                        // Bi…". Stripping it leaves the actual occasion ("Birthday"),
-                        // which fits clean; only genuinely long custom names still
-                        // truncate, at a roomier threshold. 2026-06-08.
-                        const prefix = `${childFirst}'s `;
-                        const name = raw.toLowerCase().startsWith(prefix.toLowerCase()) ? raw.slice(prefix.length) : raw;
-                        return name.length > 14 ? `${name.slice(0, 13)}…` : name;
-                      })())
-                : "New occasion";
-              const occasionIsImminent = activeOccasion && occasionDays !== null && occasionDays <= 30;
-              const occasionSlug = activeOccasion?.slug;
-              const handleOccasionTap = () => {
-                haptic("selection");
-                if (activeOccasion && fundSlug && occasionSlug) {
-                  // Preview the occasion's public gifter page (e.g. /emma/birthday-2026)
-                  window.open(`/${fundSlug}/${occasionSlug}`, "_blank");
-                } else {
-                  // Empty state → create one. Same affordance, contextual job.
-                  setCreateEventSheetOpen(true);
-                }
-              };
-              // Responsive tile + label classes. Mobile keeps the compact original
-              // sizes; md+ scales up so desktop reads as a proper quick-links panel
-              // instead of a tiny mobile row marooned in white space.
-              const btn = "flex flex-1 min-w-0 flex-col items-center gap-[5px] md:gap-2 py-1 md:py-2 select-none cursor-pointer transition-all active:opacity-50 active:scale-95 bg-transparent border-0";
-              const tile = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-cream))] text-[hsl(var(--kiddo-evergreen))]";
-              const tileGold = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-gold)/0.14)] text-[hsl(var(--kiddo-ink))]";
-              const lbl = "text-[9.5px] md:text-xs font-medium text-muted-foreground leading-tight text-center";
-              const lblGold = "text-[9.5px] md:text-xs font-semibold text-[hsl(var(--kiddo-ink))] leading-tight text-center";
-              return (
-                <motion.section
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18, delay: 0.011 }}
-                >
-                  <div className="flex w-full">
-                    {/* 1. Share — the loop trigger.
-                        Hidden for read-only roles. A previous owner sharing
-                        their handed-off fund's link would route incoming
-                        gifts to a fund they no longer control; viewers
-                        sharing isn't theirs to do. Preview pills (gifter
-                        page, kid view) stay visible — those are READ
-                        affordances, not WRITE actions. */}
-                    {!isReadOnlyFund && (
-                      <button type="button" onClick={() => { haptic("medium"); handleShareLink(); }} className={btn} data-testid="pill-share-link">
-                        <span className={tile}><Share2 size={14} className="md:hidden" strokeWidth={2} /><Share2 size={18} className="hidden md:block" strokeWidth={2} /></span>
-                        <span className={lbl}>Share link</span>
-                      </button>
-                    )}
-                    {/* 2. Gifter page — preview from gifter perspective.
-                        Wouter <Link> for proper SPA nav. Pass props directly on
-                        Link (no inner <a>) so wouter renders one clean anchor
-                        with its own click handler — no merging/race weirdness. */}
-                    {fundSlug ? (
-                      <Link
-                        href={`/${fundSlug}`}
-                        className={btn}
-                        data-testid="pill-gifter-page"
-                        onClick={() => haptic("selection")}
-                      >
-                        <span className={tile}><Eye size={14} className="md:hidden" strokeWidth={2} /><Eye size={18} className="hidden md:block" strokeWidth={2} /></span>
-                        <span className={lbl}>Gifter page</span>
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        className={btn}
-                        data-testid="pill-gifter-page"
-                        style={{ pointerEvents: "none", opacity: 0.5 }}
-                      >
-                        <span className={tile}><Eye size={14} className="md:hidden" strokeWidth={2} /><Eye size={18} className="hidden md:block" strokeWidth={2} /></span>
-                        <span className={lbl}>Gifter page</span>
-                      </button>
-                    )}
-                    {/* 3. {Child}'s view — preview from kid perspective + set up
-                        the PIN'd Kid View link. Hidden in owner-mode: the
-                        post-handoff owner IS the (now-adult) kid, so "previewing
-                        their own kid view" / configuring a child link is
-                        nonsensical for them. (Share, gifter-page preview, and
-                        occasions stay — those remain valid post-handoff.) */}
-                    {!isOwnerMode && (
-                      <button type="button" onClick={() => { haptic("selection"); setKidViewConfigStep(kidViewSettings?.enabled ? "done" : "settings"); setKidViewConfigOpen(true); }} className={btn} data-testid="pill-kid-view">
-                        <span className={tile}><Smile size={14} className="md:hidden" strokeWidth={2} /><Smile size={18} className="hidden md:block" strokeWidth={2} /></span>
-                        <span className={`${lbl} w-full`}>{childFirst}'s view</span>
-                      </button>
-                    )}
-                    {/* 4. Occasion — DYNAMIC: wouter <Link> for active occasion
-                        nav (handles SPA routing + cmd/ctrl-click new-tab),
-                        <button> fallback for the empty-state "create new
-                        occasion" sheet trigger. Props on Link directly — no
-                        inner <a> — so wouter manages the single anchor cleanly. */}
-                    {activeOccasion && fundSlug && occasionSlug ? (
-                      <Link
-                        href={`/${fundSlug}/${occasionSlug}`}
-                        className={btn}
-                        data-testid="pill-occasion-active"
-                        aria-label={`Open ${activeOccasion.name || "occasion"} page`}
-                        onClick={() => haptic("selection")}
-                      >
-                        <span className={occasionIsImminent ? tileGold : tile}>
-                          <span className="text-[18px] md:text-[22px] leading-none" aria-hidden="true">{occasionEmoji}</span>
-                        </span>
-                        <span className={occasionIsImminent ? lblGold : lbl}>{occasionLabel}</span>
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleOccasionTap}
-                        className={btn}
-                        data-testid="pill-occasion-new"
-                        aria-label="Create new occasion"
-                      >
-                        <span className={tile}>
-                          {/* CalendarClock replaces Sparkles 2026-05-12 — the
-                              "create new occasion" CTA semantically maps to
-                              the locked "Calendar (event with time)" icon
-                              per feedback_iconography_consistency.md.
-                              Sparkles was AI-slop iconography banned by
-                              feedback_no_ai_slop.md. */}
-                          <CalendarClock size={14} className="md:hidden" strokeWidth={2} />
-                          <CalendarClock size={18} className="hidden md:block" strokeWidth={2} />
-                        </span>
-                        <span className={lbl}>{occasionLabel}</span>
-                      </button>
-                    )}
-                  </div>
-                  {/* Demo-only loop nudge. The "Gifter page" pill above is the
-                      doorway to FEELING the product, but a prospect doesn't know
-                      that — it reads as a preview. Spell the loop out: go give as
-                      a gifter would, then come back and watch it land. Demo
-                      accounts only; a no-op for real parents (who know their own
-                      gift link). Pairs with DemoGiftMoment + the Memory Book
-                      live-entry to make the whole loop self-evident. */}
-                  {isDemoAccount && fundSlug && !isOwnerMode && (
-                    <Link
-                      href={`/${fundSlug}`}
-                      onClick={() => haptic("selection")}
-                      className="mt-2 flex items-center justify-center gap-1.5 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-2.5 text-center text-xs font-medium leading-snug text-[hsl(var(--kiddo-evergreen))] transition hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] md:text-sm"
-                      data-testid="demo-try-gifting"
-                    >
-                      See it from a gifter's side: give {childFirst} a gift, then watch it land →
-                    </Link>
-                  )}
-                </motion.section>
-              );
-            })()}
-
+            {/* LAB: the growth chart ("brokerage software"), collapsed
+                (smooth open + close). */}
+            <LabCollapse
+              marginTop={16}
+              testid="lab-chart-details"
+              icon={TrendingUp}
+              title={isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Growth"}
+              stat={(() => {
+                // Post-handoff keepsake: never surface the now-adult's LIVE
+                // "this month" performance to the previous owner — that's the
+                // private financial activity the keepsake exists to stop showing.
+                // The lifetime "fund so far" stat reads as the fund's story; a
+                // live monthly ticker reads as surveillance. Show the neutral
+                // tap-to-expand hint instead.
+                if (showHandoffKeepsake) return "The full chart over time";
+                // LAB: range-INDEPENDENT "this month" move — computed with the
+                // EXACT same recipe as the in-chart "Growth · 1M" box
+                // (growthInRange): live totalValue minus the FIRST snapshot
+                // inside the 30-day window, plus the same today's-sell guard.
+                // One fact = one formula. The previous walk used last-snapshot
+                // minus the snapshot just OUTSIDE the window — off by a
+                // boundary day + the live-vs-snapshot gap, so this said "+$446"
+                // while the chart said "+$609.63" for the same month (founder
+                // caught it). NOT trendData either: that's range-filtered and
+                // carries a synthetic $0 baseline row (the earlier
+                // whole-balance-as-monthly-move bug).
+                if (!heroDataReady) return "The full chart over time"; // don't compute from a half-loaded baseline (it reads as the whole balance)
+                const snaps = [...usableFundHistory]
+                  .map((p) => ({ ts: new Date(p.snapshotDate || 0).getTime(), value: parseFloat(p.totalValue || "0") }))
+                  .filter((p) => Number.isFinite(p.ts) && p.ts > 0)
+                  .sort((a, b) => a.ts - b.ts);
+                if (snaps.length < 2) return "The full chart over time";
+                const cutoff = Date.now() - 30 * 86400000;
+                const start = snaps.find((p) => p.ts >= cutoff);
+                if (!start || start.value === 0) return "The full chart over time";
+                const move = growthCurrentValue - start.value;
+                // Mirror growthInRange's guard: a big "move" that's really just
+                // today's sell re-shuffling isn't growth — hide rather than lie.
+                if (todaysSellTotal > 0 && Math.abs(move - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) return "The full chart over time";
+                if (Math.abs(move) < 1) return "The full chart over time";
+                return `${move >= 0 ? "+" : "-"}$${Math.round(Math.abs(move)).toLocaleString("en-US")} this month ${move >= 0 ? "↗" : "↘"}`;
+              })()}
+            >
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: 0.012 }}
             >
-              <div className="kiddo-card overflow-hidden p-0">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
-                  <h3 className="text-sm font-bold text-muted-foreground">
-                    {isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Fund growth"}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-1">
+              {/* STAGING: flushed to match the breakdown — the chart is content, not
+                  a "pick-up" object, so it loses the white card and sits flush on the
+                  page (its range-tab divider + the line carry the definition). */}
+              <div className="overflow-hidden">
+                {/* Inner "{child}'s growth" title removed — it duplicated the
+                    LabCollapse header right above. The open header IS the section
+                    title; the chart opens straight into its range controls. */}
+                <div className="flex flex-wrap items-center justify-start gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
                     {(["1W", "1M", "YTD", "1Y", "5Y", "ALL"] as const).map((r) => (
                       <button
                         key={r}
@@ -7502,11 +9364,24 @@ export default function Dashboard() {
                         {r}
                       </button>
                     ))}
+                    {/* "Watch it grow" journey-replay button REMOVED — it replayed
+                        an animation that already plays on load, was founder-unsure,
+                        and cluttered the range row. Cut in the subtract pass. */}
                   </div>
                 </div>
                 <Suspense fallback={<TrendChartSkeleton />}>
-                  <div className="relative">
-                    <DashboardTrendChart data={trendData} onScrub={setScrubbedTrendPoint} />
+                  <div ref={chartScrollRef} style={{ position: "relative" }}>
+                  {/* Compositor wipe pair — see chartScrollRef's definition.
+                      The MOVER (overflow hidden only while wiping) slides
+                      left→right while the INNER counter-slides, so the chart
+                      stays pixel-still under a moving reveal edge. The draw-in
+                      fires on mount (initial load, collapse reopen) and
+                      replays on scroll-back; pure-transform = GPU = smooth
+                      even mid-momentum-scroll, where the old clip-path wipe
+                      repainted the SVG main-thread every frame (the jitter). */}
+                  <div data-chart-wipe-mover>
+                  <div data-chart-wipe-inner className="relative">
+                    <DashboardTrendChart data={trendData} onScrub={handleScrub} />
                     {totalValue > 0 && trendData.length > 0 && (() => {
                       // Live dot — sits on the rightmost end of the chart
                       // line (the most recent plotted value), pulsing to
@@ -7550,6 +9425,45 @@ export default function Dashboard() {
                       );
                     })()}
                   </div>
+                  </div>
+                    {/* Journey-replay caption — one floating pill that fades
+                        between beats ("Where it began" → "First gift — $50
+                        from Grandpa" → "Crossed $10k" → "Today"), keyed by
+                        label so each beat cross-fades. Lives OUTSIDE the wipe
+                        pair (sibling of the mover, founder catch 2026-06-05):
+                        inside it, the mover's overflow clip swallowed early
+                        captions until the reveal edge passed center — the
+                        narration eaten by its own curtain. Out here it floats
+                        above the clip, visible from the first frame.
+                        pointer-events-none: the chart stays scrubbable. */}
+                    <AnimatePresence>
+                      {journeyCaption && (
+                        <motion.div
+                          key={journeyCaption.label}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className="pointer-events-none"
+                          style={{ position: "absolute", top: 8, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 11 }}
+                        >
+                          <div style={{
+                            background: "rgba(255,255,255,0.94)",
+                            backdropFilter: "blur(4px)",
+                            border: "1px solid rgba(26,23,16,0.08)",
+                            boxShadow: "0 2px 10px rgba(26,23,16,0.10)",
+                            borderRadius: 9999, padding: "5px 13px", textAlign: "center",
+                            maxWidth: "92%",
+                          }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: "rgb(26,23,16)" }}>{journeyCaption.label}</span>
+                            {journeyCaption.sub && (
+                              <span style={{ fontSize: 11, color: "rgba(26,23,16,0.5)", marginLeft: 6 }}>{journeyCaption.sub}</span>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </Suspense>
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
                   <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
@@ -7559,36 +9473,17 @@ export default function Dashboard() {
                   </p>
                 )}
                 {gifts.length > 0 && (
-                  <div className="border-t border-[hsl(var(--kiddo-border)/0.65)] px-4 py-3">
+                  <div className="border-t border-[hsl(var(--kiddo-border)/0.4)] px-4 py-3">
                     {/* items-start aligns the eyebrow titles across columns —
                         was items-center which centered each column vertically,
                         making columns of different heights (Growth now has a
                         percent line beneath the dollar) drift the titles out
                         of alignment. Top-aligned: titles always sit on the
                         same baseline. */}
+                    {/* STAGING de-dupe: "Total gifts" + "Have gifted" removed —
+                        both repeat the hero caption and the gifter roster. The
+                        chart owns ONE canonical stat, Growth. */}
                     <div className="flex items-start gap-6">
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Total gifts</p>
-                      <p className="font-heading text-base font-bold text-foreground">
-                        {formatCurrency(gifterRoster.reduce((s, g) => s + g.totalNetAmount, 0))}
-                      </p>
-                      {/* `$X settling` indicator — replaces the noisy
-                          "Your gift is pending. This is normal." banner.
-                          Tiny gold-tone secondary line, only renders when
-                          something is actually in flight. Mirrors the
-                          30-day summary's secondary-line pattern.
-                          `settling` already aggregates pendingBalance +
-                          processing-status gifts upstream — we don't need
-                          to re-derive it here. */}
-                      {settling > 0 && (
-                        <p
-                          style={{ fontSize: 10.5, fontWeight: 600, color: "hsl(43,55%,40%)", marginTop: 2 }}
-                          data-testid="text-pending-summary"
-                        >
-                          {formatCurrency(settling)} settling
-                        </p>
-                      )}
-                    </div>
                     {(() => {
                       // Growth row swaps to the scrubbed point's gain when
                       // the parent is dragging through the chart. Compute
@@ -7679,36 +9574,31 @@ export default function Dashboard() {
                       return (
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{growthLabel}</p>
-                        <p
-                          className={`font-heading text-base font-bold ${growthDollars >= 0 ? "text-green-600" : "text-red-500"}`}
-                          aria-live={isScrubbing ? "off" : "polite"}
-                        >
-                          {growthDollars >= 0 ? "+" : ""}{formatCurrency(growthDollars)}
-                        </p>
-                        {/* Percent rides as a quiet secondary line. Was previously
-                            shown only on the hero gain pill (now removed); moved
-                            here so the percent stays visible in its canonical
-                            metrics home rather than living on the emotional
-                            anchor surface. Same number, different surface. */}
-                        {Math.abs(growthPercent) >= 0.01 && (
-                          <p className={`text-[10.5px] font-semibold ${growthPercent >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
-                            {growthPercent >= 0 ? "+" : ""}{growthPercent.toFixed(2)}%
-                          </p>
-                        )}
+                        {/* STAGING: dollar + percent on ONE line (was three rows for a
+                            single stat). Label row, then value row with the percent as
+                            a quiet inline companion. */}
+                        <div className="flex items-baseline gap-2">
+                          <span
+                            className={`font-heading text-base font-bold ${growthDollars >= 0 ? "text-green-600" : "text-red-500"}`}
+                            aria-live={isScrubbing ? "off" : "polite"}
+                          >
+                            {growthDollars >= 0 ? "+" : ""}{formatCurrency(growthDollars)}
+                          </span>
+                          {Math.abs(growthPercent) >= 0.01 && (
+                            <span className={`text-[11px] font-semibold ${growthPercent >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
+                              {growthPercent >= 0 ? "+" : ""}{growthPercent.toFixed(2)}%
+                            </span>
+                          )}
+                        </div>
                       </div>
                       );
                     })()}
-                    {contributorCount > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Have gifted</p>
-                        <p className="font-heading text-base font-bold text-foreground">{contributorCount} {contributorCount === 1 ? "person" : "people"}</p>
-                      </div>
-                    )}
                     </div>
                   </div>
                 )}
               </div>
             </motion.section>
+            </LabCollapse>
 
 
             {/* Age-band strategy nudge. Fires once per band when the child's age crosses
@@ -7812,6 +9702,8 @@ export default function Dashboard() {
                     }),
                   ]);
                   if (!strategyRes.ok) throw new Error("strategy update failed");
+                  const strategyData = await strategyRes.json().catch(() => null);
+                  if (demoBlocked(strategyData, toast)) return;
                   // Optimistically hide the banner the moment we know the strategy update succeeded.
                   setNudgeOptimisticallyDismissed(prev => {
                     const next = new Set(prev);
@@ -7876,7 +9768,7 @@ export default function Dashboard() {
                           Switching to {recommendedLabel}…
                         </span>
                       ) : (
-                        <>Switch to {recommendedLabel} →</>
+                        <>Switch to {recommendedLabel}</>
                       )}
                     </Button>
                     <button
@@ -7901,11 +9793,36 @@ export default function Dashboard() {
               );
             })()}
 
-            {/* Hidden on the post-handoff keepsake (mirror of DashboardLab): a
-                previous owner's frozen view must not expose the now-adult's live
-                holdings + current values; there's no honest "as of handoff"
-                holdings view, so the keepsake omits it. */}
+            {/* LAB: the portfolio ENGINE, collapsed (smooth open + close).
+                Hidden on the post-handoff KEEPSAKE: a previous owner's frozen
+                view must not expose the now-adult's LIVE holdings + current
+                values (which also contradict the frozen hero), and there's no
+                honest way to show holdings "as of handoff" — positions can change
+                after, and they carry no per-date value. The keepsake centers on
+                the value handed over, who built it, and the Memory Book instead. */}
             {!showHandoffKeepsake && (
+            <LabCollapse
+              marginTop={16}
+              testid="lab-portfolio-details"
+              icon={PieChart}
+              title={isOwnerMode ? "What you own" : recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "Investments"}
+              // "powering the growth" implies an ACTIVE, live-investing engine.
+              // Investing isn't live yet (INVESTING_LIVE=false) — holdings are a
+              // real-priced simulation — so when pending, drop the live claim and
+              // just name the mix. Auto-flips to the dynamic copy at custody time.
+              stat={holdings.length > 0 ? (() => {
+                // STAGING action-title pass: lead the collapsed stat with the on-brand
+                // SO-WHAT — that some holdings were HAND-PICKED (people chose them with
+                // love), with the managed mix as the rest — instead of a bare "{N} in the
+                // mix" count. Falls back to the count when nothing was picked (all-managed
+                // fund). Mirrors the chosenTickers logic used in the expanded view.
+                const chosenSet = new Set(gifts.filter(g => String(g.executionModel || "").toLowerCase() === "pick" && g.selectedTicker).map(g => String(g.selectedTicker).toUpperCase()));
+                const picked = holdings.filter(h => chosenSet.has(String(h.ticker).toUpperCase())).length;
+                if (picked === 0) return `${holdings.length} ${holdings.length === 1 ? "holding" : "holdings"} ${investingLiveCopy("powering the growth", "in the mix")}`;
+                if (picked >= holdings.length) return `${picked} hand-picked`;
+                return `${picked} hand-picked + a managed mix`;
+              })() : investingLiveCopy("The mix powering the growth", "The investment mix")}
+            >
             <motion.section
               ref={holdingsSectionRef}
               initial={{ opacity: 0, y: 8 }}
@@ -7913,11 +9830,8 @@ export default function Dashboard() {
               transition={{ duration: 0.25, delay: 0.018 }}
               className="space-y-3"
             >
-              <div className="flex items-center justify-between">
-                <p className="kiddo-section-label" data-testid="text-holdings-title">
-                  {isOwnerMode ? "What you own" : recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "What the fund owns"}
-                </p>
-              </div>
+              {/* Inner "What {child} owns" title removed — duplicated the
+                  LabCollapse header above. The open header is the section title. */}
               {holdingsLoading ? (
                 <div className="space-y-3">
                   <SkeletonBlock className="h-16 w-full" />
@@ -8112,7 +10026,7 @@ export default function Dashboard() {
                       ? `${formatCurrency(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
                       : `All of ${childFirst === "them" ? "the gifts are" : `${childFirst}'s gifts are`} invested. Nothing pending.`,
                   managed: `${formatCurrency(managedVal)} in a diversified managed mix.`,
-                  chosen: `${formatCurrency(chosenVal)} chosen with love by people who care about ${childFirst === "them" ? "their" : childFirst + "'s"} future.`,
+                  chosen: `${formatCurrency(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
                 };
 
                 return (
@@ -8148,6 +10062,19 @@ export default function Dashboard() {
                           // add more Apple), not for managed mix tickers (those are
                           // auto-allocated by the strategy, so a user-driven "add more BND"
                           // would just fight the rebalancer).
+                          // (The "· since {year}" context on red rows was
+                          // REMOVED 2026-06-07, founder catch — the second
+                          // instance of the same aggregate-misattribution
+                          // error as the killed WHO line: a row's gain % is a
+                          // BLEND across every lot gifted into that ticker
+                          // over the years, so pinning the first-pick year
+                          // onto it read as "down X% since {year}" — a return
+                          // window the blended number doesn't support. The
+                          // per-gift truth (each gift, its date, its own
+                          // now-worth) lives at the correct altitude: the
+                          // holding sheet, one tap in. RULE: holdings rows
+                          // are aggregates — no single-source claims (who
+                          // picked it, when it started) on the row itself.)
                           const renderHoldingRow = (h: HoldingEntry, isChosen = false) => {
                             const hValue   = parseFloat(h.currentValue || "0");
                             const hCost    = parseFloat(h.costBasis    || "0");
@@ -8165,15 +10092,33 @@ export default function Dashboard() {
                             // per-row %s now sum to exactly 100% across both sections.
                             const hPct     = investedTotal > 0 ? (hValue / investedTotal) * 100 : 0;
                             const dName    = friendlyHoldingName(h.ticker, h.name);
+                            // Strip the redundant " (TICKER)" the friendly name
+                            // carries (2026-06-07, founder: "long names get an
+                            // ellipsis on mobile"). The StockLogo already shows
+                            // the ticker, so "International Stocks (VXUS)" beside
+                            // a VXUS logo was the ticker twice AND overran the
+                            // row into a "…" on a phone. Brand names (Apple,
+                            // Disney) carry no suffix, so they're unchanged.
+                            const dNameDisplay = dName.replace(new RegExp(`\\s*\\(${String(h.ticker).toUpperCase()}\\)\\s*$`, "i"), "").trim() || dName;
+                            // STAGING: consistent 2-decimal share counts (was 4 dp for
+                            // sub-1 holdings → "0.2173 shares" sat jarringly next to
+                            // "7.64 shares"). Only fall back to more precision for a
+                            // truly sub-penny share count that would otherwise round to
+                            // "0.00 shares".
                             const sharesLbl = hShares > 0
-                              ? (hShares >= 1 ? hShares.toFixed(2) : hShares.toFixed(4)) + " shares"
+                              ? (hShares >= 0.01 ? hShares.toFixed(2) : hShares.toFixed(4)) + " shares"
                               : null;
                             // Holdings under 0.5% round to 0 with Math.round —
-                            // "0% of your fund" on a real $300 holding reads as
-                            // worthless. Floor the label at "<1%" for any
-                            // positive-but-sub-1% position.
+                            // "0%" on a real $300 holding reads as worthless.
+                            // Floor the label at "<1%" for any positive-but-
+                            // sub-1% position. The "of {child}'s fund" suffix was
+                            // DROPPED 2026-06-07 (founder: the subline wrapped to
+                            // two rows on mobile) — it repeated on every row, and
+                            // under a "What {child} owns" header a bare "%" reads
+                            // unambiguously as percent-of-fund. "7.64 shares · 10%"
+                            // now fits one line.
                             const pctRound = Math.round(hPct);
-                            const pctLbl = hPct > 0 ? `${pctRound < 1 ? "<1" : pctRound}% of ${childPoss}` : null;
+                            const pctLbl = hPct > 0 ? `${pctRound < 1 ? "<1" : pctRound}%` : null;
                             const overlapSide = h._overlapSide;
                             const ticker = h.ticker.toUpperCase();
                             const handleAddMore = () => {
@@ -8190,7 +10135,11 @@ export default function Dashboard() {
                             return (
                               <div
                                 key={`v2-${h.id}-${overlapSide ?? "solo"}`}
-                                className="kiddo-card p-4 w-full transition-all hover:border-primary/30"
+                                /* STAGING: flushed (Tier 0) — holdings are a LIST, not 8
+                                   floating cards. Each row sits flush with a subtle hover,
+                                   brokerage-style (Robinhood/Fidelity), consistent with the
+                                   de-carded breakdown. Tappable without needing a box. */
+                                className="w-full p-3 -mx-3 rounded-xl transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.04)]"
                               >
                                 <div className="flex items-center justify-between gap-3">
                                   <button
@@ -8202,9 +10151,9 @@ export default function Dashboard() {
                                     <StockLogo ticker={h.ticker} size={36} />
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-1.5 min-w-0">
-                                        <p className="truncate text-sm font-bold text-foreground">{dName}</p>
+                                        <p className="truncate text-sm font-bold text-foreground">{dNameDisplay}</p>
                                       </div>
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="text-xs text-muted-foreground truncate">
                                         {sharesLbl ?? `Part of ${childPoss}`}
                                         {pctLbl && sharesLbl && <span className="ml-1.5 text-muted-foreground/60">· {pctLbl}</span>}
                                         {pctLbl && !sharesLbl && <span>{pctLbl}</span>}
@@ -8230,7 +10179,7 @@ export default function Dashboard() {
                                     >
                                       <p className="text-sm font-bold text-foreground">{formatCurrency(hValue)}</p>
                                       {hCost > 0 && Math.abs(hGain) > 0.01 && (
-                                        <p className={`text-xs font-semibold tabular-nums ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        <p className={`text-[11px] font-semibold tabular-nums whitespace-nowrap ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
                                           {hGain >= 0 ? "+" : ""}{formatCurrency(hGain)} ({hGain >= 0 ? "+" : ""}{hGainPct.toFixed(2)}%)
                                         </p>
                                       )}
@@ -8280,6 +10229,35 @@ export default function Dashboard() {
                           // fewer than 10 items total so vertical scroll is fine.
                           return (
                             <div className={hasBothSections ? "flex flex-col gap-4" : "space-y-2"}>
+                              {/* Composition at a glance (founder-approved
+                                  2026-06-05): picked-vs-mix concentration is
+                                  the one decision-relevant fact in this
+                                  section, and it was buried in two trailing
+                                  totals a screen apart. One two-segment bar
+                                  answers it in a glance — gold = the picks
+                                  (the love layer), evergreen = the mix (the
+                                  spine) — matching each subsection's accent.
+                                  Composition only, deliberately NO performance
+                                  split (see the section-summary comment below:
+                                  side-by-side performance comparisons drive
+                                  performance-chasing). */}
+                              {hasBothSections && investedTotal > 0 && (() => {
+                                const chosenPctRaw = (chosenVal / investedTotal) * 100;
+                                const chosenPctLbl = chosenPctRaw > 0 && chosenPctRaw < 1 ? "<1" : String(Math.round(chosenPctRaw));
+                                const mixPctLbl = chosenPctRaw > 99 && chosenPctRaw < 100 ? "<1" : String(100 - Math.round(chosenPctRaw));
+                                return (
+                                  <div className="px-1" data-testid="holdings-composition-bar">
+                                    <div className="flex h-1.5 w-full overflow-hidden rounded-full" aria-hidden="true">
+                                      <div style={{ width: `${Math.max(2, Math.min(98, chosenPctRaw))}%`, background: "hsl(var(--kiddo-gold))" }} />
+                                      <div style={{ flex: 1, background: "hsl(var(--kiddo-evergreen))" }} />
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-muted-foreground/70 tabular-nums">
+                                      <span>Hand-picked · {chosenPctLbl}%</span>
+                                      <span>{isOwnerMode ? "Your mix" : "Managed mix"} · {mixPctLbl}%</span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               {/* Chosen with love */}
                               {chosenH.length > 0 && (
                                 <div className="space-y-2">
@@ -8302,7 +10280,11 @@ export default function Dashboard() {
                                           picks without losing warmth. Parent view keeps the
                                           stronger "Picked just for {child}" — there the pickers
                                           are always OTHER people, so it's precisely true. */}
-                                      <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Hand-picked" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
+                                      {/* STAGING: "Picked just for {child}" read long + sentimental
+                                          (kinda AI). Tightened to "Hand-picked" — pairs cleanly with
+                                          "Managed mix" below: chosen-individual-stocks vs managed-mix,
+                                          no double-name, no overreach. */}
+                                      <p className="text-[12px] font-semibold text-muted-foreground/85">Hand-picked</p>
                                       {!isReadOnlyFund && (
                                         <div className="relative flex items-center gap-1.5">
                                           <AnimatePresence>
@@ -8312,7 +10294,7 @@ export default function Dashboard() {
                                                 initial={{ opacity: 0, scale: 0.92, x: 6 }}
                                                 animate={{ opacity: 1, scale: 1, x: 0 }}
                                                 exit={{ opacity: 0, scale: 0.92, x: 6 }}
-                                                transition={{ duration: 0.14, ease: "easeOut" }}
+                                                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                                                 className="flex items-center gap-1.5"
                                               >
                                                 <button
@@ -8339,7 +10321,7 @@ export default function Dashboard() {
                                             aria-label="Add investment"
                                           >
                                             Add an investment
-                                            <Plus size={10} className={`transition-transform ${investPickerOpen ? "rotate-45" : ""}`} />
+                                            <Plus size={10} className={`transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${investPickerOpen ? "rotate-45" : ""}`} />
                                           </button>
                                         </div>
                                       )}
@@ -8371,7 +10353,9 @@ export default function Dashboard() {
                                   variant when the layout went side-by-side; dropped
                                   with the stack-always change above. */}
                               {hasBothSections && (
-                                <div className="border-t border-[hsl(var(--kiddo-border)/0.6)]" />
+                                /* STAGING: /0.6 → /0.4 — this sub-group split was reading
+                                   at the section-divider weight. Within-section = /0.4. */
+                                <div className="border-t border-[hsl(var(--kiddo-border)/0.4)]" />
                               )}
 
                               {/* Managed-bucket section. Header reads
@@ -8382,7 +10366,7 @@ export default function Dashboard() {
                                   etc.), and the current preset rides as
                                   a parenthetical with the locked strategy
                                   emoji (🛡️ Conservative · ⚖️ Balanced ·
-                                  📈 Growth · 🎯 Custom). The structural
+                                  📈 Growth · 🎛️ Custom). The structural
                                   cue (this bucket is platform-managed vs
                                   the gifter-picked "Chosen with love"
                                   pair) is carried by the strategy emoji
@@ -8423,15 +10407,12 @@ export default function Dashboard() {
                                       jobs apply whether or not Custom picks exist. */}
                                   <div className="flex items-center justify-between px-1 pb-0.5">
                                     <p className="text-[12px] font-semibold text-muted-foreground/85">
-                                      {(() => {
-                                        // Sentence-case the warm form so
-                                        // "Emma's mix" reads as a header
-                                        // even when the kid name is missing.
-                                        const raw = mixIdentityFor(recipientFirstNameDisplay, isOwnerMode);
-                                        return raw.charAt(0).toUpperCase() + raw.slice(1);
-                                      })()}
+                                      {/* STAGING: "Managed mix" (matches the composition bar +
+                                          "Customize the mix"); strategy as a clean middot suffix,
+                                          NOT a parenthetical (off-brand here) → "Managed mix · 📈 Growth". */}
+                                      {isOwnerMode ? "Your mix" : "Managed mix"}
                                       <span className="ml-1.5 font-normal text-muted-foreground/70">
-                                        ({stratEmoji} {bareStratName})
+                                        · {stratEmoji} {bareStratName}
                                       </span>
                                     </p>
                                     {/* Investing strategy is OWNER-ONLY (server: PATCH /strategy adds
@@ -8447,7 +10428,7 @@ export default function Dashboard() {
                                       className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]`}
                                     >
                                       <Pencil size={9} />
-                                      {canCustomize ? (isOwnerMode ? "Customize your mix" : `Customize ${childFirst}'s mix`) : "Customize"}
+                                      {canCustomize ? (isOwnerMode ? "Customize your mix" : "Customize the mix") : "Customize"}
                                       {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
                                     </button>
                                     )}
@@ -8489,6 +10470,7 @@ export default function Dashboard() {
                 );
               })()}
             </motion.section>
+            </LabCollapse>
             )}
 
             {/* Who loves [name] */}
@@ -8529,7 +10511,15 @@ export default function Dashboard() {
               // Non-owner (parent) view is unchanged.
               const parentInvestedForOwner = isOwnerMode
                 ? loveLiveGifts.reduce((s, g) => {
-                    if (!(g as any).parentContributionId) return s;
+                    // Add back ALL custodian-parent contributions — recurring AND
+                    // one-time. Was: only `parentContributionId` (recurring) rows, so
+                    // the parent's ONE-TIME additions fell out of `totalGifted` (excluded
+                    // as account-holder money) and were never re-added here — undercounting
+                    // this footer vs the breakdown card's `investedByParentsTotal` (the
+                    // visible "$23,350 vs $22,400" gap was exactly the parent's one-times).
+                    const sender = loveSenderOf(g);
+                    if (sender === loveOwnerEmail) return s; // owner's own money isn't a gift to themselves
+                    if (!loveAccountHolders.has(sender)) return s; // externals already counted in totalGifted
                     const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
                     return s + (Number.isFinite(n) && n > 0 ? n : 0);
                   }, 0)
@@ -8542,20 +10532,41 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: 0.0195 }}
-                  className="space-y-3"
+                  className="st-section space-y-3"
                 >
-                  <p className="kiddo-section-label">
-                    {isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "People who love them"}
-                  </p>
-                  <div
-                    style={{
-                      background: "white",
-                      borderRadius: 20,
-                      border: "1px solid rgba(26,23,16,0.1)",
-                      boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
-                      padding: "20px 20px 18px",
-                    }}
-                  >
+                  {/* LAB: family as a HERO MOMENT, not a small label (the
+                      critique). The belonging beat: "N people are building
+                      Theo's future" - the thing a bank can't have. BUT calibrate
+                      to honesty: lead with the COUNT only when we can actually
+                      show the people (named-heavy). When most gifters are
+                      anonymous (real-account edge case - e.g. 10 of 14 anon),
+                      "N people are building..." overpromises a face-wall that
+                      isn't there, so lead with a warm growth line and let the
+                      honest "X named, Y anonymous" footer carry the count. */}
+                  {(() => {
+                    const namedCount = gifterRoster.filter(g => g.name !== "Anonymous").length;
+                    const mostlyAnon = namedCount < contributorCount / 2;
+                    const Poss = isOwnerMode ? "Your" : childName ? `${childName}'s` : "Their";
+                    const who = isOwnerMode ? "your" : childName ? `${childName}'s` : "their";
+                    const headline = mostlyAnon
+                      ? `${Poss} future is growing`
+                      : `${contributorCount > 0 ? contributorCount + " " : ""}${contributorCount === 1 ? "person is" : "people are"} building ${who} future`;
+                    return (
+                      <div style={{ marginBottom: 2 }}>
+                        {/* STAGING: subheading deleted — the headline already says it. */}
+                        {/* STAGING: matched to the standard section-header size/font
+                            (15.5px DM Sans, like the dropdown + Occasions headers) — was
+                            19px Bricolage, the lone outlier that made this section "shout".
+                            The warmth lives in the words + the faces below, not the size. */}
+                        <p style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: "-0.01em", color: "hsl(var(--kiddo-ink))", margin: 0 }}>{headline}</p>
+                      </div>
+                    );
+                  })()}
+                  {/* STAGING: flushed (Tier 0) — the roster is a section, not a pick-up
+                      object, so it loses the white card and the faces gather directly on
+                      the page. Warmer ("they're here", not a people-widget) and consistent
+                      with the de-carded breakdown / holdings / growth. */}
+                  <div style={{ padding: "10px 0 2px" }}>
                     {/* People circles. Several signals stacked on each avatar:
                         - Owner: evergreen ring (the parent themself)
                         - Recurring: gold ring OR small ↻ badge top-right when
@@ -8612,9 +10623,30 @@ export default function Dashboard() {
                         : namedGifters.slice(0, AVATAR_VISIBLE);
                       const overflowCount = Math.max(0, totalNamed - AVATAR_VISIBLE);
                       const recentMs = Date.now() - 48 * 60 * 60 * 1000;
+                      // Trailing tiles (+N more / less / anonymous cluster) are
+                      // plain buttons, so they reveal in CSS-sync with the
+                      // framer face cascade — tucked in after the last face.
+                      // Without this they'd sit alone, fully visible, while
+                      // the faces are still hidden pre-scroll.
+                      const tileDelay = Math.min(visibleGifters.length, 11) * 0.06;
+                      // Reduced-motion: tiles fade only (no translate/scale),
+                      // matching what MotionConfig does to the framer faces.
+                      const tilesReduceMotion = typeof window !== "undefined"
+                        && typeof window.matchMedia === "function"
+                        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                      const tileReveal: React.CSSProperties = {
+                        opacity: facesInView ? 1 : 0,
+                        transform: facesInView || tilesReduceMotion ? "none" : "translateY(12px) scale(0.8)",
+                        transition: facesInView
+                          ? (tilesReduceMotion
+                            ? `opacity 0.2s ease ${tileDelay}s`
+                            : `opacity 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s, transform 0.44s cubic-bezier(0.16,1,0.3,1) ${tileDelay}s`)
+                          : "none",
+                      };
                       return (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-                      {visibleGifters.map(gifter => {
+                    <div ref={facesScrollRef}>
+                    <div className="lab-faces" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                      {visibleGifters.map((gifter, faceIdx) => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifterShortName(gifter.name);
                         // Show how the family refers to this person ("Dad",
@@ -8654,6 +10686,11 @@ export default function Dashboard() {
                         const isFirstGifter = gifter.name === firstGifterName;
                         const lastGiftTs = gifter.lastGiftDate ? new Date(gifter.lastGiftDate).getTime() : 0;
                         const isRecent = lastGiftTs >= recentMs;
+                        // Gift-lands choreography: this gifter's gift is the one
+                        // currently playing the hero arrival cue → their face
+                        // blooms in the same window (see flashGifterName).
+                        const isFlashGifter = !!flashGifterName
+                          && gifter.name.trim().toLowerCase() === flashGifterName.trim().toLowerCase();
                         // Build a rich tooltip for desktop hover (native title
                         // attribute is accessible + zero JS overhead). Shows
                         // last-gift summary so the parent doesn't need to
@@ -8675,26 +10712,48 @@ export default function Dashboard() {
                         ].filter(Boolean) as string[];
                         const tooltipText = tooltipParts.join(" · ");
                         return (
-                          <button
+                          <motion.button
                             key={gifter.name}
                             type="button"
                             onClick={() => { haptic("selection"); setSelectedGifter(gifter); }}
                             title={tooltipText}
                             className="kiddo-gifter-avatar"
+                            // Visibility-driven cascade (NOT whileInView - it
+                            // snaps when already in view on mount, and NOT
+                            // key-remount - that cascaded invisibly off-screen
+                            // on initial load, then blinked static faces out on
+                            // first scroll-down). Hidden until facesInView
+                            // (parent row's IntersectionObserver), then rolls
+                            // in staggered — first sight is always the cascade.
+                            // Stagger only applies on the way IN; reset is
+                            // instant and off-screen. Hover/tap stay instant.
+                            initial={{ opacity: 0, y: 12, scale: 0.8 }}
+                            animate={facesInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 12, scale: 0.8 }}
+                            transition={facesInView
+                              ? { duration: 0.44, delay: faceIdx * 0.06, ease: [0.16, 1, 0.3, 1] }
+                              : { duration: 0 }}
+                            whileHover={{ y: -4, scale: 1.06, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                            whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                           >
                             <div style={{ position: "relative" }}>
                               <div
-                                className={isRecent ? "kiddo-gifter-avatar-pulse" : undefined}
+                                className={[
+                                  isRecent ? "kiddo-gifter-avatar-pulse" : null,
+                                  isFlashGifter ? "kiddo-face-bloom" : null,
+                                ].filter(Boolean).join(" ") || undefined}
                                 style={{
                                   width: 56, height: 56, borderRadius: 9999,
                                   background: color.bg,
                                   display: "flex", alignItems: "center", justifyContent: "center",
                                   overflow: "hidden",
+                                  // Gold recurring RING removed — it was redundant
+                                  // with the ↻ badge (which already marks recurring for
+                                  // everyone) AND cryptic (nobody intuits gold=recurring).
+                                  // The ring now means exactly ONE thing: evergreen = the
+                                  // owner (you). Recurring is carried solely by the ↻.
                                   boxShadow: isOwner
                                     ? "0 0 0 2.5px hsl(var(--kiddo-evergreen)), 0 3px 10px rgba(26,23,16,0.15)"
-                                    : isRecurring
-                                    ? "0 0 0 2.5px hsl(43, 85%, 50%), 0 3px 10px rgba(26,23,16,0.15)"
                                     : "0 3px 10px rgba(26,23,16,0.13)",
                                   transition: "transform 0.15s ease, box-shadow 0.15s ease",
                                 }}
@@ -8734,17 +10793,12 @@ export default function Dashboard() {
                                   ⭐
                                 </div>
                               )}
-                              {/* Recurring badge (↻), shown for ANYONE on a
-                                  recurring schedule — the parent AND recurring
-                                  gifters. For the owner, their gold recurring
-                                  ring is masked by the evergreen owner ring, so
-                                  the badge is the only recurring cue. For a
-                                  recurring gifter the avatar already carries a
-                                  gold ring, but a ring COLOUR isn't self-evidently
-                                  "recurring" — the ↻ glyph makes it legible at a
-                                  glance, and surfaces the recurring gift that the
-                                  at-majority projection counts (so the headline
-                                  number reconciles with what's on the roster). */}
+                              {/* Recurring badge (↻) — the SOLE recurring signal now,
+                                  shown for ANYONE on a recurring schedule (the parent
+                                  AND recurring gifters). The old gold ring was dropped
+                                  as redundant + cryptic; the ↻ reads as "repeats" on
+                                  its own and surfaces the recurring gift the
+                                  at-majority projection counts. */}
                               {isRecurring && (
                                 <div
                                   title={isOwner ? "Recurring schedule" : "Recurring gifter"}
@@ -8793,29 +10847,29 @@ export default function Dashboard() {
                               const lastDate = new Date(gifter.lastGiftDate);
                               const now = new Date();
                               const sameYear = lastDate.getUTCFullYear() === now.getUTCFullYear();
-                              const dateLabel = lastDate.toLocaleDateString("en-US",
-                                sameYear
-                                  ? { month: "short", day: "numeric", timeZone: "UTC" }
-                                  : { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }
-                              );
+                              const dateLabel = sameYear
+                                ? lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+                                // Prior years: compact "Mon D 'YY" (e.g. "Dec 4 '25")
+                                // instead of "Dec 4, 2025" - the full year overflowed
+                                // the face width and truncated to an ugly ellipsis.
+                                : `${lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} '${String(lastDate.getUTCFullYear()).slice(-2)}`;
                               const isRepeat = gifter.giftCount >= 2;
                               return (
                                 <span style={{
                                   fontSize: 9, fontWeight: 500,
                                   color: "rgb(150,138,128)",
-                                  maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                  maxWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                                   textAlign: "center", marginTop: -2,
                                 }}>
+                                  {/* STAGING: ambiguous "· N" gift-count dropped — a bare
+                                      number under the face read as a mystery (gifts? $? days?).
+                                      The last-gave date is the clear, useful signal; frequency
+                                      lives on tap in the gifter detail. */}
                                   {dateLabel}
-                                  {isRepeat && (
-                                    <span style={{ color: "hsl(var(--kiddo-evergreen))", fontWeight: 700 }}>
-                                      {" · "}{gifter.giftCount}
-                                    </span>
-                                  )}
                                 </span>
                               );
                             })()}
-                          </button>
+                          </motion.button>
                         );
                       })}
                       {/* +N more tile — only when overflow is collapsed.
@@ -8826,7 +10880,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => { haptic("selection"); setAvatarsExpanded(true); }}
                           title={`Show all ${totalNamed} gifters`}
-                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0, ...tileReveal }}
                         >
                           <div style={{
                             width: 56, height: 56, borderRadius: 9999,
@@ -8848,7 +10902,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => { haptic("selection"); setAvatarsExpanded(false); }}
                           title="Show fewer"
-                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0, ...tileReveal }}
                         >
                           <div style={{
                             width: 56, height: 56, borderRadius: 9999,
@@ -8886,7 +10940,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => { haptic("selection"); setSelectedGifter(anonEntry); }}
                           title={`${anonEntry.giftCount} anonymous ${anonEntry.giftCount === 1 ? "gift" : "people"}`}
-                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", padding: 0, ...tileReveal }}
                         >
                           <div style={{ position: "relative", width: 56, height: 52 }}>
                             {showCluster && (
@@ -8951,102 +11005,54 @@ export default function Dashboard() {
                         );
                       })()}
                     </div>
+                    </div>
                       );
                     })()}
 
-                    <div style={{ height: 1, background: "rgba(26,23,16,0.06)", margin: "16px 0" }} />
-
-                    {/* Stats + invite. Anonymous-as-distinct-human rule:
-                        each anonymous gift counts as a separate person
-                        (matches Memory Book's "Anonymous as distinct human"
-                        memory rule). Previously displayed "7 anonymous
-                        GIFTS" alongside "3 named PEOPLE" — inconsistent
-                        units and the breakdown didn't sum to a meaningful
-                        total. Now fronts the celebration number ("10 people
-                        love Emma") with the named/anonymous split as
-                        context, so the breakdown adds up to the headline. */}
-                    <div>
-                      {(() => {
-                        const namedCount = namedGifters.length;
-                        const anonCount = anonEntry?.giftCount ?? 0;
-                        const peopleCount = namedCount + anonCount;
-                        if (peopleCount === 0) return null;
-                        // "have given to" not "love": quantifying love overclaims
-                        // (a $20 anonymous office gift isn't love), and the warm
-                        // "Who loves" header above already carries the sentiment —
-                        // so the count stays factual. Also aligns with the gift
-                        // page's deliberately transactional "X people have gifted".
-                        const peopleLabel = isOwnerMode
-                          ? (peopleCount === 1 ? "1 person has given to your fund" : `${peopleCount} people have given to your fund`)
-                          : peopleCount === 1
-                            ? `1 person has given to ${childName || "them"}`
-                            : `${peopleCount} people have given to ${childName || "them"}`;
-                        const breakdown = (() => {
-                          if (namedCount > 0 && anonCount > 0) {
-                            return `${namedCount} named, ${anonCount} anonymous`;
-                          }
-                          if (namedCount > 0) return null;
-                          // anon-only edge case: don't double-state the count
-                          return `all anonymous`;
-                        })();
-                        return (
-                          <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(26,23,16)", lineHeight: 1.5 }}>
-                            {peopleLabel}
-                            {breakdown && (
-                              <span style={{ color: "rgb(140,130,122)", fontWeight: 500 }}>
-                                {" · "}{breakdown}
-                              </span>
-                            )}
-                          </p>
-                        );
-                      })()}
-                      <p style={{ fontSize: 13.5, color: "rgb(100,92,86)", marginTop: 8, lineHeight: 1.5 }}>
-                        {fmtWhole(displayGiftedTotal)} gifted to {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund.{" "}
-                        {/* Inline share-loop close. The community signal
-                            here ("X people love Emma") is the moment to
-                            invite more — but the surface used to end at
-                            the dollar total with no inline action. The
-                            standalone Share card below still exists for
-                            users who want a dedicated CTA; this link
-                            tightens the loop for users who want to act
-                            from inside this section. Same global share
-                            modal the rest of the app uses.
-                            Hidden for read-only roles — a previous owner
-                            inviting more gifts would route them to a fund
-                            they no longer control. */}
-                        {!isReadOnlyFund && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Was dispatching `kiddo:open-share-modal` —
-                              // but Dashboard ALSO listens for that event,
-                              // and GlobalShareModal listens at App level
-                              // unconditionally. Both modals fired in
-                              // parallel, stacking. We're already inside
-                              // Dashboard scope here, so calling
-                              // handleShareLink() directly avoids the event
-                              // bus entirely and only opens the canonical
-                              // in-page modal.
-                              haptic("selection");
-                              handleShareLink();
-                            }}
-                            style={{
-                              background: "none", border: "none", padding: 0,
-                              color: "hsl(var(--kiddo-evergreen))", fontWeight: 700,
-                              cursor: "pointer", fontFamily: "inherit", fontSize: "inherit",
-                            }}
-                            data-testid="who-loves-share-link"
-                          >
-                            Share with one more →
-                          </button>
-                        )}
-                      </p>
-                    </div>
+                    {/* STAGING: roster stats+invite footer deleted — "{N} people have
+                        given" duplicated the headline count, "{N} named, {N} anonymous"
+                        was clinical (anonymous gifters already show as an "N anon." tile),
+                        "${total} gifted" duplicates the fund-so-far breakdown, and "Share
+                        with one more" was an ambiguous 3rd Share. The faces ARE the
+                        section; the headline carries the count. */}
                   </div>
                 </motion.section>
               );
             })()}
 
+            {/* LAB: the parent's recurring + one-time contributions, collapsed
+                (smooth open + close). */}
+            <LabCollapse
+              marginTop={16}
+              testid="lab-yourpart-details"
+              openKey="yourpart"
+              icon={HandCoins}
+              // Title carries the warmer NAMED wording (promoted up from the
+              // inner section title, which was a duplicate and is now removed).
+              title={isOwnerMode
+                ? "Invest in your fund"
+                : recipientFirstNameDisplay
+                  ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
+                  : "Your part of their story"}
+              stat={(() => {
+                // Sum the viewer's OWN gift rows (recurring-linked + one-time),
+                // the same rows the fund-so-far sheet buckets into "Your
+                // recurring investments" + "Your one-time additions" — so this
+                // stat equals those two rows summed, exactly. The old version
+                // summed parentContributions.totalContributed (recurring
+                // schedules ONLY): it said "$8,400 contributed so far" while
+                // the sheet itemized $8,400 + $700 one-time (founder caught
+                // the mismatch). One fact = one formula.
+                const me = String(user?.email || "").trim().toLowerCase();
+                const c = !me ? 0 : gifts.reduce((s, g) => {
+                  const sender = String((g as any).senderEmail || "").trim().toLowerCase();
+                  if (sender !== me) return s;
+                  const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
+                  return s + (Number.isFinite(n) && n > 0 ? n : 0);
+                }, 0);
+                return c >= 1 ? `$${Math.round(c).toLocaleString("en-US")} contributed so far` : "Your recurring and one-time gifts";
+              })()}
+            >
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -9059,13 +11065,55 @@ export default function Dashboard() {
                   keeping "your" as the subject so the parent knows this section
                   belongs to them. "Story" is intentional: these contributions get
                   stamped into the Memory Book as love letters, not just transactions. */}
-              <p className="kiddo-section-label" data-testid="text-your-part-title">
-                {isOwnerMode
-                  ? "Invest in your fund"
-                  : recipientFirstNameDisplay
-                    ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
-                    : "Your part of their story"}
-              </p>
+              {/* Title moved UP to the LabCollapse header (was duplicated here).
+                  The "89 investments" identity line below is the unique part. */}
+              {(() => {
+                // The identity line (founder-approved 2026-06-05). The title
+                // promises "story"; this is the one sentence of it — count +
+                // first year, both PROVEN by the gift rows. The BARE FACT
+                // only, deliberately: a "still showing up" flourish was cut
+                // (founder call) — it told the parent what to feel instead of
+                // letting the number do it, and because it was recency-gated
+                // its disappearance after a lapse read as quiet judgment. The
+                // count never judges. Viewer-keyed like the collapse stat
+                // (Elena sees HER count, Marcus his — and previous-owner Marcus
+                // on a handed-off fund sees his full era). Hidden until the
+                // habit is real (6+ investments spanning 18+ months) so a new
+                // parent isn't shown "2 investments since 2026" dressed as a
+                // streak.
+                const me = String(user?.email || "").trim().toLowerCase();
+                if (!me) return null;
+                let count = 0;
+                let firstTs = Infinity;
+                for (const g of gifts as any[]) {
+                  if (String((g as any).senderEmail || "").trim().toLowerCase() !== me) continue;
+                  const amt = parseFloat(String((g as any).netAmount || (g as any).amount || "0")) || 0;
+                  if (!(amt > 0)) continue;
+                  count += 1;
+                  const ts = (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0;
+                  if (ts > 0 && ts < firstTs) firstTs = ts;
+                }
+                if (count < 6 || !Number.isFinite(firstTs)) return null;
+                if (Date.now() - firstTs < 548 * 86400000) return null; // 18 months
+                // DURATION, not a year (2026-06-07, founder catch): "since 2018"
+                // sat near the fund-so-far "Nov 5, 2017 → today" and read as a
+                // mismatch (the fund predates the viewer's first gift — a real
+                // but double-take-inducing fact). A duration keeps the
+                // long-term-consistency weight with no specific year to clash,
+                // and reads warmer. floor() so "over N years" is never an
+                // overstatement; "over a year" for the just-past-18-months case.
+                const yearsSpan = Math.floor((Date.now() - firstTs) / (365.25 * 86400000));
+                const spanLabel = yearsSpan >= 2 ? `over ${yearsSpan} years` : "over a year";
+                return (
+                  <p className="mt-1 text-[12.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]" data-testid="text-your-part-identity">
+                    {/* STAGING: "contributions" not "investments" — investing isn't live
+                        (INVESTING_LIVE=false), so "investments" implies the money is in the
+                        market when it isn't yet. "contributions" is true in every flag state
+                        and reads warm for "Your part of {child}'s story". */}
+                    {count} contributions {spanLabel}
+                  </p>
+                );
+              })()}
 
               {/* Layout mirrors "What Emma owns" → Chosen with love / Managed mix:
                   outside uppercase subheaders sit ABOVE each column (not inside
@@ -9161,7 +11209,7 @@ export default function Dashboard() {
                                 className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
                                 data-testid={`gentle-nudge-action-${nudgeKey}`}
                               >
-                                See both schedules →
+                                See both schedules
                               </button>
                               <button
                                 type="button"
@@ -9282,7 +11330,7 @@ export default function Dashboard() {
                   const yearsRoundedDown = Math.floor(yearsLeft);
                   const showProjection = yearsLeft > 0.5 && projectedAddedValue >= 1 && yearsRoundedDown >= 1;
                   return (
-                    <div className="kiddo-card p-5 flex flex-col" data-testid="card-auto-invest-setup-v2">
+                    <div className="p-5 flex flex-col" data-testid="card-auto-invest-setup-v2">
                       <div className="flex items-start gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
                           <Repeat size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
@@ -9352,8 +11400,10 @@ export default function Dashboard() {
                   );
                 }
 
+                // STAGING: flushed to match the holdings sub-groups (label + flush
+                // content, no card) — "Your part" is the same shape as "What X owns".
                 return (
-                  <div className="kiddo-card overflow-hidden" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-list-view">
+                  <div className="overflow-hidden" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-list-view">
                     {/* Section header + status — INSIDE the card as the
                         first block. Apple Settings group pattern: small
                         uppercase eyebrow, supporting summary line right
@@ -9436,11 +11486,36 @@ export default function Dashboard() {
                                 style={{ fontSize: 11.5, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                                 onClick={() => ownPaused.forEach(c => handleUpdateAutoInvestStatus(String(c.id), "active"))}
                               >
-                                Resume all →
+                                Resume all
                               </button>
                             )}
                           </div>
                           )}
+                          {(() => {
+                            // The combined anti-cancel line for MULTI-schedule
+                            // cards (the solo card carries it per-row instead —
+                            // see the row's solo-only gate). One sentence for
+                            // the whole card: "together on track to add ~$X by
+                            // 21", summing every ACTIVE schedule on the fund
+                            // (all contributors — the future is funded by all
+                            // of them, same population the hero pill sums).
+                            // Same canonical math + honesty gates as the hero.
+                            if (allContribs.length < 2) return null;
+                            if (Boolean((activeFund as any)?.transferredAt) || !age18Transition) return null;
+                            const yrsAhead = Math.max(0, age18Transition.daysUntil18 / 365.25);
+                            if (yrsAhead <= 0.08) return null;
+                            const activeRows = allContribs.filter((c: any) => (optimisticContribStatus[String(c.id)] ?? c.status) === "active" && c.pauseReason !== "majority_handoff");
+                            if (activeRows.length === 0) return null;
+                            const combinedMonthly = sumMonthlyEquivalent(activeRows as any[]);
+                            if (!(combinedMonthly > 0)) return null;
+                            const adds = projectFundValue({ startingValue: 0, monthlyContribution: combinedMonthly, yearsAhead: yrsAhead, contributionYears: yrsAhead });
+                            if (!(adds >= 100)) return null;
+                            return (
+                              <p className="mt-1 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)] whitespace-nowrap">
+                                together on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
+                              </p>
+                            );
+                          })()}
                         </div>
                       );
                     })()}
@@ -9489,7 +11564,7 @@ export default function Dashboard() {
                             // own identity.
                             const targetLabel = pickMeta
                               ? pickMeta.name
-                              : capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode));
+                              : (isOwnerMode ? "Your mix" : "Managed mix"); // STAGING: align with holdings "Managed mix"
                             // 4-second glow ring when this row matches the
                             // ticker that the duplicate-recurring nudge just
                             // pointed at. Gives the parent immediate visual
@@ -9587,6 +11662,40 @@ export default function Dashboard() {
                                         ? ` · Next ${new Date(String(contrib.nextRunDate)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`
                                         : ""}
                                     </p>
+                                    {(() => {
+                                      // Outcome, not just cost (founder-approved
+                                      // 2026-06-05): connect the schedule to the
+                                      // future it funds — the anti-cancel line.
+                                      // Canonical math only (sumMonthlyEquivalent +
+                                      // projectFundValue, the exact pair the hero
+                                      // pill uses), and gated like the hero's
+                                      // honesty rule: only while the majority
+                                      // moment is genuinely ahead, only on live
+                                      // schedules, and only when the contribution
+                                      // is material (≥$100 projected).
+                                      //
+                                      // SOLO ONLY (founder catch 2026-06-05: "if
+                                      // there's many recurring set?"): with N
+                                      // schedules the same sentence chanted N times
+                                      // turns the beat into boilerplate, and the
+                                      // parent wants the TOTAL anyway — multi-
+                                      // schedule cards get ONE combined line in
+                                      // the card header instead.
+                                      if (!isSoloHero) return null;
+                                      if (isPausedRow || isHandoffEnded) return null;
+                                      if (Boolean((activeFund as any)?.transferredAt) || !age18Transition) return null;
+                                      const yrsAhead = Math.max(0, age18Transition.daysUntil18 / 365.25);
+                                      if (yrsAhead <= 0.08) return null;
+                                      const rowMonthly = sumMonthlyEquivalent([contrib as any]);
+                                      if (!(rowMonthly > 0)) return null;
+                                      const adds = projectFundValue({ startingValue: 0, monthlyContribution: rowMonthly, yearsAhead: yrsAhead, contributionYears: yrsAhead });
+                                      if (!(adds >= 100)) return null;
+                                      return (
+                                        <p className="mt-0.5 text-[10.5px] font-medium tabular-nums text-[hsl(var(--kiddo-evergreen)/0.85)] whitespace-nowrap">
+                                          on track to add ~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(adds)} by {age18Transition.majorityAge}
+                                        </p>
+                                      );
+                                    })()}
                                   </div>
                                   <span
                                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -9679,7 +11788,7 @@ export default function Dashboard() {
                   owner's actual schedule history lives in "View past
                   investments" on the one-time card next to this. */}
               {isReadOnlyFund && (
-                <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
+                <div className="p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                     Recurring investments
                   </p>
@@ -9733,7 +11842,9 @@ export default function Dashboard() {
                   same restraint pass as the recurring header. */}
               <div className="md:flex-1 flex flex-col">
               {/* ── One-time investment card ── */}
-              <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "onetime")} data-testid="card-one-time-contribution-v2">
+              {/* STAGING: flushed to match holdings sub-groups (the card→flush call).
+                  Hierarchy now reads via order (recurring leads), not elevation. */}
+              <div className="flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "onetime")} data-testid="card-one-time-contribution-v2">
                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                   One-time investment
                 </p>
@@ -9784,13 +11895,21 @@ export default function Dashboard() {
                               <span className="ml-1 font-normal text-muted-foreground">· {formatMoneyFriendly(lastOwnGift.amount)}{dateLabel ? ` · ${dateLabel}` : ""}</span>
                             </p>
                           </div>
-                          {currentValue != null && delta != null && Math.abs(delta) >= 0.01 && (
+                          {currentValue != null && (
                             <p className="text-[12px] tabular-nums leading-snug">
                               <span className="text-muted-foreground">Now worth </span>
                               <span className="font-semibold text-foreground">{formatCurrency(currentValue)}</span>
-                              <span className={`ml-1 font-semibold ${delta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
-                                ({delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))}){delta >= 0 ? " 🌱" : ""}
-                              </span>
+                              {/* The delta earns its parenthetical at |Δ| ≥ $1
+                                  (founder-approved 2026-06-05) — a day-old
+                                  "(+$0.18)" undercuts its own moment (same
+                                  sub-$1 rule as the chart stat). Younger
+                                  positions get "Now worth $X 🌱" alone; time
+                                  makes the parenthetical impressive. */}
+                              {delta != null && Math.abs(delta) >= 1 ? (
+                                <span className={`ml-1 font-semibold ${delta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
+                                  ({delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))})
+                                </span>
+                              ) : null}
                             </p>
                           )}
                         </div>
@@ -9806,8 +11925,8 @@ export default function Dashboard() {
                             : activeAutoInvest
                             ? "Add outside your regular schedule anytime."
                             : isOwnerMode
-                              ? `A bonus. A good month. Just because. 🌱`
-                              : `A birthday. A milestone. Just because. 🌱`}
+                              ? `For a bonus, or any month worth marking.`
+                              : `For a birthday, or any moment worth marking.`}
                         </p>
                       </div>
                     )}
@@ -9830,7 +11949,7 @@ export default function Dashboard() {
                       onClick={() => { openDetailScope({ kind: "contributions" }); }}
                       data-testid="button-one-time-view-all-readonly"
                     >
-                      View past investments →
+                      View past investments
                     </button>
                   ) : lastOwnGift ? (
                     <div className="space-y-2">
@@ -9859,7 +11978,7 @@ export default function Dashboard() {
                         }}
                         data-testid="button-one-time-add-to-mix-v2"
                       >
-                        Invest {formatMoneyFriendly(lastOwnGift.amount)} in {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund →
+                        Invest {formatMoneyFriendly(lastOwnGift.amount)} in {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund
                       </Button>
                       {lastOwnGift.ticker && (() => {
                         // Mirror the same fallback chain used in the metadata line above
@@ -9895,7 +12014,7 @@ export default function Dashboard() {
                         onClick={() => { haptic("light"); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
                         data-testid="button-one-time-custom-amount-v2"
                       >
-                        Different amount or stock →
+                        Custom amount or stock
                       </button>
                       {/* "View all contributions" — opens the same modal
                           Activity uses, scoped to all the parent's
@@ -9910,7 +12029,7 @@ export default function Dashboard() {
                         onClick={() => { openDetailScope({ kind: "contributions" }); }}
                         data-testid="button-one-time-view-all-v2"
                       >
-                        View all your investments →
+                        View all your investments
                       </button>
                     </div>
                   ) : activeAutoInvest ? (
@@ -9939,7 +12058,7 @@ export default function Dashboard() {
                         onClick={() => { haptic("light"); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
                         data-testid="button-one-time-custom-amount-v2"
                       >
-                        Different amount
+                        Custom amount
                       </button>
                     </div>
                   ) : (
@@ -9958,15 +12077,30 @@ export default function Dashboard() {
               </div>
               </div>
             </motion.section>
+            </LabCollapse>
 
             {/* ===== Occasions ===== */}
+            {/* LAB: animates in on MOUNT (not whileInView) so the section is NEVER
+                blank white space waiting to be scrolled into view — the founder
+                disliked the gate-visibility-on-scroll behavior, especially once the
+                occasion detail expands tall (2026-06-12). Tiles inside still cascade
+                left-to-right as variant children (staggerChildren); visible by
+                default, the animation only enhances. */}
             <motion.section
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.035 }}
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: { opacity: 0, y: 14 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.055, delayChildren: 0.05 } },
+              }}
+              className="st-section"
             >
               {/* ── Section header ── */}
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
+              {/* STAGING: removed the redundant header "+" — adding an occasion is already
+                  covered by the clearer "+ New" dashed tile in the row below (same action:
+                  setCreateEventSheetOpen, more discoverable + contextual). One add affordance
+                  per section. */}
+              <div style={{ marginBottom:2 }}>
                 <span className="kiddo-section-label">
                   {isOwnerMode
                     ? "Your Occasions"
@@ -9974,16 +12108,6 @@ export default function Dashboard() {
                       ? `${recipientFirstNameDisplay}'s Occasions`
                       : "Occasions"}
                 </span>
-                {!isReadOnlyFund && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
-                    aria-label="New occasion"
-                  >
-                    <Plus size={13} />
-                  </button>
-                )}
               </div>
 
               {/* ── Horizontal tile row ── */}
@@ -10084,7 +12208,14 @@ export default function Dashboard() {
                     // "0th Birthday." Welcome branch above is the right
                     // fallback for the unborn case; for born-today we just
                     // don't add a 1st-birthday tile a year away.
-                    if (nextAge > 0) {
+                    // Suppress when the next birthday IS the majority/handoff
+                    // birthday: that exact moment is already owned by the handoff
+                    // card ("the day it becomes {child}'s"), so suggesting a birthday
+                    // OCCASION for it is redundant (founder catch 2026-06-16). A
+                    // younger kid's next birthday still suggests normally.
+                    const handoffAge = age18Transition?.majorityAge ?? null;
+                    const nextBirthdayIsHandoff = handoffAge != null && nextAge >= handoffAge;
+                    if (nextAge > 0 && !nextBirthdayIsHandoff) {
                       const daysUntil = Math.ceil((nextBday.getTime() - nowMs) / 86400000);
                       const countdownStr = daysUntil <= 0
                         ? "Today"
@@ -10095,11 +12226,17 @@ export default function Dashboard() {
                         : `${Math.ceil(daysUntil / 365)}yr away`;
                       suggestions.push({
                         key: "sug-birthday", emoji: "🎂",
-                        name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`,
-                        sub: nextBday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                        // Generic name (not "{nextAge}th Birthday"): a birthday is ONE
+                        // perpetual occasion whose date rolls forward each year
+                        // (@shared/occasions), so an ordinal name would drift — it'd read
+                        // "14th" while the date already points at the 15th. The celebratory
+                        // "turns N" lives in the sub instead. One-time milestones (Welcome,
+                        // license, graduation) keep their specific names.
+                        name: `${childFirstSug}'s Birthday`,
+                        sub: `Turns ${nextAge} · ${nextBday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
                         countdown: countdownStr,
                         sortMs: nextBday.getTime(),
-                        prefill: { name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`, eventType: "birthday", eventDate: nextBday.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
+                        prefill: { name: `${childFirstSug}'s Birthday`, eventType: "birthday", eventDate: nextBday.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
                       });
                     }
                   }
@@ -10278,8 +12415,9 @@ export default function Dashboard() {
                   const fundTowardGoal = goal > 0 ? totalValue : 0;
                   const pct = goal > 0 ? Math.min(100, (fundTowardGoal / goal) * 100) : 0;
                   const goalReached = goal > 0 && fundTowardGoal >= goal;
-                  const daysLeft = event.eventDate
-                    ? Math.ceil((new Date(event.eventDate).getTime() - Date.now()) / 86400000)
+                  const effEventDate = effectiveOccasionDate(event);
+                  const daysLeft = effEventDate
+                    ? Math.ceil((effEventDate.getTime() - Date.now()) / 86400000)
                     : null;
                   const isSoon = !isArchived && daysLeft !== null && daysLeft <= 7 && daysLeft >= 0;
                   // Prefer the savings goal type when the event is a savings goal
@@ -10299,9 +12437,9 @@ export default function Dashboard() {
                   })();
                   // Tile-friendly date label. Year is omitted when the event is in
                   // the current calendar year (saves precious tile pixels).
-                  const tileDateLabel = event.eventDate
+                  const tileDateLabel = effEventDate
                     ? (() => {
-                        const d = new Date(event.eventDate as any);
+                        const d = effEventDate;
                         const sameYear = d.getUTCFullYear() === new Date().getFullYear();
                         return d.toLocaleDateString("en-US", sameYear
                           ? { month: "short", day: "numeric", timeZone: "UTC" }
@@ -10316,9 +12454,8 @@ export default function Dashboard() {
 
                   const borderColor = isArchived
                     ? "rgba(26,23,16,0.07)"
-                    : goalReached ? "hsl(143,47%,40%)"
-                    : isSoon ? "hsl(43,65%,60%)"
-                    : isExpanded ? "hsl(143,47%,34%)"
+                    : goalReached ? "hsl(var(--success))"
+                    : isExpanded ? "hsl(var(--kiddo-evergreen))"
                     : "rgba(26,23,16,0.10)";
 
                   // Themed cover background when there's no uploaded photo.
@@ -10334,96 +12471,100 @@ export default function Dashboard() {
                   });
 
                   return (
-                    <button
+                    <motion.button
                       key={key}
+                      variants={LAB_TILE_VARIANTS}
+                      // Hover-lift + tap-press so the tiles feel alive/clickable
+                      // like the rest of the app (gifter faces, fund cards) — they
+                      // had the entrance cascade + click haptic but no hover/press
+                      // response. Signature easing; reduced-motion handled globally.
+                      whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                      whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
                       type="button"
                       onClick={() => { haptic("light"); setExpandedTileIdV2(isExpanded ? null : String(event.id)); }}
                       style={{
                         width: 140, minWidth: 140, height: 148, flexShrink: 0,
-                        borderRadius: 18, border: `1.5px solid ${borderColor}`,
-                        overflow: "hidden", cursor: "pointer", background: "white",
-                        display: "flex", flexDirection: "column",
+                        borderRadius: 16, border: `1px solid ${borderColor}`,
+                        overflow: "hidden", cursor: "pointer", position: "relative",
+                        background: imgUrl ? "hsl(var(--kiddo-evergreen-deep))" : "hsl(var(--kiddo-cream))",
+                        display: "flex", flexDirection: "column", padding: 13,
                         boxShadow: isExpanded
                           ? "0 4px 18px rgba(26,23,16,0.13)"
-                          : "0 1px 3px rgba(26,23,16,0.06)",
+                          : "0 1px 2px rgba(26,23,16,0.06)",
                         opacity: isArchived ? 0.72 : 1,
                         transition: "box-shadow 0.18s, opacity 0.18s, border-color 0.18s",
                         textAlign: "left",
                         filter: isArchived ? "saturate(0.55)" : "none",
                       }}
                     >
-                      {/* ── Visual top: photo or themed cover ── */}
-                      <div style={{ flex: 1, position: "relative", overflow: "hidden",
-                        background: imgUrl ? undefined : tileTheme.background,
-                        display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {imgUrl ? (
-                          <>
-                            <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: imgPosition, display: "block" }} />
-                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 35%, white 100%)" }} />
-                          </>
-                        ) : (
-                          <span style={{ fontSize: 38, lineHeight: 1, userSelect: "none", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{emoji}</span>
-                        )}
-                        {/* "Soon" gold shimmer badge */}
-                        {isSoon && (
-                          <div style={{ position: "absolute", top: 7, right: 7,
-                            background: "hsl(43,80%,52%)", borderRadius: 8,
-                            padding: "2px 6px", fontSize: 9, fontWeight: 700, color: "white", lineHeight: 1.4 }}>
-                            {daysLeft === 0 ? "Today" : `${daysLeft}d`}
-                          </div>
-                        )}
-                        {goalReached && (
-                          <div style={{ position: "absolute", top: 7, right: 7,
-                            background: "hsl(143,47%,32%)", borderRadius: 8,
-                            padding: "2px 6px", fontSize: 9, fontWeight: 700, color: "white", lineHeight: 1.4 }}>
-                            🌟
-                          </div>
-                        )}
+                      {/* ── Index-Card Register (design panel, 2026-06-23): an IVORY card
+                          resting on the dashboard ground — NO brand-color fill, so the row
+                          reads as a SET of occasions, not "brand blocks." Identity = the
+                          full-color glyph (the pre-attentive scan cue — never desaturated)
+                          + name + date. Gold stays RESERVED: the amount glints in gold-INK
+                          (#6F4611 — brass fails AA as text on cream). The SOONEST occasion
+                          earns ONE warm signal — a faint gold well behind its glyph + an
+                          "in Nd" chip — so birthdays lean forward and the row scans. Scales
+                          to any new occasion for free (just a new glyph). Photo upload, if
+                          present, fills the card behind an evergreen fade with white text. ── */}
+                      {imgUrl && (
+                        <>
+                          <img src={imgUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: imgPosition, display: "block" }} />
+                          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 20%, hsl(var(--kiddo-evergreen-deep) / 0.86) 100%)" }} />
+                        </>
+                      )}
+                      {/* Glyph token — full-color emoji sitting DIRECTLY on the ivory
+                          card (no grey well: a faint grey ring behind a colour emoji
+                          read placeholder/disabled, 2026-06-23 founder catch). A well
+                          appears ONLY when it earns one: faint-gold for the soonest
+                          occasion (its one warm "lean-forward" signal) and a soft white
+                          scrim over a photo (so the glyph stays legible on the image). */}
+                      <div style={{ position: "relative", width: 34, height: 34, borderRadius: 9999, flexShrink: 0,
+                        background: isSoon ? "hsl(var(--kiddo-gold) / 0.16)" : (imgUrl ? "rgba(255,255,255,0.18)" : "transparent"),
+                        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, lineHeight: 1 }} aria-hidden="true">
+                        {emoji}
                       </div>
-
-                      {/* ── Bottom info ── */}
-                      <div style={{ padding: "8px 10px 9px", background: "white", flexShrink: 0 }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25,
-                          display: "-webkit-box", WebkitLineClamp: tileDateLabel ? 1 : 2, WebkitBoxOrient: "vertical" as const,
-                          overflow: "hidden", marginBottom: 2 }}>
-                          {event.name}
+                      {/* FULL name (consistency with the gifter page / detail). 2-line clamp. */}
+                      <span className="font-heading" title={event.name}
+                        style={{ position: "relative", marginTop: 11, fontSize: 13, fontWeight: 600, lineHeight: 1.2,
+                          color: imgUrl ? "white" : "hsl(var(--kiddo-ink))",
+                          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
+                        {event.name}
+                      </span>
+                      {/* Date — plus the soonest tile's "in Nd" chip in gold-ink. */}
+                      {tileDateLabel && (
+                        <span style={{ position: "relative", marginTop: 3, fontSize: 10, fontWeight: 500, color: imgUrl ? "rgba(255,255,255,0.78)" : "rgba(26,23,16,0.5)" }}>
+                          {tileDateLabel}
+                          {isSoon && (
+                            <span style={{ color: imgUrl ? "hsl(var(--kiddo-gold-light))" : "hsl(var(--kiddo-gold-ink))", fontWeight: 700 }}>
+                              {" · "}{daysLeft === 0 ? "today" : `in ${daysLeft}d`}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      <div style={{ flex: 1 }} />
+                      {/* Value: gifted amount in gold-ink ("gold = value"), or goal progress. */}
+                      {goal > 0 ? (
+                        <div style={{ position: "relative" }}>
+                          <p style={{ fontSize: 13, marginBottom: 5, lineHeight: 1, fontWeight: 600, color: imgUrl ? "white" : (fundTowardGoal > 0 ? "hsl(var(--kiddo-gold-ink))" : "rgba(26,23,16,0.5)") }}>
+                            {fundTowardGoal > 0
+                              ? <>{fmtC(fundTowardGoal)} <span style={{ fontWeight: 500, color: imgUrl ? "rgba(255,255,255,0.7)" : "rgba(26,23,16,0.45)" }}>of {fmtC(goal)}</span></>
+                              : <span style={{ fontWeight: 600 }}>{warmEmpty}</span>}
+                          </p>
+                          <div style={{ height: 3, background: imgUrl ? "rgba(255,255,255,0.25)" : "rgba(26,23,16,0.08)", borderRadius: 2, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${pct}%`, borderRadius: 2, background: "hsl(var(--success))", transition: "width 0.5s ease" }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <p style={{ position: "relative", fontSize: 13, lineHeight: 1.2, fontWeight: 600, color: imgUrl ? "white" : (giftVol > 0 ? "hsl(var(--kiddo-gold-ink))" : "rgba(26,23,16,0.5)") }}>
+                          {isArchived
+                            ? <span style={{ fontWeight: 600, color: imgUrl ? "rgba(255,255,255,0.6)" : "rgba(26,23,16,0.45)" }}>Archived</span>
+                            : giftVol > 0
+                              ? <>{fmtC(giftVol)} <span style={{ fontWeight: 500, color: imgUrl ? "rgba(255,255,255,0.7)" : "rgba(26,23,16,0.45)" }}>gifted</span></>
+                              : <span style={{ fontWeight: 600 }}>{warmEmpty}</span>}
                         </p>
-                        {tileDateLabel && (
-                          <p style={{ fontSize: 9, color: "rgba(26,23,16,0.42)", lineHeight: 1.2, marginBottom: 4, fontWeight: 500 }}>
-                            {tileDateLabel}
-                          </p>
-                        )}
-                        {goal > 0 ? (
-                          <>
-                            {/* Goal progress: whole-fund value vs goal.
-                                Every dollar in the fund counts toward
-                                every goal (one fund, fungible money).
-                                fmtC strips trailing zeros to keep the
-                                tile's narrow text readable. */}
-                            <p style={{ fontSize: 9.5, color: fundTowardGoal > 0 ? "rgba(26,23,16,0.45)" : "hsl(143,40%,30%)", marginBottom: 4, lineHeight: 1, fontWeight: fundTowardGoal > 0 ? 400 : 600 }}>
-                              {fundTowardGoal > 0
-                                ? <>{fmtC(fundTowardGoal)} <span style={{ color: "rgba(26,23,16,0.28)" }}>of {fmtC(goal)}</span></>
-                                : <>{warmEmpty}</>}
-                            </p>
-                            <div style={{ height: 3, background: "rgba(26,23,16,0.08)", borderRadius: 2, overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${pct}%`, borderRadius: 2,
-                                background: goalReached ? "hsl(143,47%,38%)" : "hsl(143,47%,38%)",
-                                transition: "width 0.5s ease" }} />
-                            </div>
-                          </>
-                        ) : (
-                          <p style={{ fontSize: 9.5, color: giftVol > 0 ? "rgba(26,23,16,0.38)" : "hsl(143,40%,30%)", lineHeight: 1, fontWeight: giftVol > 0 ? 400 : 600 }}>
-                            {/* "gifted here" not "raised": an occasion shows the
-                                slice of gifts that came through THIS link (it's
-                                attribution, not a separate balance). "raised"
-                                read like a sub-pot sitting next to the goal's
-                                whole-fund total — the double-count confusion.
-                                "gifted here" frames it as a moment, not a jar. */}
-                            {isArchived ? "Archived" : giftVol > 0 ? fmtC(giftVol) + " gifted here" : warmEmpty}
-                          </p>
-                        )}
-                      </div>
-                    </button>
+                      )}
+                    </motion.button>
                   );
                 };
 
@@ -10450,7 +12591,13 @@ export default function Dashboard() {
                       <div style={{ marginBottom: 14 }}>
                         <p style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)", margin: "0 0 4px", lineHeight: 1.35 }}>Every milestone deserves a moment.</p>
                         <p style={{ fontSize: 13, color: "rgba(26,23,16,0.45)", lineHeight: 1.55, margin: 0 }}>
-                          {capFirst(childFirst)}'s birthday coming up? Saving for their first car?
+                          {/* capFirst title-cases EVERY word (it's a name
+                              formatter — "mary jane" → "Mary Jane"), which
+                              turned the no-name fallback into "Your Child's"
+                              (founder saw it on Robert's draft fund). Names keep
+                              capFirst; the fallback phrase caps only its
+                              first letter. */}
+                          {recipientFirstNameDisplay ? capFirst(childFirst) : "Your child"}'s birthday coming up? Saving for their first car?
                         </p>
                       </div>
                       {/* Suggestion tiles (same as normal view) + create tile */}
@@ -10470,21 +12617,26 @@ export default function Dashboard() {
                             savingsGoalType: isSavingsGoal ? sug.prefill.eventType : undefined,
                           });
                           return (
-                            <button
+                            <motion.button
                               key={sug.key}
+                              variants={LAB_TILE_VARIANTS}
                               type="button"
                               onClick={() => { haptic("selection"); setEditEventTarget({ name: sug.prefill.name, eventType: sug.prefill.eventType ?? undefined, eventDate: sug.prefill.eventDate ?? undefined, goalAmount: sug.prefill.goalAmount ?? undefined, eventCategory: sug.prefill.eventCategory ?? undefined }); setCreateEventSheetOpen(true); }}
-                              style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: `1px solid ${theme.accent}33`, overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}
+                              style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: `1.5px dashed ${theme.accent}66`, overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}
                             >
-                              <div style={{ flex: 1, background: theme.background, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                              <div style={{ flex: 1, background: stagingCoverBg(sug.prefill.eventType, isSavingsGoal ? sug.prefill.eventType : undefined, sug.key), display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                                {/* "Suggested" chip — marks the tile as a not-yet-created
+                                    template (dashed border reinforces) so it doesn't read
+                                    as an existing occasion. */}
+                                <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(255,255,255,0.82)", color: "rgba(26,23,16,0.5)", fontSize: 7.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 5px", borderRadius: 999 }}>Suggested</span>
                                 <span style={{ fontSize: 38, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{sug.emoji || theme.emoji}</span>
                               </div>
                               <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                                <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>{sug.name}</p>
+                                <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }} title={sug.name}>{sug.name}</p>
                                 <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>{sug.sub}</p>
                                 <p style={{ fontSize: 9, color: theme.inkColor, fontWeight: 600 }}>Tap to create</p>
                               </div>
-                            </button>
+                            </motion.button>
                           );
                         })}
                         {/* Cultural "Add your traditions" tile removed 2026-06-04
@@ -10494,10 +12646,10 @@ export default function Dashboard() {
                             ideas" copy. The cultural-suggestion engine stays in
                             code (dormant); if revived, it belongs INSIDE the
                             occasion-create flow, not as a peer tile here. */}
-                        <button type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
+                        <motion.button variants={LAB_TILE_VARIANTS} type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   );
@@ -10532,8 +12684,9 @@ export default function Dashboard() {
                           savingsGoalType: isSavingsGoal ? sug.prefill.eventType : undefined,
                         });
                         return (
-                          <button
+                          <motion.button
                             key={sug.key}
+                            variants={LAB_TILE_VARIANTS}
                             type="button"
                             onClick={() => {
                               haptic("selection");
@@ -10543,23 +12696,27 @@ export default function Dashboard() {
                             style={{
                               width: 140, minWidth: 140, height: 148, flexShrink: 0,
                               borderRadius: 18,
-                              border: `1px solid ${theme.accent}33`,
+                              border: `1.5px dashed ${theme.accent}66`,
                               overflow: "hidden", cursor: "pointer", background: "white",
                               display: "flex", flexDirection: "column",
                               boxShadow: "none",
                               textAlign: "left",
                             }}
                           >
-                            {/* Themed cover. Per-event-type gradient (Hanukkah
-                                navy+gold, Christmas green+red, College Fund
-                                blue, etc.) gives each suggestion a designed
-                                feel without licensing real photos. */}
-                            <div style={{ flex: 1, position: "relative", background: theme.background, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {/* STAGING themed cover — per-type but on-brand (gold /
+                                evergreen / muted warm neutrals, all fading to cream),
+                                so each suggestion reads designed without the off-brand
+                                rainbow the shared lib was avoiding. */}
+                            <div style={{ flex: 1, position: "relative", background: stagingCoverBg(sug.prefill.eventType, isSavingsGoal ? sug.prefill.eventType : undefined, sug.key), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {/* "Suggested" chip — marks this as a not-yet-created
+                                  template (dashed border reinforces) so it doesn't read
+                                  as an existing occasion. */}
+                              <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(255,255,255,0.82)", color: "rgba(26,23,16,0.5)", fontSize: 7.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 5px", borderRadius: 999 }}>Suggested</span>
                               <span style={{ fontSize: 38, lineHeight: 1, userSelect: "none", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }}>{sug.emoji || theme.emoji}</span>
                             </div>
                             {/* Bottom info */}
                             <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }}>
+                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", marginBottom: 3 }} title={sug.name}>
                                 {sug.name}
                               </p>
                               <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>
@@ -10571,7 +12728,7 @@ export default function Dashboard() {
                                 Tap to create
                               </p>
                             </div>
-                          </button>
+                          </motion.button>
                         );
                       })}
 
@@ -10580,7 +12737,8 @@ export default function Dashboard() {
 
                       {/* Show/hide archived toggle tile */}
                       {archivedEvents.length > 0 && (
-                        <button
+                        <motion.button
+                          variants={LAB_TILE_VARIANTS}
                           type="button"
                           onClick={() => { haptic("light"); setShowArchivedTilesV2(v => !v); }}
                           style={{
@@ -10595,14 +12753,15 @@ export default function Dashboard() {
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>
                             {showArchivedTilesV2 ? "Hide" : `${archivedEvents.length} archived`}
                           </span>
-                        </button>
+                        </motion.button>
                       )}
 
                       {/* Create tile - always last. Hidden for read-only
                           roles (previous owner, viewer) — they can't create
                           new occasions on a fund they don't control. */}
                       {!isReadOnlyFund && (
-                        <button
+                        <motion.button
+                          variants={LAB_TILE_VARIANTS}
                           type="button"
                           onClick={() => { haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                           style={{
@@ -10615,14 +12774,16 @@ export default function Dashboard() {
                         >
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
-                        </button>
+                        </motion.button>
                       )}
                     </div>
 
-                    {/* ── "All in the same fund" clarity note ── */}
+                    {/* "All in the same fund" clarity note. Responsive font so this
+                        locked framing line stops wrapping a touch long on narrow
+                        phones — copy unchanged. */}
                     {activeEvents.length > 0 && (
-                      <p style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
-                        Every occasion goes into the same one fund. Nothing is set aside. 🌱
+                      <p style={{ fontSize: "clamp(10.5px, 3vw, 12px)", fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
+                        Every occasion goes into the same fund.
                       </p>
                     )}
 
@@ -10652,14 +12813,16 @@ export default function Dashboard() {
                             ? `${window.location.origin}/${fundSlug}`
                             : `${window.location.origin}/${fundSlug}/${ev.slug}`
                           : null;
-                        const daysLeft = ev.eventDate
-                          ? Math.ceil((new Date(ev.eventDate).getTime() - Date.now()) / 86400000)
+                        const evEffDate = effectiveOccasionDate(ev);
+                        const daysLeft = evEffDate
+                          ? Math.ceil((evEffDate.getTime() - Date.now()) / 86400000)
                           : null;
                         // eventDate is stored at UTC midnight (date-only, picked
                         // via <input type="date">). Render in UTC so Apr 9 stays
-                        // Apr 9, not Apr 8 in US timezones.
-                        const dateStr = ev.eventDate
-                          ? new Date(ev.eventDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+                        // Apr 9, not Apr 8 in US timezones. For a birthday this is
+                        // the NEXT occurrence (see @shared/occasions).
+                        const dateStr = evEffDate
+                          ? evEffDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
                           : null;
                         const evGifts = gifts
                           .filter(g => g.eventId === ev.id && g.status !== "failed" && g.status !== "refunded")
@@ -10976,7 +13139,16 @@ export default function Dashboard() {
                                           : evTy ? "draft"
                                           : "missing";
                                         return (
-                                          <div key={g.id ?? gi} style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, paddingBottom: 8, borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)" }}>
+                                          <div
+                                            key={g.id ?? gi}
+                                            className={g.id ? "lab-tap" : undefined}
+                                            onClick={g.id ? () => { haptic("selection"); setLocation(`/memory/${activeFundId}?gift=${g.id}`); } : undefined}
+                                            role={g.id ? "button" : undefined}
+                                            tabIndex={g.id ? 0 : undefined}
+                                            onKeyDown={g.id ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); haptic("selection"); setLocation(`/memory/${activeFundId}?gift=${g.id}`); } } : undefined}
+                                            title={g.id ? ((evTyState === "missing" || evTyState === "draft") ? `Open ${gName}'s gift in the Memory Book to thank them` : `Open ${gName}'s gift in the Memory Book`) : undefined}
+                                            style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, paddingBottom: 8, borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)", cursor: g.id ? "pointer" : "default" }}
+                                          >
                                             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "hsl(143,47%,94%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                               <span style={{ fontSize: 10, fontWeight: 800, color: "hsl(143,47%,28%)" }}>{gName.charAt(0).toUpperCase()}</span>
                                             </div>
@@ -10996,6 +13168,7 @@ export default function Dashboard() {
                                               {g.message && <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.5)", fontStyle: "italic", margin: 0, marginTop: 2 }}>"{g.message}"</p>}
                                             </div>
                                             <span style={{ fontSize: 13, fontWeight: 700, color: "rgb(26,23,16)", flexShrink: 0 }}>{fmtC(gAmt)}</span>
+                                            {g.id && <ChevronRight size={14} aria-hidden style={{ color: (evTyState === "missing" || evTyState === "draft") ? "hsl(43,55%,45%)" : "rgba(26,23,16,0.25)", flexShrink: 0, marginLeft: -2 }} />}
                                           </div>
                                         );
                                       })}
@@ -11287,43 +13460,105 @@ export default function Dashboard() {
                 the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
                 extended to all transferred-fund viewers 2026-06-02. */}
             {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
+            // LAB: handoff section animates in on MOUNT (not whileInView) so it is
+            // never blank-until-scroll (founder call 2026-06-12), with a two-beat
+            // stagger — the sentence lands first ("The day it all becomes Theo's."),
+            // a breath, then the card rises under it. The sentence IS the emotional
+            // payload; giving it its own beat makes the section read instead of
+            // just appear.
             <motion.section
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.040 }}
-              className="space-y-3"
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: { opacity: 0, y: 14 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.16 } },
+              }}
+              className="st-section space-y-3"
             >
-              <p className="kiddo-section-label" style={{ textTransform: "none", fontSize: "0.82rem", letterSpacing: "0.01em" }}>
+              <motion.p
+                variants={LAB_TILE_VARIANTS}
+                className="kiddo-section-label" style={{ textTransform: "none", letterSpacing: "0.01em" }}>
                 {recipientFirstNameDisplay
                   ? `The day it all becomes ${recipientFirstNameDisplay}'s.`
                   : "The day it all becomes theirs."}
-              </p>
-              <div style={{
-                background: "white",
-                borderRadius: 20,
-                border: "1px solid rgba(26,23,16,0.1)",
-                boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
-                overflow: "hidden",
-              }}>
-                {/* Date + countdown header */}
+              </motion.p>
+              {/* Full-bleed on mobile so the handoff BOOKENDS the hero — the page
+                  opens AND closes on a full-bleed evergreen moment, with the routine
+                  content (chart, holdings, occasions) in the contained column
+                  between them. Contained card chrome (radius/border/shadow) restores
+                  at md+ so a wide desktop column doesn't band green edge-to-edge. */}
+              <motion.div variants={LAB_TILE_VARIANTS}
+                className="-mx-4 md:mx-0 md:rounded-[20px] md:border md:border-[hsl(var(--kiddo-ink)/0.1)] md:shadow-[0_1px_6px_hsl(var(--kiddo-ink)/0.05)]"
+                style={{
+                  background: "white",
+                  overflow: "hidden",
+                }}>
+                {/* Date + countdown header — the SAME evergreen as the hero
+                    (152 hue, brand token) so the two moments bookend in one green,
+                    not two almost-matching ones. */}
                 <div style={{
-                  background: "linear-gradient(135deg, hsl(143,47%,14%) 0%, hsl(143,40%,22%) 100%)",
+                  background: "linear-gradient(160deg, hsl(158 45% 19%) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
                   padding: "20px 20px 18px",
                 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                     <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)", textTransform: "uppercase", marginBottom: 4 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: 4 }}>
                         {recipientFirstNameDisplay || "Your child"} turns {majorityAge}
                       </p>
                       <p style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                         {age18Transition ? formatAgeTransitionDate(age18Transition.eighteenthBirthday) : "Add a birthdate"}
                       </p>
+                      {/* THE HUMAN LEAD (2026-06-22). The handoff is the product's
+                          emotional summit, not a payout screen. Lead with what the
+                          kid actually receives — years of people who showed up,
+                          anchored to the OLDEST note in the Memory Book — and let the
+                          money drop to a grounded line below. (Founder critique: the
+                          old order "made them do math" at the one moment that should
+                          make them feel something.) Pure-additive; degrades to just
+                          the counts line when there are no notes yet. */}
+                      {totalValue > 0 && age18Transition && (() => {
+                        const notes = (memoryEntriesForFund || []).filter((e: any) => String(e?.content || "").trim() && e?.type !== "parent_letter");
+                        const oldest = notes.slice().sort((a: any, b: any) => new Date(a?.createdAt || 0).getTime() - new Date(b?.createdAt || 0).getTime())[0];
+                        const people = new Set((gifts || []).map((g: any) => String(g?.senderName || "").trim().toLowerCase()).filter(Boolean)).size;
+                        if (!oldest && notes.length === 0 && people === 0) return null;
+                        return (
+                          <div style={{ marginTop: 12 }}>
+                            {/* Both the "money is only part of it" topper AND the
+                                auto-sampled note quote were cut (2026-06-22). The quote
+                                pulled WHATEVER the oldest note was — uncontrolled quality
+                                that undersells when thin, with a faintly templated "· the
+                                first note, {year}" caption (read as auto-generated). The
+                                ONE count line below carries the moat message reliably,
+                                every time; browsing real notes lives IN the Memory Book,
+                                not auto-sampled onto the emotional summit. */}
+                            {/* "X notes {child} can keep forever." The earlier
+                                "from N people" clause was cut (2026-06-22): N came
+                                from gift SENDERS, not the note authors, so "notes
+                                FROM N people" asserted a link the data doesn't
+                                compute (a gifter who wrote no note still inflated N;
+                                notes from non-gifters went uncounted) — a false
+                                number at the trust summit. The contributor count
+                                already headlines the roster above ("N people are
+                                building {child}'s future"), so it isn't lost — just
+                                kept where it's honest. */}
+                            <p style={{ fontSize: 13.5, fontWeight: 500, color: "rgba(255,255,255,0.82)", lineHeight: 1.5 }}>
+                              {notes.length > 0 ? `${notes.length} ${notes.length === 1 ? "note" : "notes"}` : "Notes"} {recipientFirstNameDisplay || "they"} can keep forever.
+                            </p>
+                          </div>
+                        );
+                      })()}
                       {age18Transition && totalValue === 0 && (
-                        <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", marginTop: 6 }}>
-                          🌱 {age18Transition.countdownLabel} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
+                        <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.62)", marginTop: 6 }}>
+                          🌱 {age18Transition.countdownLabel.replace(` until age ${age18Transition.majorityAge}`, "")} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
                         </p>
                       )}
                       {totalValue > 0 && age18Transition && (() => {
+                        // LAB: hold a pulse until the recurring data lands - same
+                        // as the hero projection, else this reads far too low then
+                        // jumps (and disagrees with the hero for a beat).
+                        if (!heroDataReady) {
+                          return <div className="animate-pulse" aria-hidden style={{ height: 18, width: 260, maxWidth: "100%", borderRadius: 6, background: "hsl(var(--kiddo-evergreen) / 0.10)", margin: "4px 0" }} />;
+                        }
                         const fmtUSD0 = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
                         const yearsToMajority = age18Transition.daysUntil18 / 365.25;
                         // Sum every active recurring schedule (parent contributions + gifter
@@ -11395,37 +13630,40 @@ export default function Dashboard() {
                         const beyondAge = age18Transition.majorityAge + 12;
                         return (
                           <>
+                            {/* STAGING: projection line shows ONLY at the IMMINENT handoff,
+                                where "takes ownership of ~$X" is the moment's actual framing
+                                (she's getting it now). For a DISTANT handoff it just re-printed
+                                the hero's "~$X at 21" — redundant, and part of the "too much."
+                                This card's one job is the emotional summit (milestone + Memory
+                                Book); the number lives in the hero. */}
+                            {nearMajority && (
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                              <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.55)", fontStyle: "italic" }}>
-                                {nearMajority ? (
-                                  <>On track for ~{fmtUSD0(Math.round(projectedLongHorizon))} if {childSubject} keep{childIsSingular ? "s" : ""} it growing to {beyondAge} 🌱</>
-                                ) : (
-                                  <>On track for {fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱</>
-                                )}
+                              <p style={{ fontSize: "clamp(10px, 2.9vw, 11.5px)", color: "rgba(255,255,255,0.62)", fontStyle: "italic" }}>
+                                {capFirst(childSubject)} take{childIsSingular ? "s" : ""} ownership of ~{fmtUSD0(Math.round(projectedAtMajority))} at {age18Transition.majorityAge}.
                               </p>
                               <button
                                 type="button"
                                 onClick={() => { haptic("light"); setDisclosureOpen("projection"); }}
-                                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "rgba(255,255,255,0.28)", lineHeight: 1, display: "flex", alignItems: "center", flexShrink: 0 }}
+                                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "rgba(255,255,255,0.55)", lineHeight: 1, display: "flex", alignItems: "center", flexShrink: 0 }}
                                 aria-label="How we calculate projections"
                               >
                                 <Info size={11} />
                               </button>
                             </div>
-                            {nearMajority ? (
-                              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", marginTop: 4, fontStyle: "italic" }}>
-                                ~{fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} take{childIsSingular ? "s" : ""} ownership at {age18Transition.majorityAge}, then it keeps compounding.
-                              </p>
-                            ) : (showLongHorizon && (
-                              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", marginTop: 4, fontStyle: "italic" }}>
-                                If {childSubject} let{childIsSingular ? "s" : ""} it keep growing to {beyondAge} → ~{fmtUSD0(Math.round(projectedLongHorizon))}.
-                              </p>
-                            ))}
+                            )}
+                            {/* STAGING: "Left to grow, ~$X by {beyondAge}" second projection
+                                CUT everywhere (near AND distant). It was the density that made
+                                the handoff read as "too much" — a hypothetical (long horizon)
+                                stacked under another hypothetical (the at-majority number). The
+                                "it keeps compounding" story isn't lost: the trajectory CHART
+                                already draws the curve past majority, and "Explore the full
+                                horizon →" is the door to it. The handoff now lands on ONE arc:
+                                the people (Memory Book) → the one number. Founder, 2026-06-22. */}
                           </>
                         );
                       })()}
                       {!age18Transition && (
-                        <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.55)", marginTop: 6 }}>
+                        <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.62)", marginTop: 6 }}>
                           Add a birthdate to see the countdown.
                         </p>
                       )}
@@ -11433,55 +13671,13 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Handoff TRAJECTORY curve, doorway to the Projection slider.
-                    The handoff is a WAYPOINT on an accelerating line, not the
-                    finish: the back-loaded magic of compounding is SHOWN, not
-                    preached (no caption; the curve is the argument). Card stops at
-                    majority+12 on purpose; the full horizon (to 65) is one tap away
-                    on the Projection page, explorable and user-chosen, never a
-                    fixed retirement headline. Age-robust: near majority the
-                    "Turns N" waypoint is dropped (it would sit on "today"); past
-                    majority the card is gated out (daysUntil18 > 0). Ported from
-                    DashboardLab 2026-06-11. */}
-                {totalValue > 0 && age18Transition && age18Transition.daysUntil18 > 0 && (() => {
-                  const yearsToMajority = age18Transition.daysUntil18 / 365.25;
-                  const majAge = age18Transition.majorityAge;
-                  const currentAge = Math.max(0, majAge - yearsToMajority);
-                  const beyondAge = majAge + 12;
-                  const activeMonthly = sumMonthlyEquivalent([
-                    ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
-                    ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
-                  ]);
-                  const projectAtCurve = (years: number, contribStop: number = years) =>
-                    projectFundValue({ startingValue: totalValue, monthlyContribution: activeMonthly, yearsAhead: years, contributionYears: contribStop });
-                  const pts: { age: number; value: number }[] = [{ age: currentAge, value: totalValue }];
-                  for (let age = Math.ceil(currentAge); age <= beyondAge; age++) {
-                    pts.push({ age, value: projectAtCurve(age - currentAge, yearsToMajority) });
-                  }
-                  if (pts.length < 3) return null;
-                  const showMilestone = yearsToMajority > 1.5;
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => { haptic("selection"); if (activeFund?.id) setLocation(`/projection/${activeFund.id}`); }}
-                      aria-label="Explore the full growth horizon"
-                      style={{ display: "block", width: "100%", textAlign: "left", background: "white", border: "none", borderTop: "1px solid rgba(26,23,16,0.06)", padding: "10px 12px 12px", cursor: "pointer" }}
-                    >
-                      <ProjectionTrajectoryChart
-                        points={pts}
-                        targetAge={beyondAge}
-                        currentValue={totalValue}
-                        currentAge={Math.round(currentAge)}
-                        milestoneAge={showMilestone ? majAge : undefined}
-                        milestoneLabel={showMilestone ? `Turns ${majAge}` : undefined}
-                        heightPx={142}
-                      />
-                      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4, marginTop: 2 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-evergreen))" }}>Explore the full horizon →</span>
-                      </div>
-                    </button>
-                  );
-                })()}
+                {/* Trajectory chart PULLED from this card (option A, 2026-06-22):
+                    the handoff is the EMOTIONAL summit — the day, the people/notes,
+                    and the parent's letter. The money trajectory was a SECOND money
+                    element competing with that beat ("lots going on"). It lives in
+                    the hero ("~$X at {majority} →", which links to the Projection
+                    page) and on the Projection page itself, so it isn't lost — just
+                    off the one screen that should make the parent feel something. */}
 
                 {/* Letter - inline */}
                 <AnimatePresence initial={false}>
@@ -11611,6 +13807,7 @@ export default function Dashboard() {
                     <motion.button
                       key="letter-cta"
                       type="button"
+                      className="lab-tap"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -11624,13 +13821,16 @@ export default function Dashboard() {
                     >
                       <div style={{
                         width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-                        background: parentLetter ? "rgba(26,61,43,0.1)" : "hsl(43,85%,95%)",
+                        background: "hsl(var(--kiddo-evergreen) / 0.1)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
-                          <rect x="2" y="4" width="16" height="12" rx="2" stroke={parentLetter ? "hsl(143,47%,28%)" : "hsl(43,72%,40%)"} strokeWidth="1.5"/>
-                          <path d="M2 7l8 5 8-5" stroke={parentLetter ? "hsl(143,47%,28%)" : "hsl(43,72%,40%)"} strokeWidth="1.5" strokeLinecap="round"/>
-                        </svg>
+                        {/* lucide Mail @2 — was a custom 1.5-stroke envelope, off the icon
+                            system + scale (same fix as the bell). Evergreen in BOTH states:
+                            gold removed to keep it reserved for the Share/primary action
+                            (this screen already spends gold on Share + the "on track" pill;
+                            a gold letter card would over-use it). State reads from the copy +
+                            pill ("Start writing" vs "Edit"), not color. */}
+                        <Mail size={18} strokeWidth={2} aria-hidden style={{ color: "hsl(var(--kiddo-evergreen))" }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {parentLetter ? (() => {
@@ -11647,10 +13847,10 @@ export default function Dashboard() {
                           );
                         })() : (
                           <>
-                            <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 3 }}>
+                            <p style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               Write something for {recipientFirstNameDisplay || childPronouns.object}
                             </p>
-                            <p style={{ fontSize: 12, color: "rgba(26,23,16,0.45)", lineHeight: 1.5 }}>
+                            <p style={{ fontSize: 11, color: "rgba(26,23,16,0.45)", lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {/* Pronoun-aware reads-it line; name takes singular verb;
                                   pronoun form uses childPronouns.singular for agreement. */}
                               {recipientFirstNameDisplay
@@ -11662,8 +13862,8 @@ export default function Dashboard() {
                       </div>
                       <div style={{
                         fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-                        color: parentLetter ? "hsl(143,47%,28%)" : "hsl(43,72%,38%)",
-                        background: parentLetter ? "rgba(26,61,43,0.08)" : "hsl(43,85%,94%)",
+                        color: "hsl(var(--kiddo-evergreen))",
+                        background: "hsl(var(--kiddo-evergreen) / 0.08)",
                         padding: "5px 11px", borderRadius: 20,
                       }}>
                         {parentLetter ? "Edit" : "Start writing"}
@@ -11687,13 +13887,11 @@ export default function Dashboard() {
                         see(s) first" — names take singular verb regardless,
                         pronouns use childPronouns.singular. */}
                     <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(26,23,16)" }}>What happens when {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} turns` : `${childPronouns.subject} turn${childPronouns.singular ? "s" : ""}`} {majorityAge}?</p>
-                    <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>How the fund transfers, what {recipientFirstNameDisplay || childPronouns.subject} see{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} first.</p>
+                    <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>How it transfers, and what {recipientFirstNameDisplay || childPronouns.subject} see{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} first.</p>
                   </div>
-                  <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M7 4l6 6-6 6" stroke="rgba(26,23,16,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <ChevronRight size={16} aria-hidden style={{ flexShrink: 0, color: "rgba(26,23,16,0.3)" }} />
                 </button>
-              </div>
+              </motion.div>
             </motion.section>
             )}
 
@@ -11749,34 +13947,60 @@ export default function Dashboard() {
                   haptic("selection");
                   const refCode = `pf-${String(activeFundId || "").slice(0, 12)}`;
                   const url = `${window.location.origin}/?ref=${encodeURIComponent(refCode)}`;
-                  // Fire-and-forget analytics; the share must never wait on it.
-                  try {
-                    void fetch("/api/referral-events", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ refCode, fundId: activeFundId, action: "parent_referral_share", channel: "web" }),
-                    });
-                  } catch { /* analytics only */ }
+                  // Fire-and-forget analytics; the share must never wait on
+                  // it. Fired AFTER a share completes / a copy succeeds — NOT
+                  // on tap (2026-06-07 flow audit): navigator.share rejects on
+                  // dismiss, so counting taps inflated the k-factor panel's
+                  // shares numerator with cancels and made shares→visits read
+                  // worse than reality. Funded-k discipline = honest funnels.
+                  const recordShare = () => {
+                    try {
+                      void fetch("/api/referral-events", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ refCode, fundId: activeFundId, action: "parent_referral_share", channel: "web" }),
+                      });
+                    } catch { /* analytics only */ }
+                  };
                   const shareText = "We started an investment fund for our kid that family and friends gift into. Thought your family might want this too.";
                   if (navigator.share) {
-                    try { await navigator.share({ title: "Kiddo", text: shareText, url }); } catch { /* user dismissed */ }
+                    try {
+                      await navigator.share({ title: "Kiddo", text: shareText, url });
+                      recordShare();
+                    } catch { /* user dismissed — no share happened, no event */ }
                   } else {
                     try {
                       await navigator.clipboard.writeText(`${shareText} ${url}`);
+                      recordShare();
                       toast({ title: "Link copied", description: "Paste it to a parent who'd want this." });
-                    } catch { /* clipboard blocked */ }
+                    } catch {
+                      // Clipboard blocked (permissions / non-secure context).
+                      // Never let the tap be a silent dead end — surface the
+                      // link itself so the parent can copy it by hand.
+                      toast({ title: "Copy this link", description: url });
+                    }
                   }
                 }}
+                className="lab-tap"
                 style={{
-                  width: "100%", padding: "14px 16px", marginBottom: 14,
-                  background: "transparent", border: "1px dashed rgba(26,23,16,0.14)",
-                  borderRadius: 14, cursor: "pointer", textAlign: "center",
+                  // A soft, FINISHED warm surface — not the old dashed box (which read
+                  // as a placeholder/dropzone, the opposite of "quiet + deliberate").
+                  // Faint evergreen tint marks it as the outward, parent→parent invite
+                  // (distinct from the white fund-data cards) without any bounty/channel
+                  // chrome. A heart (believer warmth, not a share-logo grid) + an
+                  // evergreen action word + chevron make it read finished and tappable.
+                  width: "100%", padding: "15px 18px", marginBottom: 14,
+                  background: "hsl(var(--kiddo-evergreen) / 0.045)", border: "none",
+                  borderRadius: 14, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
                 }}
                 data-testid="button-pass-it-along"
               >
-                <span style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)" }}>
-                  Know a family who'd want this? <span style={{ fontWeight: 600, color: "rgba(26,23,16,0.75)" }}>Pass it along →</span>
+                <Heart size={14} strokeWidth={2} aria-hidden style={{ color: "hsl(var(--kiddo-evergreen) / 0.6)", flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: "rgba(26,23,16,0.62)" }}>
+                  Know a family who'd want this? <span style={{ fontWeight: 700, color: "hsl(var(--kiddo-evergreen))" }}>Pass it along</span>
                 </span>
+                <ChevronRight size={15} strokeWidth={2.2} aria-hidden style={{ color: "hsl(var(--kiddo-evergreen) / 0.55)", flexShrink: 0 }} />
               </button>
             )}
             <TrustMicroStrip />
@@ -11877,16 +14101,11 @@ export default function Dashboard() {
                   const items = [
                     "Current invested balance",
                     ...(monthlyLabel ? [monthlyLabel] : []),
-                    // Rate line matches what projectFundValue actually computes:
-                    // 7% historical average LESS the 0.10% AUM fee (netAumFee
-                    // defaults true), i.e. 6.9% net, compounded monthly. The
-                    // "after inflation" is load-bearing honesty: ~7% is the long-
-                    // run REAL (inflation-adjusted) total return of a diversified
-                    // equity portfolio (nominal historical is ~10%), so the figure
-                    // lands in TODAY'S dollars, not inflated future ones. That's
-                    // the framing the skeptical Boglehead-adjacent parent already
-                    // holds and rewards; the today's-dollars line below states the
-                    // takeaway plainly. 2026-06-11.
+                    // Match projectFundValue: 7% historical average LESS the
+                    // 0.10% AUM fee = 6.9% net. "after inflation" because ~7% is
+                    // the long-run REAL return (nominal historical ~10%), so the
+                    // figure is in today's dollars. Mirrors Dashboard.tsx (kept in
+                    // sync as the lab is groomed to replace it). 2026-06-11.
                     "7% historical average annual return, after inflation, net our 0.10% fee, compounded monthly",
                     ...(majorityDateLabel ? [majorityDateLabel] : []),
                   ];
@@ -11967,7 +14186,7 @@ export default function Dashboard() {
       )}
 
       {/* One-time contribution modal */}
-      <Dialog open={oneTimeModalOpen} onOpenChange={(v) => { if (!v) { setOneTimeModalOpen(false); setOneTimeStep("amount"); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeMedia(EMPTY_MEMORY_MEDIA); } }}>
+      <Dialog open={oneTimeModalOpen} onOpenChange={(v) => { if (!v) { setOneTimeModalOpen(false); setOneTimeStep("amount"); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeShowRails(false); setOneTimeMedia(EMPTY_MEMORY_MEDIA); } }}>
         <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[88vh]" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add a one-time investment</DialogTitle>
 
@@ -11981,7 +14200,7 @@ export default function Dashboard() {
 
           <div className="px-6 pt-5 shrink-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
-              <span className="text-[10px]">{isOwnerMode ? "🌱" : "💛"}</span> {isOwnerMode ? "Add to your fund" : "Add a gift"}
+              {isOwnerMode ? "Add to your fund" : "Add a gift"}
             </span>
           </div>
 
@@ -12011,9 +14230,13 @@ export default function Dashboard() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Amount</label>
-                    <div className="relative mt-2">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                    {/* STAGING: the amount IS the moment — a big centered number you type
+                        into (the Cash App / Venmo register), not a small labeled form
+                        field. The "Amount" label is dropped (the big "$50" is self-evidently
+                        the amount). Number spinners hidden; the input auto-sizes to its
+                        digits and the $-and-number group stays centered as it grows. */}
+                    <div className="flex items-end justify-center gap-1.5 pt-4 pb-1">
+                      <span className="text-3xl font-semibold text-muted-foreground/55 leading-none pb-1.5">$</span>
                       <input
                         type="number"
                         min="5"
@@ -12021,17 +14244,37 @@ export default function Dashboard() {
                         value={oneTimeAmount}
                         onChange={(e) => setOneTimeAmount(e.target.value)}
                         placeholder="50"
-                        className="h-12 w-full rounded-2xl border border-border bg-background pl-8 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        inputMode="decimal"
+                        aria-label="Gift amount in dollars"
+                        className="font-bold text-foreground text-center tracking-tight focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        style={{
+                          // Inline font-size is required: the global iOS-zoom base rule
+                          // (`input { font-size: max(16px,1rem) }`, index.css ~L870) has 5
+                          // :not() selectors = high specificity and was pinning this to
+                          // 16px. 54px is well above the 16px zoom threshold, so no iOS
+                          // zoom regression. Inline border/outline/bg guarantee the
+                          // box-less "register" look regardless of the base input styles.
+                          fontSize: "3.4rem",
+                          lineHeight: 1.05,
+                          width: `${Math.max(1.5, String(oneTimeAmount || "50").length + 0.3)}ch`,
+                          border: "none",
+                          outline: "none",
+                          // kills the global input:focus box-shadow RING (index.css ~L382)
+                          // — border:none alone left a glowing box around the number.
+                          boxShadow: "none",
+                          background: "transparent",
+                          padding: 0,
+                        }}
                         autoFocus
                       />
                     </div>
-                    <div className="mt-2 flex gap-2 flex-wrap">
+                    <div className="mt-4 flex gap-2 justify-center flex-wrap">
                       {[25, 50, 100, 250].map((amt) => (
                         <button
                           key={amt}
                           type="button"
                           onClick={() => setOneTimeAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-[13px] font-semibold px-4 py-1.5 rounded-full border transition-colors ${
                             oneTimeAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -12041,7 +14284,11 @@ export default function Dashboard() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum. Estimated processing updates live once you choose a payment method.</p>
+                    {/* STAGING: dropped "Estimated processing updates live once you choose a
+                        payment method" — premature on the amount step (payment isn't chosen
+                        until step 3) and confusing here. The fee detail lives on the payment
+                        step where it's actually shown. */}
+                    <p className="mt-3 text-center text-[11px] text-muted-foreground">$5 minimum</p>
                   </div>
                 </div>
 
@@ -12095,7 +14342,7 @@ export default function Dashboard() {
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
-                          <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
+                          <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
                             {Math.abs(pctDelta) >= 0.1 && (
@@ -12178,7 +14425,7 @@ export default function Dashboard() {
                     if (mode === "stock" && defaultTicker) {
                       const stockMeta = quotedAutoInvestStocks.find(s => s.symbol === defaultTicker);
                       return (
-                        <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3 flex items-center gap-3">
+                        <div className="ml-4 pl-3.5 pr-2 py-2.5 border-l-2 border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.05)] rounded-r-lg flex items-center gap-3">
                           <StockLogo ticker={defaultTicker} size={28} className="shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">{stockMeta?.name ?? defaultTicker}</p>
@@ -12191,7 +14438,7 @@ export default function Dashboard() {
 
                     if (mode === "cash") {
                       return (
-                        <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center gap-3">
+                        <div className="ml-4 pl-3.5 pr-2 py-2.5 border-l-2 border-border bg-muted/30 rounded-r-lg flex items-center gap-3">
                           <div className="text-2xl shrink-0">💵</div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Held as cash</p>
@@ -12218,7 +14465,7 @@ export default function Dashboard() {
                       : [];
                     const allocations = isCustom ? customAllocations : presetAllocations;
                     return (
-                      <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3 space-y-2.5">
+                      <div className="ml-4 pl-3.5 pr-2 py-2.5 border-l-2 border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.04)] rounded-r-lg space-y-2.5">
                         <div className="flex items-center gap-2">
                           <span className="text-base">{STRATEGY_META[strategy]?.emoji ?? STRATEGY_META.growth.emoji}</span>
                           <p className="text-sm font-semibold text-foreground">
@@ -12319,7 +14566,6 @@ export default function Dashboard() {
                 {oneTimeExecutionModel === "pick" && (
                   <div className="grid grid-cols-2 gap-2">
                     {quotedAutoInvestStocks.map((stock) => {
-                      const amt = parseFloat(oneTimeAmount || "0");
                       const isSelected = oneTimeTicker === stock.symbol;
                       return (
                         <button
@@ -12335,11 +14581,8 @@ export default function Dashboard() {
                           <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
                           <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
-                          {amt > 0 && (
-                            <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
-                              {formatCurrency(amt)} invested
-                            </p>
-                          )}
+                          {/* STAGING: removed the per-card "$X invested" — the amount is set in
+                              step 1 and identical on all 28 cards, so it was repeated noise. */}
                         </button>
                       );
                     })}
@@ -12420,7 +14663,7 @@ export default function Dashboard() {
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
-                          <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
+                          <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
                         </div>
                       </div>
@@ -12446,16 +14689,26 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Funding source</span>
-                    <span className="text-sm font-semibold text-foreground">
-                      {oneTimePaymentMethod === "bank"
-                        ? "Bank transfer"
-                        : oneTimePaymentMethod === "cashapp"
-                          ? "Cash App"
-                          : oneTimePaymentMethod === "paypal"
-                            ? "PayPal"
-                            : oneTimePaymentMethod === "card"
-                              ? "Card"
-                              : "Apple Pay / Google Pay"}
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground">
+                        {oneTimePaymentMethod === "bank"
+                          ? "Bank transfer"
+                          : oneTimePaymentMethod === "cashapp"
+                            ? "Cash App"
+                            : oneTimePaymentMethod === "paypal"
+                              ? "PayPal"
+                              : oneTimePaymentMethod === "card"
+                                ? "Card"
+                                : "Apple Pay / Google Pay"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setOneTimeShowRails(v => !v); haptic("selection"); }}
+                        className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                        data-testid="button-one-time-change-rail"
+                      >
+                        {oneTimeShowRails ? "Done" : "Change"}
+                      </button>
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -12474,6 +14727,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {oneTimeShowRails && (
                 <div className="space-y-2">
                   <div>
                     <p className="text-sm font-medium text-foreground">How do you want to fund it?</p>
@@ -12538,6 +14792,7 @@ export default function Dashboard() {
                     </p>
                   )}
                 </div>
+                )}
 
                 {/* Memory note */}
                 <div className="rounded-2xl border border-amber-200/60 bg-amber-50/40 p-4 space-y-2">
@@ -13784,6 +16039,8 @@ export default function Dashboard() {
                 body: JSON.stringify({ email, role }),
               });
               if (res.ok) {
+                const data = await res.json().catch(() => null);
+                if (demoBlocked(data, toast)) return;
                 haptic("success");
                 toast({ title: "Invite sent!", description: `${email} has been invited as ${role}` });
               } else {
@@ -13821,6 +16078,8 @@ export default function Dashboard() {
             fundAllTimeReturnPct={displayGainPct || undefined}
             fundMonthReturnPct={fundMonthReturnPct}
             fundAgeYears={fundAgeYears}
+            yearsToMajority={age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : undefined}
+            majorityAge={age18Transition?.majorityAge}
           />
         );
       })()}
@@ -14055,7 +16314,7 @@ export default function Dashboard() {
 
           <div className="px-6 pt-4 shrink-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-              <span className="text-[10px]">🔁</span> Recurring investment
+              <Repeat size={11} strokeWidth={2.5} /> Recurring investment
             </span>
           </div>
 
@@ -14099,7 +16358,7 @@ export default function Dashboard() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                       <input
                         type="number"
-                        min="1"
+                        min="5"
                         step="1"
                         value={autoInvestAmount}
                         onChange={(e) => setAutoInvestAmount(e.target.value)}
@@ -14190,13 +16449,15 @@ export default function Dashboard() {
                   const periodsPerYear = autoInvestFrequency === "daily" ? 365 : autoInvestFrequency === "weekly" ? 52 : autoInvestFrequency === "yearly" ? 1 : 12;
                   const monthly = amt * (periodsPerYear / 12);
                   // Future value of an annuity at 7% annual return, compounded monthly,
-                  // running until the child turns 18. The 7% assumption is intentionally
-                  // conservative (long-run S&P avg is ~10% nominal / ~7% real) and the
-                  // disclaimer is non-negotiable: parents who later reconcile the projection
-                  // against reality should never feel oversold. Honest losses, honest gains.
-                  const yearsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
-                  const fvOf = (m: number) => yearsTo18 && yearsTo18 > 0
-                    ? projectFundValue({ startingValue: 0, monthlyContribution: m, yearsAhead: yearsTo18 })
+                  // running until the child reaches majority (18 to 21 by state;
+                  // age18Transition.daysUntil18 is days-to-MAJORITY despite its name). The
+                  // 7% assumption is intentionally conservative (long-run S&P avg is ~10%
+                  // nominal / ~7% real) and the disclaimer is non-negotiable: parents who
+                  // later reconcile the projection against reality should never feel
+                  // oversold. Honest losses, honest gains.
+                  const yearsToMajority = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
+                  const fvOf = (m: number) => yearsToMajority && yearsToMajority > 0
+                    ? projectFundValue({ startingValue: 0, monthlyContribution: m, yearsAhead: yearsToMajority })
                     : null;
                   const fv = fvOf(monthly);
                   const fmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));
@@ -14334,7 +16595,7 @@ export default function Dashboard() {
                     if (mode === "stock" && defaultTicker) {
                       const stockMeta = quotedAutoInvestStocks.find(s => s.symbol === defaultTicker);
                       return (
-                        <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3 flex items-center gap-3">
+                        <div className="ml-4 pl-3.5 pr-2 py-2.5 border-l-2 border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.05)] rounded-r-lg flex items-center gap-3">
                           <StockLogo ticker={defaultTicker} size={28} className="shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">{stockMeta?.name ?? defaultTicker}</p>
@@ -14346,7 +16607,7 @@ export default function Dashboard() {
 
                     if (mode === "cash") {
                       return (
-                        <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center gap-3">
+                        <div className="ml-4 pl-3.5 pr-2 py-2.5 border-l-2 border-border bg-muted/30 rounded-r-lg flex items-center gap-3">
                           <div className="text-2xl shrink-0">💵</div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Held as cash</p>
@@ -14373,7 +16634,7 @@ export default function Dashboard() {
                       : [];
                     const allocations = isCustom ? customAllocations : presetAllocations;
                     return (
-                      <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3 space-y-2.5">
+                      <div className="ml-4 pl-3.5 pr-2 py-2.5 border-l-2 border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.04)] rounded-r-lg space-y-2.5">
                         <div className="flex items-center gap-2">
                           <span className="text-base">{STRATEGY_META[strategy]?.emoji ?? STRATEGY_META.growth.emoji}</span>
                           <p className="text-sm font-semibold text-foreground">
@@ -14485,7 +16746,7 @@ export default function Dashboard() {
                     Where should we pull from?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Recurring investments run from your connected bank account. Lower fees. More reliable. Better for {recipientFirstNameDisplay || "them"}.
+                    Recurring investments run from your connected bank account. It costs less and runs more reliably than a card, so more of each gift reaches {recipientFirstNameDisplay || "them"}.
                   </p>
                 </div>
 
@@ -14823,9 +17084,8 @@ export default function Dashboard() {
                     </div>
                     {/* Show ALL suggestions, not just the first 3 — a teen
                         flooding her parent with picks deserves visibility,
-                        not silent truncation. The DialogContent now scrolls
-                        (max-h-[90dvh] overflow-y-auto), so long lists stay
-                        reachable inside the modal. */}
+                        not silent truncation. Long lists scroll naturally
+                        inside the modal. */}
                     {enriched.map((suggestion: any) => {
                       const status = suggestion.effectiveStatus;
                       const statusPill = status === "approved"
@@ -15659,7 +17919,9 @@ export default function Dashboard() {
                 // was a deeper drilldown than parents wanted; the action
                 // sheet exposes all three management actions in one tap
                 // and matches what the MoreVertical icon already opens.
-                label: "Manage recurring →",
+                // No trailing arrow: opens the in-place action sheet, doesn't
+                // navigate (the page-wide arrow grammar, 2026-06-05).
+                label: "Manage recurring",
                 onClick: () => {
                   closeDetailScope();
                   setListActionConfirmCancel(false);
@@ -15737,26 +17999,36 @@ export default function Dashboard() {
           if (contributionsSubFilter === "onetime") return !recurring;
           return true;
         });
-        const recurringCount = allContribRows.filter(isRecurringRow).length;
-        const onetimeCount = allContribRows.length - recurringCount;
-        const totalContributed = subFilteredRows.reduce((s, r) => {
-          const n = parseActivityAmount(r.amount);
-          return s + (n != null && n > 0 ? n : 0);
-        }, 0);
-        const avgContrib = subFilteredRows.length > 0 ? totalContributed / subFilteredRows.length : 0;
-        const lastDate = (() => {
-          let latest: Date | null = null;
-          for (const r of subFilteredRows) {
-            const d = parseActivitySafeDate(r.createdAt);
-            if (d && (!latest || d.getTime() > latest.getTime())) latest = d;
-          }
-          return latest;
-        })();
+        // STATS from the COMPLETE gifts array — the exact viewer-keyed rows
+        // the "Your part of the story" stat sums — NOT from the activity
+        // feed, which is WINDOWED to 200 rows (2026-06-05 modal-number
+        // audit): on gift-rich funds the window misses older contributions,
+        // so "Total invested" silently undercounted the very section that
+        // opened this modal, under a subtitle claiming "every dollar". One
+        // fact = one formula. The history LIST below stays the feed's recent
+        // window (conventional for history surfaces); the toggle counts are
+        // gift-derived too, so every NUMBER on this modal is complete-truth
+        // even when the scrollable list is a window.
+        const myGiftRows = (gifts as any[])
+          .map((g) => ({
+            amt: parseFloat(String((g as any).netAmount || (g as any).amount || "0")) || 0,
+            ts: (g as any).createdAt ? new Date(String((g as any).createdAt)).getTime() : 0,
+            recurring: !!(g as any).parentContributionId,
+            sender: String((g as any).senderEmail || "").trim().toLowerCase(),
+          }))
+          .filter((g) => g.amt > 0 && !!ownerEmailLowerForFilter && g.sender === ownerEmailLowerForFilter);
+        const statRows = myGiftRows.filter((g) =>
+          contributionsSubFilter === "all" ? true : contributionsSubFilter === "recurring" ? g.recurring : !g.recurring);
+        const recurringCount = myGiftRows.filter((g) => g.recurring).length;
+        const onetimeCount = myGiftRows.length - recurringCount;
+        const totalContributed = statRows.reduce((s, g) => s + g.amt, 0);
+        const avgContrib = statRows.length > 0 ? totalContributed / statRows.length : 0;
+        const lastTs = statRows.reduce((m, g) => Math.max(m, g.ts), 0);
         const stats: DetailStat[] = [
           { label: "Total invested", value: formatCurrency(totalContributed), tone: totalContributed > 0 ? "positive" : "neutral" },
-          { label: "Investments", value: `${subFilteredRows.length}`, tone: "neutral" },
-          { label: "Average", value: subFilteredRows.length > 0 ? formatCurrency(avgContrib) : "Not yet", tone: "neutral" },
-          { label: "Most recent", value: lastDate ? lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
+          { label: "Investments", value: `${statRows.length}`, tone: "neutral" },
+          { label: "Average", value: statRows.length > 0 ? formatCurrency(avgContrib) : "Not yet", tone: "neutral" },
+          { label: "Most recent", value: lastTs > 0 ? new Date(lastTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
         ];
         return (
           <DetailHistoryModal
@@ -15767,7 +18039,7 @@ export default function Dashboard() {
             summaryStats={stats}
             subToggle={{
               options: [
-                { value: "all", label: "All", count: allContribRows.length },
+                { value: "all", label: "All", count: myGiftRows.length },
                 { value: "recurring", label: "Recurring", count: recurringCount },
                 { value: "onetime", label: "One-time", count: onetimeCount },
               ],
@@ -15793,5 +18065,6 @@ export default function Dashboard() {
         }}
       />
     </div>
+    </MotionConfig>
   );
 }

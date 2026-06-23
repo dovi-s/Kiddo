@@ -1504,7 +1504,7 @@ export default function GifterDashboard() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: Math.min(fundIdx * 0.05, 0.3) }}
-                      className="rounded-3xl border border-border/60 bg-background p-5 shadow-[0_1px_3px_rgba(26,23,16,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(26,23,16,0.10)]"
+                      className="rounded-3xl border border-border/60 bg-background p-5 shadow-[0_1px_3px_hsl(var(--kiddo-ink) / 0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_hsl(var(--kiddo-ink) / 0.10)]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>

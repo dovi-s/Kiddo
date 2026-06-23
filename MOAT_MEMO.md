@@ -123,6 +123,22 @@ competitors can't easily dislodge. **We don't have this yet.** It is the highest
 value thing we can build toward. Gated by the same blockers as launch (custody +
 legal + a `partnerSource` attribution primitive).
 
+**Babylist revenue teardown (2026-06-23) — what we can and can't copy.** Babylist is
+proof the registry-wedge → multi-vertical-harvest model works ($750M rev, +45% YoY).
+But read *where* the money comes from: ~65% own-retail e-commerce, plus affiliate
+commissions, **media/ads to its captive new-parent audience, and selling first-party
+new-parent data to baby brands** (its own Reddit threads: "they sell your data"). Two
+of its biggest engines — ads + data-selling — are ones our trust (§5d) *structurally
+forbids*; a children's-money brand that does either has torched §1. So we copy the
+*shape* (concentric expansion: harvest ONE owned relationship many ways) but **not the
+attention/data verticals** — our harvest is **product-only** (financial services to a
+family we already own = the §4 lifetime funnel). Narrower revenue surface than Babylist
+on paper, and that narrowness *is* the counter-position: we become the trusted one their
+$750M model can't be. Sequence holds too — Babylist was *just a registry* for years
+before the verticals; win the wedge first, harvest after. (Don't mistake "pump out
+verticals" for sprawl into new moats — it only works *concentrically*, around the one
+owned relationship.)
+
 ---
 
 ## 3. What we DO NOT have — and must never claim
@@ -213,6 +229,58 @@ corner that erodes trust for a short-term metric).
    multi-occasion + "just because" turns a once-a-year card into a habit — and
    frequency is a moat *input* (more gifts → fuller Memory Book → more switching
    cost → more loop fuel).
+
+---
+
+## 6b. Moat engineering — the moat is an accumulation RATE, not a description (added 2026-06-23)
+
+The genuinely new frame from a long strategy thread: **you cannot pre-build a heavy moat.**
+The deep ones are either *accumulated through usage* (data, switching cost) or *contracted*
+(exclusivity) — and both are **downstream of the loop turning.** A moat is a consequence of a
+working business, not a substitute for one. Building a deep moat before the loop works is a
+fortress around an empty field.
+
+So the moat work that is legitimately *present-tense* is not "describe the moat" — it's
+**engineer the accumulation RATE.** The difference between a thin moat and a brutal one isn't
+time or luck; it's whether the product is *designed to deposit irreplaceable, un-exportable
+value with every use.* Levers, in priority:
+
+1. **Density.** Design so a fund accumulates a deep corpus *fast* — drive frequency + media +
+   multiple contributors so a **6-month-old** fund already has 40 notes from 15 people, not a
+   5-year-old one. Turns "un-leavable" from a year-5 outcome into a year-1 one. The single most
+   controllable heavy-moat input (ties to §6.5).
+2. **Relationship-binding (un-exportable).** The moat is *the people who showed up*, not the
+   content. ACAT moves the shares in 3 days; it can never move the 15 people who already
+   recorded their love here. Engineer the data **relationship-bound, not content-bound** — a
+   competitor can copy the feature but cannot port the relationships.
+3. **Identity / record-of-record.** Make Kiddo the kid's permanent financial + emotional
+   identity since birth (money + memories + relationships + tax history + the at-18 handoff =
+   one account that *is* them). Leaving means abandoning a life's record.
+4. **Lineage (deepest; architect now, pays off in decades).** Build the data model so
+   fund → kid → *their* kids is possible: the multi-generational record of how a family
+   transfers love + money. Un-replicable because it can't be back-dated. Cheap to architect
+   now; the deepest moat there is, measured in generations.
+
+**The one instant-heavy moat: exclusivity.** Everything above compounds slowly. A **contract**
+is heavy on day one — the *exclusive* embedded child-fund partner of a registry (Babylist), or
+*the* platform a state runs its CSA / baby-bonds program on. The one heavy moat you can actively
+*pursue* rather than wait to accumulate. Gated on the product converting + custody, but it's the
+highest-leverage heavy-moat *action*.
+
+**Discipline — credibility is a TRAILING indicator, not a lever.** Institutional logos, capital,
+and partnerships are things you *attract by winning the core*, not things you *acquire to win it.*
+Credible institutions associate with *proven* things (doubly so in children's money, where the
+reputational coupling runs both ways) — so a logo wall built early is hollow, front-runs the loop,
+and *erodes* the trust it's meant to signal. Earn trust now through **regulated structure + a
+respected advisor + radical honesty**; the names and capital then flow to you as a *consequence of
+being proven*.
+
+**The reframe:** don't build a wall — build a **machine that secretes the wall**: a product whose
+every use deposits irreplaceable, relationship-bound, un-exportable value into one lifelong account.
+That machine *is* the moat. The job is to engineer the **accumulation rate** (brutal by year two,
+not year ten) and lock **one exclusive deal** so part of the wall is poured in concrete from day
+one. Both are downstream of proving the loop (§6) — engineer the rate now; the depth accrues when
+the loop turns.
 
 ---
 

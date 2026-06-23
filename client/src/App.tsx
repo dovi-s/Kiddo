@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense, type ReactNode, type ComponentType } from "react";
 import { Switch, Route, useLocation, useSearch } from "wouter";
 import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
@@ -25,13 +25,43 @@ import { GradientText } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import Home from "@/pages/Home";
 
-const NotFound = lazy(() => import("@/pages/not-found"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Settings = lazy(() => import("@/pages/Settings"));
-const Account = lazy(() => import("@/pages/Account"));
-const Activity = lazy(() => import("@/pages/Activity"));
-const ActivityDetail = lazy(() => import("@/pages/ActivityDetail"));
-const Onboard = lazy(() => import("@/pages/Onboard"));
+// Lazy import with a one-shot reload-retry. A dynamic import() can fail on a
+// transient network blip (ERR_NETWORK_CHANGED when wifi/VPN switches) or, in
+// production, when an old tab references a chunk filename a new deploy has
+// replaced. Vite/the browser cache the rejected module promise, so the route
+// would then dead-end on EVERY navigation until a manual hard reload. On
+// failure we reload exactly ONCE (guarded by a sessionStorage flag) to pull
+// the fresh module graph; a second failure falls through to the route's
+// Suspense/error boundary instead of looping. The flag clears on any success.
+const CHUNK_RELOAD_FLAG = "kiddo:chunk-reload";
+function lazyWithRetry<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    factory()
+      .then((mod) => {
+        try { sessionStorage.removeItem(CHUNK_RELOAD_FLAG); } catch {}
+        return mod;
+      })
+      .catch((err) => {
+        let alreadyReloaded = false;
+        try { alreadyReloaded = sessionStorage.getItem(CHUNK_RELOAD_FLAG) === "1"; } catch {}
+        if (!alreadyReloaded && typeof window !== "undefined") {
+          try { sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1"); } catch {}
+          window.location.reload();
+          // Reload is in flight — never resolve, so React doesn't flash error UI.
+          return new Promise<{ default: T }>(() => {});
+        }
+        throw err;
+      }),
+  );
+}
+
+const NotFound = lazyWithRetry(() => import("@/pages/not-found"));
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const Settings = lazyWithRetry(() => import("@/pages/Settings"));
+const Account = lazyWithRetry(() => import("@/pages/Account"));
+const Activity = lazyWithRetry(() => import("@/pages/Activity"));
+const ActivityDetail = lazyWithRetry(() => import("@/pages/ActivityDetail"));
+const Onboard = lazyWithRetry(() => import("@/pages/Onboard"));
 // /send route was removed 2026-05-14. Send.tsx was a UI-only
 // prototype with a "Coming soon" banner and no real API. Public
 // route to a non-functional feature is worse than no route. The
@@ -39,67 +69,72 @@ const Onboard = lazy(() => import("@/pages/Onboard"));
 // feature ships later, restore the import + the Route below + the
 // page-title mapping + the hidden-paths entries in MobileNav /
 // DesktopSidebar / AppHeader title map.
-const Claim = lazy(() => import("@/pages/Claim"));
-const ClaimFund = lazy(() => import("@/pages/ClaimFund"));
-const InvitationAccept = lazy(() => import("@/pages/InvitationAccept"));
-const FundsOverview = lazy(() => import("@/pages/FundsOverview"));
-const GiftLookup = lazy(() => import("@/pages/GiftLookup"));
-const GetStarted = lazy(() => import("@/pages/GetStarted"));
-const ActivateInvesting = lazy(() => import("@/pages/ActivateInvesting"));
-const GiftCheckout = lazy(() => import("@/pages/GiftCheckout"));
-const Login = lazy(() => import("@/pages/Login"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
-const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
-const AuthMagic = lazy(() => import("@/pages/AuthMagic"));
-const FounderClaim = lazy(() => import("@/pages/FounderClaim"));
-const ConfirmEmailChange = lazy(() => import("@/pages/ConfirmEmailChange"));
-const CancelEmailChange = lazy(() => import("@/pages/CancelEmailChange"));
-const FAQ = lazy(() => import("@/pages/FAQ"));
-const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
-const CalculatorAt18 = lazy(() => import("@/pages/CalculatorAt18"));
-const RobuxVsUtma = lazy(() => import("@/pages/RobuxVsUtma"));
-const TrumpAccountVsUtma = lazy(() => import("@/pages/TrumpAccountVsUtma"));
-const UtmaByStateIndex = lazy(() => import("@/pages/UtmaByStateIndex"));
-const UtmaByState = lazy(() => import("@/pages/UtmaByState"));
-const Pricing = lazy(() => import("@/pages/Pricing"));
-const FoundingMembers = lazy(() => import("@/pages/FoundingMembers"));
-const PmfSurvey = lazy(() => import("@/pages/PmfSurvey"));
-const SponsorSuccess = lazy(() => import("@/pages/SponsorSuccess"));
-const Blog = lazy(() => import("@/pages/Blog"));
-const BlogPost = lazy(() => import("@/pages/BlogPost"));
-const Stories = lazy(() => import("@/pages/Stories"));
-const StoryPage = lazy(() => import("@/pages/StoryPage"));
-const Compare = lazy(() => import("@/pages/Compare"));
-const Demo = lazy(() => import("@/pages/Demo"));
-const P2PDemo = lazy(() => import("@/pages/P2PDemo"));
-const GenerationalLoop = lazy(() => import("@/pages/GenerationalLoop"));
-const DashboardLab = lazy(() => import("@/pages/DashboardLab"));
-const Partners = lazy(() => import("@/pages/Partners"));
-const Security = lazy(() => import("@/pages/Security"));
-const Age18 = lazy(() => import("@/pages/Age18"));
-const Age18Plan = lazy(() => import("@/pages/Age18Plan"));
-const TaxDocuments = lazy(() => import("@/pages/TaxDocuments"));
-const TaxDocsExplainer = lazy(() => import("@/pages/TaxDocsExplainer"));
-const Projection = lazy(() => import("@/pages/Projection"));
-const FundSnapshot = lazy(() => import("@/pages/FundSnapshot"));
-const MemoryBook = lazy(() => import("@/pages/MemoryBook"));
-const MemoryRedirect = lazy(() => import("@/pages/MemoryRedirect"));
-const GiftSuccess = lazy(() => import("@/pages/GiftSuccess"));
-const KidView = lazy(() => import("@/pages/KidView"));
-const AgeTransitionManager = lazy(() => import("@/pages/AgeTransitionManager"));
-const AgeTransitionInvite = lazy(() => import("@/pages/AgeTransitionInvite"));
-const AgeTransitionVerify = lazy(() => import("@/pages/AgeTransitionVerify"));
-const Age18Welcome = lazy(() => import("@/pages/Age18Welcome"));
-const GiveAGift = lazy(() => import("@/pages/GiveAGift"));
-const YourStory = lazy(() => import("@/pages/YourStory"));
-const GifterShare = lazy(() => import("@/pages/GifterShare"));
-const GifterUnsubscribe = lazy(() => import("@/pages/GifterUnsubscribe"));
-const GifterDashboard = lazy(() => import("@/pages/GifterDashboard"));
-const About = lazy(() => import("@/pages/About"));
-const Contact = lazy(() => import("@/pages/Contact"));
-const PersonalFunds = lazy(() => import("@/pages/PersonalFunds"));
-const Legal = lazy(() => import("@/pages/Legal"));
-const Admin = lazy(() => import("@/pages/Admin"));
+const Claim = lazyWithRetry(() => import("@/pages/Claim"));
+const ClaimFund = lazyWithRetry(() => import("@/pages/ClaimFund"));
+const InvitationAccept = lazyWithRetry(() => import("@/pages/InvitationAccept"));
+const FundsOverview = lazyWithRetry(() => import("@/pages/FundsOverview"));
+const GiftLookup = lazyWithRetry(() => import("@/pages/GiftLookup"));
+const GetStarted = lazyWithRetry(() => import("@/pages/GetStarted"));
+const ActivateInvesting = lazyWithRetry(() => import("@/pages/ActivateInvesting"));
+const GiftCheckout = lazyWithRetry(() => import("@/pages/GiftCheckout"));
+const Login = lazyWithRetry(() => import("@/pages/Login"));
+const ResetPassword = lazyWithRetry(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazyWithRetry(() => import("@/pages/VerifyEmail"));
+const AuthMagic = lazyWithRetry(() => import("@/pages/AuthMagic"));
+const FounderClaim = lazyWithRetry(() => import("@/pages/FounderClaim"));
+const ConfirmEmailChange = lazyWithRetry(() => import("@/pages/ConfirmEmailChange"));
+const CancelEmailChange = lazyWithRetry(() => import("@/pages/CancelEmailChange"));
+const FAQ = lazyWithRetry(() => import("@/pages/FAQ"));
+const HowItWorks = lazyWithRetry(() => import("@/pages/HowItWorks"));
+const CalculatorAt18 = lazyWithRetry(() => import("@/pages/CalculatorAt18"));
+const RobuxVsUtma = lazyWithRetry(() => import("@/pages/RobuxVsUtma"));
+const TrumpAccountVsUtma = lazyWithRetry(() => import("@/pages/TrumpAccountVsUtma"));
+const UtmaByStateIndex = lazyWithRetry(() => import("@/pages/UtmaByStateIndex"));
+const UtmaByState = lazyWithRetry(() => import("@/pages/UtmaByState"));
+const Pricing = lazyWithRetry(() => import("@/pages/Pricing"));
+const FoundingMembers = lazyWithRetry(() => import("@/pages/FoundingMembers"));
+const PmfSurvey = lazyWithRetry(() => import("@/pages/PmfSurvey"));
+const SponsorSuccess = lazyWithRetry(() => import("@/pages/SponsorSuccess"));
+const Blog = lazyWithRetry(() => import("@/pages/Blog"));
+const BlogPost = lazyWithRetry(() => import("@/pages/BlogPost"));
+const Stories = lazyWithRetry(() => import("@/pages/Stories"));
+const StoryPage = lazyWithRetry(() => import("@/pages/StoryPage"));
+const Compare = lazyWithRetry(() => import("@/pages/Compare"));
+const Demo = lazyWithRetry(() => import("@/pages/Demo"));
+const P2PDemo = lazyWithRetry(() => import("@/pages/P2PDemo"));
+const GenerationalLoop = lazyWithRetry(() => import("@/pages/GenerationalLoop"));
+const HeroPreview = lazyWithRetry(() => import("@/pages/HeroPreview")); // TEMP: full-bleed hero prototype
+const DashboardLab = lazyWithRetry(() => import("@/pages/DashboardLab"));
+// Full-page redesign sandbox. A complete clone of the dashboard at /staging where
+// we restructure aggressively (trimmed hero, de-duped sections) without touching
+// the live /dashboard. Port back to DashboardLab once blessed; delete if not.
+const DashboardStaging = lazyWithRetry(() => import("@/pages/DashboardStaging"));
+const Partners = lazyWithRetry(() => import("@/pages/Partners"));
+const Security = lazyWithRetry(() => import("@/pages/Security"));
+const Age18 = lazyWithRetry(() => import("@/pages/Age18"));
+const Age18Plan = lazyWithRetry(() => import("@/pages/Age18Plan"));
+const TaxDocuments = lazyWithRetry(() => import("@/pages/TaxDocuments"));
+const TaxDocsExplainer = lazyWithRetry(() => import("@/pages/TaxDocsExplainer"));
+const Projection = lazyWithRetry(() => import("@/pages/Projection"));
+const FundSnapshot = lazyWithRetry(() => import("@/pages/FundSnapshot"));
+const MemoryBook = lazyWithRetry(() => import("@/pages/MemoryBook"));
+const MemoryRedirect = lazyWithRetry(() => import("@/pages/MemoryRedirect"));
+const GiftSuccess = lazyWithRetry(() => import("@/pages/GiftSuccess"));
+const KidView = lazyWithRetry(() => import("@/pages/KidView"));
+const AgeTransitionManager = lazyWithRetry(() => import("@/pages/AgeTransitionManager"));
+const AgeTransitionInvite = lazyWithRetry(() => import("@/pages/AgeTransitionInvite"));
+const AgeTransitionVerify = lazyWithRetry(() => import("@/pages/AgeTransitionVerify"));
+const Age18Welcome = lazyWithRetry(() => import("@/pages/Age18Welcome"));
+const GiveAGift = lazyWithRetry(() => import("@/pages/GiveAGift"));
+const YourStory = lazyWithRetry(() => import("@/pages/YourStory"));
+const GifterShare = lazyWithRetry(() => import("@/pages/GifterShare"));
+const GifterUnsubscribe = lazyWithRetry(() => import("@/pages/GifterUnsubscribe"));
+const GifterDashboard = lazyWithRetry(() => import("@/pages/GifterDashboard"));
+const About = lazyWithRetry(() => import("@/pages/About"));
+const Contact = lazyWithRetry(() => import("@/pages/Contact"));
+const PersonalFunds = lazyWithRetry(() => import("@/pages/PersonalFunds"));
+const Legal = lazyWithRetry(() => import("@/pages/Legal"));
+const Admin = lazyWithRetry(() => import("@/pages/Admin"));
 
 type SeoConfig = {
   title: string;
@@ -595,17 +630,21 @@ function prefetchCriticalRoutes() {
   _prefetchDone = true;
   const run = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (fn: () => void) => setTimeout(fn, 120);
   run(() => {
-    import("@/pages/DashboardLab"); // the ported dashboard (/dashboard); classic parked at /dashboard-classic
-    import("@/pages/Settings");
-    import("@/pages/Account");
-    import("@/pages/Activity");
-    import("@/pages/MemoryBook");
-    import("@/pages/MemoryRedirect");
-    import("@/pages/ActivateInvesting");
-    import("@/pages/Login");
-    import("@/pages/GetStarted");
-    import("@/pages/GiftCheckout");
-    import("@/pages/GiftSuccess");
+    // Best-effort warm-ups. A failed prefetch (transient network) must NEVER
+    // surface as an uncaught promise rejection in the console — swallow it
+    // here; the route's own lazyWithRetry import handles real navigation.
+    const warm = (p: Promise<unknown>) => { void p.catch(() => {}); };
+    warm(import("@/pages/DashboardLab")); // the ported dashboard (/dashboard); classic parked at /dashboard-classic
+    warm(import("@/pages/Settings"));
+    warm(import("@/pages/Account"));
+    warm(import("@/pages/Activity"));
+    warm(import("@/pages/MemoryBook"));
+    warm(import("@/pages/MemoryRedirect"));
+    warm(import("@/pages/ActivateInvesting"));
+    warm(import("@/pages/Login"));
+    warm(import("@/pages/GetStarted"));
+    warm(import("@/pages/GiftCheckout"));
+    warm(import("@/pages/GiftSuccess"));
   });
 }
 
@@ -750,6 +789,7 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/demo"><Demo /></Route>
           <Route path="/p2p-preview"><P2PDemo /></Route>
           <Route path="/generational-loop"><GenerationalLoop /></Route>
+          <Route path="/hero-preview"><HeroPreview /></Route>{/* TEMP: full-bleed hero prototype */}
           {/* PORTED 2026-06-10: the redesign (DashboardLab) is now THE real
               dashboard. /design-lab is kept as an ALIAS (existing links + the
               build-blind dev workflow still work); both render DashboardLab.
@@ -762,6 +802,7 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/onboard"><Onboard /></Route>
           <Route path="/activate"><ProtectedRoute><ActivateInvesting /></ProtectedRoute></Route>
           <Route path="/dashboard"><ProtectedRoute><DashboardLab /></ProtectedRoute></Route>
+          <Route path="/staging"><ProtectedRoute><DashboardStaging /></ProtectedRoute></Route>
           <Route path="/dashboard-classic"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
           <Route path="/profile"><ProtectedRoute><Account /></ProtectedRoute></Route>
           <Route path="/activity"><ProtectedRoute><Activity /></ProtectedRoute></Route>

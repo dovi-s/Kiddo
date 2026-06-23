@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { MOTION_COUNT_UP_MS } from "@/lib/motion";
 
+// Default climb easing: ease-out cubic ("find its home" deceleration).
+const EASE_OUT_CUBIC = (t: number) => 1 - Math.pow(1 - t, 3);
+
 // Smooth value-transition hook — animates the displayed number from its
 // previous value to the new target with ease-out cubic. Used for the
 // dashboard hero balance, projection sliders, anywhere a number changes
@@ -34,6 +37,10 @@ export type UseCountUpOptions = {
   // the hero balance has settled) instead of both animating at once and
   // splitting the eye. Default 0 = roll immediately.
   startDelay?: number;
+  // Easing applied to climb progress t∈[0,1]. Default ease-out cubic. Pass a
+  // stronger curve (e.g. ease-out quart) for a slower, more pronounced settle at
+  // the very end — useful when finer digits (cents) should land last.
+  easing?: (t: number) => number;
 };
 
 export type UseCountUpResult = { value: number; isAnimating: boolean; isRolling: boolean };
@@ -53,6 +60,7 @@ export function useCountUp(
   const effectiveDuration = isObjectArg ? targetOrOptions.duration ?? MOTION_COUNT_UP_MS : duration;
   const effectivePrecision = isObjectArg ? targetOrOptions.precision ?? 0 : precision;
   const effectiveStartDelay = isObjectArg ? targetOrOptions.startDelay ?? 0 : 0;
+  const effectiveEasing = isObjectArg ? targetOrOptions.easing ?? EASE_OUT_CUBIC : EASE_OUT_CUBIC;
 
   const initial = fromOpt !== undefined && Number.isFinite(fromOpt) ? fromOpt : target;
   const [display, setDisplay] = useState(initial);
@@ -126,7 +134,7 @@ export function useCountUp(
       const startedAt = performance.now();
       frame = requestAnimationFrame(function tick(now) {
         const t = Math.min(1, (now - startedAt) / effectiveDuration);
-        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        const eased = effectiveEasing(t); // default ease-out cubic; caller may override
         const raw = start + delta * eased;
         const value = effectivePrecision > 0 ? Math.round(raw * factor) / factor : Math.round(raw);
         setDisplay(value);

@@ -672,6 +672,41 @@ for this answer.**
 
 ---
 
+# Part 12 — Charitable "solidarity pool" / fund-the-unfunded (NOT launch-gating, forward-looking) (Securities / Charity / Consumer)
+
+**Forward-looking — design intent, not a launch-day feature.** Post-launch we want a
+**solidarity pool** that closes the model's structural equity gap (gifting favors kids with
+generous networks; a kid with none gets nothing). Intended mechanic:
+
+- **Funding:** gifters opt in at checkout to add a small amount ("add $1 to fund a kid who
+  doesn't have a Kiddo yet"), plus a Kiddo baseline contribution.
+- **Distribution:** funds that **languish** (zero gifts in N days — a non-means-tested proxy
+  for "no network") are auto-seeded a small amount from the pool, **locked in the recipient
+  kid's UTMA** (only theirs at majority).
+- A related **at-18 hand-back** (a kid taking over their fund may seed another kid's first fund).
+- **At scale (year 3–5 vision):** the same pool could take **institutional capital** —
+  foundations, corporate ESG, UHNWI / family-office / DAF philanthropy, and **government CSA
+  programs** (cf. CalKIDS, baby-bonds). This sharpens Q1 (the 501c3/DAF structure must
+  accommodate institutional donors and their deductions) and Q4 (beneficiary selection at scale).
+
+**The questions:**
+1. **Structure.** Soliciting contributions, holding a pool, and granting it to chosen minor
+   beneficiaries — does this require a **separate 501(c)(3) / charitable entity** (a "Kiddo
+   Foundation")? Does running it through that entity keep the for-profit perimeter clean? Could
+   a **donor-advised-fund** arrangement be cleaner?
+2. **Charitable solicitation.** State charitable-solicitation registration obligations if we
+   ask gifters to contribute to the pool.
+3. **Money transmission / custody.** Does Kiddo (or the foundation) holding pooled funds
+   pre-grant trigger MTL / FinCEN / safeguarding? (Ties to Part 2.)
+4. **Gift/tax + beneficiary selection.** Who is the donor of a pool-seeded gift into a child's
+   UTMA; any gift-tax / 1099 / disclosure obligations; and does the **languishing proxy** avoid
+   the fair-selection / protected-class issues a means-test would raise?
+
+Cleanest hypothesis to validate: **a separate Kiddo Foundation (501c3) runs the pool and grants
+into funds**, keeping all regulated charity activity outside the operating company.
+
+---
+
 # Engagement logistics
 
 **Firm type (in order):** SEC-RIA specialist boutiques (Hardin Compliance, ACA
@@ -685,31 +720,11 @@ companies + fintech regulatory, Lowenstein Sandler fintech/RIA.
 estimate for follow-up work. **Budget envelope: $3K–$5K** for call + memo;
 follow-up scoped separately.
 
-**Cover email (paste, fill the brackets):**
-
-> **Subject:** RIA-registration + fund-holding questions — pre-launch UTMA fintech,
-> need a directional call + short memo
->
-> Hi [Name],
->
-> We're Kiddo, Inc., a pre-launch, US-only fintech. Parents open custodial (UTMA)
-> investment accounts for their kids, and friends and family contribute
-> gift-investments. Investments are intended to be custodied and executed by a
-> third-party broker-dealer; we are the technology/UX layer, and we are pre-launch
-> (custody is not yet live).
->
-> We need directional answers, before public launch, on two linked questions: (1)
-> whether our planned 0.10% AUM fee requires SEC RIA registration (we've sketched a
-> self-directed-platform posture plus three fallback structures), and (2) whether we
-> may capture a gifter's payment before the recipient's account exists. A short
-> attached packet lays out these plus a few tightly-scoped privacy questions
-> (children's data). We're looking for a 60–90 minute call plus a short written
-> memo, roughly a $3K–$5K initial engagement, with follow-up scoped separately.
->
-> Does this fit your practice? Happy to answer scoping questions first.
->
-> Best,
-> [Your name], Kiddo, Inc.
+**Cover email:** use the dedicated draft in **`COUNSEL_OUTREACH_EMAIL.md`** — it is
+the single source of truth and the better-scoped version (it leads with the
+software-layer structure to validate and lists the attachment set). Do not maintain a
+second copy here; an older inline draft lived here and was removed to avoid a
+"which one do I send" fork.
 
 **Timeline:** Week 1 send to 3 firms + intake calls; Week 2 pick + schedule the
 substantive meeting; Weeks 3–4 meeting + memo; Weeks 4–6 act on the memo (file

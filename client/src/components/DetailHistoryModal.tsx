@@ -185,7 +185,7 @@ export function DetailHistoryModal({
             data-testid="detail-history-modal-backdrop"
             style={{
               position: "fixed", inset: 0, zIndex: 70,
-              background: "rgba(26,23,16,0.45)",
+              background: "hsl(var(--kiddo-ink) / 0.45)",
               backdropFilter: "blur(2px)",
             }}
           />
@@ -227,7 +227,7 @@ export function DetailHistoryModal({
               display: "flex", flexDirection: "column" as const,
               background: "white",
               borderTopLeftRadius: 24, borderTopRightRadius: 24,
-              boxShadow: "0 -4px 24px rgba(26,23,16,0.18)",
+              boxShadow: "0 -4px 24px hsl(var(--kiddo-ink) / 0.18)",
             }}
             // Desktop: bounded width + rounded all corners + centered max
             // height. The wrapper's flex-center handles the actual
@@ -239,7 +239,7 @@ export function DetailHistoryModal({
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "14px 18px 0 18px",
             }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(26,23,16,0.10)", margin: "0 auto" }} className="md:hidden" />
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: "hsl(var(--kiddo-ink) / 0.10)", margin: "0 auto" }} className="md:hidden" />
               <button
                 type="button"
                 onClick={onClose}
@@ -249,7 +249,7 @@ export function DetailHistoryModal({
                   position: "absolute", right: 12, top: 10,
                   width: 32, height: 32, borderRadius: 999,
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  background: "rgba(26,23,16,0.06)", border: "none",
+                  background: "hsl(var(--kiddo-ink) / 0.06)", border: "none",
                   cursor: "pointer",
                 }}
               >
@@ -259,11 +259,11 @@ export function DetailHistoryModal({
 
             {/* Hero */}
             <div style={{ padding: "16px 20px 14px" }}>
-              <p className="font-heading" style={{ fontSize: 20, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.2 }}>
+              <p className="font-heading" style={{ fontSize: 20, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
                 {title}
               </p>
               {subtitle && (
-                <p style={{ fontSize: 13, color: "rgba(26,23,16,0.62)", marginTop: 4 }}>
+                <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.62)", marginTop: 4 }}>
                   {subtitle}
                 </p>
               )}
@@ -281,7 +281,7 @@ export function DetailHistoryModal({
                         className="font-heading"
                         style={{
                           fontSize: 16, fontWeight: 700, lineHeight: 1.2,
-                          color: s.tone === "positive" ? "rgb(26,67,50)" : s.tone === "negative" ? "rgb(185,28,28)" : "rgb(26,23,16)",
+                          color: s.tone === "positive" ? "rgb(26,67,50)" : s.tone === "negative" ? "rgb(185,28,28)" : "hsl(var(--kiddo-ink))",
                         }}
                       >
                         {s.value}
@@ -310,7 +310,7 @@ export function DetailHistoryModal({
                       data-testid={`detail-subtoggle-${opt.value}`}
                       style={{
                         padding: "6px 13px", borderRadius: 999, flexShrink: 0,
-                        border: active ? "none" : "1.5px solid rgba(26,23,16,0.12)",
+                        border: active ? "none" : "1.5px solid hsl(var(--kiddo-ink) / 0.12)",
                         background: active ? "rgb(26,61,43)" : "white",
                         color: active ? "white" : "rgb(100,92,86)",
                         fontSize: 12, fontWeight: active ? 700 : 600,
@@ -323,8 +323,8 @@ export function DetailHistoryModal({
                         <span style={{
                           fontSize: 10, fontWeight: 800,
                           padding: "1px 6px", borderRadius: 999,
-                          background: active ? "rgba(255,255,255,0.18)" : "rgba(26,23,16,0.08)",
-                          color: active ? "white" : "rgba(26,23,16,0.55)",
+                          background: active ? "rgba(255,255,255,0.18)" : "hsl(var(--kiddo-ink) / 0.08)",
+                          color: active ? "white" : "hsl(var(--kiddo-ink) / 0.55)",
                         }}>
                           {opt.count}
                         </span>
@@ -339,7 +339,7 @@ export function DetailHistoryModal({
             <div style={{
               display: "grid", gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 4,
               margin: "0 20px",
-              background: "rgba(26,23,16,0.05)", borderRadius: 12, padding: 4,
+              background: "hsl(var(--kiddo-ink) / 0.05)", borderRadius: 12, padding: 4,
             }}>
               {tabs.map((t) => {
                 const active = tab === t.id;
@@ -355,8 +355,8 @@ export function DetailHistoryModal({
                       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
                       height: 32, borderRadius: 9, border: "none",
                       background: active ? "white" : "transparent",
-                      boxShadow: active ? "0 1px 3px rgba(26,23,16,0.10)" : "none",
-                      color: active ? "rgb(26,67,50)" : "rgba(26,23,16,0.55)",
+                      boxShadow: active ? "0 1px 3px hsl(var(--kiddo-ink) / 0.10)" : "none",
+                      color: active ? "rgb(26,67,50)" : "hsl(var(--kiddo-ink) / 0.55)",
                       fontSize: 12, fontWeight: active ? 700 : 600,
                       cursor: "pointer", fontFamily: "inherit",
                     }}
@@ -367,8 +367,8 @@ export function DetailHistoryModal({
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         minWidth: 16, height: 16, borderRadius: 8,
                         padding: "0 4px", fontSize: 9.5, fontWeight: 800,
-                        background: active ? "rgb(26,67,50)" : "rgba(26,23,16,0.15)",
-                        color: active ? "white" : "rgba(26,23,16,0.65)",
+                        background: active ? "rgb(26,67,50)" : "hsl(var(--kiddo-ink) / 0.15)",
+                        color: active ? "white" : "hsl(var(--kiddo-ink) / 0.65)",
                       }}>
                         {t.count}
                       </span>
@@ -425,7 +425,7 @@ export function DetailHistoryModal({
             {bottomCta && (
               <div style={{
                 padding: "12px 20px",
-                borderTop: "1px solid rgba(26,23,16,0.08)",
+                borderTop: "1px solid hsl(var(--kiddo-ink) / 0.08)",
                 background: "white",
               }}>
                 <Button
@@ -454,9 +454,9 @@ function EmptyState({ label, sub }: { label: string; sub: string }) {
   return (
     <div style={{
       padding: "40px 20px", textAlign: "center" as const,
-      border: "1px dashed rgba(26,23,16,0.14)", borderRadius: 16,
+      border: "1px dashed hsl(var(--kiddo-ink) / 0.14)", borderRadius: 16,
     }}>
-      <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 4 }}>
+      <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-ink))", marginBottom: 4 }}>
         {label}
       </p>
       {sub && (
@@ -476,7 +476,7 @@ function ScheduledRow({ row }: { row: DetailScheduledRow }) {
       display: "flex", alignItems: "flex-start", gap: 12,
       padding: "12px 14px",
       background: "white",
-      border: "1px solid rgba(26,23,16,0.08)",
+      border: "1px solid hsl(var(--kiddo-ink) / 0.08)",
       borderRadius: 14,
     }} data-testid={`detail-scheduled-${row.id}`}>
       <div style={{
@@ -489,7 +489,7 @@ function ScheduledRow({ row }: { row: DetailScheduledRow }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: isPaused ? "rgb(140,130,122)" : "rgb(26,23,16)" }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: isPaused ? "rgb(140,130,122)" : "hsl(var(--kiddo-ink))" }}>
             {row.title}
           </p>
           <span style={{
@@ -501,7 +501,7 @@ function ScheduledRow({ row }: { row: DetailScheduledRow }) {
           </span>
         </div>
         {row.subtitle && (
-          <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", marginTop: 2 }}>
+          <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink) / 0.55)", marginTop: 2 }}>
             {row.subtitle}
           </p>
         )}
@@ -543,7 +543,7 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
     <div
       style={{
         background: "white",
-        border: "1px solid rgba(26,23,16,0.08)",
+        border: "1px solid hsl(var(--kiddo-ink) / 0.08)",
         borderRadius: 14,
         padding: "12px 14px",
       }}
@@ -560,13 +560,13 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
               {row.title || "Activity"}
             </p>
             {amtNum != null && (
               <p className="font-heading" style={{
                 fontSize: 14.5, fontWeight: 700, lineHeight: 1.3,
-                color: amtNum >= 0 ? "rgb(26,23,16)" : "rgb(185,28,28)",
+                color: amtNum >= 0 ? "hsl(var(--kiddo-ink))" : "rgb(185,28,28)",
               }}>
                 {amtNum > 0 ? "+" : ""}{formatCurrency(amtNum)}
               </p>
@@ -598,7 +598,7 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
             return (
               <p style={{
                 fontSize: 12, lineHeight: 1.45, marginTop: 3,
-                color: "rgba(26,23,16,0.62)",
+                color: "hsl(var(--kiddo-ink) / 0.62)",
                 fontStyle: shown.startsWith('"') ? "italic" : "normal",
               }}>
                 {shown}
@@ -648,7 +648,7 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
           {reconcileLast4 && (
             <>
               <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Charged to</p>
-              <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600 }}>
+              <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                 {reconcileBrand ? reconcileBrand.charAt(0).toUpperCase() + reconcileBrand.slice(1) : "Card"} ····{reconcileLast4}
               </p>
             </>
@@ -656,13 +656,13 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
           {reconcileDescriptor && (
             <>
               <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>On your statement</p>
-              <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600 }}>{reconcileDescriptor}</p>
+              <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>{reconcileDescriptor}</p>
             </>
           )}
           {nextRetryDate && Number.isFinite(nextRetryDate.getTime()) && (
             <>
               <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Next attempt</p>
-              <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600 }}>
+              <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                 {nextRetryDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </p>
             </>

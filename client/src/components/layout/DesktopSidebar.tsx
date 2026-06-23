@@ -1,6 +1,6 @@
 import { Link, useLocation, useSearch } from "wouter";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, BookOpen, Activity, LogOut, ShieldCheck, ChevronDown, Check, Plus, ChevronRight, Settings as SettingsIcon, ArrowLeft } from "lucide-react";
+import { Home, BookOpen, History, LogOut, ShieldCheck, ChevronDown, Check, Plus, ChevronRight, Settings as SettingsIcon, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { haptic } from "@/lib/haptics";
@@ -319,8 +319,12 @@ export function DesktopSidebar() {
       // on load (you ARE on the kid's dashboard), and tapping it scroll-to-tops
       // the lab like home does — tapActiveNavScrollToTop ignores the href and
       // acts on the current page, so this never yanks you off the lab.
+      // /staging is the other dashboard rebuild sandbox (same reasoning as
+      // /design-lab) — a "home" surface, so it highlights this item and the
+      // tap scroll-to-tops the staging page instead of yanking to /dashboard.
       isActive:
         location === "/dashboard" || location.startsWith("/dashboard?") || location.startsWith("/dashboard/") ||
+        location === "/staging" || location.startsWith("/staging?") || location.startsWith("/staging/") ||
         location === "/design-lab" || location.startsWith("/design-lab?") || location.startsWith("/design-lab/"),
     },
     {
@@ -331,7 +335,7 @@ export function DesktopSidebar() {
     },
     {
       href: "/activity",
-      icon: Activity,
+      icon: History,
       label: "Activity",
       isActive: location.startsWith("/activity"),
     },
@@ -354,21 +358,9 @@ export function DesktopSidebar() {
   // active Share quick-link there silently fires Emma's link, same
   // stealth-context-switch foot-gun the AppHeader Share button has.
   const quickLinks = suppressFundChrome ? [] : [
-    activeFund && {
-      id: "share",
-      // Compound copy disambiguates from the financial-noun reading
-      // of "share" (stock-share). "Share Emma's link" reads as the
-      // verb-action. See feedback_share_vs_gift_distinction.md.
-      label: copiedLink
-        ? "Copied!"
-        : isOwnerMode
-          ? "Share your link"
-          : activeFund.recipientFirstName
-            ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
-            : "Share gift link",
-      onClick: handleShareLink,
-      href: null,
-    },
+    // Share quick-link dropped (2026-06-22): the hero owns the primary Share CTA,
+    // so this sidebar echo was the 3rd "Share … link" on one screen. See
+    // DASHBOARD_CHROME_PORT_SPEC.md (chrome de-dup).
     fundSlug && {
       id: "gifter-page",
       // Same-tab navigation matches every other Quick Link (Share, Kid's
@@ -377,14 +369,14 @@ export function DesktopSidebar() {
       // affordance that punched the user out to a new window. The gifter
       // page is a real route in the SPA, not an external destination, so
       // setLocation is the correct semantics.
-      label: "View gifter page",
+      label: "Gifter page",
       href: `/${fundSlug}`,
       external: false,
       onClick: null,
     },
     activeFund?.id && !isOwnerMode && !(activeFund as any)?.transferredAt && (activeFund as any)?.accessRole !== "previous_owner" && {
       id: "kid-view",
-      label: childName ? `${childName}'s View` : "Kid's View",
+      label: childName ? `${childName}'s view` : "Kid's view",
       href: null,
       external: false,
       onClick: () => {
@@ -395,37 +387,36 @@ export function DesktopSidebar() {
         }
       },
     },
-    activeFund?.id && {
-      id: "new-occasion",
-      label: "New occasion",
-      href: null,
-      external: false,
-      // Only the dashboard listens for kiddo:create-event, so off-dashboard
-      // the bare dispatch fired into the void (button did nothing). Mirror the
-      // Kid's View link: navigate to the dashboard with a deep-link param that
-      // opens the create-occasion sheet there.
-      onClick: () => {
-        if (location.startsWith("/dashboard")) {
-          window.dispatchEvent(new CustomEvent("kiddo:create-event"));
-        } else {
-          setLocation("/dashboard?openCreateEvent=1");
+    // ONE dynamic occasion link (was a separate "New occasion" + active-occasion
+    // PAIR — collapsed 2026-06-22 to match the staging in-content row): the
+    // active/featured occasion if there is one, otherwise the create-occasion entry.
+    activeFund?.id && (featuredEvent
+      ? {
+          id: "active-event",
+          label: featuredEvent.name || "Active occasion",
+          // Route to the actual gift page for this event (/{fundSlug}/{eventSlug}),
+          // falling back to dashboard only when slugs are missing (legacy data).
+          href: activeFund?.slug && (featuredEvent as any).slug
+            ? `/${activeFund.slug}/${(featuredEvent as any).slug}`
+            : `/dashboard?fund=${activeFund?.id}`,
+          external: false,
+          onClick: null,
         }
-      },
-    },
-    featuredEvent && {
-      id: "active-event",
-      label: featuredEvent.name || "Active occasion",
-      // Route to the actual gift page for this event (/{fundSlug}/{eventSlug}),
-      // NOT /dashboard?fund=ID. The previous /dashboard route just switched the
-      // active fund and went home — it never opened the event itself, which is
-      // the whole point of a "quick link to active occasion." Falls back to
-      // dashboard only when slugs are somehow missing (legacy data).
-      href: activeFund?.slug && (featuredEvent as any).slug
-        ? `/${activeFund.slug}/${(featuredEvent as any).slug}`
-        : `/dashboard?fund=${activeFund?.id}`,
-      external: false,
-      onClick: null,
-    },
+      : {
+          id: "new-occasion",
+          label: "New occasion",
+          href: null,
+          external: false,
+          // Only the dashboard listens for kiddo:create-event; off-dashboard, deep-link
+          // to the dashboard with a param that opens the create-occasion sheet.
+          onClick: () => {
+            if (location.startsWith("/dashboard")) {
+              window.dispatchEvent(new CustomEvent("kiddo:create-event"));
+            } else {
+              setLocation("/dashboard?openCreateEvent=1");
+            }
+          },
+        }),
   ].filter(Boolean) as Array<{
     id: string;
     label: string;
@@ -437,14 +428,14 @@ export function DesktopSidebar() {
   return (
     <aside
       className="kiddo-sidebar hidden md:flex fixed left-0 top-0 bottom-0 z-50 flex-col bg-white"
-      style={{ borderRight: "1px solid rgba(26,23,16,0.10)" }}
+      style={{ borderRight: "1px solid hsl(var(--kiddo-ink) / 0.10)" }}
       data-testid="desktop-sidebar"
     >
       {/* Logo. Wordmark is solid evergreen — the gradient-text version drifted
           from the no-AI-slop guideline (no gradient bleeds) AND from the Home
           page's plain wordmark. Brand identity belongs in the Logo mark itself;
           the wordmark just labels it. */}
-      <div className="flex items-center gap-2.5 px-5 py-5" style={{ borderBottom: "1px solid rgba(26,23,16,0.06)" }}>
+      <div className="flex items-center gap-2.5 px-5 py-5" style={{ borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.06)" }}>
         <Logo size="md" className="text-foreground" showWordmark={false} />
         <div>
           <div
@@ -542,11 +533,17 @@ export function DesktopSidebar() {
                       ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
                       : activeFund.name || "Fund"}
               </div>
-              <div className="text-[11.5px] text-muted-foreground mt-px tabular-nums">
-                {isFundsOverview
-                  ? `${funds.length} fund${funds.length === 1 ? "" : "s"}`
-                  : formatMoney(Number.isFinite(fundValue) ? fundValue : 0)}
-              </div>
+              {/* CHROME DE-DUP (2026-06-22): the sidebar no longer echoes the hero's
+                  balance — nav repeating the hero's one big number gutted its impact
+                  (see DASHBOARD_CHROME_PORT_SPEC.md). Identity only here: the fund name
+                  above + the avatar. The funds-overview COUNT stays (not a dup of
+                  anything); per-fund balances still show inside the switcher dropdown,
+                  which only appears on open and helps compare funds. */}
+              {isFundsOverview && (
+                <div className="text-[11.5px] text-muted-foreground mt-px tabular-nums">
+                  {`${funds.length} fund${funds.length === 1 ? "" : "s"}`}
+                </div>
+              )}
             </div>
             <ChevronDown
               className={`h-3 w-3 shrink-0 text-muted-foreground transition-transform ${fundMenuOpen ? "rotate-180" : ""}`}
@@ -555,7 +552,7 @@ export function DesktopSidebar() {
 
           {fundMenuOpen && (
             <div
-              className="absolute left-3 right-3 top-[calc(100%+4px)] z-50 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_rgba(26,23,16,0.16)]"
+              className="absolute left-3 right-3 top-[calc(100%+4px)] z-50 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_hsl(var(--kiddo-ink) / 0.16)]"
               role="listbox"
               data-testid="sidebar-fund-dropdown"
             >
@@ -785,7 +782,7 @@ export function DesktopSidebar() {
       {/* Quick links */}
       {quickLinks.length > 0 && (
         <div className="px-2.5 pb-3">
-          <div style={{ height: 1, background: "rgba(26,23,16,0.06)", marginBottom: 12 }} />
+          <div style={{ height: 1, background: "hsl(var(--kiddo-ink) / 0.06)", marginBottom: 12 }} />
           <div
             style={{
               fontSize: 10,
@@ -868,7 +865,7 @@ export function DesktopSidebar() {
             counter-productive. */}
 
       {/* Profile footer */}
-      <div style={{ borderTop: "1px solid rgba(26,23,16,0.10)", padding: "12px 14px 14px" }}>
+      <div style={{ borderTop: "1px solid hsl(var(--kiddo-ink) / 0.10)", padding: "12px 14px 14px" }}>
         {user && (
           <Link href="/account">
             <button
@@ -884,7 +881,7 @@ export function DesktopSidebar() {
                   background: "rgb(238,231,220)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   overflow: "hidden",
-                  border: "1.5px solid rgba(26,23,16,0.10)",
+                  border: "1.5px solid hsl(var(--kiddo-ink) / 0.10)",
                 }}
               >
                 {user.profileImageUrl ? (

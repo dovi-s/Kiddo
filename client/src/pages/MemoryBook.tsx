@@ -2816,7 +2816,7 @@ export default function MemoryBook() {
               padding: "28px 28px 24px",
               position: "relative",
               overflow: "hidden",
-              boxShadow: "0 4px 16px rgba(26,23,16,0.12), 0 16px 48px rgba(26,23,16,0.10)",
+              boxShadow: "0 4px 16px hsl(var(--kiddo-ink) / 0.12), 0 16px 48px hsl(var(--kiddo-ink) / 0.10)",
               marginBottom: 24,
             }}
             data-testid="memory-hero"
@@ -3239,8 +3239,8 @@ export default function MemoryBook() {
                             textAlign: "left",
                             transition: "transform 0.12s, box-shadow 0.12s",
                             boxShadow: isActive
-                              ? "0 0 0 3px hsl(var(--kiddo-evergreen)/0.18), 0 4px 16px rgba(26,23,16,0.10)"
-                              : "0 1px 4px rgba(26,23,16,0.06)",
+                              ? "0 0 0 3px hsl(var(--kiddo-evergreen)/0.18), 0 4px 16px hsl(var(--kiddo-ink) / 0.10)"
+                              : "0 1px 4px hsl(var(--kiddo-ink) / 0.06)",
                           }}
                           onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
                           onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -3318,7 +3318,7 @@ export default function MemoryBook() {
                                         borderRadius: "50%",
                                         objectFit: "cover",
                                         border: "2px solid white",
-                                        boxShadow: "0 2px 8px rgba(26,23,16,0.18)",
+                                        boxShadow: "0 2px 8px hsl(var(--kiddo-ink) / 0.18)",
                                       }}
                                     />
                                   ) : (
@@ -3340,11 +3340,11 @@ export default function MemoryBook() {
                                 )}
                               </div>
                             )}
-                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(26,23,16,0.5) 0%, transparent 55%)" }} />
+                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.5) 0%, transparent 55%)" }} />
                             {evt.status === "archived" && (
                               <div style={{
                                 position: "absolute", top: 7, right: 7,
-                                background: "rgba(26,23,16,0.55)", borderRadius: 6,
+                                background: "hsl(var(--kiddo-ink) / 0.55)", borderRadius: 6,
                                 padding: "2px 6px", fontSize: 9, fontWeight: 700, color: "white", letterSpacing: "0.05em",
                               }}>
                                 ARCHIVED
@@ -3367,12 +3367,12 @@ export default function MemoryBook() {
                                 every card body identical height. */}
                             <p
                               aria-hidden={eventDateLabel ? undefined : true}
-                              style={{ fontSize: 10.5, color: "rgba(26,23,16,0.45)", marginBottom: 5, visibility: eventDateLabel ? undefined : "hidden" }}
+                              style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.45)", marginBottom: 5, visibility: eventDateLabel ? undefined : "hidden" }}
                             >
                               {eventDateLabel || " "}
                             </p>
                             {evt.description && stripHtml(evt.description) && (
-                              <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.55)", lineHeight: 1.4, marginBottom: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                              <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.55)", lineHeight: 1.4, marginBottom: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                                 {stripHtml(evt.description)}
                               </p>
                             )}
@@ -3645,7 +3645,7 @@ export default function MemoryBook() {
                               style={{
                                 boxShadow: ownerProfileImageUrl
                                   ? (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55)")
-                                  : (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 3px 10px rgba(26,23,16,0.13)"),
+                                  : (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 3px 10px hsl(var(--kiddo-ink) / 0.13)"),
                               }}
                             >
                               <img src={rosterPhoto} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -3663,8 +3663,8 @@ export default function MemoryBook() {
                                 boxShadow: isActive
                                   ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))"
                                   : gifter.isOwnerRow
-                                    ? "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55), 0 3px 10px rgba(26,23,16,0.13)"
-                                    : "0 3px 10px rgba(26,23,16,0.13)",
+                                    ? "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55), 0 3px 10px hsl(var(--kiddo-ink) / 0.13)"
+                                    : "0 3px 10px hsl(var(--kiddo-ink) / 0.13)",
                               }}
                             >
                               {gifter.name.slice(0, 1).toUpperCase()}
@@ -4333,12 +4333,12 @@ export default function MemoryBook() {
                                   </span>
                                 )}
                                 {mediaKind === "video" && (
-                                  <span title="Video" aria-label="Video" style={{ color: "rgba(26,23,16,0.55)", display: "inline-flex" }}>
+                                  <span title="Video" aria-label="Video" style={{ color: "hsl(var(--kiddo-ink) / 0.55)", display: "inline-flex" }}>
                                     <Video size={11} />
                                   </span>
                                 )}
                                 {mediaKind === "photo" && (
-                                  <span title="Photo" aria-label="Photo" style={{ color: "rgba(26,23,16,0.55)", display: "inline-flex" }}>
+                                  <span title="Photo" aria-label="Photo" style={{ color: "hsl(var(--kiddo-ink) / 0.55)", display: "inline-flex" }}>
                                     <Camera size={11} />
                                   </span>
                                 )}
@@ -4472,7 +4472,7 @@ export default function MemoryBook() {
                       style={(() => {
                         const baseStyle = getDeepLinkHighlightCardStyle(
                           isHighlighted,
-                          "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)",
+                          "0 1px 3px hsl(var(--kiddo-ink) / 0.06), 0 14px 34px hsl(var(--kiddo-ink) / 0.07)",
                         );
                         // Per-type tint + left-rail accent. The rail is
                         // a 3px colored strip on the inside-left of the
@@ -4499,7 +4499,7 @@ export default function MemoryBook() {
                         return {
                           ...baseStyle,
                           background: accent.tint,
-                          boxShadow: `inset 3px 0 0 0 ${accent.rail}, ${(baseStyle as any).boxShadow ?? "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)"}`,
+                          boxShadow: `inset 3px 0 0 0 ${accent.rail}, ${(baseStyle as any).boxShadow ?? "0 1px 3px hsl(var(--kiddo-ink) / 0.06), 0 14px 34px hsl(var(--kiddo-ink) / 0.07)"}`,
                         };
                       })()}
                       // Hover lift bumped from y:-1 to y:-2 with a soft
@@ -4507,7 +4507,7 @@ export default function MemoryBook() {
                       // language. Subtle, not bouncy. Adds a "this is
                       // alive" feel on desktop without disturbing the
                       // mobile read.
-                      whileHover={{ y: -2, boxShadow: "0 2px 6px rgba(26,23,16,0.07), 0 18px 42px rgba(26,23,16,0.10)" }}
+                      whileHover={{ y: -2, boxShadow: "0 2px 6px hsl(var(--kiddo-ink) / 0.07), 0 18px 42px hsl(var(--kiddo-ink) / 0.10)" }}
                       transition={{ duration: DUR_FAST, ease: EASE_DECEL }}
                     >
                       <div className="flex flex-col gap-3 border-b border-border/50 bg-[hsl(var(--kiddo-cream)/0.42)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -4996,7 +4996,7 @@ export default function MemoryBook() {
                                   style={{
                                     position: "absolute", right: 10, bottom: 10,
                                     padding: "4px 9px", borderRadius: 999,
-                                    background: "rgba(26,23,16,0.62)", color: "white",
+                                    background: "hsl(var(--kiddo-ink) / 0.62)", color: "white",
                                     fontSize: 10, fontWeight: 700, letterSpacing: "0.04em",
                                     textTransform: "uppercase",
                                     backdropFilter: "blur(4px)",
@@ -5034,7 +5034,7 @@ export default function MemoryBook() {
                                     return (
                                       <div
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden${isRecent ? " kiddo-gifter-avatar-pulse" : ""}`}
-                                        style={{ boxShadow: "0 0 0 2px hsl(var(--kiddo-evergreen)/0.65), 0 1px 4px rgba(26,23,16,0.08)" }}
+                                        style={{ boxShadow: "0 0 0 2px hsl(var(--kiddo-evergreen)/0.65), 0 1px 4px hsl(var(--kiddo-ink) / 0.08)" }}
                                       >
                                         <img
                                           src={ownerProfileImageUrl}
@@ -6879,7 +6879,7 @@ export default function MemoryBook() {
               {/* Decorative spine shadow on the left edge — gives the
                   page a "stacked book" feel without trying to fake a
                   real 3D paper turn. Subtle; mostly suggestion. */}
-              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 24, background: "linear-gradient(to right, rgba(26,23,16,0.12) 0%, rgba(26,23,16,0.04) 60%, transparent 100%)", pointerEvents: "none", zIndex: 1 }} />
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 24, background: "linear-gradient(to right, hsl(var(--kiddo-ink) / 0.12) 0%, hsl(var(--kiddo-ink) / 0.04) 60%, transparent 100%)", pointerEvents: "none", zIndex: 1 }} />
 
               {/* Top bar — close + share */}
               <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 0", flexShrink: 0 }}>
@@ -6890,8 +6890,8 @@ export default function MemoryBook() {
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
                     padding: "8px 14px", borderRadius: 999,
-                    background: "rgba(26,23,16,0.06)", border: "1px solid rgba(26,23,16,0.10)",
-                    color: "rgba(26,23,16,0.65)", fontSize: 12.5, fontWeight: 600,
+                    background: "hsl(var(--kiddo-ink) / 0.06)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
+                    color: "hsl(var(--kiddo-ink) / 0.65)", fontSize: 12.5, fontWeight: 600,
                     cursor: "pointer",
                   }}
                 >
@@ -6906,8 +6906,8 @@ export default function MemoryBook() {
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6,
                       padding: "8px 14px", borderRadius: 999,
-                      background: "rgba(26,23,16,0.06)", border: "1px solid rgba(26,23,16,0.10)",
-                      color: "rgba(26,23,16,0.65)", fontSize: 12.5, fontWeight: 600,
+                      background: "hsl(var(--kiddo-ink) / 0.06)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
+                      color: "hsl(var(--kiddo-ink) / 0.65)", fontSize: 12.5, fontWeight: 600,
                       cursor: "pointer",
                     }}
                   >
@@ -6960,18 +6960,18 @@ export default function MemoryBook() {
                       // the rounded corners of the page so the shadow
                       // hugs the silhouette, not the bounding box.
                       filter: bookSlideDirection >= 0
-                        ? "drop-shadow(0 14px 28px rgba(26,23,16,0.10)) drop-shadow(8px 0 12px rgba(26,23,16,0.05))"
-                        : "drop-shadow(0 14px 28px rgba(26,23,16,0.10)) drop-shadow(-8px 0 12px rgba(26,23,16,0.05))",
+                        ? "drop-shadow(0 14px 28px hsl(var(--kiddo-ink) / 0.10)) drop-shadow(8px 0 12px hsl(var(--kiddo-ink) / 0.05))"
+                        : "drop-shadow(0 14px 28px hsl(var(--kiddo-ink) / 0.10)) drop-shadow(-8px 0 12px hsl(var(--kiddo-ink) / 0.05))",
                     }}
                   >
                     {isCover ? (
                       // ─── Cover page ───
                       <div style={{
                         background: "linear-gradient(160deg, rgba(255,255,255,0.6) 0%, rgba(245,240,232,0.95) 100%)",
-                        border: "1px solid rgba(26,23,16,0.10)",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                         borderRadius: 24,
                         padding: "44px 28px 36px",
-                        boxShadow: "0 12px 40px rgba(26,23,16,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                         textAlign: "center" as const,
                       }} data-testid="book-page-cover">
                         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: "hsl(var(--kiddo-gold))", marginBottom: 18 }}>
@@ -6980,24 +6980,24 @@ export default function MemoryBook() {
                         <h2 className="font-heading" style={{ fontSize: 36, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.15, marginBottom: 14, letterSpacing: "-0.01em" }}>
                           {isOwnerMode ? "Your Story" : childName ? `${childName}'s Story` : "Their Story"}
                         </h2>
-                        <p className="font-serif italic" style={{ fontSize: 16, color: "rgba(26,23,16,0.65)", lineHeight: 1.6, marginBottom: 28, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                        <p className="font-serif italic" style={{ fontSize: 16, color: "hsl(var(--kiddo-ink) / 0.65)", lineHeight: 1.6, marginBottom: 28, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           Every gift has a story.
                           {fundCreated && <><br />This one began {fundCreated}.</>}
                         </p>
                         <div style={{ display: "flex", justifyContent: "center", gap: 22, marginBottom: 28 }}>
                           <div>
                             <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1 }}>{Math.round(displayMemoryGiftCount)}</p>
-                            <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.50)", marginTop: 4 }}>gifts</p>
+                            <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>gifts</p>
                           </div>
-                          <div style={{ width: 1, background: "rgba(26,23,16,0.12)" }} />
+                          <div style={{ width: 1, background: "hsl(var(--kiddo-ink) / 0.12)" }} />
                           <div>
                             <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1 }}>{Math.round(displayMemoryPeople)}</p>
-                            <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.50)", marginTop: 4 }}>people</p>
+                            <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>people</p>
                           </div>
-                          <div style={{ width: 1, background: "rgba(26,23,16,0.12)" }} />
+                          <div style={{ width: 1, background: "hsl(var(--kiddo-ink) / 0.12)" }} />
                           <div>
                             <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", lineHeight: 1 }}>{formatMoney(displayMemoryFundValue)}</p>
-                            <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.50)", marginTop: 4 }}>so far</p>
+                            <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>so far</p>
                           </div>
                         </div>
                         <button
@@ -7030,10 +7030,10 @@ export default function MemoryBook() {
                       // 18 to see the village, not the ledger.
                       <div style={{
                         background: "linear-gradient(160deg, rgba(255,255,255,0.92) 0%, hsl(var(--kiddo-cream)/0.78) 100%)",
-                        border: "1px solid rgba(26,23,16,0.10)",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                         borderRadius: 24,
                         padding: "36px 28px 30px",
-                        boxShadow: "0 12px 40px rgba(26,23,16,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                       }} data-testid="book-page-community">
                         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: "hsl(var(--kiddo-gold))", marginBottom: 14, textAlign: "center" }}>
                           The Village
@@ -7044,7 +7044,7 @@ export default function MemoryBook() {
                             return `${total} ${total === 1 ? "person" : "people"} built this.`;
                           })()}
                         </h3>
-                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.55, marginBottom: 22, textAlign: "center", maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.55, marginBottom: 22, textAlign: "center", maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           {childName ? `Every gift in this book came from one of them. ${childName} got here because they showed up.` : `Every gift in this book came from one of them.`}
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
@@ -7070,14 +7070,14 @@ export default function MemoryBook() {
                                   padding: "10px 14px",
                                   borderRadius: 14,
                                   background: "rgba(255,255,255,0.62)",
-                                  border: "1px solid rgba(26,23,16,0.06)",
+                                  border: "1px solid hsl(var(--kiddo-ink) / 0.06)",
                                 }}
                                 data-testid={`book-community-row-${idx}`}
                               >
                                 <span style={{ fontSize: 14, fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>
                                   {displayName}
                                 </span>
-                                <span style={{ fontSize: 12, color: "rgba(26,23,16,0.55)" }}>
+                                <span style={{ fontSize: 12, color: "hsl(var(--kiddo-ink) / 0.55)" }}>
                                   {giftCountLabel}
                                 </span>
                               </div>
@@ -7124,10 +7124,10 @@ export default function MemoryBook() {
                         return (
                           <div style={{
                             background: "linear-gradient(160deg, hsl(var(--kiddo-cream)) 0%, rgba(255,255,255,0.92) 60%, hsl(var(--kiddo-cream)/0.85) 100%)",
-                            border: "1px solid rgba(26,23,16,0.10)",
+                            border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                             borderRadius: 24,
                             padding: "44px 28px 36px",
-                            boxShadow: "0 12px 40px rgba(26,23,16,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                            boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                             textAlign: "center" as const,
                           }} data-testid="book-page-sealed">
                             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgb(140,30,30)", marginBottom: 24 }}>
@@ -7165,7 +7165,7 @@ export default function MemoryBook() {
                                 : (childName ? `Write ${childName} a letter for their ${ageOfMajority}th birthday.` : `Write a letter for their ${ageOfMajority}th birthday.`)}
                             </h3>
                             {hasLetter ? (
-                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                                 {isUnsealed
                                   ? "This letter is unsealed."
                                   : unsealDateLabel
@@ -7173,7 +7173,7 @@ export default function MemoryBook() {
                                     : "Sealed for the future."}
                               </p>
                             ) : (
-                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                                 One sealed page. Whatever you want them to read on the day the fund becomes theirs.
                               </p>
                             )}
@@ -7214,7 +7214,7 @@ export default function MemoryBook() {
                         border: "1px solid hsl(var(--kiddo-gold)/0.28)",
                         borderRadius: 24,
                         padding: "44px 28px 36px",
-                        boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                         textAlign: "center" as const,
                       }} data-testid="book-page-closing">
                         <div style={{ fontSize: 48, lineHeight: 1, marginBottom: 16 }} aria-hidden>🌱</div>
@@ -7224,7 +7224,7 @@ export default function MemoryBook() {
                         <h3 className="font-heading" style={{ fontSize: 24, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 14, letterSpacing: "-0.01em" }}>
                           {isOwnerMode ? "Your story is still being written." : childName ? `${childName}'s story is still being written.` : "This story is still being written."}
                         </h3>
-                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 26, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 26, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           Every gift, every note, every milestone
                           becomes a page here. Come back any time.
                         </p>
@@ -7285,10 +7285,10 @@ export default function MemoryBook() {
                     style={{
                       position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)",
                       width: 40, height: 40, borderRadius: 999,
-                      background: "rgba(255,255,255,0.78)", border: "1px solid rgba(26,23,16,0.10)",
+                      background: "rgba(255,255,255,0.78)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                       cursor: "pointer", display: "none",
                       alignItems: "center", justifyContent: "center",
-                      color: "rgba(26,23,16,0.55)",
+                      color: "hsl(var(--kiddo-ink) / 0.55)",
                       backdropFilter: "blur(6px)",
                     }}
                     className="md:!flex"
@@ -7304,10 +7304,10 @@ export default function MemoryBook() {
                     style={{
                       position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)",
                       width: 40, height: 40, borderRadius: 999,
-                      background: "rgba(255,255,255,0.78)", border: "1px solid rgba(26,23,16,0.10)",
+                      background: "rgba(255,255,255,0.78)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                       cursor: "pointer", display: "none",
                       alignItems: "center", justifyContent: "center",
-                      color: "rgba(26,23,16,0.55)",
+                      color: "hsl(var(--kiddo-ink) / 0.55)",
                       backdropFilter: "blur(6px)",
                     }}
                     className="md:!flex"
@@ -7348,12 +7348,12 @@ export default function MemoryBook() {
                       disabled={safeIndex === 0}
                       style={{
                         padding: "4px 8px", borderRadius: 6,
-                        border: "1px solid rgba(26,23,16,0.10)", background: "rgba(255,255,255,0.6)",
-                        color: "rgba(26,23,16,0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === 0 ? "default" : "pointer",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)", background: "rgba(255,255,255,0.6)",
+                        color: "hsl(var(--kiddo-ink) / 0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === 0 ? "default" : "pointer",
                         opacity: safeIndex === 0 ? 0.4 : 1,
                       }}
                     >←</button>
-                    <span style={{ fontSize: 11, color: "rgba(26,23,16,0.50)", padding: "0 6px" }}>
+                    <span style={{ fontSize: 11, color: "hsl(var(--kiddo-ink) / 0.50)", padding: "0 6px" }}>
                       Page {safeIndex + 1} of {totalPages}
                     </span>
                     <button
@@ -7362,14 +7362,14 @@ export default function MemoryBook() {
                       disabled={safeIndex === totalPages - 1}
                       style={{
                         padding: "4px 8px", borderRadius: 6,
-                        border: "1px solid rgba(26,23,16,0.10)", background: "rgba(255,255,255,0.6)",
-                        color: "rgba(26,23,16,0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === totalPages - 1 ? "default" : "pointer",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)", background: "rgba(255,255,255,0.6)",
+                        color: "hsl(var(--kiddo-ink) / 0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === totalPages - 1 ? "default" : "pointer",
                         opacity: safeIndex === totalPages - 1 ? 0.4 : 1,
                       }}
                     >→</button>
                   </div>
                 )}
-                <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.40)", letterSpacing: "0.04em" }}>
+                <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.40)", letterSpacing: "0.04em" }}>
                   {isCover
                     ? "Cover"
                     : isClosingPage
@@ -7407,7 +7407,7 @@ export default function MemoryBook() {
             aria-label="Sealed letter editor"
             style={{
               position: "fixed", inset: 0, zIndex: 70,
-              background: "rgba(26,23,16,0.62)",
+              background: "hsl(var(--kiddo-ink) / 0.62)",
               display: "flex", alignItems: "center", justifyContent: "center",
               padding: "20px",
               backdropFilter: "blur(3px)",
@@ -7422,14 +7422,14 @@ export default function MemoryBook() {
               onClick={(e) => e.stopPropagation()}
               style={{
                 background: "linear-gradient(160deg, #fff 0%, hsl(var(--kiddo-cream)/0.65) 100%)",
-                border: "1px solid rgba(26,23,16,0.10)",
+                border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                 borderRadius: 24,
                 padding: "28px 26px 24px",
                 width: "100%",
                 maxWidth: 540,
                 maxHeight: "min(86vh, 720px)",
                 display: "flex", flexDirection: "column",
-                boxShadow: "0 24px 64px rgba(26,23,16,0.22)",
+                boxShadow: "0 24px 64px hsl(var(--kiddo-ink) / 0.22)",
               }}
               data-testid="sealed-letter-editor"
             >
@@ -7442,12 +7442,12 @@ export default function MemoryBook() {
                   onClick={() => !sealedSaving && setSealedEditorOpen(false)}
                   aria-label="Close"
                   style={{
-                    background: "rgba(26,23,16,0.06)",
-                    border: "1px solid rgba(26,23,16,0.10)",
+                    background: "hsl(var(--kiddo-ink) / 0.06)",
+                    border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                     borderRadius: 999,
                     padding: 6,
                     cursor: sealedSaving ? "not-allowed" : "pointer",
-                    color: "rgba(26,23,16,0.55)",
+                    color: "hsl(var(--kiddo-ink) / 0.55)",
                   }}
                   data-testid="button-sealed-editor-close"
                 >
@@ -7457,7 +7457,7 @@ export default function MemoryBook() {
               <h3 className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 6, letterSpacing: "-0.01em" }}>
                 {childName ? `For ${childName}, when they turn ${fundData?.majorityAge ?? 18}.` : `When they turn ${fundData?.majorityAge ?? 18}.`}
               </h3>
-              <p className="font-serif italic" style={{ fontSize: 13.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 16 }}>
+              <p className="font-serif italic" style={{ fontSize: 13.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 16 }}>
                 Whatever you want them to read on the day the fund becomes theirs. You can edit this any time.
               </p>
               <textarea
@@ -7471,7 +7471,7 @@ export default function MemoryBook() {
                   width: "100%",
                   padding: "14px 16px",
                   borderRadius: 14,
-                  border: "1px solid rgba(26,23,16,0.14)",
+                  border: "1px solid hsl(var(--kiddo-ink) / 0.14)",
                   background: "rgba(255,255,255,0.85)",
                   fontSize: 15,
                   lineHeight: 1.6,
@@ -7489,8 +7489,8 @@ export default function MemoryBook() {
                   disabled={sealedSaving}
                   style={{
                     padding: "10px 16px", borderRadius: 999,
-                    background: "white", color: "rgba(26,23,16,0.65)",
-                    border: "1px solid rgba(26,23,16,0.14)",
+                    background: "white", color: "hsl(var(--kiddo-ink) / 0.65)",
+                    border: "1px solid hsl(var(--kiddo-ink) / 0.14)",
                     fontSize: 13, fontWeight: 600,
                     cursor: sealedSaving ? "not-allowed" : "pointer",
                   }}
@@ -7602,7 +7602,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           border: "1px solid hsl(var(--kiddo-gold)/0.35)",
           borderRadius: 24,
           padding: "40px 28px 32px",
-          boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.12), 0 2px 6px rgba(26,23,16,0.06)",
+          boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.12), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
           textAlign: "center" as const,
         }}
         data-testid={`book-page-milestone-${entry.id}`}
@@ -7615,7 +7615,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           {entry.content}
         </h3>
         {date && (
-          <p style={{ fontSize: 13, color: "rgba(26,23,16,0.55)" }}>{date}</p>
+          <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.55)" }}>{date}</p>
         )}
       </div>
     );
@@ -7626,10 +7626,10 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
     <div
       style={{
         background: "linear-gradient(160deg, rgba(255,255,255,0.85) 0%, hsl(var(--kiddo-cream)/0.65) 100%)",
-        border: "1px solid rgba(26,23,16,0.08)",
+        border: "1px solid hsl(var(--kiddo-ink) / 0.08)",
         borderRadius: 24,
         padding: "32px 28px 28px",
-        boxShadow: "0 12px 40px rgba(26,23,16,0.08), 0 2px 6px rgba(26,23,16,0.05)",
+        boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.08), 0 2px 6px hsl(var(--kiddo-ink) / 0.05)",
       }}
       data-testid={`book-page-${entry.id}`}
     >
@@ -7637,10 +7637,10 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: noteText ? 22 : 16 }}>
         <p className="font-heading" style={{ fontSize: 17, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
           {displayName}
-          {isParentEntry && <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.50)", marginLeft: 8 }}>· memory</span>}
+          {isParentEntry && <span style={{ fontSize: 12, fontWeight: 500, color: "hsl(var(--kiddo-ink) / 0.50)", marginLeft: 8 }}>· memory</span>}
         </p>
         {date && (
-          <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.50)", flexShrink: 0 }}>{date}</p>
+          <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.50)", flexShrink: 0 }}>{date}</p>
         )}
       </div>
 
@@ -7672,7 +7672,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
         <p
           className="font-serif italic"
           style={{
-            fontSize: 18, fontWeight: 500, color: "rgba(26,23,16,0.72)",
+            fontSize: 18, fontWeight: 500, color: "hsl(var(--kiddo-ink) / 0.72)",
             lineHeight: 1.55, marginBottom: 22, textAlign: "center" as const,
           }}
           data-testid={`book-note-empty-${entry.id}`}
@@ -7712,12 +7712,12 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
 
       {/* Voice note — minimal player. */}
       {audioUrl && (
-        <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(26,23,16,0.10)", background: "rgba(255,255,255,0.7)" }}>
+        <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 14, border: "1px solid hsl(var(--kiddo-ink) / 0.10)", background: "rgba(255,255,255,0.7)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(26,23,16,0.55)" }}>
+            <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(var(--kiddo-ink) / 0.55)" }}>
               Voice note
             </p>
-            <span style={{ marginLeft: "auto", color: "rgba(26,23,16,0.32)" }} aria-hidden>
+            <span style={{ marginLeft: "auto", color: "hsl(var(--kiddo-ink) / 0.32)" }} aria-hidden>
               <StaticWaveform size="md" />
             </span>
           </div>
@@ -7727,8 +7727,8 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
 
       {/* Financial detail — footnote. Always last. Always smallest. */}
       {isGift && giftAmt > 0 && (
-        <div style={{ paddingTop: 16, borderTop: "1px solid rgba(26,23,16,0.10)" }}>
-          <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.55 }}>
+        <div style={{ paddingTop: 16, borderTop: "1px solid hsl(var(--kiddo-ink) / 0.10)" }}>
+          <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.55 }}>
             {ticker
               ? <>$
 {giftAmt.toFixed(2)} invested in <strong style={{ color: "hsl(var(--kiddo-ink))" }}>{ticker}</strong>{childName ? ` · for ${childName}` : ""}</>

@@ -55,7 +55,7 @@ function HoverTooltip({ active, payload, label }: any) {
           so leading with it (instead of the value) makes the tooltip feel
           alive even when consecutive snapshots happen to share the same
           dollar amount. */}
-      <div style={{ fontSize: 9.5, opacity: 0.55, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
+      <div style={{ fontSize: 9.5, opacity: 0.72, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
         {label}
       </div>
       <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.2 }}>
@@ -65,11 +65,11 @@ function HoverTooltip({ active, payload, label }: any) {
         <>
           <div style={{ height: 1, background: "currentColor", opacity: 0.1, margin: "6px 0 5px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
-            <span style={{ fontSize: 10, opacity: 0.52 }}>Contributed</span>
+            <span style={{ fontSize: 10, opacity: 0.68 }}>Contributed</span>
             <span style={{ fontSize: 10, fontWeight: 600 }}>{formatCurrency(principal)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginTop: 3 }}>
-            <span style={{ fontSize: 10, opacity: 0.52 }}>Market change</span>
+            <span style={{ fontSize: 10, opacity: 0.68 }}>Market change</span>
             <span style={{ fontSize: 10, fontWeight: 600, color: Math.abs(growth) < 0.01 ? "currentColor" : (growth > 0 ? "hsl(143, 64%, 58%)" : "hsl(0, 70%, 62%)") }}>
               {Math.abs(growth) < 0.01 ? formatCurrency(0) : `${growth > 0 ? "+" : ""}${formatCurrency(growth)}`}
             </span>

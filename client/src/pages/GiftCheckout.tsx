@@ -2482,10 +2482,10 @@ export default function GiftCheckout() {
                     </p>
                     {(executionModel !== "pick" || isFamilyDefaultStockSelected) && (
                       <div
-                        className="mt-4 flex items-center gap-3 rounded-3xl border border-[hsl(var(--kiddo-evergreen)/0.12)] bg-[linear-gradient(135deg,hsl(var(--kiddo-evergreen)/0.06),hsl(var(--kiddo-gold)/0.10))] p-4 shadow-[0_12px_30px_rgba(26,23,16,0.06)]"
+                        className="mt-4 flex items-center gap-3 rounded-3xl border border-[hsl(var(--kiddo-evergreen)/0.12)] bg-[linear-gradient(135deg,hsl(var(--kiddo-evergreen)/0.06),hsl(var(--kiddo-gold)/0.10))] p-4 shadow-[0_12px_30px_hsl(var(--kiddo-ink) / 0.06)]"
                         data-testid="card-family-default-stock"
                       >
-                        <StockLogo ticker={familyDefaultStock.symbol} size={40} className="shadow-[0_8px_18px_rgba(26,23,16,0.08)]" />
+                        <StockLogo ticker={familyDefaultStock.symbol} size={40} className="shadow-[0_8px_18px_hsl(var(--kiddo-ink) / 0.08)]" />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-semibold text-foreground">{familyDefaultStock.name}</p>

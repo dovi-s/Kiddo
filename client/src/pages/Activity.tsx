@@ -649,14 +649,14 @@ function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast
   })();
   return (
     <div style={{ borderLeft: "3px solid rgb(150,176,158)", background: "linear-gradient(to right, rgba(150,176,158,0.07) 0%, transparent 64%)", borderRadius: 8, marginLeft: -3, paddingLeft: 8 }} data-testid={`activity-recurring-run-${run.id}`}>
-      <button type="button" onClick={onToggle} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 0", borderBottom: (!isLast || expanded) ? "1px solid rgba(26,23,16,0.06)" : "none", width: "100%", textAlign: "left", background: "transparent", cursor: "pointer" }}>
+      <button type="button" onClick={onToggle} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 0", borderBottom: (!isLast || expanded) ? "1px solid hsl(var(--kiddo-ink) / 0.06)" : "none", width: "100%", textAlign: "left", background: "transparent", cursor: "pointer" }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "rgb(234,239,233)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(96,124,104,0.16)" }}>
           <Repeat size={16} style={{ color: "rgb(96,124,104)" }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3 }}>Monthly contributions</p>
-            <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)", whiteSpace: "nowrap" }}>+{formatCurrency(total)}</p>
+            <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3 }}>Monthly contributions</p>
+            <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-ink))", whiteSpace: "nowrap" }}>+{formatCurrency(total)}</p>
           </div>
           <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>
             {count} contributions · {range}{uniform ? ` · ${formatCurrency(amounts[0])} each` : ""}
@@ -674,9 +674,9 @@ function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast
             const d = parseSafeDate(it.createdAt);
             const amt = parseAmount(it.amount) || 0;
             return (
-              <div key={(it.id as string) || idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", fontSize: 12.5, color: "rgb(90,82,74)", borderTop: idx > 0 ? "1px solid rgba(26,23,16,0.04)" : "none" }}>
+              <div key={(it.id as string) || idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", fontSize: 12.5, color: "rgb(90,82,74)", borderTop: idx > 0 ? "1px solid hsl(var(--kiddo-ink) / 0.04)" : "none" }}>
                 <span>{d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
-                <span style={{ fontWeight: 600, color: "rgb(26,23,16)" }}>+{formatCurrency(amt)}</span>
+                <span style={{ fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>+{formatCurrency(amt)}</span>
               </div>
             );
           })}
@@ -1267,7 +1267,7 @@ export default function Activity() {
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-activity">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-5 md:py-6 space-y-4">
-          <div style={{ height: 28, background: "rgba(26,23,16,0.06)", borderRadius: 8, width: 120 }} />
+          <div style={{ height: 28, background: "hsl(var(--kiddo-ink) / 0.06)", borderRadius: 8, width: 120 }} />
           <div className="kiddo-card" style={{ padding: "0 18px" }}>
             {[1, 2, 3, 4].map(i => <KiddoSkeleton key={i} variant="list-row" />)}
           </div>
@@ -1907,7 +1907,7 @@ export default function Activity() {
           aria-label="Activity sections"
           style={{
             display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4,
-            background: "rgba(26,23,16,0.05)", borderRadius: 12, padding: 4,
+            background: "hsl(var(--kiddo-ink) / 0.05)", borderRadius: 12, padding: 4,
             marginBottom: 20,
           }}
           data-testid="activity-tabs"
@@ -1930,8 +1930,8 @@ export default function Activity() {
                   display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
                   height: 36, borderRadius: 9, border: "none",
                   background: active ? "white" : "transparent",
-                  boxShadow: active ? "0 1px 3px rgba(26,23,16,0.1)" : "none",
-                  color: active ? "rgb(26,67,50)" : "rgba(26,23,16,0.55)",
+                  boxShadow: active ? "0 1px 3px hsl(var(--kiddo-ink) / 0.1)" : "none",
+                  color: active ? "rgb(26,67,50)" : "hsl(var(--kiddo-ink) / 0.55)",
                   fontSize: 13, fontWeight: active ? 700 : 600,
                   cursor: "pointer", fontFamily: "inherit",
                   transition: "background 0.15s, color 0.15s, box-shadow 0.15s",
@@ -1947,8 +1947,8 @@ export default function Activity() {
                       display: "inline-flex", alignItems: "center", justifyContent: "center",
                       minWidth: 18, height: 18, borderRadius: 9,
                       padding: "0 5px", fontSize: 10, fontWeight: 800,
-                      background: active ? "rgb(26,67,50)" : "rgba(26,23,16,0.15)",
-                      color: active ? "white" : "rgba(26,23,16,0.65)",
+                      background: active ? "rgb(26,67,50)" : "hsl(var(--kiddo-ink) / 0.15)",
+                      color: active ? "white" : "hsl(var(--kiddo-ink) / 0.65)",
                     }}
                   >
                     {t.count}
@@ -2126,7 +2126,7 @@ export default function Activity() {
                         className="font-heading"
                         style={{
                           fontSize: 16, fontWeight: 700, lineHeight: 1.2,
-                          color: tone === "positive" ? "rgb(26,67,50)" : tone === "negative" ? "rgb(185,28,28)" : "rgb(26,23,16)",
+                          color: tone === "positive" ? "rgb(26,67,50)" : tone === "negative" ? "rgb(185,28,28)" : "hsl(var(--kiddo-ink))",
                         }}
                       >
                         {value}
@@ -2181,14 +2181,14 @@ export default function Activity() {
               ].map(({ label, value }) => (
                 <div key={label} style={{
                   background: "white", borderRadius: 16,
-                  border: "1px solid rgba(26,23,16,0.09)",
-                  boxShadow: "0 1px 4px rgba(26,23,16,0.05)",
+                  border: "1px solid hsl(var(--kiddo-ink) / 0.09)",
+                  boxShadow: "0 1px 4px hsl(var(--kiddo-ink) / 0.05)",
                   padding: "14px 16px",
                 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "rgb(140,130,122)", marginBottom: 5 }}>
                     {label}
                   </p>
-                  <p className="font-heading" style={{ fontSize: 20, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1 }}>
+                  <p className="font-heading" style={{ fontSize: 20, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1 }}>
                     {value}
                   </p>
                 </div>
@@ -2215,13 +2215,13 @@ export default function Activity() {
               className="text-base sm:text-sm"
               style={{
                 width: "100%", padding: "10px 12px 10px 34px",
-                border: "1.5px solid rgba(26,23,16,0.12)", borderRadius: 12,
-                color: "rgb(26,23,16)", background: "white",
+                border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", borderRadius: 12,
+                color: "hsl(var(--kiddo-ink))", background: "white",
                 outline: "none", boxSizing: "border-box" as const,
                 fontFamily: "inherit",
               }}
               onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-              onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+              onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
             />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -2234,7 +2234,7 @@ export default function Activity() {
                 data-testid={`filter-${opt.value}`}
                 style={{
                   padding: "7px 16px", borderRadius: 999, flexShrink: 0,
-                  border: filter === opt.value ? "none" : "1.5px solid rgba(26,23,16,0.12)",
+                  border: filter === opt.value ? "none" : "1.5px solid hsl(var(--kiddo-ink) / 0.12)",
                   background: filter === opt.value ? "rgb(26,61,43)" : "white",
                   color: filter === opt.value ? "white" : "rgb(100,92,86)",
                   fontSize: 12.5, fontWeight: filter === opt.value ? 700 : 500,
@@ -2362,7 +2362,7 @@ export default function Activity() {
         {!feedLoading && !feedError && (search || filter !== "all") && filtered.length > 0 && (
           <p style={{ fontSize: 12, color: "rgb(140,130,122)", marginBottom: 12 }}>
             {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-            {search && <> matching "<strong style={{ color: "rgb(26,23,16)" }}>{search}</strong>"</>}
+            {search && <> matching "<strong style={{ color: "hsl(var(--kiddo-ink))" }}>{search}</strong>"</>}
           </p>
         )}
 
@@ -2788,7 +2788,7 @@ export default function Activity() {
                         style={{
                           display: "flex", alignItems: "flex-start", gap: 12,
                           padding: "13px 0",
-                          borderBottom: !isLast || isExpanded ? "1px solid rgba(26,23,16,0.06)" : "none",
+                          borderBottom: !isLast || isExpanded ? "1px solid hsl(var(--kiddo-ink) / 0.06)" : "none",
                           width: "100%", textAlign: "left" as const, background: "transparent", cursor: "pointer",
                         }}
                       >
@@ -2813,14 +2813,14 @@ export default function Activity() {
                                 New
                               </span>
                             )}
-                            <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3, flex: 1, minWidth: 0 }} data-testid={`text-title-${rowId}`}>
+                            <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3, flex: 1, minWidth: 0 }} data-testid={`text-title-${rowId}`}>
                               {effectiveTitle}
                             </p>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                               {amtNum != null && (
                                 <p className="font-heading" style={{
                                   fontSize: 15, fontWeight: 700, lineHeight: 1.3,
-                                  color: amtNum >= 0 ? "rgb(26,23,16)" : "rgb(185,28,28)",
+                                  color: amtNum >= 0 ? "hsl(var(--kiddo-ink))" : "rgb(185,28,28)",
                                 }}>
                                   {amtNum > 0 ? "+" : ""}{formatCurrency(amtNum)}
                                 </p>
@@ -2850,7 +2850,7 @@ export default function Activity() {
                             return (
                               <p style={{
                                 fontSize: 12.5, lineHeight: 1.45, marginTop: 3,
-                                color: "rgba(26,23,16,0.55)",
+                                color: "hsl(var(--kiddo-ink) / 0.55)",
                                 fontStyle: shown.startsWith('"') ? "italic" : "normal",
                                 // Gift notes WRAP and show in full — was nowrap+ellipsis,
                                 // which cut "feliz cumpleaños…" mid-message on mobile. The
@@ -2984,7 +2984,7 @@ export default function Activity() {
                             alignItems: "center",
                             gap: 8,
                             padding: "8px 0 12px 48px",
-                            borderBottom: !isLast || isExpanded ? "1px solid rgba(26,23,16,0.06)" : "none",
+                            borderBottom: !isLast || isExpanded ? "1px solid hsl(var(--kiddo-ink) / 0.06)" : "none",
                           }}
                         >
                           {collapsedSuggestionStatus ? (
@@ -3031,7 +3031,7 @@ export default function Activity() {
                                   padding: "6px 14px", borderRadius: 999,
                                   background: "white",
                                   color: "rgb(80,72,64)",
-                                  border: "1px solid rgba(26,23,16,0.18)",
+                                  border: "1px solid hsl(var(--kiddo-ink) / 0.18)",
                                   cursor: collapsedSuggestionLoading ? "wait" : "pointer",
                                   opacity: collapsedSuggestionLoading ? 0.6 : 1,
                                   fontFamily: "inherit",
@@ -3255,7 +3255,7 @@ export default function Activity() {
                               <div
                                 style={{
                                   paddingLeft: 48, paddingRight: 4, paddingBottom: 14, paddingTop: 8,
-                                  borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)",
+                                  borderBottom: isLast ? "none" : "1px solid hsl(var(--kiddo-ink) / 0.06)",
                                   display: "flex", flexDirection: "column", gap: 10,
                                 }}
                                 data-testid={`detail-view-${rowId}`}
@@ -3337,12 +3337,12 @@ export default function Activity() {
                                         <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "rgb(126,68,180)", marginBottom: 8 }}>
                                           Strategy change
                                         </p>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: "rgb(26,23,16)", flexWrap: "wrap" }}>
-                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(26,23,16,0.04)", border: "1px solid rgba(26,23,16,0.10)", color: "rgb(100,92,86)" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: "hsl(var(--kiddo-ink))", flexWrap: "wrap" }}>
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "hsl(var(--kiddo-ink) / 0.04)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)", color: "rgb(100,92,86)" }}>
                                             <span aria-hidden>{prev.emoji}</span>
                                             <span style={{ fontWeight: 600 }}>{prev.label}</span>
                                           </span>
-                                          <span style={{ color: "rgba(26,23,16,0.42)", fontSize: 16 }} aria-hidden>→</span>
+                                          <span style={{ color: "hsl(var(--kiddo-ink) / 0.42)", fontSize: 16 }} aria-hidden>→</span>
                                           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(126,68,180,0.10)", border: "1px solid rgba(126,68,180,0.26)", color: "rgb(60,30,100)" }}>
                                             <span aria-hidden>{next.emoji}</span>
                                             <span style={{ fontWeight: 700 }}>{next.label}</span>
@@ -3380,7 +3380,7 @@ export default function Activity() {
                                       </p>
                                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                         {diffs.map((d) => (
-                                          <div key={d.ticker} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, color: "rgb(26,23,16)" }}>
+                                          <div key={d.ticker} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, color: "hsl(var(--kiddo-ink))" }}>
                                             <span style={{ minWidth: 64, fontWeight: 700, letterSpacing: "0.04em" }}>{d.ticker}</span>
                                             {d.kind === "added" && (
                                               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgb(26,67,50)", fontWeight: 600 }}>
@@ -3389,15 +3389,15 @@ export default function Activity() {
                                             )}
                                             {d.kind === "removed" && (
                                               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgb(190,30,30)", fontWeight: 600 }}>
-                                                <span style={{ textDecoration: "line-through", color: "rgba(26,23,16,0.45)" }}>{fmtPct(d.before)}</span>
+                                                <span style={{ textDecoration: "line-through", color: "hsl(var(--kiddo-ink) / 0.45)" }}>{fmtPct(d.before)}</span>
                                                 <span aria-hidden>→</span>
                                                 <span>removed</span>
                                               </span>
                                             )}
                                             {d.kind === "changed" && (
                                               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
-                                                <span style={{ color: "rgba(26,23,16,0.55)" }}>{fmtPct(d.before)}</span>
-                                                <span aria-hidden style={{ color: "rgba(26,23,16,0.42)" }}>→</span>
+                                                <span style={{ color: "hsl(var(--kiddo-ink) / 0.55)" }}>{fmtPct(d.before)}</span>
+                                                <span aria-hidden style={{ color: "hsl(var(--kiddo-ink) / 0.42)" }}>→</span>
                                                 <span style={{ color: d.after > d.before ? "rgb(26,67,50)" : "rgb(190,30,30)" }}>{fmtPct(d.after)}</span>
                                               </span>
                                             )}
@@ -3447,11 +3447,11 @@ export default function Activity() {
                                       <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "rgb(30,80,170)", marginBottom: 8 }}>
                                         {isSell ? "What moved" : "Withdrawal"}
                                       </p>
-                                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: "rgb(26,23,16)", flexWrap: "wrap" }}>
-                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(26,23,16,0.04)", border: "1px solid rgba(26,23,16,0.10)", color: "rgb(100,92,86)" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: "hsl(var(--kiddo-ink))", flexWrap: "wrap" }}>
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "hsl(var(--kiddo-ink) / 0.04)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)", color: "rgb(100,92,86)" }}>
                                           <span style={{ fontWeight: 600 }}>{beforeLabel}</span>
                                         </span>
-                                        <span style={{ color: "rgba(26,23,16,0.42)", fontSize: 16 }} aria-hidden>→</span>
+                                        <span style={{ color: "hsl(var(--kiddo-ink) / 0.42)", fontSize: 16 }} aria-hidden>→</span>
                                         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(30,80,170,0.10)", border: "1px solid rgba(30,80,170,0.26)", color: "rgb(20,50,130)" }}>
                                           <span style={{ fontWeight: 700 }}>{afterLabel}</span>
                                           {amtNum != null && Number.isFinite(amtNum) && (
@@ -3480,19 +3480,19 @@ export default function Activity() {
                                     {scheduleAmount != null && Number.isFinite(scheduleAmount) && (
                                       <>
                                         <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Amount</p>
-                                        <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(scheduleAmount)}</p>
+                                        <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(scheduleAmount)}</p>
                                       </>
                                     )}
                                     {scheduleFreq && (
                                       <>
                                         <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Frequency</p>
-                                        <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600, textTransform: "capitalize" as const }}>{scheduleFreq}</p>
+                                        <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600, textTransform: "capitalize" as const }}>{scheduleFreq}</p>
                                       </>
                                     )}
                                     {(scheduleTicker || scheduleExec) && (
                                       <>
                                         <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Destination</p>
-                                        <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600 }}>
+                                        <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                                           {scheduleTicker || (scheduleExec === "family" ? "Managed mix" : "Auto-allocated")}
                                         </p>
                                       </>
@@ -3504,7 +3504,7 @@ export default function Activity() {
                                     Tells the parent WHY the gift went to cash
                                     instead of investing, plus the next step. */}
                                 {reasonHuman && (
-                                  <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.70)", lineHeight: 1.55, padding: "8px 10px", background: "hsl(43,55%,95%)", borderRadius: 8, border: "1px solid hsl(43,40%,86%)" }}>
+                                  <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.70)", lineHeight: 1.55, padding: "8px 10px", background: "hsl(43,55%,95%)", borderRadius: 8, border: "1px solid hsl(43,40%,86%)" }}>
                                     {reasonHuman}
                                   </p>
                                 )}
@@ -3537,7 +3537,7 @@ export default function Activity() {
                                     email lets the parent reach out personally
                                     if they want, beyond the in-app thank-you. */}
                                 {senderEmail && !((meta as any).isParentContribution) && (
-                                  <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)" }}>
+                                  <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink) / 0.55)" }}>
                                     From <a href={`mailto:${senderEmail}`} style={{ color: "hsl(143,47%,28%)", textDecoration: "none", fontWeight: 600 }}>{senderEmail}</a>
                                   </p>
                                 )}
@@ -3568,7 +3568,7 @@ export default function Activity() {
                                     {reconcileLast4 && (
                                       <>
                                         <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Charged to</p>
-                                        <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600 }}>
+                                        <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                                           {reconcileBrand ? reconcileBrand.charAt(0).toUpperCase() + reconcileBrand.slice(1) : "Card"} ····{reconcileLast4}
                                         </p>
                                       </>
@@ -3576,7 +3576,7 @@ export default function Activity() {
                                     {reconcileDescriptor && (
                                       <>
                                         <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>On your statement</p>
-                                        <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                                        <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
                                           {reconcileDescriptor}
                                         </p>
                                       </>
@@ -3584,7 +3584,7 @@ export default function Activity() {
                                     {nextRetryDate && Number.isFinite(nextRetryDate.getTime()) && (
                                       <>
                                         <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Next attempt</p>
-                                        <p style={{ fontSize: 12, color: "rgb(26,23,16)", fontWeight: 600 }}>
+                                        <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                                           {nextRetryDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                                         </p>
                                       </>
@@ -3596,7 +3596,7 @@ export default function Activity() {
                                     quote framing. Shown in addition to the
                                     inline preview above (which truncates). */}
                                 {giftMessage && (
-                                  <p style={{ fontSize: 13.5, color: "rgba(26,23,16,0.78)", lineHeight: 1.55, fontStyle: "italic", paddingLeft: 10, borderLeft: "2px solid rgba(26,67,50,0.20)" }}>
+                                  <p style={{ fontSize: 13.5, color: "hsl(var(--kiddo-ink) / 0.78)", lineHeight: 1.55, fontStyle: "italic", paddingLeft: 10, borderLeft: "2px solid rgba(26,67,50,0.20)" }}>
                                     &ldquo;{giftMessage}&rdquo;
                                   </p>
                                 )}
@@ -3619,7 +3619,7 @@ export default function Activity() {
                                     already covered it. Skips kid suggestions
                                     (their box renders the reason styled). */}
                                 {!giftMessage && !hasMultipleTickers && !isScheduleChange && !reasonHuman && !isKidSuggestion && item.description && item.description.length > 120 && (
-                                  <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.70)", lineHeight: 1.55, whiteSpace: "pre-wrap" as const }}>
+                                  <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.70)", lineHeight: 1.55, whiteSpace: "pre-wrap" as const }}>
                                     {rewriteLegacyDescription(item.description)}
                                   </p>
                                 )}
@@ -3728,7 +3728,7 @@ export default function Activity() {
                   }}>
                     <Check size={22} style={{ color: "rgb(26,67,50)" }} />
                   </div>
-                  <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 6 }}>
+                  <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: "hsl(var(--kiddo-ink))", marginBottom: 6 }}>
                     Nothing in transit right now.
                   </p>
                   <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6 }}>
@@ -3759,7 +3759,7 @@ export default function Activity() {
                               style={{
                                 display: "flex", alignItems: "flex-start", gap: 12,
                                 padding: "14px 0",
-                                borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)",
+                                borderBottom: isLast ? "none" : "1px solid hsl(var(--kiddo-ink) / 0.06)",
                               }}
                               data-testid={`pending-row-${item.id || i}`}
                             >
@@ -3773,17 +3773,17 @@ export default function Activity() {
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                  <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
+                                  <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
                                     {rewriteLegacyAutoInvestTitle(item.title) || "Settling"}
                                   </p>
                                   {amtNum != null && (
-                                    <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)" }}>
+                                    <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
                                       {amtNum > 0 ? "+" : ""}{formatCurrency(amtNum)}
                                     </p>
                                   )}
                                 </div>
                                 {rewriteLegacyDescription(item.description) && (
-                                  <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3, lineHeight: 1.45 }}>
+                                  <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.55)", marginTop: 3, lineHeight: 1.45 }}>
                                     {rewriteLegacyDescription(item.description)}
                                   </p>
                                 )}
@@ -3823,7 +3823,7 @@ export default function Activity() {
                               style={{
                                 display: "flex", alignItems: "flex-start", gap: 12,
                                 padding: "14px 0",
-                                borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)",
+                                borderBottom: isLast ? "none" : "1px solid hsl(var(--kiddo-ink) / 0.06)",
                               }}
                               data-testid={`upcoming-row-${c.id}`}
                             >
@@ -3837,16 +3837,16 @@ export default function Activity() {
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                  <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)" }}>
+                                  <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
                                     Recurring investment runs {next ? next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "soon"}
                                   </p>
                                   {amtNum != null && (
-                                    <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)" }}>
+                                    <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
                                       {formatCurrency(amtNum)}
                                     </p>
                                   )}
                                 </div>
-                                <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
+                                <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.55)", marginTop: 3 }}>
                                   Into {ownerModeFundIds.has(String((c as any).fundId)) ? "your" : c.recipientFirstName ? `${capFirst(c.recipientFirstName)}'s` : "the"} fund · {c.frequency}
                                 </p>
                                 {/* Manage link added 2026-05-25 — user-flagged
@@ -3911,7 +3911,7 @@ export default function Activity() {
                   }}>
                     <Repeat size={22} style={{ color: "rgb(184,121,26)" }} />
                   </div>
-                  <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 6 }}>
+                  <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: "hsl(var(--kiddo-ink))", marginBottom: 6 }}>
                     No recurring investments yet.
                   </p>
                   <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6, marginBottom: 18 }}>
@@ -3997,7 +3997,7 @@ export default function Activity() {
                               style={{
                                 padding: "14px 8px",
                                 margin: "0 -8px",
-                                borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)",
+                                borderBottom: isLast ? "none" : "1px solid hsl(var(--kiddo-ink) / 0.06)",
                                 ...getDeepLinkHighlightStyle(highlightedId === String(c.id)),
                                 opacity: isMutating ? 0.6 : 1,
                                 transition: "opacity 0.15s",
@@ -4044,7 +4044,7 @@ export default function Activity() {
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-                                    <p style={{ fontSize: 13.5, fontWeight: 700, color: isPaused ? "rgb(140,130,122)" : "rgb(26,23,16)" }}>
+                                    <p style={{ fontSize: 13.5, fontWeight: 700, color: isPaused ? "rgb(140,130,122)" : "hsl(var(--kiddo-ink))" }}>
                                       {amtNum != null ? `${formatCurrency(amtNum)} every ${c.frequency === "weekly" ? "week" : c.frequency === "yearly" ? "year" : c.frequency === "daily" ? "day" : "month"}` : `Recurring · ${c.frequency}`}
                                     </p>
                                     <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
@@ -4114,7 +4114,7 @@ export default function Activity() {
                                       </button>
                                     </div>
                                   </div>
-                                  <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
+                                  <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.55)", marginTop: 3 }}>
                                     {strategyLabel}
                                     {next && !isPaused ? ` · ${(!totalNum || totalNum <= 0) && !c.hasRecentFailure ? "first charge" : "next"} ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : ""}
                                   </p>
@@ -4206,7 +4206,7 @@ export default function Activity() {
                                   {pauseReasonText && (
                                     <div style={{
                                       background: pauseReason === "subscription_ended" ? "rgb(254,243,199)" : "rgb(243,240,236)",
-                                      border: `1px solid ${pauseReason === "subscription_ended" ? "rgba(184,121,26,0.30)" : "rgba(26,23,16,0.10)"}`,
+                                      border: `1px solid ${pauseReason === "subscription_ended" ? "rgba(184,121,26,0.30)" : "hsl(var(--kiddo-ink) / 0.10)"}`,
                                       borderRadius: 12,
                                       padding: "10px 12px",
                                       marginBottom: 12,
@@ -4396,7 +4396,7 @@ export default function Activity() {
                               key={r.id}
                               style={{
                                 padding: "14px 0",
-                                borderBottom: isLast ? "none" : "1px solid rgba(26,23,16,0.06)",
+                                borderBottom: isLast ? "none" : "1px solid hsl(var(--kiddo-ink) / 0.06)",
                                 opacity: isMutating ? 0.6 : 1,
                                 transition: "opacity 0.15s",
                               }}
@@ -4428,7 +4428,7 @@ export default function Activity() {
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                    <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)" }}>
+                                    <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
                                       {r.senderName || "Someone"} · {isAutoCharge ? "recurring" : "reminder"}
                                     </p>
                                     {amtNum != null && (
@@ -4437,7 +4437,7 @@ export default function Activity() {
                                       </p>
                                     )}
                                   </div>
-                                  <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
+                                  <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.55)", marginTop: 3 }}>
                                     {isAutoCharge
                                       ? `Gives to ${capFirst(r.recipientFirstName) || "the child"} automatically`
                                       : `Email reminder to gift ${capFirst(r.recipientFirstName) || "the child"}`}

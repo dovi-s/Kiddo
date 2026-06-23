@@ -103,6 +103,27 @@ export default function Age18Welcome() {
     staleTime: 5 * 60_000, // 5 minutes — the kid won't be reloading this
   });
 
+  // The OLDEST note, surfaced as a taste on Screen 1. The supporters strip
+  // proves people showed up (a count + names); this lets the kid actually
+  // READ one at the climax instead of deferring every word to the Memory Book
+  // at the end. Feeling a real sentence someone wrote years ago is the beat;
+  // the number is the smaller gift. Best-effort + gated, so it silently adds
+  // nothing when there are no notes (no empty state in the calm register).
+  const { data: memoryPreview } = useQuery<any[]>({
+    queryKey: ["/api/funds", fundId, "memory"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${fundId}/memory`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!fundId,
+    staleTime: 5 * 60_000,
+  });
+  const oldestNote = useMemo(() => {
+    const notes = (memoryPreview || []).filter((e: any) => String(e?.content || "").trim() && e?.type !== "parent_letter");
+    return notes.slice().sort((a: any, b: any) => new Date(a?.createdAt || 0).getTime() - new Date(b?.createdAt || 0).getTime())[0] || null;
+  }, [memoryPreview]);
+
   const [screen, setScreen] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [hasJob, setHasJob] = useState<boolean | null>(null);
   const [bracket, setBracket] = useState<"0_45" | "45_100" | "100_plus" | null>(null);
@@ -294,6 +315,20 @@ export default function Age18Welcome() {
                     Built by {communityData.totalContributors} {communityData.totalContributors === 2 ? "people" : "people"} who showed up for you
                   </p>
                 </div>
+                {oldestNote && (() => {
+                  const raw = String(oldestNote.content).trim();
+                  const excerpt = raw.length > 140 ? raw.slice(0, 140).replace(/\s+\S*$/, "") + "…" : raw;
+                  const author = String(oldestNote.authorName || "").trim();
+                  const yr = oldestNote.createdAt ? new Date(oldestNote.createdAt).getFullYear() : null;
+                  return (
+                    <figure className="m-0 border-l-2 border-[hsl(var(--kiddo-gold))]/50 pl-3">
+                      <p className="text-sm italic leading-relaxed text-foreground/85">&ldquo;{excerpt}&rdquo;</p>
+                      <figcaption className="mt-1 text-[11px] text-muted-foreground">
+                        {author || "someone who showed up"}{yr ? ` · the first note, ${yr}` : ""}
+                      </figcaption>
+                    </figure>
+                  );
+                })()}
                 <div className="flex flex-wrap gap-1.5">
                   {communityData.series.map((s, idx) => (
                     <motion.span

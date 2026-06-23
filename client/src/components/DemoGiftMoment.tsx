@@ -130,11 +130,12 @@ export function DemoGiftMoment() {
       // storage blocked → skip; badges just open as before (no worse).
     }
   }, [isDemo]);
-  // Includes /design-lab so the redesign surface gets the same live-gift beat as
-  // /dashboard (it's being groomed to replace it). Without this, /design-lab had
-  // no "watch it land" moment AND no gift-triggered hero roll. The only navigate()
-  // is on a toast tap, so firing here never yanks the viewer off the page.
-  const onDashboard = location === "/dashboard" || location === "/" || location === "/design-lab";
+  // Includes /design-lab AND /staging so both redesign surfaces get the same
+  // live-gift beat as /dashboard (they're being groomed to replace it). Without
+  // this, the rebuilt hero had its in-hero arc + roll but no loop-closure TOAST,
+  // so the "watch it land" moment was only half-present. The only navigate() is
+  // on a toast tap, so firing here never yanks the viewer off the page.
+  const onDashboard = location === "/dashboard" || location === "/" || location === "/design-lab" || location === "/staging";
 
   useEffect(() => {
     if (!isDemo || !onDashboard) return;

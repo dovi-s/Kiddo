@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Home, BookOpen, Settings as SettingsIcon, Share2, CalendarDays } from "lucide-react";
+import { Home, BookOpen, Settings as SettingsIcon, Share2, History } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity } from "@/lib/prefetch";
@@ -143,7 +143,7 @@ export function MobileNav() {
     // verb. See feedback_share_vs_gift_distinction.md "approved
     // adjustment" note for the verb/object rationale.
     { href: "__share__", icon: Share2, label: "Share" },
-    { href: "/activity", icon: CalendarDays, label: "Activity" },
+    { href: "/activity", icon: History, label: "Activity" },
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
   ];
   // Drop the Share tab on any non-fund-scoped surface — there is no
@@ -199,7 +199,7 @@ export function MobileNav() {
         {items.map((item) => {
           const isShare = item.href === "__share__";
           const isActive =
-            (item.href === "/dashboard" && (location === "/dashboard" || location.startsWith("/dashboard") || isFundSubPage(location))) ||
+            (item.href === "/dashboard" && (location === "/dashboard" || location.startsWith("/dashboard") || location.startsWith("/staging") || isFundSubPage(location))) ||
             (item.href === "/activity" && (location.startsWith("/activity") || location.startsWith("/event/"))) ||
             (item.href.startsWith("/memory") && location.startsWith("/memory")) ||
             (item.href === "/settings" && location.startsWith("/settings"));

@@ -109,6 +109,158 @@ export function AppHeader() {
   // doc-block in page-scope.ts. Locked 2026-05-18.
   const isSubPage = isFundSubPage(location);
   const showBackArrow = hideNav || isSubPage;
+  // The dashboard (live /dashboard + the /staging rebuild) carries its OWN hero
+  // "Share … link" button, so the header Share is a redundant 2nd copy there. Hide
+  // it on the dashboard, keep it on the other fund pages (Memory Book, Activity,
+  // Settings) where there is no hero Share. See DASHBOARD_CHROME_PORT_SPEC.md.
+  const isOnDashboard = location.startsWith("/dashboard") || location.startsWith("/staging");
+
+  // Chameleon header: evergreen while the bar sits over the hero, cream once the
+  // hero scrolls past (matches the section beneath it). Driven by an
+  // IntersectionObserver on the hero element — robust against ANY scroll
+  // container (the dashboard scrolls inside a div, not the window) and fires only
+  // on threshold crossings, so no per-frame jitter. Defaults to evergreen until
+  // the observer attaches (the hero mounts after the cold-load).
+  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  useEffect(() => {
+    if (!isOnDashboard) { setScrolledPastHero(false); return; }
+    let io: IntersectionObserver | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attach = () => {
+      const hero = document.querySelector('[data-testid="hero-card"]');
+      if (!hero) { timer = setTimeout(attach, 200); return; }
+      io = new IntersectionObserver(
+        ([entry]) => setScrolledPastHero(!entry.isIntersecting),
+        // -58px top inset = the sticky header's height: the hero stops
+        // "intersecting" exactly when its bottom slides under the bar.
+        { rootMargin: "-58px 0px 0px 0px", threshold: 0 },
+      );
+      io.observe(hero);
+    };
+    attach();
+    return () => { if (io) io.disconnect(); if (timer) clearTimeout(timer); };
+  }, [isOnDashboard, location]);
+  // Evergreen hero chrome only while at the top over the hero; cream into content.
+  const heroChrome = isOnDashboard && !scrolledPastHero;
+
+  // STAGING seam fix (2026-06-23). The staging hero is a FULL-BLEED vertical
+  // gradient (light bottle-green at the top -> evergreen-deep at the floor). The
+  // chameleon header is a single FLAT green = the hero's TOP tone, so at rest the
+  // bar reads as one surface with the hero. But as the hero scrolls UP under the
+  // bar, the hero just below the 58px seam keeps darkening while the flat header
+  // stays light -> a visible lighter band opens up right before the cream flip
+  // (a flat color can't blend with a moving gradient). Fix: while over the
+  // staging hero, drive the header background to the hero's OWN gradient color at
+  // the seam line, so the bar darkens in lock-step and the seam never appears.
+  // Scoped to /staging only — the live dashboard hero is a different (diagonal,
+  // carded) gradient and keeps the existing flat treatment untouched.
+  const isStagingHero = location.startsWith("/staging");
+  const [heroSeamBg, setHeroSeamBg] = useState("hsl(158 45% 19%)");
+  useEffect(() => {
+    if (!isStagingHero) return;
+    // Staging hero gradient stops: [pct, H, S, L]. Keep in sync with the
+    // hero-card background in DashboardStaging.tsx.
+    const STOPS: number[][] = [
+      [0, 158, 45, 19],
+      [46, 158, 49, 15],
+      [100, 157, 49, 8],
+    ];
+    const colorAt = (frac: number) => {
+      const p = Math.min(100, Math.max(0, frac * 100));
+      let a = STOPS[0];
+      let b = STOPS[STOPS.length - 1];
+      for (let i = 0; i < STOPS.length - 1; i++) {
+        if (p >= STOPS[i][0] && p <= STOPS[i + 1][0]) { a = STOPS[i]; b = STOPS[i + 1]; break; }
+      }
+      const t = b[0] === a[0] ? 0 : (p - a[0]) / (b[0] - a[0]);
+      const h = a[1] + (b[1] - a[1]) * t;
+      const s = a[2] + (b[2] - a[2]) * t;
+      const l = a[3] + (b[3] - a[3]) * t;
+      return `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`;
+    };
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const hero = document.querySelector('[data-testid="hero-card"]');
+      if (!hero) return;
+      const r = hero.getBoundingClientRect();
+      if (r.height <= 0) return;
+      // Fraction of the hero gradient sitting at the header's bottom edge (58px).
+      setHeroSeamBg(colorAt((58 - r.top) / r.height));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    // Capture phase catches scrolls from the dashboard's inner scroll container
+    // (it scrolls inside a div, not the window — same reason the chameleon above
+    // uses an IntersectionObserver rather than a window scroll position).
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [isStagingHero, location]);
+
+  // Smooth the green<->cream FLIP in BOTH directions. The tracking above runs
+  // with NO bg transition so it follows scroll EXACTLY (a 0.2s ease would lag a
+  // fast flick and re-open the seam) — but that alone would make the cream->green
+  // RE-ENTRY (scrolling back up into the hero) snap hard. So for one beat after
+  // the chameleon flips, re-enable the 0.2s bg ease, then drop back to instant
+  // tracking. Net: seam-free instant tracking over the hero + a soft fade on both
+  // the exit-to-cream and the return-to-green.
+  const [bgFlipping, setBgFlipping] = useState(false);
+  useEffect(() => {
+    if (!isStagingHero) return;
+    setBgFlipping(true);
+    const t = window.setTimeout(() => setBgFlipping(false), 240);
+    return () => window.clearTimeout(t);
+  }, [heroChrome, isStagingHero]);
+
+  // Extend the green to the EDGES of the device when over the hero (founder:
+  // "if you pull from the hero it should extend green, not white"). Two surfaces
+  // the chameleon header alone didn't cover:
+  //   • the iOS status-bar tint (`theme-color`) — matched to the header so the
+  //     notch area is green over the hero, cream once scrolled into content;
+  //   • the document (html) background — what the native rubber-band reveals when
+  //     you overscroll at the top. Setting it to the hero's top tone means a pull
+  //     from the dashboard STRETCHES green, seamless with the green header + hero,
+  //     instead of a cream/white gap. It only ever shows on a top-overscroll (the
+  //     cream body covers the rest), so normal scrolling is untouched, and every
+  //     non-dashboard page keeps the cream top. (Standalone PWA locks overscroll,
+  //     so there's no stretch there — the JS pull spinner handles refresh.)
+  useEffect(() => {
+    const HERO_TOP = "#1b4636"; // === hsl(158 45% 19%), the Gilt-Ledger bottle-green header/hero top tone
+    const CREAM = "#f9f7f3";    // === the default theme-color in index.html
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute("content", heroChrome ? HERO_TOP : CREAM);
+    document.documentElement.style.backgroundColor = isOnDashboard ? HERO_TOP : "";
+    // Native (Capacitor) shell: also drive the REAL OS status bar (clock / wifi /
+    // battery glyphs) so they flip light over the green hero and dark on cream —
+    // the per-route control a pure Safari PWA can't do, but the wrapped store app
+    // can. We read the runtime-injected `window.Capacitor` global + call the
+    // StatusBar plugin through its bridge — NO `@capacitor/*` import, so nothing
+    // Capacitor ever enters the web bundle (an eager `import @capacitor/core`
+    // white-screened the web app). In a browser/PWA `window.Capacitor` is
+    // undefined → this whole block is a no-op. ("DARK" = light glyphs for the
+    // dark green; "LIGHT" = dark glyphs for cream — Capacitor's Style enum values.)
+    const cap = typeof window !== "undefined" ? (window as any).Capacitor : null;
+    if (cap?.isNativePlatform?.()) {
+      const sb = cap.Plugins?.StatusBar;
+      if (sb) {
+        try {
+          sb.setStyle?.({ style: heroChrome ? "DARK" : "LIGHT" });
+          if (cap.getPlatform?.() === "android") {
+            sb.setBackgroundColor?.({ color: heroChrome ? HERO_TOP : CREAM });
+          }
+        } catch { /* native bridge unavailable — ignore */ }
+      }
+    }
+    return () => {
+      meta?.setAttribute("content", CREAM);
+      document.documentElement.style.backgroundColor = "";
+    };
+  }, [heroChrome, isOnDashboard]);
 
   const { data: funds = [] } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
@@ -284,7 +436,11 @@ export function AppHeader() {
   // outright, so "UTMA" is stale for them — show "Personal" (the platform's adult-account
   // type) instead.
   const displayAccountType = isOwnerMode && accountType ? "Personal" : accountType;
-  const badgeText = suppressFundChrome
+  // Account-type/status badge ("UTMA · Active") also suppressed on the dashboard: the
+  // hero owns status there (and the staging hero deliberately drops the account type for
+  // active funds), so the header badge was a chrome echo. Kept on the other fund pages
+  // (Memory Book / Activity / Settings) where there's no hero. See DASHBOARD_CHROME_PORT_SPEC.md.
+  const badgeText = suppressFundChrome || isOnDashboard
     ? ""
     : displayAccountType && statusLabel
       ? `${displayAccountType} · ${statusLabel}`
@@ -295,10 +451,25 @@ export function AppHeader() {
       <motion.header
         className="sticky top-0 z-50"
         style={{
-          background: "hsl(var(--kiddo-cream) / 0.94)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(26, 23, 16, 0.10)",
+          // Chameleon: evergreen + no border while over the hero (matches the
+          // hero's top gradient tone EXACTLY, no blur so it reads identical),
+          // cream + blur + hairline once scrolled into the content. Transitions
+          // smoothly between the two as you scroll. Other pages: always cream.
+          // backgroundColor (not the `background` shorthand) so the green↔cream
+          // change actually ANIMATES — browsers snap shorthand transitions but
+          // smoothly interpolate background-color.
+          backgroundColor: heroChrome
+            ? (isStagingHero ? heroSeamBg : "hsl(158 45% 19%)")
+            : "hsl(var(--kiddo-cream) / 0.94)",
+          backdropFilter: heroChrome ? "none" : "blur(20px)",
+          WebkitBackdropFilter: heroChrome ? "none" : "blur(20px)",
+          borderBottom: heroChrome ? "1px solid transparent" : "1px solid hsl(var(--kiddo-ink) / 0.10)",
+          // While tracking the staging hero gradient, the bg must follow scroll
+          // INSTANTLY (a 0.2s ease would lag the scroll and re-open the seam on a
+          // fast flick). The cream flip + every other page still animate over 0.2s.
+          transition: (isStagingHero && heroChrome && !bgFlipping)
+            ? "border-color 0.2s ease-out"
+            : "background-color 0.2s ease-out, border-color 0.2s ease-out",
           height: 58,
           display: "flex",
           alignItems: "center",
@@ -340,7 +511,7 @@ export function AppHeader() {
             </button>
           )}
           <h1
-            className={`font-heading shrink-0 text-[15px] font-bold text-foreground${hideTitleOnMobile ? " sr-only md:not-sr-only" : ""}`}
+            className={`font-heading shrink-0 text-[15px] font-bold transition-colors ${heroChrome ? "text-[hsl(var(--kiddo-cream))]" : "text-foreground"}${hideTitleOnMobile ? " sr-only md:not-sr-only" : ""}`}
             data-testid="header-page-title"
           >
             {pageTitle}
@@ -356,7 +527,7 @@ export function AppHeader() {
                   (/account) — the fund-switcher trigger doesn't render
                   there, so there's nothing to separate from anyway. */}
               {pageTitle && (
-                <span className={`shrink-0 text-[18px] leading-none text-foreground/15${hideTitleOnMobile ? " hidden md:inline" : ""}`}>·</span>
+                <span className={`shrink-0 text-[18px] leading-none transition-colors ${heroChrome ? "text-[hsl(var(--kiddo-cream)/0.3)]" : "text-foreground/15"}${hideTitleOnMobile ? " hidden md:inline" : ""}`}>·</span>
               )}
 
               {/* Fund name — always tappable. Even with one fund, the
@@ -375,7 +546,7 @@ export function AppHeader() {
                   setFundPickerOpen((v) => !v);
                   haptic("light");
                 }}
-                className="flex min-w-0 items-center gap-1 truncate text-[13px] text-muted-foreground cursor-pointer hover:text-foreground"
+                className={`flex min-w-0 items-center gap-1 truncate text-[13px] cursor-pointer transition-colors ${heroChrome ? "text-[hsl(var(--kiddo-cream)/0.85)] hover:text-[hsl(var(--kiddo-cream))]" : "text-muted-foreground hover:text-foreground"}`}
                 data-testid="header-fund-name"
               >
                 <span className="truncate">
@@ -387,7 +558,12 @@ export function AppHeader() {
                         ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
                         : activeFund.name || "Fund"}
                 </span>
-                <ChevronDown size={12} className={`shrink-0 transition-transform text-muted-foreground ${fundPickerOpen ? "rotate-180" : ""}`} />
+                {/* Color keys off heroChrome (NOT isOnDashboard): the bar flips
+                    to cream once scrolled past the hero, so a fixed cream chevron
+                    went cream-on-cream and vanished. Now it matches the fund-name
+                    text beside it — cream over the green hero, muted-ink over cream
+                    — and eases instead of snapping (transition-[color,transform]). */}
+                <ChevronDown size={12} className={`shrink-0 transition-[color,transform] duration-200 ease-out ${heroChrome ? "text-[hsl(var(--kiddo-cream)/0.7)]" : "text-muted-foreground"} ${fundPickerOpen ? "rotate-180" : ""}`} />
               </button>
 
               {badgeText && (
@@ -404,7 +580,7 @@ export function AppHeader() {
           {/* Fund picker dropdown */}
           {fundPickerOpen && (
             <div
-              className="absolute left-0 top-[calc(100%+10px)] z-50 min-w-[220px] overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_rgba(26,23,16,0.18)]"
+              className="absolute left-0 top-[calc(100%+10px)] z-50 min-w-[220px] overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_hsl(var(--kiddo-ink) / 0.18)]"
               role="listbox"
             >
               {/* Family-plan overview entry. Appears ONLY when the user
@@ -538,7 +714,12 @@ export function AppHeader() {
                 // Hover darkens the tint slightly. Empty-photo and
                 // has-photo cases share the same chrome (border + base bg
                 // ring around the avatar).
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[rgb(237,244,238)] border-[rgb(224,237,227)] transition-colors md:hidden overflow-hidden p-0 hover:bg-[rgb(224,237,227)] focus-visible:bg-[rgb(224,237,227)] focus-visible:outline-none"
+                // VARIANT 3 (2026-06-23): no frame at all — bare glyph, no ring,
+                // no fill. The person glyph sits directly in the hero. A profile
+                // PHOTO still renders circular (the <img> below is rounded-full on
+                // its own), just without a ring around it — a standard bare-avatar
+                // look, not a broken one. Faint hover fill kept for tap feedback.
+                className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors md:hidden overflow-hidden p-0 focus-visible:outline-none ${heroChrome ? "hover:bg-[hsl(var(--kiddo-cream)/0.14)]" : "hover:bg-[rgb(237,244,238)] focus-visible:bg-[rgb(237,244,238)]"}`}
                 data-testid="header-profile"
                 aria-label="Account"
               >
@@ -567,7 +748,7 @@ export function AppHeader() {
                   size={16}
                   strokeWidth={1.6}
                   style={{
-                    color: "rgb(26,61,43)",
+                    color: heroChrome ? "hsl(var(--kiddo-cream))" : "rgb(26,61,43)",
                     display: photoUrl ? "none" : "block",
                   }}
                 />
@@ -589,7 +770,7 @@ export function AppHeader() {
               on /account: user-scoped page → the active fund is
               irrelevant → an active Share button there would silently
               share Emma's link if tapped, same foot-gun. */}
-          {withFund && !suppressFundChrome && (
+          {withFund && !suppressFundChrome && !isOnDashboard && (
             <button
               type="button"
               onClick={handleShare}

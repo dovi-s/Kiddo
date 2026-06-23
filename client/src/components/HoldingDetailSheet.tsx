@@ -476,7 +476,7 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
               </span>
             )}
             {thankYouState === "missing" && (
-              <span title="No thank-you on record" className="shrink-0 inline-flex items-center rounded-full bg-[rgba(26,23,16,0.06)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[rgba(26,23,16,0.55)]">
+              <span title="No thank-you on record" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink) / 0.06)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-ink) / 0.55)]">
                 No thanks yet
               </span>
             )}

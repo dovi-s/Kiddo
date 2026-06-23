@@ -62,6 +62,12 @@ interface Props {
   // is unchanged).
   milestoneAge?: number;
   milestoneLabel?: string;
+  // When false, hide the target-endpoint DOLLAR label (e.g. "$114K") while keeping
+  // the "Age NN" eyebrow + the curve. Use when the surrounding copy already states the
+  // projected number — so the chart shows the SHAPE and the text carries the figure
+  // (with its honest conditional framing the bare chart number can't). Default true
+  // preserves standalone behavior (Projection.tsx + live dashboards).
+  showTargetValue?: boolean;
 }
 
 function fmtCompact(n: number): string {
@@ -78,6 +84,7 @@ export function ProjectionTrajectoryChart({
   heightPx = 168,
   milestoneAge,
   milestoneLabel,
+  showTargetValue = true,
 }: Props) {
   // Measure the container so the viewBox ratio MATCHES the rendered
   // box. Previously the viewBox was locked to a fixed 3:1 ratio with
@@ -295,7 +302,7 @@ export function ProjectionTrajectoryChart({
                 textAnchor="middle"
                 fontSize="9.5"
                 fontWeight="700"
-                fill="rgba(26,23,16,0.5)"
+                fill="hsl(var(--kiddo-ink) / 0.5)"
                 style={{ letterSpacing: "0.05em", textTransform: "uppercase" }}
               >
                 {milestoneLabel}
@@ -348,24 +355,29 @@ export function ProjectionTrajectoryChart({
                 : "middle";
           return (
             <>
+              {showTargetValue && (
+                <text
+                  x={drawnArea.targetX}
+                  y={drawnArea.targetY - 16}
+                  textAnchor={labelAnchor}
+                  fontSize="16"
+                  fontWeight="700"
+                  fill={evergreen}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {fmtCompact(drawnArea.targetValue)}
+                </text>
+              )}
+              {/* When the dollar label is hidden, drop the age eyebrow down to where
+                  the value sat (−16) so it stays snug above the dot instead of floating
+                  with an empty gap below it. */}
               <text
                 x={drawnArea.targetX}
-                y={drawnArea.targetY - 16}
-                textAnchor={labelAnchor}
-                fontSize="16"
-                fontWeight="700"
-                fill={evergreen}
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
-                {fmtCompact(drawnArea.targetValue)}
-              </text>
-              <text
-                x={drawnArea.targetX}
-                y={drawnArea.targetY - 32}
+                y={drawnArea.targetY - (showTargetValue ? 32 : 16)}
                 textAnchor={labelAnchor}
                 fontSize="10"
                 fontWeight="600"
-                fill="rgba(26,23,16,0.55)"
+                fill="hsl(var(--kiddo-ink) / 0.55)"
                 style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
               >
                 Age {drawnArea.targetAgeReal}

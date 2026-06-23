@@ -33,6 +33,11 @@ type UseCachedFirstNumberOptions = {
   // caller so independent numbers (hero balance vs hero projection) don't
   // cross-lock. A real page reload starts a fresh session and rolls again.
   lockScope?: string;
+  // Decimal places preserved DURING the roll (forwarded to useCountUp). Default
+  // 0 = whole-number climb (cents snap on the final frame). 2 = cents roll too.
+  precision?: number;
+  // Easing for the climb (forwarded to useCountUp). Default ease-out cubic.
+  easing?: (t: number) => number;
 };
 
 // Module-scoped lock stores, one Set per lockScope. Outlive any single mount, so
@@ -56,6 +61,8 @@ export function useCachedFirstNumber({
   startDelay = 0,
   rollKey,
   lockScope,
+  precision,
+  easing,
 }: UseCachedFirstNumberOptions) {
   const normalizedSeed =
     typeof seedValue === "number" && Number.isFinite(seedValue) ? seedValue : null;
@@ -131,6 +138,8 @@ export function useCachedFirstNumber({
     duration,
     enabled: rollingColdLoad,
     startDelay,
+    precision,
+    easing,
   });
 
   // Lock the CURRENT key ONLY after its actual CLIMB has run and finished

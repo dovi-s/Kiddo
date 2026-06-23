@@ -129,21 +129,29 @@
      are regenerated against the canonical kiddo evergreen + gold so
      the whole palette stays internally consistent. */
   --kora-evergreen: var(--kiddo-evergreen);
-  --kora-evergreen-light: 152 32% 27%; /* derived: lighter than --kiddo-evergreen */
-  --kora-evergreen-hover: 152 37% 21%; /* derived: hover lifts ~4% above base */
-  --kora-evergreen-active: 152 37% 14%; /* derived: pressed dims ~3% below base */
+  --kora-evergreen-light: 158 42% 25%; /* derived: lighter than the bottle --kiddo-evergreen */
+  --kora-evergreen-hover: 158 48% 19%; /* derived: hover lifts above base */
+  --kora-evergreen-active: 157 50% 12%; /* derived: pressed dims below base */
   --kora-gold: var(--kiddo-gold);
   --kora-gold-light: var(--kiddo-gold-light);
   --kora-gold-ink: var(--kiddo-gold-ink); /* alias, see --kiddo-gold-ink for rationale */
-  --kora-gold-glow: 34 78% 58%;        /* derived: glowing variant of --kiddo-gold */
+  --kora-gold-glow: 40 70% 60%;        /* derived: glowing variant of the brass --kiddo-gold */
   --kora-cream: var(--kiddo-cream);
   --kora-ink: var(--kiddo-ink);
-  --kiddo-evergreen: 152 37% 17%;       /* #1B3A2D */
-  --kiddo-evergreen-deep: 152 45% 10%;  /* #0E2518 — hero gradient endpoint */
-  --kiddo-cream: 38 36% 96%;            /* #F8F5F0 */
-  --kiddo-cream-dark: 36 28% 90%;       /* #EDE7DC */
-  --kiddo-gold: 34 74% 45%;             /* #C5821E */
-  --kiddo-gold-light: 40 78% 66%;       /* #EDC164 — balance flash + warm highlight */
+  /* GILT LEDGER palette (2026-06-23, design judge-panel decision). Anchored to a
+     real heirloom: a Smythson bottle-green leather ledger with a 23k gold-leaf
+     gilt spine on aged ivory rag paper — the Memory Book itself. Premium comes
+     from VALUE-DEPTH + hue choice + ONE disciplined metallic accent, NOT from
+     saturation (the prior "enrich" chased chroma → marigold/toy, eroded trust).
+     Evergreen → deeper bottle-green; gold → antique BRASS-LEAF (sat 86→61) that
+     glints like stamped gilt instead of a candy badge; cream → ivory rag paper.
+     Was: evergreen 152 37% 17% / gold 34 74% 45% / cream 38 36% 96%. */
+  --kiddo-evergreen: 158 49% 15%;       /* bottle racing-green #143A2C */
+  --kiddo-evergreen-deep: 157 49% 8%;   /* hero / handoff gradient floor #0B2018 */
+  --kiddo-cream: 38 41% 95%;            /* aged ivory rag paper #F7F3EC */
+  --kiddo-cream-dark: 38 32% 90%;       /* derived from the ivory */
+  --kiddo-gold: 38 61% 48%;             /* antique brass-leaf #C68F30 — fill/glint only, not text */
+  --kiddo-gold-light: 40 70% 63%;       /* gilt highlight #E3B860 */
   /* Gold ink. Darker gold suitable for TEXT use on cream + on
      gold-tinted backgrounds (the chip / pill / love-mark pattern).
      The brand --kiddo-gold (#C5821E) is too light for text on
@@ -156,7 +164,7 @@
      defined, falling back silently to inherited color. Defining
      the token fixes those latent references AND closes Issue 2 of
      ACCESSIBILITY_AUDIT_2026-05-13.md. */
-  --kiddo-gold-ink: 34 74% 25%;         /* #6F4611 */
+  --kiddo-gold-ink: 34 74% 25%;         /* #6F4611 — canonical gold-TEXT token (AA on cream); the brass --kiddo-gold stays fill-only */
   --kiddo-ink: 40 23% 8%;               /* #1A1710 */
   /* Darkened from 32 7% 44% (#7A7268) to 32 7% 38% (~#61615A) on
      2026-05-14 to clear WCAG AA normal-text contrast against cream.
@@ -207,16 +215,17 @@
      needed the same shift. */
   --muted-foreground: 150 8% 38%;
 
-  /* Accent - Warm Gold */
-  --accent: 36 72% 52%;
+  /* Accent - brass, unified to --kiddo-gold (one gold) */
+  --accent: 38 61% 48%;
   --accent-foreground: 150 15% 12%;
 
-  /* Success - Softer green for positive states */
-  --success: 152 55% 35%;
+  /* Success — GAIN green #3E9468, LIFTED in lightness so a growth number stays
+     unmistakable on the evergreen hero (the reassurance moment) AND on cream */
+  --success: 149 41% 41%;
   --success-foreground: 40 30% 97%;
 
-  /* Destructive */
-  --destructive: 0 65% 50%;
+  /* Destructive — dignified oxblood #B5503C: a loss on a 21-year horizon, not a fire-alarm */
+  --destructive: 10 50% 47%;
   --destructive-foreground: 0 0% 100%;
 
   /* Borders - Soft gray with warmth */
@@ -628,6 +637,17 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   .kiddo-gifter-avatar:hover > div:first-child > div:first-child {
     transform: none;
   }
+}
+
+/* Skeleton loaders use Tailwind's `animate-pulse` (a 2s opacity cycle),
+   which Tailwind itself does NOT guard for reduced motion. Our reduced-
+   motion handling is a set of targeted kills (above/below) with no global
+   `* { animation: none }` net, so without this rule every loading
+   skeleton app-wide (SkeletonBlock, KiddoSkeleton, and any ad-hoc
+   animate-pulse) keeps cycling for vestibular-sensitive users. The static
+   tinted block still reads clearly as "loading". WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse { animation: none; }
 }
 
 /* Milestone celebration — restraint version of the original "stars

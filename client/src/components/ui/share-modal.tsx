@@ -381,7 +381,7 @@ function ShareRow({
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(26,23,16)", lineHeight: 1.2 }}>{label}</p>
+        <p style={{ fontSize: 13.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>{label}</p>
         <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 1 }}>{subtitle}</p>
       </div>
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "rgb(200,190,182)", flexShrink: 0 }}>
@@ -757,12 +757,12 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
         <DialogTitle className="sr-only">{recipientIsOwner ? "Share your gift link" : recipientName ? `Share ${recipientName}'s gift link` : "Share gift link"}</DialogTitle>
         {/* Mobile grab-handle — the native bottom-sheet affordance. Hidden on
             desktop (centered modal). Decorative; flex-shrink-0 so it stays put. */}
-        <div aria-hidden className="sm:hidden" style={{ flexShrink: 0, margin: "8px auto 2px", width: 36, height: 4, borderRadius: 999, background: "rgba(26,23,16,0.15)" }} />
+        <div aria-hidden className="sm:hidden" style={{ flexShrink: 0, margin: "8px auto 2px", width: 36, height: 4, borderRadius: 999, background: "hsl(var(--kiddo-ink) / 0.15)" }} />
 
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "18px 20px 16px", borderBottom: "1px solid rgba(26,23,16,0.08)",
+          padding: "18px 20px 16px", borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.08)",
           flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
@@ -770,13 +770,13 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
               <button
                 type="button"
                 onClick={() => { setView("main"); haptic("selection"); }}
-                style={{ padding: 4, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "rgb(26,23,16)", display: "flex", alignItems: "center", flexShrink: 0 }}
+                style={{ padding: 4, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "hsl(var(--kiddo-ink))", display: "flex", alignItems: "center", flexShrink: 0 }}
               >
                 <ArrowLeft size={16} />
               </button>
             )}
             <div>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.2 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
                 {view === "email"
                   ? `Email invite`
                   : recipientIsOwner
@@ -840,7 +840,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      style={{ background: "white", borderRadius: 20, padding: 16, boxShadow: "0 2px 12px rgba(26,23,16,0.08), 0 0 0 1px rgba(26,23,16,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ background: "white", borderRadius: 20, padding: 16, boxShadow: "0 2px 12px hsl(var(--kiddo-ink) / 0.08), 0 0 0 1px hsl(var(--kiddo-ink) / 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       <QRCodeSVG
                         ref={(el) => { qrRef.current = el as SVGSVGElement | null; }}
@@ -1053,9 +1053,9 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         disabled={printing}
                         style={{
                           flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid rgba(26,23,16,0.12)",
+                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)",
                           background: "white", cursor: printing ? "wait" : "pointer", opacity: printing ? 0.6 : 1,
-                          fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)", fontFamily: "inherit",
+                          fontSize: 12.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", fontFamily: "inherit",
                           transition: "all 0.12s",
                         }}
                       >
@@ -1068,9 +1068,9 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         disabled={downloading}
                         style={{
                           flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid rgba(26,23,16,0.12)",
+                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)",
                           background: "white", cursor: downloading ? "wait" : "pointer", opacity: downloading ? 0.6 : 1,
-                          fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)", fontFamily: "inherit",
+                          fontSize: 12.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", fontFamily: "inherit",
                           transition: "all 0.12s",
                         }}
                       >
@@ -1127,12 +1127,12 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       placeholder="email@example.com, another@example.com"
                       style={{
                         width: "100%", padding: "10px 12px", borderRadius: 10,
-                        border: "1.5px solid rgba(26,23,16,0.12)", fontSize: 13,
-                        color: "rgb(26,23,16)", background: "white", outline: "none",
+                        border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", fontSize: 13,
+                        color: "hsl(var(--kiddo-ink))", background: "white", outline: "none",
                         fontFamily: "inherit", boxSizing: "border-box" as const,
                       }}
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+                      onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
                     />
                   </div>
 
@@ -1147,12 +1147,12 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       onChange={e => setEmailSubject(e.target.value)}
                       style={{
                         width: "100%", padding: "10px 12px", borderRadius: 10,
-                        border: "1.5px solid rgba(26,23,16,0.12)", fontSize: 13,
-                        color: "rgb(26,23,16)", background: "white", outline: "none",
+                        border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", fontSize: 13,
+                        color: "hsl(var(--kiddo-ink))", background: "white", outline: "none",
                         fontFamily: "inherit", boxSizing: "border-box" as const,
                       }}
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+                      onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
                     />
                   </div>
 
@@ -1167,13 +1167,13 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       rows={10}
                       style={{
                         width: "100%", padding: "10px 12px", borderRadius: 10,
-                        border: "1.5px solid rgba(26,23,16,0.12)", fontSize: 13,
-                        color: "rgb(26,23,16)", background: "white", outline: "none",
+                        border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", fontSize: 13,
+                        color: "hsl(var(--kiddo-ink))", background: "white", outline: "none",
                         fontFamily: "inherit", resize: "vertical" as const, lineHeight: 1.6,
                         boxSizing: "border-box" as const,
                       }}
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+                      onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
                     />
                     <p style={{ fontSize: 10.5, color: "rgb(112,103,95)", marginTop: 5, lineHeight: 1.5 }}>
                       Pre-written and warm. Edit anything. The link is already in the message.
@@ -1215,9 +1215,9 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
         {snapshotHref && view === "main" && (
           <div
             style={{
-              borderTop: "1px solid rgba(26,23,16,0.08)",
+              borderTop: "1px solid hsl(var(--kiddo-ink) / 0.08)",
               padding: "10px 20px 14px 20px",
-              background: "rgba(26,23,16,0.015)",
+              background: "hsl(var(--kiddo-ink) / 0.015)",
             }}
           >
             {/* Mini-header — calls out the AUDIENCE difference for
@@ -1251,7 +1251,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                   spouse, advisor, or grandparent who needs to review
                   the fund's structure, not gift to it. Renaming to
                   "Fund snapshot" makes the difference legible. */}
-              <p style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)" }}>
+              <p style={{ fontSize: 12.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>
                 Fund snapshot
               </p>
               <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 1, lineHeight: 1.4 }}>

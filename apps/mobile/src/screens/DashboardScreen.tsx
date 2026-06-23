@@ -8,13 +8,14 @@ import {
   RefreshControl,
   ScrollView,
   Share,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { slugify } from "@kora/utils";
@@ -789,7 +790,17 @@ function EventComposer({
 
 export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: DashboardScreenProps) {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const [tab, setTab] = useState<Tab>("home");
+  // Acorns-style contextual chrome: the HOME tab is the green-topped screen, so
+  // the system status bar (clock/wifi/battery) sits ON green with light glyphs,
+  // and the app header below it is green too — one continuous green surface from
+  // the notch through the hero. Every other tab (and any pushed cream screen)
+  // stays cream with dark glyphs. Gating on `isFocused` is what prevents the
+  // light bar leaking onto a pushed detail screen (FundDetail etc.): when this
+  // screen is covered, homeChrome flips false and the bar returns to dark — so
+  // we never need to touch the other screens. (Native only; the web PWA can't do
+  // per-screen glyph color, see the web theme-color/overscroll work.)
   const [funds, setFunds] = useState<ApiFund[]>([]);
   const [selectedFundId, setSelectedFundId] = useState<string>("");
   const [fundSwitcherOpen, setFundSwitcherOpen] = useState(false);
@@ -957,10 +968,26 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     );
   }
 
+  const homeChrome = isFocused && tab === "home";
+
   return (
     <View style={styles.screen}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      {/* Status bar: green + light glyphs over the home hero, cream + dark
+          elsewhere. backgroundColor is the Android bar fill; iOS ignores it and
+          shows the green header bg (which spans from y=0 behind the notch). */}
+      <StatusBar
+        barStyle={homeChrome ? "light-content" : "dark-content"}
+        backgroundColor={homeChrome ? colors.evergreen : colors.cream}
+      />
+      {/* Header — greens on the home tab so the status bar + header + hero read
+          as one continuous green surface (Acorns-style); cream on every other tab. */}
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + 10 },
+          homeChrome && { backgroundColor: colors.evergreen, borderBottomColor: "transparent" },
+        ]}
+      >
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             {activeFund ? (
@@ -969,11 +996,11 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
                 style={styles.fundSwitcherBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.fundSwitcherName}>{childName}'s Fund</Text>
-                <Ionicons name="chevron-down" size={16} color={colors.ink} style={{ marginTop: 2 }} />
+                <Text style={[styles.fundSwitcherName, homeChrome && { color: colors.cream }]}>{childName}'s Fund</Text>
+                <Ionicons name="chevron-down" size={16} color={homeChrome ? colors.cream : colors.ink} style={{ marginTop: 2 }} />
               </Pressable>
             ) : (
-              <Text style={styles.headerKiddo}>Kiddo</Text>
+              <Text style={[styles.headerKiddo, homeChrome && { color: colors.cream }]}>Kiddo</Text>
             )}
           </View>
           {/* profile/account icon (web parity, replaces the page-name label) */}
@@ -983,7 +1010,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
             accessibilityRole="button"
             accessibilityLabel="Open profile"
           >
-            <Ionicons name="person-circle-outline" size={30} color={colors.evergreen} />
+            <Ionicons name="person-circle-outline" size={30} color={homeChrome ? colors.cream : colors.evergreen} />
           </Pressable>
         </View>
 
@@ -998,13 +1025,24 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           >
             {funds.map((f) => {
               const isActive = f.id === activeFund?.id;
+              // On the green header the pills invert: active = cream chip with
+              // evergreen text (stands off the green), idle = light translucent
+              // border + cream text. Cream header keeps the original treatment.
+              const pillOverride = homeChrome
+                ? isActive
+                  ? { backgroundColor: colors.cream }
+                  : { borderColor: "rgba(248,245,240,0.45)" }
+                : null;
+              const pillTextColor = homeChrome
+                ? isActive ? colors.evergreen : colors.cream
+                : isActive ? colors.cream : semanticColors.native.textSecondary;
               return (
                 <Pressable
                   key={f.id}
                   onPress={() => setSelectedFundId(f.id)}
-                  style={[tabStyles.fundPill, isActive ? tabStyles.fundPillActive : tabStyles.fundPillIdle]}
+                  style={[tabStyles.fundPill, isActive ? tabStyles.fundPillActive : tabStyles.fundPillIdle, pillOverride]}
                 >
-                  <Text style={[tabStyles.fundPillText, { color: isActive ? colors.cream : semanticColors.native.textSecondary }]}>
+                  <Text style={[tabStyles.fundPillText, { color: pillTextColor }]}>
                     {getChildName(f)}
                   </Text>
                 </Pressable>
@@ -1012,10 +1050,10 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
             })}
             <Pressable
               onPress={onAddFund}
-              style={[tabStyles.fundPill, tabStyles.fundPillIdle, { flexDirection: "row", gap: 3 }]}
+              style={[tabStyles.fundPill, tabStyles.fundPillIdle, { flexDirection: "row", gap: 3 }, homeChrome && { borderColor: "rgba(248,245,240,0.45)" }]}
             >
-              <Ionicons name="add" size={15} color={semanticColors.native.textSecondary} />
-              <Text style={[tabStyles.fundPillText, { color: semanticColors.native.textSecondary }]}>Add</Text>
+              <Ionicons name="add" size={15} color={homeChrome ? colors.cream : semanticColors.native.textSecondary} />
+              <Text style={[tabStyles.fundPillText, { color: homeChrome ? colors.cream : semanticColors.native.textSecondary }]}>Add</Text>
             </Pressable>
           </ScrollView>
         ) : null}

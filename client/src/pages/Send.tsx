@@ -283,7 +283,7 @@ export default function Send() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <StockLogo ticker={stock.symbol} size={38} className="shadow-[0_8px_18px_rgba(26,23,16,0.08)]" />
+                        <StockLogo ticker={stock.symbol} size={38} className="shadow-[0_8px_18px_hsl(var(--kiddo-ink) / 0.08)]" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate font-medium text-foreground">{stock.name}</p>

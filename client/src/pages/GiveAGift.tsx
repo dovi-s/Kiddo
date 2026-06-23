@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { usePageSeo } from "@/lib/seo";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { haptic } from "@/lib/haptics";
 
 const PRESET_AMOUNTS = [25, 50, 100, 250, 500] as const;
@@ -51,6 +52,14 @@ export default function GiveAGift() {
   // show the point-of-charge disclosure + affirmative consent BEFORE redirecting
   // (per the advisory panel's required floor). Copy here is PENDING COUNSEL.
   const [pendingCapture, setPendingCapture] = useState<{ url: string; amount: number; kidFirstName: string } | null>(null);
+
+  // The three terminal screens (pending-capture / card-saved / completed) are
+  // state-driven early returns, NOT route changes, so the global ScrollToTop
+  // (which fires on location change) never runs for them. Without this, a gifter
+  // who filled the long form near the viewport bottom lands on the success
+  // screen scrolled past its headline. Reset to top whenever the screen mode flips.
+  const screenMode = pendingCapture ? "pendingCapture" : cardSaved ? "cardSaved" : completed ? "completed" : "form";
+  useScrollResetOnChange(screenMode);
 
   const [gifterName, setGifterName] = useState("");
   const [gifterEmail, setGifterEmail] = useState("");

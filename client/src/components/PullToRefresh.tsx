@@ -115,7 +115,7 @@ export function PullToRefresh() {
           height: 36,
           borderRadius: 9999,
           background: "white",
-          boxShadow: "0 2px 12px rgba(26,23,16,0.18)",
+          boxShadow: "0 2px 12px hsl(var(--kiddo-ink) / 0.18)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

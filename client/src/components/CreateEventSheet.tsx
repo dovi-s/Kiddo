@@ -194,33 +194,33 @@ const INPUT_BG = "hsl(var(--muted))";           // input background
 const S = {
   input: (focused?: boolean): React.CSSProperties => ({
     width: "100%", padding: "12px 14px", borderRadius: 14,
-    border: `1.5px solid ${focused ? G : "rgba(26,23,16,0.15)"}`,
+    border: `1.5px solid ${focused ? G : "hsl(var(--kiddo-ink) / 0.15)"}`,
     background: INPUT_BG, fontSize: 15, fontWeight: 500,
     color: INK, outline: "none", boxSizing: "border-box",
   }),
   textarea: (focused?: boolean): React.CSSProperties => ({
     width: "100%", padding: "12px 14px", borderRadius: 14,
-    border: `1.5px solid ${focused ? G : "rgba(26,23,16,0.15)"}`,
+    border: `1.5px solid ${focused ? G : "hsl(var(--kiddo-ink) / 0.15)"}`,
     background: INPUT_BG, fontSize: 14, fontWeight: 400,
     color: INK, outline: "none", resize: "none",
     boxSizing: "border-box", lineHeight: 1.55, fontFamily: "inherit",
   }),
   label: (): React.CSSProperties => ({
-    fontSize: 10.5, fontWeight: 700, color: "rgba(26,23,16,0.38)",
+    fontSize: 10.5, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.38)",
     textTransform: "uppercase", letterSpacing: "0.08em",
     display: "block", marginBottom: 8,
   }),
   pill: (active: boolean): React.CSSProperties => ({
     padding: "8px 14px", borderRadius: 100, border: "1.5px solid",
-    borderColor: active ? G : "rgba(26,23,16,0.15)",
+    borderColor: active ? G : "hsl(var(--kiddo-ink) / 0.15)",
     background: active ? G : "transparent",
     color: active ? "white" : INK,
     fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s",
   }),
   primaryBtn: (enabled: boolean): React.CSSProperties => ({
     width: "100%", padding: "15px", borderRadius: 100, border: "none",
-    background: enabled ? GOLD : "rgba(26,23,16,0.1)",
-    color: enabled ? "white" : "rgba(26,23,16,0.3)",
+    background: enabled ? GOLD : "hsl(var(--kiddo-ink) / 0.1)",
+    color: enabled ? "white" : "hsl(var(--kiddo-ink) / 0.3)",
     fontSize: 15, fontWeight: 700, cursor: enabled ? "pointer" : "not-allowed",
     transition: "opacity 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
   }),
@@ -662,10 +662,10 @@ export function CreateEventSheet({
               userSelect: "none",
               pointerEvents: "none",
             }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(26,23,16,0.45) 0%, transparent 55%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.45) 0%, transparent 55%)", pointerEvents: "none" }} />
           <button type="button"
             onClick={() => { setCoverFile(null); setCoverPreview(""); setUseChildPhoto(false); setCoverFocalX(0.5); setCoverFocalY(0.5); }}
-            style={{ position: "absolute", top: 8, right: 8, background: "rgba(26,23,16,0.55)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            style={{ position: "absolute", top: 8, right: 8, background: "hsl(var(--kiddo-ink) / 0.55)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Trash2 size={13} color="white" />
           </button>
           {!useChildPhoto && (
@@ -678,16 +678,16 @@ export function CreateEventSheet({
       ) : (
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" onClick={() => coverInputRef.current?.click()}
-            style={{ flex: 1, height: 90, borderRadius: 14, border: "1.5px dashed rgba(26,23,16,0.18)", background: "white", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5 }}>
-            <ImagePlus size={18} color="rgba(26,23,16,0.3)" />
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: "rgba(26,23,16,0.45)" }}>Upload photo</span>
+            style={{ flex: 1, height: 90, borderRadius: 14, border: "1.5px dashed hsl(var(--kiddo-ink) / 0.18)", background: "white", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            <ImagePlus size={18} color="hsl(var(--kiddo-ink) / 0.3)" />
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: "hsl(var(--kiddo-ink) / 0.45)" }}>Upload photo</span>
           </button>
           {childPhotoUrl && (
             <button type="button"
               onClick={() => { setUseChildPhoto(true); setCoverFile(null); setCoverPreview(""); haptic("selection"); }}
-              style={{ width: 90, height: 90, borderRadius: 14, border: "1.5px dashed rgba(26,23,16,0.18)", background: "white", cursor: "pointer", padding: 0, overflow: "hidden", position: "relative" }}>
+              style={{ width: 90, height: 90, borderRadius: 14, border: "1.5px dashed hsl(var(--kiddo-ink) / 0.18)", background: "white", cursor: "pointer", padding: 0, overflow: "hidden", position: "relative" }}>
               <img src={childPhotoUrl} alt={fundName || "Child"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div style={{ position: "absolute", inset: 0, background: "rgba(26,23,16,0.38)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ position: "absolute", inset: 0, background: "hsl(var(--kiddo-ink) / 0.38)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <User size={14} color="white" />
                 <span style={{ fontSize: 10, fontWeight: 700, color: "white", marginTop: 3 }}>{fundName?.split(" ")[0] || "Photo"}</span>
               </div>
@@ -764,7 +764,7 @@ export function CreateEventSheet({
                     <p style={{ fontSize: 16, fontWeight: 700, color: INK, lineHeight: 1.2, marginBottom: 5 }}>An occasion</p>
                     <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Birthday, holiday, milestone. Share a link. Anyone gifts.</p>
                   </div>
-                  <ChevronRight size={16} color="rgba(26,23,16,0.3)" style={{ flexShrink: 0, marginTop: 5 }} />
+                  <ChevronRight size={16} color="hsl(var(--kiddo-ink) / 0.3)" style={{ flexShrink: 0, marginTop: 5 }} />
                 </button>
 
                 {/* "A savings goal" option removed — fund-level dollar goals are
@@ -826,7 +826,7 @@ export function CreateEventSheet({
                       <p style={{ fontSize: 14, fontWeight: 700, color: INK, lineHeight: 1.2 }}>{type.label}</p>
                       <p style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{type.desc}</p>
                     </div>
-                    <ChevronRight size={14} color="rgba(26,23,16,0.3)" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <ChevronRight size={14} color="hsl(var(--kiddo-ink) / 0.3)" style={{ flexShrink: 0, marginTop: 2 }} />
                   </button>
                 ))}
               </div>
@@ -839,11 +839,11 @@ export function CreateEventSheet({
               style={{ padding: "4px 20px 32px", overflowY: "auto", flex: 1 }}>
 
               {isEditing && !isCreatingFromArchived && selectedGiftingType && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, padding: "10px 12px", borderRadius: 14, background: "rgba(26,23,16,0.04)", border: `1px solid ${BORDER}` }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, padding: "10px 12px", borderRadius: 14, background: "hsl(var(--kiddo-ink) / 0.04)", border: `1px solid ${BORDER}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                     <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{selectedGiftingType.emoji}</span>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(26,23,16,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1 }}>Type</p>
+                      <p style={{ fontSize: 10.5, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.4)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1 }}>Type</p>
                       <p style={{ fontSize: 13, fontWeight: 600, color: INK, marginTop: 3, lineHeight: 1.1 }}>{selectedGiftingType.label}</p>
                     </div>
                   </div>
@@ -895,7 +895,7 @@ export function CreateEventSheet({
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          style={{ ...S.input(), color: date ? INK : "rgba(26,23,16,0.4)", display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left" }}
+                          style={{ ...S.input(), color: date ? INK : "hsl(var(--kiddo-ink) / 0.4)", display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left" }}
                         >
                           <span>
                             {dateValue
@@ -926,7 +926,7 @@ export function CreateEventSheet({
                     </Popover>
                   );
                 })()}
-                <p style={{ marginTop: 6, fontSize: 11.5, color: "rgba(26,23,16,0.38)", lineHeight: 1.5 }}>
+                <p style={{ marginTop: 6, fontSize: 11.5, color: "hsl(var(--kiddo-ink) / 0.38)", lineHeight: 1.5 }}>
                   People are reminded 7 days before the occasion.
                 </p>
               </div>
@@ -944,13 +944,13 @@ export function CreateEventSheet({
               {isEditing && !isCreatingFromArchived && editEvent?.slug && fundSlug && (
                 <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 14, background: "white", border: `1.5px solid ${BORDER}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <Lock size={11} color="rgba(26,23,16,0.35)" />
-                    <span style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(26,23,16,0.35)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Gift link</span>
+                    <Lock size={11} color="hsl(var(--kiddo-ink) / 0.35)" />
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.35)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Gift link</span>
                   </div>
                   <p style={{ fontSize: 12.5, color: MUTED, wordBreak: "break-all", lineHeight: 1.4 }}>
                     {window.location.origin}/{fundSlug}/{editEvent.slug}
                   </p>
-                  <p style={{ fontSize: 11, color: "rgba(26,23,16,0.32)", marginTop: 5 }}>
+                  <p style={{ fontSize: 11, color: "hsl(var(--kiddo-ink) / 0.32)", marginTop: 5 }}>
                     This link never changes. Anyone who has it can always gift.
                   </p>
                 </div>
@@ -971,11 +971,11 @@ export function CreateEventSheet({
               style={{ padding: "4px 20px 32px", overflowY: "auto", flex: 1 }}>
 
               {isEditing && !isCreatingFromArchived && selectedGoalTypeDef && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, padding: "10px 12px", borderRadius: 14, background: "rgba(26,23,16,0.04)", border: `1px solid ${BORDER}` }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, padding: "10px 12px", borderRadius: 14, background: "hsl(var(--kiddo-ink) / 0.04)", border: `1px solid ${BORDER}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                     <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{selectedGoalTypeDef.emoji}</span>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(26,23,16,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1 }}>Goal type</p>
+                      <p style={{ fontSize: 10.5, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.4)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1 }}>Goal type</p>
                       <p style={{ fontSize: 13, fontWeight: 600, color: INK, marginTop: 3, lineHeight: 1.1 }}>{selectedGoalTypeDef.label}</p>
                     </div>
                   </div>
@@ -1025,7 +1025,7 @@ export function CreateEventSheet({
                     placeholder="Enter target" min="100" max="1000000"
                     style={{ marginTop: 10, ...S.input(true) }} autoFocus />
                 )}
-                <p style={{ marginTop: 8, fontSize: 12, color: "rgba(26,23,16,0.38)", lineHeight: 1.5 }}>
+                <p style={{ marginTop: 8, fontSize: 12, color: "hsl(var(--kiddo-ink) / 0.38)", lineHeight: 1.5 }}>
                   A target gives people something to gift toward. You can update it anytime.
                 </p>
               </div>
@@ -1045,12 +1045,12 @@ export function CreateEventSheet({
               style={{ padding: "4px 20px 32px", overflowY: "auto", flex: 1 }}>
 
               {/* Label */}
-              <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(26,23,16,0.38)", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 10 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.38)", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 10 }}>
                 What people see
               </p>
 
               {/* Gifter-facing card */}
-              <div style={{ borderRadius: 20, overflow: "hidden", border: `1px solid ${BORDER}`, background: "white", boxShadow: "0 4px 24px rgba(26,23,16,0.08)", marginBottom: 16 }}>
+              <div style={{ borderRadius: 20, overflow: "hidden", border: `1px solid ${BORDER}`, background: "white", boxShadow: "0 4px 24px hsl(var(--kiddo-ink) / 0.08)", marginBottom: 16 }}>
                 {/* Hero */}
                 {(() => {
                   const childFirstName = fundName ? fundName.split("'")[0].trim() : "";
@@ -1061,7 +1061,7 @@ export function CreateEventSheet({
                   return (
                     <div style={{ position: "relative", minHeight: 200, background: previewCover ? undefined : `linear-gradient(135deg, ${G} 0%, rgb(43,88,64) 100%)`, overflow: "hidden" }}>
                       {previewCover && <img src={previewCover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(26,23,16,0.72) 0%, rgba(26,23,16,0.2) 60%, transparent 100%)" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.72) 0%, hsl(var(--kiddo-ink) / 0.2) 60%, transparent 100%)" }} />
                       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", padding: 16, minHeight: 200 }}>
                         <div style={{ flex: 1 }} />
                         <div>
@@ -1106,7 +1106,7 @@ export function CreateEventSheet({
                 {((description || goalDescription) || (effectiveGoal && parseFloat(effectiveGoal) > 0) || (effectiveSavingsGoal && parseFloat(effectiveSavingsGoal) > 0)) && (
                   <div style={{ padding: "14px 16px 16px", borderTop: `1px solid ${BORDER}` }}>
                     {(description || goalDescription) && (
-                      <p style={{ fontSize: 13, color: "rgba(26,23,16,0.65)", lineHeight: 1.55, marginBottom: 12 }}>
+                      <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.65)", lineHeight: 1.55, marginBottom: 12 }}>
                         {description || goalDescription}
                       </p>
                     )}
@@ -1116,10 +1116,10 @@ export function CreateEventSheet({
                           <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>Gift goal</span>
                           <span style={{ fontSize: 13, fontWeight: 700, color: G }}>{formatGoalAmount(effectiveGoal)}</span>
                         </div>
-                        <div style={{ height: 5, borderRadius: 3, background: "rgba(26,23,16,0.08)" }}>
+                        <div style={{ height: 5, borderRadius: 3, background: "hsl(var(--kiddo-ink) / 0.08)" }}>
                           <div style={{ height: "100%", width: "0%", borderRadius: 3, background: G }} />
                         </div>
-                        <p style={{ fontSize: 11, color: "rgba(26,23,16,0.4)", marginTop: 4 }}>$0 raised so far</p>
+                        <p style={{ fontSize: 11, color: "hsl(var(--kiddo-ink) / 0.4)", marginTop: 4 }}>$0 raised so far</p>
                       </div>
                     )}
                     {category === "savings_goal" && effectiveSavingsGoal && parseFloat(effectiveSavingsGoal) > 0 && (
@@ -1128,10 +1128,10 @@ export function CreateEventSheet({
                           <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>Target</span>
                           <span style={{ fontSize: 13, fontWeight: 700, color: G }}>{formatGoalAmount(effectiveSavingsGoal)}</span>
                         </div>
-                        <div style={{ height: 5, borderRadius: 3, background: "rgba(26,23,16,0.08)" }}>
+                        <div style={{ height: 5, borderRadius: 3, background: "hsl(var(--kiddo-ink) / 0.08)" }}>
                           <div style={{ height: "100%", width: "0%", borderRadius: 3, background: G }} />
                         </div>
-                        <p style={{ fontSize: 11, color: "rgba(26,23,16,0.4)", marginTop: 4 }}>$0 raised so far</p>
+                        <p style={{ fontSize: 11, color: "hsl(var(--kiddo-ink) / 0.4)", marginTop: 4 }}>$0 raised so far</p>
                       </div>
                     )}
                   </div>
@@ -1139,8 +1139,8 @@ export function CreateEventSheet({
               </div>
 
               {/* For-you info - investment + link */}
-              <div style={{ borderRadius: 14, border: `1px solid ${BORDER}`, background: "rgba(26,23,16,0.03)", padding: "12px 14px", marginBottom: 16 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(26,23,16,0.38)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>For you only</p>
+              <div style={{ borderRadius: 14, border: `1px solid ${BORDER}`, background: "hsl(var(--kiddo-ink) / 0.03)", padding: "12px 14px", marginBottom: 16 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.38)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>For you only</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: category !== "savings_goal" && predictedSlug ? 10 : 0 }}>
                   <span style={{ fontSize: 14 }}>📈</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1159,7 +1159,7 @@ export function CreateEventSheet({
                   <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
                     <p style={{ fontSize: 11, color: MUTED, marginBottom: 4 }}>Gift link (estimated)</p>
                     <p style={{ fontSize: 12, color: G, wordBreak: "break-all", fontWeight: 500 }}>{predictedSlug}</p>
-                    <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.3)", marginTop: 3 }}>Exact link generated on creation.</p>
+                    <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.3)", marginTop: 3 }}>Exact link generated on creation.</p>
                   </div>
                 )}
               </div>
@@ -1210,7 +1210,7 @@ export function CreateEventSheet({
                       {shareUrl}
                     </div>
                     <button type="button" onClick={handleCopyLink}
-                      style={{ flexShrink: 0, padding: "11px 16px", borderRadius: 14, border: "none", background: copiedLink ? G : "rgba(26,23,16,0.08)", color: copiedLink ? "white" : INK, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s" }}>
+                      style={{ flexShrink: 0, padding: "11px 16px", borderRadius: 14, border: "none", background: copiedLink ? G : "hsl(var(--kiddo-ink) / 0.08)", color: copiedLink ? "white" : INK, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s" }}>
                       {copiedLink ? <Check size={14} /> : <Copy size={14} />}
                       {copiedLink ? "Copied" : "Copy"}
                     </button>

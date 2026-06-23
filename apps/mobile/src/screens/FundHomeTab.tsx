@@ -582,7 +582,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1 }}
-      contentContainerStyle={{ padding: spacing.md, gap: spacing.lg, paddingBottom: 32 }}
+      contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: 0, paddingBottom: 32, gap: spacing.lg }}
       showsVerticalScrollIndicator={false}
       refreshControl={refresh}
       scrollEventThrottle={16}
@@ -593,76 +593,13 @@ export function FundHomeTab(props: FundHomeTabProps) {
         viewportHRef.current = e.nativeEvent.layout.height;
       }}
     >
-      {/* ── activate investing (fund not yet active = identity not verified) ── */}
-      {!isReadOnly && String(activeFund.status || "").toLowerCase() === "draft" ? (
-        <KiddoCard>
-          <KText variant="eyebrow" color={colors.goldInk}>One quick step</KText>
-          <KText variant="heading" style={{ marginTop: 2 }}>Activate investing</KText>
-          <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
-            Gifts are held safely until we verify your identity — a secure, one-time step required to invest.
-            It takes a couple of minutes on the web.
-          </KText>
-          <Button
-            label="Verify identity on the web"
-            onPress={() => {
-              haptic("selection");
-              Linking.openURL(`${WEB_BASE}/activate-investing`).catch(() => {});
-            }}
-            fullWidth
-          />
-          <KText variant="caption" color={semanticColors.text.muted} center style={{ marginTop: spacing.sm }}>
-            You may need to sign in. Identity steps stay on our secure web flow.
-          </KText>
-        </KiddoCard>
-      ) : null}
-
-      {/* ── approaching-handoff banner (within 90 days of majority) ───────── */}
-      {(() => {
-        const days = daysUntilMajority(activeFund?.recipientBirthdate, majorityAge);
-        if (!days || days > 90 || isReadOnly) return null;
-        return (
-          <Pressable
-            onPress={() => setAge18Open(true)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: spacing.sm,
-              backgroundColor: colors.evergreen + "12",
-              borderRadius: radius.inner,
-              borderWidth: 1,
-              borderColor: colors.evergreen + "30",
-              padding: spacing.md,
-            }}
-          >
-            <Ionicons name="time-outline" size={20} color={colors.evergreen} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <KText variant="bodyStrong" color={colors.evergreen}>
-                Handoff in {days} {days === 1 ? "day" : "days"}
-              </KText>
-              <KText variant="caption" color={semanticColors.text.muted}>
-                {childName} turns {majorityAge}{eighteenthDate ? ` on ${eighteenthDate}` : ""}. Here's what changes.
-              </KText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={semanticColors.text.muted} />
-          </Pressable>
-        );
-      })()}
-
-      {/* ── "while you were away" recap (web parity, above the hero) ───────── */}
-      {hasStarted && activeFund ? (
-        <SinceLastVisitDigest
-          subject={`${childName}'s fund`}
-          currentValue={d.totalValue}
-          gifts={summary?.gifts ?? []}
-          fundId={activeFund.id}
-          isDemoAccount={isDemoAccount}
-          viewerIsContributor={!isReadOnly}
-        />
-      ) : null}
-
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <Appear delay={0}>
-      <KiddoCard variant="hero">
+      {/* ── HERO — full-bleed green, fused to the green header above. Square
+          top corners + negative horizontal margin cancel the scroll padding so
+          the status bar → header → hero read as one continuous green surface
+          (the "while you were away" digest moved below, mirroring the web
+          "nothing above the hero" decision). ─────────────────────────────── */}
+      <Appear delay={0} style={{ marginHorizontal: -spacing.md }}>
+      <KiddoCard variant="hero" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
         {/* identity row (web parity: avatar + name · type · ACTIVE) */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View
@@ -758,6 +695,75 @@ export function FundHomeTab(props: FundHomeTabProps) {
         ) : null}
       </KiddoCard>
       </Appear>
+
+      {/* ── activate investing (fund not yet active = identity not verified) —
+          moved below the hero so nothing renders above it (web parity). ────── */}
+      {!isReadOnly && String(activeFund.status || "").toLowerCase() === "draft" ? (
+        <KiddoCard>
+          <KText variant="eyebrow" color={colors.goldInk}>One quick step</KText>
+          <KText variant="heading" style={{ marginTop: 2 }}>Activate investing</KText>
+          <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
+            Gifts are held safely until we verify your identity — a secure, one-time step required to invest.
+            It takes a couple of minutes on the web.
+          </KText>
+          <Button
+            label="Verify identity on the web"
+            onPress={() => {
+              haptic("selection");
+              Linking.openURL(`${WEB_BASE}/activate-investing`).catch(() => {});
+            }}
+            fullWidth
+          />
+          <KText variant="caption" color={semanticColors.text.muted} center style={{ marginTop: spacing.sm }}>
+            You may need to sign in. Identity steps stay on our secure web flow.
+          </KText>
+        </KiddoCard>
+      ) : null}
+
+      {/* ── approaching-handoff banner (within 90 days of majority) — below the hero */}
+      {(() => {
+        const days = daysUntilMajority(activeFund?.recipientBirthdate, majorityAge);
+        if (!days || days > 90 || isReadOnly) return null;
+        return (
+          <Pressable
+            onPress={() => setAge18Open(true)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: spacing.sm,
+              backgroundColor: colors.evergreen + "12",
+              borderRadius: radius.inner,
+              borderWidth: 1,
+              borderColor: colors.evergreen + "30",
+              padding: spacing.md,
+            }}
+          >
+            <Ionicons name="time-outline" size={20} color={colors.evergreen} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <KText variant="bodyStrong" color={colors.evergreen}>
+                Handoff in {days} {days === 1 ? "day" : "days"}
+              </KText>
+              <KText variant="caption" color={semanticColors.text.muted}>
+                {childName} turns {majorityAge}{eighteenthDate ? ` on ${eighteenthDate}` : ""}. Here's what changes.
+              </KText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={semanticColors.text.muted} />
+          </Pressable>
+        );
+      })()}
+
+      {/* ── "while you were away" recap (moved BELOW the hero so the hero fuses
+          to the green header above — web "nothing above the hero" parity) ──── */}
+      {hasStarted && activeFund ? (
+        <SinceLastVisitDigest
+          subject={`${childName}'s fund`}
+          currentValue={d.totalValue}
+          gifts={summary?.gifts ?? []}
+          fundId={activeFund.id}
+          isDemoAccount={isDemoAccount}
+          viewerIsContributor={!isReadOnly}
+        />
+      ) : null}
 
       {/* ── first-gift nudge (only before the fund is funded) ──────────────── */}
       {!hasStarted && !isReadOnly ? (

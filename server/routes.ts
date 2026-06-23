@@ -8677,11 +8677,21 @@ export async function registerRoutes(
         return res.status(500).json({ error: 'Upload failed. Please try again later.' });
       }
 
+      // Normalize the scanned-clean original before storing: STRIP EXIF/GPS, bake
+      // orientation, re-encode to webp (also neutralizes smuggled payloads). A throw
+      // = undecodable → reject. Wired 2026-06-23 (was: raw buffer to object storage).
+      let normalizedPublicPhoto;
+      try {
+        normalizedPublicPhoto = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
+
       const uploaded = await uploadMemoryFile({
         fundId: req.params.id,
-        ext: parsed.ext,
-        mime: parsed.mime,
-        buffer: parsed.buffer,
+        ext: 'webp',
+        mime: 'image/webp',
+        buffer: normalizedPublicPhoto.full,
       });
 
       // Audit every accepted upload. Provides traceability for any later
@@ -11170,12 +11180,22 @@ export async function registerRoutes(
       const parsed = parseImageDataUrl(req.body?.dataUrl);
       if (!parsed) return res.status(400).json({ error: 'Invalid image. Upload PNG/JPG/WEBP/GIF.' });
       if (parsed.buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large. Max 5MB.' });
+      // Normalize before storing: STRIP EXIF/GPS (occasion covers are often photos of
+      // the child and render on the dashboard tile + gifter hero), bake orientation,
+      // re-encode to webp (also neutralizes smuggled payloads). A throw = undecodable
+      // → reject. Wired 2026-06-23.
+      let normalizedEventImage;
+      try {
+        normalizedEventImage = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
       const safeId = String(req.params.id).replace(/[^a-zA-Z0-9_-]/g, "");
       const dir = path.resolve(process.cwd(), "uploads", "events", safeId);
       await fs.mkdir(dir, { recursive: true });
-      const filename = `${Date.now()}-${crypto.randomUUID()}.${parsed.ext}`;
+      const filename = `${Date.now()}-${crypto.randomUUID()}.webp`;
       const abs = path.join(dir, filename);
-      await fs.writeFile(abs, parsed.buffer);
+      await fs.writeFile(abs, normalizedEventImage.full);
       const url = `/uploads/events/${safeId}/${filename}`;
       // Accept focal-point coords alongside the upload so the parent's
       // pan/zoom framing intent persists across all destination surfaces
@@ -13827,15 +13847,27 @@ export async function registerRoutes(
       if (!parsed) return res.status(400).json({ error: 'Invalid image data. Upload PNG/JPG/WEBP.' });
       if (parsed.buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large. Please use an image under 5MB.' });
 
+      // Normalize before storing: STRIP EXIF/GPS — a CHILD'S photo would otherwise
+      // carry home coordinates, the single most sensitive EXIF leak in the app, and
+      // it's served from a public /uploads path. Bake orientation, re-encode to webp
+      // (also neutralizes any payload smuggled in the container). A throw = undecodable
+      // bytes → reject (never store an unprocessed original of a minor). Wired 2026-06-23.
+      let normalizedChildPhoto;
+      try {
+        normalizedChildPhoto = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
+
       const safeFundId = String(req.params.fundId).replace(/[^a-zA-Z0-9_-]/g, "");
       const dir = path.resolve(process.cwd(), "uploads", "child-photos", safeFundId);
       await fs.mkdir(dir, { recursive: true });
       // Unguessable filename. A timestamp-only name (`child-<Date.now()>`)
       // under the publicly-served /uploads path is guessable per known
       // fundId, exposing a minor's photo. A random UUID removes that.
-      const filename = `child-${crypto.randomUUID()}.${parsed.ext}`;
+      const filename = `child-${crypto.randomUUID()}.webp`;
       const abs = path.join(dir, filename);
-      await fs.writeFile(abs, parsed.buffer);
+      await fs.writeFile(abs, normalizedChildPhoto.full);
       const relUrl = `/uploads/child-photos/${safeFundId}/${filename}`;
 
       await storage.updateFund(req.params.fundId, { childPhotoUrl: relUrl });
@@ -15004,6 +15036,9 @@ export async function registerRoutes(
         trustedContactRelation,
       } = body;
       const maxProfileImageDataUrlBytes = 7 * 1024 * 1024;
+      // Holds the NORMALIZED (EXIF/GPS-stripped, oriented, right-sized webp) avatar
+      // data-url that we actually persist — never the raw upload. Set below.
+      let normalizedProfileImageUrl: string | undefined;
 
       // Empty string = explicit photo REMOVAL (clears to null). Added
       // 2026-06-05 for the gifter-dashboard avatar editor — until then the
@@ -15051,6 +15086,21 @@ export async function registerRoutes(
           }
           return res.status(500).json({ error: 'Could not update photo. Please try again later.' });
         }
+
+        // Normalize the SCANNED-clean original before persisting: STRIP all metadata
+        // (incl. GPS — child-privacy/COPPA, a photo would otherwise carry home
+        // coordinates), bake EXIF orientation, and re-encode to right-sized webp
+        // (re-encoding also neutralizes any payload smuggled in the container). We
+        // store the THUMB derivative as the data-url — avatars never need >256px and
+        // it loads with every roster face, so a small row matters — NEVER the raw
+        // upload. Mirrors the memory-photo path (normalizeImage, 2026-06-15 EXIF
+        // audit); wired into profile photos 2026-06-23. A throw = undecodable → reject.
+        try {
+          const normalizedPhoto = await normalizeImage(parsedPhoto.buffer);
+          normalizedProfileImageUrl = `data:image/webp;base64,${normalizedPhoto.thumb.toString('base64')}`;
+        } catch {
+          return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+        }
       }
 
       // Trusted-contact email validation. Permissive on shape (basic
@@ -15070,7 +15120,10 @@ export async function registerRoutes(
 
       type UserUpdate = Partial<typeof users.$inferInsert>;
       const updates: UserUpdate = { updatedAt: new Date() };
-      if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl === '' ? null : profileImageUrl;
+      // Empty string clears the photo; otherwise store the NORMALIZED webp avatar
+      // (guaranteed set above when non-empty — we'd have returned on parse/scan/normalize
+      // failure), never the raw EXIF-bearing upload.
+      if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl === '' ? null : (normalizedProfileImageUrl ?? profileImageUrl);
       if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
       if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
       if (preferredName !== undefined) updates.preferredName = String(preferredName).trim().slice(0, 50) || null;
