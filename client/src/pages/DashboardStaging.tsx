@@ -190,7 +190,7 @@ import { demoBlocked } from "@/lib/demo-block";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
-import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
+import { investingLiveCopy, INVESTING_LIVE, PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 import {
   calculateKoraContributionFee,
   calculatePaymentProcessingFee,
@@ -3540,7 +3540,7 @@ export default function DashboardStaging() {
       return `What I want ${childName} to know by graduation day...`;
     }
     if (eventType === "birthday" || /\bbirthday\b/i.test(eventName)) {
-      return isOwnerMode ? `What this birthday means to you...` : `What ${childName}'s next birthday means to you...`;
+      return isOwnerMode ? `What you want to remember about this...` : `What you want ${childName} to know...`;
     }
     if (eventType === "wedding" || /\bwedding\b/i.test(eventName)) {
       return `What you hope for ${childName} on their wedding day...`;
@@ -4547,9 +4547,28 @@ export default function DashboardStaging() {
     const landedAmt = landed ? parseFloat(String(landed.amount ?? "").replace(/[^0-9.]/g, "")) : NaN;
     setFlashGiftAmount(Number.isFinite(landedAmt) && landedAmt > 0 ? landedAmt : null);
     setPendingFlashId(null);
-    const t = setTimeout(() => { setNewGiftFlash(false); setFlashGifterName(null); setFlashGiftAmount(null); }, 4800);
-    return () => clearTimeout(t);
+    // The 4800ms reset of the gold cue lives in its OWN effect below — NOT here.
+    // Arming it inside this effect tied clearTimeout to this effect's volatile deps
+    // (recentGiftsFeed). A poll / demo-overlay update between the flash and the
+    // 4800ms re-ran this effect → its cleanup CANCELLED the reset timer, then the
+    // early-return (pendingFlashId now null) never re-armed it → newGiftFlash stuck
+    // TRUE → the hero number stayed GOLD forever (worst after firing two test gifts
+    // back-to-back, which churns the feed). Decoupled 2026-06-23.
   }, [pendingFlashId, heroTabVisible, heroInView, activeFundId, recentGiftsFeed]);
+
+  // Reset the gift-flash gold cue 4800ms after the LAST gift beat. Keyed on
+  // giftSpinToken (bumped once per gift, so a second gift RE-ARMS the timer) and on
+  // newGiftFlash (so it only runs while lit) — and crucially NOT on recentGiftsFeed,
+  // so background polling / overlay updates can't cancel the reset mid-flight.
+  useEffect(() => {
+    if (!newGiftFlash) return;
+    const t = setTimeout(() => {
+      setNewGiftFlash(false);
+      setFlashGifterName(null);
+      setFlashGiftAmount(null);
+    }, 4800);
+    return () => clearTimeout(t);
+  }, [newGiftFlash, giftSpinToken]);
 
   // Gift-lands "roll the +$X" (founder, 2026-06-23: "does the balance roll the
   // additional $50?"). The once-per-kid hero roll (useCachedFirstNumber) is
@@ -6028,8 +6047,8 @@ export default function DashboardStaging() {
   const handleSaveAutoInvest = async () => {
     if (!activeFundId || savingAutoInvest) return;
     const amt = parseFloat(autoInvestAmount);
-    if (isNaN(amt) || amt < 1) {
-      toast({ title: "Enter a valid amount", description: "Minimum $1 per gift.", variant: "destructive" });
+    if (isNaN(amt) || amt < 5) {
+      toast({ title: "Enter a valid amount", description: "Minimum $5 per deposit.", variant: "destructive" });
       return;
     }
     setSavingAutoInvest(true);
@@ -6240,18 +6259,12 @@ export default function DashboardStaging() {
         message: oneTimeMemoryNote.trim() || undefined,
       });
       haptic("success");
-      // FEEDBACK FIX (2026-06-22): the one-time invest closed the modal with NO explicit
-      // confirmation — the only signal was the background hero roll, which (rightly) doesn't
-      // read as "it worked." Fire a clear success toast so the action visibly lands. (Founder
-      // caught this completing the flow with no indication.)
-      toast({
-        title: `${formatCurrency(amt)} added to ${isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund`,
-        description: oneTimeExecutionModel === "pick" && oneTimeTicker
-          ? `Buying ${oneTimeTicker.toUpperCase()}.`
-          : oneTimeExecutionModel === "cash"
-            ? "Held as cash to invest from the dashboard later."
-            : "Into the growth mix.",
-      });
+      // FEEDBACK (2026-06-23, founder): the success TOAST was redundant with the gift pop-in
+      // (the "+$X · You" chip under the balance + the balance roll) — and the pop-in is the
+      // richer, on-brand, contextual confirmation. Dropped the toast; instead SCROLL TO THE
+      // HERO so the pop-in is actually seen. (The original "no indication" was the pop-in
+      // firing off-screen while scrolled down at the modal — not a missing signal, a missed one.)
+      window.scrollTo({ top: 0, behavior: "smooth" });
       try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "onetime", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
       // Close + reset the modal (mirrors the dialog's own onOpenChange reset).
       setOneTimeModalOpen(false);
@@ -6572,7 +6585,11 @@ export default function DashboardStaging() {
     // matchMedia inside playWipe, and the CSS tile-reveal/pulses are killed
     // in the reduced-motion media block of the lab <style>.
     <MotionConfig reducedMotion="user">
-    <div className="kiddo-app-page staging-root md:ml-[264px] pb-24 md:pb-8">
+    {/* No mobile pb here: the `.mobile-app-shell--with-nav` wrapper (App.tsx) already
+        adds `96px + safe-area` of bottom-nav clearance. A page-level `pb-24` on top of
+        that DOUBLED it → ~190px of dead space above the floating nav. Desktop keeps its
+        own `md:pb-8` (no bottom nav there). Fixed 2026-06-23. */}
+    <div className="kiddo-app-page staging-root md:ml-[264px] md:pb-8">
       <AppHeader />
 
       {/* Desktop width cap (2026-06-22, founder: "on desktop there are issues").
@@ -6584,8 +6601,32 @@ export default function DashboardStaging() {
           layout constraint, NOT the paused IA/desktop-grid re-architecture —
           mobile is untouched (cap only applies at md+). */}
       <main className="kiddo-canvas px-4 py-6 space-y-6 md:!max-w-[760px] md:mx-auto" id="dashboard-main-content">
-        {/* (Removed the temp ▶ Test +$50 / +$2,500 floating dev buttons — staging-only
-            cascade-test triggers, deleted 2026-06-23 per founder.) */}
+        {/* ⚠️ TEMP TEST BUTTONS — fire a REAL (session-scoped) demo gift so the WHOLE
+            cascade runs: chip "+$X · Grandma" → balance rolls the +$X → (big only)
+            projection rolls up after. Two amounts: $50 = the everyday case (projection
+            rounds to ~$Xk so it won't visibly move — correct); $2,500 = big enough to
+            roll the projection so you can see the full ordered cascade. DELETE this
+            whole block when done (founder will say "delete the button"). Staging-only. */}
+        <div style={{ position: "fixed", right: 16, bottom: 92, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+          {[{ amt: "50", label: "▶ Test +$50" }, { amt: "2500", label: "▶ Test +$2,500" }].map((t) => (
+            <button
+              key={t.amt}
+              type="button"
+              data-testid={t.amt === "50" ? "test-gift-popin" : "test-gift-popin-big"}
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                if (activeFundId) recordDemoLiveGift({ fundId: String(activeFundId), senderName: "Grandma", amount: t.amt });
+              }}
+              style={{
+                background: "hsl(var(--kiddo-evergreen))", color: "white", border: "none",
+                borderRadius: 9999, padding: "12px 18px", fontSize: 14, fontWeight: 700,
+                boxShadow: "0 6px 20px rgba(0,0,0,0.28)", cursor: "pointer",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
         {/* ===== STAGING DESIGN SYSTEM (the foundation all four design leads
             demanded). Replaces the 24-font-size / 11-shadow / 10-radius chaos with
             real tokens. Everything in the rebuilt surfaces snaps to these:
@@ -9210,7 +9251,11 @@ export default function DashboardStaging() {
                         sub-lines (cash status + next-scheduled preview)
                         carry NEW information; the date sub-line did not. */}
                     <div className="mt-4">
-                      <div className="flex items-baseline justify-between">
+                      {/* STAGING: pr-4 so the Worth today number shares the SAME right edge as
+                          the breakdown rows above — those are hover-buttons with -mx-2/px-2 that
+                          inset their value 16px, which this total (a plain div) wasn't matching
+                          (it sat 16px further right). */}
+                      <div className="flex items-baseline justify-between pr-4">
                         <span className="text-sm font-bold text-foreground">Worth today</span>
                         {/* Right-aligned by the row's justify-between, so the
                             Worth today number shares the same right edge as the
@@ -10184,7 +10229,7 @@ export default function DashboardStaging() {
                                         </p>
                                       )}
                                     </button>
-                                    {isChosen && !isReadOnlyFund && (
+                                    {isChosen && !isReadOnlyFund ? (
                                       <button
                                         type="button"
                                         onClick={handleAddMore}
@@ -10195,7 +10240,17 @@ export default function DashboardStaging() {
                                       >
                                         <Plus size={14} strokeWidth={2.5} />
                                       </button>
-                                    )}
+                                    ) : !isReadOnlyFund ? (
+                                      // Managed-mix rows have no "+" (you customize the whole mix,
+                                      // not individual sleeves) — but in an editable fund the
+                                      // hand-picked rows above DO, so without this their values
+                                      // would right-align 42px further right than the hand-picked
+                                      // ones (the "value column steps at the group seam" snag).
+                                      // Reserve the +-button's exact footprint so every value in
+                                      // the list shares ONE right edge. (Read-only funds have no +
+                                      // on any row, so they're already consistent — no spacer.)
+                                      <div className="h-8 w-8 shrink-0" aria-hidden="true" />
+                                    ) : null}
                                   </div>
                                 </div>
                               </div>
@@ -11931,7 +11986,13 @@ export default function DashboardStaging() {
                       </div>
                     )}
                 </div>
-                <div className="mt-auto pt-4">
+                {/* pt-4 only (NOT mt-auto): mt-auto bottom-aligned the action block,
+                    which is fine on mobile (content-height column) but on desktop the
+                    column stretches to the taller 2-row recurring side, so mt-auto
+                    stranded the button low with a big gap above it. Top-packing keeps
+                    the button right under its description; the column just ends shorter
+                    than recurring (clean trailing whitespace, not a mid-column void). */}
+                <div className="pt-4">
                   {isReadOnlyFund ? (
                     // Read-only role (previous owner, viewer): show the
                     // last-investment chrome above unchanged, but the
@@ -13508,45 +13569,15 @@ export default function DashboardStaging() {
                       <p style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                         {age18Transition ? formatAgeTransitionDate(age18Transition.eighteenthBirthday) : "Add a birthdate"}
                       </p>
-                      {/* THE HUMAN LEAD (2026-06-22). The handoff is the product's
-                          emotional summit, not a payout screen. Lead with what the
-                          kid actually receives — years of people who showed up,
-                          anchored to the OLDEST note in the Memory Book — and let the
-                          money drop to a grounded line below. (Founder critique: the
-                          old order "made them do math" at the one moment that should
-                          make them feel something.) Pure-additive; degrades to just
-                          the counts line when there are no notes yet. */}
-                      {totalValue > 0 && age18Transition && (() => {
-                        const notes = (memoryEntriesForFund || []).filter((e: any) => String(e?.content || "").trim() && e?.type !== "parent_letter");
-                        const oldest = notes.slice().sort((a: any, b: any) => new Date(a?.createdAt || 0).getTime() - new Date(b?.createdAt || 0).getTime())[0];
-                        const people = new Set((gifts || []).map((g: any) => String(g?.senderName || "").trim().toLowerCase()).filter(Boolean)).size;
-                        if (!oldest && notes.length === 0 && people === 0) return null;
-                        return (
-                          <div style={{ marginTop: 12 }}>
-                            {/* Both the "money is only part of it" topper AND the
-                                auto-sampled note quote were cut (2026-06-22). The quote
-                                pulled WHATEVER the oldest note was — uncontrolled quality
-                                that undersells when thin, with a faintly templated "· the
-                                first note, {year}" caption (read as auto-generated). The
-                                ONE count line below carries the moat message reliably,
-                                every time; browsing real notes lives IN the Memory Book,
-                                not auto-sampled onto the emotional summit. */}
-                            {/* "X notes {child} can keep forever." The earlier
-                                "from N people" clause was cut (2026-06-22): N came
-                                from gift SENDERS, not the note authors, so "notes
-                                FROM N people" asserted a link the data doesn't
-                                compute (a gifter who wrote no note still inflated N;
-                                notes from non-gifters went uncounted) — a false
-                                number at the trust summit. The contributor count
-                                already headlines the roster above ("N people are
-                                building {child}'s future"), so it isn't lost — just
-                                kept where it's honest. */}
-                            <p style={{ fontSize: 13.5, fontWeight: 500, color: "rgba(255,255,255,0.82)", lineHeight: 1.5 }}>
-                              {notes.length > 0 ? `${notes.length} ${notes.length === 1 ? "note" : "notes"}` : "Notes"} {recipientFirstNameDisplay || "they"} can keep forever.
-                            </p>
-                          </div>
-                        );
-                      })()}
+                      {/* The "{N} notes {child} can keep forever" line was CUT
+                          2026-06-23 (founder). On the emotional summit it read as a
+                          feature-pitch — advertising permanence ("forever") with a stat
+                          instead of trusting the moment. The sentence + date already
+                          carry the feeling and the letter below is the real action; the
+                          keepsake idea lives where it's honest (the Memory Book itself).
+                          The upgrade that brings this beat back is a curated, parent-
+                          PINNED real note — actual words, not a count — which is a real
+                          feature (a pin action + a durable field), deliberately deferred. */}
                       {age18Transition && totalValue === 0 && (
                         <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.62)", marginTop: 6 }}>
                           🌱 {age18Transition.countdownLabel.replace(` until age ${age18Transition.majorityAge}`, "")} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
@@ -13671,13 +13702,14 @@ export default function DashboardStaging() {
                   </div>
                 </div>
 
-                {/* Trajectory chart PULLED from this card (option A, 2026-06-22):
-                    the handoff is the EMOTIONAL summit — the day, the people/notes,
-                    and the parent's letter. The money trajectory was a SECOND money
-                    element competing with that beat ("lots going on"). It lives in
-                    the hero ("~$X at {majority} →", which links to the Projection
-                    page) and on the Projection page itself, so it isn't lost — just
-                    off the one screen that should make the parent feel something. */}
+                {/* NO chart on this card — by design. The analytical trajectory was
+                    pulled 2026-06-22 (it competed as a second money element on the
+                    emotional summit); a number-less "growth arc" was tried 2026-06-23
+                    and also removed — even without numbers a curve pulls the register
+                    back toward finance on the one screen that should be purely human,
+                    and "empty" here is calm, not a gap. The summit is words: the day,
+                    what {recipientFirstNameDisplay || "they"} keep, the letter. The
+                    growth story lives in the hero + Projection page, where it belongs. */}
 
                 {/* Letter - inline */}
                 <AnimatePresence initial={false}>
@@ -14003,7 +14035,9 @@ export default function DashboardStaging() {
                 <ChevronRight size={15} strokeWidth={2.2} aria-hidden style={{ color: "hsl(var(--kiddo-evergreen) / 0.55)", flexShrink: 0 }} />
               </button>
             )}
-            <TrustMicroStrip />
+            {/* Recessive footer treatment (no floating card) — fine print should recede
+                on the de-carded dashboard, not float as the last card-soup pill. */}
+            <TrustMicroStrip flush />
           </>
         )}
       </main>
@@ -14321,7 +14355,6 @@ export default function DashboardStaging() {
                   // labels in the holdings card and the section summary lines.
                   const beforePct = (beforeValue / investedCurrentValue) * 100;
                   const afterPct = (afterValue / (investedCurrentValue + addAmt)) * 100;
-                  const pctDelta = afterPct - beforePct;
                   const fmtShares = (n: number) => n >= 1 ? n.toFixed(2) : n.toFixed(4);
                   const companyName = tickerMeta?.name || oneTimeTicker.toUpperCase();
                   const companyEmoji = tickerMeta?.emoji || "";
@@ -14345,11 +14378,6 @@ export default function DashboardStaging() {
                           <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
-                            {Math.abs(pctDelta) >= 0.1 && (
-                              <span className={`ml-1 font-medium ${pctDelta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
-                                ({pctDelta >= 0 ? "+" : ""}{pctDelta.toFixed(1)})
-                              </span>
-                            )}
                           </p>
                         </div>
                       </div>
@@ -14535,7 +14563,11 @@ export default function DashboardStaging() {
                     data-testid="button-one-time-execution-cash"
                   >
                     <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-lg" aria-hidden="true">💵</span>
+                      {/* Banknote glyph — hand-drawn to match the star (fund default)
+                          + bullseye (pick a stock) in this selector: one bespoke,
+                          monochrome `primary`-stroke set, no OS emoji. (Was 💵, the lone
+                          borrowed-emoji straggler among two custom SVGs.) */}
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="5.5" width="15" height="9" rx="2" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--primary)/0.12)"/><circle cx="10" cy="10" r="2.2" stroke="hsl(var(--primary))" strokeWidth="1.5"/></svg>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">Hold as cash</p>
@@ -14671,8 +14703,9 @@ export default function DashboardStaging() {
                   );
                 })()}
 
-                {/* Summary card */}
-                <div className="rounded-xl border border-border/50 bg-muted/30 p-4 space-y-2">
+                {/* Summary card — grouped (gift details | charge) with a hairline + more air
+                    so the five rows read as two tidy groups, not one crammed list. */}
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-4 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Amount</span>
                     <span className="text-sm font-semibold text-foreground">{formatCurrency(parseFloat(oneTimeAmount || "0"))}</span>
@@ -14687,40 +14720,41 @@ export default function DashboardStaging() {
                           : capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Funding source</span>
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">
-                        {oneTimePaymentMethod === "bank"
-                          ? "Bank transfer"
-                          : oneTimePaymentMethod === "cashapp"
-                            ? "Cash App"
-                            : oneTimePaymentMethod === "paypal"
-                              ? "PayPal"
-                              : oneTimePaymentMethod === "card"
-                                ? "Card"
-                                : "Apple Pay / Google Pay"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => { setOneTimeShowRails(v => !v); haptic("selection"); }}
-                        className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
-                        data-testid="button-one-time-change-rail"
-                      >
-                        {oneTimeShowRails ? "Done" : "Change"}
-                      </button>
+                  {/* STAGING: funding-source row was wrapping to 2 lines — the "Change" text
+                      button pushed "Apple Pay / Google Pay" over. Now the WHOLE row is one
+                      tappable button with a rotating chevron (no "Change/Done" text), + a
+                      defensive truncate, so it stays on one line. */}
+                  <button
+                    type="button"
+                    onClick={() => { setOneTimeShowRails(v => !v); haptic("selection"); }}
+                    className="flex w-full items-center justify-between gap-3 text-left"
+                    data-testid="button-one-time-change-rail"
+                    aria-label="Change funding source"
+                  >
+                    <span className="shrink-0 text-sm text-muted-foreground">Funding source</span>
+                    <span className="flex min-w-0 items-center gap-1 text-sm font-semibold text-foreground">
+                      <span className="truncate">{oneTimePaymentMethod === "bank"
+                        ? "Bank transfer"
+                        : oneTimePaymentMethod === "cashapp"
+                          ? "Cash App"
+                          : oneTimePaymentMethod === "paypal"
+                            ? "PayPal"
+                            : oneTimePaymentMethod === "card"
+                              ? "Card"
+                              : "Apple Pay / Google Pay"}</span>
+                      <ChevronDown size={14} className={`shrink-0 text-muted-foreground transition-transform ${oneTimeShowRails ? "rotate-180" : ""}`} aria-hidden />
                     </span>
-                  </div>
-                  <div className="flex items-center justify-between">
+                  </button>
+                  <div className="flex items-center justify-between border-t border-border/40 pt-3">
                     <span className="text-sm text-muted-foreground">
-                      Estimated processing fee
+                      Processing fee
                     </span>
                     <span className="text-sm font-semibold text-foreground" data-testid="text-one-time-processing-fee">
                       {formatCurrency(oneTimeSelectedEstimate.processingFee)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Estimated total charged</span>
+                    <span className="text-sm text-muted-foreground">Estimated total</span>
                     <span className="text-sm font-semibold text-foreground" data-testid="text-one-time-total-charge">
                       {formatCurrency(oneTimeSelectedEstimate.totalCharge)}
                     </span>
@@ -14732,7 +14766,7 @@ export default function DashboardStaging() {
                   <div>
                     <p className="text-sm font-medium text-foreground">How do you want to fund it?</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      New money can come from Apple Pay, Cash App, PayPal, card, or bank transfer. Fees are estimated live before checkout.
+                      Fees are estimated live, finalized at checkout.
                     </p>
                   </div>
                   <div className="grid gap-2">
@@ -14794,8 +14828,9 @@ export default function DashboardStaging() {
                 </div>
                 )}
 
-                {/* Memory note */}
-                <div className="rounded-2xl border border-amber-200/60 bg-amber-50/40 p-4 space-y-2">
+                {/* Memory note — brand gold tint (was generic Tailwind amber), warm enough to
+                    mark this as the emotional moment without being a generic yellow. */}
+                <div className="rounded-2xl border border-[hsl(var(--kiddo-gold)/0.3)] bg-[hsl(var(--kiddo-gold)/0.06)] p-4 space-y-2">
                   <p className="text-sm font-semibold text-foreground">
                     Leave a note for the Memory Book
                   </p>
@@ -14803,7 +14838,7 @@ export default function DashboardStaging() {
                     {/* Pronoun-aware reads-on-18 helper. */}
                     {recipientFirstNameDisplay
                       ? `${recipientFirstNameDisplay} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
-                      : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} ${majorityAge}.`} Optional, but it matters.
+                      : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} ${majorityAge}.`}
                   </p>
                   {oneTimeNoteSaved ? (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium">
@@ -14813,12 +14848,16 @@ export default function DashboardStaging() {
                     <>
                       <textarea
                         value={oneTimeMemoryNote}
-                        onChange={(e) => setOneTimeMemoryNote(e.target.value.slice(0, 240))}
+                        onChange={(e) => setOneTimeMemoryNote(e.target.value.slice(0, 600))}
                         placeholder={noteFlowPlaceholder("one-time")}
-                        rows={3}
-                        className="w-full rounded-xl border border-amber-200/40 bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-amber-700/40 focus:outline-none focus:ring-1 focus:ring-primary"
+                        rows={4}
+                        className="w-full rounded-xl border border-[hsl(var(--kiddo-gold)/0.28)] bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-[hsl(var(--kiddo-gold-ink)/0.4)] focus:outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <p className="text-[10px] text-muted-foreground text-right">{oneTimeMemoryNote.length}/240</p>
+                      {/* Counter only near the cap — a heartfelt 18-year note shouldn't write under
+                          a constant character ceiling. 600 gives it room; the count shows only when close. */}
+                      {oneTimeMemoryNote.length > 480 && (
+                        <p className="text-[10px] text-muted-foreground text-right">{oneTimeMemoryNote.length}/600</p>
+                      )}
                       {/* Media trio (photo / video / voice). Voice is the moat
                           — Emma at 18 hearing the parent's voice from when she
                           was 3. Collapsible by default so the speed of the
@@ -16353,7 +16392,7 @@ export default function DashboardStaging() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Amount per gift</label>
+                    <label className="text-sm font-medium text-foreground">Amount per deposit</label>
                     <div className="relative mt-2">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                       <input
@@ -16404,7 +16443,7 @@ export default function DashboardStaging() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum per gift</p>
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum per deposit</p>
                   </div>
                 </div>
 
@@ -16522,9 +16561,10 @@ export default function DashboardStaging() {
                         </>
                       )}
                       {showProjection && (
-                        <p className="text-[10px] text-green-800/45 leading-snug pt-0.5">
-                          *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
-                        </p>
+                        <>
+                          <p className="text-[10px] text-green-800/55 leading-snug pt-0.5">Time is what compounds.</p>
+                          <p className="text-[10px] text-green-800/45 leading-snug">*{PROJECTION_DISCLAIMER}</p>
+                        </>
                       )}
                     </div>
                   );
@@ -17623,9 +17663,7 @@ export default function DashboardStaging() {
                           −{cancelFmt0(cancelFv)} less for {cancelChildFirst} at {majorityAge}<span className="text-amber-900/55 font-normal">*</span>
                         </p>
                       </div>
-                      <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">
-                        *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
-                      </p>
+                      <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">*{PROJECTION_DISCLAIMER}</p>
                     </div>
                   )}
                   <div className="space-y-2">
