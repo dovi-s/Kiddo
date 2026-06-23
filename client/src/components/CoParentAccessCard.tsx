@@ -44,7 +44,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { UserPlus } from "lucide-react";
+import { UserPlus, KeyRound, Eye, Ban, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
@@ -216,13 +216,13 @@ export function CoParentAccessCard({
           <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-gradient-to-br from-[hsl(var(--kiddo-evergreen)/0.05)] to-[hsl(var(--kiddo-cream-dark)/0.4)] p-4">
             <p className="kiddo-section-label mb-3">How co-parent access works</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {[
-                { emoji: "🔑", title: "You stay in control", body: "You are the legal custodian. They have no legal claim." },
-                { emoji: "👁", title: "Choose their role", body: "Viewer or Co-Admin. You decide what they can see and do." },
-                { emoji: "🚫", title: "Revoke anytime", body: "Remove access instantly. Their session ends immediately." },
-              ].map((item) => (
+              {([
+                { Icon: KeyRound, title: "You stay in control", body: "You are the legal custodian. They have no legal claim." },
+                { Icon: Eye, title: "Choose their role", body: "Viewer or Co-Admin. You decide what they can see and do." },
+                { Icon: Ban, title: "Revoke anytime", body: "Remove access instantly. Their session ends immediately." },
+              ] as { Icon: LucideIcon; title: string; body: string }[]).map((item) => (
                 <div key={item.title} className="rounded-xl bg-card p-3">
-                  <p className="text-lg mb-1.5">{item.emoji}</p>
+                  <item.Icon className="mb-1.5 text-[hsl(var(--kiddo-evergreen))]" size={20} strokeWidth={2} aria-hidden />
                   <p className="text-[11.5px] font-bold text-foreground mb-0.5">{item.title}</p>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">{item.body}</p>
                 </div>

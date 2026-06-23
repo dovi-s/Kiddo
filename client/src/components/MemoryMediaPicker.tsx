@@ -20,7 +20,7 @@
 // the parent flows.
 
 import { useRef, useState, useEffect } from "react";
-import { Camera, Lock } from "lucide-react";
+import { Camera, Lock, Mic, Video, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
@@ -227,10 +227,13 @@ export function MemoryMediaPicker({
     };
   }, []);
 
-  const triggers: { kind: Exclude<MediaKind, null>; label: string; emoji: string; has: boolean }[] = [
-    { kind: "photo", label: "Photo", emoji: "📷", has: hasPhoto },
-    { kind: "video", label: "Video", emoji: "🎬", has: hasVideo },
-    { kind: "voice", label: "Voice", emoji: "🎙", has: hasAudio },
+  // Action-tab icons are lucide (Camera / Video / Mic) — matching the rest of this
+  // component (it already uses lucide Camera) and the app's icon system. Not OS
+  // emoji, which render differently on every device and read as borrowed chrome.
+  const triggers: { kind: Exclude<MediaKind, null>; label: string; Icon: LucideIcon; has: boolean }[] = [
+    { kind: "photo", label: "Photo", Icon: Camera, has: hasPhoto },
+    { kind: "video", label: "Video", Icon: Video, has: hasVideo },
+    { kind: "voice", label: "Voice", Icon: Mic, has: hasAudio },
   ];
 
   // Plus-gate UI. When the parent's fund is on Free AND this picker is
@@ -351,7 +354,7 @@ export function MemoryMediaPicker({
               }`}
               data-testid={`media-trigger-${t.kind}`}
             >
-              <span aria-hidden="true" className="text-sm leading-none">{t.emoji}</span>
+              <t.Icon size={15} strokeWidth={2} aria-hidden />
               <span>{t.label}</span>
               {t.has && (
                 <span
@@ -528,7 +531,7 @@ export function MemoryMediaPicker({
                 disabled={audioUploading}
                 data-testid="media-audio-record"
               >
-                🎙 Record
+                <Mic size={14} strokeWidth={2} aria-hidden className="mr-1.5" />Record
               </Button>
               <Button
                 type="button"
