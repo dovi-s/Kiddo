@@ -12,6 +12,8 @@
         "lint:content": "node script/lint-content.cjs",
         "typecheck:mobile": "tsc --noEmit -p apps/mobile/tsconfig.json",
         "check": "npm run lint:content && tsc && npm run typecheck:mobile",
+        "staging:diff": "node script/promote-staging.mjs --diff",
+        "staging:promote": "node script/promote-staging.mjs",
         "smoke:alpaca-custodial": "tsx script/alpaca-custodial-smoke.ts",
         "smoke:email": "set NODE_OPTIONS=--use-system-ca&& tsx script/email-smoke.ts",
         "test:memory-utils": "tsx script/test-memory-utils.ts",
