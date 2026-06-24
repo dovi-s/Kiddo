@@ -222,7 +222,7 @@ export function HeroMoment({
             {projectionLabel && (
               <p className="mt-4 flex items-center justify-center gap-2 text-[13px] text-[hsl(var(--kiddo-cream)/0.7)] md:mt-3 md:justify-end" data-testid="hero-moment-projection">
                 <TrendingUp size={13} className="text-[hsl(var(--kiddo-gold-light))]" />
-                Growing toward <b className="font-bold text-[hsl(var(--kiddo-gold-light))]">{projectionLabel}</b>
+                On track for <b className="font-bold text-[hsl(var(--kiddo-gold-light))]">{projectionLabel}</b>
               </p>
             )}
           </div>

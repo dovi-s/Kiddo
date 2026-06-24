@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, Loader2, ImagePlus, Trash2, Copy, Check, Share2, User, Lock,
-  Calendar as CalendarIcon,
+  Calendar as CalendarIcon, Sprout, Zap, Gift, type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -702,7 +702,7 @@ export function CreateEventSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
@@ -713,12 +713,16 @@ export function CreateEventSheet({
         transition={{ type: "spring", damping: 28, stiffness: 320 }}
         style={{
           background: CREAM,
-          borderRadius: 24,
           width: "100%", maxWidth: 480,
-          maxHeight: "88dvh", display: "flex", flexDirection: "column", overflow: "hidden",
+          maxHeight: "92dvh", display: "flex", flexDirection: "column", overflow: "hidden",
         }}
-        className=""
+        className="rounded-t-[24px] sm:rounded-[24px]"
       >
+        {/* Mobile drag-handle grabber — matches the app's bottom-sheet system
+            (every action sheet now anchors to the bottom with this affordance). */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
+          <span className="h-1.5 w-10 rounded-full bg-foreground/20" />
+        </div>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -759,7 +763,7 @@ export function CreateEventSheet({
                   onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.985)")}
                   onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
                 >
-                  <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>🎁</div>
+                  <div style={{ flexShrink: 0, marginTop: 1 }}><Gift size={38} strokeWidth={1.5} color={GOLD} aria-hidden /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 16, fontWeight: 700, color: INK, lineHeight: 1.2, marginBottom: 5 }}>An occasion</p>
                     <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Birthday, holiday, milestone. Share a link. Anyone gifts.</p>
@@ -1078,16 +1082,17 @@ export function CreateEventSheet({
                           </p>
                           {/* Trust badges */}
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 10 }}>
-                            {[["🌱","Invested"],["🔒","Protected"],["⚡","Seconds"]].map(([icon, label]) => (
+                            {([[Sprout,"Invested"],[Lock,"Protected"],[Zap,"Seconds"]] as [LucideIcon, string][]).map(([Icon, label]) => (
                               <div key={label} style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(4px)", borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
-                                <div style={{ fontSize: 14, lineHeight: 1 }}>{icon}</div>
+                                <Icon size={14} strokeWidth={2} color="white" aria-hidden style={{ display: "inline-block" }} />
                                 <div style={{ fontSize: 9.5, fontWeight: 700, color: "white", marginTop: 3 }}>{label}</div>
                               </div>
                             ))}
                           </div>
                           {previewDateLabel && (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(4px)", borderRadius: 100, padding: "3px 10px" }}>
-                              <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.9)", fontWeight: 500 }}>📅 {previewDateLabel}</span>
+                              <CalendarIcon size={11} strokeWidth={2} color="rgba(255,255,255,0.9)" aria-hidden />
+                              <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.9)", fontWeight: 500 }}>{previewDateLabel}</span>
                             </div>
                           )}
                           {/* Gift CTA */}
@@ -1197,7 +1202,7 @@ export function CreateEventSheet({
                 <div style={{ marginBottom: 20, padding: "13px 16px", borderRadius: 16, background: "hsl(143,28%,96%)", border: "1.5px solid hsl(143,28%,88%)", display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <span style={{ fontSize: 16, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>🌱</span>
                   <p style={{ fontSize: 13, color: "hsl(143,40%,28%)", lineHeight: 1.6, margin: 0 }}>
-                    Gifts to this occasion go directly into {isOwnerMode ? "your fund" : fundName ? `${fundName}'s fund` : "the fund"}. Same place. Just beautifully tagged.
+                    Gifts to this occasion go directly into {isOwnerMode ? "your fund" : fundName ? `${fundName}'s fund` : "the fund"}, just grouped under this occasion.
                   </p>
                 </div>
               )}

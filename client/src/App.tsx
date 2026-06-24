@@ -17,6 +17,7 @@ import { IdleLogout } from "@/components/IdleLogout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { NavTransition } from "@/components/layout/NavTransition";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { GlobalShareModal } from "@/components/GlobalShareModal";
 import { DemoBanner } from "@/components/DemoBanner";
@@ -24,6 +25,7 @@ import { Mascot } from "@/components/ui/mascot";
 import { GradientText } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import Home from "@/pages/Home";
+import { KID_INITIATED_ONBOARDING, IN_APP_CHECKOUT } from "@/lib/feature-flags";
 
 // Lazy import with a one-shot reload-retry. A dynamic import() can fail on a
 // transient network blip (ERR_NETWORK_CHANGED when wifi/VPN switches) or, in
@@ -104,6 +106,8 @@ const Demo = lazyWithRetry(() => import("@/pages/Demo"));
 const P2PDemo = lazyWithRetry(() => import("@/pages/P2PDemo"));
 const GenerationalLoop = lazyWithRetry(() => import("@/pages/GenerationalLoop"));
 const HeroPreview = lazyWithRetry(() => import("@/pages/HeroPreview")); // TEMP: full-bleed hero prototype
+const FundIdea = lazyWithRetry(() => import("@/pages/FundIdea")); // flag-gated kid-initiated onboarding (KID_FUND_IDEA_SPEC.md)
+const CheckoutPreview = lazyWithRetry(() => import("@/pages/CheckoutPreview")); // flag-gated in-app embedded checkout (CHECKOUT_IN_APP_SPEC.md)
 const DashboardLab = lazyWithRetry(() => import("@/pages/DashboardLab"));
 // Full-page redesign sandbox. A complete clone of the dashboard at /staging where
 // we restructure aggressively (trimmed hero, de-duped sections) without touching
@@ -323,7 +327,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/give-a-gift") {
     return {
       title: "Give a gift that lasts | Kiddo",
-      description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll send them a warm note.",
+      description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll let the parents know.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -766,7 +770,6 @@ function RouteFader({ children }: { children: React.ReactNode }) {
 function Router({ showSidebar = false }: { showSidebar?: boolean }) {
   return (
     <>
-      <ScrollToTop />
       {/* id="main-content" is the skip-to-content link target (defined
           on the App shell above). tabIndex={-1} lets the anchor jump
           focus here without making the wrapper itself part of the tab
@@ -774,9 +777,10 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
       <main id="main-content" tabIndex={-1} className="outline-none">
       {/* sidebarOffset mirrors the shell's sidebar presence so the lazy-load
           skeleton clears the fixed DesktopSidebar instead of rendering under
-          it (2026-06-07). */}
+          it (2026-06-07). NavTransition (spatial push/pop + scroll memory +
+          swipe-back) replaces the old RouteFader cross-fade + ScrollToTop. */}
+      <NavTransition>
       <Suspense fallback={<RouteLoadingFallback sidebarOffset={showSidebar} />}>
-        <RouteFader>
         <Switch>
           <Route path="/"><Home /></Route>
           <Route path="/login"><Login /></Route>
@@ -788,6 +792,13 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
           <Route path="/p2p-preview"><P2PDemo /></Route>
+          {/* Kid-initiated "fund idea" — registered ONLY when the flag is on (default
+              off → 404). v1 is local-only/zero-PII; stays off for real teens until
+              counsel clears COUNSEL_Q_KID_ONBOARDING.md. */}
+          {KID_INITIATED_ONBOARDING && <Route path="/fund-idea"><FundIdea /></Route>}
+          {/* In-app embedded checkout preview — registered only when IN_APP_CHECKOUT is
+              on (default off → 404). Hosted Checkout stays the live path. */}
+          {IN_APP_CHECKOUT && <Route path="/checkout-preview"><CheckoutPreview /></Route>}
           <Route path="/generational-loop"><GenerationalLoop /></Route>
           <Route path="/hero-preview"><HeroPreview /></Route>{/* TEMP: full-bleed hero prototype */}
           {/* PORTED 2026-06-10: the redesign (DashboardLab) is now THE real
@@ -879,8 +890,8 @@ function Router({ showSidebar = false }: { showSidebar?: boolean }) {
           <Route path="/:fund/:event"><GiftCheckout /></Route>
           <Route><NotFound /></Route>
         </Switch>
-        </RouteFader>
       </Suspense>
+      </NavTransition>
       </main>
     </>
   );

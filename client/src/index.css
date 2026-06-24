@@ -287,6 +287,15 @@
   * {
     @apply border-border;
   }
+  /* On-brand text selection — the browser default is blue, off-brand against the
+     evergreen/gold/cream palette (most visible on amount inputs that auto-select
+     on focus, e.g. the recurring/one-time amount). Evergreen-tinted instead. */
+  ::selection {
+    background-color: hsl(var(--kiddo-evergreen) / 0.28);
+  }
+  ::-moz-selection {
+    background-color: hsl(var(--kiddo-evergreen) / 0.28);
+  }
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-feature-settings: "cv11", "ss01", "kern" 1;
@@ -507,6 +516,41 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   0% { opacity: 0.6; transform: scale(0.95); }
   70% { opacity: 0; transform: scale(1.18); }
   100% { opacity: 0; transform: scale(1.18); }
+}
+
+/* ── Page-transition vocabulary (Wise register: a SMALL, semantic set, not a
+   zoo of effects). Built on the motion tokens above, so every transition shares
+   the app's perceived speed + easing. Three meanings, each tied to intent —
+   "one pattern per need, always intentional":
+     .kiddo-enter-up   — "a NEW flow/action starts here" (gift, deposit). Rises
+                          from below like a sheet taking over. Pair with a
+                          dismiss control top-left; on a money action that
+                          escape hatch is trust, not decoration.
+     .kiddo-enter-side — "CONTINUING a flow" (consecutive steps). Slides in from
+                          the trailing edge, hinting at forward progress.
+     .kiddo-fade-in    — top-level destinations + content settling. A quiet fade;
+                          top-level screens aren't related, so the motion makes
+                          NO spatial connection on purpose (the M3 top-level rule).
+   Reduced motion collapses all three to a bare fade — no travel, no overshoot. */
+@keyframes kiddo-enter-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes kiddo-enter-side {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes kiddo-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.kiddo-enter-up   { animation: kiddo-enter-up   var(--duration-slow)   var(--ease-out-expo) both; }
+.kiddo-enter-side { animation: kiddo-enter-side var(--duration-normal) var(--ease-out-expo) both; }
+.kiddo-fade-in    { animation: kiddo-fade-in    var(--duration-normal) var(--ease-out-expo) both; }
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-enter-up,
+  .kiddo-enter-side,
+  .kiddo-fade-in { animation: kiddo-fade-in var(--duration-fast) linear both; }
 }
 /* Fund-composition / "Last 30 days" breakdown rows (DashboardLab):
    every row must stay a SINGLE clean line on mobile. A long label like

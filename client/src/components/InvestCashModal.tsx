@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, CheckCircle2, Info, Clock, Zap, Banknote } from "lucide-react";
+import { DrawIcon } from "@/components/DrawIcon";
 import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -146,7 +147,7 @@ export function InvestCashModal({
     kyc_pending: "Verification is complete. You can invest some, all, or none of this cash.",
     held_as_cash: `This fund holds gifts as cash until you choose what to invest.`,
     sold_proceeds: `These are the proceeds from a recent stock sale, ready to reinvest.`,
-    gifts_settled: `${childName}'s settled gifts are ready when you are.`,
+    gifts_settled: `${childName}'s gifts have settled and are ready to invest.`,
   };
 
   const selectedStockName = STOCK_CHOICES.find((s) => s.ticker === selectedTicker)?.name || selectedTicker;
@@ -161,6 +162,9 @@ export function InvestCashModal({
     Math.round((cashAmount / 2) * 100) / 100,
     cashAmount,
   ].filter((value) => value > 0))).sort((a, b) => a - b);
+  // The "half your cash" quick amount — shown as "Half", not an oddly precise
+  // "$1,193.04" that reads like a calculator instead of a choice.
+  const halfAmount = Math.round((cashAmount / 2) * 100) / 100;
 
   const confirmDescription =
     investMode === "stock"
@@ -278,7 +282,7 @@ export function InvestCashModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[90vh]" aria-describedby={undefined}>
         <DialogHeader className="px-6 pt-6 pb-0 shrink-0">
           <DialogTitle className="font-heading text-xl font-semibold">
             {step === "done" ? "All set" : "Put cash to work"}
@@ -325,7 +329,7 @@ export function InvestCashModal({
                       onClick={() => setInvestAmount(amount.toFixed(2))}
                       className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
                     >
-                      {amount === cashAmount ? "All cash" : formatCurrency(amount)}
+                      {amount === cashAmount ? "All cash" : amount === halfAmount ? "Half" : amount % 1 === 0 ? `$${amount}` : formatCurrency(amount)}
                     </button>
                   ))}
                 </div>
@@ -553,7 +557,7 @@ export function InvestCashModal({
             <>
               <div className="text-center py-3 space-y-3">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-                  <CheckCircle2 size={32} className="text-green-600" />
+                  <DrawIcon icon={CheckCircle2} size={32} className="text-green-600" />
                 </div>
                 <div>
                   {investMode === "withdraw" ? (

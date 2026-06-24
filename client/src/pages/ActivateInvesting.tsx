@@ -1480,7 +1480,7 @@ export default function ActivateInvesting() {
               className="py-16 space-y-6"
             >
               <SuccessState
-                message="You're all set!"
+                message="Investing is active."
                 submessage="Your gifts will now be automatically invested."
               />
               <div className="max-w-xs mx-auto">

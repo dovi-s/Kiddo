@@ -321,7 +321,7 @@ export default function FoundingMembers() {
                 </p>
                 {submitted.spotsRemaining > 0 && submitted.spotsRemaining <= 100 && (
                   <p className="mt-4 text-xs text-muted-foreground">
-                    Only {submitted.spotsRemaining} spots left after you. Forward this link to anyone who'd want one.
+                    Only {submitted.spotsRemaining} spot{submitted.spotsRemaining === 1 ? "" : "s"} left after you. Forward this link to anyone who'd want one.
                   </p>
                 )}
                 <Link href="/">

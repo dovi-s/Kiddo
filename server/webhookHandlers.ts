@@ -1849,6 +1849,41 @@ export class WebhookHandlers {
   static async handlePaymentIntentSucceeded(paymentIntent: any): Promise<void> {
     console.log('[Webhook] payment_intent.succeeded:', paymentIntent.id);
 
+    // ── EMBEDDED in-app checkout fulfillment (CHECKOUT_IN_APP_SPEC.md) ──
+    // The embedded Payment Element has NO Checkout Session, so it can't fulfill via
+    // checkout.session.completed — it must fulfill here. The DANGER (see
+    // _TANDEM_webhook_double_credit_HANDOFF.md): hosted gifts ALSO fire
+    // payment_intent.succeeded, so crediting unconditionally here would DOUBLE-CREDIT
+    // every hosted gift on real custodial money. The guard is therefore strict and
+    // double-keyed: fulfill ONLY when (a) metadata.source === 'in_app' (hosted PIs lack
+    // this) AND (b) a fund target is present (a bare /checkout-preview PI carries neither
+    // a fund nor the fulfillment fields, so it safely no-ops). Fulfillment reuses the
+    // PROVEN handleGiftPayment path (create→credit→invest→reconcile), which is itself
+    // idempotent via getGiftByPaymentIntent — so a redelivered event never re-credits.
+    //
+    // ⚠️ NOT YET LIVE-VERIFIED. Gated by the IN_APP_CHECKOUT flag upstream. Before any
+    // prod-like flag flip, the real in-app PIs must carry the SAME metadata the hosted
+    // gift/parent-contribution checkout sets (fundId, isParentContribution, fundUserId,
+    // amounts, executionModel, …), AND the 4-case `stripe listen` test must pass:
+    // hosted-credits-once / embedded-credits-once / redelivered-no-double / refund-reverses.
+    const md = paymentIntent.metadata || {};
+    if (md.source === 'in_app' && (md.fundId || md.fundSlug)) {
+      // Adapt the PaymentIntent into the minimal session shape handleGiftPayment reads,
+      // then reuse the proven, idempotent fulfillment. No new credit logic.
+      await this.handleGiftPayment({
+        id: `inapp_${paymentIntent.id}`,
+        payment_status: 'paid',
+        payment_intent: paymentIntent.id,
+        amount_total: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        metadata: md,
+        customer: paymentIntent.customer,
+      });
+      return;
+    }
+
+    // Default (hosted gifts + everything else): hosted fulfillment owns the credit via
+    // checkout.session.completed; here we only advance the gift's lifecycle state.
     const gift = await storage.getGiftByPaymentIntent(paymentIntent.id);
     if (gift && gift.status === 'pending') {
       await storage.updateGift(gift.id, { status: 'processing' });

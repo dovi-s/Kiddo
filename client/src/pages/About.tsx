@@ -82,13 +82,13 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Memory Book</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  A record of every gift, note, and person who showed up.
+                  A record of every gift, every note, and who it came from.
                 </h2>
               </div>
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>Every gift, every note, every person who showed up for your kid gets captured in the Memory Book.</p>
-              <p>A living record of everyone who believed in them before they even knew what a stock was.</p>
+              <p>A record of everyone who put something toward their future, from long before the child could understand it.</p>
               <p className="font-medium text-foreground">
                 Every gift and note is kept with the account, as a story they can read.
               </p>
@@ -108,7 +108,7 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Kid View</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  {investingLiveCopy("They watch it grow, in shares they actually own.", "Real shares they'll watch grow and truly own.")}
+                  {investingLiveCopy("They own real shares, and can see what those shares are worth.", "Real shares in companies their family chose, owned in their name.")}
                 </h2>
               </div>
             </div>
@@ -117,9 +117,9 @@ export default function About() {
                 The Kid View lets them see their fund: the companies it follows and the gifts that built it.
               </p>
               <p>
-                Once investing is live, a 10-year-old can open the app, see the Disney stock their family picked, and own a real piece of it. Watching their own fund grow is how they learn the way money works over time. Someone in their family put it there.
+                Once investing is live, a 10-year-old can open the app, see the Disney stock their family picked, and own a real share of it. Seeing what they own is how money starts to make sense, long before they have to manage it. Someone in their family put it there.
               </p>
-              <p className="font-medium text-foreground">That moment changes how they think about money for good.</p>
+              <p className="font-medium text-foreground">That is how money becomes real to a kid, years early.</p>
             </div>
           </FadeIn>
         </div>
@@ -142,10 +142,10 @@ export default function About() {
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                Every gift, note, stock pick, and person who believed in them, delivered at the moment it matters most.
+                Every gift, note, and stock pick, with the name behind each one, delivered when the fund becomes theirs.
               </p>
               <p>
-                They inherit a record of everyone who showed up for them, starting from before they could even say thank you, alongside the balance itself.
+                They inherit the balance and the record of who built it, going back further than they can remember.
               </p>
               <p className="font-heading text-xl font-semibold text-foreground">That is what Kiddo hands them.</p>
             </div>

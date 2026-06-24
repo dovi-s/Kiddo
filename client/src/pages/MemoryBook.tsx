@@ -381,6 +381,18 @@ function formatMoney(value: number) {
   }).format(Number.isFinite(value) ? value : 0);
 }
 
+// Friendly variant for warm/emotional copy (thank-you letters, the keepsake hero):
+// drops the robotic ".00" on whole amounts, keeps cents only when they're real.
+function formatMoneyFriendly(value: number) {
+  const rounded = Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(rounded);
+}
+
 function displayAmount(value: string | number | null | undefined) {
   const amount = typeof value === "number" ? value : parseFloat(String(value || "0"));
   return new Intl.NumberFormat("en-US", {
@@ -1188,7 +1200,7 @@ export default function MemoryBook() {
     const tickerCo = ctx?.ticker ? ctx.ticker.toUpperCase() : null;
     const valueNow =
       typeof ctx?.currentValue === "number" && Number.isFinite(ctx.currentValue) && ctx.currentValue > 0
-        ? `$${ctx.currentValue.toFixed(2)}`
+        ? formatMoneyFriendly(ctx.currentValue)
         : null;
     const portfolioSentenceWarm = tickerCo && valueNow
       ? ` It's invested in ${tickerCo} and now worth ${valueNow}.`
@@ -1213,15 +1225,15 @@ export default function MemoryBook() {
       ageAtGift = Math.floor((giftMs - birthMs) / (365.25 * 24 * 60 * 60 * 1000));
     }
     const useTimeAwareOwner = isOwnerMode && ageAtGift !== null && ageAtGift < majorityAge;
-    const whenAgePhrase = ageAtGift === null ? "" : ageAtGift <= 1 ? "when I was just a baby" : `when I was ${ageAtGift}`;
+    const whenAgePhrase = ageAtGift === null ? "" : ageAtGift <= 1 ? "when I was a baby" : `when I was ${ageAtGift}`;
     switch (tone) {
       case "warm":
         if (useTimeAwareOwner) {
           return `Dear ${name},\n\nThank you for the ${fmt} you gave me ${whenAgePhrase}.${portfolioSentenceWarm} I'm old enough now to understand what you were doing back then, and it means even more to me than it could have at the time.\n\nWith love,\n${ownerName}`;
         }
         return isOwnerMode
-          ? `Dear ${name},\n\nThank you so much for your ${fmt} gift to my fund.${portfolioSentenceWarm} It means more than you know. You showed up for my future, and that is what stays with me.\n\nWith love,\n${ownerName}`
-          : `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know. You showed up for ${child}'s future, and that is what stays with us.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
+          ? `Dear ${name},\n\nThank you for the ${fmt} you put into my fund.${portfolioSentenceWarm} You showed up for my future, and I won't forget it.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you for the ${fmt} you put into ${child}'s fund.${portfolioSentenceWarm} You showed up for ${child}'s future, and we won't forget it.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
       case "brief":
         return isOwnerMode
           ? `Hi ${name},\n\nThank you for the ${fmt} gift to my fund.${portfolioSentenceBrief} I really appreciate it!\n\nWith gratitude,\n${ownerName}`
@@ -1279,14 +1291,14 @@ export default function MemoryBook() {
     if (tone === "custom") return "";
     const count = pendingGifts.length;
     const totalAmount = pendingGifts.reduce((sum, g) => sum + (parseFloat(String(g.amount || "0")) || 0), 0);
-    const fmtTotal = `$${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const fmtTotal = formatMoneyFriendly(totalAmount);
     const child = childName || "our child";
     const name = titleCaseName(senderName) || senderName;
     switch (tone) {
       case "warm":
         return isOwnerMode
-          ? `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. It means more than you know. You keep showing up for me, and that is what matters.\n\nWith love,\n${ownerName}`
-          : `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know. You keep showing up for ${child}, and that is what matters.\n\nWith love,\n${ownerName}`;
+          ? `Dear ${name},\n\nThank you for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. You keep showing up for me, and that is what matters.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one is a real investment ${child} will read about one day. You keep showing up for ${child}, and that is what matters.\n\nWith love,\n${ownerName}`;
       case "brief":
         return isOwnerMode
           ? `Hi ${name},\n\nThank you for the ${count} gifts to my fund (${fmtTotal} total). I really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`
@@ -2615,6 +2627,41 @@ export default function MemoryBook() {
     liveValue: entryStats.giftCount,
     minDelta: 1,
   });
+
+  // ── The Inscription Leaf (design-panel decision 2026-06-23). The Memory Book
+  // hero LEADS with one real sentence someone who loves {child} actually wrote —
+  // the irreplaceable thing the dashboard never shows and a bank can't hold (the
+  // switching-cost moat, made visible). Deterministic, NEVER-null escalation
+  // ladder: a PINNED note wins, else the most-recent real note, else null (→ the
+  // hero falls to the people "standing" line, then the true-zero line — so it's
+  // precious at 8 notes and still dignified, never an empty void, at 0). Owner
+  // notes are skipped (never quote the viewer to themselves); anon reads
+  // "Someone who loves {child}". Reuses the existing Pin-to-top (isFeatured)
+  // control as the curation hook — no ranking-algorithm-on-love. ──
+  const heroInscription = useMemo(() => {
+    const ownerCtx = {
+      emailLower: ownerEmailLowerForMemory,
+      profileImageUrl: (user as any)?.profileImageUrl || null,
+      preferredName: (user as any)?.preferredName || null,
+      firstName: (user as any)?.firstName || null,
+    };
+    const read = (entry: any) => {
+      const isGift = entry?.type === "gift_message" || !!entry?.gift;
+      const raw = isGift ? entry?.gift?.message : entry?.content;
+      if (isMemoryBookSuppressedMessage(raw)) return null;
+      const ident = getEntryIdentity(entry, ownerCtx);
+      if (ident.avatarStyle === "owner") return null; // never quote the viewer to themselves
+      const isAnon = ident.avatarStyle === "anonymous";
+      return {
+        text: String(raw).trim(),
+        name: isAnon ? `Someone who loves ${childName || "them"}` : ident.displayName,
+        occasion: isGift ? ((entry?.gift?.eventName as string | undefined) || null) : null,
+      };
+    };
+    const chosen = sortedEntries.find((e: any) => e?.isFeatured && read(e))
+      || sortedEntries.find((e: any) => read(e));
+    return chosen ? read(chosen) : null;
+  }, [sortedEntries, user, ownerEmailLowerForMemory, childName]);
   const canSubmit = content.trim().length > 0 && !validateMemoryMedia(photoUrl, videoUrl);
   // Memory Book tier policy (locked 2026-05-13):
   //   - GIFTER-attached media (photos/videos/voice on gifts) is ALWAYS free.
@@ -2707,7 +2754,9 @@ export default function MemoryBook() {
   }
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-memory-book">
+    // No mobile pb-24: `.mobile-app-shell--with-nav` (App.tsx) already adds the bottom-nav
+    // clearance; a page-level pb-24 doubled it into ~190px of dead space. Fixed 2026-06-23.
+    <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-memory-book">
       <AppHeader />
 
       <main className="kiddo-canvas px-4 py-5 md:py-6">
@@ -2809,10 +2858,14 @@ export default function MemoryBook() {
         )}
 
         <EnlighteningReveal>
+          {/* Full-bleed "moment" on mobile — same structural language as the dashboard
+              hero (edge-to-edge, square, no floating-card chrome); contained rounded card
+              at md+ so a wide column doesn't band green edge-to-edge. The -mx-4 breaks out
+              of the main's px-4. Added 2026-06-23 (was a contained rounded card). */}
           <div
+            className="-mx-4 md:mx-0 rounded-none md:rounded-[28px]"
             style={{
               background: "linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
-              borderRadius: 28,
               padding: "28px 28px 24px",
               position: "relative",
               overflow: "hidden",
@@ -2847,25 +2900,73 @@ export default function MemoryBook() {
                 {isOwnerMode ? "Your" : childName ? `${childName}'s` : "Fund"} Memory Book
               </div>
 
+              {/* THE INSCRIPTION LEAF — the words lead; money demoted to a footnote
+                  (it's the dashboard's anchor, not the keepsake's). See heroInscription
+                  ladder above. The 44px formatMoney number was REMOVED here so this
+                  surface stops being a twin of the dashboard money hero (panel, 2026-06-23). */}
               <div style={{ marginBottom: 22 }} data-testid="memory-hero-number">
-                <p className="font-heading" style={{ fontSize: 44, fontWeight: 700, color: "white", lineHeight: 1, letterSpacing: "-0.01em", marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>
-                  {formatMoney(displayMemoryFundValue)}
-                </p>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.45 }}>
-                  {(() => {
-                    const peopleN = Math.round(displayMemoryPeople);
-                    const giftsN = Math.round(displayMemoryGiftCount);
-                    if (peopleN === 0 && giftsN === 0) return `Built one moment at a time.`;
-                    const peopleLabel = peopleN === 1 ? "1 person" : `${peopleN} people`;
-                    const giftsLabel = giftsN === 1 ? "1 gift" : `${giftsN} gifts`;
-                    // Sprout emoji removed 2026-05-19 — was wallpaper
-                    // weight on a daily-view surface. Earned only at
-                    // genuine celebration moments (milestone crossings,
-                    // closing book page). The eyebrow already names
-                    // {child}; trailing "for {child}" was redundant.
-                    return `Built by ${peopleLabel} · ${giftsLabel}`;
-                  })()}
-                </p>
+                {(() => {
+                  const peopleN = Math.round(displayMemoryPeople);
+                  const giftsN = Math.round(displayMemoryGiftCount);
+                  const peopleLabel = peopleN === 1 ? "1 person" : `${peopleN} people`;
+                  const giftsLabel = giftsN === 1 ? "1 gift" : `${giftsN} gifts`;
+                  // The ONE reserved gold mark — a gilt edge separating the voice from
+                  // its source (brass-leaf, used exactly once per render).
+                  const goldRule = (mt: number) => (
+                    <motion.div
+                      style={{ height: 1, width: 32, background: "hsl(var(--kiddo-gold))", marginTop: mt, marginBottom: 10, transformOrigin: "left" }}
+                      initial={prefersReducedMotion ? { scaleX: 1 } : { scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.5, delay: prefersReducedMotion ? 0 : 0.42, ease: [0.16, 1, 0.3, 1] }}
+                      aria-hidden
+                    />
+                  );
+
+                  // TRUE ZERO — no people, no gifts.
+                  if (peopleN === 0 && giftsN === 0) {
+                    return <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.45 }}>Built one moment at a time.</p>;
+                  }
+
+                  // LEAD WITH THE WORDS — a real sentence someone who loves {child} wrote.
+                  if (heroInscription) {
+                    return (
+                      <>
+                        <motion.p className="font-heading" style={{ fontSize: 26, fontWeight: 500, lineHeight: 1.4, letterSpacing: "-0.005em", color: "rgba(255,255,255,0.92)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}
+                          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: prefersReducedMotion ? 0.3 : 0.6, ease: "easeOut" }}
+                        >
+                          {heroInscription.text}
+                        </motion.p>
+                        {goldRule(16)}
+                        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.6)", letterSpacing: "0.01em" }}>
+                          {heroInscription.name}{heroInscription.occasion ? ` · ${heroInscription.occasion}` : ""}
+                        </p>
+                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 14, fontVariantNumeric: "tabular-nums" as const }}>
+                          Built by {peopleLabel} · {giftsLabel} · {formatMoneyFriendly(displayMemoryFundValue)} set aside
+                        </p>
+                      </>
+                    );
+                  }
+
+                  // COLD-START — gifts exist but no quotable note yet → the people
+                  // "standing" line leads, money/gifts a quiet footnote beneath.
+                  return (
+                    <>
+                      <motion.p className="font-heading" style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.3, letterSpacing: "-0.01em", color: "rgba(255,255,255,0.92)", fontVariantNumeric: "tabular-nums" as const }}
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: prefersReducedMotion ? 0.3 : 0.6, ease: "easeOut" }}
+                      >
+                        {peopleN === 1 ? "1 person is" : `${peopleN} people are`} building {childName ? `${childName}'s` : "this"} book.
+                      </motion.p>
+                      {goldRule(14)}
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" as const }}>
+                        {giftsLabel} · {formatMoneyFriendly(displayMemoryFundValue)} set aside
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Actions — moderators only. For previous_owner / viewer
@@ -4513,7 +4614,7 @@ export default function MemoryBook() {
                       <div className="flex flex-col gap-3 border-b border-border/50 bg-[hsl(var(--kiddo-cream)/0.42)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {entry.isFeatured ? (
-                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800 inline-flex items-center gap-1">
+                            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.14)] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
                               <Pin size={10} /> Pinned
                             </span>
                           ) : null}
@@ -6461,7 +6562,7 @@ export default function MemoryBook() {
                         type="button"
                         onClick={() => setIsFeatured((v) => !v)}
                         className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
-                          isFeatured ? "border-amber-400 bg-amber-50 text-amber-900" : "border-border bg-background text-foreground"
+                          isFeatured ? "border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.1)] text-[hsl(var(--kiddo-gold-ink))]" : "border-border bg-background text-foreground"
                         }`}
                         data-testid="button-memory-featured"
                       >

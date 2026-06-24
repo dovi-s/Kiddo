@@ -312,7 +312,7 @@ export default function Age18Welcome() {
                 <div className="flex items-center gap-2">
                   <Heart size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
                   <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-wide">
-                    Built by {communityData.totalContributors} {communityData.totalContributors === 2 ? "people" : "people"} who showed up for you
+                    Built by {communityData.totalContributors} {communityData.totalContributors === 1 ? "person" : "people"} who showed up for you
                   </p>
                 </div>
                 {oldestNote && (() => {

@@ -1264,7 +1264,7 @@ export default function Activity() {
 
   if (authLoading) {
     return (
-      <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-activity">
+      <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-activity">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-5 md:py-6 space-y-4">
           <div style={{ height: 28, background: "hsl(var(--kiddo-ink) / 0.06)", borderRadius: 8, width: 120 }} />
@@ -1833,7 +1833,7 @@ export default function Activity() {
   const scheduledTotalCount = scheduledContribs.length + scheduledReminders.length;
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-activity">
+    <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-activity">
       <AppHeader />
       <main className="kiddo-canvas px-4 py-5 md:py-6">
 

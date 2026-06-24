@@ -130,7 +130,7 @@ export function SetupProgressNudge({
   );
 }
 
-export function TrustMicroStrip() {
+export function TrustMicroStrip({ flush = false }: { flush?: boolean } = {}) {
   // Single source for the three claims so the mobile (stacked) and desktop
   // (one inline row) layouts can't drift. Wording is locked custody-honesty /
   // brand copy: kept verbatim in BOTH layouts, never trimmed to fit.
@@ -144,7 +144,13 @@ export function TrustMicroStrip() {
   const noFees = "No hidden charges. Ever.";
   return (
     <section
-      className="kiddo-card px-4 py-3"
+      // `flush` = recessive FOOTER treatment (hairline top-divider, no floating
+      // card) for the de-carded dashboards, where a white card over-weights fine
+      // print and is the last card-soup remnant. Default keeps the contained card
+      // for marketing / flow pages where it reads as an intentional trust block.
+      className={flush
+        ? "border-t border-[hsl(var(--kiddo-border)/0.7)] px-1 pt-5 pb-1"
+        : "kiddo-card px-4 py-3"}
       data-testid="card-trust-micro-strip"
     >
       {/* Desktop (>=640px): the original single inline row with dot separators. */}

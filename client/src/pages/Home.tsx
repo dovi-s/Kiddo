@@ -331,7 +331,7 @@ export default function Home() {
                       At 18, they receive the account and the whole story of who built it.
                     </h3>
                     <p className="mt-4 leading-relaxed text-muted-foreground">
-                      The transfer should feel like something their family handed down to them, not a cold paperwork event.
+                      The transfer should arrive as something their family built for them, not a stack of surprise paperwork.
                     </p>
                   </div>
                   <ProductFrame

@@ -138,7 +138,7 @@ export function FeatureWallModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleDismiss(); }}>
-      <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="space-y-1">

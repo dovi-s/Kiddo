@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import { motion } from "framer-motion";
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { DrawIcon } from "@/components/DrawIcon";
 import { Logo } from "@/components/ui/logo";
 
 type VerifyState =
@@ -95,7 +96,7 @@ export default function AgeTransitionVerify() {
               className="mx-auto flex h-16 w-16 items-center justify-center rounded-full"
               style={{ background: "hsl(var(--kiddo-evergreen) / 0.10)" }}
             >
-              <CheckCircle2 size={32} className="text-[hsl(var(--kiddo-evergreen))]" />
+              <DrawIcon icon={CheckCircle2} size={32} className="text-[hsl(var(--kiddo-evergreen))]" />
             </div>
             <h1 className="font-heading text-3xl font-semibold text-foreground">
               {state.kind === "alreadyDone" ? "Already confirmed." : "Email confirmed."}

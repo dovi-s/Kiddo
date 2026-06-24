@@ -80,7 +80,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Create an Occasion</DialogTitle>
         <div className="p-6 pb-2 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">

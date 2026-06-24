@@ -930,7 +930,7 @@ export default function GifterDashboard() {
                     </h1>
                     <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
                       {savedFundCount > 0
-                        ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}, and what you gave keeps growing for them.`
+                        ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}. Everything you've given is here.`
                         : "The funds you've gifted to, in one place."}
                     </p>
                   </div>

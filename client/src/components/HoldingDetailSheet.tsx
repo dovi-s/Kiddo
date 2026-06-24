@@ -343,7 +343,7 @@ const TICKER_INFO: Record<string, { about: string; category: string }> = {
   SPOT:  { about: "The world's leading music streaming platform. 600M+ listeners, millions of podcasts.", category: "Entertainment" },
   META:  { about: "Facebook, Instagram, WhatsApp, and a big bet on the metaverse.", category: "Social / Technology" },
   NVDA:  { about: "Makes the chips that power AI, gaming, and data centers. At the center of the AI revolution.", category: "Technology" },
-  VTI:   { about: "Owns a tiny piece of every major US company: over 3,600 stocks in one fund.", category: "ETF · US Total Market" },
+  VTI:   { about: "Owns a fractional share of every major US company: over 3,600 stocks in one fund.", category: "ETF · US Total Market" },
   VXUS:  { about: "Owns thousands of international stocks outside the US. 50+ countries in one fund.", category: "ETF · International" },
   BND:   { about: "Owns thousands of US investment-grade bonds. The steady, reliable layer of a portfolio.", category: "ETF · US Bonds" },
   AGG:   { about: "Tracks the broad US bond market. The classic stability layer.", category: "ETF · US Bonds" },

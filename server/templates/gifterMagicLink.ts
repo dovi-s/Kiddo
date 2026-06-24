@@ -55,7 +55,7 @@ export function buildGifterMagicLinkEmail(input: GifterMagicLinkInput): EmailMes
     subject = "Your recurring gift is set up. Tap to manage it.";
     cta = "Open my gifter dashboard";
     const giftLine = giftSummary
-      ? `Your recurring gift of $${giftSummary.amount.toFixed(2)} in ${giftSummary.ticker} to ${giftSummary.fundName} is set up and will run on the schedule you chose.`
+      ? `Your recurring gift of ${giftSummary.amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 })} in ${giftSummary.ticker} to ${giftSummary.fundName} is set up and will run on the schedule you chose.`
       : `Your recurring gift is set up and will run on the schedule you chose.`;
     intro = `${greeting} ${giftLine} Tap the button below to open your dashboard. You'll see every gift you've sent, manage the schedule, or pause it any time. The link is good for the next 15 minutes; we'll email you a fresh one whenever you need to sign in.`;
     postscript = "We don't ask for passwords. Every time you want to manage your gifts, click the link in any Kiddo email or request a new one from the sign-in page. We'll never ask you to forward or share a sign-in link, even if someone says they're from Kiddo.";

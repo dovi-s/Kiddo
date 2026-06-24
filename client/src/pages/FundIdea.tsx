@@ -158,7 +158,7 @@ export default function FundIdea() {
           <h1 className="font-heading text-2xl font-bold text-foreground">Show a grown-up</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             Here's your idea{draft.fundName ? `, "${draft.fundName}"` : ""}. A parent or guardian can
-            open Kiddo and make it real — they'll set up the account, add the details, and choose what
+            open Kiddo and make it real. They'll set up the account, add the details, and choose what
             to put in. Until then, your idea is saved right here on this device.
           </p>
           <button
@@ -184,7 +184,7 @@ export default function FundIdea() {
           Dream up a fund.
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pick a name and what you'd invest in. A grown-up can make it real later — this is just your
+          Pick a name and what you'd invest in. A grown-up can make it real later. This is just your
           idea for now.
         </p>
 

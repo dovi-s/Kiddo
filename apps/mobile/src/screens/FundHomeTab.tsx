@@ -121,7 +121,7 @@ function countdownToMajority(birthdate?: string | null, majorityAge = 18): strin
   const months = Math.max(0, Math.round((days % 365) / 30));
   if (years <= 0) return `${months} month${months === 1 ? "" : "s"}`;
   if (months <= 0) return `${years} year${years === 1 ? "" : "s"}`;
-  return `${years} yr${years === 1 ? "" : "s"} ${months} mo`;
+  return `${years} yr${years === 1 ? "" : "s"} ${months} mo${months === 1 ? "" : "s"}`;
 }
 
 // Per-occasion emoji + soft pastel tile (mirrors the web colored occasion cards).

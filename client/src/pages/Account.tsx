@@ -476,7 +476,7 @@ export default function Account() {
           : null;
         const childSuffix = planFit?.fund?.childName ? ` for ${planFit.fund.childName}` : "";
         toast({
-          title: "You're all set",
+          title: "Plan updated",
           description: isStop
             ? `Kiddo Family stays active${until ? ` until ${until}` : ""}, then stops. Your Memory Books stay safe.`
             : data?.seamless
@@ -1559,7 +1559,7 @@ export default function Account() {
                         ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
-                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
+                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Build it up, month after month.</p>
                       <div className="mt-5 space-y-2 text-sm text-muted-foreground">
                         {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />{item}</p>
@@ -2014,7 +2014,7 @@ export default function Account() {
             already know they want to cancel and want the action to
             fire without surface-bouncing. */}
         <Dialog open={showCancelConfirm} onOpenChange={(o) => { if (!o && !canceling) { setShowCancelConfirm(false); setCancelStep("warn"); } }}>
-          <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
+          <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-hidden" aria-describedby={undefined}>
             <DialogTitle className="sr-only">Cancel plan</DialogTitle>
             {cancelStep === "warn" ? (
               <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto">

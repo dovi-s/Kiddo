@@ -130,6 +130,14 @@ import {
   PieChart,
   HandCoins,
   Play,
+  Smartphone,
+  CreditCard,
+  DollarSign,
+  Landmark,
+  Scale,
+  Shield,
+  SlidersHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
@@ -190,7 +198,7 @@ import { demoBlocked } from "@/lib/demo-block";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
-import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
+import { investingLiveCopy, INVESTING_LIVE, PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 import {
   calculateKoraContributionFee,
   calculatePaymentProcessingFee,
@@ -412,12 +420,23 @@ function strategyEmoji(key: string | null | undefined): string {
 // recurring section, action sheets, and any future strategy-card surface all read
 // consistently. Keep tints muted (NOT red/alarm); the parent surface is Apple-
 // Settings-discoverable per the design lens.
-const STRATEGY_TINTS: Record<string, { bg: string; border: string }> = {
-  growth:       { bg: "hsl(var(--kiddo-evergreen) / 0.10)", border: "hsla(157,42%,18%,0.12)" },
-  balanced:     { bg: "hsl(var(--kiddo-evergreen) / 0.07)", border: "hsla(157,42%,18%,0.10)" },
-  conservative: { bg: "hsl(var(--kiddo-cream))",            border: "hsla(36,38%,82%,0.55)" },
-  custom:       { bg: "hsl(var(--kiddo-gold) / 0.10)",      border: "hsla(43,75%,52%,0.18)" },
-  cash:         { bg: "rgba(26,23,16,0.05)",                border: "rgba(26,23,16,0.10)" },
+const STRATEGY_TINTS: Record<string, { bg: string; border: string; fg: string }> = {
+  growth:       { bg: "hsl(var(--kiddo-evergreen) / 0.10)", border: "hsla(157,42%,18%,0.12)", fg: "hsl(var(--kiddo-evergreen))" },
+  balanced:     { bg: "hsl(var(--kiddo-evergreen) / 0.07)", border: "hsla(157,42%,18%,0.10)", fg: "hsl(var(--kiddo-evergreen))" },
+  conservative: { bg: "hsl(var(--kiddo-cream))",            border: "hsla(36,38%,82%,0.55)", fg: "hsl(var(--kiddo-evergreen))" },
+  custom:       { bg: "hsl(var(--kiddo-gold) / 0.10)",      border: "hsla(43,75%,52%,0.18)", fg: "hsl(var(--kiddo-gold-ink))" },
+  cash:         { bg: "rgba(26,23,16,0.05)",                border: "rgba(26,23,16,0.10)", fg: "hsl(var(--kiddo-ink))" },
+};
+
+// Bespoke monochrome glyph per strategy — the semantic read of the old emojis
+// (chart-up=growth, scales=balanced, shield=conservative, sliders=custom) rendered as
+// brand-tinted lucide icons so the tile reads fully Kiddo, not a colorful system emoji.
+const STRATEGY_ICONS: Record<string, LucideIcon> = {
+  growth: TrendingUp,
+  balanced: Scale,
+  conservative: Shield,
+  custom: SlidersHorizontal,
+  cash: Coins,
 };
 
 // Visual marker for a managed-mix schedule. Replaces the generic Repeat icon —
@@ -439,9 +458,9 @@ function StrategyIcon({
   className?: string;
 }) {
   const k = String(strategyKey || "growth").toLowerCase();
-  const emoji = STRATEGY_META[k]?.emoji ?? "📈";
   const tint = STRATEGY_TINTS[k] ?? STRATEGY_TINTS.growth;
-  const emojiSize = Math.round(size * 0.5);
+  const Icon = STRATEGY_ICONS[k] ?? TrendingUp;
+  const iconSize = Math.round(size * 0.46);
   return (
     <div
       className={`flex shrink-0 items-center justify-center rounded-xl border transition-all duration-300 ${className ?? ""}`}
@@ -455,7 +474,7 @@ function StrategyIcon({
       aria-hidden="true"
       data-strategy={k}
     >
-      <span style={{ fontSize: emojiSize, lineHeight: 1 }}>{emoji}</span>
+      <Icon size={iconSize} strokeWidth={2.25} color={paused ? "rgba(120,113,100,0.75)" : tint.fg} aria-hidden />
     </div>
   );
 }
@@ -837,7 +856,9 @@ function HeroProjectionSpin({
             display: "flex",
             flexDirection: "column",
             transform: `translateY(${rolled ? -(span * CELL) : 0}em)`,
-            transition: `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+            // Curve = the canonical --ease-out-expo token (was a hardcoded copy of
+            // the same bezier). durationMs stays dynamic (the roll speed). 2026-06-23.
+            transition: `transform ${durationMs}ms var(--ease-out-expo)`,
           }}
         >
           {rows.map((v, i) => (
@@ -975,7 +996,7 @@ function LabCollapse({
           // Open state warms the title + chevron only: no box, no shadow, no lid.
           background: "transparent",
           border: "none",
-          borderTop: "1px solid hsl(var(--kiddo-border) / 0.7)",
+          borderTop: "1px solid hsl(var(--kiddo-border))",
           borderRadius: 0,
           boxShadow: "none",
         }}
@@ -1006,7 +1027,7 @@ function LabCollapse({
             flexShrink: 0,
             color: open ? "hsl(var(--kiddo-evergreen))" : "rgba(26,23,16,0.4)",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform .26s cubic-bezier(0.16,1,0.3,1), color .26s cubic-bezier(0.16,1,0.3,1)",
+            transition: "transform var(--duration-normal) var(--ease-out-expo), color var(--duration-normal) var(--ease-out-expo)",
           }}
         />
       </button>
@@ -1381,7 +1402,7 @@ function humanizeDaysAway(days: number | null | undefined): string {
   if (days < 365) return `about ${Math.round(days / 30)} months away`;
   const years = Math.round((days / 365) * 2) / 2; // nearest half-year
   const yearStr = years % 1 === 0 ? String(years) : years.toFixed(1);
-  return `about ${yearStr} years away`;
+  return `about ${yearStr} year${years === 1 ? "" : "s"} away`;
 }
 
 type GifterProfile = {
@@ -3540,7 +3561,7 @@ export default function DashboardLab() {
       return `What I want ${childName} to know by graduation day...`;
     }
     if (eventType === "birthday" || /\bbirthday\b/i.test(eventName)) {
-      return isOwnerMode ? `What this birthday means to you...` : `What ${childName}'s next birthday means to you...`;
+      return isOwnerMode ? `What you want to remember about this...` : `What you want ${childName} to know...`;
     }
     if (eventType === "wedding" || /\bwedding\b/i.test(eventName)) {
       return `What you hope for ${childName} on their wedding day...`;
@@ -4547,9 +4568,28 @@ export default function DashboardLab() {
     const landedAmt = landed ? parseFloat(String(landed.amount ?? "").replace(/[^0-9.]/g, "")) : NaN;
     setFlashGiftAmount(Number.isFinite(landedAmt) && landedAmt > 0 ? landedAmt : null);
     setPendingFlashId(null);
-    const t = setTimeout(() => { setNewGiftFlash(false); setFlashGifterName(null); setFlashGiftAmount(null); }, 4800);
-    return () => clearTimeout(t);
+    // The 4800ms reset of the gold cue lives in its OWN effect below — NOT here.
+    // Arming it inside this effect tied clearTimeout to this effect's volatile deps
+    // (recentGiftsFeed). A poll / demo-overlay update between the flash and the
+    // 4800ms re-ran this effect → its cleanup CANCELLED the reset timer, then the
+    // early-return (pendingFlashId now null) never re-armed it → newGiftFlash stuck
+    // TRUE → the hero number stayed GOLD forever (worst after firing two test gifts
+    // back-to-back, which churns the feed). Decoupled 2026-06-23.
   }, [pendingFlashId, heroTabVisible, heroInView, activeFundId, recentGiftsFeed]);
+
+  // Reset the gift-flash gold cue 4800ms after the LAST gift beat. Keyed on
+  // giftSpinToken (bumped once per gift, so a second gift RE-ARMS the timer) and on
+  // newGiftFlash (so it only runs while lit) — and crucially NOT on recentGiftsFeed,
+  // so background polling / overlay updates can't cancel the reset mid-flight.
+  useEffect(() => {
+    if (!newGiftFlash) return;
+    const t = setTimeout(() => {
+      setNewGiftFlash(false);
+      setFlashGifterName(null);
+      setFlashGiftAmount(null);
+    }, 4800);
+    return () => clearTimeout(t);
+  }, [newGiftFlash, giftSpinToken]);
 
   // Gift-lands "roll the +$X" (founder, 2026-06-23: "does the balance roll the
   // additional $50?"). The once-per-kid hero roll (useCachedFirstNumber) is
@@ -4888,7 +4928,7 @@ export default function DashboardLab() {
           duration: 8000,
           action: (
             <ToastAction
-              altText="Add a little more to the recurring investment"
+              altText="Add more to the recurring investment"
               onClick={() => {
                 haptic("medium");
                 if (payload.doubledAmt) setAutoInvestAmount(String(payload.doubledAmt));
@@ -4897,7 +4937,7 @@ export default function DashboardLab() {
                 setAutoInvestModalOpen(true);
               }}
             >
-              Add a little more
+              Add more each month
             </ToastAction>
           ),
         });
@@ -6028,8 +6068,8 @@ export default function DashboardLab() {
   const handleSaveAutoInvest = async () => {
     if (!activeFundId || savingAutoInvest) return;
     const amt = parseFloat(autoInvestAmount);
-    if (isNaN(amt) || amt < 1) {
-      toast({ title: "Enter a valid amount", description: "Minimum $1 per gift.", variant: "destructive" });
+    if (isNaN(amt) || amt < 5) {
+      toast({ title: "Enter a valid amount", description: "Minimum $5 per deposit.", variant: "destructive" });
       return;
     }
     setSavingAutoInvest(true);
@@ -6240,18 +6280,12 @@ export default function DashboardLab() {
         message: oneTimeMemoryNote.trim() || undefined,
       });
       haptic("success");
-      // FEEDBACK FIX (2026-06-22): the one-time invest closed the modal with NO explicit
-      // confirmation — the only signal was the background hero roll, which (rightly) doesn't
-      // read as "it worked." Fire a clear success toast so the action visibly lands. (Founder
-      // caught this completing the flow with no indication.)
-      toast({
-        title: `${formatCurrency(amt)} added to ${isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund`,
-        description: oneTimeExecutionModel === "pick" && oneTimeTicker
-          ? `Buying ${oneTimeTicker.toUpperCase()}.`
-          : oneTimeExecutionModel === "cash"
-            ? "Held as cash to invest from the dashboard later."
-            : "Into the growth mix.",
-      });
+      // FEEDBACK (2026-06-23, founder): the success TOAST was redundant with the gift pop-in
+      // (the "+$X · You" chip under the balance + the balance roll) — and the pop-in is the
+      // richer, on-brand, contextual confirmation. Dropped the toast; instead SCROLL TO THE
+      // HERO so the pop-in is actually seen. (The original "no indication" was the pop-in
+      // firing off-screen while scrolled down at the modal — not a missing signal, a missed one.)
+      window.scrollTo({ top: 0, behavior: "smooth" });
       try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "onetime", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
       // Close + reset the modal (mirrors the dialog's own onOpenChange reset).
       setOneTimeModalOpen(false);
@@ -6572,7 +6606,11 @@ export default function DashboardLab() {
     // matchMedia inside playWipe, and the CSS tile-reveal/pulses are killed
     // in the reduced-motion media block of the lab <style>.
     <MotionConfig reducedMotion="user">
-    <div className="kiddo-app-page staging-root md:ml-[264px] pb-24 md:pb-8">
+    {/* No mobile pb here: the `.mobile-app-shell--with-nav` wrapper (App.tsx) already
+        adds `96px + safe-area` of bottom-nav clearance. A page-level `pb-24` on top of
+        that DOUBLED it → ~190px of dead space above the floating nav. Desktop keeps its
+        own `md:pb-8` (no bottom nav there). Fixed 2026-06-23. */}
+    <div className="kiddo-app-page staging-root md:ml-[264px] md:pb-8">
       <AppHeader />
 
       {/* Desktop width cap (2026-06-22, founder: "on desktop there are issues").
@@ -6584,8 +6622,6 @@ export default function DashboardLab() {
           layout constraint, NOT the paused IA/desktop-grid re-architecture —
           mobile is untouched (cap only applies at md+). */}
       <main className="kiddo-canvas px-4 py-6 space-y-6 md:!max-w-[760px] md:mx-auto" id="dashboard-main-content">
-        {/* (Removed the temp ▶ Test +$50 / +$2,500 floating dev buttons — staging-only
-            cascade-test triggers, deleted 2026-06-23 per founder.) */}
         {/* ===== STAGING DESIGN SYSTEM (the foundation all four design leads
             demanded). Replaces the 24-font-size / 11-shadow / 10-radius chaos with
             real tokens. Everything in the rebuilt surfaces snaps to these:
@@ -6628,7 +6664,7 @@ export default function DashboardLab() {
              occasions, handoff) the same hairline top-divider the LabCollapse headers
              have, so the whole page reads as one consistent rhythm of dividered
              sections (no section looks "attached" to the one above it). */
-          .st-section { border-top: 1px solid hsl(var(--kiddo-border) / 0.7); padding-top: 22px; }
+          .st-section { border-top: 1px solid hsl(var(--kiddo-border)); padding-top: 22px; }
         `}</style>
         <h1 className="sr-only">
           {isOwnerMode ? "Your fund" : `${recipientFirstNameDisplay || "Your child"}'s fund`}
@@ -7847,11 +7883,11 @@ export default function DashboardLab() {
                 mid-story between the collapsed view-sections. Always-visible (an action,
                 never hidden in a collapse), calm ("some, all, or none"), conditional on
                 idle cash. Relocated 2026-06-23. */}
-            {uninvestedCash > 0 && !isReadOnlyFund && (
+            {uninvestedCash > 0 && !isReadOnlyFund && bannersRevealed && (
               <motion.section
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: 0.010 }}
+                transition={{ duration: 0.28, delay: 0.05 }}
                 className="mt-4"
               >
                 {/* Self-contained CARD (not the flush .st-section hairline) so it sits as
@@ -7860,34 +7896,36 @@ export default function DashboardLab() {
                 <button
                   type="button"
                   onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
-                  className="w-full rounded-2xl border border-[hsl(var(--kiddo-border)/0.9)] bg-white p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.04)]"
+                  className="w-full rounded-2xl border border-[hsl(var(--kiddo-gold)/0.3)] bg-[hsl(var(--kiddo-gold)/0.09)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.14)]"
                   style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "cash")}
                   data-testid="button-invest-cash"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative shrink-0">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-gold)/0.25)] bg-[hsl(var(--kiddo-gold)/0.12)]">
-                          {/* Coins (NOUN: "this card is about cash"), not TrendingUp. */}
-                          <Coins size={20} className="text-[hsl(var(--kiddo-evergreen))]" />
-                        </div>
-                      </div>
+                      {/* Coins (NOUN: "this card is about cash"), not TrendingUp. Bare —
+                          the gold-on-gold chip behind it was low-contrast + read as generic
+                          "icon kit"; the evergreen icon pops cleaner straight on the gold. */}
+                      <Coins size={28} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase text-muted-foreground">
                           {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
                         </p>
-                        <p className="text-xl font-bold text-foreground font-heading">{formatCurrency(uninvestedCash)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
-                          {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
-                          {cashContext === "gifts_settled" && "Choose how much to invest."}
-                        </p>
+                        <p className="text-xl font-bold text-foreground font-heading">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(uninvestedCash)}</p>
+                        {/* gifts_settled drops the sub-line — "Settled and ready." was
+                            redundant against the "Cash is waiting" eyebrow. The other
+                            two states keep their context-specific sub (they add real info). */}
+                        {cashContext !== "gifts_settled" && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {cashContext === "kyc_pending" && "Verified and ready to invest."}
+                            {cashContext === "held_as_cash" && "Held as cash. Invest any time."}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {/* Evergreen primary-CTA pill, NOT gold — gold's solid-pill weight is
                         reserved for Share. */}
                     <div className="shrink-0 whitespace-nowrap rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1.5 text-xs font-semibold text-white">
-                      Review options
+                      Invest it
                     </div>
                   </div>
                 </button>
@@ -8520,7 +8558,7 @@ export default function DashboardLab() {
                     type="button"
                     onClick={() => { haptic("selection"); openRecurring(); }}
                     data-testid="chip-recurring-status"
-                    className={`flex-1 min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
+                    className={`flex-1 md:flex-none min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
                   >
                     <Repeat size={14} className="shrink-0" />
                     <span className="flex-1 min-w-0 truncate">{statusLine}</span>
@@ -9001,21 +9039,6 @@ export default function DashboardLab() {
                       disclosure doesn't get its own box (containers never nest) —
                       structure comes from alignment + the total divider, not chrome. */}
                   <div className="pt-1">
-                    {/* Inner "{child} fund so far 🌱" title removed — it duplicated
-                        the LabCollapse header right above (4th instance of the same
-                        echo as growth/holdings/your-part). The date-range line stays:
-                        it's the unique part, labeling this breakdown's lifespan. */}
-                    <div className="flex items-baseline justify-start mb-4">
-                      <p className="text-[10px] text-muted-foreground/60">
-                        {/* Year ALWAYS shown 2026-05-23 — was conditionally
-                            hidden when fund age < 365d on the theory that
-                            the year was redundant for recent funds. In
-                            practice the reader sees "Apr 13" cold and has
-                            to guess whether that's this year or last;
-                            removing the guess is worth the four chars. */}
-                        Since {new Date(periodStartMs).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}
-                      </p>
-                    </div>
 
                     <div className="space-y-2 last30-breakdown">
                       {/* Gifts row navigates to Memory Book. Pronoun pulled
@@ -9210,7 +9233,11 @@ export default function DashboardLab() {
                         sub-lines (cash status + next-scheduled preview)
                         carry NEW information; the date sub-line did not. */}
                     <div className="mt-4">
-                      <div className="flex items-baseline justify-between">
+                      {/* STAGING: pr-4 so the Worth today number shares the SAME right edge as
+                          the breakdown rows above — those are hover-buttons with -mx-2/px-2 that
+                          inset their value 16px, which this total (a plain div) wasn't matching
+                          (it sat 16px further right). */}
+                      <div className="flex items-baseline justify-between pr-4">
                         <span className="text-sm font-bold text-foreground">Worth today</span>
                         {/* Right-aligned by the row's justify-between, so the
                             Worth today number shares the same right edge as the
@@ -9239,7 +9266,7 @@ export default function DashboardLab() {
                         <button
                           type="button"
                           onClick={() => summaryScrollTo("cash")}
-                          className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+                          className="mt-2 block max-w-sm text-left text-[11px] leading-relaxed text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
                           {/* Settling-state copy enhancement 2026-05-14
@@ -9252,9 +9279,9 @@ export default function DashboardLab() {
                               (GiftSuccess.tsx, mobile GifterFlow
                               handoff step) so both sides read as one
                               coherent story. */}
-                          <span className="tabular-nums">{fmtRow(periodCash)}</span>
-                          <span>of that is still in cash. Invests on the next cycle, usually 1 to 2 business days.</span>
-                          <ChevronRight size={12} className="opacity-60" aria-hidden />
+                          <span className="font-medium tabular-nums text-foreground/70">{fmtRow(periodCash)}</span>{" "}
+                          of that is still in cash, investing in 1 to 2 business days.
+                          <ChevronRight size={12} className="ml-0.5 inline align-middle opacity-60" aria-hidden />
                         </button>
                       )}
                     </div>
@@ -10018,15 +10045,15 @@ export default function DashboardLab() {
                 // Tooltip messages per segment
                 const childFirst = recipientFirstNameDisplay || "them";
                 const segTooltip: Record<string, string> = {
-                  principal: `${formatCurrency(principal)} gifted by people who love ${childFirst}.`,
-                  growth: growth > 0.5 ? `${formatCurrency(growth)} in growth so far. Building quietly.` : `No growth yet. Every gift is a seed. 🌱`,
+                  principal: `${formatMoneyFriendly(principal)} gifted by people who love ${childFirst}.`,
+                  growth: growth > 0.5 ? `${formatMoneyFriendly(growth)} in growth so far.` : `No growth yet. It builds as the market moves.`,
                   cash: cash > 0.5
-                    ? `${formatCurrency(cash)} is sitting as cash, ready to invest.`
+                    ? `${formatMoneyFriendly(cash)} is sitting as cash, ready to invest.`
                     : settling > 0.5
-                      ? `${formatCurrency(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
+                      ? `${formatMoneyFriendly(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
                       : `All of ${childFirst === "them" ? "the gifts are" : `${childFirst}'s gifts are`} invested. Nothing pending.`,
-                  managed: `${formatCurrency(managedVal)} in a diversified managed mix.`,
-                  chosen: `${formatCurrency(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
+                  managed: `${formatMoneyFriendly(managedVal)} in a diversified managed mix.`,
+                  chosen: `${formatMoneyFriendly(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
                 };
 
                 return (
@@ -10184,7 +10211,7 @@ export default function DashboardLab() {
                                         </p>
                                       )}
                                     </button>
-                                    {isChosen && !isReadOnlyFund && (
+                                    {isChosen && !isReadOnlyFund ? (
                                       <button
                                         type="button"
                                         onClick={handleAddMore}
@@ -10195,7 +10222,17 @@ export default function DashboardLab() {
                                       >
                                         <Plus size={14} strokeWidth={2.5} />
                                       </button>
-                                    )}
+                                    ) : !isReadOnlyFund ? (
+                                      // Managed-mix rows have no "+" (you customize the whole mix,
+                                      // not individual sleeves) — but in an editable fund the
+                                      // hand-picked rows above DO, so without this their values
+                                      // would right-align 42px further right than the hand-picked
+                                      // ones (the "value column steps at the group seam" snag).
+                                      // Reserve the +-button's exact footprint so every value in
+                                      // the list shares ONE right edge. (Read-only funds have no +
+                                      // on any row, so they're already consistent — no spacer.)
+                                      <div className="h-8 w-8 shrink-0" aria-hidden="true" />
+                                    ) : null}
                                   </div>
                                 </div>
                               </div>
@@ -11473,7 +11510,7 @@ export default function DashboardLab() {
                       // let the header + hero row carry it crisply.
                       const showSummaryLine = shownContribs.length !== 1 || pausedCount > 0;
                       return (
-                        <div className="px-4 pt-3.5 pb-3 border-b border-border/40">
+                        <div className="pb-3">
                           <p className={`text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 ${showSummaryLine ? "mb-1" : ""}`}>
                             Recurring investments
                           </p>
@@ -11600,7 +11637,7 @@ export default function DashboardLab() {
                                     setListActionContribId(String(contrib.id));
                                   }}
                                   data-testid={`recurring-list-row-${contrib.id}`}
-                                  className={`w-full flex items-center gap-3 px-4 ${isSoloHero ? "py-4" : "py-2.5"} pr-20 text-left hover:bg-muted/30 transition-colors ${isPausedRow ? "opacity-60" : ""}`}
+                                  className={`w-full flex items-center gap-3 ${isSoloHero ? "py-4" : "py-2.5"} pr-20 text-left hover:bg-muted/30 transition-colors ${isPausedRow ? "opacity-60" : ""}`}
                                 >
                                   {/* Two icon types share the same slot:
                                       - Pick → real brand logo (Apple stays Apple
@@ -11766,7 +11803,7 @@ export default function DashboardLab() {
                         recurring for free, exactly like a parent does, just for
                         themselves. The parent's handed-off plan sits above as
                         read-only "Ended" history. */}
-                    <div className="border-t border-border/40 px-4 py-3">
+                    <div className="pt-2 pb-3">
                       <button
                         type="button"
                         className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
@@ -11848,7 +11885,11 @@ export default function DashboardLab() {
                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                   One-time investment
                 </p>
-                <div className="min-w-0">
+                {/* md:flex-1 + center: on desktop the sparse one-time content distributes
+                    its air evenly in the equal-height column (was pooling at the bottom
+                    next to the denser recurring card). Eyebrow stays top-aligned with
+                    "Recurring investments"; mobile (stacked) is unaffected. */}
+                <div className="min-w-0 md:flex md:flex-1 md:flex-col md:justify-center">
                   {lastOwnGift ? (() => {
                       // The "feel it working" moment: parent's last contribution wrapped
                       // as a mini Memory Book entry. Brand emoji is the hero (warm anchor),
@@ -11915,11 +11956,11 @@ export default function DashboardLab() {
                         </div>
                       );
                     })() : (
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
                           <Plus size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
                         </div>
-                        <p className="text-xs text-muted-foreground pt-1">
+                        <p className="text-xs text-muted-foreground">
                           {isReadOnlyFund
                             ? `Your one-time investments are part of ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund now.`
                             : activeAutoInvest
@@ -11931,7 +11972,13 @@ export default function DashboardLab() {
                       </div>
                     )}
                 </div>
-                <div className="mt-auto pt-4">
+                {/* pt-4 only (NOT mt-auto): mt-auto bottom-aligned the action block,
+                    which is fine on mobile (content-height column) but on desktop the
+                    column stretches to the taller 2-row recurring side, so mt-auto
+                    stranded the button low with a big gap above it. Top-packing keeps
+                    the button right under its description; the column just ends shorter
+                    than recurring (clean trailing whitespace, not a mid-column void). */}
+                <div className="pt-4">
                   {isReadOnlyFund ? (
                     // Read-only role (previous owner, viewer): show the
                     // last-investment chrome above unchanged, but the
@@ -13508,45 +13555,15 @@ export default function DashboardLab() {
                       <p style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                         {age18Transition ? formatAgeTransitionDate(age18Transition.eighteenthBirthday) : "Add a birthdate"}
                       </p>
-                      {/* THE HUMAN LEAD (2026-06-22). The handoff is the product's
-                          emotional summit, not a payout screen. Lead with what the
-                          kid actually receives — years of people who showed up,
-                          anchored to the OLDEST note in the Memory Book — and let the
-                          money drop to a grounded line below. (Founder critique: the
-                          old order "made them do math" at the one moment that should
-                          make them feel something.) Pure-additive; degrades to just
-                          the counts line when there are no notes yet. */}
-                      {totalValue > 0 && age18Transition && (() => {
-                        const notes = (memoryEntriesForFund || []).filter((e: any) => String(e?.content || "").trim() && e?.type !== "parent_letter");
-                        const oldest = notes.slice().sort((a: any, b: any) => new Date(a?.createdAt || 0).getTime() - new Date(b?.createdAt || 0).getTime())[0];
-                        const people = new Set((gifts || []).map((g: any) => String(g?.senderName || "").trim().toLowerCase()).filter(Boolean)).size;
-                        if (!oldest && notes.length === 0 && people === 0) return null;
-                        return (
-                          <div style={{ marginTop: 12 }}>
-                            {/* Both the "money is only part of it" topper AND the
-                                auto-sampled note quote were cut (2026-06-22). The quote
-                                pulled WHATEVER the oldest note was — uncontrolled quality
-                                that undersells when thin, with a faintly templated "· the
-                                first note, {year}" caption (read as auto-generated). The
-                                ONE count line below carries the moat message reliably,
-                                every time; browsing real notes lives IN the Memory Book,
-                                not auto-sampled onto the emotional summit. */}
-                            {/* "X notes {child} can keep forever." The earlier
-                                "from N people" clause was cut (2026-06-22): N came
-                                from gift SENDERS, not the note authors, so "notes
-                                FROM N people" asserted a link the data doesn't
-                                compute (a gifter who wrote no note still inflated N;
-                                notes from non-gifters went uncounted) — a false
-                                number at the trust summit. The contributor count
-                                already headlines the roster above ("N people are
-                                building {child}'s future"), so it isn't lost — just
-                                kept where it's honest. */}
-                            <p style={{ fontSize: 13.5, fontWeight: 500, color: "rgba(255,255,255,0.82)", lineHeight: 1.5 }}>
-                              {notes.length > 0 ? `${notes.length} ${notes.length === 1 ? "note" : "notes"}` : "Notes"} {recipientFirstNameDisplay || "they"} can keep forever.
-                            </p>
-                          </div>
-                        );
-                      })()}
+                      {/* The "{N} notes {child} can keep forever" line was CUT
+                          2026-06-23 (founder). On the emotional summit it read as a
+                          feature-pitch — advertising permanence ("forever") with a stat
+                          instead of trusting the moment. The sentence + date already
+                          carry the feeling and the letter below is the real action; the
+                          keepsake idea lives where it's honest (the Memory Book itself).
+                          The upgrade that brings this beat back is a curated, parent-
+                          PINNED real note — actual words, not a count — which is a real
+                          feature (a pin action + a durable field), deliberately deferred. */}
                       {age18Transition && totalValue === 0 && (
                         <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.62)", marginTop: 6 }}>
                           🌱 {age18Transition.countdownLabel.replace(` until age ${age18Transition.majorityAge}`, "")} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
@@ -13671,13 +13688,14 @@ export default function DashboardLab() {
                   </div>
                 </div>
 
-                {/* Trajectory chart PULLED from this card (option A, 2026-06-22):
-                    the handoff is the EMOTIONAL summit — the day, the people/notes,
-                    and the parent's letter. The money trajectory was a SECOND money
-                    element competing with that beat ("lots going on"). It lives in
-                    the hero ("~$X at {majority} →", which links to the Projection
-                    page) and on the Projection page itself, so it isn't lost — just
-                    off the one screen that should make the parent feel something. */}
+                {/* NO chart on this card — by design. The analytical trajectory was
+                    pulled 2026-06-22 (it competed as a second money element on the
+                    emotional summit); a number-less "growth arc" was tried 2026-06-23
+                    and also removed — even without numbers a curve pulls the register
+                    back toward finance on the one screen that should be purely human,
+                    and "empty" here is calm, not a gap. The summit is words: the day,
+                    what {recipientFirstNameDisplay || "they"} keep, the letter. The
+                    growth story lives in the hero + Projection page, where it belongs. */}
 
                 {/* Letter - inline */}
                 <AnimatePresence initial={false}>
@@ -14003,7 +14021,9 @@ export default function DashboardLab() {
                 <ChevronRight size={15} strokeWidth={2.2} aria-hidden style={{ color: "hsl(var(--kiddo-evergreen) / 0.55)", flexShrink: 0 }} />
               </button>
             )}
-            <TrustMicroStrip />
+            {/* Recessive footer treatment (no floating card) — fine print should recede
+                on the de-carded dashboard, not float as the last card-soup pill. */}
+            <TrustMicroStrip flush />
           </>
         )}
       </main>
@@ -14187,7 +14207,7 @@ export default function DashboardLab() {
 
       {/* One-time contribution modal */}
       <Dialog open={oneTimeModalOpen} onOpenChange={(v) => { if (!v) { setOneTimeModalOpen(false); setOneTimeStep("amount"); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeShowRails(false); setOneTimeMedia(EMPTY_MEMORY_MEDIA); } }}>
-        <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[88vh]" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 gap-0 max-h-[88vh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add a one-time investment</DialogTitle>
 
           {/* Progress bar */}
@@ -14321,7 +14341,6 @@ export default function DashboardLab() {
                   // labels in the holdings card and the section summary lines.
                   const beforePct = (beforeValue / investedCurrentValue) * 100;
                   const afterPct = (afterValue / (investedCurrentValue + addAmt)) * 100;
-                  const pctDelta = afterPct - beforePct;
                   const fmtShares = (n: number) => n >= 1 ? n.toFixed(2) : n.toFixed(4);
                   const companyName = tickerMeta?.name || oneTimeTicker.toUpperCase();
                   const companyEmoji = tickerMeta?.emoji || "";
@@ -14345,11 +14364,6 @@ export default function DashboardLab() {
                           <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
-                            {Math.abs(pctDelta) >= 0.1 && (
-                              <span className={`ml-1 font-medium ${pctDelta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
-                                ({pctDelta >= 0 ? "+" : ""}{pctDelta.toFixed(1)})
-                              </span>
-                            )}
                           </p>
                         </div>
                       </div>
@@ -14376,8 +14390,8 @@ export default function DashboardLab() {
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {oneTimeExecutionModel === "cash"
-                      ? `${formatCurrency(parseFloat(oneTimeAmount))} will sit as cash in the fund until you invest it from the dashboard.`
-                      : `Kiddo invests ${formatCurrency(parseFloat(oneTimeAmount))} as soon as it clears.`}
+                      ? `${formatMoneyFriendly(parseFloat(oneTimeAmount))} will sit as cash in the fund until you invest it from the dashboard.`
+                      : `Kiddo invests ${formatMoneyFriendly(parseFloat(oneTimeAmount))} as soon as it clears.`}
                   </p>
                 </div>
 
@@ -14535,7 +14549,11 @@ export default function DashboardLab() {
                     data-testid="button-one-time-execution-cash"
                   >
                     <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-lg" aria-hidden="true">💵</span>
+                      {/* Banknote glyph — hand-drawn to match the star (fund default)
+                          + bullseye (pick a stock) in this selector: one bespoke,
+                          monochrome `primary`-stroke set, no OS emoji. (Was 💵, the lone
+                          borrowed-emoji straggler among two custom SVGs.) */}
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="5.5" width="15" height="9" rx="2" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="hsl(var(--primary)/0.12)"/><circle cx="10" cy="10" r="2.2" stroke="hsl(var(--primary))" strokeWidth="1.5"/></svg>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">Hold as cash</p>
@@ -14615,6 +14633,22 @@ export default function DashboardLab() {
                   <h2 className="font-heading text-xl font-semibold text-foreground">
                     Almost there.
                   </h2>
+                  {/* Prominent destination line — answers "where does my money go?" at a
+                      glance so the parent never has to hunt the summary's "Goes into"
+                      row. Mirrors the target-step explainer copy (cash vs invest). */}
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {(() => {
+                      const amt = formatMoneyFriendly(parseFloat(oneTimeAmount || "0"));
+                      const whose = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the";
+                      if (oneTimeExecutionModel === "cash")
+                        return `${amt} stays as cash in ${whose} fund until you invest it.`;
+                      if (oneTimeExecutionModel === "pick" && oneTimeTicker) {
+                        const nm = quotedAutoInvestStocks.find(s => s.symbol === oneTimeTicker.toUpperCase())?.name ?? oneTimeTicker.toUpperCase();
+                        return `${amt} buys ${nm} as soon as it clears.`;
+                      }
+                      return `${amt} goes into ${capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}, invested as soon as it clears.`;
+                    })()}
+                  </p>
                 </div>
 
                 {/* Position diff arrow on confirm — same logic as the amount step,
@@ -14671,8 +14705,9 @@ export default function DashboardLab() {
                   );
                 })()}
 
-                {/* Summary card */}
-                <div className="rounded-xl border border-border/50 bg-muted/30 p-4 space-y-2">
+                {/* Summary card — grouped (gift details | charge) with a hairline + more air
+                    so the five rows read as two tidy groups, not one crammed list. */}
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-4 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Amount</span>
                     <span className="text-sm font-semibold text-foreground">{formatCurrency(parseFloat(oneTimeAmount || "0"))}</span>
@@ -14687,40 +14722,41 @@ export default function DashboardLab() {
                           : capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Funding source</span>
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">
-                        {oneTimePaymentMethod === "bank"
-                          ? "Bank transfer"
-                          : oneTimePaymentMethod === "cashapp"
-                            ? "Cash App"
-                            : oneTimePaymentMethod === "paypal"
-                              ? "PayPal"
-                              : oneTimePaymentMethod === "card"
-                                ? "Card"
-                                : "Apple Pay / Google Pay"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => { setOneTimeShowRails(v => !v); haptic("selection"); }}
-                        className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
-                        data-testid="button-one-time-change-rail"
-                      >
-                        {oneTimeShowRails ? "Done" : "Change"}
-                      </button>
+                  {/* STAGING: funding-source row was wrapping to 2 lines — the "Change" text
+                      button pushed "Apple Pay / Google Pay" over. Now the WHOLE row is one
+                      tappable button with a rotating chevron (no "Change/Done" text), + a
+                      defensive truncate, so it stays on one line. */}
+                  <button
+                    type="button"
+                    onClick={() => { setOneTimeShowRails(v => !v); haptic("selection"); }}
+                    className="flex w-full items-center justify-between gap-3 text-left"
+                    data-testid="button-one-time-change-rail"
+                    aria-label="Change funding source"
+                  >
+                    <span className="shrink-0 text-sm text-muted-foreground">Funding source</span>
+                    <span className="flex min-w-0 items-center gap-1 text-sm font-semibold text-foreground">
+                      <span className="truncate">{oneTimePaymentMethod === "bank"
+                        ? "Bank transfer"
+                        : oneTimePaymentMethod === "cashapp"
+                          ? "Cash App"
+                          : oneTimePaymentMethod === "paypal"
+                            ? "PayPal"
+                            : oneTimePaymentMethod === "card"
+                              ? "Card"
+                              : "Apple Pay / Google Pay"}</span>
+                      <ChevronDown size={14} className={`shrink-0 text-muted-foreground transition-transform ${oneTimeShowRails ? "rotate-180" : ""}`} aria-hidden />
                     </span>
-                  </div>
-                  <div className="flex items-center justify-between">
+                  </button>
+                  <div className="flex items-center justify-between border-t border-border/40 pt-3">
                     <span className="text-sm text-muted-foreground">
-                      Estimated processing fee
+                      Processing fee
                     </span>
                     <span className="text-sm font-semibold text-foreground" data-testid="text-one-time-processing-fee">
                       {formatCurrency(oneTimeSelectedEstimate.processingFee)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Estimated total charged</span>
+                    <span className="text-sm text-muted-foreground">Estimated total</span>
                     <span className="text-sm font-semibold text-foreground" data-testid="text-one-time-total-charge">
                       {formatCurrency(oneTimeSelectedEstimate.totalCharge)}
                     </span>
@@ -14732,7 +14768,7 @@ export default function DashboardLab() {
                   <div>
                     <p className="text-sm font-medium text-foreground">How do you want to fund it?</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      New money can come from Apple Pay, Cash App, PayPal, card, or bank transfer. Fees are estimated live before checkout.
+                      Fees are estimated live, finalized at checkout.
                     </p>
                   </div>
                   <div className="grid gap-2">
@@ -14748,6 +14784,14 @@ export default function DashboardLab() {
                         method === "bank"
                           ? Math.max(0, oneTimeCardLikeFee - estimate.processingFee)
                           : 0;
+                      // Monochrome rail icon (NOT brand logos — keeps the cream/evergreen
+                      // calm; the real wallet marks show in the Stripe element after select).
+                      const RailIcon =
+                        method === "apple_pay" ? Smartphone
+                        : method === "card" ? CreditCard
+                        : method === "cashapp" ? DollarSign
+                        : method === "paypal" ? Wallet
+                        : Landmark;
                       return (
                       <button
                         key={method}
@@ -14763,28 +14807,40 @@ export default function DashboardLab() {
                         }`}
                         data-testid={`button-one-time-payment-${method}`}
                       >
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-foreground">{title}</span>
-                          <span className="block text-xs text-muted-foreground">{description}</span>
+                        {/* Redesigned rail: one clean line — method + fee. Only the smart
+                            choice (ACH) carries a second line ("Lowest fee · save $X"), so
+                            the eye lands on it. Dropped the per-rail "$X total" (it lives in
+                            the summary above — no more "$51.75 total" five times) and the
+                            obvious card-brand descriptions (the spreadsheet feel). */}
+                        <span className="flex min-w-0 items-center gap-3">
+                          <RailIcon
+                            size={18}
+                            strokeWidth={2}
+                            className={`shrink-0 ${oneTimePaymentMethod === method ? "text-[hsl(var(--kiddo-evergreen))]" : "text-muted-foreground"}`}
+                            aria-hidden
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-foreground">{title}</span>
+                            {method === "bank" && (
+                              <span className="block text-xs font-medium text-green-700">
+                                Lowest fee{savings > 0 ? ` · save ${formatCurrency(savings)}` : ""}
+                              </span>
+                            )}
+                          </span>
                         </span>
                         <span className="shrink-0 text-right">
-                          <span className={`block text-[11px] font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}>
+                          <span
+                            className={`block text-xs font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}
+                            data-testid={`text-one-time-total-${method}`}
+                          >
                             {fee}
                           </span>
-                          <span className="block text-[10px] text-foreground/80" data-testid={`text-one-time-total-${method}`}>
-                            {formatCurrency(estimate.totalCharge)} total
-                          </span>
-                          {savings > 0 && (
-                            <span className="block text-[10px] text-green-700">
-                              Save about {formatCurrency(savings)}
-                            </span>
-                          )}
                         </span>
                       </button>
                     )})}
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Estimated charge = gift amount plus payment processing. The full gift amount goes into the fund.
+                    The full gift amount goes into the fund.
                   </p>
                   {oneTimeAchSavings > 0 && (
                     <p className="text-[11px] text-green-700">
@@ -14794,8 +14850,9 @@ export default function DashboardLab() {
                 </div>
                 )}
 
-                {/* Memory note */}
-                <div className="rounded-2xl border border-amber-200/60 bg-amber-50/40 p-4 space-y-2">
+                {/* Memory note — brand gold tint (was generic Tailwind amber), warm enough to
+                    mark this as the emotional moment without being a generic yellow. */}
+                <div className="rounded-2xl border border-[hsl(var(--kiddo-gold)/0.3)] bg-[hsl(var(--kiddo-gold)/0.06)] p-4 space-y-2">
                   <p className="text-sm font-semibold text-foreground">
                     Leave a note for the Memory Book
                   </p>
@@ -14803,7 +14860,7 @@ export default function DashboardLab() {
                     {/* Pronoun-aware reads-on-18 helper. */}
                     {recipientFirstNameDisplay
                       ? `${recipientFirstNameDisplay} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
-                      : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} ${majorityAge}.`} Optional, but it matters.
+                      : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} ${majorityAge}.`}
                   </p>
                   {oneTimeNoteSaved ? (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium">
@@ -14813,12 +14870,16 @@ export default function DashboardLab() {
                     <>
                       <textarea
                         value={oneTimeMemoryNote}
-                        onChange={(e) => setOneTimeMemoryNote(e.target.value.slice(0, 240))}
+                        onChange={(e) => setOneTimeMemoryNote(e.target.value.slice(0, 600))}
                         placeholder={noteFlowPlaceholder("one-time")}
-                        rows={3}
-                        className="w-full rounded-xl border border-amber-200/40 bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-amber-700/40 focus:outline-none focus:ring-1 focus:ring-primary"
+                        rows={4}
+                        className="w-full rounded-xl border border-[hsl(var(--kiddo-gold)/0.28)] bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-[hsl(var(--kiddo-gold-ink)/0.4)] focus:outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <p className="text-[10px] text-muted-foreground text-right">{oneTimeMemoryNote.length}/240</p>
+                      {/* Counter only near the cap — a heartfelt 18-year note shouldn't write under
+                          a constant character ceiling. 600 gives it room; the count shows only when close. */}
+                      {oneTimeMemoryNote.length > 480 && (
+                        <p className="text-[10px] text-muted-foreground text-right">{oneTimeMemoryNote.length}/600</p>
+                      )}
                       {/* Media trio (photo / video / voice). Voice is the moat
                           — Emma at 18 hearing the parent's voice from when she
                           was 3. Collapsible by default so the speed of the
@@ -14861,7 +14922,7 @@ export default function DashboardLab() {
                   </Button>
                 </div>
                 <p className="text-center text-xs text-muted-foreground -mt-2">
-                  Secure checkout via Stripe. Final totals can move slightly if the payment rail changes on the hosted checkout page.
+                  Secure checkout via Stripe.
                 </p>
               </>
             )}
@@ -16106,7 +16167,7 @@ export default function DashboardLab() {
             </motion.div>
             <div>
               <h2 className="font-heading text-xl font-semibold text-foreground">
-                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is growing.` : "Your gift is on its way."}
+                {recipientFirstNameDisplay ? `On its way to ${recipientFirstNameDisplay}'s fund.` : "Your gift is on its way."}
               </h2>
               {/* Was: "Lands as soon as your bank clears it." That copy
                   was ACH-specific — flat-out wrong for the card / Apple
@@ -16120,7 +16181,7 @@ export default function DashboardLab() {
                   : "It'll show up in the fund any moment now."}
               </p>
               <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
-                Powered by Kiddo · gifts that actually last 🌱
+                Powered by Kiddo · gifts that actually last
               </p>
             </div>
             <Button
@@ -16163,7 +16224,7 @@ export default function DashboardLab() {
           7% = $Y at 18) so the parent sees what Plus actually unlocks for
           their fund, not generic feature copy. */}
       <Dialog open={autoInvestUpgradeOpen} onOpenChange={(open) => { if (!open) setAutoInvestUpgradeOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
             const child = recipientFirstNameDisplay || "your child";
@@ -16293,7 +16354,7 @@ export default function DashboardLab() {
 
       {/* Auto-invest modal */}
       <Dialog open={autoInvestModalOpen} onOpenChange={(open) => { if (!open) { setAutoInvestModalOpen(false); setAutoInvestStep("amount"); setLastSavedContribId(null); setAutoInvestMedia(EMPTY_MEMORY_MEDIA); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Recurring investment settings</DialogTitle>
 
           {/* Step progress dots */}
@@ -16353,9 +16414,13 @@ export default function DashboardLab() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Amount per gift</label>
-                    <div className="relative mt-2">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                    {/* The amount IS the moment — the big centered "register" number, matched
+                        to the one-time flow (this used to be a small boxed form field + tiny
+                        chips, which read FAR behind it). The "Amount per deposit" label is
+                        dropped: the big $25 is self-evidently the amount, and the Frequency
+                        selector right below names the cadence ("per deposit"). 2026-06-23. */}
+                    <div className="flex items-end justify-center gap-1.5 pt-3 pb-1">
+                      <span className="text-3xl font-semibold text-muted-foreground/55 leading-none pb-1.5">$</span>
                       <input
                         type="number"
                         min="5"
@@ -16363,17 +16428,32 @@ export default function DashboardLab() {
                         value={autoInvestAmount}
                         onChange={(e) => setAutoInvestAmount(e.target.value)}
                         placeholder="25"
-                        className="h-12 w-full rounded-2xl border border-border bg-background pl-8 pr-4 text-sm"
+                        inputMode="decimal"
+                        aria-label="Amount per deposit in dollars"
+                        className="font-bold text-foreground text-center tracking-tight focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        style={{
+                          // Matches the one-time register: inline font-size beats the global
+                          // iOS-zoom base rule; box-less (no border/ring/bg) so it reads as a
+                          // number you type, not a form field. Auto-sizes to its digits.
+                          fontSize: "3.4rem",
+                          lineHeight: 1.05,
+                          width: `${Math.max(1.5, String(autoInvestAmount || "25").length + 0.3)}ch`,
+                          border: "none",
+                          outline: "none",
+                          boxShadow: "none",
+                          background: "transparent",
+                          padding: 0,
+                        }}
                         data-testid="input-auto-invest-amount"
                       />
                     </div>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-4 flex gap-2 justify-center flex-wrap">
                       {[10, 25, 50, 100].map((amt) => (
                         <button
                           key={amt}
                           type="button"
                           onClick={() => setAutoInvestAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-[13px] font-semibold px-4 py-1.5 rounded-full border transition-colors ${
                             autoInvestAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -16386,17 +16466,21 @@ export default function DashboardLab() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-foreground">Frequency</label>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    {/* Frequency as a centered SEGMENTED control — matches the register's
+                        centered pill aesthetic (was a left-labelled 2x2 grid that read a step
+                        below the amount above it). No label: the four time-words are
+                        self-evidently the cadence, the same way the big number is the amount.
+                        2026-06-23 (parity pass with the one-time flow). */}
+                    <div className="flex rounded-full border border-border p-1">
                       {(["daily", "weekly", "monthly", "yearly"] as const).map((freq) => (
                         <button
                           key={freq}
                           type="button"
                           onClick={() => setAutoInvestFrequency(freq)}
-                          className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+                          className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors ${
                             autoInvestFrequency === freq
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:text-foreground"
+                              ? "bg-[hsl(var(--kiddo-evergreen))] text-white shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                           data-testid={`button-frequency-${freq}`}
                         >
@@ -16404,7 +16488,7 @@ export default function DashboardLab() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum per gift</p>
+                    <p className="mt-2 text-center text-[11px] text-muted-foreground">$5 minimum per deposit</p>
                   </div>
                 </div>
 
@@ -16510,8 +16594,10 @@ export default function DashboardLab() {
                       ) : (
                         <>
                           <p className="text-sm text-green-800">
-                            {formatCurrency(amt)}/{freqWord(autoInvestFrequency)} ·{" "}
-                            {formatCurrency(amt * periodsPerYear)}/yr
+                            {/* friendly format drops the robotic ".00" on whole amounts:
+                                "$25/month · $300/yr", not "$25.00/month · $300.00/yr". */}
+                            {formatMoneyFriendly(amt)}/{freqWord(autoInvestFrequency)} ·{" "}
+                            {formatMoneyFriendly(amt * periodsPerYear)}/yr
                             {recipientFirstNameDisplay ? ` into ${recipientFirstNameDisplay}'s fund` : ""}
                           </p>
                           {showProjection && (
@@ -16522,9 +16608,10 @@ export default function DashboardLab() {
                         </>
                       )}
                       {showProjection && (
-                        <p className="text-[10px] text-green-800/45 leading-snug pt-0.5">
-                          *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
-                        </p>
+                        <>
+                          <p className="text-[10px] text-green-800/55 leading-snug pt-0.5">Time is what compounds.</p>
+                          <p className="text-[10px] text-green-800/45 leading-snug">*{PROJECTION_DISCLAIMER}</p>
+                        </>
                       )}
                     </div>
                   );
@@ -16550,7 +16637,7 @@ export default function DashboardLab() {
                     Where should it go?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Each gift goes into what you choose. You can change this anytime.
+                    Each deposit goes into what you choose. You can change this anytime.
                   </p>
                 </div>
 
@@ -16679,7 +16766,7 @@ export default function DashboardLab() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">Pick a stock</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Every gift buys shares in one company
+                        Every deposit buys shares in one company
                       </p>
                     </div>
                     <div className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
@@ -16746,7 +16833,7 @@ export default function DashboardLab() {
                     Where should we pull from?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Recurring investments run from your connected bank account. It costs less and runs more reliably than a card, so more of each gift reaches {recipientFirstNameDisplay || "them"}.
+                    Recurring investments run from your connected bank account. It costs less and runs more reliably than a card, so more of each deposit reaches {recipientFirstNameDisplay || "them"}.
                   </p>
                 </div>
 
@@ -16880,7 +16967,7 @@ export default function DashboardLab() {
                     ) : (
                       <Repeat size={15} className="mr-1.5" />
                     )}
-                    {savingAutoInvest ? "Setting up..." : recipientFirstNameDisplay ? `Start growing ${recipientFirstNameDisplay}'s fund` : "Start investing"}
+                    {savingAutoInvest ? "Setting up..." : recipientFirstNameDisplay ? `Start investing for ${recipientFirstNameDisplay}` : "Start investing"}
                   </Button>
                 </div>
 
@@ -16970,7 +17057,7 @@ export default function DashboardLab() {
                 </motion.div>
                 <div>
                   <h2 className="font-heading text-xl font-semibold text-foreground">
-                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is growing.` : "It's running."}
+                    {recipientFirstNameDisplay ? `Investing for ${recipientFirstNameDisplay} is on.` : "It's on."}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-2">
                     {formatCurrency(parseFloat(autoInvestAmount))}/{autoInvestFrequency === "daily" ? "day" : autoInvestFrequency === "weekly" ? "week" : autoInvestFrequency === "yearly" ? "year" : "month"} is scheduled
@@ -16979,7 +17066,7 @@ export default function DashboardLab() {
                       : ""}. Change or cancel anytime.
                   </p>
                   <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
-                    Powered by Kiddo · gifts that actually last 🌱
+                    Powered by Kiddo · gifts that actually last
                   </p>
                 </div>
                 <Button
@@ -17003,7 +17090,7 @@ export default function DashboardLab() {
       </Dialog>
 
       <Dialog open={kidViewConfigOpen} onOpenChange={(o) => { if (!o) { setKidViewConfigOpen(false); setKidViewConfigStep("settings"); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Kid View settings</DialogTitle>
 
           {kidViewConfigStep === "settings" ? (
@@ -17404,7 +17491,7 @@ export default function DashboardLab() {
               </div>
 
               <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 mb-4">
-                Moving an investment to cash can create tax reporting. For a child's fund, money still belongs to the child.
+                Moving an investment to cash can mean a tax form at year-end. For a child's fund, money still belongs to the child.
               </p>
 
               </div>
@@ -17445,7 +17532,7 @@ export default function DashboardLab() {
       <AnimatePresence>
         {showCoverageUpgradeModal && activeFund && (
           <Dialog open={showCoverageUpgradeModal} onOpenChange={setShowCoverageUpgradeModal}>
-            <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+            <DialogContent sheet className="sm:max-w-md p-0 overflow-hidden" aria-describedby={undefined}>
               <DialogTitle className="sr-only">Upgrade {activeFund.name}</DialogTitle>
               <div className="p-6 space-y-5">
                 <div className="space-y-1">
@@ -17550,7 +17637,7 @@ export default function DashboardLab() {
           tapped row. Cancel uses a two-step within the same dialog (menu → confirm)
           rather than nesting another modal. */}
       <Dialog open={listActionContribId !== null} onOpenChange={(open) => { if (!open) closeListAction(); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Recurring investment actions</DialogTitle>
           {(() => {
             // Pull the contrib from root-level parentContributions (the IIFE scope where
@@ -17623,9 +17710,7 @@ export default function DashboardLab() {
                           −{cancelFmt0(cancelFv)} less for {cancelChildFirst} at {majorityAge}<span className="text-amber-900/55 font-normal">*</span>
                         </p>
                       </div>
-                      <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">
-                        *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
-                      </p>
+                      <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">*{PROJECTION_DISCLAIMER}</p>
                     </div>
                   )}
                   <div className="space-y-2">
@@ -17757,7 +17842,7 @@ export default function DashboardLab() {
 
       {/* Pause options modal */}
       <Dialog open={pauseOptionsContribId !== null} onOpenChange={(open) => { if (!open) setPauseOptionsContribId(null); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Pause recurring investment</DialogTitle>
           <div className="p-6 space-y-5">
             <div>

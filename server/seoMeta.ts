@@ -39,7 +39,7 @@ const STATIC: Record<string, PageSeo> = {
   },
   "/give-a-gift": {
     title: "Give a gift that lasts | Kiddo",
-    description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll send them a warm note.",
+    description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll let the parents know.",
     ogType: "website",
   },
   "/pricing": {

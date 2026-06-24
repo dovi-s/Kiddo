@@ -315,7 +315,7 @@ export default function GiveAGift() {
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
               Want to invest for a child but their parents don't have a Kiddo fund yet?
-              Tell us about your gift. We'll send the parents a warm note. They set up the fund. Your gift becomes a real investment in the kid's name.
+              Tell us about your gift. We'll let the parents know. They set up the fund. Your gift becomes a real investment in the child's name.
             </p>
           </motion.div>
 
@@ -411,10 +411,10 @@ export default function GiveAGift() {
                     type="button"
                     aria-pressed={amount === preset && !customAmount}
                     onClick={() => { setAmount(preset); setCustomAmount(""); }}
-                    className={`rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
+                    className={`rounded-full border py-2.5 text-sm font-semibold transition-colors ${
                       amount === preset && !customAmount
-                        ? "border-primary bg-primary/5 text-foreground"
-                        : "border-border bg-card text-foreground/70 hover:border-foreground/30"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-foreground/70 hover:border-foreground/30 hover:text-foreground"
                     }`}
                   >
                     ${preset}

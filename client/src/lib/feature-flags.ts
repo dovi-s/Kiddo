@@ -11,3 +11,12 @@ export const KID_INITIATED_ONBOARDING: boolean =
   String(import.meta.env.VITE_KID_INITIATED_ONBOARDING || "")
     .trim()
     .toLowerCase() === "true";
+
+// In-app embedded checkout (CHECKOUT_IN_APP_SPEC.md). When OFF, the /checkout-preview
+// route is not registered and the app keeps the hosted-redirect Checkout. Phase-1
+// on-session deposit preview — flip VITE_IN_APP_CHECKOUT=true (and the server
+// IN_APP_CHECKOUT) to exercise the embedded Payment Element + Apple Pay.
+export const IN_APP_CHECKOUT: boolean =
+  String(import.meta.env.VITE_IN_APP_CHECKOUT || "")
+    .trim()
+    .toLowerCase() === "true";

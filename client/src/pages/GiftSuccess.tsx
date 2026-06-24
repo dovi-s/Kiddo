@@ -959,7 +959,7 @@ export default function GiftSuccess() {
         >
           {isRecurringSetup
             ? `Your ${recurringCadenceLabel} is set up.`
-            : "Your gift is growing."}
+            : "Your gift is in."}
         </motion.h1>
 
         {/* Gift amount — the visual anchor the page was missing. The
@@ -1275,7 +1275,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns net of Kiddo's annual fee, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed. But gifts that last? Those are.
+            At 7% historical average returns net of Kiddo's annual fee, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed.
           </motion.p>
         ) : projectedAmount ? (
           <motion.p
@@ -1285,7 +1285,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns net of Kiddo's annual fee, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed. But gifts that last? Those are.
+            At 7% historical average returns net of Kiddo's annual fee, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed.
           </motion.p>
         ) : null}
 
@@ -1297,7 +1297,7 @@ export default function GiftSuccess() {
           transition={{ delay: 0.76 }}
           data-testid="text-gift-provenance"
         >
-          This gift was invested with Kiddo. Gifts that actually last.
+          This gift was invested with Kiddo.
         </motion.p>
 
         {/* Quiet "send another" affordance. NOT a card, NOT a primary

@@ -1617,7 +1617,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
   const motionsLevers = [
     { motion: "Product-led", lever: "Acquisition", pct: Number(growth.share_to_gift_rate_pct || 0), sub: `${fmtNum(growth.shared_funds_with_gifts)} / ${fmtNum(growth.shared_funds)} shared funds`, color: "blue" as const },
     { motion: "Product-led", lever: "Monetization", pct: Number(growth.gift_completion_rate_pct || 0), sub: `${fmtNum(growth.checkout_complete_events)} / ${fmtNum(growth.checkout_start_events)} checkout`, color: "green" as const },
-    { motion: "Product-led", lever: "Retention", pct: Number(growth.recurring_adoption_afrg_pct || 0), sub: `${fmtNum(growth.afrg_with_recurring)} recurring AFRG funds`, color: "purple" as const },
+    { motion: "Product-led", lever: "Retention", pct: Number(growth.recurring_adoption_afrg_pct || 0), sub: `${fmtNum(growth.afrg_with_recurring)} recurring AFRG fund${Number(growth.afrg_with_recurring) === 1 ? "" : "s"}`, color: "purple" as const },
     { motion: "Marketing-led", lever: "Acquisition", pct: visitToSharePct, sub: `${fmtNum(checkoutShares30d)} / ${fmtNum(checkoutVisits30d)} visit->share`, color: "blue" as const },
     { motion: "Marketing-led", lever: "Monetization", pct: shareToCheckoutStartPct, sub: `${fmtNum(checkoutStarts30d)} / ${fmtNum(checkoutShares30d)} share->start`, color: "amber" as const },
     { motion: "Marketing-led", lever: "Retention", pct: repeatGifterRate, sub: `${fmtNum(repeatGifters)} / ${fmtNum(totalGiftersCount)} repeat gifters`, color: "green" as const },
@@ -2082,8 +2082,8 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total Revenue" value={fmt(r.totalKoraRevenue)} icon={TrendingUp} color="green" sub="All-time Kiddo earnings" />
           <StatCard label="Gift Platform Fees" value={fmt(r.giftPlatformFees)} icon={Gift} color="primary" sub="Free-plan gift fees + applicable safeguards" />
-          <StatCard label="Subscription Revenue" value={fmt((Number(r.starterPlanRevenue || 0) + Number(r.familyPlanRevenue || 0)).toString())} icon={CreditCard} color="purple" sub={`${fmtNum(s.active_paid_plans)} active paid plans`} />
-          <StatCard label="Kiddo Occasion Revenue" value={fmt(r.eventPassRevenue)} icon={Calendar} color="amber" sub={`${fmtNum(e.events_with_pass)} premium occasions`} />
+          <StatCard label="Subscription Revenue" value={fmt((Number(r.starterPlanRevenue || 0) + Number(r.familyPlanRevenue || 0)).toString())} icon={CreditCard} color="purple" sub={`${fmtNum(s.active_paid_plans)} active paid plan${Number(s.active_paid_plans) === 1 ? "" : "s"}`} />
+          <StatCard label="Kiddo Occasion Revenue" value={fmt(r.eventPassRevenue)} icon={Calendar} color="amber" sub={`${fmtNum(e.events_with_pass)} premium occasion${Number(e.events_with_pass) === 1 ? "" : "s"}`} />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mt-4">
           <StatCard label="MRR" value={fmt(r.mrr)} icon={TrendingUp} color="blue" sub="Monthly recurring run-rate" />
@@ -2242,7 +2242,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             Funds (AUM)
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Total AUM" value={fmt(f.total_aum)} icon={Wallet} color="green" sub={`${fmtNum(f.total_funds)} funds`} onClick={() => goTab("funds")} />
+            <StatCard label="Total AUM" value={fmt(f.total_aum)} icon={Wallet} color="green" sub={`${fmtNum(f.total_funds)} fund${Number(f.total_funds) === 1 ? "" : "s"}`} onClick={() => goTab("funds")} />
             <StatCard label="Fund Balance" value={fmt(f.total_invested)} icon={TrendingUp} color="blue" sub={`Pending: ${fmt(f.total_pending)}`} onClick={() => goTab("assets")} />
             <StatCard label="UTMA (Kids)" value={fmtNum(f.utma_funds)} icon={Users} color="amber" sub="Custodial accounts" onClick={() => goTab("funds", { accountType: "UTMA" })} />
             <StatCard label="Personal" value={fmtNum(f.personal_funds)} icon={Wallet} color="primary" sub="Adult accounts" onClick={() => goTab("funds", { accountType: "Personal" })} />
@@ -2350,7 +2350,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             value={`${trustTooltipCtrPct.toFixed(2)}%`}
             icon={Shield}
             color={trustTooltipOpens > 0 ? "purple" : "amber"}
-            sub={`${fmtNum(trustTooltipClicks)} clicks / ${fmtNum(trustTooltipOpens)} opens`}
+            sub={`${fmtNum(trustTooltipClicks)} click${trustTooltipClicks === 1 ? "" : "s"} / ${fmtNum(trustTooltipOpens)} open${trustTooltipOpens === 1 ? "" : "s"}`}
           />
           <StatCard
             label="Reactivation Recovery"
@@ -2757,7 +2757,7 @@ function GrowthTab() {
           <StatCard
             label="Top Touchpoint"
             value={formatLoopTouchpointLabel(topLoopTouchpoint?.touchpoint)}
-            sub={topLoopTouchpoint ? `${fmtNum(topLoopTouchpoint?.signups || 0)} signups` : "No loop conversions yet"}
+            sub={topLoopTouchpoint ? `${fmtNum(topLoopTouchpoint?.signups || 0)} signup${Number(topLoopTouchpoint?.signups || 0) === 1 ? "" : "s"}` : "No loop conversions yet"}
             icon={TrendingUp}
             color="purple"
             onClick={topLoopTouchpoint?.touchpoint ? () => setDetailTouchpoint(String(topLoopTouchpoint.touchpoint)) : undefined}
@@ -6039,7 +6039,7 @@ function OpsTab() {
       <div className="rounded border border-border/60 bg-card">
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/40">
           <p className="text-sm font-semibold">{title}</p>
-          <span className="text-[11px] text-muted-foreground tabular-nums">{fmtNum(list.length)} entries</span>
+          <span className="text-[11px] text-muted-foreground tabular-nums">{fmtNum(list.length)} {list.length === 1 ? "entry" : "entries"}</span>
         </div>
         {list.length === 0 ? <p className="text-xs text-muted-foreground p-3">Empty</p> : (
           <div className="max-h-72 overflow-auto p-2 space-y-1">

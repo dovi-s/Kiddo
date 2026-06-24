@@ -130,6 +130,14 @@ import {
   PieChart,
   HandCoins,
   Play,
+  Smartphone,
+  CreditCard,
+  DollarSign,
+  Landmark,
+  Scale,
+  Shield,
+  SlidersHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
@@ -412,12 +420,23 @@ function strategyEmoji(key: string | null | undefined): string {
 // recurring section, action sheets, and any future strategy-card surface all read
 // consistently. Keep tints muted (NOT red/alarm); the parent surface is Apple-
 // Settings-discoverable per the design lens.
-const STRATEGY_TINTS: Record<string, { bg: string; border: string }> = {
-  growth:       { bg: "hsl(var(--kiddo-evergreen) / 0.10)", border: "hsla(157,42%,18%,0.12)" },
-  balanced:     { bg: "hsl(var(--kiddo-evergreen) / 0.07)", border: "hsla(157,42%,18%,0.10)" },
-  conservative: { bg: "hsl(var(--kiddo-cream))",            border: "hsla(36,38%,82%,0.55)" },
-  custom:       { bg: "hsl(var(--kiddo-gold) / 0.10)",      border: "hsla(43,75%,52%,0.18)" },
-  cash:         { bg: "rgba(26,23,16,0.05)",                border: "rgba(26,23,16,0.10)" },
+const STRATEGY_TINTS: Record<string, { bg: string; border: string; fg: string }> = {
+  growth:       { bg: "hsl(var(--kiddo-evergreen) / 0.10)", border: "hsla(157,42%,18%,0.12)", fg: "hsl(var(--kiddo-evergreen))" },
+  balanced:     { bg: "hsl(var(--kiddo-evergreen) / 0.07)", border: "hsla(157,42%,18%,0.10)", fg: "hsl(var(--kiddo-evergreen))" },
+  conservative: { bg: "hsl(var(--kiddo-cream))",            border: "hsla(36,38%,82%,0.55)", fg: "hsl(var(--kiddo-evergreen))" },
+  custom:       { bg: "hsl(var(--kiddo-gold) / 0.10)",      border: "hsla(43,75%,52%,0.18)", fg: "hsl(var(--kiddo-gold-ink))" },
+  cash:         { bg: "rgba(26,23,16,0.05)",                border: "rgba(26,23,16,0.10)", fg: "hsl(var(--kiddo-ink))" },
+};
+
+// Bespoke monochrome glyph per strategy — the semantic read of the old emojis
+// (chart-up=growth, scales=balanced, shield=conservative, sliders=custom) rendered as
+// brand-tinted lucide icons so the tile reads fully Kiddo, not a colorful system emoji.
+const STRATEGY_ICONS: Record<string, LucideIcon> = {
+  growth: TrendingUp,
+  balanced: Scale,
+  conservative: Shield,
+  custom: SlidersHorizontal,
+  cash: Coins,
 };
 
 // Visual marker for a managed-mix schedule. Replaces the generic Repeat icon —
@@ -439,9 +458,9 @@ function StrategyIcon({
   className?: string;
 }) {
   const k = String(strategyKey || "growth").toLowerCase();
-  const emoji = STRATEGY_META[k]?.emoji ?? "📈";
   const tint = STRATEGY_TINTS[k] ?? STRATEGY_TINTS.growth;
-  const emojiSize = Math.round(size * 0.5);
+  const Icon = STRATEGY_ICONS[k] ?? TrendingUp;
+  const iconSize = Math.round(size * 0.46);
   return (
     <div
       className={`flex shrink-0 items-center justify-center rounded-xl border transition-all duration-300 ${className ?? ""}`}
@@ -455,7 +474,7 @@ function StrategyIcon({
       aria-hidden="true"
       data-strategy={k}
     >
-      <span style={{ fontSize: emojiSize, lineHeight: 1 }}>{emoji}</span>
+      <Icon size={iconSize} strokeWidth={2.25} color={paused ? "rgba(120,113,100,0.75)" : tint.fg} aria-hidden />
     </div>
   );
 }
@@ -837,7 +856,9 @@ function HeroProjectionSpin({
             display: "flex",
             flexDirection: "column",
             transform: `translateY(${rolled ? -(span * CELL) : 0}em)`,
-            transition: `transform ${durationMs}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+            // Curve = the canonical --ease-out-expo token (was a hardcoded copy of
+            // the same bezier). durationMs stays dynamic (the roll speed). 2026-06-23.
+            transition: `transform ${durationMs}ms var(--ease-out-expo)`,
           }}
         >
           {rows.map((v, i) => (
@@ -975,7 +996,7 @@ function LabCollapse({
           // Open state warms the title + chevron only: no box, no shadow, no lid.
           background: "transparent",
           border: "none",
-          borderTop: "1px solid hsl(var(--kiddo-border) / 0.7)",
+          borderTop: "1px solid hsl(var(--kiddo-border))",
           borderRadius: 0,
           boxShadow: "none",
         }}
@@ -1006,7 +1027,7 @@ function LabCollapse({
             flexShrink: 0,
             color: open ? "hsl(var(--kiddo-evergreen))" : "rgba(26,23,16,0.4)",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform .26s cubic-bezier(0.16,1,0.3,1), color .26s cubic-bezier(0.16,1,0.3,1)",
+            transition: "transform var(--duration-normal) var(--ease-out-expo), color var(--duration-normal) var(--ease-out-expo)",
           }}
         />
       </button>
@@ -1381,7 +1402,7 @@ function humanizeDaysAway(days: number | null | undefined): string {
   if (days < 365) return `about ${Math.round(days / 30)} months away`;
   const years = Math.round((days / 365) * 2) / 2; // nearest half-year
   const yearStr = years % 1 === 0 ? String(years) : years.toFixed(1);
-  return `about ${yearStr} years away`;
+  return `about ${yearStr} year${years === 1 ? "" : "s"} away`;
 }
 
 type GifterProfile = {
@@ -4907,7 +4928,7 @@ export default function DashboardStaging() {
           duration: 8000,
           action: (
             <ToastAction
-              altText="Add a little more to the recurring investment"
+              altText="Add more to the recurring investment"
               onClick={() => {
                 haptic("medium");
                 if (payload.doubledAmt) setAutoInvestAmount(String(payload.doubledAmt));
@@ -4916,7 +4937,7 @@ export default function DashboardStaging() {
                 setAutoInvestModalOpen(true);
               }}
             >
-              Add a little more
+              Add more each month
             </ToastAction>
           ),
         });
@@ -6601,32 +6622,6 @@ export default function DashboardStaging() {
           layout constraint, NOT the paused IA/desktop-grid re-architecture —
           mobile is untouched (cap only applies at md+). */}
       <main className="kiddo-canvas px-4 py-6 space-y-6 md:!max-w-[760px] md:mx-auto" id="dashboard-main-content">
-        {/* ⚠️ TEMP TEST BUTTONS — fire a REAL (session-scoped) demo gift so the WHOLE
-            cascade runs: chip "+$X · Grandma" → balance rolls the +$X → (big only)
-            projection rolls up after. Two amounts: $50 = the everyday case (projection
-            rounds to ~$Xk so it won't visibly move — correct); $2,500 = big enough to
-            roll the projection so you can see the full ordered cascade. DELETE this
-            whole block when done (founder will say "delete the button"). Staging-only. */}
-        <div style={{ position: "fixed", right: 16, bottom: 92, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-          {[{ amt: "50", label: "▶ Test +$50" }, { amt: "2500", label: "▶ Test +$2,500" }].map((t) => (
-            <button
-              key={t.amt}
-              type="button"
-              data-testid={t.amt === "50" ? "test-gift-popin" : "test-gift-popin-big"}
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-                if (activeFundId) recordDemoLiveGift({ fundId: String(activeFundId), senderName: "Grandma", amount: t.amt });
-              }}
-              style={{
-                background: "hsl(var(--kiddo-evergreen))", color: "white", border: "none",
-                borderRadius: 9999, padding: "12px 18px", fontSize: 14, fontWeight: 700,
-                boxShadow: "0 6px 20px rgba(0,0,0,0.28)", cursor: "pointer",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
         {/* ===== STAGING DESIGN SYSTEM (the foundation all four design leads
             demanded). Replaces the 24-font-size / 11-shadow / 10-radius chaos with
             real tokens. Everything in the rebuilt surfaces snaps to these:
@@ -6669,7 +6664,7 @@ export default function DashboardStaging() {
              occasions, handoff) the same hairline top-divider the LabCollapse headers
              have, so the whole page reads as one consistent rhythm of dividered
              sections (no section looks "attached" to the one above it). */
-          .st-section { border-top: 1px solid hsl(var(--kiddo-border) / 0.7); padding-top: 22px; }
+          .st-section { border-top: 1px solid hsl(var(--kiddo-border)); padding-top: 22px; }
         `}</style>
         <h1 className="sr-only">
           {isOwnerMode ? "Your fund" : `${recipientFirstNameDisplay || "Your child"}'s fund`}
@@ -7888,11 +7883,11 @@ export default function DashboardStaging() {
                 mid-story between the collapsed view-sections. Always-visible (an action,
                 never hidden in a collapse), calm ("some, all, or none"), conditional on
                 idle cash. Relocated 2026-06-23. */}
-            {uninvestedCash > 0 && !isReadOnlyFund && (
+            {uninvestedCash > 0 && !isReadOnlyFund && bannersRevealed && (
               <motion.section
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: 0.010 }}
+                transition={{ duration: 0.28, delay: 0.05 }}
                 className="mt-4"
               >
                 {/* Self-contained CARD (not the flush .st-section hairline) so it sits as
@@ -7901,34 +7896,36 @@ export default function DashboardStaging() {
                 <button
                   type="button"
                   onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
-                  className="w-full rounded-2xl border border-[hsl(var(--kiddo-border)/0.9)] bg-white p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.04)]"
+                  className="w-full rounded-2xl border border-[hsl(var(--kiddo-gold)/0.3)] bg-[hsl(var(--kiddo-gold)/0.09)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.14)]"
                   style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "cash")}
                   data-testid="button-invest-cash"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative shrink-0">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-gold)/0.25)] bg-[hsl(var(--kiddo-gold)/0.12)]">
-                          {/* Coins (NOUN: "this card is about cash"), not TrendingUp. */}
-                          <Coins size={20} className="text-[hsl(var(--kiddo-evergreen))]" />
-                        </div>
-                      </div>
+                      {/* Coins (NOUN: "this card is about cash"), not TrendingUp. Bare —
+                          the gold-on-gold chip behind it was low-contrast + read as generic
+                          "icon kit"; the evergreen icon pops cleaner straight on the gold. */}
+                      <Coins size={28} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase text-muted-foreground">
                           {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
                         </p>
-                        <p className="text-xl font-bold text-foreground font-heading">{formatCurrency(uninvestedCash)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
-                          {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
-                          {cashContext === "gifts_settled" && "Choose how much to invest."}
-                        </p>
+                        <p className="text-xl font-bold text-foreground font-heading">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(uninvestedCash)}</p>
+                        {/* gifts_settled drops the sub-line — "Settled and ready." was
+                            redundant against the "Cash is waiting" eyebrow. The other
+                            two states keep their context-specific sub (they add real info). */}
+                        {cashContext !== "gifts_settled" && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {cashContext === "kyc_pending" && "Verified and ready to invest."}
+                            {cashContext === "held_as_cash" && "Held as cash. Invest any time."}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {/* Evergreen primary-CTA pill, NOT gold — gold's solid-pill weight is
                         reserved for Share. */}
                     <div className="shrink-0 whitespace-nowrap rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1.5 text-xs font-semibold text-white">
-                      Review options
+                      Invest it
                     </div>
                   </div>
                 </button>
@@ -8561,7 +8558,7 @@ export default function DashboardStaging() {
                     type="button"
                     onClick={() => { haptic("selection"); openRecurring(); }}
                     data-testid="chip-recurring-status"
-                    className={`flex-1 min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
+                    className={`flex-1 md:flex-none min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
                   >
                     <Repeat size={14} className="shrink-0" />
                     <span className="flex-1 min-w-0 truncate">{statusLine}</span>
@@ -9042,21 +9039,6 @@ export default function DashboardStaging() {
                       disclosure doesn't get its own box (containers never nest) —
                       structure comes from alignment + the total divider, not chrome. */}
                   <div className="pt-1">
-                    {/* Inner "{child} fund so far 🌱" title removed — it duplicated
-                        the LabCollapse header right above (4th instance of the same
-                        echo as growth/holdings/your-part). The date-range line stays:
-                        it's the unique part, labeling this breakdown's lifespan. */}
-                    <div className="flex items-baseline justify-start mb-4">
-                      <p className="text-[10px] text-muted-foreground/60">
-                        {/* Year ALWAYS shown 2026-05-23 — was conditionally
-                            hidden when fund age < 365d on the theory that
-                            the year was redundant for recent funds. In
-                            practice the reader sees "Apr 13" cold and has
-                            to guess whether that's this year or last;
-                            removing the guess is worth the four chars. */}
-                        Since {new Date(periodStartMs).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}
-                      </p>
-                    </div>
 
                     <div className="space-y-2 last30-breakdown">
                       {/* Gifts row navigates to Memory Book. Pronoun pulled
@@ -9284,7 +9266,7 @@ export default function DashboardStaging() {
                         <button
                           type="button"
                           onClick={() => summaryScrollTo("cash")}
-                          className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+                          className="mt-2 block max-w-sm text-left text-[11px] leading-relaxed text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
                           {/* Settling-state copy enhancement 2026-05-14
@@ -9297,9 +9279,9 @@ export default function DashboardStaging() {
                               (GiftSuccess.tsx, mobile GifterFlow
                               handoff step) so both sides read as one
                               coherent story. */}
-                          <span className="tabular-nums">{fmtRow(periodCash)}</span>
-                          <span>of that is still in cash. Invests on the next cycle, usually 1 to 2 business days.</span>
-                          <ChevronRight size={12} className="opacity-60" aria-hidden />
+                          <span className="font-medium tabular-nums text-foreground/70">{fmtRow(periodCash)}</span>{" "}
+                          of that is still in cash, investing in 1 to 2 business days.
+                          <ChevronRight size={12} className="ml-0.5 inline align-middle opacity-60" aria-hidden />
                         </button>
                       )}
                     </div>
@@ -10063,15 +10045,15 @@ export default function DashboardStaging() {
                 // Tooltip messages per segment
                 const childFirst = recipientFirstNameDisplay || "them";
                 const segTooltip: Record<string, string> = {
-                  principal: `${formatCurrency(principal)} gifted by people who love ${childFirst}.`,
-                  growth: growth > 0.5 ? `${formatCurrency(growth)} in growth so far. Building quietly.` : `No growth yet. Every gift is a seed. 🌱`,
+                  principal: `${formatMoneyFriendly(principal)} gifted by people who love ${childFirst}.`,
+                  growth: growth > 0.5 ? `${formatMoneyFriendly(growth)} in growth so far.` : `No growth yet. It builds as the market moves.`,
                   cash: cash > 0.5
-                    ? `${formatCurrency(cash)} is sitting as cash, ready to invest.`
+                    ? `${formatMoneyFriendly(cash)} is sitting as cash, ready to invest.`
                     : settling > 0.5
-                      ? `${formatCurrency(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
+                      ? `${formatMoneyFriendly(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
                       : `All of ${childFirst === "them" ? "the gifts are" : `${childFirst}'s gifts are`} invested. Nothing pending.`,
-                  managed: `${formatCurrency(managedVal)} in a diversified managed mix.`,
-                  chosen: `${formatCurrency(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
+                  managed: `${formatMoneyFriendly(managedVal)} in a diversified managed mix.`,
+                  chosen: `${formatMoneyFriendly(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
                 };
 
                 return (
@@ -11528,7 +11510,7 @@ export default function DashboardStaging() {
                       // let the header + hero row carry it crisply.
                       const showSummaryLine = shownContribs.length !== 1 || pausedCount > 0;
                       return (
-                        <div className="px-4 pt-3.5 pb-3 border-b border-border/40">
+                        <div className="pb-3">
                           <p className={`text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 ${showSummaryLine ? "mb-1" : ""}`}>
                             Recurring investments
                           </p>
@@ -11655,7 +11637,7 @@ export default function DashboardStaging() {
                                     setListActionContribId(String(contrib.id));
                                   }}
                                   data-testid={`recurring-list-row-${contrib.id}`}
-                                  className={`w-full flex items-center gap-3 px-4 ${isSoloHero ? "py-4" : "py-2.5"} pr-20 text-left hover:bg-muted/30 transition-colors ${isPausedRow ? "opacity-60" : ""}`}
+                                  className={`w-full flex items-center gap-3 ${isSoloHero ? "py-4" : "py-2.5"} pr-20 text-left hover:bg-muted/30 transition-colors ${isPausedRow ? "opacity-60" : ""}`}
                                 >
                                   {/* Two icon types share the same slot:
                                       - Pick → real brand logo (Apple stays Apple
@@ -11821,7 +11803,7 @@ export default function DashboardStaging() {
                         recurring for free, exactly like a parent does, just for
                         themselves. The parent's handed-off plan sits above as
                         read-only "Ended" history. */}
-                    <div className="border-t border-border/40 px-4 py-3">
+                    <div className="pt-2 pb-3">
                       <button
                         type="button"
                         className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
@@ -11903,7 +11885,11 @@ export default function DashboardStaging() {
                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                   One-time investment
                 </p>
-                <div className="min-w-0">
+                {/* md:flex-1 + center: on desktop the sparse one-time content distributes
+                    its air evenly in the equal-height column (was pooling at the bottom
+                    next to the denser recurring card). Eyebrow stays top-aligned with
+                    "Recurring investments"; mobile (stacked) is unaffected. */}
+                <div className="min-w-0 md:flex md:flex-1 md:flex-col md:justify-center">
                   {lastOwnGift ? (() => {
                       // The "feel it working" moment: parent's last contribution wrapped
                       // as a mini Memory Book entry. Brand emoji is the hero (warm anchor),
@@ -11970,11 +11956,11 @@ export default function DashboardStaging() {
                         </div>
                       );
                     })() : (
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
                           <Plus size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
                         </div>
-                        <p className="text-xs text-muted-foreground pt-1">
+                        <p className="text-xs text-muted-foreground">
                           {isReadOnlyFund
                             ? `Your one-time investments are part of ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund now.`
                             : activeAutoInvest
@@ -14221,7 +14207,7 @@ export default function DashboardStaging() {
 
       {/* One-time contribution modal */}
       <Dialog open={oneTimeModalOpen} onOpenChange={(v) => { if (!v) { setOneTimeModalOpen(false); setOneTimeStep("amount"); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeShowRails(false); setOneTimeMedia(EMPTY_MEMORY_MEDIA); } }}>
-        <DialogContent className="max-w-sm w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[88vh]" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 gap-0 max-h-[88vh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add a one-time investment</DialogTitle>
 
           {/* Progress bar */}
@@ -14404,8 +14390,8 @@ export default function DashboardStaging() {
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {oneTimeExecutionModel === "cash"
-                      ? `${formatCurrency(parseFloat(oneTimeAmount))} will sit as cash in the fund until you invest it from the dashboard.`
-                      : `Kiddo invests ${formatCurrency(parseFloat(oneTimeAmount))} as soon as it clears.`}
+                      ? `${formatMoneyFriendly(parseFloat(oneTimeAmount))} will sit as cash in the fund until you invest it from the dashboard.`
+                      : `Kiddo invests ${formatMoneyFriendly(parseFloat(oneTimeAmount))} as soon as it clears.`}
                   </p>
                 </div>
 
@@ -14647,6 +14633,22 @@ export default function DashboardStaging() {
                   <h2 className="font-heading text-xl font-semibold text-foreground">
                     Almost there.
                   </h2>
+                  {/* Prominent destination line — answers "where does my money go?" at a
+                      glance so the parent never has to hunt the summary's "Goes into"
+                      row. Mirrors the target-step explainer copy (cash vs invest). */}
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {(() => {
+                      const amt = formatMoneyFriendly(parseFloat(oneTimeAmount || "0"));
+                      const whose = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the";
+                      if (oneTimeExecutionModel === "cash")
+                        return `${amt} stays as cash in ${whose} fund until you invest it.`;
+                      if (oneTimeExecutionModel === "pick" && oneTimeTicker) {
+                        const nm = quotedAutoInvestStocks.find(s => s.symbol === oneTimeTicker.toUpperCase())?.name ?? oneTimeTicker.toUpperCase();
+                        return `${amt} buys ${nm} as soon as it clears.`;
+                      }
+                      return `${amt} goes into ${capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}, invested as soon as it clears.`;
+                    })()}
+                  </p>
                 </div>
 
                 {/* Position diff arrow on confirm — same logic as the amount step,
@@ -14782,6 +14784,14 @@ export default function DashboardStaging() {
                         method === "bank"
                           ? Math.max(0, oneTimeCardLikeFee - estimate.processingFee)
                           : 0;
+                      // Monochrome rail icon (NOT brand logos — keeps the cream/evergreen
+                      // calm; the real wallet marks show in the Stripe element after select).
+                      const RailIcon =
+                        method === "apple_pay" ? Smartphone
+                        : method === "card" ? CreditCard
+                        : method === "cashapp" ? DollarSign
+                        : method === "paypal" ? Wallet
+                        : Landmark;
                       return (
                       <button
                         key={method}
@@ -14797,28 +14807,40 @@ export default function DashboardStaging() {
                         }`}
                         data-testid={`button-one-time-payment-${method}`}
                       >
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-foreground">{title}</span>
-                          <span className="block text-xs text-muted-foreground">{description}</span>
+                        {/* Redesigned rail: one clean line — method + fee. Only the smart
+                            choice (ACH) carries a second line ("Lowest fee · save $X"), so
+                            the eye lands on it. Dropped the per-rail "$X total" (it lives in
+                            the summary above — no more "$51.75 total" five times) and the
+                            obvious card-brand descriptions (the spreadsheet feel). */}
+                        <span className="flex min-w-0 items-center gap-3">
+                          <RailIcon
+                            size={18}
+                            strokeWidth={2}
+                            className={`shrink-0 ${oneTimePaymentMethod === method ? "text-[hsl(var(--kiddo-evergreen))]" : "text-muted-foreground"}`}
+                            aria-hidden
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-foreground">{title}</span>
+                            {method === "bank" && (
+                              <span className="block text-xs font-medium text-green-700">
+                                Lowest fee{savings > 0 ? ` · save ${formatCurrency(savings)}` : ""}
+                              </span>
+                            )}
+                          </span>
                         </span>
                         <span className="shrink-0 text-right">
-                          <span className={`block text-[11px] font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}>
+                          <span
+                            className={`block text-xs font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}
+                            data-testid={`text-one-time-total-${method}`}
+                          >
                             {fee}
                           </span>
-                          <span className="block text-[10px] text-foreground/80" data-testid={`text-one-time-total-${method}`}>
-                            {formatCurrency(estimate.totalCharge)} total
-                          </span>
-                          {savings > 0 && (
-                            <span className="block text-[10px] text-green-700">
-                              Save about {formatCurrency(savings)}
-                            </span>
-                          )}
                         </span>
                       </button>
                     )})}
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Estimated charge = gift amount plus payment processing. The full gift amount goes into the fund.
+                    The full gift amount goes into the fund.
                   </p>
                   {oneTimeAchSavings > 0 && (
                     <p className="text-[11px] text-green-700">
@@ -14900,7 +14922,7 @@ export default function DashboardStaging() {
                   </Button>
                 </div>
                 <p className="text-center text-xs text-muted-foreground -mt-2">
-                  Secure checkout via Stripe. Final totals can move slightly if the payment rail changes on the hosted checkout page.
+                  Secure checkout via Stripe.
                 </p>
               </>
             )}
@@ -16145,7 +16167,7 @@ export default function DashboardStaging() {
             </motion.div>
             <div>
               <h2 className="font-heading text-xl font-semibold text-foreground">
-                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is growing.` : "Your gift is on its way."}
+                {recipientFirstNameDisplay ? `On its way to ${recipientFirstNameDisplay}'s fund.` : "Your gift is on its way."}
               </h2>
               {/* Was: "Lands as soon as your bank clears it." That copy
                   was ACH-specific — flat-out wrong for the card / Apple
@@ -16159,7 +16181,7 @@ export default function DashboardStaging() {
                   : "It'll show up in the fund any moment now."}
               </p>
               <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
-                Powered by Kiddo · gifts that actually last 🌱
+                Powered by Kiddo · gifts that actually last
               </p>
             </div>
             <Button
@@ -16202,7 +16224,7 @@ export default function DashboardStaging() {
           7% = $Y at 18) so the parent sees what Plus actually unlocks for
           their fund, not generic feature copy. */}
       <Dialog open={autoInvestUpgradeOpen} onOpenChange={(open) => { if (!open) setAutoInvestUpgradeOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
             const child = recipientFirstNameDisplay || "your child";
@@ -16332,7 +16354,7 @@ export default function DashboardStaging() {
 
       {/* Auto-invest modal */}
       <Dialog open={autoInvestModalOpen} onOpenChange={(open) => { if (!open) { setAutoInvestModalOpen(false); setAutoInvestStep("amount"); setLastSavedContribId(null); setAutoInvestMedia(EMPTY_MEMORY_MEDIA); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Recurring investment settings</DialogTitle>
 
           {/* Step progress dots */}
@@ -16392,9 +16414,13 @@ export default function DashboardStaging() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Amount per deposit</label>
-                    <div className="relative mt-2">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                    {/* The amount IS the moment — the big centered "register" number, matched
+                        to the one-time flow (this used to be a small boxed form field + tiny
+                        chips, which read FAR behind it). The "Amount per deposit" label is
+                        dropped: the big $25 is self-evidently the amount, and the Frequency
+                        selector right below names the cadence ("per deposit"). 2026-06-23. */}
+                    <div className="flex items-end justify-center gap-1.5 pt-3 pb-1">
+                      <span className="text-3xl font-semibold text-muted-foreground/55 leading-none pb-1.5">$</span>
                       <input
                         type="number"
                         min="5"
@@ -16402,17 +16428,32 @@ export default function DashboardStaging() {
                         value={autoInvestAmount}
                         onChange={(e) => setAutoInvestAmount(e.target.value)}
                         placeholder="25"
-                        className="h-12 w-full rounded-2xl border border-border bg-background pl-8 pr-4 text-sm"
+                        inputMode="decimal"
+                        aria-label="Amount per deposit in dollars"
+                        className="font-bold text-foreground text-center tracking-tight focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        style={{
+                          // Matches the one-time register: inline font-size beats the global
+                          // iOS-zoom base rule; box-less (no border/ring/bg) so it reads as a
+                          // number you type, not a form field. Auto-sizes to its digits.
+                          fontSize: "3.4rem",
+                          lineHeight: 1.05,
+                          width: `${Math.max(1.5, String(autoInvestAmount || "25").length + 0.3)}ch`,
+                          border: "none",
+                          outline: "none",
+                          boxShadow: "none",
+                          background: "transparent",
+                          padding: 0,
+                        }}
                         data-testid="input-auto-invest-amount"
                       />
                     </div>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-4 flex gap-2 justify-center flex-wrap">
                       {[10, 25, 50, 100].map((amt) => (
                         <button
                           key={amt}
                           type="button"
                           onClick={() => setAutoInvestAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-[13px] font-semibold px-4 py-1.5 rounded-full border transition-colors ${
                             autoInvestAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -16425,17 +16466,21 @@ export default function DashboardStaging() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-foreground">Frequency</label>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    {/* Frequency as a centered SEGMENTED control — matches the register's
+                        centered pill aesthetic (was a left-labelled 2x2 grid that read a step
+                        below the amount above it). No label: the four time-words are
+                        self-evidently the cadence, the same way the big number is the amount.
+                        2026-06-23 (parity pass with the one-time flow). */}
+                    <div className="flex rounded-full border border-border p-1">
                       {(["daily", "weekly", "monthly", "yearly"] as const).map((freq) => (
                         <button
                           key={freq}
                           type="button"
                           onClick={() => setAutoInvestFrequency(freq)}
-                          className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+                          className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors ${
                             autoInvestFrequency === freq
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:text-foreground"
+                              ? "bg-[hsl(var(--kiddo-evergreen))] text-white shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}
                           data-testid={`button-frequency-${freq}`}
                         >
@@ -16443,7 +16488,7 @@ export default function DashboardStaging() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum per deposit</p>
+                    <p className="mt-2 text-center text-[11px] text-muted-foreground">$5 minimum per deposit</p>
                   </div>
                 </div>
 
@@ -16549,8 +16594,10 @@ export default function DashboardStaging() {
                       ) : (
                         <>
                           <p className="text-sm text-green-800">
-                            {formatCurrency(amt)}/{freqWord(autoInvestFrequency)} ·{" "}
-                            {formatCurrency(amt * periodsPerYear)}/yr
+                            {/* friendly format drops the robotic ".00" on whole amounts:
+                                "$25/month · $300/yr", not "$25.00/month · $300.00/yr". */}
+                            {formatMoneyFriendly(amt)}/{freqWord(autoInvestFrequency)} ·{" "}
+                            {formatMoneyFriendly(amt * periodsPerYear)}/yr
                             {recipientFirstNameDisplay ? ` into ${recipientFirstNameDisplay}'s fund` : ""}
                           </p>
                           {showProjection && (
@@ -16590,7 +16637,7 @@ export default function DashboardStaging() {
                     Where should it go?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Each gift goes into what you choose. You can change this anytime.
+                    Each deposit goes into what you choose. You can change this anytime.
                   </p>
                 </div>
 
@@ -16719,7 +16766,7 @@ export default function DashboardStaging() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">Pick a stock</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Every gift buys shares in one company
+                        Every deposit buys shares in one company
                       </p>
                     </div>
                     <div className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
@@ -16786,7 +16833,7 @@ export default function DashboardStaging() {
                     Where should we pull from?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Recurring investments run from your connected bank account. It costs less and runs more reliably than a card, so more of each gift reaches {recipientFirstNameDisplay || "them"}.
+                    Recurring investments run from your connected bank account. It costs less and runs more reliably than a card, so more of each deposit reaches {recipientFirstNameDisplay || "them"}.
                   </p>
                 </div>
 
@@ -16920,7 +16967,7 @@ export default function DashboardStaging() {
                     ) : (
                       <Repeat size={15} className="mr-1.5" />
                     )}
-                    {savingAutoInvest ? "Setting up..." : recipientFirstNameDisplay ? `Start growing ${recipientFirstNameDisplay}'s fund` : "Start investing"}
+                    {savingAutoInvest ? "Setting up..." : recipientFirstNameDisplay ? `Start investing for ${recipientFirstNameDisplay}` : "Start investing"}
                   </Button>
                 </div>
 
@@ -17010,7 +17057,7 @@ export default function DashboardStaging() {
                 </motion.div>
                 <div>
                   <h2 className="font-heading text-xl font-semibold text-foreground">
-                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is growing.` : "It's running."}
+                    {recipientFirstNameDisplay ? `Investing for ${recipientFirstNameDisplay} is on.` : "It's on."}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-2">
                     {formatCurrency(parseFloat(autoInvestAmount))}/{autoInvestFrequency === "daily" ? "day" : autoInvestFrequency === "weekly" ? "week" : autoInvestFrequency === "yearly" ? "year" : "month"} is scheduled
@@ -17019,7 +17066,7 @@ export default function DashboardStaging() {
                       : ""}. Change or cancel anytime.
                   </p>
                   <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
-                    Powered by Kiddo · gifts that actually last 🌱
+                    Powered by Kiddo · gifts that actually last
                   </p>
                 </div>
                 <Button
@@ -17043,7 +17090,7 @@ export default function DashboardStaging() {
       </Dialog>
 
       <Dialog open={kidViewConfigOpen} onOpenChange={(o) => { if (!o) { setKidViewConfigOpen(false); setKidViewConfigStep("settings"); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Kid View settings</DialogTitle>
 
           {kidViewConfigStep === "settings" ? (
@@ -17444,7 +17491,7 @@ export default function DashboardStaging() {
               </div>
 
               <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 mb-4">
-                Moving an investment to cash can create tax reporting. For a child's fund, money still belongs to the child.
+                Moving an investment to cash can mean a tax form at year-end. For a child's fund, money still belongs to the child.
               </p>
 
               </div>
@@ -17485,7 +17532,7 @@ export default function DashboardStaging() {
       <AnimatePresence>
         {showCoverageUpgradeModal && activeFund && (
           <Dialog open={showCoverageUpgradeModal} onOpenChange={setShowCoverageUpgradeModal}>
-            <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+            <DialogContent sheet className="sm:max-w-md p-0 overflow-hidden" aria-describedby={undefined}>
               <DialogTitle className="sr-only">Upgrade {activeFund.name}</DialogTitle>
               <div className="p-6 space-y-5">
                 <div className="space-y-1">
@@ -17590,7 +17637,7 @@ export default function DashboardStaging() {
           tapped row. Cancel uses a two-step within the same dialog (menu → confirm)
           rather than nesting another modal. */}
       <Dialog open={listActionContribId !== null} onOpenChange={(open) => { if (!open) closeListAction(); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Recurring investment actions</DialogTitle>
           {(() => {
             // Pull the contrib from root-level parentContributions (the IIFE scope where
@@ -17795,7 +17842,7 @@ export default function DashboardStaging() {
 
       {/* Pause options modal */}
       <Dialog open={pauseOptionsContribId !== null} onOpenChange={(open) => { if (!open) setPauseOptionsContribId(null); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Pause recurring investment</DialogTitle>
           <div className="p-6 space-y-5">
             <div>

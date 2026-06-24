@@ -175,7 +175,7 @@ export default function RobuxVsUtma() {
                 {formatMoney(totalRobuxOverYears)}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Total ${monthlyRobux} × 12 × {yearsUntil18} years of Robux spend. Real fun while it lasts, and gone the moment it's spent. Zero left at 18.
+                Total ${monthlyRobux} × 12 × {yearsUntil18} year{yearsUntil18 === 1 ? "" : "s"} of Robux spend. Real fun while it lasts, and gone the moment it's spent. Zero left at 18.
               </p>
             </div>
 

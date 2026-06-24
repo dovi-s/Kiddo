@@ -3,10 +3,13 @@ import { Link, useParams, useSearch } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, TrendingUp, Video, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { IN_APP_CHECKOUT } from "@/lib/feature-flags";
+import { InAppGiftCheckoutModal } from "@/components/InAppGiftCheckoutModal";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { FounderBadge } from "@/components/ui/founder-badge";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { DrawCheck } from "@/components/DrawCheck";
 import { GoalCard } from "@/components/ui/premium-themes";
 // Import RichText from the lightweight view module (DOMPurify only) so this
 // PUBLIC gift funnel does NOT bundle the ~130KB gzip tiptap editor. 2026-06-04.
@@ -20,6 +23,7 @@ import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
 import { buildGiftDraftKey, isMeaningfulGiftDraft, parseGiftDraft, serializeGiftDraft, type GiftDraftFields } from "@/lib/giftDraft";
+import { getLastGift, setLastGift } from "@/lib/last-gift";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
 import { effectiveOccasionDate } from "@shared/occasions";
 import { FEATURED_STOCK_PICKS as CANON_FEATURED_STOCK_PICKS, ADDITIONAL_STOCK_PICKS as CANON_ADDITIONAL_STOCK_PICKS } from "@shared/stock-picks";
@@ -340,6 +344,9 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
   if (done) {
     return (
       <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5 text-center" data-testid="guestbook-note-success">
+        {/* PROTOTYPE (draw-on icon): the success check draws itself in as the
+            note lands — a rare, meaningful peak, not everyday chrome. */}
+        <DrawCheck size={48} className="mx-auto mb-2.5 text-[hsl(var(--kiddo-evergreen))]" />
         <p className="text-sm font-semibold text-foreground">Your note is on its way to {childName}'s Memory Book 🌱</p>
         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
           The family takes a look first, then it joins the story.
@@ -373,7 +380,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         className="w-full rounded-2xl border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-5 py-4 text-center text-sm text-muted-foreground hover:text-foreground hover:border-[hsl(var(--kiddo-evergreen)/0.4)] transition-colors"
         data-testid="button-open-guestbook-note"
       >
-        Just here to celebrate? <span className="font-semibold text-foreground">Leave {childName} a note</span> for the Memory Book. No payment, no account.
+        Here to leave a note instead? <span className="font-semibold text-foreground">Write {childName} one</span> for the Memory Book. No payment, no account.
       </button>
     );
   }
@@ -464,6 +471,9 @@ export default function GiftCheckout() {
   const [customAmount, setCustomAmount] = useState("");
   const [executionModel, setExecutionModel] = useState<ExecutionModel>("auto");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  // "Give again" — true when we pre-filled from a returning gifter's last gift to
+  // this fund (drives the warm welcome-back note). See lib/last-gift.
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   // "Request a company" escape hatch — the bounded picker is never a hard wall.
   const [stockRequestOpen, setStockRequestOpen] = useState(false);
   const [stockRequestText, setStockRequestText] = useState("");
@@ -511,6 +521,9 @@ export default function GiftCheckout() {
   const [showFeeDetails, setShowFeeDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // Embedded in-app checkout (flag-gated). When set, the gift completes in a modal
+  // instead of a hosted-Stripe redirect. Null = the unchanged hosted flow.
+  const [embeddedGift, setEmbeddedGift] = useState<{ clientSecret: string; successPath: string } | null>(null);
   // Recurring gift state — Tier-1 deferred work, restored 2026-05-21 per
   // project_gifter_recurring_restoration.md. Three new fields:
   //   isRecurring         — toggle on the amount step
@@ -545,6 +558,17 @@ export default function GiftCheckout() {
       const d = parseGiftDraft(raw, Date.now());
       if (!d) {
         if (raw) sessionStorage.removeItem(draftKey); // stale/garbage cleanup
+        // No in-progress draft → if this gifter gave to THIS fund before, pre-fill
+        // their last amount/stock and flag the warm "welcome back" note. PRE-FILL
+        // ONLY — the normal confirm + payment step still runs (never a silent charge).
+        const last = getLastGift(fundSlug);
+        if (last) {
+          if (last.isCustom) { setShowCustom(true); setCustomAmount(String(last.amount)); }
+          else { setSelectedAmount(last.amount); }
+          setExecutionModel(last.executionModel as ExecutionModel);
+          if (last.stock) setSelectedStock(last.stock);
+          setShowWelcomeBack(true);
+        }
         return;
       }
       if (d.selectedAmount !== undefined) setSelectedAmount(d.selectedAmount);
@@ -1187,6 +1211,10 @@ export default function GiftCheckout() {
           // a magic-link welcome email after the Stripe success webhook.
           // Per project_recurring_gifting_without_password_spec.md.
           accountPassword: isRecurring && eventData?.fund?.magicLinkAuth !== true ? recurringPassword : undefined,
+          // Embedded in-app checkout (flag-gated, one-time only). When true the server
+          // returns a PaymentIntent client_secret + success path instead of a hosted
+          // session URL. Recurring still uses its subscription flow.
+          embedded: IN_APP_CHECKOUT && !isRecurring ? true : undefined,
         }),
       });
       if (!res.ok) {
@@ -1194,6 +1222,21 @@ export default function GiftCheckout() {
         throw new Error(payload?.message || payload?.error || `Checkout failed (HTTP ${res.status})`);
       }
       const data = await res.json();
+      // Remember this gift so a return visit can offer "give again" (pre-fill amount +
+      // stock). Local, no PII, best-effort — recorded at submit; abandoning at Stripe
+      // just leaves a harmless seed. Works whether checkout is hosted or embedded.
+      setLastGift(fundSlug, {
+        amount: activeAmount,
+        isCustom: showCustom,
+        stock: effectiveExecutionModel === "pick" ? (effectiveSelectedTicker ?? null) : null,
+        executionModel: effectiveExecutionModel,
+      });
+      // Embedded in-app checkout: open the modal in-place instead of redirecting.
+      if (data.clientSecret) {
+        setEmbeddedGift({ clientSecret: data.clientSecret, successPath: data.successPath || "/gift/success" });
+        setIsSubmitting(false);
+        return;
+      }
       if (data.url) window.location.href = data.url;
     } catch (err: any) {
       console.error("Payment error:", err);
@@ -1453,7 +1496,7 @@ export default function GiftCheckout() {
       const atMajority = fmt(g(yearsUntil18));
       const at30 = yTo30 >= 3 ? fmt(g(yTo30)) : null;
       return {
-        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}. But at 30? → ~${at30}.`,
+        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}. But at 30? ~${at30}.`,
         tagline: `It keeps growing well past ${fundMajorityAge}. 🌱 Based on 7% historical returns. Not guaranteed.`,
       };
     }
@@ -1490,9 +1533,9 @@ export default function GiftCheckout() {
     }
     const byType: Record<string, OccasionMeta> = {
       birthday:    { emoji: "🎂", headline: `It's ${nm}'s Birthday!`, sub: investingLiveCopy(`Give ${nm} a gift that actually grows, in real stocks invested in their name.`, `Give ${nm} a gift that grows for their future, invested in their name once investing is live.`), notePlaceholder: `Leave ${nm} a birthday message...` },
-      baby_shower: { emoji: "🍼", headline: `Welcome ${nm} to the world!`, sub: investingLiveCopy(`Start them off right with a real investment in their name.`, `Start them off right with a fund in their name, invested once investing is live.`), notePlaceholder: `Leave a warm welcome note...` },
+      baby_shower: { emoji: "🍼", headline: `Welcome ${nm} to the world!`, sub: investingLiveCopy(`Start them off right with a real investment in their name.`, `Start them off right with a fund in their name, invested once investing is live.`), notePlaceholder: `Leave a welcome note...` },
       graduation:  { emoji: "🎓", headline: `Congrats, ${nm}!`, sub: `A graduation gift that grows over time. Start it now.`, notePlaceholder: `Leave ${nm} a congratulations message...` },
-      holiday:     { emoji: "🎁", headline: `A Gift for ${nm}'s Future!`, sub: `This season, give something that keeps growing.`, notePlaceholder: `Season's greetings to ${nm}...` },
+      holiday:     { emoji: "🎁", headline: `A gift for ${nm}'s future`, sub: `This season, give something that keeps growing.`, notePlaceholder: `Season's greetings to ${nm}...` },
       just_because:{ emoji: "💚", headline: `Surprise ${nm}!`, sub: `A gift they'll thank you for in 15 years.`, notePlaceholder: `Leave ${nm} a note...` },
     };
     return byType[eventData?.event?.eventType || ""] || { emoji: "🎁", headline: `A gift for ${nm}'s future`, sub: investingLiveCopy(`Give a gift that actually grows, in real stocks invested in their name.`, `Give a gift that grows for their future, invested in their name once investing is live.`), notePlaceholder: `Leave ${nm} a note...` };
@@ -1500,6 +1543,14 @@ export default function GiftCheckout() {
 
   return (
     <div className="kiddo-app-page">
+      {embeddedGift && (
+        <InAppGiftCheckoutModal
+          clientSecret={embeddedGift.clientSecret}
+          successPath={embeddedGift.successPath}
+          amountLabel={`$${activeAmount}`}
+          onClose={() => setEmbeddedGift(null)}
+        />
+      )}
       <header className="sticky top-0 z-50 border-b border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-lg">
         <div className={`${PAGE_MAX} h-14 flex items-center justify-between`}>
           <div className="flex items-center gap-3">
@@ -1720,9 +1771,10 @@ export default function GiftCheckout() {
                         ? evDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
                         : null;
                       const yrs = Math.round(countdown.days / 365);
+                      const mos = Math.max(1, Math.round(countdown.days / 30));
                       const countdownLabel = countdown.days >= 365
                         ? `about ${yrs} year${yrs === 1 ? "" : "s"} away`
-                        : `about ${Math.round(countdown.days / 30)} months away`;
+                        : `about ${mos} month${mos === 1 ? "" : "s"} away`;
                       return (
                         <div className="kiddo-card p-4 flex items-center justify-center gap-3 text-center">
                           <span className="text-xl shrink-0" aria-hidden="true">🌱</span>
@@ -2166,6 +2218,16 @@ export default function GiftCheckout() {
 
           {step === "amount" && (
             <motion.section key="amount" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-5">
+              {/* "Give again" — warm, HONEST note that we pre-filled (surface, never
+                  silent-charge). Only shows when there's a real prior gift to this fund. */}
+              {showWelcomeBack && (
+                <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3 flex items-start gap-2.5" data-testid="gift-welcome-back">
+                  <span className="text-base leading-none mt-0.5" aria-hidden>🌱</span>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    Welcome back — we filled in your last gift{recipientLooksLikeFund ? "" : ` to ${recipientName}`}. Change anything you like.
+                  </p>
+                </div>
+              )}
               <div className="kiddo-card p-5 md:p-6">
                 <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">Most people give $50 or $100</p>
                 <h1 className="mt-2 font-heading text-2xl md:text-3xl font-semibold text-foreground">How much do you want to give {recipientLooksLikeFund ? "this child" : recipientName}?</h1>
@@ -2705,7 +2767,7 @@ export default function GiftCheckout() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground">
-                        {recurringFrequency.charAt(0).toUpperCase() + recurringFrequency.slice(1)} gift, ${activeAmount.toFixed(2)} each time.
+                        {recurringFrequency.charAt(0).toUpperCase() + recurringFrequency.slice(1)} gift, ${activeAmount % 1 === 0 ? activeAmount : activeAmount.toFixed(2)} each time.
                       </p>
                       {/* Specificity-is-trust: name the actual NEXT charge date, not a
                           vague "same schedule" (conversion research: "delivery in 23

@@ -937,7 +937,7 @@ ${shareUrl}`;
 
       {/* Change-monthly bottom sheet */}
       <Dialog open={changeSheetOpen} onOpenChange={(o) => { if (!o) setChangeSheetOpen(false); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Change monthly amount</DialogTitle>
           <div className="p-6 space-y-5">
             <div>
@@ -1119,7 +1119,7 @@ ${shareUrl}`;
 
       {/* Return-rate explainer */}
       <Dialog open={explainerOpen} onOpenChange={(o) => { if (!o) setExplainerOpen(false); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">How we calculate the return rate</DialogTitle>
           <div className="p-6 space-y-4">
             <div>

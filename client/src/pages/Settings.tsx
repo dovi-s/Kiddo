@@ -305,6 +305,15 @@ function formatUsd(value: number): string {
   }).format(Number.isFinite(value) ? value : 0);
 }
 
+// Whole-dollar currency (commas, no cents) for amounts shown without decimals.
+function usd0(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
 function FundDetailsSnapshot({
   fund,
   compact = false,
@@ -572,7 +581,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Move {holding.ticker} to cash</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -590,12 +599,12 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Current value</span>
-              <span className="font-medium">${parseFloat(holding.currentValue).toFixed(2)}</span>
+              <span className="font-medium">{formatUsd(parseFloat(holding.currentValue))}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Gain/Loss</span>
               <span className={`font-medium ${parseFloat(holding.gain) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {parseFloat(holding.gain) >= 0 ? "+" : ""}${parseFloat(holding.gain).toFixed(2)}
+                {parseFloat(holding.gain) >= 0 ? "+" : ""}{formatUsd(parseFloat(holding.gain))}
               </span>
             </div>
           </div>
@@ -607,7 +616,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
               data-testid="option-sell-all"
             >
               <p className="text-sm font-medium">Move all to cash</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Move {parseFloat(holding.shares).toFixed(4)} shares for about ${parseFloat(holding.currentValue).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Move {parseFloat(holding.shares).toFixed(4)} shares for about {formatUsd(parseFloat(holding.currentValue))}</p>
             </button>
             <button
               onClick={() => { setSellAll(false); haptic("selection"); }}
@@ -642,7 +651,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
           <div className="bg-blue-50 rounded-xl border border-blue-200/50 p-3">
             <p className="text-xs font-medium text-blue-900 mb-1">Tax note: cost basis</p>
             <p className="text-xs text-blue-800">
-              Moving an investment to cash can create tax reporting. Kiddo will keep the activity visible, but a tax professional can help with personal guidance.
+              Moving an investment to cash can mean a tax form at year-end. Kiddo will keep the activity visible, but a tax professional can help with personal guidance.
             </p>
           </div>
 
@@ -818,7 +827,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Taking money out</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -826,7 +835,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
               <ArrowDownToLine size={24} className="text-primary" />
             </div>
             <h2 className="font-heading text-xl font-semibold text-foreground">Taking money out</h2>
-            <p className="text-sm text-muted-foreground">Available: ${availableCash.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">Available: {formatUsd(availableCash)}</p>
           </div>
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -930,13 +939,13 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
                   disabled={!selectedBank}
                   data-testid="button-liquidate-all"
                 >
-                  Sell everything (${investedBalance.toFixed(2)}) and send to bank →
+                  Sell everything ({formatUsd(investedBalance)}) and send to bank →
                 </button>
               ) : (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
                   <p className="text-sm font-semibold text-amber-900">Close out the whole fund?</p>
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    We'll sell all holdings and send the full balance (~${(availableCash + investedBalance).toFixed(2)}) to {bankAccounts.find(b => b.id === selectedBank)?.bankName || "your bank"}.
+                    We'll sell all holdings and send the full balance (~{formatUsd(availableCash + investedBalance)}) to {bankAccounts.find(b => b.id === selectedBank)?.bankName || "your bank"}.
                     Cash settles in 1 to 2 business days. This may have tax implications.
                   </p>
                   <div className="flex gap-2">
@@ -1051,7 +1060,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Link Bank Account</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -4062,7 +4071,9 @@ const [editFundName, setEditFundName] = useState("");
   // 2026-05-14 — Phase 2 sheet-extraction chunk 2.)
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+    // No mobile pb-24: the app shell already adds bottom-nav clearance (it doubled to
+    // ~190px of dead space). Fixed 2026-06-23, same as the dashboards.
+    <div className="kiddo-app-page md:ml-[264px] md:pb-8">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 space-y-6">
         {/* Fund switcher tabs for Settings — multi-fund parents need
@@ -4650,12 +4661,12 @@ const [editFundName, setEditFundName] = useState("");
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">What pauses when {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends</p>
                       {cancellationImpact.parentContributions.map(c => (
                         <p key={c.id} className="text-xs text-amber-900 leading-relaxed">
-                          ⏸ {c.childName}'s recurring investment{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""}, ${c.amount.toFixed(2)}/{c.frequency}
+                          ⏸ {c.childName}'s recurring investment{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""}, {formatUsd(c.amount)}/{c.frequency}
                         </p>
                       ))}
                       {cancellationImpact.recurringGifts.map(rg => (
                         <p key={rg.id} className="text-xs text-amber-900 leading-relaxed">
-                          ⏸ {rg.senderName}'s gift reminder for {rg.childName}, ${rg.amount.toFixed(2)} every {rg.frequency === "yearly" ? "year" : rg.frequency === "quarterly" ? "3 months" : "month"}
+                          ⏸ {rg.senderName}'s gift reminder for {rg.childName}, {formatUsd(rg.amount)} every {rg.frequency === "yearly" ? "year" : rg.frequency === "quarterly" ? "3 months" : "month"}
                         </p>
                       ))}
                     </div>
@@ -4774,7 +4785,7 @@ const [editFundName, setEditFundName] = useState("");
                     ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Build it up, month after month.</p>
                   <div className="mt-5 space-y-2 text-sm text-muted-foreground">
                     {/* Plus upgrade-card bullets. Synced 2026-05-14 to
                         match Pricing.tsx leading constraint so existing
@@ -5427,7 +5438,7 @@ const [editFundName, setEditFundName] = useState("");
           project_cancellation_dark_pattern_avoidance.md +
           project_close_fund_design_lens.md. */}
       <Dialog open={closeFundOpen} onOpenChange={(o) => { if (!o) setCloseFundOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl flex max-h-[90vh] flex-col">
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden">
           {/* Scrollable body — capped to 90vh with the action buttons pinned
               in a non-scrolling footer below, so on short/mobile viewports the
               disclosure scrolls and the confirm/cancel buttons stay reachable
@@ -5584,7 +5595,7 @@ const [editFundName, setEditFundName] = useState("");
       </Dialog>
 
       <Dialog open={editFundOpen} onOpenChange={(o) => { if (!o) setEditFundOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           {(() => {
             // Title + subtitle adapt to who the fund belongs to. UTMA funds
             // get the child's name in the heading because this surface is
@@ -5806,7 +5817,7 @@ const [editFundName, setEditFundName] = useState("");
             content under the address bar on iOS Safari.
             overflow-hidden stays on the outer so the rounded-2xl
             clip works at the corners. */}
-        <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Cancel plan</DialogTitle>
 
           {cancelStep === "warn" ? (
@@ -5826,7 +5837,7 @@ const [editFundName, setEditFundName] = useState("");
                   After that, the plan moves to Free and your money keeps working. Still invested, still growing, gifts arriving the same way they always have.
                   {cancellationImpact && cancellationImpact.growthSinceSubscribed > 0.01 && (
                     <>
-                      {" "}Your {cancellationImpact.funds.length === 1 ? "fund has" : "funds have"} grown ${cancellationImpact.growthSinceSubscribed.toFixed(0)} since you subscribed; that growth stays.
+                      {" "}Your {cancellationImpact.funds.length === 1 ? "fund has" : "funds have"} grown {usd0(cancellationImpact.growthSinceSubscribed)} since you subscribed; that growth stays.
                     </>
                   )}
                 </p>
@@ -5852,7 +5863,7 @@ const [editFundName, setEditFundName] = useState("");
                         ? `${c.childName}'s ${c.selectedTicker} pick`
                         : `${c.childName}'s mix`;
                       const freq = c.frequency === "weekly" ? "/wk" : c.frequency === "yearly" ? "/yr" : "/mo";
-                      return `$${c.amount.toFixed(0)}${freq} into ${destLabel}`;
+                      return `${usd0(c.amount)}${freq} into ${destLabel}`;
                     });
                     const joined = items.length === 1
                       ? items[0]
@@ -5862,14 +5873,14 @@ const [editFundName, setEditFundName] = useState("");
                     return (
                       <p>
                         Your recurring investments pause: {joined}.
-                        {monthlyTotal > 0 ? ` That's $${monthlyTotal.toFixed(0)}/month of automatic growth that stops until you turn the plan back on.` : ""}
+                        {monthlyTotal > 0 ? ` That's ${usd0(monthlyTotal)}/month of automatic growth that stops until you turn the plan back on.` : ""}
                       </p>
                     );
                   }
                   return (
                     <p>
                       Your {contribs.length} recurring investments pause.
-                      {monthlyTotal > 0 ? ` That's $${monthlyTotal.toFixed(0)}/month of automatic growth that stops until you turn the plan back on.` : ""}
+                      {monthlyTotal > 0 ? ` That's ${usd0(monthlyTotal)}/month of automatic growth that stops until you turn the plan back on.` : ""}
                     </p>
                   );
                 })()}

@@ -3,6 +3,7 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
+import { isInAppCheckoutEnabled } from "./inAppCheckoutFlag";
 import { isStripeMediaTokenEnabled } from "./stripeMediaTokenFlag";
 import { isSeamlessPlanDowngradeEnabled } from "./planDowngradeFlag";
 import { settleGiftIntentOffSession } from "./giftIntentSettlement";
@@ -45,6 +46,7 @@ import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
 import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
 import { isPublicMediaUploadsEnabled } from "./publicMediaFlag";
 import { normalizeImage } from "./imagePipeline";
+import { stripMediaMetadata } from "./mediaPipeline";
 import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rateLimiter";
 import { verifyEmailUnsubscribeSignature } from "./emailUnsubscribeToken";
 import { senderNameIssue, giftMessageIssue, sanitizeTranscript, isSenderBlocked, SENDER_BLOCKED_RESPONSE } from "./giftTextSafety";
@@ -11180,6 +11182,28 @@ export async function registerRoutes(
       const parsed = parseImageDataUrl(req.body?.dataUrl);
       if (!parsed) return res.status(400).json({ error: 'Invalid image. Upload PNG/JPG/WEBP/GIF.' });
       if (parsed.buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large. Max 5MB.' });
+      // Content-safety scan on the ORIGINAL bytes (occasion covers are often photos of
+      // the child). Same silent-log-and-refuse gate as the other image paths; noop is
+      // fail-CLOSED in prod / fail-open in dev, so covers stay OFF in prod until a real
+      // vendor is wired — uniform with profile/child-photo/public paths. Wired 2026-06-23.
+      const scan = await scanImageBuffer(parsed.buffer, parsed.mime);
+      if (!scan.safe) {
+        await writeAudit(req, 'event_image_scan_rejected', 'event', req.params.id, {
+          provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch,
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        try {
+          await sendOpsAlert({
+            severity: 'critical',
+            title: 'Content scanner rejected an occasion image',
+            message: `Occasion image for event ${req.params.id} rejected by ${scan.provider}. Reason: ${scan.reason || 'unknown'}.`,
+            context: { eventId: req.params.id, provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch },
+          });
+        } catch (alertErr) {
+          console.error('[event-image] Ops alert failed for scanner-rejected image:', alertErr);
+        }
+        return res.status(500).json({ error: 'Could not save that image. Please try again later.' });
+      }
       // Normalize before storing: STRIP EXIF/GPS (occasion covers are often photos of
       // the child and render on the dashboard tile + gifter hero), bake orientation,
       // re-encode to webp (also neutralizes smuggled payloads). A throw = undecodable
@@ -12743,6 +12767,76 @@ export async function registerRoutes(
     }
   });
 
+  // In-app embedded checkout (CHECKOUT_IN_APP_SPEC.md), flag-gated (default off). Creates
+  // an ON-SESSION deposit PaymentIntent for the embedded Payment Element — card +
+  // Apple/Google Pay + Link, no hosted redirect, method vaulted for one-tap next time.
+  // Stripe coupling stays in stripeService (this handler just orchestrates).
+  app.post('/api/checkout/payment-intent', async (req, res) => {
+    try {
+      if (!isInAppCheckoutEnabled()) return res.status(404).json({ error: 'Not found' });
+      const amountCents = Math.round(Number(req.body?.amountCents ?? Number(req.body?.amount) * 100));
+      if (!Number.isFinite(amountCents) || amountCents < 100) {
+        return res.status(400).json({ error: 'Minimum $1.' });
+      }
+      // The user authorizes this charge live (on-session). Use the authed user's
+      // Customer when present; otherwise a stable preview Customer so the element can
+      // render for the /checkout-preview demo without an account.
+      const u = (req as any).user;
+      const email = (u?.email as string) || 'checkout-preview@kiddo.test';
+      const customer = await stripeService.getOrCreateCustomer(email, u?.firstName, u?.id);
+      const pi = await stripeService.createDepositPaymentIntent({
+        customerId: customer.id,
+        amountCents,
+        metadata: { surface: 'in_app_deposit_preview' },
+      });
+      res.json({ clientSecret: pi.client_secret });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create payment intent';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Saved methods for the RETURN-USER one-tap surface ("Pay with •••• 4242").
+  app.get('/api/checkout/payment-methods', async (req, res) => {
+    try {
+      if (!isInAppCheckoutEnabled()) return res.status(404).json({ error: 'Not found' });
+      const u = (req as any).user;
+      const email = (u?.email as string) || 'checkout-preview@kiddo.test';
+      const customer = await stripeService.getOrCreateCustomer(email, u?.firstName, u?.id);
+      const methods = await stripeService.listSavedPaymentMethods(customer.id);
+      res.json({ methods: methods.map((m) => ({ id: m.id, brand: m.card?.brand || 'card', last4: m.card?.last4 || '' })) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to list methods';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // RETURN-USER one tap: charge a saved method on-session, no element. Returns the PI
+  // status (succeeded) or a clientSecret for the client to finish 3DS via
+  // stripe.handleNextAction. Card declines surface as 402 with a clean message.
+  app.post('/api/checkout/charge-saved', async (req, res) => {
+    try {
+      if (!isInAppCheckoutEnabled()) return res.status(404).json({ error: 'Not found' });
+      const amountCents = Math.round(Number(req.body?.amountCents ?? Number(req.body?.amount) * 100));
+      const paymentMethodId = String(req.body?.paymentMethodId || '');
+      if (!Number.isFinite(amountCents) || amountCents < 100) return res.status(400).json({ error: 'Minimum $1.' });
+      if (!paymentMethodId) return res.status(400).json({ error: 'No saved method.' });
+      const u = (req as any).user;
+      const email = (u?.email as string) || 'checkout-preview@kiddo.test';
+      const customer = await stripeService.getOrCreateCustomer(email, u?.firstName, u?.id);
+      const pi = await stripeService.chargeSavedMethodOnSession({
+        customerId: customer.id,
+        paymentMethodId,
+        amountCents,
+        metadata: { surface: 'in_app_deposit_onetap' },
+      });
+      res.json({ status: pi.status, clientSecret: pi.client_secret });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Charge failed';
+      res.status(402).json({ error: message });
+    }
+  });
+
   app.post('/api/stripe/calculate-fees', async (req, res) => {
     try {
       const { amount, coverFees, eventId, fundId, fundSlug, eventSlug, paymentMethod, giftAddOn } = req.body;
@@ -13077,6 +13171,65 @@ export async function registerRoutes(
         } catch (mediaErr) {
           console.warn('[gift-checkout] pending media persist failed; using legacy metadata path:', (mediaErr as any)?.message || mediaErr);
         }
+      }
+
+      // EMBEDDED in-app checkout (CHECKOUT_IN_APP_SPEC.md), flag-gated. When the client
+      // asks for embedded mode, return a PaymentIntent client_secret + the in-app success
+      // path instead of a hosted Checkout Session URL. Identical fees/metadata; settles
+      // via the guarded source:'in_app' branch. Hosted stays the default when `embedded`
+      // is absent or the flag is off — pure additive, instant fallback.
+      if (req.body?.embedded === true && isInAppCheckoutEnabled()) {
+        const giftPi = await stripeService.createGiftPaymentIntent({
+          fundId,
+          eventId,
+          amount: parseFloat(amount),
+          senderName: normalizedSenderName,
+          senderEmail: hasEmail ? trimmedEmail : undefined,
+          message,
+          photoUrl: normalizedPhotoUrl || undefined,
+          videoUrl: normalizedVideoUrl || undefined,
+          audioUrl: normalizedAudioUrl || undefined,
+          mediaToken: giftMediaToken,
+          coverFees: coverFees || false,
+          hasLegacyPremiumEventCoverage,
+          hostPlan: (coverageStatus === "trial_active"
+            ? "free"
+            : (hostPlan as 'free' | 'starter' | 'family' | 'legacy')) || "free",
+          coverageStatus,
+          fundUserId: fund.userId,
+          recipientName,
+          paymentMethod: paymentMethod || 'card',
+          executionModel: executionModel || 'auto',
+          selectedTicker: selectedTicker || undefined,
+          giftAddOn: getGiftAddOn(giftAddOn).id,
+          isAnonymous: isAnonymousFlag,
+          idempotencyKey,
+          source: normalizedSource,
+          isParentContribution,
+        });
+        // Relative path — the client navigates internally after confirmPayment (no
+        // session_id; the embedded flow has no Checkout Session, and GiftSuccess reads
+        // the gift from these params + the webhook-created row).
+        const successPath = isParentContribution
+          ? `/dashboard?parentContrib=1&fundId=${encodeURIComponent(fundId)}&syncGifts=1`
+          : `/gift/success?fundId=${encodeURIComponent(fundId)}` +
+            `&eventId=${encodeURIComponent(eventId || '')}` +
+            `&fundSlug=${encodeURIComponent(fund.slug || '')}` +
+            `&eventSlug=${encodeURIComponent(event?.slug || '')}` +
+            `&eventName=${encodeURIComponent(event?.name || '')}` +
+            `&amount=${encodeURIComponent(String(parseFloat(amount)))}` +
+            `&senderName=${encodeURIComponent(normalizedSenderName)}` +
+            `&executionModel=${encodeURIComponent(executionModel || 'auto')}` +
+            `&ticker=${encodeURIComponent(selectedTicker || '')}` +
+            `&fundName=${encodeURIComponent(recipientName)}`;
+        recordEvent({
+          ...eventCtxFromReq(req),
+          name: "gift_started",
+          fundId,
+          source: isParentContribution ? "web" : "public",
+          props: { amount: Number(amount) || 0, executionModel: executionModel || null, isParentContribution: !!isParentContribution, hasMessage: !!message, embedded: true },
+        });
+        return res.json({ clientSecret: giftPi.client_secret, paymentIntentId: giftPi.id, successPath });
       }
 
       const session = await stripeService.createGiftCheckoutSession({
@@ -13847,6 +14000,32 @@ export async function registerRoutes(
       if (!parsed) return res.status(400).json({ error: 'Invalid image data. Upload PNG/JPG/WEBP.' });
       if (parsed.buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large. Please use an image under 5MB.' });
 
+      // Content-safety scan on the ORIGINAL bytes — a child's photo is the most
+      // sensitive surface in the app, so it gets the SAME gate as the profile +
+      // public-photo paths: silent-log-and-refuse (generic client error, audit + ops
+      // alert with the real reason). The noop scanner is fail-CLOSED in prod /
+      // fail-open in dev, so child photos stay effectively OFF in production until a
+      // real vendor (PhotoDNA/Rekognition + NCMEC) is wired — uniform with the other
+      // image paths so the central scanner swap covers everything at once. Wired 2026-06-23.
+      const scan = await scanImageBuffer(parsed.buffer, parsed.mime);
+      if (!scan.safe) {
+        await writeAudit(req, 'child_photo_scan_rejected', 'fund', fund.id, {
+          provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch,
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        try {
+          await sendOpsAlert({
+            severity: 'critical',
+            title: 'Content scanner rejected a child photo',
+            message: `Child photo for fund ${fund.id} rejected by ${scan.provider}. Reason: ${scan.reason || 'unknown'}.`,
+            context: { fundId: fund.id, provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch },
+          });
+        } catch (alertErr) {
+          console.error('[child-photo] Ops alert failed for scanner-rejected photo:', alertErr);
+        }
+        return res.status(500).json({ error: 'Could not save that photo. Please try again later.' });
+      }
+
       // Normalize before storing: STRIP EXIF/GPS — a CHILD'S photo would otherwise
       // carry home coordinates, the single most sensitive EXIF leak in the app, and
       // it's served from a public /uploads path. Bake orientation, re-encode to webp
@@ -13980,11 +14159,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Video too large. Please use a video under 25MB.' });
       }
 
+      // Strip GPS/location + other metadata before storing — the moving-image counterpart
+      // to normalizeImage for photos. DORMANT until `ffmpeg-static` + `fluent-ffmpeg` are
+      // installed (see server/mediaPipeline.ts): until then it's a lossless pass-through, so
+      // it never breaks the upload. The audit records whether the strip actually ran, so a
+      // shared Memory Book can't silently leak a home video's coordinates once it's active.
+      const cleaned = await stripMediaMetadata(parsed.buffer, parsed.ext);
       const uploaded = await uploadMemoryFile({
         fundId: req.params.fundId,
         ext: parsed.ext,
         mime: parsed.mime,
-        buffer: parsed.buffer,
+        buffer: cleaned.buffer,
+      });
+
+      await writeAudit(req, 'memory_media_upload', 'fund', fund.id, {
+        mediaType: 'video', filename: uploaded.filename,
+        sizeBytes: cleaned.buffer.length, mime: parsed.mime,
+        storage: uploaded.storage, metadataStripped: cleaned.stripped,
       });
 
       res.json({ url: uploaded.url, mime: parsed.mime, size: parsed.buffer.length });
@@ -14067,11 +14258,15 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Voice note too large. Max 10MB.' });
       }
 
+      // Strip metadata before storing (dormant pass-through until ffmpeg is installed;
+      // see server/mediaPipeline.ts). Audio rarely carries GPS, but this keeps the voice
+      // path consistent with video and lossless (-c copy: the voice is byte-identical).
+      const cleaned = await stripMediaMetadata(parsed.buffer, parsed.ext);
       const uploaded = await uploadMemoryFile({
         fundId: req.params.fundId,
         ext: parsed.ext,
         mime: parsed.mime,
-        buffer: parsed.buffer,
+        buffer: cleaned.buffer,
       });
 
       // Best-effort Whisper transcription. Returns null when OPENAI_API_KEY
@@ -14081,7 +14276,15 @@ export async function registerRoutes(
       // memory entry so it persists into Memory Book + KidView.
       // Buffer-based now so it works regardless of where the file landed
       // (Supabase Storage in prod, local disk in dev).
-      const transcript = await transcribeAudioBuffer(parsed.buffer, uploaded.filename, parsed.mime);
+      const transcript = await transcribeAudioBuffer(cleaned.buffer, uploaded.filename, parsed.mime);
+
+      // Audit parity with the public voice path (which the authed path was missing).
+      // metadataStripped reflects whether the strip actually ran (false until ffmpeg lands).
+      await writeAudit(req, 'memory_media_upload', 'fund', fund.id, {
+        mediaType: 'audio', filename: uploaded.filename,
+        sizeBytes: cleaned.buffer.length, mime: parsed.mime,
+        storage: uploaded.storage, metadataStripped: cleaned.stripped, transcribed: Boolean(transcript),
+      });
 
       res.json({ url: uploaded.url, mime: parsed.mime, size: parsed.buffer.length, transcript });
     } catch (error) {
