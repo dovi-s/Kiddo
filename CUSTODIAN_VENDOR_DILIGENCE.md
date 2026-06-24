@@ -183,6 +183,28 @@ via a background waiter). So make-or-break #1's mechanism (fractional/notional) 
 - **🟡 Instant Funding = available but SKIP at launch.** It extends instant buying power *before* funds settle (for ACH-first apps) — needs a partner deposit, T+1 wire settlement, signed pricing amendment, late interest (Fed+8%). Kiddo **pre-collects via Stripe**, so we already hold the cash before investing → don't need the credit/risk. Revisit only if we want sub-day "watch it land."
 - **Market data:** Broker API plans = Basic (free, IEX/15-min-delayed) → Standard $500-$2,000/mo. Delayed/IEX is fine for showing fund values. NB market-data auth uses the **OAuth Client-Credentials** flow → the `Client Secret` credential we generated earlier IS the one for market data (Legacy/Basic-auth is for the Broker REST endpoints). Both have a use.
 
+### 🟢 ENTITLEMENT ENABLED + MAKE-OR-BREAK #1 & #2 VERIFIED IN SANDBOX (2026-06-24)
+
+Alpaca support (agent "Radzi", ticket **309412**) **enabled custodial USA account creation for correspondent `frvq`**. He only said "completed, please retry" — did NOT answer Dovi's 2 confirmation questions or name a partnerships contact (the reply was an UNBLOCK, not answers). We then verified the two testable make-or-breaks directly:
+
+- **#1 custodial account opens — ✅ PROVEN.** `npm run smoke:alpaca-custodial` opens `account_type:"custodial"` + `minor_identity`, reaches `APPROVED` / trading `ACTIVE`.
+- **#2 fractional notional buy INSIDE custodial — ✅ PROVEN with a real fill.** A `$50` notional AAPL buy filled in the custodial account → position **`qty=0.168967335`** (clearly fractional), mv ~$49.99. Earlier "inconclusive" runs were a FALSE NEGATIVE from sandbox ACH funding lag (see below), NOT a custodial rejection — the order validator accepted the notional order and failed only on `insufficient buying power`, identically on a regular account.
+- **#3 at-majority handoff — STILL the only open make-or-break.** Untestable in sandbox; Radzi didn't answer it. This is the one genuine remaining Alpaca question (see the strong-but-unconfirmed doc evidence above).
+
+### 📺 WEBINAR FINDINGS (2026-06-24) — 3 Alpaca Broker API webinars (RIA onboarding / KYC+funding / Ribbit reference app)
+
+Mined for our open questions. Net effect: the procedural unknowns are now answered, so the Alpaca email shrinks to custodial-specifics only.
+
+- **🟢 Sandbox ACH delay is BY DESIGN (resolves the 2026-06-24 funding saga).** *"We have some of the ACH delay built into sandbox… about an hour"* + *"cash is not made available right away — you have to wait for it to clear before you can place an order."* So the `QUEUED` transfer wasn't wedged — it's a deliberate ~1hr simulated clearing delay, and the buy correctly failed on buying power until it cleared. **One ACH relationship per account** (*"one account is only allowed to have one relationship"*) — matched our `409 only one active ach relationship` on re-issue; change-bank = delete + re-add. **No sandbox-funding question to ask Alpaca; we know the answer.**
+- **🟢 Go-live pipeline (the production-onboarding answer for make-or-break #6 commercials):** three stages — **Sandbox** (1-6mo, unlimited) → **Limited Live** (1-3mo, up to **35 real internal accounts**, Alpaca does KYC, **$5k buying-power / $2k withdrawal cap per account**, no margin/short) → **Full Live** (unrestricted). Sandbox→Limited: submit legal entity + control-person → **sign carrying agreement w/ sales** → build compliant onboarding flow (Alpaca reviews; exact reqs NOT in docs, sales sends them) → hand a pre-funded test account to their tech consultant. Limited→Full: due-diligence packet **~1mo before launch** — entity docs, **W9 (required if you ever custody stock)**, UBOs to 10%, authorized users (photo ID + CIP), **InfoSec policy** + P&Ps, AML program if you self-conduct KYC; remediations bucket into immediate / 30-day / 90-day. **Two support models:** self-service (email) vs **project-managed** (~1hr/day PM + tech consultant + DD specialist — worth it given custodial is new).
+- **🟢 Non-BD / RIA reconfirmed AND reconfirmed as counsel's call.** *"Do we need the RIA license to start go-live? Nope, not at all… various partnership types… you could launch as a tech partner."* But asked "do we still need our own investment license," Alpaca said *"yes, you operate on your own licenses… differs by jurisdiction"* then **deferred to sales/counsel.** Starting doesn't require it; whether Kiddo's 0.10% + curated-mix model ultimately needs RIA registration is the **counsel Part 1** question — Alpaca won't answer it.
+- **🟢 Journals are near-instant (intraday), vs ~1hr ACH** (*"the journaling is near real-time… settles at EOD"*). Right rail for "invest a gift the moment it lands," but needs the **firm/FBO account**, which only exists post-carrying-agreement → confirms the gifter-funding plan is gated on partnership, not code.
+- **🟢 Agreements are HOSTED BY ALPACA.** *"The customer agreement is already created by Alpaca; we recommend you link directly to it (auto-updates); there are requirements on how you present it + e-signature."* → refine `alpacaBrokerClient.ts`: present Alpaca's hosted customer agreement + capture the real e-sig + IP at activate-investing time, don't hardcode a `signed_at`.
+- **Other:** no bulk-order API (workaround: trade in firm account → journal shares out); order types = market/limit/stop/stop-limit/trailing-stop; per-account fee tiers (different bips/account) NOT native — "get creative" w/ PMs; rate limit 1000 calls/min, negotiable w/ partnerships; international funding = wire (not ACH), not simulable in sandbox; market data = SIP aggregate, free Basic (IEX/delayed) fine for showing fund values.
+- **NOT answered by any webinar:** the at-majority custodial handoff (generic webinars, custodial barely mentioned) and the excluded-states list. Handoff stays make-or-break #3.
+
+**→ The Alpaca partnerships email now collapses to TWO custodial-specific asks only:** (1) handoff = in-place re-registration vs ACAT *(already in the ticket-309412 reply)*, and (2) Kiddo-specific commercials — per-account/clearing economics, AUM floor, and whether partners share the FDIC-sweep interest. Everything procedural is answered above.
+
 ## The plan (sandbox-first, decide on evidence)
 
 1. **Alpaca sandbox today** (free, self-serve). Prototype the three make-or-break
@@ -301,9 +323,9 @@ is a sandbox/call, not a full pitch.
 
 | Gate | Alpaca | DriveWealth |
 |---|---|---|
-| Fractional notional buy works IN custodial (run `npm run smoke:alpaca-custodial`) | ☐ pass / ☐ fail | ☐ pass / ☐ fail |
-| At-majority handoff to the child exists (custodial → individual) | ☐ pass / ☐ fail | ☐ pass / ☐ fail |
-| We can operate WITHOUT being our own broker-dealer | ☐ pass / ☐ fail | ☐ pass / ☐ fail |
+| Fractional notional buy works IN custodial (run `npm run smoke:alpaca-custodial`) | ✅ **PASS** (2026-06-24, real fill qty=0.169 in custodial) | ☐ pass / ☐ fail |
+| At-majority handoff to the child exists (custodial → individual) | 🟡 likely (docs imply in-place re-registration; confirm 1 sentence — ticket 309412) | ☐ pass / ☐ fail |
+| We can operate WITHOUT being our own broker-dealer | ✅ **PASS** (Alpaca Securities = BD of record; tech-partner path confirmed in webinar — RIA-vs-not is the separate counsel question) | ☐ pass / ☐ fail |
 
 **Step 2 — score the survivors (1-5 each; weight in parens). Highest total wins:**
 

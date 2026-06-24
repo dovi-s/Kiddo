@@ -105,8 +105,12 @@ function toAlpacaCustodialBody(
       immediate_family_exposed: false,
     },
     // Reuse the per-fund UTMA irrevocability acknowledgment as the signed-at
-    // anchor. TODO(alpaca): present + capture Alpaca's specific customer/account
-    // agreements (and the real signing IP) at activate-investing time.
+    // anchor. TODO(alpaca): per Alpaca's onboarding webinar (2026-06-24), the
+    // customer agreement is HOSTED BY ALPACA — link/present their hosted agreement
+    // directly (it auto-updates) rather than our own copy, follow their display +
+    // e-signature requirements, and capture the real e-sig timestamp + signing IP
+    // at activate-investing time. (Some "optional" account fields are also actually
+    // required depending on partnership type — confirm the set with sales.)
     agreements: [
       {
         agreement: "customer_agreement",

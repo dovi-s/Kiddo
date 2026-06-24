@@ -52,51 +52,48 @@ dovisherman@gmail.com · kiddofund.com
 
 ## 2. Alpaca (Broker API partnerships)
 
-**Subject:** Broker API for a custodial kids' investing + gifting product
+> **Scope note (2026-06-24):** this email was deliberately SHORTENED. We already verified
+> custodial account creation + fractional notional buys in sandbox ourselves (ticket 309412
+> enabled `frvq`), and the 3 Alpaca Broker API webinars + our doc-research run already answer
+> the procedural questions (go-live pipeline, KYC ownership, funding mechanics, the sandbox
+> ~1hr ACH delay, what registrations gate *starting*). Two questions remain that only Alpaca
+> can answer, and one of them (the handoff) already rides the **support ticket 309412 reply**
+> — so this partnerships email is now just the commercials conversation. Do NOT re-ask the
+> things we already know (full detail in `CUSTODIAN_VENDOR_DILIGENCE.md`). **Send once a
+> partnerships contact is named; from `dovi@kiddofund.com`.**
 
-Hi Alpaca team,
+**Subject:** Production onboarding for a custodial kids' investing + gifting product
 
-I'm building Kiddo, a custodial investing product for kids funded by family gifting. The
-flow: relatives gift small amounts, we invest them in a UTMA account managed by the
-parent, and the account hands off to the child at the age of majority. We've signed up for
-the Broker API sandbox and are prototyping now.
+Hi [Name],
 
-We've read the custodial, ACAT, funding, and FDIC-sweep docs, so these are the specific
-points that decide our fit:
+I'm building Kiddo, custodial (UTMA) investing for kids funded by family gifting: relatives
+gift small amounts, we invest them in a UTMA account managed by the parent, and the account
+hands off to the child at the age of majority. We've validated the core flow on the Broker
+API sandbox — custodial account open plus fractional notional buys filling inside the
+custodial account — and we're planning production.
 
-1. Fractional / notional in custodial: confirm dollar-amount (notional) buys work INSIDE a
-   custodial account — our gifts are $25 to $100, so notional is mandatory.
+Could we get 30 minutes on the commercial and go-live side? Specifically:
 
-2. At-majority handoff (our biggest question): your custodial docs say the beneficiary
-   "assumes full control of the account" at majority. Please confirm this is an in-place
-   re-registration of the same account that preserves fractional positions and cost basis
-   (no liquidation) — i.e. not an ACAT (your ACAT doc notes a full ACAT liquidates
-   fractional shares). And is it Alpaca-driven by the minor's DOB/state, or platform-triggered?
+1. Per-account and clearing economics, and any minimums or AUM floor at our stage.
 
-3. Non-BD technology partner + enablement: we're a US software platform, not a broker-dealer
-   or RIA. Confirm we can be approved as a technology provider under Alpaca Securities (broker-
-   dealer of record), what registrations (if any) we must hold, and what's needed to enable
-   custodial USA account creation for our sandbox correspondent (firm frvq, currently
-   403 "creating custodial USA accounts is not enabled").
+2. The FDIC sweep on custodial accounts — do partners share in the interest, or does it pass
+   entirely to the customer?
 
-4. Gifter (third-party) funding: many non-custodian gifters fund one minor's account. We plan
-   to pool gift deposits into a firm/FBO account and journal them into each custodial account.
-   Confirm this is supported, what your flow-review process is, whether it requires us to hold
-   a money-transmission license, and what Travel-Rule / transmitter info we must collect on
-   each (often small) deposit.
+3. Production go-live prerequisites and timeline, including approving us as a technology
+   partner under Alpaca Securities as broker-dealer of record (we're a US software platform,
+   not a broker-dealer; the RIA-registration question we're handling with our own counsel).
 
-5. Excluded states for custodial UTMA/UGMA, if any.
-
-6. Commercials + go-live: per-account and clearing economics, any minimums / AUM floor,
-   whether partners share the FDIC-sweep interest or it passes entirely to the customer, and
-   the production go-live timeline + prerequisites.
-
-Could we get 30 minutes with the partnerships team?
+We can share product detail and volume expectations on the call.
 
 Thanks,
 Dovi Sherman
 Founder, Kiddo
-dovisherman@gmail.com · kiddofund.com
+dovi@kiddofund.com · kiddofund.com
+
+> **Held for the same thread (already asked in ticket 309412, don't double-ask):** confirm the
+> at-majority transition is an in-place re-registration preserving fractional positions + cost
+> basis (not an ACAT). If support hasn't answered it by the time you reach partnerships, fold
+> it in here.
 
 ---
 
@@ -104,23 +101,36 @@ dovisherman@gmail.com · kiddofund.com
 
 **Subject:** Custodial + fractional API for a kids' gifting investing product
 
+> **Scope note (2026-06-24):** DriveWealth is now the **proven-incumbent comparison**, not
+> the lead. We've already verified custodial account open + fractional notional buys inside a
+> custodial account on Alpaca's sandbox, so this call exists to pressure-test the two places
+> Alpaca's month-old custodial product is least proven — the **at-majority handoff** and
+> **small-account economics** (DriveWealth historically carries higher minimums, which is the
+> thing most likely to decide this either way). Lead with those. Send from `dovi@kiddofund.com`.
+
 Hi DriveWealth team,
 
-I'm the founder of Kiddo, a custodial investing product for kids funded by family gifting
-(gifts get invested into a UTMA account, which hands off to the child at the age of
-majority). I'm evaluating custody and brokerage partners, and DriveWealth's track record
-with custodial and teen accounts puts you on the shortlist.
+I'm the founder of Kiddo, a custodial investing product for kids funded by family gifting:
+gifts get invested into a UTMA account managed by the parent, which hands off to the child
+at the age of majority. I'm choosing a custody partner, and DriveWealth's track record with
+custodial and teen accounts puts you on the shortlist.
 
-Could we set up a call? The questions that matter most to us:
+Could we set up a call? In priority order, the questions that decide our fit:
 
-1. Fractional, dollar-amount investing inside custodial accounts (our gifts are $25 to
-   $100).
-2. The at-majority handoff: whether custodial converts to individual ownership for the
-   child as an in-place re-registration that preserves fractional positions and cost basis
-   (not an ACAT that liquidates), and how automated that transfer is.
-3. Account minimums, per-account and per-trade economics, and your typical onboarding and
-   go-live timeline.
-4. A couple of reference customers running custodial or teen accounts at scale.
+1. The at-majority handoff: when the child reaches the age of majority, does the custodial
+   account convert to individual ownership as an in-place re-registration that preserves
+   fractional positions and cost basis (not an ACAT that liquidates fractional shares), and
+   how automated is that transfer — API-triggered off the minor's DOB/state, or an ops process?
+
+2. Economics at our scale: account minimums, any AUM floor, and per-account / per-trade /
+   fractional-share costs. Our accounts start small (gifts are $25 to $100), so minimums
+   matter a lot to us.
+
+3. Fractional, dollar-amount investing inside custodial accounts (table stakes for us — we
+   know it's a DriveWealth strength, just confirming).
+
+4. Typical onboarding and go-live timeline, and a couple of reference customers running
+   custodial or teen accounts at scale.
 
 Happy to share more on the product and volume expectations on a call. What does your
 availability look like next week?
@@ -128,11 +138,16 @@ availability look like next week?
 Thanks,
 Dovi Sherman
 Founder, Kiddo
-dovisherman@gmail.com · kiddofund.com
+dovi@kiddofund.com · kiddofund.com
 
 ---
 
 ## 4. Alpaca support — enable custodial creation in sandbox (unblocks the smoke test)
+
+> ✅ **DONE / SUPERSEDED (2026-06-24).** Sent 2026-06-18; Alpaca enabled `frvq` on 2026-06-24
+> (ticket **309412**). We then verified custodial open + fractional-in-custodial in sandbox.
+> The remaining asks (handoff confirmation + partnerships contact) moved to the **reply on
+> ticket 309412** — see that draft, not this template. Kept below for the record only.
 
 **Subject:** Enable custodial USA account creation for sandbox correspondent (firm frvq)
 
