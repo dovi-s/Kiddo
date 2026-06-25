@@ -4,49 +4,60 @@ The four emails that start the two long-lead clocks (counsel + custody). Filled 
 your details. Source briefs: `COUNSEL_ENGAGEMENT_PACKET.md`, `CUSTODIAN_VENDOR_DILIGENCE.md`.
 
 ## Before you send (60 seconds)
-1. **From-address:** these go out under `dovisherman@gmail.com` as written. If you have
-   a `dovi@kiddofund.com` (or similar) address, send from that instead — a domain email
-   reads more credibly to a law firm and a brokerage. Swap the contact line if so.
+1. **From-address:** all four now use `dovi@kiddofund.com` (the address already on the live
+   Alpaca thread) — a domain email reads more credibly to a law firm and a brokerage than a
+   gmail. If you'd rather send any of these from `dovisherman@gmail.com`, swap the contact line.
 2. **Confirm `kiddofund.com` is live** (or pointing somewhere presentable) before you
    cite it. If it isn't up yet, drop the site line rather than link a dead page.
 3. **Counsel email only:** attach the product overview / deck, a TOS draft, and a
    pricing-page screenshot. Do NOT attach any custodian/BD agreement (none is signed;
    the packet's safe framing depends on not implying one).
 4. **Counsel: send to 3 firms in parallel**, pick the one that replies with a thoughtful
-   scoping question rather than just a fee quote. Suggested: Hardin Compliance, ACA Group,
-   Foley Hoag (fintech), Cooley (emerging companies + fintech), Lowenstein Sandler (RIA).
+   scoping question rather than just a fee quote. **Target a boutique securities/IA attorney**
+   (senior enough to give a privileged opinion, small enough to take a bounded fixed-fee job) —
+   NOT a compliance consultancy. ⚠️ The earlier suggestions **Hardin Compliance** and **ACA
+   Group** are compliance *consultancies*, not law firms — they do RIA registration *mechanics*
+   but **cannot opine** on the fee-vs-advisory or money-transmission questions; dropped.
+   **Verified shortlist (2026-06-24):**
+   - **Part 1 / RIA (the primary engagement):**
+     - **Parker MacIntyre** (Atlanta GA) — IA/RIA regulatory boutique, ex-regulators. Partner
+       J. Steven Parker · `jsparker@parkmac.com` · (404) 490-4060 · contact form at
+       parkmac.com/contact-us/.
+     - **Fintech Law** — Bo Howell (16+ yrs securities lawyer, ex-SEC, ex-CCO); RIA registration;
+       intake form at fintechlaw.ai/contact. Boutique, fixed-fee friendly.
+   - **Part 2 / money transmission (only if the securities firm doesn't cover it — see the
+     packet's "Parts 3/5 can ride the same call" note):**
+     - **Cogent Law** — money-transmitter licensing + custody platforms (cogentlaw.com).
+     - **Hudson Cook, LLP** — MSB / money-transmitter regulatory (hudsoncook.com).
+   - **Optional BigLaw credibility check (pricier — likely $10K+, may decline a small fixed
+     fee):** Cooley, Lowenstein Sandler, or Foley Hoag fintech practices.
+   - Contact each via the published email / intake form above — do NOT guess partner emails.
 5. Optional: add a phone number to the sign-offs if you want calls to come in faster.
 
 ---
 
 ## 1. Counsel (send to 3 SEC-RIA fintech boutiques) + attach the packet
 
-**Subject:** RIA-registration + fund-holding questions — pre-launch UTMA fintech, need a directional call + short memo
+**Subject:** RIA question for a pre-launch UTMA app — scoping a short engagement
 
 Hi [Name],
 
-We're Kiddo, Inc., a pre-launch, US-only fintech. Parents open custodial (UTMA)
-investment accounts for their kids, and friends and family contribute gift-investments.
-Investments are intended to be custodied and executed by a third-party broker-dealer; we
-are the technology and experience layer, and we are pre-launch (custody is not yet live).
+I'm the founder of Kiddo, a pre-launch app where parents open UTMA accounts for their kids
+and family chips in gift investments. Custody and execution run through a third-party
+broker-dealer — we're the software layer, and we're not live yet.
 
-We need directional answers, before public launch, on two linked questions: (1) whether
-our planned 0.10% asset-based fee requires SEC RIA registration, given a self-directed
-platform posture (we've also sketched three fallback structures); and (2) whether we may
-capture a gifter's payment before the recipient's account exists, without tripping money
-transmission or custody rules. A short attached packet lays out these plus a few
-tightly-scoped privacy questions on children's data.
+Before we launch I need a read on two things: whether our 0.10% asset-based fee makes us an
+SEC RIA (we think there's a self-directed, platform-fee path), and whether we can capture a
+gifter's payment before the child's account exists without tripping money-transmission rules.
+I've put the specifics in a short packet I can send over.
 
-We're looking for a 60 to 90 minute call plus a 2 to 3 page written memo within about two
-weeks (which structure, why, and what to change in the product, website, and TOS to be
-clean), roughly a $3K to $5K initial engagement, with any follow-up scoped separately.
+What I'm after is a call and a 2 to 3 page memo on which structure to use and what to fix in
+the product and TOS — fixed fee, if you'd propose one. Is this the kind of thing you do, and
+do you cover the money-transmission side or would that be separate counsel?
 
-Does this fit your practice? Happy to answer scoping questions first.
-
-Best,
+Thanks,
 Dovi Sherman
-Founder, Kiddo, Inc.
-dovisherman@gmail.com · kiddofund.com
+Kiddo · dovi@kiddofund.com
 
 ---
 
@@ -62,33 +73,22 @@ dovisherman@gmail.com · kiddofund.com
 > things we already know (full detail in `CUSTODIAN_VENDOR_DILIGENCE.md`). **Send once a
 > partnerships contact is named; from `dovi@kiddofund.com`.**
 
-**Subject:** Production onboarding for a custodial kids' investing + gifting product
+**Subject:** Production onboarding — custodial kids' app on Broker API
 
 Hi [Name],
 
-I'm building Kiddo, custodial (UTMA) investing for kids funded by family gifting: relatives
-gift small amounts, we invest them in a UTMA account managed by the parent, and the account
-hands off to the child at the age of majority. We've validated the core flow on the Broker
-API sandbox — custodial account open plus fractional notional buys filling inside the
-custodial account — and we're planning production.
+Kiddo founder here. We've got the custodial flow working in your Broker API sandbox — account
+open plus fractional notional buys inside the custodial account — and we're heading toward
+production.
 
-Could we get 30 minutes on the commercial and go-live side? Specifically:
-
-1. Per-account and clearing economics, and any minimums or AUM floor at our stage.
-
-2. The FDIC sweep on custodial accounts — do partners share in the interest, or does it pass
-   entirely to the customer?
-
-3. Production go-live prerequisites and timeline, including approving us as a technology
-   partner under Alpaca Securities as broker-dealer of record (we're a US software platform,
-   not a broker-dealer; the RIA-registration question we're handling with our own counsel).
-
-We can share product detail and volume expectations on the call.
+Could we grab 30 minutes on the commercial side? Mainly per-account economics and any
+minimums, whether partners share the FDIC sweep on custodial cash, and what go-live takes —
+including getting approved as a tech partner under Alpaca Securities (we're software, not a
+broker-dealer; the RIA question's with our own counsel).
 
 Thanks,
 Dovi Sherman
-Founder, Kiddo
-dovi@kiddofund.com · kiddofund.com
+Kiddo · dovi@kiddofund.com
 
 > **Held for the same thread (already asked in ticket 309412, don't double-ask):** confirm the
 > at-majority transition is an in-place re-registration preserving fractional positions + cost
@@ -99,46 +99,29 @@ dovi@kiddofund.com · kiddofund.com
 
 ## 3. DriveWealth (sales)
 
-**Subject:** Custodial + fractional API for a kids' gifting investing product
+**Subject:** Custodial + fractional API — worth a quick call?
 
-> **Scope note (2026-06-24):** DriveWealth is now the **proven-incumbent comparison**, not
-> the lead. We've already verified custodial account open + fractional notional buys inside a
-> custodial account on Alpaca's sandbox, so this call exists to pressure-test the two places
-> Alpaca's month-old custodial product is least proven — the **at-majority handoff** and
-> **small-account economics** (DriveWealth historically carries higher minimums, which is the
-> thing most likely to decide this either way). Lead with those. Send from `dovi@kiddofund.com`.
+> **Scope note (2026-06-24):** DriveWealth is the **proven-incumbent comparison**, not the
+> lead — we've already verified custodial open + fractional-in-custodial on Alpaca's sandbox.
+> This call exists to pressure-test the two places Alpaca's month-old product is least proven:
+> the **at-majority handoff** and **small-account economics** (DriveWealth historically carries
+> higher minimums — the thing most likely to decide this). Send from `dovi@kiddofund.com`.
 
 Hi DriveWealth team,
 
-I'm the founder of Kiddo, a custodial investing product for kids funded by family gifting:
-gifts get invested into a UTMA account managed by the parent, which hands off to the child
-at the age of majority. I'm choosing a custody partner, and DriveWealth's track record with
-custodial and teen accounts puts you on the shortlist.
+I'm the founder of Kiddo — family gifting into a kid's UTMA that hands off to the child at
+the age of majority. I'm picking a custody partner and want DriveWealth in the mix.
 
-Could we set up a call? In priority order, the questions that decide our fit:
+Two things will really decide it for us: at majority, does the custodial re-register in place
+to the child (keeping the fractional shares and cost basis, not an ACAT that liquidates), and
+how do your minimums and per-account costs look — our accounts start small, gifts are $25 to
+$100. Fractional-in-custodial too, though I assume that's a given for you.
 
-1. The at-majority handoff: when the child reaches the age of majority, does the custodial
-   account convert to individual ownership as an in-place re-registration that preserves
-   fractional positions and cost basis (not an ACAT that liquidates fractional shares), and
-   how automated is that transfer — API-triggered off the minor's DOB/state, or an ops process?
-
-2. Economics at our scale: account minimums, any AUM floor, and per-account / per-trade /
-   fractional-share costs. Our accounts start small (gifts are $25 to $100), so minimums
-   matter a lot to us.
-
-3. Fractional, dollar-amount investing inside custodial accounts (table stakes for us — we
-   know it's a DriveWealth strength, just confirming).
-
-4. Typical onboarding and go-live timeline, and a couple of reference customers running
-   custodial or teen accounts at scale.
-
-Happy to share more on the product and volume expectations on a call. What does your
-availability look like next week?
+Free for a short call next week? Happy to share more on the product and the volume we expect.
 
 Thanks,
 Dovi Sherman
-Founder, Kiddo
-dovi@kiddofund.com · kiddofund.com
+Kiddo · dovi@kiddofund.com
 
 ---
 

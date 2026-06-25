@@ -108,3 +108,29 @@ These two unblock the entire P0 surface. Nothing else matters until they're movi
 **Bottom line:** start the **counsel engagement** and the **custody-vendor + (if
 needed) NCMEC** conversations this week. Everything else is hours of config you can
 do whenever, and the code is already done.
+
+---
+
+## ⬜ Beyond the launch gate — the one strategic decision this list does NOT cover
+
+Everything above gets you *launched*. It does not answer whether the model pays off in
+time. A monetization-model scan (see `REVENUE_MODEL.md` → "the Zelle lens", 2026-06-25)
+found we're **not missing a revenue stream** — the stack is complete in kind. What it
+surfaced instead: nearly every *certain* dollar (AUM, interchange, float, the kid-2.0
+funnel) is **retention- and custody-gated, i.e. years out.** The near-term streams (sub,
+float) are thin; the sturdier ones (B2B2C, sponsor) are unproven. So the binding
+constraint isn't stack design — it's **runway to reach the retention payoff.**
+
+That makes the open question already in `REVENUE_MODEL.md` (line ~213: *is raising
+capital on the table?*) the real fork, and it's **founder-owned, not a launch gate** —
+deliberately kept out of the numbered list above so this doc stays "what blocks the
+doors opening." But it's the decision that determines which company you're running:
+- **Patient path** (the at-18 lifetime LTV bet) needs runway to outlast a long-dated
+  payoff → that's a capital decision to make consciously, not by default.
+- **Faster path** (advisor-led / B2B2C-forward revenue in year two) is the alternative —
+  and `REVENUE_MODEL.md` names the one experiment that settles it: the rate at which any
+  adult in the loop moves *real* money to you (instrument it from day one, read it once
+  funded-k is real).
+
+Launch doesn't require resolving this. Knowing it's the question — and not mistaking a
+complete revenue stack for a funded one — does.

@@ -245,3 +245,65 @@ sponsor-naming renewal reminder re-prompts it). Run the HONEST version — no Go
 opt-out dark pattern — because these are repeat relationship gifters; an extractive
 default would poison the loop. Wave-2 build; the current non-stacking sponsor-Plus ships
 fine for launch.
+
+---
+
+## 2026-06-25 — the Zelle lens (external articulation; confirms the stack, doesn't expand it)
+
+A monetization-model scan (Zelle, then Venmo/Cash App, GoFundMe/Patreon, Babylist/Honey)
+to pressure-test whether we're missing a stream. **Verdict: we're not missing one in
+*kind*.** The external scan maps cleanly onto streams already above — its value is the
+cleanest one-line statement of our spine, plus two disciplines and one sharper caveat.
+
+**Zelle (free P2P owned by the banks it defends) → Kiddo map:**
+
+| Zelle mechanism | Kiddo equivalent | Status here |
+|---|---|---|
+| Network / licensing fees (banks pay to integrate) | **B2B2C** — orgs embed Kiddo gifting, pay per funded account | the near-term scaler (line ~61) |
+| Business/merchant payments (free consumers, charge businesses) | **"Someone else pays"** — gifters never pay; sponsors + employers fund it | core spine (line ~178) |
+| Ecosystem retention / float on deposits | **Float (shared-yield, thin)** + the real prize: the **at-18 lifetime funnel** | pinned (lines ~59, 64) |
+| Data & value-added / anti-fraud services | **HARD NO — forbidden** ("no selling children's data", line ~152) | the line we proudly don't cross |
+
+**The spine, said in Zelle's words:** *free at the transaction layer, monetize the
+retained relationship at the system layer.* Zelle is external proof this is a durable,
+proven pattern — not a fragile bet. Venmo/Cash App (interchange on a habituated user once
+free P2P is locked = our at-18 card moment), GoFundMe/Patreon (voluntary tip = our
+gifter-tip + sponsor-Plus, run honest), and Babylist/Honey (affiliate margin at the
+moment = our emotional-commerce layer) all repeat the same shape. The stack is complete.
+
+**Two disciplines the network-monetization frame must NOT pull us into:**
+1. **Data is a feature to reject, not adopt.** Zelle can sell behavioral/anti-fraud data
+   because its subjects are adult bank customers. We're a *children's* data company —
+   selling it torches the trust moat and hits COPPA. The disciplined version: the
+   gift-graph + life-moment signal is real and **under-exploited as a FIRST-PARTY asset**
+   (better fraud/AML on the multi-gifter flow, better prompt timing) — internal leverage,
+   never a sold product. Brands may pay for *placement at a moment*; **no PII ever leaves.**
+2. **Don't let "banks profit on deposits" inflate our float, or reframe us as a network.**
+   Zelle is a defensive *utility owned by the incumbents it protects*, retaining deposits
+   they already hold; banks lend against those reserves at scale. We are a
+   counter-positioned *attacker* acquiring a relationship that doesn't exist yet, and we're
+   **not the bank** — the custodian + FDIC sweep capture the float; we get at most a thin
+   disclosed spread. So the Zelle frame actually *caps* the float ambition (it's structurally
+   thin for us) rather than expanding it. And our loop is a *referral* engine, not a
+   network effect — the moat memo deliberately refuses the network-effects claim. We retain
+   via the Memory Book's emotional switching cost with the exits left wide open (no exit
+   fees, no fractional-liquidation lock-in), not via convenience + incumbency.
+
+**The infrastructure fork — and its real cost.** Zelle's most aggressive form is being
+*the rail everyone embeds*. Our maximalist version: stop treating B2B2C as a channel and
+become **the gifting-investing layer registries / employers / other fintechs plug into.**
+But going infrastructure means partly serving would-be competitors, which **cannibalizes
+our #1 moat — owning the gifter relationship** (the gifter becomes the partner's customer,
+not ours). So this isn't only an Act-2 *timing* call and a brand-dilution risk; it's a
+*moat* trade. Bank the consumer counter-positioning first; revisit the rail only after
+funded-k is real, eyes open that it spends the very asset that makes us special.
+
+**The sharpest takeaway (deliberated, not in the table).** Nearly every *certain* dollar
+here — AUM, interchange, float, kid-2.0 — is **retention- and custody-gated, i.e.
+long-dated.** Zelle could monetize indirectly/deferred because its bank-owners had infinite
+patience and the deposits were immediate; we have neither a bank balance sheet nor those
+deposits. So the external scan reveals **no missing monetization knob — it reveals that the
+binding constraint is runway to reach the retention payoff, not stack design.** That points
+straight back to the open founder question already on this page (line ~213: *is raising
+capital on the table?*). The model is well-built; the question is whether it's funded long
+enough to collect.

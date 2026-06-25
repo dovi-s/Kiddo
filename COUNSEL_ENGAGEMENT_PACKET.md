@@ -709,22 +709,25 @@ into funds**, keeping all regulated charity activity outside the operating compa
 
 # Engagement logistics
 
-**Firm type (in order):** SEC-RIA specialist boutiques (Hardin Compliance, ACA
-Group, Wagner Law Group's RIA practice); securities boutiques with fintech focus in
-Miami/SF/NYC ($500–800/hr but efficient); **avoid generalist corporate firms**.
-Names to verify: Hardin Compliance, ACA Group, Foley Hoag fintech, Cooley emerging
-companies + fintech regulatory, Lowenstein Sandler fintech/RIA.
+**Firm type:** a **boutique securities / investment-adviser attorney** — senior enough to
+give a privileged opinion, small enough to take a bounded fixed-fee job; fintech focus;
+**avoid generalist corporate firms.** ⚠️ **Hardin Compliance and ACA Group are compliance
+*consultancies*, not law firms** — they do RIA registration *mechanics* but cannot opine on
+the fee-vs-advisory or money-transmission questions; dropped from the list. **Verified
+shortlist (2026-06-24):** Parker MacIntyre (RIA/IA regulatory boutique — `jsparker@parkmac.com`),
+Fintech Law (Bo Howell, ex-SEC — fintechlaw.ai/contact); for the money-transmission half if
+the securities firm doesn't cover it: Cogent Law or Hudson Cook; optional pricier BigLaw
+comparison: Cooley / Lowenstein / Foley Hoag fintech.
 
-**Ask:** a 60–90 min initial call + a **2–3 page written memo within 2 weeks**
-(which option, why, what to change in product / website / TOS to be clean) + an
-estimate for follow-up work. **Budget envelope: $3K–$5K** for call + memo;
-follow-up scoped separately.
+**Ask:** a 60–90 min initial call + a **2–3 page written memo within 2 weeks** (which option,
+why, what to change in product / website / TOS to be clean) + an estimate for follow-up work.
+**Don't name a budget — describe the bounded scope and ask them to propose a fixed fee.** (The
+old "$3K–$5K envelope" was dropped: it's too low for the multi-domain scope at a real
+securities firm, and naming a lowball number anchors you and signals "not a serious client.")
 
-**Cover email:** use the dedicated draft in **`COUNSEL_OUTREACH_EMAIL.md`** — it is
-the single source of truth and the better-scoped version (it leads with the
-software-layer structure to validate and lists the attachment set). Do not maintain a
-second copy here; an older inline draft lived here and was removed to avoid a
-"which one do I send" fork.
+**Cover email:** the canonical, short/human version lives in **`LAUNCH_OUTREACH_EMAILS.md` §1**
+(all launch outreach is consolidated there). `COUNSEL_OUTREACH_EMAIL.md` now just points to it
+— don't maintain a second copy.
 
 **Timeline:** Week 1 send to 3 firms + intake calls; Week 2 pick + schedule the
 substantive meeting; Weeks 3–4 meeting + memo; Weeks 4–6 act on the memo (file
