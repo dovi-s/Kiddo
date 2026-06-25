@@ -694,6 +694,28 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   .animate-pulse { animation: none; }
 }
 
+/* Radix entrance/exit animations (tailwindcss-animate `animate-in`/`animate-out`
+   on Sheets, Dialogs, Popovers, Dropdowns) are NOT guarded by the plugin for
+   reduced motion — the same gap as `animate-pulse` above, and the reason a
+   bottom sheet still SLID up/down for vestibular-sensitive users even though the
+   count-up inside it already honored the preference. Zero ONLY the translate /
+   scale / rotate enter/exit vars so any opacity fade is preserved (a cross-fade
+   is reduced-motion-safe); the slide motion is removed, the appearance stays
+   soft. App-wide: covers every Radix overlay in one rule. WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-rotate: 0 !important;
+  }
+}
+
 /* Milestone celebration — restraint version of the original "stars
    burst from the balance" idea. No particles, no sparkle elements
    (locked: feedback_no_ai_slop). Instead: a brief gold-ring breath
