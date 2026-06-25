@@ -309,6 +309,18 @@
        deliberately keep (see index.html viewport note) is preserved. Bonus:
        removes the 300ms tap delay, so taps feel snappier. */
     touch-action: manipulation;
+    /* Remove the browser's default gray tap-flash on mobile — it's off-brand and
+       reads as "website," and the app already provides its own press feedback
+       (Button active:scale-[0.97], the bottom-nav whileTap spring, .card-tactile /
+       .kiddo-press). -webkit-tap-highlight-color is inherited, so body covers every
+       descendant. The one tradeoff: long-tail tappables that DON'T have a custom
+       press state lose their only feedback — but the gray flash was never the
+       feedback we'd want anyway; the fix is to give those elements .kiddo-press. */
+    -webkit-tap-highlight-color: transparent;
+    /* Stop iOS from auto-inflating body text on rotation — keeps the tuned type
+       scale honest (a subtle but real "native, not webpage" detail). */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-semibold;
@@ -674,6 +686,37 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none; /* Chrome / Safari / Edge (WebKit/Blink) */
+}
+
+/* App-wide scrollbar. The main page + any scroll container now read as part of
+   the calm cream/evergreen surface instead of the stark OS-default gray bar
+   (most visible on Windows; macOS auto-hides its overlay). Thin but still
+   grabbable — the webkit thumb sits inside a 3px transparent border with
+   background-clip:padding-box, so it LOOKS ~6px while keeping a 12px hit target.
+   The .scrollbar-hide / .kiddo-h-scroll rules above are more specific, so the
+   swipeable chip rows stay bar-free. We never HIDE the main page scrollbar —
+   it's an orientation cue on a long page and an a11y affordance.
+   Tradeoff (accepted): styling the bar makes macOS show a thin always-visible
+   scrollbar instead of its auto-hiding overlay. Locked 2026-06-25. */
+html {
+  scrollbar-width: thin; /* Firefox + Chromium 121+ */
+  scrollbar-color: hsl(var(--kiddo-evergreen) / 0.3) transparent;
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--kiddo-evergreen) / 0.24);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--kiddo-evergreen) / 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {
