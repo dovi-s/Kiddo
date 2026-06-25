@@ -20,7 +20,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { X } from "lucide-react";
+import { X, LogOut } from "lucide-react";
 import { isDemoAppSurface } from "@/lib/routes";
 
 const SESSION_DISMISS_KEY = "kora:demo-banner-dismissed";
@@ -87,56 +87,53 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
 
   return (
     <motion.div
-      initial={playEntrance ? { opacity: 0, y: -10 } : false}
+      initial={playEntrance ? { opacity: 0, y: 12 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className={`sticky top-0 z-50 border-b border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] backdrop-blur-sm${sidebarOffset ? " md:ml-[264px]" : ""}`}
+      className={`fixed z-50 left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] md:bottom-5${sidebarOffset ? " md:left-[calc(50%+132px)]" : ""}`}
       data-testid="demo-banner"
       role="status"
       aria-live="polite"
     >
-      {/* Mobile: STACK — message on its own full-width row, the actions
-          (Create / Exit / dismiss) on a second row. The earlier all-widths
-          flex-row kept the actions BESIDE the message, squeezing the text into
-          a narrow column that wrapped to ~3 lines on a phone. flex-col fixes
-          that; sm: restores the single desktop row. Copy also tightened
-          ("The amounts are illustrative and" → just "Amounts") and the CTA
-          shortened to "Create your own →". 2026-06-07. */}
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:text-sm">
-        <p className="leading-snug text-[hsl(var(--kiddo-evergreen))]">
-          <span className="font-semibold">You're in the Rivera demo.</span>{" "}
-          Amounts reset periodically.
-        </p>
-        <div className="flex shrink-0 items-center gap-3">
-          <Link
-            href="/get-started"
-            className="whitespace-nowrap font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2 hover:opacity-80"
-            data-testid="demo-banner-create-cta"
-          >
-            Create your own →
-          </Link>
-          {/* Explicit door out of the demo. logout() clears the illustrative
-              session and full-page-navigates to "/" (the real homepage) as a
-              fresh, logged-out visitor. Founder call 2026-06-01. */}
-          <button
-            type="button"
-            onClick={() => logout()}
-            disabled={isLoggingOut}
-            className="whitespace-nowrap rounded-full border border-[hsl(var(--kiddo-evergreen)/0.35)] px-3 py-1 font-semibold text-[hsl(var(--kiddo-evergreen))] transition-opacity hover:opacity-80 disabled:opacity-50"
-            data-testid="demo-banner-exit"
-          >
-            {isLoggingOut ? "Exiting…" : "Exit demo"}
-          </button>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="ml-auto rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-70 transition-opacity hover:opacity-100 sm:ml-0"
-            aria-label="Dismiss demo banner"
-            data-testid="demo-banner-dismiss"
-          >
-            <X size={14} />
-          </button>
-        </div>
+      {/* FLOATING variant: a compact pill that floats bottom-center (above the
+          mobile nav) instead of a top strip — maximally out of the content's way.
+          Keeps the demo dot + label for context and the Create CTA visible so the
+          conversion path isn't buried; Exit + dismiss are quiet icons. */}
+      <div className="flex items-center gap-2.5 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--background)/0.95)] px-3.5 py-2 text-xs shadow-[0_6px_24px_rgba(27,58,45,0.16)] backdrop-blur-md sm:text-sm">
+        <span className="flex items-center gap-2 text-[hsl(var(--kiddo-evergreen))]">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen))]" aria-hidden />
+          <span className="whitespace-nowrap font-semibold">Rivera demo</span>
+        </span>
+        <span className="h-3.5 w-px shrink-0 bg-[hsl(var(--kiddo-evergreen)/0.2)]" aria-hidden />
+        <Link
+          href="/get-started"
+          className="whitespace-nowrap font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2 hover:opacity-80"
+          data-testid="demo-banner-create-cta"
+        >
+          Create yours →
+        </Link>
+        {/* logout() clears the illustrative session and full-page-navigates to "/"
+            as a fresh, logged-out visitor. Quiet door icon. */}
+        <button
+          type="button"
+          onClick={() => logout()}
+          disabled={isLoggingOut}
+          className="flex shrink-0 items-center rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-80 transition-opacity hover:opacity-100 disabled:opacity-50"
+          data-testid="demo-banner-exit"
+          aria-label="Exit demo"
+          title="Exit demo"
+        >
+          <LogOut size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="flex shrink-0 items-center rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-55 transition-opacity hover:opacity-100"
+          aria-label="Dismiss demo banner"
+          data-testid="demo-banner-dismiss"
+        >
+          <X size={14} />
+        </button>
       </div>
     </motion.div>
   );
