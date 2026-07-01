@@ -9877,7 +9877,7 @@ export default function DashboardStaging() {
                 <div className="kiddo-card p-6 text-center">
                   <p className="text-sm font-bold text-foreground">{recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s investments will appear here after the first gift.` : "Investments will appear here after the first gift."}</p>
                   <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                    Every gift gets invested automatically. 🌱
+                    Every gift gets invested automatically.
                   </p>
                 </div>
               ) : (() => {
@@ -13575,7 +13575,7 @@ export default function DashboardStaging() {
                           feature (a pin action + a durable field), deliberately deferred. */}
                       {age18Transition && totalValue === 0 && (
                         <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.62)", marginTop: 6 }}>
-                          🌱 {age18Transition.countdownLabel.replace(` until age ${age18Transition.majorityAge}`, "")} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
+                          {age18Transition.countdownLabel.replace(` until age ${age18Transition.majorityAge}`, "")} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
                         </p>
                       )}
                       {totalValue > 0 && age18Transition && (() => {
@@ -14149,7 +14149,7 @@ export default function DashboardStaging() {
                 Because that 7% is already after inflation, the number is in today's dollars: what it could buy now, not an inflated future figure.
               </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                This is hypothetical. Not guaranteed. Markets go up and down. But gifts that last? Those are guaranteed. 🌱
+                This is hypothetical. Not guaranteed. Markets go up and down. But gifts that last? Those are guaranteed.
               </p>
               <button
                 type="button"
@@ -14369,7 +14369,7 @@ export default function DashboardStaging() {
                         </div>
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After</p>
                           <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
@@ -14705,7 +14705,7 @@ export default function DashboardStaging() {
                         </div>
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After</p>
                           <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(afterValue)}</p>
                           <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
                         </div>
@@ -15060,7 +15060,7 @@ export default function DashboardStaging() {
                         );
                       })()}
                       <p className="text-xs text-muted-foreground italic mt-2 leading-relaxed">
-                        They chose not to be known. Their love counts just as much. 🌱
+                        They chose not to be known. Their love counts just as much.
                       </p>
                     </div>
                   </div>
