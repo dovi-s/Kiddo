@@ -24,6 +24,8 @@ export interface GiftCheckoutParams {
   photoUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
+  // Gifter opted to seal their note/voice until the child's 18th birthday.
+  voiceSealUntil18?: boolean;
   // C3: when set, the gift media was persisted server-side under this opaque
   // token and the media URLs are OMITTED from Stripe metadata (the webhook
   // hydrates them back from the token). When unset, the URLs ride in metadata
@@ -515,6 +517,8 @@ export class StripeService {
         videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
         audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
         mediaToken: params.mediaToken || '',
+        // Seal the gift's note/voice until the child's 18th (default off).
+        voiceSealUntil18: params.voiceSealUntil18 ? 'true' : 'false',
         baseAmount: params.amount.toString(),
         processingFee: fees.processingFee.toString(),
         koraFee: fees.koraFee.toString(),
@@ -553,6 +557,7 @@ export class StripeService {
           videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
           audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
           mediaToken: params.mediaToken || '',
+          voiceSealUntil18: params.voiceSealUntil18 ? 'true' : 'false',
           baseAmount: params.amount.toString(),
           processingFee: fees.processingFee.toString(),
           koraFee: fees.koraFee.toString(),
@@ -636,6 +641,8 @@ export class StripeService {
         videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
         audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
         mediaToken: params.mediaToken || '',
+        // Seal the gift's note/voice until the child's 18th (default off).
+        voiceSealUntil18: params.voiceSealUntil18 ? 'true' : 'false',
         baseAmount: params.amount.toString(),
         processingFee: fees.processingFee.toString(),
         koraFee: fees.koraFee.toString(),

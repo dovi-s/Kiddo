@@ -284,7 +284,7 @@ export class WebhookHandlers {
     const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
     if (!isParentContrib) {
       try {
-        await this.ensureMemoryEntryForGift(gift.id, this.normalizeVideoUrl(metadata?.videoUrl), metadata?.audioUrl || null);
+        await this.ensureMemoryEntryForGift(gift.id, this.normalizeVideoUrl(metadata?.videoUrl), metadata?.audioUrl || null, metadata?.voiceSealUntil18 === true || metadata?.voiceSealUntil18 === 'true');
         console.log('[Webhook] Memory entry created for gift:', gift.id);
       } catch (memoryError) {
         console.error('[Webhook] Failed to create memory entry for gift:', gift.id, memoryError);
@@ -855,7 +855,7 @@ export class WebhookHandlers {
     });
   }
 
-  private static async ensureMemoryEntryForGift(giftId: string, fallbackVideoUrl?: string | null, fallbackAudioUrl?: string | null): Promise<void> {
+  private static async ensureMemoryEntryForGift(giftId: string, fallbackVideoUrl?: string | null, fallbackAudioUrl?: string | null, sealUntil18?: boolean): Promise<void> {
     const gift = await storage.getGift(giftId);
     if (!gift) return;
 
@@ -931,6 +931,10 @@ export class WebhookHandlers {
       photoUrl: resolvedPhotoUrl,
       videoUrl: resolvedVideoUrl,
       audioUrl: resolvedAudioUrl,
+      // The gifter can opt to SEAL this gift's note/voice until the child's
+      // 18th birthday (passed from checkout metadata, default off). 'kid_now'
+      // is today's behavior, so this is a no-op unless they chose to seal.
+      visibility: sealUntil18 ? 'kid_at_18' : 'kid_now',
       status: entryStatus,
     });
   }
@@ -1300,7 +1304,7 @@ export class WebhookHandlers {
         // gift path that was bypassing it.
         const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
         if (!isParentContrib) {
-          await this.ensureMemoryEntryForGift(existingGift.id, this.normalizeVideoUrl(metadata.videoUrl), metadata?.audioUrl || null);
+          await this.ensureMemoryEntryForGift(existingGift.id, this.normalizeVideoUrl(metadata.videoUrl), metadata?.audioUrl || null, metadata?.voiceSealUntil18 === true || metadata?.voiceSealUntil18 === 'true');
         }
         await this.ensureFundPendingCoversPendingGifts(existingGift.fundId);
       }
