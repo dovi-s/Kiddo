@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { trendYDomain } from "@/lib/trend-domain";
 
@@ -83,8 +83,15 @@ function HoverTooltip({ active, payload, label }: any) {
 export default function DashboardTrendChart({
   data,
   onScrub,
+  costBasis,
 }: {
   data: DashboardTrendPoint[];
+  // Optional total invested / cost basis. When provided (and within the visible
+  // y-band), draws a subtle dashed baseline so the area above it reads as growth
+  // at a glance — the always-on complement to the tooltip's contributed/growth
+  // split. Opt-in per caller, so the live dashboard is unaffected until it
+  // passes the prop too (promotion-only discipline).
+  costBasis?: number;
   // Fires whenever the user is actively scrubbing the chart (hover on
   // desktop, finger drag on mobile). Hero consumes this to swap its
   // "Today / live balance" surface for the scrubbed date / scrubbed
@@ -335,6 +342,28 @@ export default function DashboardTrendChart({
             animationDuration={550}
             animationEasing="ease-out"
           />
+          {/* Cost-basis baseline. Neutral (not green) so it reads as "what went
+              in," leaving the green area above it to read as growth. Hidden when
+              the value is outside the auto-scaled window (e.g. short 1W ranges
+              where the whole band sits above cost basis) so it never distorts the
+              domain. Honest framing: it's your total invested, clearly labeled. */}
+          {typeof costBasis === "number" && costBasis > 0 && (
+            <ReferenceLine
+              y={costBasis}
+              ifOverflow="hidden"
+              stroke="hsl(var(--muted-foreground))"
+              strokeOpacity={0.55}
+              strokeDasharray="5 4"
+              strokeWidth={1}
+              label={{
+                value: `cost basis · ${formatCurrency(costBasis)}`,
+                position: "insideTopLeft",
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            />
+          )}
         </AreaChart>
       </ChartContainer>
 

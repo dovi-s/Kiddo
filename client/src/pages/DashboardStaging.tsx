@@ -6635,6 +6635,11 @@ export default function DashboardStaging() {
             --st-radius: 16px; --st-radius-pill: 999px;
             --st-rest: 0 1px 2px rgba(27,58,45,0.06);
             --st-lift: 0 8px 24px rgba(27,58,45,0.12);
+            /* Tabular figures for the whole surface — money, %, counts, dates all
+               align in fixed-width columns and, crucially, the hero count-up no
+               longer jitters its width as digits roll. Inherited, so it reaches
+               every number without tagging each span. */
+            font-variant-numeric: tabular-nums;
           }
           /* Desktop header alignment (2026-06-22). <main> is capped to a
              centered 760px reading column (see the cap a few lines below), but
@@ -9408,7 +9413,7 @@ export default function DashboardStaging() {
                       repainted the SVG main-thread every frame (the jitter). */}
                   <div data-chart-wipe-mover>
                   <div data-chart-wipe-inner className="relative">
-                    <DashboardTrendChart data={trendData} onScrub={handleScrub} />
+                    <DashboardTrendChart data={trendData} onScrub={handleScrub} costBasis={investedCostBasis} />
                     {totalValue > 0 && trendData.length > 0 && (() => {
                       // Live dot — sits on the rightmost end of the chart
                       // line (the most recent plotted value), pulsing to
