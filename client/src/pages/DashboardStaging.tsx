@@ -134,9 +134,11 @@ import {
   CreditCard,
   DollarSign,
   Landmark,
+  Package,
   Scale,
   Shield,
   SlidersHorizontal,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
@@ -7236,9 +7238,11 @@ export default function DashboardStaging() {
                           }}
                           data-testid="badge-shared-fund"
                         >
-                          {isPreviousOwner
-                            ? `📦 Transferred to ${recipientFirstNameDisplay || "them"} · view only`
-                            : `🤝 Shared with you${isViewerOnly ? " · view-only" : ""}`}
+                          {isPreviousOwner ? (
+                            <><Package size={11} strokeWidth={2.25} aria-hidden /><span>Transferred to {recipientFirstNameDisplay || "them"} · view only</span></>
+                          ) : (
+                            <><Users size={11} strokeWidth={2.25} aria-hidden /><span>Shared with you{isViewerOnly ? " · view-only" : ""}</span></>
+                          )}
                         </div>
                       )}
                       {/* Owner-side ownership record — the symmetric counterpart to
@@ -7264,7 +7268,7 @@ export default function DashboardStaging() {
                           }}
                           data-testid="badge-owner-took-ownership"
                         >
-                          📦 You took ownership · {new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                          <Package size={11} strokeWidth={2.25} aria-hidden /><span>You took ownership · {new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
                         </div>
                       )}
                       {/* Balance — uses brand serif via .font-heading instead of
