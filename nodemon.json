@@ -4,5 +4,7 @@
   "ext": "ts,js,json",
   "ignore": ["client/**", "dist/**", "node_modules/**", "apps/mobile/**", ".local/**", "**/*.test.ts", "**/*.spec.ts"],
   "exec": "tsx server/index.ts",
-  "delay": 300
+  "delay": 300,
+  "//legacyWatch": "Poll the filesystem instead of relying on native fs events. On this Windows setup native events silently missed server-file edits (a CSP change never triggered a restart), so backend changes appeared not to take. Polling catches every write.",
+  "legacyWatch": true
 }
