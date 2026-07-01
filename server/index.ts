@@ -214,6 +214,12 @@ function buildContentSecurityPolicy() {
     // here keeps the strict default-src 'self' baseline while permitting
     // the specific worker pattern that the app actually uses.
     `worker-src 'self' blob:`,
+    // media-src must be set explicitly too. Without it, <audio>/<video> fall
+    // back to default-src 'self', which blocks `blob:` URLs — and recorded
+    // audio (e.g. the voice-note feature) plays from a blob: URL produced by
+    // MediaRecorder + createObjectURL. `data:` and `https:` cover data-URI and
+    // stored/CDN-served media. Same rationale as the worker-src blob: line.
+    `media-src 'self' blob: data: https:`,
     `connect-src ${connectSrc.join(" ")}`,
     `frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://cdn.plaid.com https://*.plaid.com https://s.tradingview.com https://www.tradingview.com`,
     `form-action 'self'`,
