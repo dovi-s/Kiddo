@@ -28,6 +28,10 @@ export type DemoLiveGift = {
   senderName: string;
   amount: string;
   ticker?: string;
+  // The occasion this gift was sent to, if any — so the occasion tile's
+  // "$X gifted" volume reflects a demo gift. Only the gifter/GiftSuccess path
+  // carries it; parent one-time contributions have no occasion.
+  eventId?: string;
   // "cash" = held as uninvested cash (a one-time "add cash"); anything else
   // (auto/pick/undefined) invests into a holding. Drives whether the gift lands
   // in a holding or in the cash bucket.
@@ -107,6 +111,86 @@ export function useDemoOverlayVersion(): number {
 export function readDemoLiveGiftsForFund(fundId: string | null | undefined, enabled: boolean): DemoLiveGift[] {
   if (!enabled || !fundId) return [];
   return readRaw().filter((g) => g.fundId === fundId);
+}
+
+/**
+ * Synthesize DB-shaped gift + gift-allocation rows from the session-scoped demo
+ * live gifts. Demo gifts never hit the DB, so surfaces that read `gifts` /
+ * `giftAllocations` (the holding-detail contributor list "Everyone who built
+ * this portfolio", the gifter roster, per-holding attribution) never saw a
+ * just-added demo gift — even though the holdings + activity overlays did. This
+ * closes that gap: overlay `gifts`/`giftAllocations` at the source and every
+ * consumer stays consistent. Gate on `enabled` (demo only → zero effect for
+ * real users). A stock-pick gift (ticker set, not cash) also gets an EXACT
+ * allocation so it attributes to that specific holding; auto/managed gifts get
+ * only the gift row (the proportional model picks those up).
+ */
+export function demoGiftsAsGiftsAndAllocations(
+  fundId: string | null | undefined,
+  enabled: boolean,
+): { gifts: any[]; allocations: any[] } {
+  const live = readDemoLiveGiftsForFund(fundId, enabled);
+  const gifts: any[] = [];
+  const allocations: any[] = [];
+  for (const g of live) {
+    const id = `demo-gift-${g.fundId}-${g.createdAt}`;
+    const amt = parseFloat(g.amount) || 0;
+    const isCash = String(g.executionModel || "").toLowerCase() === "cash";
+    const ticker = String(g.ticker || "").toUpperCase();
+    gifts.push({
+      id,
+      fundId: g.fundId,
+      senderName: g.senderName,
+      senderEmail: null,
+      amount: g.amount,
+      netAmount: g.amount,
+      selectedTicker: ticker || null,
+      executionModel: g.executionModel || "auto",
+      status: "invested",
+      isAnonymous: false,
+      message: g.message || null,
+      createdAt: g.createdAt,
+    });
+    if (ticker && !isCash && STOCK_PICK_PRICE.has(ticker)) {
+      const price = STOCK_PICK_PRICE.get(ticker) || amt || 1;
+      allocations.push({
+        id: `demo-alloc-${id}`,
+        giftId: id,
+        ticker,
+        shares: String(price > 0 ? amt / price : 0),
+        costBasis: g.amount,
+        source: "pick",
+      });
+    }
+  }
+  return { gifts, allocations };
+}
+
+/**
+ * Bump each occasion's `giftVolume` by any demo gift sent to that occasion, so
+ * the occasion tile's "$X gifted" reflects a session-only demo gift (the server
+ * `events` list can't know about it). No-op unless `enabled` (demo) and only
+ * for events that have a matching demo gift `eventId`.
+ */
+export function applyDemoGiftsToEvents<T extends { id: string }>(
+  events: T[],
+  fundId: string | null | undefined,
+  enabled: boolean,
+): T[] {
+  if (!enabled || !fundId || !events || !events.length) return events;
+  const live = readDemoLiveGiftsForFund(fundId, enabled).filter((g) => g.eventId);
+  if (!live.length) return events;
+  const bumpByEvent = new Map<string, number>();
+  for (const g of live) {
+    const amt = parseFloat(g.amount) || 0;
+    if (amt > 0) bumpByEvent.set(String(g.eventId), (bumpByEvent.get(String(g.eventId)) || 0) + amt);
+  }
+  return events.map((e) => {
+    const add = bumpByEvent.get(String(e.id));
+    if (!add) return e;
+    const cur = parseFloat(String((e as any).giftVolume ?? "0")) || 0;
+    return { ...e, giftVolume: String(cur + add) } as T;
+  });
 }
 
 type FundBalanceLike = {
