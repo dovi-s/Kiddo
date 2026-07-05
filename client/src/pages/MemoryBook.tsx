@@ -54,7 +54,7 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound } from "lucide-react";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound, PieChart } from "lucide-react";
 import SealedVoiceNote from "@/components/SealedVoiceNote";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
@@ -687,6 +687,14 @@ export default function MemoryBook() {
   // Thank-you composer
   const [composerGiftId, setComposerGiftId] = useState<string | null>(null);
   const [composerTone, setComposerTone] = useState<"warm" | "brief" | "formal" | "custom">("warm");
+  // The template the current draft is *based on* — tracked separately from
+  // composerTone. Editing the textarea flips composerTone -> "custom" (so the chip
+  // reflects that it's been customized), but baseTone stays put so "Reset" knows
+  // which template to restore. Without this split, Reset only showed while the
+  // message still equalled the template (a no-op) and vanished the instant you
+  // edited it — visible exactly when useless, gone exactly when needed (founder
+  // catch 2026-07).
+  const [composerBaseTone, setComposerBaseTone] = useState<"warm" | "brief" | "formal" | "custom">("warm");
   // Portfolio context for the thank-you draft — populated at
   // openComposer time so the draft can specialize: "Your $250 is
   // invested in Google and now worth $267.50." Without it the draft
@@ -1267,14 +1275,18 @@ export default function MemoryBook() {
     ctx?: { ticker?: string | null; currentValue?: number | null }
   ) => {
     setComposerGiftId(giftId);
-    setComposerTone("warm");
     setComposerContext(ctx ?? {});
     // Post-handoff owner: the stored auto-draft (ty.message) was generated in
     // the parent era — "Thank you X for your generous gift of $Y to Mia's
     // Fund!", third person — and reads wrong when Mia thanks her own gifters.
     // Seed from the first-person warm template instead (buildThankYouMessage is
     // owner-aware). The parent still gets their stored/auto draft as before.
-    setComposerMessage((!isOwnerMode && ty?.message) || buildThankYouMessage("warm", senderName, amount, ctx));
+    // A seeded parent draft is their own words, so start on "custom" (no template
+    // to reset to); everyone else starts on warm.
+    const seededDraft = (!isOwnerMode && ty?.message) ? String(ty.message) : null;
+    setComposerTone(seededDraft ? "custom" : "warm");
+    setComposerBaseTone(seededDraft ? "custom" : "warm");
+    setComposerMessage(seededDraft ?? buildThankYouMessage("warm", senderName, amount, ctx));
     setComposerStep("compose");
     haptic("selection");
   };
@@ -5111,7 +5123,8 @@ export default function MemoryBook() {
                                       {ticker}
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-3xs font-bold text-foreground">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
+                                      <PieChart size={11} className="text-[hsl(var(--kiddo-evergreen))]" />
                                       {isOwnerMode ? "Your mix" : childName ? `${childName}'s mix` : "Diversified mix"}
                                     </span>
                                   )}
@@ -5270,6 +5283,11 @@ export default function MemoryBook() {
                                     if (!giftDate || !Number.isFinite(giftDate.getTime())) return null;
                                     const yearsInvested = (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
                                     if (yearsInvested < 0.08) return null; // < ~1 month, no meaningful growth yet
+                                    // No simulated value while investing is gated — matches the "Now
+                                    // worth $X" gate on ticker gifts, so NO entry shows a fabricated
+                                    // value pre-live (this is a projectFundValue estimate on a gift
+                                    // that isn't actually invested yet).
+                                    if (!INVESTING_LIVE) return null;
                                     // Single-ticker gifts are valued by the richer "Now worth $X (±$Y)"
                                     // investment block below (real shares × live price, with the gain
                                     // delta). Render this terse estimate ONLY for the diversified MIX,
@@ -5506,6 +5524,12 @@ export default function MemoryBook() {
                             // it underneath. Canva-mode: less chrome
                             // when chrome adds no signal.
                             const valueDiffersFromCost = currentValue !== null && giftAmt > 0 && Math.abs(currentValue - giftAmt) > 0.01;
+                            // Single-ticker gifts already show the stock's logo + name in the row
+                            // header, so the "Invested in {ticker}" line here is redundant — and
+                            // while investing is gated there's no honest value to show either. Hide
+                            // the whole box in that case (founder ask: drop the "Going into {X}").
+                            // Diversified-mix / cash gifts KEEP it — it's their only destination cue.
+                            if (ticker && !INVESTING_LIVE) return null;
                             return (
                               <div className="mt-3 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-2 text-2xs text-[hsl(var(--kiddo-evergreen)/0.85)]">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -5665,6 +5689,7 @@ export default function MemoryBook() {
                                                   type="button"
                                                   onClick={() => {
                                                     setComposerTone(tone);
+                                                    setComposerBaseTone(tone);
                                                     setComposerMessage(buildThankYouMessage(tone, senderName, amount, tyCtx));
                                                   }}
                                                   className={`rounded-full px-3 py-1 text-2xs font-semibold capitalize transition-colors ${composerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
@@ -5719,10 +5744,20 @@ export default function MemoryBook() {
                                               >
                                                 Preview →
                                               </button>
-                                              {composerTone !== "custom" && (
+                                              {/* Reset restores the template the draft is based on, and only
+                                                  appears once you've actually edited away from it (message !=
+                                                  template). It stays hidden for a from-scratch "custom" draft
+                                                  (nothing to restore) and when the draft is still the pristine
+                                                  template (nothing to undo) — so it's shown only when it does
+                                                  something. */}
+                                              {composerBaseTone !== "custom"
+                                                && composerMessage.trim() !== buildThankYouMessage(composerBaseTone, senderName, amount, tyCtx).trim() && (
                                                 <button
                                                   type="button"
-                                                  onClick={() => setComposerMessage(buildThankYouMessage(composerTone, senderName, amount, tyCtx))}
+                                                  onClick={() => {
+                                                    setComposerMessage(buildThankYouMessage(composerBaseTone, senderName, amount, tyCtx));
+                                                    setComposerTone(composerBaseTone);
+                                                  }}
                                                   className="rounded-xl border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                                                   data-testid={`button-reset-thank-you-${entry.id}`}
                                                 >
