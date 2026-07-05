@@ -1818,7 +1818,16 @@ export default function DashboardStaging() {
     haptic("selection");
     setSummaryHaloTarget(target);
     const cancel = scrollToTestId(testIdByTarget[target], {
-      onFound: () => {
+      onFound: (el) => {
+        // The target usually lives inside a collapse we JUST opened, so the first
+        // scrollIntoView (inside scrollToTestId) fires against mid-expand layout
+        // and can net ZERO movement — the tap then looks like it did nothing.
+        // Re-scroll as the height animation settles so it reliably lands.
+        // (Verified: a single-schedule recurring chip tap left the manage section
+        // off-screen without these follow-ups.)
+        [160, 360].forEach((d) => window.setTimeout(() => {
+          try { el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { /* best-effort */ }
+        }, d));
         window.setTimeout(() => setSummaryHaloTarget((cur) => (cur === target ? null : cur)), HIGHLIGHT_HOLD_MS);
       },
       onMissed: () => {
@@ -8540,7 +8549,20 @@ export default function DashboardStaging() {
               const paused = mine.filter((c: any) => String(c?.status || "").toLowerCase() === "paused");
               let statusLine: string;
               let toneClass: string;
-              let onClick: () => void;
+              let onRecurringTap: () => void;
+              // The two add-paths. openRecurring starts a NEW schedule (auto-invest
+              // modal); openOneTime opens the one-time modal. Hoisted above the
+              // status branches so the empty state can wire the chip straight to
+              // create, while the populated states jump to the manage section.
+              const openRecurring = () => {
+                if (hasAutoInvestAccess) { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }
+                else { setAutoInvestUpgradeOpen(true); }
+              };
+              const openOneTime = () => {
+                setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto");
+                setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote("");
+                setOneTimeNoteSaved(false); setOneTimeModalOpen(true);
+              };
               if (active.length > 0) {
                 const nextTs = active
                   .map((c: any) => (c?.nextRunDate ? new Date(c.nextRunDate).getTime() : 0))
@@ -8571,36 +8593,27 @@ export default function DashboardStaging() {
                   statusLine = `${active.length} recurring active${nextLabel ? ` · next ${nextLabel}` : ""}`;
                 }
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)]";
-                onClick = () => summaryScrollTo("recurring");
+                // Schedules exist: this chip SUMMARIZES a collection, so tapping it
+                // jumps to the manage section below (each row's edit/pause/history/
+                // cancel + "Add another") rather than to a blank new-schedule form.
+                onRecurringTap = () => summaryScrollTo("recurring");
               } else if (paused.length > 0) {
                 statusLine = "Recurring paused · tap to resume";
                 toneClass = "text-amber-700 border-amber-300/60 bg-amber-50";
-                onClick = () => summaryScrollTo("recurring");
+                // The label promises resume; land them on the section's Resume-all /
+                // the paused row, not a new-schedule modal.
+                onRecurringTap = () => summaryScrollTo("recurring");
               } else {
                 statusLine = "Set up monthly";
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-dashed border-[hsl(var(--kiddo-evergreen)/0.4)] bg-[hsl(var(--kiddo-evergreen)/0.04)]";
-                // Consistent with the active/paused states above: this status chip
-                // scrolls to the "Invest in your fund" section (where "+ Add another"
-                // starts recurring) rather than jumping straight to a modal — so one
-                // control behaves one way. (Was: opened the auto-invest modal directly.)
-                onClick = () => summaryScrollTo("recurring");
+                // No recurring yet: this is the CREATE path, so open the auto-invest
+                // modal directly (one tap to set up). Only the empty state opens a
+                // modal; once any schedule exists the branches above jump to manage.
+                onRecurringTap = openRecurring;
               }
               // LAB: until the recurring data lands, `active`/`paused` are empty
-              // so this falls to "Set up recurring" even when there IS recurring
+              // so this falls to "Set up monthly" even when there IS recurring
               // (a wrong, jumpy CTA). Hold a calm pulse until we actually know.
-              // STAGING: the two ways a parent adds to the fund, side by side, both
-              // one tap. LEFT = the recurring chip → opens the recurring (auto-invest)
-              // modal (the popup we already have); RIGHT = "Add once" → opens the
-              // existing one-time contribution modal. Plain words, obvious actions.
-              const openRecurring = () => {
-                if (hasAutoInvestAccess) { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }
-                else { setAutoInvestUpgradeOpen(true); }
-              };
-              const openOneTime = () => {
-                setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto");
-                setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote("");
-                setOneTimeNoteSaved(false); setOneTimeModalOpen(true);
-              };
               if (!heroDataReady) {
                 return (
                   <div className="animate-pulse" aria-hidden style={{ height: 44, width: "100%", maxWidth: "100%", borderRadius: 16, background: "hsl(var(--kiddo-evergreen) / 0.08)", marginTop: 12 }} />
@@ -8608,10 +8621,11 @@ export default function DashboardStaging() {
               }
               return (
                 <div className="mt-3 flex items-stretch gap-2">
-                  {/* Recurring — opens the recurring/auto-invest modal */}
+                  {/* Recurring — empty state opens the auto-invest modal (create);
+                      once schedules exist it jumps to the manage section below. */}
                   <button
                     type="button"
-                    onClick={() => { haptic("selection"); openRecurring(); }}
+                    onClick={() => { haptic("selection"); onRecurringTap(); }}
                     data-testid="chip-recurring-status"
                     className={`flex-1 md:flex-none min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
                   >
@@ -14286,7 +14300,9 @@ export default function DashboardStaging() {
             />
           </div>
 
-          <div className="px-6 pt-5 shrink-0 flex items-center gap-2 flex-wrap">
+          {/* Match the Recurring modal header: mode pill left, fund pill right
+              (justify-between), not clustered together on the left. */}
+          <div className="px-6 pt-5 shrink-0 flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
               <Coins size={11} /> One-time
             </span>
