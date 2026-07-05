@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearch } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, TrendingUp, Video, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, TrendingUp, Video, Wallet, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { IN_APP_CHECKOUT } from "@/lib/feature-flags";
 import { InAppGiftCheckoutModal } from "@/components/InAppGiftCheckoutModal";
@@ -2000,9 +2000,9 @@ export default function GiftCheckout() {
 
                   {/* Trust badges */}
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    {[{ icon: "🛡", label: "Regulated broker" }, { icon: "⚡", label: "Seconds" }, { icon: "🎁", label: "Memory Book" }].map(({ icon, label }) => (
+                    {[{ Icon: Shield, label: "Regulated broker" }, { Icon: Zap, label: "Seconds" }, { Icon: BookOpen, label: "Memory Book" }].map(({ Icon, label }) => (
                       <div key={label} className="rounded-2xl border border-border bg-card px-2 py-3">
-                        <p className="text-lg leading-none">{icon}</p>
+                        <Icon size={18} strokeWidth={2} className="mx-auto text-[hsl(var(--kiddo-evergreen))]" />
                         <p className="mt-1 text-2xs font-semibold text-muted-foreground">{label}</p>
                       </div>
                     ))}
@@ -2073,9 +2073,9 @@ export default function GiftCheckout() {
                           <h1 className="mt-3 font-heading text-4xl md:text-5xl font-bold leading-tight" data-testid="text-heading">{landingHeadline}</h1>
                           <p className="mt-3 max-w-2xl text-base font-semibold text-white/90">No account needed. Takes seconds.</p>
                           <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white" data-testid="grid-gift-first-answers">
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🌱</span><p className="mt-1 font-semibold">Invested</p></div>
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🔒</span><p className="mt-1 font-semibold">Secure</p></div>
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">⚡</span><p className="mt-1 font-semibold">Seconds</p></div>
+                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><TrendingUp size={17} strokeWidth={2.25} className="mx-auto" /><p className="mt-1 font-semibold">Invested</p></div>
+                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><Lock size={17} strokeWidth={2.25} className="mx-auto" /><p className="mt-1 font-semibold">Secure</p></div>
+                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><Zap size={17} strokeWidth={2.25} className="mx-auto" /><p className="mt-1 font-semibold">Seconds</p></div>
                           </div>
                           {eventData.event.name && eventData.event.name !== "Gift anytime" && !eventData.event.isPermanent && (
                             <div className="mt-3 hidden items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1.5 md:inline-flex">

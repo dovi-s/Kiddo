@@ -8,6 +8,7 @@ import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { FadeImage } from "@/components/ui/fade-image";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
@@ -533,8 +534,10 @@ export default function GifterDashboard() {
     recurringSchedules.some((s) => s.status === "active") ||
     sponsoredSubs.some((s) => s.status === "active" && new Date(s.expiresAt).getTime() > Date.now());
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  // Which schedule is pending a cancel confirm (drives the branded ConfirmDialog,
+  // replacing the OS-native window.confirm that looked off-brand on mobile).
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
   const handleCancelRecurring = async (scheduleId: string) => {
-    if (!window.confirm("Cancel this recurring gift? Future charges stop; charges already made aren't affected.")) return;
     setCancellingId(scheduleId);
     try {
       const res = await fetch(`/api/gifter-account/recurring/${scheduleId}/cancel`, {
@@ -1103,7 +1106,7 @@ export default function GifterDashboard() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleCancelRecurring(sch.id)}
+                            onClick={() => setCancelConfirmId(sch.id)}
                             disabled={cancellingId === sch.id}
                             className="ml-auto inline-flex items-center rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                             aria-label={`Cancel recurring gift of ${fmtMoney(sch.amount)} ${sch.frequency} to ${sch.fundName}`}
@@ -1296,7 +1299,7 @@ export default function GifterDashboard() {
                         )}
                         <button
                           type="button"
-                          onClick={() => handleCancelRecurring(sch.id)}
+                          onClick={() => setCancelConfirmId(sch.id)}
                           disabled={cancellingId === sch.id}
                           className="inline-flex items-center rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                           data-testid={`cancel-recurring-${sch.id}`}
@@ -1953,6 +1956,18 @@ export default function GifterDashboard() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        request={cancelConfirmId ? {
+          title: "Cancel this recurring gift?",
+          body: "Future charges stop. Charges already made aren't affected.",
+          confirmLabel: "Cancel it",
+          cancelLabel: "Keep it",
+          destructive: true,
+          onConfirm: () => handleCancelRecurring(cancelConfirmId),
+        } : null}
+        onClose={() => setCancelConfirmId(null)}
+      />
     </div>
   );
 }
