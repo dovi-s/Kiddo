@@ -944,7 +944,7 @@ export default function GetStarted() {
             <div className="flex flex-1 flex-col">
               <AnimatedBlock>
                 <ScreenLead
-                  title={accountType === "child" ? "Who's this fund for?" : "What should we call your fund?"}
+                  title={accountType === "child" ? `Tell us about your child` : "What should we call your fund?"}
                   description={accountType === "personal" ? "This is what people will see when they land on your page." : "One thing at a time. Name, occasion, then who should get the link."}
                 />
               </AnimatedBlock>
@@ -1244,7 +1244,7 @@ export default function GetStarted() {
                 <AnimatedBlock className="mt-4">
                   <div className="rounded-2xl border border-border bg-card px-4 py-3">
                     <label htmlFor="get-started-state" className="text-xs font-semibold text-foreground mb-1.5 block">
-                      Where do you live?
+                      Which state?
                     </label>
                     <select
                       id="get-started-state"
