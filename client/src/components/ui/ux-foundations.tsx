@@ -109,7 +109,7 @@ export function SetupProgressNudge({
                     )}
                     <span className={`min-w-0 flex-1 ${item.done ? "text-muted-foreground" : "font-semibold text-foreground"}`}>{item.label}</span>
                     {!item.done && (
-                      <span className="shrink-0 rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+                      <span className="shrink-0 rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
                         Action needed
                       </span>
                     )}
@@ -141,7 +141,7 @@ export function TrustMicroStrip({ flush = false }: { flush?: boolean } = {}) {
   // INVESTING_LIVE flips true.
   const sipc = "SIPC up to $500,000 once investing is live";
   const brokerDealer = "Our broker-dealer partner · Member FINRA/SIPC";
-  const noFees = "No hidden charges. Ever.";
+  const noFees = "No hidden charges";
   return (
     <section
       // `flush` = recessive FOOTER treatment (hairline top-divider, no floating
@@ -171,7 +171,7 @@ export function TrustMicroStrip({ flush = false }: { flush?: boolean } = {}) {
           row (and degrade to two clean centered lines on a 320px SE without
           ever breaking), and the long broker-dealer line gets its own row.
           All copy kept verbatim; only the layout changed. */}
-      <div className="flex flex-col items-center gap-1 text-center text-[11px] leading-snug text-muted-foreground sm:hidden">
+      <div className="flex flex-col items-center gap-1 text-center text-2xs leading-snug text-muted-foreground sm:hidden">
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
           <span className="inline-flex items-center gap-1.5">
             <Shield size={12} className="text-[hsl(var(--kiddo-evergreen))]" />
@@ -182,7 +182,7 @@ export function TrustMicroStrip({ flush = false }: { flush?: boolean } = {}) {
         <span>{brokerDealer}</span>
       </div>
 
-      <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/55">
+      <p className="mt-2 text-center text-3xs leading-relaxed text-muted-foreground/55">
         Kiddo's only ongoing investment fee is $1/year per $1,000 invested, charged on invested assets only. When investing is live, eligible securities are then protected up to $500,000 against broker-dealer failure. Not a protection against market losses.{" "}
         <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-muted-foreground">sipc.org</a>
         {" · "}Investing involves risk.

@@ -27,7 +27,7 @@ export function BrowserFrame({ src, alt, caption, className = "", href, liveLabe
         <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
         <span className="h-3 w-3 rounded-full bg-[#28c840]" />
         <div className="ml-3 flex-1">
-          <div className="mx-auto w-2/3 max-w-[220px] rounded-md bg-white/10 py-1 text-center text-[11px] font-medium tracking-wide text-white/55">
+          <div className="mx-auto w-2/3 max-w-[220px] rounded-md bg-white/10 py-1 text-center text-2xs font-medium tracking-wide text-white/55">
             Kiddo
           </div>
         </div>

@@ -148,7 +148,7 @@ export function ThemeSelector({
               )}
               
               <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/20 to-transparent">
-                <p className={`text-[10px] font-medium ${theme.id === 'midnight' ? 'text-white' : 'text-foreground'}`}>
+                <p className={`text-3xs font-medium ${theme.id === 'midnight' ? 'text-white' : 'text-foreground'}`}>
                   {theme.name}
                 </p>
               </div>
@@ -215,13 +215,13 @@ export function GoalCard({
             {[...Array(Math.min(contributorCount, 4))].map((_, i) => (
               <div 
                 key={i}
-                className="w-6 h-6 rounded-full bg-card border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-[10px] font-medium text-muted-foreground"
+                className="w-6 h-6 rounded-full bg-card border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-3xs font-medium text-muted-foreground"
               >
                 {String.fromCharCode(65 + i)}
               </div>
             ))}
             {contributorCount > 4 && (
-              <div className="w-6 h-6 rounded-full bg-[hsl(var(--kiddo-gold))]/10 border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-[10px] font-medium text-[hsl(var(--kiddo-gold-ink))]">
+              <div className="w-6 h-6 rounded-full bg-[hsl(var(--kiddo-gold))]/10 border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-3xs font-medium text-[hsl(var(--kiddo-gold-ink))]">
                 +{contributorCount - 4}
               </div>
             )}
@@ -241,7 +241,7 @@ interface EventPassBadgeProps {
 export function EventPassBadge({ size = "md" }: EventPassBadgeProps) {
   return (
     <div className={`inline-flex items-center gap-1.5 bg-[hsl(var(--kiddo-gold))]/10 text-[hsl(var(--kiddo-gold-ink))] font-medium rounded-full ${
-      size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs"
+      size === "sm" ? "px-2 py-0.5 text-3xs" : "px-3 py-1 text-xs"
     }`}>
       <Crown size={size === "sm" ? 10 : 12} />
       Kiddo Occasion

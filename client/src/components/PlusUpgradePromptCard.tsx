@@ -177,7 +177,7 @@ export function PlusUpgradePromptCard({
                 disclosure), muted on the daily equivalent (cognitive
                 reframe). Same pattern as MemoryMediaPicker Plus wall
                 (commit 67bed3c). */}
-            <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+            <p className="mt-1.5 text-2xs text-muted-foreground/85">
               <span className="font-semibold text-foreground">$3.99/month</span>
               <span className="text-muted-foreground/70">, about 13¢ a day.</span>
             </p>
@@ -187,7 +187,7 @@ export function PlusUpgradePromptCard({
                 silent objections a price callout leaves open: "am I locked in?"
                 and "do I lose what I've already built?" The "stays" half is
                 already true in code. Proposed + founder-approved 2026-06-12. */}
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/70">
+            <p className="mt-1 text-2xs leading-relaxed text-muted-foreground/70">
               Cancel anytime. Anything you've added to {displayChild}'s fund stays, on any plan.
             </p>
             <div className="mt-3 flex gap-2">

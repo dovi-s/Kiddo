@@ -17,6 +17,7 @@ import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Camera } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { FadeImage } from "@/components/ui/fade-image";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 
@@ -161,7 +162,7 @@ export function ChildIdentityCard({
             data-testid="button-change-child-photo"
           >
             {fund?.childPhotoUrl ? (
-              <img
+              <FadeImage
                 src={fund.childPhotoUrl}
                 alt=""
                 loading="eager"

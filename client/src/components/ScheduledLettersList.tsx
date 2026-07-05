@@ -252,7 +252,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                       <p className="text-xs font-semibold text-foreground">
                         Yearly series · {count} {count === 1 ? "delivery" : "deliveries"}
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-2xs text-muted-foreground mt-0.5">
                         Next: <span className="text-foreground font-medium">{dateLabel || "scheduled"}</span>
                         {years !== null && years > 0 ? (
                           <> ({years} {years === 1 ? "year" : "years"} away)</>
@@ -267,7 +267,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                         </p>
                       )}
                       {(hasPhoto || hasVideo || hasAudio) && (
-                        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                        <div className="mt-1.5 flex items-center gap-1.5 text-3xs text-muted-foreground/80">
                           {hasPhoto && (
                             <span className="inline-flex items-center gap-0.5"><ImageIcon size={10} /> photo</span>
                           )}
@@ -340,7 +340,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                       </p>
                     )}
                     {(hasPhoto || hasVideo || hasAudio) && (
-                      <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                      <div className="mt-1.5 flex items-center gap-1.5 text-3xs text-muted-foreground/80">
                         {hasPhoto && (
                           <span className="inline-flex items-center gap-0.5"><ImageIcon size={10} /> photo</span>
                         )}

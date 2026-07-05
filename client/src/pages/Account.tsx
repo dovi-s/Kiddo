@@ -8,6 +8,7 @@ import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { demoBlocked } from "@/lib/demo-block";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FounderBadge } from "@/components/ui/founder-badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star, Download } from "lucide-react";
@@ -135,7 +136,7 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
         className="h-10 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         data-testid="input-new-email"
       />
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <p className="text-2xs leading-snug text-muted-foreground">
         We send a confirmation link to the new address and a heads-up to {currentEmail}. The change only happens once the new address confirms.
       </p>
       {error && <p className="text-xs text-red-700" data-testid="text-change-email-error">{error}</p>}
@@ -359,7 +360,6 @@ export default function Account() {
   };
   const profileNeedsName = !displayName;
   const profileNeedsPhoto = !user?.profileImageUrl;
-  const profileNeedsCompletion = profileNeedsName || profileNeedsPhoto;
 
   // Stripe billing portal — inline action on the plan card so paid users
   // can manage their billing without bouncing to Settings. Per the
@@ -970,7 +970,7 @@ export default function Account() {
           className="px-1"
           data-testid="account-hero"
         >
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+          <p className="text-3xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
             Account
           </p>
           <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
@@ -1036,12 +1036,17 @@ export default function Account() {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-4"
           >
-            {profileNeedsCompletion && (
+            {/* Scoped to NAME-only (2026-07). This nudge also used to prompt for a
+                photo — but the profile card's avatar right below already prompts that,
+                warmly ("a real face behind it") and on the actual tap target — so with a
+                photo missing you got the SAME nag twice. De-duped: photo → the avatar
+                caption; name → this nudge. No overlap, both keep their value. */}
+            {profileNeedsName && (
               <SectionCard className="border-primary/20 bg-primary/5">
                 <div className="p-4">
                   <p className="text-sm font-semibold text-foreground">Complete your profile</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add your {profileNeedsName && profileNeedsPhoto ? "name and photo" : profileNeedsName ? "name" : "photo"} so it appears in {isNonParentOwner ? "your" : "your child's"} Memory Book.
+                    Add your name so it appears in {isNonParentOwner ? "your" : "your child's"} Memory Book.
                   </p>
                 </div>
               </SectionCard>
@@ -1060,7 +1065,7 @@ export default function Account() {
                     data-testid="button-change-profile-photo"
                   >
                     {user?.profileImageUrl ? (
-                      <img src={user.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                      <FadeImage src={user.profileImageUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-xl font-bold text-foreground">{initial}</span>
                     )}
@@ -1177,7 +1182,7 @@ export default function Account() {
                     className="h-10 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     data-testid="input-preferred-name"
                   />
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <p className="mt-1.5 text-2xs text-muted-foreground">
                     {isNonParentOwner ? "Shows up in your Memory Book. Optional." : "Shows up in the Memory Book and Kid's View. Optional."}
                   </p>
                   <Button
@@ -1200,7 +1205,7 @@ export default function Account() {
                   <span className="text-sm text-muted-foreground">Current plan</span>
                   <span className="text-sm font-semibold text-foreground">{planLabel}</span>
                 </div>
-                <a href="/legal" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30">
+                <a href="/legal" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30 kiddo-press">
                   <span className="text-sm text-muted-foreground">Legal disclosures</span>
                   <ChevronRight size={16} className="text-muted-foreground" />
                 </a>
@@ -1210,7 +1215,7 @@ export default function Account() {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground kiddo-press"
             >
               <LogOut size={15} />
               Log out
@@ -1289,7 +1294,7 @@ export default function Account() {
                             </li>
                           ))}
                         </ul>
-                        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/85">
+                        <p className="mt-3 text-2xs leading-relaxed text-muted-foreground/85">
                           We'll send you a renewal reminder before each one expires. Your card won't be charged automatically; you choose whether to take over the bill.
                         </p>
                       </div>
@@ -1541,10 +1546,10 @@ export default function Account() {
                 : null;
               const badgeClass = (tone: "current" | "gold" | "evergreen") =>
                 tone === "current"
-                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white"
                   : tone === "gold"
-                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
-                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white";
+                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white"
+                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white";
               return (
                 <div className={`grid gap-4 ${isLegacyCurrent ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
                   <SectionCard className={`relative border-2 ${isStarterCurrent ? "border-[hsl(var(--kiddo-evergreen))]" : "border-[hsl(var(--kiddo-gold))]"} shadow-[0_2px_8px_hsl(var(--kiddo-ink) / 0.10),0_8px_24px_hsl(var(--kiddo-ink) / 0.08)]`}>
@@ -1569,7 +1574,7 @@ export default function Account() {
                           under a green check reads as a perk you receive. */}
                       <p className="mt-3 text-xs text-muted-foreground/70">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
                       {includedHint("starter") && (
-                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
+                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
                           <Check size={10} />
                           {includedHint("starter")}
                         </p>
@@ -1592,7 +1597,7 @@ export default function Account() {
                     data-testid="card-account-kiddo-family"
                   >
                     {familyBadge && (
-                      <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em]`}>
+                      <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em]`}>
                         {familyBadge.label}
                       </div>
                     )}
@@ -1623,7 +1628,7 @@ export default function Account() {
                       </div>
                       <p className="mt-3 text-xs text-[hsl(var(--kiddo-cream)/0.6)]">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
                       {includedHint("family") && (
-                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
+                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
                           <Check size={10} />
                           {includedHint("family")}
                         </p>
@@ -1944,7 +1949,7 @@ export default function Account() {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground kiddo-press"
             >
               <LogOut size={15} />
               Log out
@@ -1958,7 +1963,7 @@ export default function Account() {
               type="button"
               onClick={handleExportData}
               disabled={exportingData}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-60"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-60 kiddo-press"
               data-testid="button-export-data"
             >
               {exportingData ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
@@ -1974,7 +1979,7 @@ export default function Account() {
             <button
               type="button"
               onClick={() => setDeleteAccountModalOpen(true)}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-red-600"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-red-600 kiddo-press"
               data-testid="button-delete-account"
             >
               Delete my account

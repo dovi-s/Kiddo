@@ -164,7 +164,7 @@ export function FeatureWallModal({
           <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
             <div>
               <p className="text-sm font-semibold text-foreground">{tierLabel}</p>
-              <p className="text-[11px] text-muted-foreground">{priceLine}</p>
+              <p className="text-2xs text-muted-foreground">{priceLine}</p>
             </div>
           </div>
 

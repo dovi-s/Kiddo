@@ -97,7 +97,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
             <button
               onClick={handleStarterPlan}
               disabled={loading !== null}
-              className="group w-full rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary/30"
+              className="group w-full rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary/30 kiddo-press"
               data-testid="button-gate-kora-plus"
             >
               <div className="flex items-start gap-3">
@@ -150,7 +150,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
           <button
             onClick={handleFamilyPlan}
             disabled={loading !== null}
-            className="group w-full rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 text-left transition-all hover:border-primary/40"
+            className="group w-full rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 text-left transition-all hover:border-primary/40 kiddo-press"
             data-testid="button-gate-family-plan"
           >
             <div className="flex items-start gap-3">

@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, CheckCircle2, Heart, Lock, Mail, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
@@ -436,7 +437,7 @@ export default function AgeTransitionInvite() {
                       {memory.content || memory.gift?.message || "A gift that became part of your story."}
                     </p>
                     {memory.photoUrl ? (
-                      <img src={memory.photoUrl} alt="Memory" loading="lazy" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
+                      <FadeImage src={memory.photoUrl} alt="Memory" loading="lazy" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
                     ) : null}
                     {embed ? (
                       <iframe
@@ -696,7 +697,7 @@ export default function AgeTransitionInvite() {
                 );
               })}
             </div>
-            <p className="mt-4 text-[11px] text-muted-foreground">
+            <p className="mt-4 text-2xs text-muted-foreground">
               Tapping opens your mail app with a pre-filled message. You can edit it before sending.
             </p>
           </motion.section>

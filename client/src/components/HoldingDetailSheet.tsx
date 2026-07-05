@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { TrendChartSkeleton } from "@/components/TrendChartSkeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { motion } from "framer-motion";
+import { SHARED_ELEMENT_HOLDING_MORPH, holdingMorphId } from "@/lib/shared-element-flag";
 import { haptic } from "@/lib/haptics";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 import { gifterIdentityKey } from "@/lib/gifter-name";
@@ -207,7 +209,7 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
             key={r}
             type="button"
             onClick={() => setRange(r)}
-            className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-3xs font-semibold transition-colors ${
               range === r
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -318,7 +320,7 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
           with no on-range gifts. Keeps the gifter loop's "you bought
           here" story legible without needing a tooltip on each dot. */}
       {buyMarkers.length > 0 && !loading && !error && data.length >= 2 && (
-        <p className="text-[10px] text-muted-foreground/80 leading-snug px-1">
+        <p className="text-3xs text-muted-foreground/80 leading-snug px-1">
           <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: "hsl(43, 75%, 55%)", verticalAlign: "middle" }} />
           {buyMarkers.length === 1 ? "Gold dot marks when this gift was made." : `Gold dots mark when gifts to ${ticker} were made.`}
         </p>
@@ -455,28 +457,31 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
             {isRecurring && (
               <span
                 title="Has an active recurring investment in this holding"
-                className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]"
+                className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]"
               >
                 ↻ Recurring
               </span>
             )}
             {thankYouState === "sent" && (
-              <span title="You've thanked them" className="shrink-0 inline-flex items-center rounded-full bg-[rgba(26,61,43,0.09)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[rgb(26,61,43)]">
+              <span title="You've thanked them" className="shrink-0 inline-flex items-center rounded-full bg-[rgba(26,61,43,0.09)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[rgb(26,61,43)]">
                 ✓ Thanked
               </span>
             )}
             {thankYouState === "partial" && (
-              <span title="Some of their gifts are thanked, some are still awaiting" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
+              <span title="Some of their gifts are thanked, some are still awaiting" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
                 Some thanks pending
               </span>
             )}
             {thankYouState === "draft" && (
-              <span title="A thank-you is drafted but not sent yet" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
-                ⏳ Awaiting thanks
+              // Kept here (unlike the Memory Book card): this sheet has no
+              // "Say thanks" CTA, so the pill is the only thank-you signal —
+              // not redundant. Dropped the ⏳ emoji to match the lucide chrome sweep.
+              <span title="A thank-you is drafted but not sent yet" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
+                Awaiting thanks
               </span>
             )}
             {thankYouState === "missing" && (
-              <span title="No thank-you on record" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink) / 0.06)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-ink) / 0.55)]">
+              <span title="No thank-you on record" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink) / 0.06)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-ink) / 0.55)]">
                 No thanks yet
               </span>
             )}
@@ -486,7 +491,7 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
                 hero, Dashboard event-list, gifter detail modal, and Memory
                 Book list. */}
           </div>
-          <p className="text-[11px] text-muted-foreground">{subtitleText}</p>
+          <p className="text-2xs text-muted-foreground">{subtitleText}</p>
           {fullMessage && (
             <p
               className="font-heading italic text-[hsl(var(--kiddo-evergreen))] mt-1.5 leading-snug"
@@ -510,14 +515,14 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
             // "·" separator matches the date/cost separator pattern used
             // in the expanded rows. Was "from $X" — replaced 2026-05-12
             // for consistency.
-            <p className={`text-[10px] font-semibold tabular-nums ${gain! >= 0 ? "text-green-600" : "text-red-500"}`}>
+            <p className={`text-3xs font-semibold tabular-nums ${gain! >= 0 ? "text-green-600" : "text-red-500"}`}>
               {gain! >= 0 ? "+" : ""}{formatCurrency(gain!)} ({gain! >= 0 ? "+" : ""}{gainPct.toFixed(1)}%)
               {count === 1 && costBasisSlice != null && costBasisSlice > 0.01 && (
                 <span className="text-muted-foreground/70 font-normal"> · Original {formatCurrency(costBasisSlice)}</span>
               )}
             </p>
           ) : sharesLabel ? (
-            <p className="text-[10px] text-muted-foreground/70 tabular-nums">{sharesLabel}</p>
+            <p className="text-3xs text-muted-foreground/70 tabular-nums">{sharesLabel}</p>
           ) : null}
         </div>
         {showExpandChevron ? (
@@ -528,7 +533,7 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
             aria-hidden="true"
           />
         ) : (
-          <span className="text-[10px] text-muted-foreground/50 leading-none select-none">›</span>
+          <span className="text-3xs text-muted-foreground/50 leading-none select-none">›</span>
         )}
       </div>
     </>
@@ -538,7 +543,7 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
       <button
         type="button"
         onClick={onNavigate}
-        className="flex w-full items-center justify-between rounded-xl bg-muted/30 px-3.5 py-2.5 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left"
+        className="flex w-full items-center justify-between rounded-xl bg-muted/30 px-3.5 py-2.5 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left kiddo-press"
       >
         {inner}
       </button>
@@ -913,7 +918,12 @@ function HoldingDetailSheetBody({
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <StockLogo ticker={ticker} size={44} />
+          {/* Shared-element morph destination: same layoutId as the dashboard holding
+              row's logo, so Framer animates the logo from the row into this header. The
+              row side carries the reduced-motion guard (undefined layoutId there = no match). */}
+          <motion.div layoutId={holdingMorphId(ticker, SHARED_ELEMENT_HOLDING_MORPH)}>
+            <StockLogo ticker={ticker} size={44} />
+          </motion.div>
           <div className="flex-1 min-w-0">
             <p className="font-heading text-lg font-bold text-foreground leading-tight">{name}</p>
             <p className="text-sm text-muted-foreground font-medium">
@@ -972,10 +982,10 @@ function HoldingDetailSheetBody({
           return (
             <div className="mb-4 px-0.5">
               <div className="flex items-baseline justify-between mb-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {sectionLabel}
                 </p>
-                <p className="text-[10px] text-muted-foreground/70">
+                <p className="text-3xs text-muted-foreground/70">
                   As of {etfData.asOf}
                 </p>
               </div>
@@ -1001,16 +1011,16 @@ function HoldingDetailSheetBody({
                     {!isBondFund && (
                       <StockLogo ticker={h.ticker} size={14} className="shrink-0" />
                     )}
-                    <span className="text-[11px] font-bold text-[hsl(var(--kiddo-evergreen))] tabular-nums">
+                    <span className="text-2xs font-bold text-[hsl(var(--kiddo-evergreen))] tabular-nums">
                       {h.ticker}
                     </span>
-                    <span className="text-[10.5px] font-medium text-muted-foreground tabular-nums">
+                    <span className="text-3xs font-medium text-muted-foreground tabular-nums">
                       {h.weight.toFixed(h.weight >= 10 ? 1 : 2)}%
                     </span>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[10px] text-muted-foreground/60 leading-relaxed">
+              <p className="mt-2 text-3xs text-muted-foreground/60 leading-relaxed">
                 Source: {etfData.source}{etfData.totalAssets ? ` · ${etfData.totalAssets} total assets` : ""}
               </p>
             </div>
@@ -1031,25 +1041,25 @@ function HoldingDetailSheetBody({
         {/* Position summary grid */}
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Shares owned</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Shares owned</p>
             <p className="text-base font-bold text-foreground tabular-nums">{shareCount}</p>
             {pricePerShare > 0 && (
-              <p className="text-[11px] text-muted-foreground mt-0.5">{formatCurrency(pricePerShare)}/share now</p>
+              <p className="text-2xs text-muted-foreground mt-0.5">{formatCurrency(pricePerShare)}/share now</p>
             )}
           </div>
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Cost basis</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Cost basis</p>
             <p
               className="text-base font-bold text-foreground tabular-nums"
               aria-live={costBasisAnimating ? "off" : "polite"}
               aria-label={formatCurrency(costBasis)}
             >{formatCurrency(animatedCostBasis)}</p>
             {avgCostPerShare > 0 && (
-              <p className="text-[11px] text-muted-foreground mt-0.5">avg {formatCurrency(avgCostPerShare)}/share</p>
+              <p className="text-2xs text-muted-foreground mt-0.5">avg {formatCurrency(avgCostPerShare)}/share</p>
             )}
           </div>
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Since first gift</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Since first gift</p>
             {costBasis > 0 && Math.abs(gain) > 0.01 ? (
               <>
                 <p
@@ -1059,7 +1069,7 @@ function HoldingDetailSheetBody({
                 >
                   {isUp ? "+" : ""}{formatCurrency(animatedGain)}
                 </p>
-                <p className={`text-[11px] mt-0.5 font-medium ${isUp ? "text-green-500" : "text-red-400"}`}>
+                <p className={`text-2xs mt-0.5 font-medium ${isUp ? "text-green-500" : "text-red-400"}`}>
                   {isUp ? "+" : ""}{gainPct.toFixed(2)}%
                 </p>
               </>
@@ -1068,14 +1078,14 @@ function HoldingDetailSheetBody({
             )}
           </div>
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Today</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Today</p>
             {todayQuote?.changePercent != null ? (
               <>
                 <p className={`text-base font-bold tabular-nums ${todayQuote.changePercent >= 0 ? "text-green-600" : "text-red-500"}`}>
                   {todayQuote.changePercent >= 0 ? "+" : ""}{todayQuote.changePercent.toFixed(2)}%
                 </p>
                 {todayQuote.change != null && shares > 0 && (
-                  <p className={`text-[11px] mt-0.5 font-medium ${todayQuote.change >= 0 ? "text-green-500" : "text-red-400"}`}>
+                  <p className={`text-2xs mt-0.5 font-medium ${todayQuote.change >= 0 ? "text-green-500" : "text-red-400"}`}>
                     {todayQuote.change >= 0 ? "+" : ""}{formatCurrency(todayQuote.change * shares)} on your shares
                   </p>
                 )}
@@ -1086,13 +1096,13 @@ function HoldingDetailSheetBody({
           </div>
         </div>
         <div className="mt-2.5 rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             {isOwnerMode ? "% of your fund" : recipientName ? `% of ${recipientName}'s fund` : "% of fund"}
           </p>
           <p className="text-base font-bold text-foreground tabular-nums">
             {portfolioPct > 0 ? `${portfolioPct.toFixed(1)}%` : "--"}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-2xs text-muted-foreground mt-0.5">
             {formatCurrency(currentValue)} of {formatCurrency(totalPortfolioValue)}
           </p>
         </div>
@@ -1192,7 +1202,7 @@ function HoldingDetailSheetBody({
                         const inner = (
                           <>
                             <div className="min-w-0">
-                              <p className="text-[11.5px] text-muted-foreground tabular-nums">
+                              <p className="text-2xs text-muted-foreground tabular-nums">
                                 {r.date ? `${formatGiftDate(r.date)} · ` : ""}Original {formatCurrency(r.original)}
                               </p>
                               {/* Gift message (when present). Same italic-evergreen
@@ -1214,11 +1224,11 @@ function HoldingDetailSheetBody({
                             <div className="text-right shrink-0">
                               <p className="text-xs font-semibold text-foreground tabular-nums">{formatCurrency(r.todayVal)}</p>
                               {showDelta ? (
-                                <p className={`text-[10px] font-semibold tabular-nums ${r.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                <p className={`text-3xs font-semibold tabular-nums ${r.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
                                   {r.delta >= 0 ? "+" : ""}{formatCurrency(r.delta)} ({r.delta >= 0 ? "+" : ""}{r.pct.toFixed(1)}%)
                                 </p>
                               ) : (
-                                <p className="text-[10px] text-muted-foreground/70">at cost</p>
+                                <p className="text-3xs text-muted-foreground/70">at cost</p>
                               )}
                             </div>
                           </>
@@ -1258,7 +1268,7 @@ function HoldingDetailSheetBody({
                         <button
                           type="button"
                           onClick={() => { haptic("selection"); onClose(); onNavigateToGift(c.mostRecentGiftId!); }}
-                          className="w-full text-left text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline px-2.5 py-1"
+                          className="w-full text-left text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline px-2.5 py-1"
                         >
                           See all {detailRows.length} gifts in Memory Book →
                         </button>
@@ -1321,7 +1331,7 @@ function HoldingDetailSheetBody({
                 and MemoryBook.tsx for the reasoning ("managed"
                 connotes active management; "diversified" is factual
                 and matches the rest of the product's vocabulary). */}
-            <p className="mt-3 text-center text-[11.5px] text-muted-foreground leading-relaxed">
+            <p className="mt-3 text-center text-2xs text-muted-foreground leading-relaxed">
               Part of {strategyLabel || "the diversified mix"}. Adding spreads across every position to keep the ratio. To sell or rebalance, switch the strategy.
             </p>
           </>
@@ -1349,7 +1359,7 @@ function HoldingDetailSheetBody({
           </div>
         )}
 
-        <p className="mt-3 text-center text-[11px] text-muted-foreground">
+        <p className="mt-3 text-center text-2xs text-muted-foreground">
           Price data via Yahoo Finance · 1-year daily closes · may be delayed{shares > 0 ? " · Share counts are estimates based on avg cost" : ""}
         </p>
       </SheetContent>

@@ -109,7 +109,7 @@ export function ActionItemCard({ item, compact = false }: Props) {
           <p className={`mt-1 text-muted-foreground leading-snug ${compact ? "text-[12px]" : "text-[13px]"}`}>
             {item.description}
           </p>
-          <p className="mt-1.5 text-[11px] text-muted-foreground/80">
+          <p className="mt-1.5 text-2xs text-muted-foreground/80">
             {item.fundLabel}
           </p>
 

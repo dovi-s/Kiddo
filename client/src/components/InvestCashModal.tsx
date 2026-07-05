@@ -294,7 +294,7 @@ export function InvestCashModal({
             <>
               {/* Cash amount + context */}
               <div className="rounded-2xl bg-[hsl(var(--kiddo-cream))] border border-[hsl(var(--kiddo-gold)/0.28)] p-4 space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Ready when you are</p>
+                <p className="text-2xs font-semibold uppercase text-muted-foreground">Available cash</p>
                 <p className="text-3xl font-bold text-foreground font-heading">{formatCurrency(cashAmount)}</p>
                 <p className="text-sm text-muted-foreground">{contextMessages[cashContext]}</p>
                 {!marketOpen && (
@@ -306,14 +306,14 @@ export function InvestCashModal({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <label htmlFor="invest-cash-amount" className="text-sm font-semibold text-foreground">How much should move today?</label>
+                <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground">{formatCurrency(cashAmount)} available</span>
                 </div>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
                   <input
                     id="invest-cash-amount"
+                    aria-label="Amount to invest"
                     value={investAmount}
                     onChange={(event) => setInvestAmount(event.target.value)}
                     inputMode="decimal"
@@ -327,7 +327,7 @@ export function InvestCashModal({
                       key={amount}
                       type="button"
                       onClick={() => setInvestAmount(amount.toFixed(2))}
-                      className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                      className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground kiddo-press"
                     >
                       {amount === cashAmount ? "All cash" : amount === halfAmount ? "Half" : amount % 1 === 0 ? `$${amount}` : formatCurrency(amount)}
                     </button>
@@ -363,7 +363,6 @@ export function InvestCashModal({
                   selected={investMode === "stock"}
                   onClick={() => setInvestMode("stock")}
                   title="Pick one company"
-                  description="Only the amount above goes into this choice"
                 />
 
                 {investMode === "stock" && (
@@ -375,7 +374,7 @@ export function InvestCashModal({
                           key={stock.ticker}
                           type="button"
                           onClick={() => setSelectedTicker(stock.ticker)}
-                          className={`rounded-xl border p-3 text-left transition-all ${
+                          className={`rounded-xl border p-3 text-left transition-all kiddo-press ${
                             isSelected
                               ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
                               : "border-border hover:border-[hsl(var(--kiddo-evergreen)/0.4)] bg-background"
@@ -383,13 +382,13 @@ export function InvestCashModal({
                         >
                           <StockLogo ticker={stock.ticker} size={32} className="mb-1.5" />
                           <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                          <p className="text-2xs text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
                           {/* Only the SELECTED pick shows the amount, and it's the
                               ACTION ("goes here"), not "invested" (done) — this was
                               rendering "$X invested" on all 24 rows, implying $X was
                               already in each. */}
                           {isSelected && amountToInvest > 0 && (
-                            <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
+                            <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
                               {formatCurrency(amountToInvest)} goes here
                             </p>
                           )}
@@ -403,7 +402,6 @@ export function InvestCashModal({
                   selected={investMode === "keep"}
                   onClick={() => setInvestMode("keep")}
                   title="Keep as cash for now"
-                  description="Make no investment today"
                   variant="muted"
                 />
 
@@ -432,7 +430,7 @@ export function InvestCashModal({
                           key={bank.id}
                           type="button"
                           onClick={() => setSelectedBankId(bank.id)}
-                          className={`w-full text-left rounded-xl border px-3.5 py-2.5 transition-all flex items-center gap-3 ${
+                          className={`w-full text-left rounded-xl border px-3.5 py-2.5 transition-all flex items-center gap-3 kiddo-press ${
                             isSelected ? "border-primary bg-primary/6" : "border-border hover:border-primary/40 bg-background"
                           }`}
                         >
@@ -673,7 +671,7 @@ function OptionCard({
   selected: boolean;
   onClick: () => void;
   title: string;
-  description: string;
+  description?: string;
   badge?: string;
   variant?: "default" | "muted";
 }) {
@@ -681,7 +679,7 @@ function OptionCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-xl border p-3.5 transition-all ${
+      className={`w-full text-left rounded-xl border p-3.5 transition-all kiddo-press ${
         selected
           ? "border-primary bg-primary/6 shadow-sm"
           : "border-border hover:border-primary/40 bg-background"
@@ -698,11 +696,11 @@ function OptionCard({
             <p className={`text-sm font-semibold ${variant === "muted" ? "text-muted-foreground" : "text-foreground"}`}>
               {title}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
+            {description && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>}
           </div>
         </div>
         {badge && (
-          <span className="shrink-0 text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+          <span className="shrink-0 text-2xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
             {badge}
           </span>
         )}

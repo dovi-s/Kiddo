@@ -50,6 +50,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { capFirst } from "@/lib/format-name";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
 // (Removed 2026-05-15: GrowthStory import. The component was never
@@ -807,11 +808,11 @@ function SsnCollectionNudge({
           <p className="text-[13px] font-semibold text-foreground">
             Add {childFirst}'s SSN to enable investing
           </p>
-          <p className="mt-1 text-[11.5px] text-muted-foreground leading-relaxed">
+          <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
             Required by the IRS for 1099-DIV / 1099-B forms tied to {childFirst}'s UTMA account. One-time. Encrypted in transit. Last 4 digits stored, not the full number.
           </p>
           {hasMultipleFunds && (
-            <p className="mt-1.5 text-[10.5px] text-muted-foreground/80 leading-relaxed">
+            <p className="mt-1.5 text-3xs text-muted-foreground/80 leading-relaxed">
               Each child's account is its own UTMA. Set once for {childFirst}, separately from your other kids.
             </p>
           )}
@@ -839,7 +840,7 @@ function SsnCollectionNudge({
                   // path with no-op data (no fund mutation, just rerender).
                   window.dispatchEvent(new CustomEvent("kiddo:ssn-snoozed", { detail: { fundId } }));
                 }}
-                className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+                className="text-2xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
                 data-testid="button-snooze-ssn"
               >
                 Remind me tomorrow
@@ -863,7 +864,7 @@ function SsnCollectionNudge({
                 data-testid="input-recipient-ssn"
               />
               {serverError && (
-                <p className="text-[11px] text-destructive">{serverError}</p>
+                <p className="text-2xs text-destructive">{serverError}</p>
               )}
               <div className="flex gap-2">
                 <button
@@ -884,7 +885,7 @@ function SsnCollectionNudge({
                   Not now
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+              <p className="text-3xs text-muted-foreground/70 leading-relaxed">
                 Encrypted submission. Used only for IRS-required tax forms tied to {childFirst}'s custodial account.
               </p>
             </div>
@@ -2001,7 +2002,7 @@ export default function Dashboard() {
     if (!activeFundId) return;
     const cancel = onIdle(() => {
       prefetchMemoryBook(queryClient, activeFundId);
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, activeFundId);
       // Warm the lazy Recharts chunk during idle so the trend chart paints from
       // cache the instant its data is ready — instead of arriving last (the
       // "blank box, then it rolls in" the chunk download otherwise causes).
@@ -5279,7 +5280,7 @@ export default function Dashboard() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
+                <p className="text-3xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
                   Handoff in {age18Transition.daysUntil18 === 1 ? "1 day" : `${age18Transition.daysUntil18} days`}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
@@ -5470,7 +5471,7 @@ export default function Dashboard() {
                     🌱
                   </motion.span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85">
+                    <p className="text-3xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85">
                       The first gift just landed
                     </p>
                     <h2 className="mt-1 font-heading text-xl md:text-2xl font-semibold text-foreground leading-tight">
@@ -5898,7 +5899,7 @@ export default function Dashboard() {
                                   here). See feedback_image_load_hints
                                   _pattern.md for the canonical
                                   treatment of focal-point images. */}
-                              <img
+                              <FadeImage
                                 src={childPhotoUrl}
                                 alt=""
                                 loading="eager"
@@ -6958,10 +6959,10 @@ export default function Dashboard() {
                     <div className="flex items-baseline justify-between mb-4">
                       {/* Always "fund so far" — lifetime view permanently
                           (was "last 30 days" once fund crossed 30 days). */}
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
                         {isOwnerMode ? "Your" : childPossess} fund so far <span aria-hidden>🌱</span>
                       </p>
-                      <p className="text-[10px] text-muted-foreground/60">
+                      <p className="text-3xs text-muted-foreground/60">
                         {/* Year ALWAYS shown 2026-05-23 — was conditionally
                             hidden when fund age < 365d on the theory that
                             the year was redundant for recent funds. In
@@ -7015,7 +7016,7 @@ export default function Dashboard() {
                           erase how much they specifically did. This sub-line keeps the
                           gratitude — once, where the fold happens. */}
                       {isOwnerMode && investedByParentsTotal > 0 && parentContribYears >= 1 && (
-                        <p className="px-2 -mt-0.5 mb-0.5 text-[11px] text-muted-foreground/70" data-testid="text-parent-recognition">
+                        <p className="px-2 -mt-0.5 mb-0.5 text-2xs text-muted-foreground/70" data-testid="text-parent-recognition">
                           including {fmtRow(investedByParentsTotal)} from {custodianLabel} over {parentContribYears} years
                         </p>
                       )}
@@ -7035,13 +7036,13 @@ export default function Dashboard() {
                           Your recurring investments
                           {/* Parent, no money yet but a schedule queued → "starts {date}". */}
                           {yourRecurringRowTotal === 0 && !isOwnerMode && nextScheduled && (
-                            <span className="text-[11px] text-muted-foreground/70">
+                            <span className="text-2xs text-muted-foreground/70">
                               {" · starts "}{fmtNextDate(nextScheduled.nextTs)}
                             </span>
                           )}
                           {/* Graduated owner, hasn't started their own yet → invitation. */}
                           {yourRecurringRowTotal === 0 && isOwnerMode && (
-                            <span className="text-[11px] font-medium text-[hsl(var(--kiddo-evergreen))]">
+                            <span className="text-2xs font-medium text-[hsl(var(--kiddo-evergreen))]">
                               {" · start your own →"}
                             </span>
                           )}
@@ -7200,7 +7201,7 @@ export default function Dashboard() {
                         <button
                           type="button"
                           onClick={() => summaryScrollTo("cash")}
-                          className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+                          className="mt-2 inline-flex items-center gap-1 text-2xs text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
                           {/* Settling-state copy enhancement 2026-05-14
@@ -7235,7 +7236,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => { haptic("selection"); setLocation("/activity"); }}
-                        className="mt-3 w-full text-center text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        className="mt-3 w-full text-center text-2xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         data-testid="lifetime-link-recent"
                       >
                         Last 30 days ↗
@@ -7274,7 +7275,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+                        <p className="text-2xs font-semibold uppercase text-muted-foreground">
                           {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
                         </p>
                         <p className="text-xl font-bold text-foreground font-heading">{formatCurrency(uninvestedCash)}</p>
@@ -7361,8 +7362,8 @@ export default function Dashboard() {
               const btn = "flex flex-1 min-w-0 flex-col items-center gap-[5px] md:gap-2 py-1 md:py-2 select-none cursor-pointer transition-all active:opacity-50 active:scale-95 bg-transparent border-0";
               const tile = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-cream))] text-[hsl(var(--kiddo-evergreen))]";
               const tileGold = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-gold)/0.14)] text-[hsl(var(--kiddo-ink))]";
-              const lbl = "text-[9.5px] md:text-xs font-medium text-muted-foreground leading-tight text-center";
-              const lblGold = "text-[9.5px] md:text-xs font-semibold text-[hsl(var(--kiddo-ink))] leading-tight text-center";
+              const lbl = "text-4xs md:text-xs font-medium text-muted-foreground leading-tight text-center";
+              const lblGold = "text-4xs md:text-xs font-semibold text-[hsl(var(--kiddo-ink))] leading-tight text-center";
               return (
                 <motion.section
                   initial={{ opacity: 0, y: 6 }}
@@ -7568,7 +7569,7 @@ export default function Dashboard() {
                         same baseline. */}
                     <div className="flex items-start gap-6">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Total gifts</p>
+                      <p className="text-3xs font-semibold uppercase tracking-[0.07em] text-muted-foreground">Total gifts</p>
                       <p className="font-heading text-base font-bold text-foreground">
                         {formatCurrency(gifterRoster.reduce((s, g) => s + g.totalNetAmount, 0))}
                       </p>
@@ -7678,7 +7679,7 @@ export default function Dashboard() {
                       if (!isScrubbing && Math.abs(growthDollars) < 0.01) return null;
                       return (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{growthLabel}</p>
+                        <p className="text-3xs font-semibold uppercase tracking-[0.07em] text-muted-foreground">{growthLabel}</p>
                         <p
                           className={`font-heading text-base font-bold ${growthDollars >= 0 ? "text-green-600" : "text-red-500"}`}
                           aria-live={isScrubbing ? "off" : "polite"}
@@ -7691,7 +7692,7 @@ export default function Dashboard() {
                             metrics home rather than living on the emotional
                             anchor surface. Same number, different surface. */}
                         {Math.abs(growthPercent) >= 0.01 && (
-                          <p className={`text-[10.5px] font-semibold ${growthPercent >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
+                          <p className={`text-3xs font-semibold ${growthPercent >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
                             {growthPercent >= 0 ? "+" : ""}{growthPercent.toFixed(2)}%
                           </p>
                         )}
@@ -7700,7 +7701,7 @@ export default function Dashboard() {
                     })()}
                     {contributorCount > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Have gifted</p>
+                        <p className="text-3xs font-semibold uppercase tracking-[0.07em] text-muted-foreground">Have gifted</p>
                         <p className="font-heading text-base font-bold text-foreground">{contributorCount} {contributorCount === 1 ? "person" : "people"}</p>
                       </div>
                     )}
@@ -7859,7 +7860,7 @@ export default function Dashboard() {
                       target (new gifts + recurring follow it), existing holdings
                       are untouched, and it's reversible. Stating that removes the
                       "what did I just do?" moment. */}
-                  <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+                  <p className="mt-2 text-2xs text-muted-foreground/80 leading-relaxed">
                     This changes where new gifts and recurring investments go. {childFirst}'s current holdings aren't sold, and you can switch back anytime in Settings.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -8210,12 +8211,12 @@ export default function Dashboard() {
                                         {pctLbl && !sharesLbl && <span>{pctLbl}</span>}
                                       </p>
                                       {overlapSide === "chosen" && (
-                                        <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/70">
+                                        <p className="mt-0.5 text-3xs font-medium text-muted-foreground/70">
                                           gifter-chosen · personal
                                         </p>
                                       )}
                                       {overlapSide === "managed" && (
-                                        <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/70">
+                                        <p className="mt-0.5 text-3xs font-medium text-muted-foreground/70">
                                           algorithm-allocated · automatic
                                         </p>
                                       )}
@@ -8318,14 +8319,14 @@ export default function Dashboard() {
                                                 <button
                                                   type="button"
                                                   onClick={() => { haptic("selection"); setInvestPickerOpen(false); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("pick"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
-                                                  className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
+                                                  className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
                                                 >
                                                   One time
                                                 </button>
                                                 <button
                                                   type="button"
                                                   onClick={() => { haptic("selection"); setInvestPickerOpen(false); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
-                                                  className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
+                                                  className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
                                                 >
                                                   Recurring
                                                 </button>
@@ -8335,7 +8336,7 @@ export default function Dashboard() {
                                           <button
                                             type="button"
                                             onClick={() => { haptic("light"); setInvestPickerOpen(v => !v); }}
-                                            className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors ${investPickerOpen ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]"}`}
+                                            className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-3xs font-bold transition-colors ${investPickerOpen ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]"}`}
                                             aria-label="Add investment"
                                           >
                                             Add an investment
@@ -8359,7 +8360,7 @@ export default function Dashboard() {
                                       lens applies. See feedback_no_ai_slop.md
                                       and feedback_no_greenwashing_losses.md. */}
                                   {hasBothSections && investedTotal > 0 && (
-                                    <p className="px-1 pt-1 text-[11px] font-medium text-muted-foreground/70 tabular-nums">
+                                    <p className="px-1 pt-1 text-2xs font-medium text-muted-foreground/70 tabular-nums">
                                       Total: {formatCurrency(chosenVal)} · {Math.round((chosenVal / investedTotal) * 100)}% of invested
                                     </p>
                                   )}
@@ -8444,11 +8445,11 @@ export default function Dashboard() {
                                     <button
                                       type="button"
                                       onClick={handleCustomize}
-                                      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]`}
+                                      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-3xs font-bold transition-colors bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]`}
                                     >
                                       <Pencil size={9} />
                                       {canCustomize ? (isOwnerMode ? "Customize your mix" : `Customize ${childFirst}'s mix`) : "Customize"}
-                                      {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
+                                      {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
                                     </button>
                                     )}
                                   </div>
@@ -8458,7 +8459,7 @@ export default function Dashboard() {
                                       rationale on why per-section performance
                                       is intentionally absent. */}
                                   {hasBothSections && investedTotal > 0 && (
-                                    <p className="px-1 pt-1 text-[11px] font-medium text-muted-foreground/70 tabular-nums">
+                                    <p className="px-1 pt-1 text-2xs font-medium text-muted-foreground/70 tabular-nums">
                                       Total: {formatCurrency(managedVal)} · {Math.round((managedVal / investedTotal) * 100)}% of invested
                                     </p>
                                   )}
@@ -8704,7 +8705,7 @@ export default function Dashboard() {
                                   // face beats generic initials. Works for any
                                   // gifter (Dad's photo on the kid's roster), not
                                   // just the viewer's own "this is me" tile.
-                                  <img
+                                  <FadeImage
                                     src={avatarSrc}
                                     alt=""
                                     className="w-full h-full object-cover"
@@ -9158,7 +9159,7 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => { haptic("selection"); highlightDuplicateSchedules(ticker); }}
-                                className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                                className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
                                 data-testid={`gentle-nudge-action-${nudgeKey}`}
                               >
                                 See both schedules →
@@ -9166,7 +9167,7 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => { haptic("light"); dismissNudge(nudgeKey); }}
-                                className="text-[11px] text-muted-foreground/70 hover:text-foreground"
+                                className="text-2xs text-muted-foreground/70 hover:text-foreground"
                                 data-testid={`gentle-nudge-dismiss-${nudgeKey}`}
                               >
                                 Dismiss
@@ -9289,7 +9290,7 @@ export default function Dashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           {!hasAutoInvestAccess && (
-                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))]">Kiddo+</span>
+                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))]">Kiddo+</span>
                           )}
                           <p className="text-sm text-foreground">
                             {hasAutoInvestAccess
@@ -9424,7 +9425,7 @@ export default function Dashboard() {
                       const showSummaryLine = shownContribs.length !== 1 || pausedCount > 0;
                       return (
                         <div className="px-4 pt-3.5 pb-3 border-b border-border/40">
-                          <p className={`text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 ${showSummaryLine ? "mb-1" : ""}`}>
+                          <p className={`text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 ${showSummaryLine ? "mb-1" : ""}`}>
                             Recurring investments
                           </p>
                           {showSummaryLine && (
@@ -9572,13 +9573,13 @@ export default function Dashboard() {
                                       {isLegacyTicker(contrib.selectedTicker) && (
                                         <span
                                           title="This stock is no longer available to pick. Existing schedules still run. Cancel here to clean up."
-                                          className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-amber-700 border border-amber-200"
+                                          className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.06em] text-amber-700 border border-amber-200"
                                         >
                                           Legacy
                                         </span>
                                       )}
                                     </div>
-                                    <p className={`${isSoloHero ? "text-xs mt-0.5" : "text-[11px]"} text-muted-foreground truncate tabular-nums`}>
+                                    <p className={`${isSoloHero ? "text-xs mt-0.5" : "text-2xs"} text-muted-foreground truncate tabular-nums`}>
                                       <span className={isSoloHero ? "font-semibold text-foreground/85" : ""}>
                                         {formatMoneyFriendly(parseFloat(contrib.amount))}/{freqLabel(contrib.frequency)}
                                       </span>
@@ -9589,7 +9590,7 @@ export default function Dashboard() {
                                     </p>
                                   </div>
                                   <span
-                                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    className={`shrink-0 rounded-full px-2 py-0.5 text-3xs font-bold ${
                                       isReadOnly ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
                                     }`}
                                   >
@@ -9680,7 +9681,7 @@ export default function Dashboard() {
                   investments" on the one-time card next to this. */}
               {isReadOnlyFund && (
                 <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
+                  <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                     Recurring investments
                   </p>
                   <div className="flex items-start gap-3">
@@ -9734,7 +9735,7 @@ export default function Dashboard() {
               <div className="md:flex-1 flex flex-col">
               {/* ── One-time investment card ── */}
               <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "onetime")} data-testid="card-one-time-contribution-v2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
+                <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                   One-time investment
                 </p>
                 <div className="min-w-0">
@@ -9763,7 +9764,7 @@ export default function Dashboard() {
                         : null;
                       return (
                         <div className="rounded-xl bg-[hsl(var(--kiddo-cream)/0.7)] border border-[hsl(var(--kiddo-border)/0.4)] p-3 space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/60">
+                          <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/60">
                             Last investment
                           </p>
                           {/* Real brand logo for picks (Robinhood / Apple Stocks
@@ -9826,7 +9827,7 @@ export default function Dashboard() {
                     // handed-off fund. Everything else is hidden.
                     <button
                       type="button"
-                      className="w-full text-center text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors py-1"
+                      className="w-full text-center text-2xs text-muted-foreground/70 hover:text-foreground transition-colors py-1"
                       onClick={() => { openDetailScope({ kind: "contributions" }); }}
                       data-testid="button-one-time-view-all-readonly"
                     >
@@ -9906,7 +9907,7 @@ export default function Dashboard() {
                           inline — Acorns-style. */}
                       <button
                         type="button"
-                        className="w-full text-center text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors py-1"
+                        className="w-full text-center text-2xs text-muted-foreground/70 hover:text-foreground transition-colors py-1"
                         onClick={() => { openDetailScope({ kind: "contributions" }); }}
                         data-testid="button-one-time-view-all-v2"
                       >
@@ -10358,7 +10359,7 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {imgUrl ? (
                           <>
-                            <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: imgPosition, display: "block" }} />
+                            <FadeImage src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: imgPosition, display: "block" }} />
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 35%, white 100%)" }} />
                           </>
                         ) : (
@@ -10725,7 +10726,7 @@ export default function Dashboard() {
                                       const evFxPct = Number.isFinite(evFx) ? Math.max(0, Math.min(100, evFx * 100)) : 50;
                                       const evFyPct = Number.isFinite(evFy) ? Math.max(0, Math.min(100, evFy * 100)) : 50;
                                       return (
-                                        <img
+                                        <FadeImage
                                           src={imgUrl}
                                           alt={ev.name}
                                           style={{
@@ -11832,7 +11833,7 @@ export default function Dashboard() {
                   ))}
                 </ul>
               </div>
-              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+              <p className="text-2xs text-muted-foreground/60 leading-relaxed">
                 Past performance does not guarantee future results. Not investment advice.
               </p>
               <button
@@ -11980,8 +11981,8 @@ export default function Dashboard() {
           </div>
 
           <div className="px-6 pt-5 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
-              <span className="text-[10px]">{isOwnerMode ? "🌱" : "💛"}</span> {isOwnerMode ? "Add to your fund" : "Add a gift"}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
+              <span className="text-3xs">{isOwnerMode ? "🌱" : "💛"}</span> {isOwnerMode ? "Add to your fund" : "Add a gift"}
             </span>
           </div>
 
@@ -12003,7 +12004,7 @@ export default function Dashboard() {
                     <p className="text-xs font-semibold text-amber-800">
                       {formatCurrency(uninvestedCash)} already in the fund
                     </p>
-                    <p className="text-[11px] text-amber-700 mt-0.5">
+                    <p className="text-2xs text-amber-700 mt-0.5">
                       There's uninvested cash in {recipientFirstNameDisplay || "the fund"}. This gift is in addition to that.
                     </p>
                   </div>
@@ -12031,7 +12032,7 @@ export default function Dashboard() {
                           key={amt}
                           type="button"
                           onClick={() => setOneTimeAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                             oneTimeAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -12041,7 +12042,7 @@ export default function Dashboard() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum. Estimated processing updates live once you choose a payment method.</p>
+                    <p className="mt-1.5 text-2xs text-muted-foreground">$5 minimum. Estimated processing updates live once you choose a payment method.</p>
                   </div>
                 </div>
 
@@ -12082,21 +12083,21 @@ export default function Dashboard() {
                     <div className="rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] border border-[hsl(var(--kiddo-evergreen)/0.20)] p-3.5 space-y-2.5">
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
-                        <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+                        <p className="text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
                           {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
+                          <p className="text-3xs uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
                           <p className="text-sm font-semibold text-foreground/70 tabular-nums">{formatCurrency(beforeValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
+                          <p className="text-2xs text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
                         </div>
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                          <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
                           <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">
+                          <p className="text-2xs text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
                             {Math.abs(pctDelta) >= 0.1 && (
                               <span className={`ml-1 font-medium ${pctDelta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
@@ -12182,8 +12183,8 @@ export default function Dashboard() {
                           <StockLogo ticker={defaultTicker} size={28} className="shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">{stockMeta?.name ?? defaultTicker}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
-                            {amt > 0 && <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1">{formatCurrency(amt)} invested</p>}
+                            <p className="text-2xs text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
+                            {amt > 0 && <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1">{formatCurrency(amt)} invested</p>}
                           </div>
                         </div>
                       );
@@ -12195,7 +12196,7 @@ export default function Dashboard() {
                           <div className="text-2xl shrink-0">💵</div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Held as cash</p>
-                            <p className="text-[11px] text-muted-foreground">Sits in the fund until you manually invest it</p>
+                            <p className="text-2xs text-muted-foreground">Sits in the fund until you manually invest it</p>
                           </div>
                         </div>
                       );
@@ -12231,14 +12232,14 @@ export default function Dashboard() {
                               <div key={a.ticker} className="flex items-center gap-2 rounded-lg bg-background/70 border border-border/50 px-2.5 py-1.5">
                                 <StockLogo ticker={a.ticker} size={20} />
                                 <div className="min-w-0">
-                                  <p className="text-[10px] font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
-                                  <p className="text-[9px] text-muted-foreground leading-tight truncate">{a.name}</p>
+                                  <p className="text-3xs font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
+                                  <p className="text-4xs text-muted-foreground leading-tight truncate">{a.name}</p>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : isCustom ? (
-                          <p className="text-[11px] text-muted-foreground">Loading your custom mix...</p>
+                          <p className="text-2xs text-muted-foreground">Loading your custom mix...</p>
                         ) : null}
                       </div>
                     );
@@ -12309,7 +12310,7 @@ export default function Dashboard() {
                       no-greenwashing rule, omitting this would be the
                       Acorns-style "money sitting uninvested" failure. */}
                   {oneTimeExecutionModel === "cash" && (
-                    <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+                    <p className="px-1 text-2xs leading-relaxed text-muted-foreground">
                       Cash sits in the fund earning nothing until you invest it. Use this when you want to time the buy yourself, or accumulate before a single bigger investment.
                     </p>
                   )}
@@ -12334,9 +12335,9 @@ export default function Dashboard() {
                         >
                           <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
                           <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                          <p className="text-2xs text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
                           {amt > 0 && (
-                            <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
+                            <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
                               {formatCurrency(amt)} invested
                             </p>
                           )}
@@ -12407,21 +12408,21 @@ export default function Dashboard() {
                     <div className="rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] border border-[hsl(var(--kiddo-evergreen)/0.20)] p-3.5 space-y-2.5">
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
-                        <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+                        <p className="text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
                           {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
+                          <p className="text-3xs uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
                           <p className="text-sm font-semibold text-foreground/70 tabular-nums">{formatCurrency(beforeValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
+                          <p className="text-2xs text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
                         </div>
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                          <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
                           <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
+                          <p className="text-2xs text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
                         </div>
                       </div>
                     </div>
@@ -12514,14 +12515,14 @@ export default function Dashboard() {
                           <span className="block text-xs text-muted-foreground">{description}</span>
                         </span>
                         <span className="shrink-0 text-right">
-                          <span className={`block text-[11px] font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}>
+                          <span className={`block text-2xs font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}>
                             {fee}
                           </span>
-                          <span className="block text-[10px] text-foreground/80" data-testid={`text-one-time-total-${method}`}>
+                          <span className="block text-3xs text-foreground/80" data-testid={`text-one-time-total-${method}`}>
                             {formatCurrency(estimate.totalCharge)} total
                           </span>
                           {savings > 0 && (
-                            <span className="block text-[10px] text-green-700">
+                            <span className="block text-3xs text-green-700">
                               Save about {formatCurrency(savings)}
                             </span>
                           )}
@@ -12529,11 +12530,11 @@ export default function Dashboard() {
                       </button>
                     )})}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     Estimated charge = gift amount plus payment processing. The full gift amount goes into the fund.
                   </p>
                   {oneTimeAchSavings > 0 && (
-                    <p className="text-[11px] text-green-700">
+                    <p className="text-2xs text-green-700">
                       Bank transfer saves about {formatCurrency(oneTimeAchSavings)} compared with card pricing.
                     </p>
                   )}
@@ -12563,7 +12564,7 @@ export default function Dashboard() {
                         rows={3}
                         className="w-full rounded-xl border border-amber-200/40 bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-amber-700/40 focus:outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <p className="text-[10px] text-muted-foreground text-right">{oneTimeMemoryNote.length}/240</p>
+                      <p className="text-3xs text-muted-foreground text-right">{oneTimeMemoryNote.length}/240</p>
                       {/* Media trio (photo / video / voice). Voice is the moat
                           — Emma at 18 hearing the parent's voice from when she
                           was 3. Collapsible by default so the speed of the
@@ -13013,7 +13014,7 @@ export default function Dashboard() {
                           // The gifter's real profile photo in the detail modal
                           // hero — same swap as the small roster avatar so the
                           // face reads consistently (Dad's photo, not initials).
-                          <img
+                          <FadeImage
                             src={(selectedGifter.avatarUrl || user?.profileImageUrl) as string}
                             alt=""
                             className="w-full h-full object-cover"
@@ -13609,7 +13610,7 @@ export default function Dashboard() {
                 className="w-full rounded-xl border border-amber-200/40 bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-amber-700/40 focus:outline-none focus:ring-1 focus:ring-primary"
                 data-testid="textarea-add-from-schedule-note"
               />
-              <p className="text-[10px] text-muted-foreground text-right">{addFromScheduleNote.length}/240</p>
+              <p className="text-3xs text-muted-foreground text-right">{addFromScheduleNote.length}/240</p>
               {/* Photo / video / voice trio for the contribute-now flow.
                   Same composer as the one-time and recurring flows so the
                   parent learns the pattern once. */}
@@ -13860,7 +13861,7 @@ export default function Dashboard() {
                   ? `It'll show up in ${recipientFirstNameDisplay}'s fund any moment now.`
                   : "It'll show up in the fund any moment now."}
               </p>
-              <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
+              <p className="text-2xs text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
                 Powered by Kiddo · gifts that actually last 🌱
               </p>
             </div>
@@ -13948,7 +13949,7 @@ export default function Dashboard() {
                       <span>+ added by $25/mo recurring</span>
                       <span className="font-semibold text-foreground tabular-nums">+{fmt(delta)}</span>
                     </div>
-                    <p className="pt-1 text-[10px] leading-snug text-muted-foreground/70">
+                    <p className="pt-1 text-3xs leading-snug text-muted-foreground/70">
                       Starting from {fmt(totalValue)}, {yearsLabel} of compounding at 7% yearly average. Markets vary. Time is what compounds.
                     </p>
                   </div>
@@ -13973,7 +13974,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Kiddo+</p>
-                    <p className="text-[11px] text-muted-foreground">$3.99/month or $29/year. Cancel any time.</p>
+                    <p className="text-2xs text-muted-foreground">$3.99/month or $29/year. Cancel any time.</p>
                   </div>
                 </div>
 
@@ -14054,8 +14055,8 @@ export default function Dashboard() {
           )}
 
           <div className="px-6 pt-4 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-              <span className="text-[10px]">🔁</span> Recurring investment
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+              <span className="text-3xs">🔁</span> Recurring investment
             </span>
           </div>
 
@@ -14114,7 +14115,7 @@ export default function Dashboard() {
                           key={amt}
                           type="button"
                           onClick={() => setAutoInvestAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                             autoInvestAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -14145,7 +14146,7 @@ export default function Dashboard() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum per gift</p>
+                    <p className="mt-1.5 text-2xs text-muted-foreground">$5 minimum per gift</p>
                   </div>
                 </div>
 
@@ -14174,7 +14175,7 @@ export default function Dashboard() {
                       className="mt-3 rounded-2xl bg-[hsl(var(--kiddo-gold)/0.10)] border border-[hsl(var(--kiddo-gold)/0.30)] px-4 py-3 text-center"
                       data-testid="auto-invest-daily-equivalent"
                     >
-                      <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-muted-foreground/80">
+                      <p className="text-3xs uppercase tracking-[0.14em] font-bold text-muted-foreground/80">
                         That's about
                       </p>
                       <p className="mt-0.5 text-2xl font-bold text-foreground tabular-nums leading-tight">
@@ -14221,10 +14222,10 @@ export default function Dashboard() {
                           <div className="grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 text-[12px] items-baseline">
                             <span className="text-green-800/55">Was</span>
                             <span className="text-green-800/75 tabular-nums">{formatCurrency(prevAmount)}/{freqWord(prevFreq)}</span>
-                            <span className="text-green-800/55 text-[11px]">· {formatCurrency(prevAnnualized)}/yr</span>
+                            <span className="text-green-800/55 text-2xs">· {formatCurrency(prevAnnualized)}/yr</span>
                             <span className="text-green-800/55">Now</span>
                             <span className="text-green-800 font-semibold tabular-nums">{formatCurrency(amt)}/{freqWord(autoInvestFrequency)}</span>
-                            <span className="text-green-800/70 text-[11px]">
+                            <span className="text-green-800/70 text-2xs">
                               · {formatCurrency(amt * periodsPerYear)}/yr
                               {annualDelta !== 0 && (
                                 <span className={`ml-1 font-medium ${annualDelta > 0 ? "text-green-700" : "text-amber-700"}`}>
@@ -14261,7 +14262,7 @@ export default function Dashboard() {
                         </>
                       )}
                       {showProjection && (
-                        <p className="text-[10px] text-green-800/45 leading-snug pt-0.5">
+                        <p className="text-3xs text-green-800/45 leading-snug pt-0.5">
                           *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
                         </p>
                       )}
@@ -14338,7 +14339,7 @@ export default function Dashboard() {
                           <StockLogo ticker={defaultTicker} size={28} className="shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">{stockMeta?.name ?? defaultTicker}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
+                            <p className="text-2xs text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
                           </div>
                         </div>
                       );
@@ -14350,7 +14351,7 @@ export default function Dashboard() {
                           <div className="text-2xl shrink-0">💵</div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Held as cash</p>
-                            <p className="text-[11px] text-muted-foreground">Money sits as cash until you manually invest it</p>
+                            <p className="text-2xs text-muted-foreground">Money sits as cash until you manually invest it</p>
                           </div>
                         </div>
                       );
@@ -14386,14 +14387,14 @@ export default function Dashboard() {
                               <div key={a.ticker} className="flex items-center gap-2 rounded-lg bg-background/70 border border-border/50 px-2.5 py-1.5">
                                 <StockLogo ticker={a.ticker} size={20} />
                                 <div className="min-w-0">
-                                  <p className="text-[10px] font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
-                                  <p className="text-[9px] text-muted-foreground leading-tight truncate">{a.name}</p>
+                                  <p className="text-3xs font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
+                                  <p className="text-4xs text-muted-foreground leading-tight truncate">{a.name}</p>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : isCustom ? (
-                          <p className="text-[11px] text-muted-foreground">Loading your custom mix...</p>
+                          <p className="text-2xs text-muted-foreground">Loading your custom mix...</p>
                         ) : null}
                       </div>
                     );
@@ -14448,9 +14449,9 @@ export default function Dashboard() {
                           >
                             <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
                             <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                            <p className="text-2xs text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
                             {amt > 0 && (
-                              <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
+                              <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
                                 {formatCurrency(amt)} invested
                               </p>
                             )}
@@ -14654,7 +14655,7 @@ export default function Dashboard() {
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3.5 text-sm leading-relaxed resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:border-[hsl(var(--kiddo-evergreen)/0.4)] focus:ring-1 focus:ring-[hsl(var(--kiddo-evergreen)/0.2)]"
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground">{autoInvestMemoryNote.length}/400</span>
+                  <span className="text-3xs text-muted-foreground">{autoInvestMemoryNote.length}/400</span>
                 </div>
                 {/* Photo / video / voice trio. Note: per the "recurring stamps
                     once" rule, only the kickoff entry carries media. Future
@@ -14717,7 +14718,7 @@ export default function Dashboard() {
                       ? ` into ${quotedAutoInvestStocks.find(s => s.symbol === autoInvestTicker)?.name ?? autoInvestTicker}`
                       : ""}. Change or cancel anytime.
                   </p>
-                  <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
+                  <p className="text-2xs text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
                     Powered by Kiddo · gifts that actually last 🌱
                   </p>
                 </div>
@@ -14805,17 +14806,17 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-foreground">Teen stock suggestions</p>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {pendingCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">
+                          <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]">
                             {pendingCount} pending
                           </span>
                         )}
                         {approvedCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-3xs font-bold text-green-700">
                             {approvedCount} approved
                           </span>
                         )}
                         {declinedCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-bold text-amber-800">
                             {declinedCount} declined
                           </span>
                         )}
@@ -14841,10 +14842,10 @@ export default function Dashboard() {
                               <p className="font-medium text-foreground">{suggestion.ticker}</p>
                               {suggestion.reason && <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>}
                               {suggestion.submittedAt && (
-                                <p className="mt-1 text-[10px] text-muted-foreground/60">Submitted {new Date(suggestion.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                                <p className="mt-1 text-3xs text-muted-foreground/60">Submitted {new Date(suggestion.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                               )}
                             </div>
-                            <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${statusPill}`}>
+                            <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-bold ${statusPill}`}>
                               {suggestion.isPending ? "Saving…" : statusLabel}
                             </span>
                           </div>
@@ -15047,16 +15048,16 @@ export default function Dashboard() {
               {/* Summary row */}
               <div className="flex gap-3 mb-4">
                 <div className="flex-1 rounded-xl bg-muted/40 border border-border/30 px-3 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Current value</p>
+                  <p className="text-3xs font-semibold uppercase tracking-wide text-muted-foreground">Current value</p>
                   <p className="text-sm font-bold text-foreground mt-0.5">{formatCurrency(maxValue)}</p>
                 </div>
                 <div className="flex-1 rounded-xl bg-muted/40 border border-border/30 px-3 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total shares</p>
+                  <p className="text-3xs font-semibold uppercase tracking-wide text-muted-foreground">Total shares</p>
                   <p className="text-sm font-bold text-foreground mt-0.5">{maxShares.toFixed(4)}</p>
                 </div>
                 {pricePerShare > 0 && (
                   <div className="flex-1 rounded-xl bg-muted/40 border border-border/30 px-3 py-2.5 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Per share</p>
+                    <p className="text-3xs font-semibold uppercase tracking-wide text-muted-foreground">Per share</p>
                     <p className="text-sm font-bold text-foreground mt-0.5">{formatCurrency(pricePerShare)}</p>
                   </div>
                 )}
@@ -15118,7 +15119,7 @@ export default function Dashboard() {
                         key={`${option.label}-${option.amount}`}
                         type="button"
                         onClick={() => setSellShares(option.amount.toFixed(2))}
-                        className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                        className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                           sellShares === option.amount.toFixed(2)
                             ? "border-primary text-primary bg-primary/10"
                             : "border-border text-muted-foreground hover:text-foreground"
@@ -15131,7 +15132,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => setSellShares(maxShares.toFixed(4))}
-                        className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                        className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                           sellShares === maxShares.toFixed(4)
                             ? "border-primary text-primary bg-primary/10"
                             : "border-border text-muted-foreground hover:text-foreground"
@@ -15348,10 +15349,10 @@ export default function Dashboard() {
                       <div className="grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 text-[12px] items-baseline">
                         <span className="text-amber-900/55">Was</span>
                         <span className="text-amber-900/80 tabular-nums">{formatCurrency(cancelAnnualized)}/yr</span>
-                        <span className="text-amber-900/55 text-[11px]">added on autopilot</span>
+                        <span className="text-amber-900/55 text-2xs">added on autopilot</span>
                         <span className="text-amber-900/55">After</span>
                         <span className="text-amber-900 font-semibold tabular-nums">$0/yr</span>
-                        <span className="text-amber-900/55 text-[11px]">unless you set up a new one</span>
+                        <span className="text-amber-900/55 text-2xs">unless you set up a new one</span>
                       </div>
                       <div className="pt-1.5 border-t border-amber-200/60 space-y-1">
                         <p className="text-[12px] text-amber-900/85 leading-relaxed">
@@ -15363,7 +15364,7 @@ export default function Dashboard() {
                           −{cancelFmt0(cancelFv)} less for {cancelChildFirst} at {majorityAge}<span className="text-amber-900/55 font-normal">*</span>
                         </p>
                       </div>
-                      <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">
+                      <p className="text-3xs text-amber-900/55 leading-snug pt-0.5">
                         *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
                       </p>
                     </div>

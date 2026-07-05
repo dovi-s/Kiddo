@@ -27,6 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart, Plus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { FadeImage } from "@/components/ui/fade-image";
 import { GiftersAcrossFundsSheet } from "@/components/GiftersAcrossFundsSheet";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -225,7 +226,7 @@ function HouseholdSparkline({
       </svg>
       {showDelta && (
         <p
-          className="mt-2 text-[11px] font-semibold tabular-nums opacity-80"
+          className="mt-2 text-2xs font-semibold tabular-nums opacity-80"
           data-testid="household-sparkline-delta"
         >
           {deltaPrefix}{new Intl.NumberFormat("en-US", {
@@ -807,7 +808,7 @@ export default function FundsOverview() {
                         : "bg-[hsl(var(--kiddo-evergreen)/0.06)] text-[hsl(var(--kiddo-evergreen)/0.7)]"
                     }`}>
                       {f.childPhotoUrl ? (
-                        <img
+                        <FadeImage
                           src={f.childPhotoUrl}
                           alt=""
                           className="h-full w-full object-cover"
@@ -832,7 +833,7 @@ export default function FundsOverview() {
                           Settings surface; the emotional cue belongs on
                           the per-kid Dashboard. See
                           project_funds_overview_rules.md. */}
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-2xs text-muted-foreground">
                         {transferredLabel
                           ? transferredLabel
                           : (
@@ -859,7 +860,7 @@ export default function FundsOverview() {
                           Locked 2026-05-18. */}
                       {!isTransferred && typeof f.delta30dUsd === "number" && Math.abs(f.delta30dUsd) >= 1 && (
                         <p
-                          className={`text-[10px] tabular-nums leading-tight mt-0.5 ${f.delta30dUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kora-gold))]"}`}
+                          className={`text-3xs tabular-nums leading-tight mt-0.5 ${f.delta30dUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kora-gold))]"}`}
                           data-testid={`overview-fund-delta-${f.id}`}
                         >
                           {f.delta30dUsd >= 0 ? "+" : "−"}{fmtCurrency(Math.abs(f.delta30dUsd), { whole: true })}
@@ -876,7 +877,7 @@ export default function FundsOverview() {
                           market moves too. Per Tier-2 deferred #4. */}
                       {!isTransferred && typeof f.thisMonthGiftUsd === "number" && f.thisMonthGiftUsd >= 1 && (
                         <p
-                          className="text-[10px] tabular-nums leading-tight mt-0.5 text-muted-foreground"
+                          className="text-3xs tabular-nums leading-tight mt-0.5 text-muted-foreground"
                           data-testid={`overview-fund-inflow-${f.id}`}
                         >
                           {fmtCurrency(f.thisMonthGiftUsd, { whole: true })} in gifts
@@ -967,7 +968,7 @@ export default function FundsOverview() {
           >
             <div className="flex items-baseline justify-between gap-3 mb-3">
               <p className="kiddo-section-label">Growing automatically</p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 {recurring.activeCount} active
               </p>
             </div>
@@ -980,7 +981,7 @@ export default function FundsOverview() {
               >
                 {fmtCurrency(animatedRecurringMonthly)}
               </p>
-              <p className="text-[11px] text-muted-foreground">per month total</p>
+              <p className="text-2xs text-muted-foreground">per month total</p>
             </div>
             <div className="space-y-2">
               {recurringItems.map((item) => {
@@ -1009,7 +1010,7 @@ export default function FundsOverview() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-8 w-8 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
                         {item.childPhotoUrl ? (
-                          <img src={item.childPhotoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          <FadeImage src={item.childPhotoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
                         ) : (
                           String(displayName).slice(0, 1).toUpperCase()
                         )}
@@ -1028,7 +1029,7 @@ export default function FundsOverview() {
                               bank, amount). */}
                           {item.isDuplicate && (
                             <span
-                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                              className="shrink-0 rounded-full px-1.5 py-0.5 text-4xs font-bold uppercase tracking-wide"
                               style={{
                                 background: "hsl(var(--kora-gold) / 0.14)",
                                 color: "hsl(var(--kora-gold))",
@@ -1045,7 +1046,7 @@ export default function FundsOverview() {
                             on the same fund don't render as identical
                             rows. See buildRecurringRowSubtitle for the
                             format choices. */}
-                        <p className="text-[11px] text-muted-foreground truncate">
+                        <p className="text-2xs text-muted-foreground truncate">
                           {buildRecurringRowSubtitle(item)}
                         </p>
                       </div>
@@ -1090,7 +1091,7 @@ export default function FundsOverview() {
                       <p className="text-sm font-medium text-foreground truncate">
                         {o.recipientFirstName ? `${capFirst(o.recipientFirstName)} · ` : ""}{o.name}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">{fmtEventDate(o.eventDate)}</p>
+                      <p className="text-2xs text-muted-foreground">{fmtEventDate(o.eventDate)}</p>
                     </div>
                   </div>
                   <ArrowRight size={14} className="text-muted-foreground shrink-0" />
@@ -1134,7 +1135,7 @@ export default function FundsOverview() {
                     {uniqueGifterCount === 1 ? "person has" : "people have"} given to your{" "}
                     {funds.length === 1 ? "child" : "children"}.
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                  <p className="text-2xs text-muted-foreground mt-1.5">
                     See who gave to who.
                   </p>
                 </div>
@@ -1152,7 +1153,7 @@ export default function FundsOverview() {
         {/* Honest footer note. Surfaces are not pretending to be the
             kid-emotional anchor — they're an administrative glance.
             Per-fund navigation is the answer for everything else. */}
-        <p className="text-center text-[11px] text-muted-foreground/70 pt-2 pb-6">
+        <p className="text-center text-2xs text-muted-foreground/70 pt-2 pb-6">
           Each fund stays separate. Open one to see its Memory Book, activity, and settings.
         </p>
       </main>

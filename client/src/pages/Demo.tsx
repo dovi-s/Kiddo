@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Mascot } from "@/components/ui/mascot";
 import { useToast } from "@/hooks/use-toast";
 import { writeLocalCache } from "@/lib/local-cache";
@@ -97,7 +98,7 @@ function PersonaAvatar({ email, name, size }: { email: string; name: string; siz
   }
   return (
     <div style={{ width: size, height: size }} className="shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-black/5">
-      <img src={src} alt={name} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      <FadeImage src={src} alt={name} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
     </div>
   );
 }
@@ -342,7 +343,7 @@ export default function Demo() {
                       <PersonaAvatar email={account.email} name={account.display} size={34} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-foreground">{account.display}</p>
-                        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{account.oneLiner}</p>
+                        <p className="mt-0.5 text-2xs leading-snug text-muted-foreground">{account.oneLiner}</p>
                       </div>
                       <ArrowRight size={14} className="shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-1" />
                     </button>
@@ -369,7 +370,7 @@ export default function Demo() {
             </ul>
           </section>
 
-          <p className="mx-auto mt-10 max-w-3xl text-center text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-10 max-w-3xl text-center text-2xs leading-relaxed text-muted-foreground">
             The Rivera family is fictional, created to demonstrate how Kiddo works. Names, gifts, notes, and dollar amounts are illustrative; any resemblance to real people is coincidental.
           </p>
 

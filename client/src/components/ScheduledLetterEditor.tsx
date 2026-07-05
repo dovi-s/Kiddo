@@ -504,7 +504,7 @@ export function ScheduledLetterEditor({
                       <p className="text-xs font-semibold text-foreground mb-1">
                         Or leave a photo, video, or voice memo.
                       </p>
-                      <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+                      <p className="text-2xs text-muted-foreground mb-2.5 leading-relaxed">
                         {displayName} hearing your voice or seeing your face on the exact day you picked is the kind of moment nothing else gives them.
                       </p>
                       <MemoryMediaPicker
@@ -536,7 +536,7 @@ export function ScheduledLetterEditor({
                       ? (isEditMode ? "Saving..." : "Sealing...")
                       : (isEditMode ? "Save changes" : "Seal until that day")}
                   </Button>
-                  <p className="mt-2 text-[10px] text-muted-foreground/70 text-center leading-snug">
+                  <p className="mt-2 text-3xs text-muted-foreground/70 text-center leading-snug">
                     <Lock className="inline-block w-2.5 h-2.5 mr-0.5 -mt-0.5" />
                     Hidden from {displayName}'s Kid View until {formattedDeliveryDate || "the chosen day"}. You can edit or reschedule any time before then.
                   </p>

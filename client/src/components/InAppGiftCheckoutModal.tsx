@@ -58,7 +58,7 @@ function PayBody({ successPath, amountLabel }: { successPath: string; amountLabe
         {busy ? "Sending…" : `Send ${amountLabel}`}
       </button>
       {err && <p className="text-sm text-amber-700" data-testid="inapp-gift-error">{err}</p>}
-      <p className="text-center text-[11px] text-muted-foreground">Secure, in-app. No redirect.</p>
+      <p className="text-center text-2xs text-muted-foreground">Secure, in-app. No redirect.</p>
     </div>
   );
 }

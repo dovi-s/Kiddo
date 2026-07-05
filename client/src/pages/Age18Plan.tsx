@@ -593,7 +593,7 @@ export default function Age18Plan() {
           <div className="kiddo-card p-5 mb-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Time remaining</p>
+                <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Time remaining</p>
                 {age18Transition.monthsUntil18 <= 18 ? (
                   // Final 18 months — months as the headline unit so the
                   // number doesn't read "0 years" the whole runway.
@@ -637,7 +637,7 @@ export default function Age18Plan() {
               </div>
               {totalValue > 0 && (
                 <div className="text-right shrink-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">On track for</p>
+                  <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">On track for</p>
                   <p
                     className="text-2xl font-bold text-[hsl(var(--kiddo-evergreen))] font-heading leading-none tabular-nums"
                     aria-live={heroProjectionAnimating ? "off" : "polite"}
@@ -655,7 +655,7 @@ export default function Age18Plan() {
                 The investments stay exactly where they are.
               </p>
               {totalValue > 0 && (
-                <p className="text-[10px] text-muted-foreground/55 leading-snug mt-2">
+                <p className="text-3xs text-muted-foreground/55 leading-snug mt-2">
                   *{KIDDO_PROJECTION_DISCLAIMER}
                 </p>
               )}
@@ -673,7 +673,7 @@ export default function Age18Plan() {
         {isDemoUser && totalValue > 0 && (
           <div className="kiddo-card mb-4 overflow-hidden border-2 border-[hsl(var(--kiddo-evergreen)/0.25)]">
             <div className="px-5 pt-5 pb-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
+              <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
                 What {childName} inherits at {majorityAge}
               </p>
               <p className="text-xs text-muted-foreground/80 leading-snug mb-4">
@@ -682,7 +682,7 @@ export default function Age18Plan() {
 
               {/* Hero number — slider-driven projection */}
               <div className="rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)] px-5 py-5 mb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--kiddo-evergreen))/0.85] mb-1.5">
+                <p className="text-3xs font-semibold uppercase tracking-widest text-[hsl(var(--kiddo-evergreen))/0.85] mb-1.5">
                   Projected value at {majorityAge}
                 </p>
                 <p className="text-4xl font-bold text-[hsl(var(--kiddo-evergreen))] font-heading leading-none tabular-nums">
@@ -704,7 +704,7 @@ export default function Age18Plan() {
                       </span>
                       {sliderMonthly > 0 ? " each month" : " on top"}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/70 tabular-nums">
+                    <p className="text-3xs text-muted-foreground/70 tabular-nums">
                       {yearsLeft.toFixed(1)} years to go
                     </p>
                   </div>
@@ -723,7 +723,7 @@ export default function Age18Plan() {
                     step={25}
                     aria-label="Monthly add to fund"
                   />
-                  <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground/60 tabular-nums">
+                  <div className="flex justify-between mt-1.5 text-3xs text-muted-foreground/60 tabular-nums">
                     <span>$0</span>
                     <span>$150</span>
                     <span>$300</span>
@@ -732,7 +732,7 @@ export default function Age18Plan() {
               )}
 
               {/* Emotional layer — the part Acorns can't match in a sprint */}
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
+              <p className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
                 And the family record so far
               </p>
               <div className="grid grid-cols-2 gap-2 mb-4">
@@ -776,7 +776,7 @@ export default function Age18Plan() {
 
               {/* First thing she'll see — the parent's sealed letter */}
               <div className="rounded-xl border border-border bg-card/50 px-4 py-3.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1.5">
+                <p className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1.5">
                   First thing {she} {reads} on {her} {majorityOrdinal}
                 </p>
                 {parentLetter ? (
@@ -786,7 +786,7 @@ export default function Age18Plan() {
                         ? parentLetter.content.slice(0, 140).trim() + "…"
                         : parentLetter.content}"
                     </p>
-                    <p className="text-[11px] text-muted-foreground/80 mt-2">
+                    <p className="text-2xs text-muted-foreground/80 mt-2">
                       From {parentLetter.authorName || parentName || "Dad"}
                     </p>
                   </>
@@ -801,7 +801,7 @@ export default function Age18Plan() {
                 )}
               </div>
 
-              <p className="text-[10px] text-muted-foreground/55 leading-snug mt-3">
+              <p className="text-3xs text-muted-foreground/55 leading-snug mt-3">
                 Projection assumes 7% yearly average. Illustrative payment examples; costs vary by region and typically rise with inflation.
               </p>
             </div>
@@ -811,7 +811,7 @@ export default function Age18Plan() {
         {/* THE FUND */}
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The fund</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The fund</p>
             {/* Italic pull-quote "Everything stays exactly where it is..."
                 removed 2026-05-20. Same anti-pattern as the
                 "doesn't just receive a fund / She receives a letter"
@@ -861,7 +861,7 @@ export default function Age18Plan() {
         {/* YOUR NOTE */}
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your note</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your note</p>
             {/* Italic "doesn't just receive a fund. She receives a letter."
                 teaser removed 2026-05-11. Three things wrong:
                   1. Marketing voice on a product surface (AI-slop
@@ -968,7 +968,7 @@ export default function Age18Plan() {
         {/* THE MEMORY BOOK */}
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The Memory Book</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The Memory Book</p>
             {/* Italic teaser removed (same anti-pattern as the "Your
                 note" card above — marketing rhythm, wrong verb,
                 hardcoded pronoun). Bullets below describe what the
@@ -1070,7 +1070,7 @@ export default function Age18Plan() {
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] mt-2 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{item.label}</p>
+                      <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{item.label}</p>
                       <p className="text-sm font-semibold text-foreground">{item.heading}</p>
                       <AnimatePresence>
                         {openTimeline === i && (
@@ -1127,7 +1127,7 @@ export default function Age18Plan() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+              <p className="text-2xs text-muted-foreground mt-3 leading-relaxed">
                 *{KIDDO_PROJECTION_DISCLAIMER} Illustrative only. Past performance does not guarantee future results. Kiddo does not provide investment advice.
               </p>
             </div>

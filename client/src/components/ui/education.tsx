@@ -83,7 +83,12 @@ export function EducationTip({ title, children, icon = "help", variant = "expand
               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 rounded-xl bg-card border border-border shadow-lg z-50"
               data-testid="education-tip-tooltip"
             >
-              <button onClick={() => setIsOpen(false)} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground">
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close"
+                className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              >
                 <X size={12} />
               </button>
               <p className="text-xs font-medium text-foreground mb-1">{title}</p>

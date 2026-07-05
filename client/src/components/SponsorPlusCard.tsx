@@ -173,7 +173,7 @@ export function SponsorPlusCard({
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Sponsor a year of Plus for {safeChildName}'s fund. Unlocks recurring contributions for everyone on the fund, custom fund mix, photo and voice memos in the Memory Book, and co-parent access. One-time payment; we never charge you again.
             </p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+            <p className="mt-1.5 text-2xs text-muted-foreground/85">
               <span className="font-semibold text-foreground">$29 for a year of Plus</span>
               <span className="text-muted-foreground/70"> · {safeChildName}'s family takes over the bill next year if they want to keep it going.</span>
             </p>
@@ -192,7 +192,7 @@ export function SponsorPlusCard({
             ) : (
               <div className="mt-3 space-y-3">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tier</label>
+                  <label className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Tier</label>
                   <div className="mt-1.5 flex gap-2">
                     {([
                       { value: "starter", label: "Plus · $29/yr" },
@@ -214,7 +214,7 @@ export function SponsorPlusCard({
                     ))}
                   </div>
                   {tier === "family" && (
-                    <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground/80">
+                    <p className="mt-1.5 text-3xs leading-relaxed text-muted-foreground/80">
                       Family covers unlimited kids. On a single-fund household this is functionally Plus; you're being generous.
                     </p>
                   )}
@@ -250,7 +250,7 @@ export function SponsorPlusCard({
                 >
                   {submitting ? "Opening checkout..." : `Give ${safeChildName} ${tierLabel} for ${priceLabel}`}
                 </Button>
-                <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                <p className="text-3xs text-muted-foreground/70 leading-snug">
                   <Lock className="inline-block w-2.5 h-2.5 mr-0.5 -mt-0.5" />
                   One-time payment via Stripe. Never auto-renews. {safeChildName}'s parents will be emailed that it was you. You can still send a one-time gift below.
                 </p>

@@ -87,7 +87,7 @@ export function ReportContentButton({
 
   if (submitted) {
     return (
-      <div className="mt-2 rounded-lg bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+      <div className="mt-2 rounded-lg bg-muted/40 px-3 py-2 text-2xs text-muted-foreground">
         Report sent. Thanks, an admin will review.
       </div>
     );
@@ -100,8 +100,8 @@ export function ReportContentButton({
         onClick={() => setOpen(true)}
         className={
           compact
-            ? "text-[11px] text-muted-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
-            : "rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+            ? "text-2xs text-muted-foreground/70 underline-offset-2 hover:text-foreground hover:underline"
+            : "rounded-full border border-border bg-card px-2.5 py-1 text-2xs font-medium text-muted-foreground hover:text-foreground"
         }
         data-testid={`button-report-${targetType}-${targetId}`}
       >
@@ -146,12 +146,12 @@ export function ReportContentButton({
         autoComplete="email"
         inputMode="email"
       />
-      {error && <p className="text-[11px] text-red-700">{error}</p>}
+      {error && <p className="text-2xs text-red-700">{error}</p>}
       <div className="flex items-center gap-2">
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-full bg-foreground px-3 py-1.5 text-[11px] font-semibold text-background disabled:opacity-50"
+          className="rounded-full bg-foreground px-3 py-1.5 text-2xs font-semibold text-background disabled:opacity-50"
           data-testid={`button-submit-report-${targetId}`}
         >
           {submitting ? "Sending…" : "Send report"}
@@ -159,7 +159,7 @@ export function ReportContentButton({
         <button
           type="button"
           onClick={() => { setOpen(false); setReason(""); setCustomReason(""); setError(null); }}
-          className="text-[11px] text-muted-foreground hover:text-foreground"
+          className="text-2xs text-muted-foreground hover:text-foreground"
         >
           Cancel
         </button>

@@ -299,7 +299,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
                   </>
                 )}
               </button>
-              <p className="text-center text-[11px] text-muted-foreground">
+              <p className="text-center text-2xs text-muted-foreground">
                 <Download size={11} className="mr-1 inline align-text-bottom" />
                 Opens your share menu, or saves the image if sharing isn't supported.
               </p>

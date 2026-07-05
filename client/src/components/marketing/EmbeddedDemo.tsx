@@ -75,7 +75,7 @@ export function EmbeddedDemo({ src, poster, alt, caption, title = "Kiddo live de
                 <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover object-top blur-[2px] brightness-90" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0c140f]/35">
                   <Loader2 className="h-6 w-6 animate-spin text-white" />
-                  <span className="text-[11px] font-semibold text-white/95">Waking the live demo…</span>
+                  <span className="text-2xs font-semibold text-white/95">Waking the live demo…</span>
                 </div>
               </div>
             </>
@@ -86,13 +86,13 @@ export function EmbeddedDemo({ src, poster, alt, caption, title = "Kiddo live de
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-[#0c140f] shadow-lg transition-transform duration-300 group-hover:scale-105">
                   Try it live <ArrowRight className="h-4 w-4" />
                 </span>
-                <span className="text-[11px] font-medium text-white/90">the real product, right here</span>
+                <span className="text-2xs font-medium text-white/90">the real product, right here</span>
               </span>
             </button>
           )}
         </div>
         {live ? (
-          <span className="pointer-events-none absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow transition-opacity duration-500" style={{ opacity: loaded ? 1 : 0 }}>
+          <span className="pointer-events-none absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-3xs font-bold text-white shadow transition-opacity duration-500" style={{ opacity: loaded ? 1 : 0 }}>
             <span className="h-1.5 w-1.5 rounded-full bg-white" /> LIVE
           </span>
         ) : null}

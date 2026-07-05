@@ -875,7 +875,7 @@ export default function ActivateInvesting() {
                 <h1 className="font-heading text-xl font-semibold text-foreground mb-1" data-testid="text-identity-heading">
                   Identity verification
                 </h1>
-                <p className="text-sm text-muted-foreground">Just a few more questions to confirm your identity. The account holder's. Not your child's.</p>
+                <p className="text-sm text-muted-foreground">Just a few more questions to confirm your identity, the account holder's.</p>
               </div>
 
               <div className="space-y-4">
@@ -1158,7 +1158,7 @@ export default function ActivateInvesting() {
                           <div className="mt-2.5 space-y-2">
                             <p className="text-xs text-muted-foreground">Unlock here, or continue and upgrade later from your Account.</p>
                             <div className="space-y-1.5">
-                              <p className="text-[11px] text-muted-foreground">Choose which fund to cover now:</p>
+                              <p className="text-2xs text-muted-foreground">Choose which fund to cover now:</p>
                               <select
                                 value={starterFundId}
                                 onChange={(e) => setStarterFundId(e.target.value)}
@@ -1403,7 +1403,7 @@ export default function ActivateInvesting() {
                   >
                     {successorSubmitting ? "Saving..." : "Save successor"}
                   </Button>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="text-2xs text-muted-foreground leading-relaxed">
                     Skip this and finish below if you'd rather add it later from Settings.
                   </p>
                 </div>
@@ -1431,7 +1431,7 @@ export default function ActivateInvesting() {
                   I agree to the {" "}<a href="/legal" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-2 hover:text-primary" data-testid="link-account-agreement" onClick={(e) => e.stopPropagation()}>Account Agreement</a>{" "}and authorize Kiddo and its clearing partners to open an investment account.
                 </span>
               </label>
-              <p className="text-[11px] text-muted-foreground -mt-2">
+              <p className="text-2xs text-muted-foreground -mt-2">
                 Once your account is open, investment accounts are SIPC protected up to $500,000 at the brokerage custodian. This does not protect against market losses. Investing involves risk, including possible loss of principal.
               </p>
 

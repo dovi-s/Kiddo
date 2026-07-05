@@ -308,7 +308,7 @@ export default function AgeTransitionManager() {
                 </div>
               ) : transition?.childEmailVerificationSentAt ? (
                 <div className="space-y-2">
-                  <p className="text-[11px] italic text-muted-foreground">
+                  <p className="text-2xs italic text-muted-foreground">
                     Verification email sent. Waiting on them to click the link.
                   </p>
                   <Button

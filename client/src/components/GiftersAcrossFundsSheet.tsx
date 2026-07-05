@@ -260,7 +260,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                             haptic("selection");
                             setExpandedEmail(isExpanded ? null : gifter.email);
                           }}
-                          className="w-full text-left rounded-2xl px-4 py-3 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none"
+                          className="w-full text-left rounded-2xl px-4 py-3 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none kiddo-press"
                           aria-expanded={isExpanded}
                           data-testid={`gifter-row-${gifter.email}`}
                         >
@@ -270,7 +270,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                 <p className="text-sm font-semibold text-foreground truncate">
                                   {gifter.displayName}
                                 </p>
-                                <span className="text-[11px] text-muted-foreground tabular-nums">
+                                <span className="text-2xs text-muted-foreground tabular-nums">
                                   {gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}
                                   {gifter.totalAmount > 0 ? ` · ${formatMoney(gifter.totalAmount)}` : ""}
                                 </span>
@@ -290,7 +290,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                   return (
                                     <span
                                       key={chip.fundId}
-                                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-semibold tracking-[0.01em]"
+                                      className="inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-semibold tracking-[0.01em]"
                                       style={{ background: style.bg, color: style.text }}
                                       data-testid={`gifter-fund-chip-${gifter.email}-${chip.fundId}`}
                                     >
@@ -303,7 +303,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                     </span>
                                   );
                                 })}
-                                <span className="text-[10.5px] text-muted-foreground tabular-nums">
+                                <span className="text-3xs text-muted-foreground tabular-nums">
                                   {timeAgo(gifter.mostRecentGiftAt)}
                                 </span>
                               </div>
@@ -362,7 +362,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           {showInnerKidChip && (
                                             <span
-                                              className="inline-flex items-center rounded-full px-1.5 py-0 text-[9.5px] font-bold tracking-[0.02em]"
+                                              className="inline-flex items-center rounded-full px-1.5 py-0 text-4xs font-bold tracking-[0.02em]"
                                               style={{ background: style.bg, color: style.text }}
                                             >
                                               {capFirst(g.recipientFirstName) || "Fund"}
@@ -377,13 +377,13 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                               the gifter wrote a note. */}
                                           {g.selectedTicker && (
                                             <span
-                                              className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0 text-[9.5px] font-bold tracking-[0.04em] text-[hsl(var(--kiddo-evergreen))]"
+                                              className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0 text-4xs font-bold tracking-[0.04em] text-[hsl(var(--kiddo-evergreen))]"
                                               data-testid={`gifter-recent-gift-ticker-${g.id}`}
                                             >
                                               {g.selectedTicker}
                                             </span>
                                           )}
-                                          <span className="text-[10.5px] text-muted-foreground tabular-nums">
+                                          <span className="text-3xs text-muted-foreground tabular-nums">
                                             {fullDate(g.createdAt)}
                                           </span>
                                           {/* Source-of-origin chip. Renders only
@@ -421,7 +421,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                   );
                                 })}
                                 {gifter.giftCount > gifter.recentGifts.length && (
-                                  <p className="text-[11px] text-muted-foreground/80 text-center pt-1">
+                                  <p className="text-2xs text-muted-foreground/80 text-center pt-1">
                                     Showing {gifter.recentGifts.length} of {gifter.giftCount} gifts.
                                     Open each fund to see the full Memory Book.
                                   </p>

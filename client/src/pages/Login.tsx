@@ -26,7 +26,7 @@ function getSafeRedirectTarget(value: string | null | undefined) {
 function LastUsedBadge() {
   return (
     <span
-      className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.1)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[hsl(var(--kiddo-evergreen))]"
+      className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.1)] px-2 py-0.5 text-3xs font-semibold uppercase tracking-[0.04em] text-[hsl(var(--kiddo-evergreen))]"
       data-testid="badge-last-used"
     >
       Last used

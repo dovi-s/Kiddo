@@ -152,7 +152,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
               <h3 className="font-heading text-base font-semibold" data-testid="text-thank-yous-title">Thank Yous</h3>
               {drafts.length > 0 && (
                 <span
-                  className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-primary text-primary-foreground"
+                  className="inline-flex items-center justify-center w-5 h-5 text-3xs font-bold rounded-full bg-primary text-primary-foreground"
                   data-testid="badge-unsent-count"
                 >
                   {drafts.length}
@@ -226,7 +226,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
                         {ty.senderName}
                       </p>
                       {ty.status === "sent" && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-3xs font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
                           <Check size={10} />
                           Sent
                         </span>

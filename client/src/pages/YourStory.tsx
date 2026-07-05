@@ -178,7 +178,7 @@ export default function YourStory() {
               }}
             >
               <p
-                className="text-[10px] font-bold uppercase mb-2"
+                className="text-3xs font-bold uppercase mb-2"
                 style={{ color: "hsl(var(--kiddo-gold-ink) / 0.85)", letterSpacing: "0.14em" }}
               >
                 Your story
@@ -207,7 +207,7 @@ export default function YourStory() {
                       reads as "ah, year 4 was a big year" at a glance. */}
                   <div className="flex items-baseline justify-between gap-3 border-b border-border/40 pb-3">
                     <p
-                      className="text-[10px] font-bold uppercase"
+                      className="text-3xs font-bold uppercase"
                       style={{ color: "hsl(var(--kiddo-gold-ink) / 0.85)", letterSpacing: "0.14em" }}
                     >
                       {year.ageLabel}
@@ -264,7 +264,7 @@ export default function YourStory() {
                       link below carries the rest. */}
                   {year.memories.length > 0 && (
                     <div className="mt-4 space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Notes from this year
                       </p>
                       {year.memories.slice(0, 4).map((m) => (
@@ -279,7 +279,7 @@ export default function YourStory() {
                               ) : (
                                 <p className="text-xs text-muted-foreground">A memory was added.</p>
                               )}
-                              <p className="mt-1 text-[11px] text-muted-foreground">
+                              <p className="mt-1 text-2xs text-muted-foreground">
                                 {m.authorName || "Someone"} · {formatMonth(m.createdAt)}
                               </p>
                             </div>

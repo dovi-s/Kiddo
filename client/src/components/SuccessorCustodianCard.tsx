@@ -170,7 +170,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
                   </p>
                 )}
                 {addedAtLabel && (
-                  <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+                  <p className="mt-0.5 text-2xs text-muted-foreground/60">
                     Designated {addedAtLabel}
                   </p>
                 )}
@@ -204,7 +204,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
             Locked 2026-05-19 per the Five Towns audit. */}
         {currentName && !editOpen && (
           <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-gold)/0.32)] bg-[hsl(var(--kiddo-gold)/0.05)] p-3">
-            <p className="text-[11.5px] leading-relaxed text-foreground">
+            <p className="text-2xs leading-relaxed text-foreground">
               <span className="font-semibold">Two layers matter.</span> This designation tells Kiddo + support who steps in. Your will needs to formally name {currentName} as successor custodian under your state's UTMA statute too. Both layers, not one.
             </p>
           </div>
@@ -213,7 +213,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
         {editOpen && (
           <div className="mt-4 space-y-3 rounded-xl bg-muted/30 p-4">
             <div>
-              <label htmlFor="successor-name" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Name</label>
+              <label htmlFor="successor-name" className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Name</label>
               <input
                 id="successor-name"
                 name="successorName"
@@ -227,7 +227,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
               />
             </div>
             <div>
-              <label htmlFor="successor-email" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Email <span className="font-normal normal-case text-muted-foreground/60">(optional)</span></label>
+              <label htmlFor="successor-email" className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Email <span className="font-normal normal-case text-muted-foreground/60">(optional)</span></label>
               <input
                 id="successor-email"
                 name="successorEmail"
@@ -241,7 +241,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
               />
             </div>
             <div>
-              <label htmlFor="successor-relation" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Relationship <span className="font-normal normal-case text-muted-foreground/60">(optional)</span></label>
+              <label htmlFor="successor-relation" className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Relationship <span className="font-normal normal-case text-muted-foreground/60">(optional)</span></label>
               <input
                 id="successor-relation"
                 name="successorRelation"
@@ -254,7 +254,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
                 data-testid="input-successor-relation"
               />
             </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground/70">
+            <p className="text-2xs leading-relaxed text-muted-foreground/70">
               This designation lives in your account record. It does not replace your will. Update your will to formally name this person as successor custodian under your state's UTMA statute.
             </p>
             <div className="flex flex-wrap items-center gap-2 pt-1">

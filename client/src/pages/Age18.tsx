@@ -162,7 +162,7 @@ export default function Age18() {
                   </p>
                 </div>
                 <p className="mt-4 text-base leading-8 text-muted-foreground">
-                  A conversation guide arrives. Real things to say. Not a financial lecture. A parent-to-child conversation about what has been built and why.
+                  A conversation guide arrives, with real things to say to her about what has been built and why.
                 </p>
               </div>
               <div>
@@ -228,7 +228,7 @@ export default function Age18() {
                   animate="animate"
                   className="w-full rounded-2xl bg-card px-4 py-4 shadow-premium-sm md:w-auto md:min-w-[240px]"
                 >
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Projected by age {selectedHorizon}</p>
+                  <p className="text-2xs uppercase tracking-[0.18em] text-muted-foreground">Projected by age {selectedHorizon}</p>
                   <p className="mt-2 font-heading text-3xl font-bold leading-none text-foreground md:text-4xl">
                     <AnimatedCurrencyValue value={finalPoint.projectedValue} />
                   </p>
@@ -239,7 +239,7 @@ export default function Age18() {
               <div className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr] lg:gap-6">
                 <div className="rounded-3xl border border-border/60 bg-background/90 p-4 md:p-5">
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Annual gifts</p>
+                    <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Annual gifts</p>
                     <div className="grid grid-cols-1 gap-1 rounded-[20px] bg-card/80 p-1 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:gap-1.5">
                     {giftOptions.map((amount) => (
                       <button
@@ -259,7 +259,7 @@ export default function Age18() {
                   </div>
 
                   <div className="mt-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Growth rate</p>
+                    <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Growth rate</p>
                     <div className="grid grid-cols-1 gap-1 rounded-[20px] bg-card/80 p-1 sm:flex sm:flex-wrap sm:gap-1.5">
                     {rateOptions.map((option) => (
                       <button
@@ -279,7 +279,7 @@ export default function Age18() {
                   </div>
 
                   <div className="mt-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Show value by age</p>
+                    <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Show value by age</p>
                     <div className="grid grid-cols-1 gap-1 rounded-[20px] bg-card/80 p-1 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:gap-1.5">
                     {horizonOptions.map((age) => (
                       <button
@@ -359,7 +359,7 @@ export default function Age18() {
                 </div>
 
                 <div className="space-y-3 lg:space-y-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:hidden">Milestones</p>
+                  <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:hidden">Milestones</p>
                   <div className="grid gap-3 lg:block lg:overflow-visible lg:pb-0">
                   {milestoneValues.map((milestone, index) => (
                     <motion.div

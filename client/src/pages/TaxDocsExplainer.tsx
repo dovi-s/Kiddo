@@ -277,7 +277,7 @@ export default function TaxDocsExplainer() {
           </Link>
         </div>
 
-        <p className="text-[11px] text-muted-foreground text-center pt-4">
+        <p className="text-2xs text-muted-foreground text-center pt-4">
           This is general education, not personal tax advice. Your specific situation
           might be different. When in doubt, ask a CPA.
         </p>

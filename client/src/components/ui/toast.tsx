@@ -27,11 +27,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  // Explicit, smooth timing on the open/close animations (2026-06-05): a
-  // snappy 200ms entrance and a graceful 300ms ease-out exit, so dismissing a
-  // toast glides rather than blinks. Without these, the animate-in/out fell
-  // back to the plugin default and read abrupt.
-  "group pointer-events-auto relative flex items-center overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:duration-200 data-[state=closed]:duration-300 data-[state=closed]:ease-out",
+  // Explicit, smooth timing on the open/close animations (2026-06-05; brand-eased
+  // 2026-06-25): a 200ms entrance on --ease-out-expo (lands gently) and a 300ms
+  // exit on --ease-in-quad (accelerates away). This puts toasts on the SAME motion
+  // curves as every sheet/modal (DESIGN_SYSTEM §9: one motion language) — the
+  // gift-landing/saved beats now move like the rest of the app, not a system default.
+  "group pointer-events-auto relative flex items-center overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:duration-200 data-[state=open]:[animation-timing-function:var(--ease-out-expo)] data-[state=closed]:duration-300 data-[state=closed]:[animation-timing-function:var(--ease-in-quad)]",
   {
     variants: {
       variant: {

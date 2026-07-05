@@ -20,21 +20,24 @@
 // exceed the palette. The founder's report was about the cross-surface case, so
 // consistency wins; the larger palette below keeps accidental repeats rare.
 //
-// Deep, desaturated tones with white text so the set stays calm and on-brand
-// even in the Memory Book's quieter register (no neon).
+// WARM EARTH TONES ONLY — greens, golds, clays, browns (no blue / purple / cool
+// teal). The set reads as ONE cohesive on-brand constellation, calm enough for the
+// Memory Book's quieter register, with white text for contrast. Replaced the old
+// indigo / plum / slate / steel — cool hues that read as a random color-generator
+// against the cream/evergreen brand, not a designed roster of the people who love a kid.
 export const GIFTER_AVATAR_COLORS = [
-  { bg: "rgb(26,61,43)",   text: "white" }, // Evergreen (brand primary)
-  { bg: "rgb(180,90,60)",  text: "white" }, // Terracotta
-  { bg: "rgb(67,101,82)",  text: "white" }, // Sage green
-  { bg: "rgb(90,65,45)",   text: "white" }, // Coffee brown
-  { bg: "rgb(58,55,92)",   text: "white" }, // Indigo
-  { bg: "rgb(110,70,95)",  text: "white" }, // Plum
-  { bg: "rgb(70,95,120)",  text: "white" }, // Slate blue
-  { bg: "rgb(40,95,100)",  text: "white" }, // Deep teal
-  { bg: "rgb(122,80,40)",  text: "white" }, // Amber-brown
-  { bg: "rgb(85,100,55)",  text: "white" }, // Olive
-  { bg: "rgb(95,70,70)",   text: "white" }, // Rosewood
-  { bg: "rgb(55,80,95)",   text: "white" }, // Deep steel
+  { bg: "rgb(26,61,43)",   text: "white" }, // 0  Evergreen (brand primary)
+  { bg: "rgb(46,84,60)",   text: "white" }, // 1  Forest
+  { bg: "rgb(78,103,82)",  text: "white" }, // 2  Sage
+  { bg: "rgb(96,104,54)",  text: "white" }, // 3  Olive
+  { bg: "rgb(140,104,42)", text: "white" }, // 4  Brass
+  { bg: "rgb(146,92,42)",  text: "white" }, // 5  Amber
+  { bg: "rgb(178,90,58)",  text: "white" }, // 6  Terracotta
+  { bg: "rgb(158,74,48)",  text: "white" }, // 7  Rust
+  { bg: "rgb(142,84,62)",  text: "white" }, // 8  Clay
+  { bg: "rgb(96,68,48)",   text: "white" }, // 9  Coffee
+  { bg: "rgb(116,86,58)",  text: "white" }, // 10 Walnut
+  { bg: "rgb(124,80,74)",  text: "white" }, // 11 Rosewood
 ];
 
 export type GifterAvatarColor = (typeof GIFTER_AVATAR_COLORS)[number];
@@ -51,25 +54,29 @@ export type GifterAvatarColor = (typeof GIFTER_AVATAR_COLORS)[number];
 // cross-surface drift — a pinned person is the same color everywhere too.
 // Indices map into GIFTER_AVATAR_COLORS above.
 const DEMO_CAST_COLOR_OVERRIDES: Record<string, number> = {
-  // Theo's fund (the live demo) — all distinct:
-  "elena rivera": 8,        // amber-brown (owner; also carries the evergreen ring)
-  "marcus rivera": 10,      // rosewood
-  "sofia rivera": 2,        // sage green
-  "chris bennett": 9,       // olive
-  "david rivera": 5,        // plum
-  "robert rivera": 7,       // deep teal
-  "leo rivera": 11,         // deep steel
-  "auntie sarah": 3,        // coffee brown
-  "the johnsons": 4,        // indigo
-  "aunt pam": 6,            // slate blue
-  "marcus's office": 1,     // terracotta
-  // Deeper long-tail (older demo funds; best-effort spread, may reuse past 12):
+  // Theo's fund (the live demo). Pinned to ALTERNATE green ↔ warm down the roster's
+  // fixed recency order (You, Leo, Marcus, Chris, Sofia, David, Robert, office) so no
+  // two adjacent faces read as the same family — a considered constellation, not a run
+  // of look-alike oranges. All 11 distinct. Elena (owner) stays off-green so her face
+  // reads against the evergreen ring.
+  "elena rivera": 5,        // amber  (You)
+  "leo rivera": 2,          // sage   (green)
+  "marcus rivera": 7,       // rust   (warm)
+  "chris bennett": 1,       // forest (green)
+  "sofia rivera": 6,        // terracotta (warm)
+  "david rivera": 3,        // olive  (green)
+  "robert rivera": 8,       // clay   (warm)
+  "marcus's office": 9,     // coffee (deep brown)
+  "auntie sarah": 10,       // walnut
+  "the johnsons": 4,        // brass
+  "aunt pam": 11,           // rosewood
+  // Deeper long-tail (older demo funds; best-effort spread, may reuse past 11):
   "the nguyens next door": 0,
-  "uncle joe": 3,
-  "helen park": 6,
+  "uncle joe": 9,
+  "helen park": 4,
   "grandpa's friend earl": 2,
-  "the book club": 5,
-  "coach mike": 1,
+  "the book club": 7,
+  "coach mike": 6,
 };
 
 // Stable hash → palette index. Normalizes case + surrounding whitespace so the

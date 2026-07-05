@@ -322,7 +322,7 @@ export default function ActivityDetail() {
                     : `${giftProjection.yearsAhead.toFixed(1)} years`}
                   {" "}until {giftProjection.childName} turns {giftProjection.majorityAge}.
                 </p>
-                <p className="text-[10px] text-muted-foreground/60 mt-3 leading-snug">
+                <p className="text-3xs text-muted-foreground/60 mt-3 leading-snug">
                   {PROJECTION_DISCLAIMER}
                 </p>
               </motion.div>

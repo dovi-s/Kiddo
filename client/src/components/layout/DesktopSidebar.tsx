@@ -10,6 +10,7 @@ import { ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT, getActiveFundId, setActiveFun
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav } from "@/lib/page-scope";
 import { readLastAppLocation, formatBackLabel, backTargetHref } from "@/lib/last-location";
 import { capFirst } from "@/lib/format-name";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { toast } from "@/hooks/use-toast";
 import type { Fund, Event } from "@shared/schema";
@@ -38,7 +39,7 @@ export function DesktopSidebar() {
     } else if (href.startsWith("/memory") && fundId) {
       prefetchMemoryBook(queryClient, fundId);
     } else if (href.startsWith("/activity")) {
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, fundId);
     }
   }, [queryClient]);
 
@@ -511,7 +512,7 @@ export function DesktopSidebar() {
                 // so the same metaphor reads top-to-bottom.
                 <span style={{ fontSize: 16 }}>🌱</span>
               ) : activeFund.childPhotoUrl ? (
-                <img
+                <FadeImage
                   src={activeFund.childPhotoUrl}
                   alt=""
                   loading="eager"
@@ -540,7 +541,7 @@ export function DesktopSidebar() {
                   anything); per-fund balances still show inside the switcher dropdown,
                   which only appears on open and helps compare funds. */}
               {isFundsOverview && (
-                <div className="text-[11.5px] text-muted-foreground mt-px tabular-nums">
+                <div className="text-2xs text-muted-foreground mt-px tabular-nums">
                   {`${funds.length} fund${funds.length === 1 ? "" : "s"}`}
                 </div>
               )}
@@ -580,7 +581,7 @@ export function DesktopSidebar() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold text-foreground">Your funds</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">All {funds.length} together</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground">All {funds.length} together</p>
                   </div>
                   {isFundsOverview && <Check className="h-4 w-4 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
                 </button>
@@ -606,7 +607,7 @@ export function DesktopSidebar() {
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-sm font-bold text-white shadow-[inset_0_-7px_14px_rgba(0,0,0,0.14)] overflow-hidden">
                       {fund.childPhotoUrl
-                        ? <img src={fund.childPhotoUrl} alt="" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
+                        ? <FadeImage src={fund.childPhotoUrl} alt="" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
                         : (fund.recipientFirstName || fund.name || "F").slice(0, 1).toUpperCase()
                       }
                     </div>
@@ -614,7 +615,7 @@ export function DesktopSidebar() {
                       <p className="truncate text-[13px] font-semibold text-foreground">
                         {fund.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s Fund` : fund.name || "Fund"}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+                      <p className="mt-0.5 text-2xs text-muted-foreground tabular-nums">
                         {formatMoney(Number.isFinite(value) ? value : 0)}
                       </p>
                     </div>
@@ -885,7 +886,7 @@ export function DesktopSidebar() {
                 }}
               >
                 {user.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                  <FadeImage src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <span style={{ fontSize: 13, fontWeight: 700, color: "rgb(44,39,32)" }}>
                     {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "U"}
@@ -897,7 +898,7 @@ export function DesktopSidebar() {
                   {user.firstName || user.email?.split("@")[0] || "Account"}
                   {(user as any).preferredName ? <span className="font-normal text-muted-foreground"> ({(user as any).preferredName})</span> : null}
                 </div>
-                <div className="text-[11px] text-muted-foreground truncate">{user.email}</div>
+                <div className="text-2xs text-muted-foreground truncate">{user.email}</div>
               </div>
               <ChevronRight size={13} className="shrink-0 text-muted-foreground" />
             </button>

@@ -175,7 +175,7 @@ export function ReminderAndAskParentsCard({
             <p className="text-sm font-semibold text-foreground">Email reminders</p>
           </div>
           <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">How often</label>
+            <label className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">How often</label>
             <div className="mt-1.5 flex gap-2">
               {(["monthly", "quarterly", "yearly"] as const).map((f) => (
                 <button

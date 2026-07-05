@@ -342,7 +342,7 @@ const faqItems = [
     category: "Kid View & Education",
     question: "What is the Kid View?",
     answer:
-      "The Kid View is how your child grows up understanding ownership, seeing which people invested in them, and learning to have real money conversations. Not a brokerage dashboard. Age-appropriate language, real company logos, and the names of the people who showed up for them.",
+      "The Kid View is how your child grows up understanding ownership, seeing which people invested in them, and learning to have real money conversations. Age-appropriate language, real company logos, and the names of the people who showed up for them.",
   },
   {
     id: "child-view-ages",
@@ -383,7 +383,7 @@ function AccordionItem({
         data-testid={`faq-toggle-${item.id}`}
       >
         <div className="pr-4">
-          <span className="mb-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+          <span className="mb-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-2xs text-primary">
             {item.category}
           </span>
           <p className="font-heading text-base font-medium text-foreground transition-colors group-hover:text-primary md:text-lg">

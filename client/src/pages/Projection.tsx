@@ -552,7 +552,7 @@ ${shareUrl}`;
         >
           {/* Today */}
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-white/60 mb-1">Today</p>
+            <p className="text-2xs font-bold uppercase tracking-wide text-white/60 mb-1">Today</p>
             <p className="text-2xl font-bold tabular-nums" data-testid="text-projection-current">
               {fmtMoney(totalValue, 2)}
             </p>
@@ -669,7 +669,7 @@ ${shareUrl}`;
                   set (18/21 are; 19/20 aren't, so the caption hides for those
                   rare states — same edge case as the dot itself). */}
               {isUtma && visibleMilestones.includes(majorityAge as any) && (
-                <p className="text-[10px] italic text-white/55 mt-1 text-center text-balance">
+                <p className="text-3xs italic text-white/55 mt-1 text-center text-balance">
                   {childName} takes control at {majorityAge} · what grows past then is pure market compound
                 </p>
               )}
@@ -679,7 +679,7 @@ ${shareUrl}`;
           {/* The big projected number — count-up animated. Fades in slightly on each
               update too so the change feels alive, not a hard repaint. */}
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-white/60 mb-1">
+            <p className="text-2xs font-bold uppercase tracking-wide text-white/60 mb-1">
               At age {targetAge}
             </p>
             <p
@@ -699,7 +699,7 @@ ${shareUrl}`;
                 three identical "today" values. Per the 2026-05-13 audit
                 on whether we're showing the magnitude brilliantly. */}
             {yearsAhead > 0 && (
-              <p className="text-[11px] text-white/55 mt-2 tabular-nums">
+              <p className="text-2xs text-white/55 mt-2 tabular-nums">
                 {projectedByRate
                   .filter((r) => r.id !== rateId)
                   .map((r) => `${r.sub.replace(" / yr", "")}: ${fmtMoney(r.value)}`)
@@ -728,7 +728,7 @@ ${shareUrl}`;
 
           {/* Contribution breakdown — the "feel it working" moment */}
           <div className="rounded-2xl bg-white/8 border border-white/10 p-4 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Of that</p>
+            <p className="text-3xs font-bold uppercase tracking-wide text-white/55">Of that</p>
             <div className="flex items-baseline justify-between">
               {/* Source-neutral on UTMA funds: this bucket is today's whole
                   balance + future deposits, most of which on a gift-funded
@@ -777,7 +777,7 @@ ${shareUrl}`;
           className="rounded-2xl border border-border bg-card p-5"
           data-testid="projection-trajectory-card"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-3">
+          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-3">
             Growth trajectory
           </p>
           <ProjectionTrajectoryChart
@@ -799,7 +799,7 @@ ${shareUrl}`;
           className="w-full flex items-center justify-between rounded-2xl border border-border bg-card hover:bg-muted/40 transition-colors p-4"
         >
           <div className="text-left min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
               Monthly contribution
             </p>
             <p className="font-heading text-xl font-bold tabular-nums text-foreground">
@@ -820,7 +820,7 @@ ${shareUrl}`;
                       : monthsLeft % 12 === 0 ? `${monthsLeft / 12} years`
                         : `about ${Math.round(monthsLeft / 12)} years`;
               return (
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-2xs text-muted-foreground mt-0.5">
                   {left} until {childName} turns {majorityAge}
                 </p>
               );
@@ -835,14 +835,14 @@ ${shareUrl}`;
         {/* Return rate — tertiary, below the monthly lever */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
               Assumed return
             </p>
             <button
               type="button"
               onClick={() => { haptic("selection"); setExplainerOpen(true); }}
               data-testid="button-rate-explainer"
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <Info size={11} />
               How we calculate this
@@ -863,8 +863,8 @@ ${shareUrl}`;
                       : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
                   }`}
                 >
-                  <p className="text-[10px] font-semibold leading-tight">{r.label}</p>
-                  <p className="text-[11px] font-bold tabular-nums leading-tight">{r.sub}</p>
+                  <p className="text-3xs font-semibold leading-tight">{r.label}</p>
+                  <p className="text-2xs font-bold tabular-nums leading-tight">{r.sub}</p>
                 </button>
               );
             })}
@@ -898,7 +898,7 @@ ${shareUrl}`;
         {/* Disclaimer. Honest about the model: contributions stop at 18 for UTMAs
             (which matches the math), continuous for personal accounts. No em-dashes
             per the locked copy rule. */}
-        <p className="text-[10.5px] text-muted-foreground/80 leading-relaxed text-center px-2 text-pretty">
+        <p className="text-3xs text-muted-foreground/80 leading-relaxed text-center px-2 text-pretty">
           For illustrative purposes only. Based on long-term historical market averages, not guaranteed.{" "}
           {isOwnerMode
             // Post-handoff OWNER: isUtma is false for them (a transferred fund is an
@@ -970,20 +970,20 @@ ${shareUrl}`;
                     : "bg-[hsl(var(--kiddo-cream))] border-[hsl(var(--kiddo-evergreen)/0.3)] hover:bg-[hsl(var(--kiddo-cream)/0.7)]"
                 }`}
               >
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                   Use my current rate
                 </p>
                 <p className="text-sm font-bold text-foreground tabular-nums">
                   {fmtMoney(activeMonthly)}/mo
                   {activeScheduleBreakdown.length > 1 && (
-                    <span className="text-[11px] font-normal text-muted-foreground"> combined</span>
+                    <span className="text-2xs font-normal text-muted-foreground"> combined</span>
                   )}
                 </p>
                 {/* Source breakdown — when the combined number wraps multiple schedules,
                     surface them here in their native frequencies so the math is visible.
                     E.g. "$25/mo + $50/wk + $100/wk" → why the combined is $677/mo. */}
                 {activeScheduleBreakdown.length > 1 && (
-                  <p className="text-[10.5px] text-muted-foreground mt-1 leading-relaxed">
+                  <p className="text-3xs text-muted-foreground mt-1 leading-relaxed">
                     {activeScheduleBreakdown.join(" + ")}
                   </p>
                 )}
@@ -1016,7 +1016,7 @@ ${shareUrl}`;
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+              <label className="block text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
                 Custom amount
               </label>
               <div className="flex items-center gap-2">
@@ -1042,7 +1042,7 @@ ${shareUrl}`;
             </div>
 
             <div className="rounded-xl bg-[hsl(var(--kiddo-cream))] border border-[hsl(var(--kiddo-gold)/0.25)] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                 At {fmtMoney(pendingMonthly)}/mo · age {targetAge}
               </p>
               {/* Cadence equivalence — translates the monthly amount into
@@ -1063,7 +1063,7 @@ ${shareUrl}`;
                     ? `$${v.toFixed(2)}`
                     : `$${Math.round(v)}`;
                 return (
-                  <p className="text-[10.5px] italic text-muted-foreground/75 mt-0.5">
+                  <p className="text-3xs italic text-muted-foreground/75 mt-0.5">
                     ≈ {formatPer(perDay)}/day · {formatPer(perWeek)}/week
                   </p>
                 );
@@ -1077,7 +1077,7 @@ ${shareUrl}`;
                   framing + the same isUtma && targetAge>majorityAge test, so the
                   truth sits right above the number it qualifies. */}
               {pendingMonthly > 0 && isUtma && targetAge > majorityAge && (
-                <p className="text-[10.5px] text-muted-foreground mt-1 leading-relaxed text-balance">
+                <p className="text-3xs text-muted-foreground mt-1 leading-relaxed text-balance">
                   Flows through {childName}'s {majorityOrdinal} birthday, then market growth alone.
                 </p>
               )}
@@ -1085,7 +1085,7 @@ ${shareUrl}`;
                 {fmtMoney(pendingPreview)}
               </p>
               {pendingMonthly !== monthly && (
-                <p className="text-[11px] text-muted-foreground mt-1">
+                <p className="text-2xs text-muted-foreground mt-1">
                   {pendingPreview > projected ? "+" : "−"}
                   {fmtMoney(Math.abs(pendingPreview - projected))} vs current scenario
                 </p>
@@ -1107,7 +1107,7 @@ ${shareUrl}`;
                   type="button"
                   onClick={handleIncreaseAutoInvest}
                   data-testid="button-go-to-settings"
-                  className="w-full text-center text-[11px] text-muted-foreground hover:text-foreground transition-colors py-1"
+                  className="w-full text-center text-2xs text-muted-foreground hover:text-foreground transition-colors py-1"
                 >
                   Want to actually set this up? Open recurring investment settings →
                 </button>

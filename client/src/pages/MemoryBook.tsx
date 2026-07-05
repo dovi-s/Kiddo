@@ -54,7 +54,8 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown } from "lucide-react";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search } from "lucide-react";
+import SealedVoiceNote from "@/components/SealedVoiceNote";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -68,6 +69,7 @@ import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getDeepLinkHighlightStyle, getDeepLinkHighlightCardStyle, hasActiveDeepLink, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { FadeImage } from "@/components/ui/fade-image";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
@@ -394,13 +396,11 @@ function formatMoneyFriendly(value: number) {
 }
 
 function displayAmount(value: string | number | null | undefined) {
+  // Friendly (cut-extra 2026-07): was forcing ".00" on every amount under $1000
+  // ("$100.00"); now drops the robotic cents on whole amounts and keeps them only
+  // when real ("$100" / "$188.84"), matching formatMoneyFriendly everywhere else.
   const amount = typeof value === "number" ? value : parseFloat(String(value || "0"));
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: amount >= 1000 ? 0 : 2,
-    maximumFractionDigits: amount >= 1000 ? 0 : 2,
-  }).format(Number.isFinite(amount) ? amount : 0);
+  return formatMoneyFriendly(Number.isFinite(amount) ? amount : 0);
 }
 
 function visibilityLabel(value?: "public" | "family" | "private") {
@@ -528,7 +528,7 @@ export default function MemoryBook() {
     if (!fundId || !isAuthenticated) return;
     const cancel = onIdle(() => {
       prefetchDashboard(queryClient, fundId);
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, fundId);
     });
     return cancel;
   }, [fundId, isAuthenticated, queryClient]);
@@ -562,6 +562,7 @@ export default function MemoryBook() {
   ], []);
   const [content, setContent] = useState("");
   const [authorName, setAuthorName] = useState(user?.firstName || "");
+  const [sealedVoiceOpen, setSealedVoiceOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -601,6 +602,10 @@ export default function MemoryBook() {
   // Lets the parent quickly answer "who haven't I thanked?" without scanning.
   const [thankYouFilter, setThankYouFilter] = useState<"all" | "awaiting" | "thanked" | "drafted">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  // Search collapses to a tap-icon (cut-extra 2026-07): a full always-on search ROW
+  // was heavy chrome before the entries (the comment at its render even flagged it).
+  // Open when toggled OR when a query is active, so a persisted search stays visible.
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<"all" | string>("all");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   // "More filters" disclosure — three primary chips (All / Pinned /
@@ -2759,6 +2764,54 @@ export default function MemoryBook() {
     <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-memory-book">
       <AppHeader />
 
+      {/* Sealed voice note — record a voice the child hears at 18. Rides the
+          existing memory-audio upload + kidVisibility='kid_at_18' seal; no new
+          backend. Top-level (not inside a framer transform) so the fixed
+          overlay covers the viewport. */}
+      <AnimatePresence>
+        {sealedVoiceOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setSealedVoiceOpen(false)}
+              className="fixed inset-0 z-[90] bg-black/45 backdrop-blur-[2px]"
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 38, stiffness: 400 }}
+              className="fixed inset-x-0 bottom-0 z-[90] mx-auto max-w-md rounded-t-[24px] p-6 pb-9 shadow-2xl"
+              style={{ background: "hsl(var(--kiddo-cream, 40 33% 96%))" }}
+            >
+              <div className="mx-auto mb-5 h-1.5 w-10 rounded-full" style={{ background: "hsl(var(--kiddo-ink) / 0.15)" }} />
+              <SealedVoiceNote
+                fundId={fundId ?? ""}
+                audience="parent"
+                childName={childName ?? undefined}
+                onComplete={({ audioUrl, transcript }) => {
+                  createMutation.mutate({
+                    type: "note",
+                    content: (transcript || "").trim() || `A voice message for ${childName || "you"}, sealed until their 18th birthday.`,
+                    authorName: (authorName || user?.firstName || "").trim() || "A parent",
+                    audioUrl,
+                    audioTranscript: transcript ?? undefined,
+                    kidVisibility: "kid_at_18",
+                    visibility: "family",
+                  });
+                  window.setTimeout(() => setSealedVoiceOpen(false), 1800);
+                }}
+              />
+              <button
+                onClick={() => setSealedVoiceOpen(false)}
+                className="mt-5 w-full text-center text-sm font-medium"
+                style={{ color: "hsl(var(--kiddo-ink) / 0.5)" }}
+              >
+                Close
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <main className="kiddo-canvas px-4 py-5 md:py-6">
         {pendingEntries.length > 0 && (
           // Pending-review tray. Only renders when the moderation toggle is
@@ -2796,7 +2849,7 @@ export default function MemoryBook() {
                     {entry.content && (
                       <p className="mt-0.5 line-clamp-2 text-sm text-foreground">{entry.content}</p>
                     )}
-                    <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wide text-amber-800">
+                    <div className="mt-1 flex flex-wrap gap-1.5 text-3xs uppercase tracking-wide text-amber-800">
                       {entry.photoUrl && <span className="rounded-full bg-amber-100 px-2 py-0.5">Photo</span>}
                       {entry.videoUrl && <span className="rounded-full bg-amber-100 px-2 py-0.5">Video</span>}
                       {entry.audioUrl && <span className="rounded-full bg-amber-100 px-2 py-0.5">Voice</span>}
@@ -2943,7 +2996,7 @@ export default function MemoryBook() {
                           {heroInscription.name}{heroInscription.occasion ? ` · ${heroInscription.occasion}` : ""}
                         </p>
                         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 14, fontVariantNumeric: "tabular-nums" as const }}>
-                          Built by {peopleLabel} · {giftsLabel} · {formatMoneyFriendly(displayMemoryFundValue)} set aside
+                          Built by {peopleLabel} · {giftsLabel}
                         </p>
                       </>
                     );
@@ -2962,7 +3015,7 @@ export default function MemoryBook() {
                       </motion.p>
                       {goldRule(14)}
                       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" as const }}>
-                        {giftsLabel} · {formatMoneyFriendly(displayMemoryFundValue)} set aside
+                        {giftsLabel}
                       </p>
                     </>
                   );
@@ -2975,53 +3028,69 @@ export default function MemoryBook() {
                   not render: a read-only book shows the story, not dead
                   controls. */}
               {canModerateMemory && (
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                <button
-                  type="button"
-                  onClick={() => { haptic("selection"); setShareOpen(true); }}
-                  className="kiddo-press"
-                  style={{
-                    padding: "9px 16px", fontSize: 13, fontWeight: 600,
-                    background: "rgba(255,255,255,0.10)", color: "white",
-                    border: "1px solid rgba(255,255,255,0.18)", borderRadius: 12,
-                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
-                  }}
-                  data-testid="button-share-memory-update"
-                  title={pastShares.length > 0 ? `${pastShares.length} update${pastShares.length === 1 ? "" : "s"} sent this year. Click to view.` : undefined}
-                >
-                  <Send size={14} />
-                  Share update
-                  {pastShares.length > 0 && (
-                    <span style={{
-                      fontSize: 10.5, fontWeight: 700,
-                      background: "rgba(255,255,255,0.18)",
-                      color: "white",
-                      padding: "1.5px 7px",
-                      borderRadius: 999,
-                      lineHeight: 1.4,
-                    }}>
-                      {/* "4 sent" was ambiguous — sent how, to whom?
-                          Switching to "4 shared" makes the action explicit
-                          and matches the button verb ("Share update"). */}
-                      {pastShares.length} shared
-                    </span>
-                  )}
-                </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "flex-start" }}>
+                {/* ONE primary. The three buttons used to be the same size — a 3-way
+                    toolbar on the most emotional surface in the app. Adding a memory IS
+                    the Memory Book; it now clearly dominates, and Share/Voice drop to
+                    quiet secondary links beneath it. (2026-07 hierarchy pass.) */}
                 <button
                   type="button"
                   onClick={() => { haptic("selection"); openAddModal(); }}
                   className="kiddo-press"
                   style={{
-                    padding: "9px 16px", fontSize: 13, fontWeight: 700,
+                    padding: "13px 26px", fontSize: 15, fontWeight: 700,
                     background: "hsl(var(--kiddo-gold))", color: "white",
-                    border: "none", borderRadius: 12,
-                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+                    border: "none", borderRadius: 14,
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9,
+                    boxShadow: "0 10px 24px -8px hsl(var(--kiddo-gold) / 0.6)",
                   }}
                   data-testid="button-add-entry"
                 >
-                  <Plus size={14} />
+                  <Plus size={18} />
                   Add memory
                 </button>
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap" as const, alignItems: "center", paddingLeft: 2 }}>
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setShareOpen(true); }}
+                    className="kiddo-press"
+                    style={{
+                      padding: 0, fontSize: 12.5, fontWeight: 600,
+                      background: "none", color: "rgba(255,255,255,0.72)",
+                      border: "none", cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                    }}
+                    data-testid="button-share-memory-update"
+                    title={pastShares.length > 0 ? `${pastShares.length} update${pastShares.length === 1 ? "" : "s"} sent this year. Click to view.` : undefined}
+                  >
+                    <Send size={13} />
+                    Share update
+                    {pastShares.length > 0 && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700,
+                        background: "rgba(255,255,255,0.18)", color: "white",
+                        padding: "1px 6px", borderRadius: 999, lineHeight: 1.4,
+                      }}>
+                        {pastShares.length} shared
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setSealedVoiceOpen(true); }}
+                    className="kiddo-press"
+                    style={{
+                      padding: 0, fontSize: 12.5, fontWeight: 600,
+                      background: "none", color: "rgba(255,255,255,0.72)",
+                      border: "none", cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                    }}
+                    data-testid="button-sealed-voice"
+                  >
+                    <Mic size={13} />
+                    Voice for 18th
+                  </button>
+                </div>
               </div>
               )}
             </div>
@@ -3276,7 +3345,7 @@ export default function MemoryBook() {
                         next.searchParams.delete("event");
                         window.history.replaceState({}, "", `${next.pathname}${next.search}`);
                       }}
-                      className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      className="text-2xs font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                     >
                       <X size={11} />
                       Show all
@@ -3367,7 +3436,7 @@ export default function MemoryBook() {
                               const fxPct = Number.isFinite(fx) ? Math.max(0, Math.min(100, fx * 100)) : 50;
                               const fyPct = Number.isFinite(fy) ? Math.max(0, Math.min(100, fy * 100)) : 50;
                               return (
-                                <img
+                                <FadeImage
                                   src={evt.imageUrl}
                                   // alt="" (decorative). The event name is already
                                   // rendered in the card body directly below this
@@ -3411,7 +3480,7 @@ export default function MemoryBook() {
                                     the ✨ until they pick an icon. */}
                                 {evt.isPermanent ? (
                                   fundData?.childPhotoUrl ? (
-                                    <img
+                                    <FadeImage
                                       src={fundData.childPhotoUrl}
                                       alt=""
                                       style={{
@@ -3497,7 +3566,7 @@ export default function MemoryBook() {
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-[hsl(var(--kiddo-evergreen))] truncate">{evt.name}</p>
                             {evt.description && stripHtml(evt.description) && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">{stripHtml(evt.description)}</p>
+                              <p className="text-2xs text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">{stripHtml(evt.description)}</p>
                             )}
                           </div>
                           <button
@@ -3508,7 +3577,7 @@ export default function MemoryBook() {
                               next.searchParams.delete("event");
                               window.history.replaceState({}, "", `${next.pathname}${next.search}`);
                             }}
-                            className="shrink-0 text-[11px] font-semibold text-muted-foreground hover:text-foreground whitespace-nowrap"
+                            className="shrink-0 text-2xs font-semibold text-muted-foreground hover:text-foreground whitespace-nowrap"
                           >
                             Clear filter
                           </button>
@@ -3566,7 +3635,7 @@ export default function MemoryBook() {
               <section className="kiddo-card mb-5 p-5" data-testid="memory-milestone-capture">
                 <div className="flex items-baseline justify-between gap-3 mb-1">
                   <p className="kiddo-section-label">Capture a moment</p>
-                  <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground/60">
+                  <span className="text-3xs uppercase tracking-wide text-muted-foreground/60">
                     {isOwnerMode ? "Your story" : <>Saved for {childName || "them"} at {fundMajorityAge}</>}
                   </span>
                 </div>
@@ -3749,7 +3818,7 @@ export default function MemoryBook() {
                                   : (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 3px 10px hsl(var(--kiddo-ink) / 0.13)"),
                               }}
                             >
-                              <img src={rosterPhoto} alt="" loading="lazy" className="h-full w-full object-cover" />
+                              <FadeImage src={rosterPhoto} alt="" loading="lazy" className="h-full w-full object-cover" />
                             </div>
                           ) : (
                             <div
@@ -3771,11 +3840,11 @@ export default function MemoryBook() {
                               {gifter.name.slice(0, 1).toUpperCase()}
                             </div>
                           )}
-                          <p className="text-[11px] font-semibold text-foreground text-center leading-tight w-[64px] truncate px-0.5">
+                          <p className="text-2xs font-semibold text-foreground text-center leading-tight w-[64px] truncate px-0.5">
                             {labelName}
                           </p>
-                          <p className="text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))] text-center">{displayAmount(gifter.totalAmount)}</p>
-                          <p className="text-[9px] text-muted-foreground text-center">
+                          <p className="text-3xs font-bold text-[hsl(var(--kiddo-evergreen))] text-center">{displayAmount(gifter.totalAmount)}</p>
+                          <p className="text-4xs text-muted-foreground text-center">
                             {gifter.isAnon && gifter.anonPeople > 1
                               ? `${gifter.giftCount} gifts`
                               : gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}
@@ -3893,7 +3962,7 @@ export default function MemoryBook() {
                       <button
                         type="button"
                         onClick={() => setMoreFiltersOpen((v) => !v)}
-                        className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                        className="shrink-0 rounded-full px-3 py-1.5 text-2xs font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
                         data-testid="button-memory-more-filters"
                         aria-expanded={moreFiltersOpen}
                       >
@@ -3916,7 +3985,7 @@ export default function MemoryBook() {
                         rows. Nothing is permanently hidden — the track
                         scrolls. */}
                     <div className="flex items-center gap-2" data-testid="memory-filter-bar">
-                      <span className="shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground mr-1">Type:</span>
+                      <span className="shrink-0 text-3xs font-bold uppercase tracking-wide text-muted-foreground mr-1">Type:</span>
                       <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
                       {[
                         { key: "all", label: "All" },
@@ -3928,7 +3997,7 @@ export default function MemoryBook() {
                         <button
                           key={opt.key}
                           onClick={() => setActiveFilter(opt.key as any)}
-                          className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                          className={`kiddo-press rounded-full px-3 py-1 text-2xs font-semibold transition-colors ${
                             activeFilter === opt.key
                               ? "bg-[hsl(var(--kiddo-evergreen))] text-white"
                               : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3942,7 +4011,7 @@ export default function MemoryBook() {
                     </div>
                     {canModerateMemory && (activeFilter === "all" || activeFilter === "gift_message") && (
                       <div className="flex items-center gap-2" data-testid="memory-thankyou-filter-bar">
-                        <span className="shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground mr-1">Thanks:</span>
+                        <span className="shrink-0 text-3xs font-bold uppercase tracking-wide text-muted-foreground mr-1">Thanks:</span>
                         <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
                         {[
                           { key: "all", label: "All" },
@@ -3953,7 +4022,7 @@ export default function MemoryBook() {
                           <button
                             key={opt.key}
                             onClick={() => setThankYouFilter(opt.key as any)}
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                            className={`kiddo-press rounded-full px-3 py-1 text-2xs font-semibold transition-colors ${
                               thankYouFilter === opt.key
                                 ? "bg-[hsl(var(--kiddo-gold))] text-[hsl(var(--kiddo-ink))]"
                                 : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3977,18 +4046,46 @@ export default function MemoryBook() {
                     on a single row regardless of breakpoint, with flex-wrap
                     handling extreme-narrow widths gracefully. */}
                 <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setVisibleCount(10);
-                    }}
-                    placeholder="Search names, notes, events..."
-                    className="h-11 w-full rounded-2xl border border-border bg-background px-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    data-testid="input-memory-search"
-                  />
+                  {(searchOpen || searchQuery) && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setVisibleCount(10);
+                      }}
+                      placeholder="Search names, notes, events..."
+                      autoFocus
+                      className="h-11 w-full rounded-2xl border border-border bg-background pl-4 pr-11 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      data-testid="input-memory-search"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(""); setSearchOpen(false); }}
+                      aria-label="Close search"
+                      className="kiddo-press absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      data-testid="button-memory-search-close"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* Search toggle — expands the field above (collapsed by default so
+                        the entries lead). Hidden while the field is already open. */}
+                    {!(searchOpen || searchQuery) && (
+                      <button
+                        type="button"
+                        onClick={() => { haptic("selection"); setSearchOpen(true); }}
+                        aria-label="Search"
+                        title="Search names, notes, events"
+                        className="kiddo-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-foreground"
+                        data-testid="button-memory-search-toggle"
+                      >
+                        <Search className="h-4 w-4" />
+                      </button>
+                    )}
                     {/* Year picker hides when entries only span one year —
                         a brand-new fund doesn't need a year selector that
                         offers "All years" + "2026" as the only options. The
@@ -4015,13 +4112,13 @@ export default function MemoryBook() {
                     <div className="flex h-11 rounded-2xl border border-border bg-background p-1">
                       <button
                         onClick={() => setViewMode("story")}
-                        className={`rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "story" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`kiddo-press rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "story" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Story
                       </button>
                       <button
                         onClick={() => setViewMode("timeline")}
-                        className={`rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "timeline" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`kiddo-press rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "timeline" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Timeline
                       </button>
@@ -4158,7 +4255,7 @@ export default function MemoryBook() {
                               setBulkComposerTone(tone);
                               setBulkComposerMessage(buildBulkThankYouMessage(tone, gifterFilter, pendingGifts));
                             }}
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-colors ${bulkComposerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
+                            className={`rounded-full px-3 py-1 text-2xs font-semibold capitalize transition-colors ${bulkComposerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
                             data-testid={`button-bulk-thanks-tone-${tone}`}
                           >
                             {tone}
@@ -4313,11 +4410,11 @@ export default function MemoryBook() {
               );
             })() : (
               <div className="mb-4 flex items-center gap-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-muted-foreground/50">
+                <p className="text-2xs font-bold uppercase tracking-[0.10em] text-muted-foreground/50">
                   {viewMode === "timeline" ? "Timeline" : "Story"}
                 </p>
                 <div className="flex-1 h-px bg-border/40" />
-                <p className="text-[11px] text-muted-foreground/40">{filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"}</p>
+                <p className="text-2xs text-muted-foreground/40">{filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"}</p>
               </div>
             )}
 
@@ -4331,7 +4428,7 @@ export default function MemoryBook() {
                         header pushes this one up and out as you scroll past.
                         Backdrop-blur so content doesn't bleed through. */}
                     <h4
-                      className={`sticky top-[58px] z-20 -mx-4 px-4 py-2 mb-3 text-[11px] font-bold uppercase tracking-[0.10em] backdrop-blur-md bg-background/85 border-b border-border/30 ${
+                      className={`sticky top-[58px] z-20 -mx-4 px-4 py-2 mb-3 text-2xs font-bold uppercase tracking-[0.10em] backdrop-blur-md bg-background/85 border-b border-border/30 ${
                         month === "The Beginning" ? "text-[hsl(var(--kiddo-gold-ink))]" : "text-muted-foreground/70"
                       }`}
                     >
@@ -4397,22 +4494,22 @@ export default function MemoryBook() {
                               style={ident.avatarStyle === "gifter" && ident.gifterBg ? { background: ident.gifterBg } : undefined}
                             >
                               {ident.profileImageUrl
-                                ? <img src={ident.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                ? <FadeImage src={ident.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 : ident.avatarLetter}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <p className="text-sm font-semibold text-foreground truncate">{ident.displayName}</p>
-                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] ${isGift ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]" : "bg-muted text-muted-foreground"}`}>
+                                <span className={`rounded-full px-2 py-0.5 text-4xs font-bold uppercase tracking-[0.08em] ${isGift ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]" : "bg-muted text-muted-foreground"}`}>
                                   {config.label}
                                 </span>
                                 {investLine && (
-                                  <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                                  <span className="rounded-full bg-muted px-2 py-0.5 text-4xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
                                     {investLine}
                                   </span>
                                 )}
                                 {eventName && (
-                                  <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[9px] font-bold text-[hsl(var(--kiddo-gold-ink))]">
+                                  <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-4xs font-bold text-[hsl(var(--kiddo-gold-ink))]">
                                     {eventName}
                                   </span>
                                 )}
@@ -4420,7 +4517,7 @@ export default function MemoryBook() {
                               {noteText ? (
                                 <p className="text-xs text-muted-foreground truncate mt-0.5">&ldquo;{noteText}&rdquo;</p>
                               ) : null}
-                              <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-1.5">
+                              <p className="text-3xs text-muted-foreground/60 mt-0.5 flex items-center gap-1.5">
                                 <span>{formatDate(entry.createdAt)}</span>
                                 {/* Media indicator. Voice (the moat) gets a
                                     soft gold tint to honor its design-lens
@@ -4447,7 +4544,7 @@ export default function MemoryBook() {
                             </div>
                             {isGift ? (
                               <span className="shrink-0 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
-                                ${amount.toFixed(2)}
+                                {formatMoneyFriendly(amount)}
                               </span>
                             ) : null}
                           </div>
@@ -4527,7 +4624,7 @@ export default function MemoryBook() {
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg leading-none" aria-hidden>🌱</span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10.5px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">
+                            <p className="text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">
                               Where it began
                             </p>
                             <p className="text-[12px] text-[rgb(95,85,72)] leading-snug mt-0.5">
@@ -4614,7 +4711,7 @@ export default function MemoryBook() {
                       <div className="flex flex-col gap-3 border-b border-border/50 bg-[hsl(var(--kiddo-cream)/0.42)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {entry.isFeatured ? (
-                            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.14)] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
+                            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.14)] px-2.5 py-1 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
                               <Pin size={10} /> Pinned
                             </span>
                           ) : null}
@@ -4628,7 +4725,7 @@ export default function MemoryBook() {
                               of an entry isn't actionable info anyway —
                               they're seeing it because they have access. */}
                           {entry.mediaStatus === "broken" ? (
-                            <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-bold text-red-700">Broken media</span>
+                            <span className="rounded-full bg-red-100 px-2.5 py-1 text-3xs font-bold text-red-700">Broken media</span>
                           ) : null}
                         </div>
                         {/* Owner controls collapsed into a single kebab.
@@ -4846,7 +4943,7 @@ export default function MemoryBook() {
                               data-testid={`memory-recurring-compressed-${entry.id}`}
                             >
                               <div
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-3xs font-bold"
                                 style={{ background: compressedGc.bg, color: compressedGc.text }}
                               >
                                 {compressedSender.slice(0, 1).toUpperCase()}
@@ -4862,10 +4959,10 @@ export default function MemoryBook() {
                                     contribution rows, which name where the money landed). Show the
                                     picked stock when there is one, else the managed mix. */}
                                 <span className="truncate text-muted-foreground/75">
-                                  {entry.gift.selectedTicker || `${childName || "the"}'s mix`}
+                                  {entry.gift.selectedTicker || (childName ? `${childName}'s mix` : "diversified mix")}
                                 </span>
                               </div>
-                              <p className="text-[10px] text-muted-foreground/70 shrink-0 tabular-nums">
+                              <p className="text-3xs text-muted-foreground/70 shrink-0 tabular-nums">
                                 {formatDate(entry.createdAt)}
                               </p>
                             </div>
@@ -4918,7 +5015,7 @@ export default function MemoryBook() {
                         const tagBlock = (
                           <div className="flex flex-wrap items-center gap-1.5">
                             {entry.gift.eventName && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-3xs font-semibold text-[hsl(var(--kiddo-evergreen))]">
                                 <Calendar size={10} />
                                 {entry.gift.eventName}
                               </span>
@@ -4932,29 +5029,30 @@ export default function MemoryBook() {
                               // the visual-richness gap with Dashboard's
                               // "Last contribution" card which already
                               // uses StockLogo.
-                              <span className="inline-flex items-center gap-1 rounded-full bg-muted pl-1 pr-2 py-0.5 text-[10px] font-bold text-foreground">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
                                 <StockLogo ticker={ticker} size={14} />
                                 {ticker}
                               </span>
                             ) : (exec === "family" || exec === "cash") ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-3xs font-medium text-muted-foreground">
                                 Cash
                               </span>
                             ) : null}
                             {/* "✨ From you" pill removed — gifter name already
-                                renders in the row, so the pill duplicated info
-                                the parent could read directly. Thank-you state
-                                pills (Thanked / Awaiting / Missing) carry signal
-                                the row doesn't otherwise expose, so they stay.
-                                ✓ Thanked is STORY (shows for every role that
-                                can see the book's thank-yous); Awaiting/Missing
-                                are WORKFLOW prompts, moderators only — a
-                                read-only viewer was seeing every gift stamped
-                                "No thanks yet" purely because their thank-you
-                                query never loads. */}
-                            {tyState === "sent" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">✓ Thanked</span>}
-                            {canModerateMemory && tyState === "draft" && <span className="inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-2 py-0.5 text-[10px] font-bold text-[hsl(43,55%,28%)]">⏳ Awaiting thanks</span>}
-                            {canModerateMemory && tyState === "missing" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink)/0.06)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-ink)/0.55)]">No thanks yet</span>}
+                                renders in the row. The "Awaiting thanks" / "No
+                                thanks yet" WORKFLOW pills were ALSO removed
+                                (2026-06-25): on an un-thanked card the owner
+                                already sees the "Say thanks" / "Finish thank-you"
+                                button right here, so the pill was a second
+                                element saying the same thing (and ⏳ was emoji
+                                chrome the lucide sweep is retiring). Only
+                                ✓ Thanked stays — it's STORY (shows for every role
+                                that can see the book's thank-yous), and a thanked
+                                card has no button, so it's the sole confirmation,
+                                not a duplicate. The draft-vs-missing distinction
+                                the old pills carried now lives in the button verb
+                                ("Finish thank-you" vs "Say thanks"). */}
+                            {tyState === "sent" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-2 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]">✓ Thanked</span>}
                           </div>
                         );
 
@@ -4996,7 +5094,7 @@ export default function MemoryBook() {
                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden"
                                     style={{ boxShadow: "0 0 0 1.5px hsl(var(--kiddo-evergreen)/0.55)" }}
                                   >
-                                    <img
+                                    <FadeImage
                                       src={ownerProfileImageUrl}
                                       alt=""
                                       className="w-full h-full object-cover"
@@ -5004,7 +5102,7 @@ export default function MemoryBook() {
                                   </div>
                                 ) : (
                                   <div
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-3xs font-bold"
                                     style={{ background: "hsl(var(--kiddo-evergreen)/0.12)", color: "hsl(var(--kiddo-evergreen))" }}
                                   >
                                     💚
@@ -5022,17 +5120,17 @@ export default function MemoryBook() {
                                       destination-less amount. Same canonical label the
                                       per-gifter detail modal and Dashboard use. */}
                                   {ticker ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-[10px] font-bold text-foreground">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
                                       <StockLogo ticker={ticker} size={12} />
                                       {ticker}
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-foreground">
+                                    <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-3xs font-bold text-foreground">
                                       {isOwnerMode ? "Your mix" : childName ? `${childName}'s mix` : "Diversified mix"}
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[10.5px] text-muted-foreground shrink-0">{formatDate(entry.createdAt)}</p>
+                                <p className="text-3xs text-muted-foreground shrink-0">{formatDate(entry.createdAt)}</p>
                               </div>
                             </div>
                           );
@@ -5080,7 +5178,7 @@ export default function MemoryBook() {
                                   minHeight: 120,
                                 }}
                               >
-                                <img
+                                <FadeImage
                                   src={photoUrl || ""}
                                   alt=""
                                   style={{
@@ -5137,7 +5235,7 @@ export default function MemoryBook() {
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden${isRecent ? " kiddo-gifter-avatar-pulse" : ""}`}
                                         style={{ boxShadow: "0 0 0 2px hsl(var(--kiddo-evergreen)/0.65), 0 1px 4px hsl(var(--kiddo-ink) / 0.08)" }}
                                       >
-                                        <img
+                                        <FadeImage
                                           src={ownerProfileImageUrl}
                                           alt=""
                                           className="w-full h-full object-cover"
@@ -5158,7 +5256,7 @@ export default function MemoryBook() {
                                   <p className="text-sm font-semibold text-foreground truncate" data-testid={`text-sender-${entry.id}`}>
                                     {displaySenderName}
                                   </p>
-                                  <p className="text-[11px] text-muted-foreground">{formatDate(entry.createdAt)}</p>
+                                  <p className="text-2xs text-muted-foreground">{formatDate(entry.createdAt)}</p>
                                 </div>
                                 <div className="shrink-0 text-right">
                                   <p className="font-heading text-base font-bold leading-none tabular-nums text-[hsl(var(--kiddo-evergreen))]" data-testid={`text-amount-${entry.id}`}>
@@ -5201,8 +5299,8 @@ export default function MemoryBook() {
                                     const gain = nowValue - giftAmount;
                                     if (gain < 0.5) return null; // < 50 cents, not worth surfacing
                                     return (
-                                      <p className="mt-1 text-[10.5px] text-green-600 tabular-nums leading-none" data-testid={`text-gift-now-worth-${entry.id}`}>
-                                        now ~${nowValue.toFixed(2)}
+                                      <p className="mt-1 text-3xs text-green-600 tabular-nums leading-none" data-testid={`text-gift-now-worth-${entry.id}`}>
+                                        now ~{formatMoneyFriendly(nowValue)}
                                       </p>
                                     );
                                   })()}
@@ -5299,8 +5397,8 @@ export default function MemoryBook() {
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))] text-[14px]" aria-hidden>🎙</span>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
-                                  <p className="text-[11px] text-muted-foreground/80 leading-tight">They wanted {isOwnerMode ? "you" : childName ? childName : "her"} to hear this.</p>
+                                  <p className="text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
+                                  <p className="text-2xs text-muted-foreground/80 leading-tight">They wanted {isOwnerMode ? "you" : childName ? childName : "her"} to hear this.</p>
                                 </div>
                                 <span className="text-[hsl(var(--kiddo-gold)/0.55)]" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
@@ -5423,7 +5521,7 @@ export default function MemoryBook() {
                             // when chrome adds no signal.
                             const valueDiffersFromCost = currentValue !== null && giftAmt > 0 && Math.abs(currentValue - giftAmt) > 0.01;
                             return (
-                              <div className="mt-3 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-2 text-[11px] text-[hsl(var(--kiddo-evergreen)/0.85)]">
+                              <div className="mt-3 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-2 text-2xs text-[hsl(var(--kiddo-evergreen)/0.85)]">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                   <span data-testid={`text-growth-${entry.id}`} className="font-medium">{investLine}</span>
                                   {/* Right-side value badge — three cases:
@@ -5439,16 +5537,17 @@ export default function MemoryBook() {
                                       3. No value, not fresh → silent.
                                          Better than wrong. */}
                                   {currentValue !== null && valueDiffersFromCost ? (
-                                    <span className="text-[10.5px] font-semibold flex items-center gap-1.5">
-                                      <span className="text-foreground">Now worth ${currentValue.toFixed(2)}</span>
-                                      {showGainPill && gainDollars !== null && (
-                                        <span className={isUp ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-500"}>
-                                          ({isUp ? "+" : "−"}${Math.abs(gainDollars).toFixed(2)})
-                                        </span>
-                                      )}
+                                    <span className="text-3xs font-semibold flex items-center gap-1.5">
+                                      {/* Gain/loss ± pill CUT (2026-07): the performance delta
+                                          — especially a RED loss (−$X) — is a money-lens that
+                                          doesn't belong on the Memory Book's love surface. The
+                                          honest current value ("Now worth $X") stays; the gain/loss
+                                          story lives on the dashboard. Not hiding the loss (the real
+                                          value is shown), just not framing love as performance. */}
+                                      <span className="text-foreground">Now worth {formatMoneyFriendly(currentValue)}</span>
                                     </span>
                                   ) : currentValue === null && isJustLanded ? (
-                                    <span className="text-[10px] font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
+                                    <span className="text-3xs font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
                                   ) : null}
                                 </div>
                               </div>
@@ -5527,7 +5626,7 @@ export default function MemoryBook() {
                                       type="button"
                                       onClick={() => setViewThankYouGiftId(isViewingThanks ? null : entry.giftId!)}
                                       aria-expanded={isViewingThanks}
-                                      className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.14)] transition-colors"
+                                      className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-3xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.14)] transition-colors"
                                       data-testid={`button-view-thanks-${entry.id}`}
                                     >
                                       ✓ Thanked{ty.sentAt ? ` · ${new Date(ty.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
@@ -5535,7 +5634,7 @@ export default function MemoryBook() {
                                     </button>
                                     {isViewingThanks && (
                                       <div className="mt-2 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.03)] p-3.5">
-                                        <p className="text-[9.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen)/0.7)] mb-1.5">
+                                        <p className="text-4xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen)/0.7)] mb-1.5">
                                           What you sent {senderName}
                                         </p>
                                         {ty.message ? (
@@ -5544,7 +5643,7 @@ export default function MemoryBook() {
                                           <p className="text-[12.5px] italic text-[hsl(var(--kiddo-ink)/0.55)]">You sent a thank-you{ty.sentAt ? `` : ""}.</p>
                                         )}
                                         {ty.sentAt && (
-                                          <p className="mt-2.5 text-[10px] text-[hsl(var(--kiddo-ink)/0.45)]">
+                                          <p className="mt-2.5 text-3xs text-[hsl(var(--kiddo-ink)/0.45)]">
                                             Sent {new Date(ty.sentAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                                           </p>
                                         )}
@@ -5557,11 +5656,11 @@ export default function MemoryBook() {
                                       <button
                                         type="button"
                                         onClick={() => openComposer(entry.giftId!, ty, senderName, amount, tyCtx)}
-                                        className="flex items-center gap-1 px-1 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity"
+                                        className="flex items-center gap-1 px-1 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity"
                                         data-testid={`button-say-thanks-${entry.id}`}
                                       >
                                         <Send size={10} />
-                                        Say thanks
+                                        {tyState === "draft" ? "Finish thank-you" : "Say thanks"}
                                       </button>
                                     )}
 
@@ -5582,7 +5681,7 @@ export default function MemoryBook() {
                                                     setComposerTone(tone);
                                                     setComposerMessage(buildThankYouMessage(tone, senderName, amount, tyCtx));
                                                   }}
-                                                  className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-colors ${composerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
+                                                  className={`rounded-full px-3 py-1 text-2xs font-semibold capitalize transition-colors ${composerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
                                                   data-testid={`button-thank-you-tone-${tone}`}
                                                 >
                                                   {tone}
@@ -5595,13 +5694,13 @@ export default function MemoryBook() {
                                                 send. Falls back to "saved as draft" copy when there's
                                                 no email on file (will copy to clipboard instead). */}
                                             <div className="rounded-xl border border-border/60 bg-background/60 px-3 py-2.5">
-                                              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                                              <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
                                                 {hasEmail ? "Send to" : "Will copy for"}
                                               </p>
                                               <p className="mt-0.5 text-sm font-semibold text-foreground">
                                                 {senderName}
                                               </p>
-                                              <p className="text-[11px] text-muted-foreground">
+                                              <p className="text-2xs text-muted-foreground">
                                                 {hasEmail
                                                   ? `Via email · from ${ownerName || "you"}`
                                                   : `Copies to your clipboard · paste it anywhere`}
@@ -5660,13 +5759,13 @@ export default function MemoryBook() {
                                                 serif body) so it reads like a card, not a
                                                 form. No fake email-client chrome. */}
                                             <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-white px-4 py-4">
-                                              <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                                              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                                                 Preview · what {senderName} will read
                                               </p>
                                               <p className="mt-2 font-serif text-[14px] leading-[1.7] text-foreground italic whitespace-pre-line">
                                                 {composerMessage}
                                               </p>
-                                              <p className="mt-3 pt-2.5 border-t border-border/40 text-[10.5px] text-muted-foreground/70">
+                                              <p className="mt-3 pt-2.5 border-t border-border/40 text-3xs text-muted-foreground/70">
                                                 {hasEmail
                                                   ? `Sent via email to ${senderName} from ${ownerName || "you"}. Also saved to ${childName || "the"} Memory Book.`
                                                   : `Message will copy to your clipboard for you to send.`}
@@ -5727,7 +5826,7 @@ export default function MemoryBook() {
                                 <Star size={18} className="text-[hsl(var(--kiddo-gold))]" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">Milestone</span>
+                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">Milestone</span>
                                 <h3 className="mt-1.5 font-heading text-base font-semibold leading-snug text-foreground" data-testid={`text-milestone-${entry.id}`}>
                                   {entry.content}
                                 </h3>
@@ -5739,7 +5838,7 @@ export default function MemoryBook() {
                           </div>
                           {entry.photoUrl && (
                             <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
-                              <img
+                              <FadeImage
                                 src={entry.photoUrl}
                                 alt=""
                                 className="w-full h-48 sm:h-52 object-cover"
@@ -5767,7 +5866,7 @@ export default function MemoryBook() {
                       {entry.type === "photo" && (
                         <div>
                           {entry.photoUrl && (
-                            <img
+                            <FadeImage
                               src={entry.photoUrl}
                               alt=""
                               className="w-full h-56 sm:h-64 object-cover"
@@ -5790,18 +5889,18 @@ export default function MemoryBook() {
                           <div className="flex items-start gap-3 p-4">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))] overflow-hidden">
                               {entry.authorPhotoUrl
-                                ? <img src={entry.authorPhotoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                ? <FadeImage src={entry.authorPhotoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 : (entry.authorName || "P").slice(0, 1).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <p className="text-sm font-bold text-foreground">{displayAuthor(entry.authorName)}</p>
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Photo</span>
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Photo</span>
                               </div>
                               {entry.content && (
                                 <p className="mt-1 text-sm leading-relaxed text-foreground/85" data-testid={`text-caption-${entry.id}`}>{entry.content}</p>
                               )}
-                              <p className="mt-0.5 text-[10px] text-muted-foreground">{formatDate(entry.createdAt)}</p>
+                              <p className="mt-0.5 text-3xs text-muted-foreground">{formatDate(entry.createdAt)}</p>
                             </div>
                           </div>
                         </div>
@@ -5826,7 +5925,7 @@ export default function MemoryBook() {
                                 </p>
                                 <div className="mt-4 flex items-center gap-2.5 text-xs text-muted-foreground">
                                   <div
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                     style={{
                                       background: memoryIdent.avatarStyle === "owner"
                                         ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5840,7 +5939,7 @@ export default function MemoryBook() {
                                     }}
                                   >
                                     {memoryIdent.profileImageUrl
-                                      ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                      ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                       : memoryIdent.avatarLetter}
                                   </div>
                                   <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5849,7 +5948,7 @@ export default function MemoryBook() {
                                   {entry.type === "parent_investment_start" && (
                                     <>
                                       <span className="text-muted-foreground/55">·</span>
-                                      <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-evergreen))]">
+                                      <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-evergreen))]">
                                         Investment
                                       </span>
                                     </>
@@ -5859,7 +5958,7 @@ export default function MemoryBook() {
                             ) : (
                               <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                                 <div
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                   style={{
                                     background: memoryIdent.avatarStyle === "owner"
                                       ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5873,7 +5972,7 @@ export default function MemoryBook() {
                                   }}
                                 >
                                   {memoryIdent.profileImageUrl
-                                    ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : memoryIdent.avatarLetter}
                                 </div>
                                 <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5887,7 +5986,7 @@ export default function MemoryBook() {
                           {entry.audioUrl && (
                             <div className="mt-3 rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)] bg-background px-4 py-3" data-testid={`audio-parent-${entry.id}`}>
                               <div className="mb-2 flex items-center gap-2">
-                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
+                                <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
                                 <span className="text-muted-foreground/45 ml-auto" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
                               <audio src={entry.audioUrl} controls className="w-full h-9" />
@@ -5915,7 +6014,7 @@ export default function MemoryBook() {
                                 </p>
                                 <div className="mt-4 flex items-center gap-2.5 text-xs text-muted-foreground">
                                   <div
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                     style={{
                                       background: memoryIdent.avatarStyle === "owner"
                                         ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5929,7 +6028,7 @@ export default function MemoryBook() {
                                     }}
                                   >
                                     {memoryIdent.profileImageUrl
-                                      ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                      ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                       : memoryIdent.avatarLetter}
                                   </div>
                                   <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5940,7 +6039,7 @@ export default function MemoryBook() {
                             ) : (
                               <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                                 <div
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                   style={{
                                     background: memoryIdent.avatarStyle === "owner"
                                       ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5954,7 +6053,7 @@ export default function MemoryBook() {
                                   }}
                                 >
                                   {memoryIdent.profileImageUrl
-                                    ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : memoryIdent.avatarLetter}
                                 </div>
                                 <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5965,7 +6064,7 @@ export default function MemoryBook() {
                           </div>
                           {entry.photoUrl && (
                             <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
-                              <img
+                              <FadeImage
                                 src={entry.photoUrl}
                                 alt=""
                                 className="w-full h-48 sm:h-52 object-cover"
@@ -5989,7 +6088,7 @@ export default function MemoryBook() {
                           {entry.audioUrl && (
                             <div className="mt-3 rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)] bg-background px-4 py-3" data-testid={`audio-note-${entry.id}`}>
                               <div className="mb-2 flex items-center gap-2">
-                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
+                                <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
                                 <span className="text-muted-foreground/45 ml-auto" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
                               <audio src={entry.audioUrl} controls className="w-full h-9" />
@@ -6053,7 +6152,7 @@ export default function MemoryBook() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {sharesRemaining < SHARES_PER_YEAR_CAP && (
                     <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                      className={`rounded-full px-2.5 py-1 text-2xs font-bold ${
                         sharesRemaining === 0
                           ? "bg-red-50 text-red-700"
                           : sharesRemaining === 1
@@ -6095,7 +6194,7 @@ export default function MemoryBook() {
                         no server-side change required. */}
                     {sharePhotoUrl ? (
                       <div className="relative rounded-2xl border border-border overflow-hidden bg-muted/30">
-                        <img
+                        <FadeImage
                           src={sharePhotoUrl}
                           alt=""
                           className="w-full max-h-64 object-cover"
@@ -6213,7 +6312,7 @@ export default function MemoryBook() {
                       URL (e.g. paste into a text thread). Newest first. */}
                   {pastShares.length > 0 && (
                     <div className="mt-6 pt-5 border-t border-border">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                      <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
                         Updates you've sent
                       </p>
                       <div className="space-y-2">
@@ -6235,11 +6334,11 @@ export default function MemoryBook() {
                                   haptic("selection");
                                   setExpandedPastShareToken(isExpanded ? null : share.token);
                                 }}
-                                className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors"
+                                className="kiddo-press w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors"
                               >
                                 <div className="flex items-baseline justify-between gap-3">
-                                  <span className="text-[11px] font-semibold text-foreground">{sentDate}</span>
-                                  <span className="text-[10px] text-muted-foreground">
+                                  <span className="text-2xs font-semibold text-foreground">{sentDate}</span>
+                                  <span className="text-3xs text-muted-foreground">
                                     Sent to {share.recipientCount} {share.recipientCount === 1 ? "gifter" : "gifters"}
                                   </span>
                                 </div>
@@ -6252,7 +6351,7 @@ export default function MemoryBook() {
                               {isExpanded && (
                                 <div className="px-4 pb-3 space-y-2.5">
                                   {share.photoUrl && (
-                                    <img
+                                    <FadeImage
                                       src={share.photoUrl}
                                       alt="Update photo"
                                       className="w-full max-h-40 rounded-xl object-cover"
@@ -6275,7 +6374,7 @@ export default function MemoryBook() {
                                           toast({ title: "Couldn't copy", variant: "destructive" });
                                         }
                                       }}
-                                      className="flex-1 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline py-1"
+                                      className="flex-1 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline py-1"
                                       data-testid={`button-copy-past-share-${share.token}`}
                                     >
                                       {copiedShareToken === share.token ? "Copied" : "Copy share link"}
@@ -6284,7 +6383,7 @@ export default function MemoryBook() {
                                       href={share.shareUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex-1 text-center text-[11px] font-semibold text-muted-foreground hover:text-foreground py-1"
+                                      className="flex-1 text-center text-2xs font-semibold text-muted-foreground hover:text-foreground py-1"
                                       onClick={() => haptic("selection")}
                                     >
                                       Open in new tab
@@ -6305,7 +6404,7 @@ export default function MemoryBook() {
                       counts if the list is empty. Parent should see who they're
                       about to email before they tap Send. */}
                   <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                    <p className="text-2xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                       Going to {optedInCount === 0 ? "no one yet" : `${optedInCount} opted-in ${optedInCount === 1 ? "gifter" : "gifters"}`}
                     </p>
                     {optedInCount === 0 ? (
@@ -6329,12 +6428,12 @@ export default function MemoryBook() {
                       see in their inbox. Same shape as the worker template:
                       subject + body + photo + the parent-written note. */}
                   <div className="rounded-2xl border border-border bg-muted/40 p-4 space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Email preview</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Email preview</p>
                     <p className="text-sm font-semibold text-foreground">
                       An update from {isOwnerMode ? "your" : childName ? `${childName}'s` : "their"} Memory Book
                     </p>
                     {sharePhotoUrl.trim() && (
-                      <img
+                      <FadeImage
                         src={sharePhotoUrl.trim()}
                         alt="Update preview"
                         className="w-full max-h-48 rounded-xl object-cover"
@@ -6344,7 +6443,7 @@ export default function MemoryBook() {
                     <blockquote className="rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                       {shareMessage.trim()}
                     </blockquote>
-                    <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                    <p className="text-2xs text-muted-foreground/80 leading-relaxed">
                       They'll also see "Gift {childName || "again"}" and "Start my own fund" buttons, plus a one-click unsubscribe link.
                     </p>
                   </div>
@@ -6442,7 +6541,7 @@ export default function MemoryBook() {
                         <button
                           key={t}
                           onClick={() => { haptic("selection"); setEntryType(t); }}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                          className={`kiddo-press flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                             isActive
                               ? "bg-primary text-primary-foreground shadow-sm"
                               : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -6707,7 +6806,7 @@ export default function MemoryBook() {
                       <button
                         type="button"
                         onClick={() => { haptic("light"); setAudioUrl(""); setAudioTranscript(""); }}
-                        className="mt-2 text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors"
+                        className="mt-2 text-2xs font-semibold text-muted-foreground hover:text-destructive transition-colors"
                         data-testid="button-clear-audio"
                       >
                         Remove voice note
@@ -6849,7 +6948,7 @@ export default function MemoryBook() {
               }}
             >
               {lightboxMedia.kind === "image" && (
-                <img
+                <FadeImage
                   src={lightboxMedia.url}
                   alt=""
                   style={{
@@ -7095,11 +7194,9 @@ export default function MemoryBook() {
                             <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1 }}>{Math.round(displayMemoryPeople)}</p>
                             <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>people</p>
                           </div>
-                          <div style={{ width: 1, background: "hsl(var(--kiddo-ink) / 0.12)" }} />
-                          <div>
-                            <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", lineHeight: 1 }}>{formatMoney(displayMemoryFundValue)}</p>
-                            <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>so far</p>
-                          </div>
+                          {/* "$X so far" money stat CUT (2026-07): the Memory Book is the
+                              love/words surface — money lives on the dashboard. (It was also
+                              showing $0: the memory-fund data doesn't carry the live balance.) */}
                         </div>
                         <button
                           type="button"
@@ -7785,7 +7882,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
       {/* Photo — full-width inside the page. */}
       {photoUrl && (
         <div style={{ marginBottom: 18, borderRadius: 16, overflow: "hidden", background: "hsl(43,28%,92%)" }}>
-          <img
+          <FadeImage
             src={photoUrl}
             alt=""
             style={{ width: "100%", display: "block", maxHeight: 360, objectFit: "cover" }}
@@ -7831,10 +7928,8 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
         <div style={{ paddingTop: 16, borderTop: "1px solid hsl(var(--kiddo-ink) / 0.10)" }}>
           <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.55 }}>
             {ticker
-              ? <>$
-{giftAmt.toFixed(2)} invested in <strong style={{ color: "hsl(var(--kiddo-ink))" }}>{ticker}</strong>{childName ? ` · for ${childName}` : ""}</>
-              : <>$
-{giftAmt.toFixed(2)} added to {childName ? `${childName}'s` : "the"} fund</>}
+              ? <>{formatMoneyFriendly(giftAmt)} invested in <strong style={{ color: "hsl(var(--kiddo-ink))" }}>{ticker}</strong>{childName ? ` · for ${childName}` : ""}</>
+              : <>{formatMoneyFriendly(giftAmt)} added to {childName ? `${childName}'s` : "the"} fund</>}
           </p>
         </div>
       )}

@@ -83,7 +83,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Write something
         <ToolbarBtn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
           <Italic size={13} />
         </ToolbarBtn>
-        <div className="ml-auto text-[10px] text-muted-foreground select-none hidden sm:block">
+        <div className="ml-auto text-3xs text-muted-foreground select-none hidden sm:block">
           <span className="opacity-60">⌘B bold · ⌘I italic · Enter new line</span>
         </div>
       </div>

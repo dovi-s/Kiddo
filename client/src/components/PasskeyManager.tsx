@@ -132,7 +132,7 @@ export function PasskeyManager() {
                   <p className="text-sm font-medium text-foreground truncate">
                     {p.nickname || "Unnamed passkey"}
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     Last used {lastUsed}
                   </p>
                 </div>

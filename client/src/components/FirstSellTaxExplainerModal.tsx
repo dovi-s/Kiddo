@@ -100,7 +100,7 @@ export function FirstSellTaxExplainerModal({ payload, busy, onConfirm, onCancel 
                 value={fmt(estimatedTax)}
                 strong
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 {payload.incomeBracket
                   ? "Based on the income bracket you told us."
                   : "Based on an average. Set your income in Settings for a closer estimate."}

@@ -94,7 +94,7 @@ export function KidAt18WelcomeBanner({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p
-            className="text-[10px] font-bold uppercase mb-1.5"
+            className="text-3xs font-bold uppercase mb-1.5"
             style={{
               color: "hsl(var(--kiddo-gold-ink) / 0.85)",
               letterSpacing: "0.14em",

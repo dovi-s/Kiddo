@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
 import { motion } from "framer-motion";
 // Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md. Both
 // usages were on "Is there a company you love?" kid-suggestion prompts;
@@ -9,6 +10,7 @@ import { motion } from "framer-motion";
 // icon per feedback_gentle_nudge_pattern.md.
 import { BadgeCheck, BookOpen, Lightbulb, Lock, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { haptic } from "@/lib/haptics";
@@ -413,7 +415,7 @@ export default function KidView() {
     enabled: !!token,
   });
 
-  const { data: content, isLoading: contentLoading, refetch } = useQuery<KidViewContent>({
+  const { data: rawContent, isLoading: contentLoading, refetch } = useQuery<KidViewContent>({
     queryKey: ["kid-view-content", token, accessToken],
     queryFn: async () => {
       const res = await fetch(`/api/kid-view/${token}/content?accessToken=${encodeURIComponent(accessToken || "")}`);
@@ -423,6 +425,45 @@ export default function KidView() {
     enabled: !!token && !!accessToken,
     retry: false,
   });
+  // Demo consistency: KidView reads server content that can't see a session-only
+  // demo gift, so "Theo's view" was stale. Overlay it here — the gifts list, the
+  // "gifts received / people gave" stats, and the holding balance. Safe for real
+  // kid-views: demo gifts live only in the demo's sessionStorage, so this is a
+  // no-op unless there are demo gifts for this exact fund (same-tab).
+  const content = useMemo<KidViewContent | undefined>(() => {
+    if (!rawContent) return rawContent;
+    const fundId = (rawContent.fund as any)?.id;
+    const live = fundId ? readDemoLiveGiftsForFund(fundId, true) : [];
+    if (!live.length) return rawContent;
+    const demoGifts = live.map((g) => ({
+      id: `demo-${g.createdAt}`,
+      senderName: g.senderName,
+      amount: g.amount,
+      message: g.message,
+      createdAt: g.createdAt,
+      status: "invested",
+    }));
+    const existing = new Set((rawContent.gifts || []).map((g) => String(g.senderName || "").toLowerCase()));
+    let newGifters = 0;
+    for (const g of live) { const k = String(g.senderName || "").toLowerCase(); if (!existing.has(k)) { existing.add(k); newGifters++; } }
+    const giftStats = rawContent.giftStats
+      ? { ...rawContent.giftStats, total: rawContent.giftStats.total + live.length, gifters: rawContent.giftStats.gifters + newGifters }
+      : rawContent.giftStats;
+    const holdings = [...(rawContent.holdings || [])];
+    for (const g of live) {
+      const t = String(g.ticker || "").toUpperCase();
+      const amt = parseFloat(g.amount) || 0;
+      if (!t || String(g.executionModel || "").toLowerCase() === "cash" || amt <= 0) continue;
+      const idx = holdings.findIndex((h) => String(h.ticker || "").toUpperCase() === t);
+      if (idx >= 0) {
+        const cur = parseFloat(String(holdings[idx].currentValue || "0")) || 0;
+        holdings[idx] = { ...holdings[idx], currentValue: String(cur + amt) };
+      } else {
+        holdings.unshift({ id: `demo-h-${t}`, ticker: t, name: t, currentValue: String(amt), gain: "0.00" });
+      }
+    }
+    return { ...rawContent, gifts: [...demoGifts, ...(rawContent.gifts || [])], giftStats, holdings };
+  }, [rawContent]);
 
   // PIN unlock — extracted so BOTH the on-screen numpad and a hardware
   // keyboard reach the same submit path. Previously a digit only registered
@@ -1056,7 +1097,7 @@ export default function KidView() {
                 className="rounded-2xl bg-white/10 px-3 py-3 text-center"
               >
                 <p className="text-xl font-bold">{stat.value}</p>
-                <p className="text-[10px] opacity-65 leading-tight mt-0.5" style={{ whiteSpace: "pre-line" }}>
+                <p className="text-3xs opacity-65 leading-tight mt-0.5" style={{ whiteSpace: "pre-line" }}>
                   {stat.label}
                 </p>
               </motion.div>
@@ -1238,7 +1279,7 @@ export default function KidView() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-semibold text-foreground">{fmtMoney(holding.currentValue)}</p>
-                      {gain > 0 && <p className="text-[11px] text-green-600">+{fmtMoney(gain)} growth</p>}
+                      {gain > 0 && <p className="text-2xs text-green-600">+{fmtMoney(gain)} growth</p>}
                     </div>
                   </motion.div>
                 );
@@ -1300,7 +1341,7 @@ export default function KidView() {
                                     Better than depersonalizing as "Auto-invest" — the
                                     relationship is the point, the cadence is metadata. */}
                                 {(gift as any).parentContributionId && (
-                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-[9px] font-bold text-[hsl(var(--kiddo-evergreen))] shrink-0" title="Recurring">
+                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-4xs font-bold text-[hsl(var(--kiddo-evergreen))] shrink-0" title="Recurring">
                                     ↻ Monthly
                                   </span>
                                 )}
@@ -1313,7 +1354,7 @@ export default function KidView() {
                             {/* When a row has no note, only the aggregate line at the
                                 top carries the "the gift was the message" framing. The
                                 row itself stays quiet — date + invested status only. */}
-                            <p className="text-[10px] text-muted-foreground/50 mt-1">
+                            <p className="text-3xs text-muted-foreground/50 mt-1">
                               {giftDate ? giftDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}
                               {gift.status === "settled" || gift.status === "processing" ? " · Invested" : ""}
                             </p>
@@ -1378,7 +1419,7 @@ export default function KidView() {
                         data-testid={isUnlockedAt18 ? "memory-saved-for-today" : undefined}
                       >
                         {isUnlockedAt18 && (
-                          <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
+                          <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-2.5 py-0.5 text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
                             Saved for today
                           </p>
                         )}
@@ -1394,10 +1435,10 @@ export default function KidView() {
                       ) : (
                         <p className="text-xs text-muted-foreground">A memory from {entry.authorName || "someone"}.</p>
                       )}
-                      {entry.photoUrl && <img src={entry.photoUrl} alt="Memory" loading="lazy" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
+                      {entry.photoUrl && <FadeImage src={entry.photoUrl} alt="Memory" loading="lazy" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
                       {(entry as any).audioUrl && (
                         <div className="mt-3 rounded-xl border border-border/40 bg-background px-3 py-2">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">🎙 Voice note</p>
+                          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-1">🎙 Voice note</p>
                           <audio src={(entry as any).audioUrl} controls className="w-full h-9" />
                           {(entry as any).audioTranscript && (
                             <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
@@ -1683,7 +1724,7 @@ export default function KidView() {
                             <p>Full legal control transfers to you at {majorityAge}.</p>
                             <p>Nothing gets sold, and the investments stay where they are. You decide what happens next.</p>
                           </div>
-                          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))]/70">
+                          <p className="mt-4 text-2xs font-semibold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))]/70">
                             {countdownLabel}
                           </p>
                         </>
@@ -1811,7 +1852,7 @@ export default function KidView() {
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
                                     <p
-                                      className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                      className={`text-3xs font-bold uppercase tracking-[0.14em] ${
                                         isApproved ? "text-green-700" : "text-amber-800"
                                       }`}
                                     >
@@ -1846,7 +1887,7 @@ export default function KidView() {
                     })()}
                     {content.suggestions.length > 0 && (
                       <div className="mt-5 space-y-2">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-muted-foreground/70">What you've suggested</p>
+                        <p className="text-2xs font-bold uppercase tracking-[0.10em] text-muted-foreground/70">What you've suggested</p>
                         {content.suggestions.map((suggestion) => {
                           // Status drives layout: pending shows a withdraw link
                           // (your parent hasn't acted yet, take it back if you
@@ -1870,7 +1911,7 @@ export default function KidView() {
                                   <p className="font-medium text-foreground">{suggestion.ticker}</p>
                                   {suggestion.reason && <p className="mt-1 text-muted-foreground">{suggestion.reason}</p>}
                                 </div>
-                                <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${pillClass}`}>
+                                <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-bold ${pillClass}`}>
                                   {pillLabel}
                                 </span>
                               </div>
@@ -1879,7 +1920,7 @@ export default function KidView() {
                                   <button
                                     type="button"
                                     onClick={() => void handleWithdrawSuggestion(suggestion.id)}
-                                    className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                                    className="text-2xs text-muted-foreground hover:text-destructive transition-colors"
                                     data-testid={`button-withdraw-suggestion-${suggestion.id}`}
                                   >
                                     Take it back
@@ -1887,12 +1928,12 @@ export default function KidView() {
                                 </div>
                               )}
                               {isApproved && (
-                                <p className="mt-2 text-[11px] italic text-green-700/80">
+                                <p className="mt-2 text-2xs italic text-green-700/80">
                                   Your parent's looking at adding {suggestion.ticker} to your fund.
                                 </p>
                               )}
                               {isDeclined && (
-                                <p className="mt-2 text-[11px] italic text-amber-800/80">
+                                <p className="mt-2 text-2xs italic text-amber-800/80">
                                   Your parent saw it but went a different way this time. You can suggest another anytime.
                                 </p>
                               )}

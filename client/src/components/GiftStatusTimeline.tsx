@@ -66,7 +66,7 @@ export function GiftStatusTimeline({
                   ) : null}
                 </motion.div>
                 <span
-                  className="absolute top-[23px] whitespace-nowrap text-[10px] font-semibold"
+                  className="absolute top-[23px] whitespace-nowrap text-3xs font-semibold"
                   style={{
                     color: lit
                       ? "hsl(var(--kiddo-evergreen))"

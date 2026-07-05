@@ -220,7 +220,7 @@ export default function CalculatorAt18() {
                     className="w-full"
                     data-testid="slider-child-age"
                   />
-                  <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+                  <div className="mt-1.5 flex justify-between text-2xs text-muted-foreground">
                     <span>Newborn</span>
                     <span>17</span>
                   </div>
@@ -243,7 +243,7 @@ export default function CalculatorAt18() {
                     className="w-full"
                     data-testid="slider-monthly"
                   />
-                  <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+                  <div className="mt-1.5 flex justify-between text-2xs text-muted-foreground">
                     <span>$0</span>
                     <span>$500/mo</span>
                   </div>
@@ -265,7 +265,7 @@ export default function CalculatorAt18() {
                     className="w-full"
                     data-testid="slider-starting-gift"
                   />
-                  <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+                  <div className="mt-1.5 flex justify-between text-2xs text-muted-foreground">
                     <span>$0</span>
                     <span>$5,000</span>
                   </div>
@@ -308,7 +308,7 @@ export default function CalculatorAt18() {
                       );
                     })}
                   </select>
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <p className="mt-1.5 text-2xs text-muted-foreground">
                     {selectedState
                       ? `In ${US_STATES.find((s) => s.code === selectedState)?.name || "this state"}, the UTMA custodian's control transfers at age ${majorityAge}.`
                       : "Most states use 21; others use 18; Alabama and Nebraska use 19. Pick yours for accurate math."}
@@ -319,7 +319,7 @@ export default function CalculatorAt18() {
               {/* Result — cream-on-evergreen card matches the locked palette
                   and the projection-card pattern from Projection.tsx. */}
               <div className="mt-10 rounded-2xl border-2 border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-cream))] p-6 md:p-8">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">
+                <p className="mb-2 text-2xs font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">
                   Projected balance at age {majorityAge}
                 </p>
                 <p
@@ -360,7 +360,7 @@ export default function CalculatorAt18() {
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-card p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total added</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Total added</p>
                     <p
                       className="mt-1 font-heading text-lg font-bold tabular-nums text-foreground"
                       aria-live={totalAddedAnimating ? "off" : "polite"}
@@ -370,7 +370,7 @@ export default function CalculatorAt18() {
                     </p>
                   </div>
                   <div className="rounded-xl bg-card p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                       Same money at 4% savings APY
                     </p>
                     <p
@@ -409,7 +409,7 @@ export default function CalculatorAt18() {
             <FadeIn>
               <div className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.35)] p-6 md:p-9"
                 style={{ background: "linear-gradient(135deg, hsl(var(--kiddo-gold)/0.12) 0%, hsl(var(--kiddo-cream)) 58%)" }}>
-                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
+                <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
                   The cost of waiting
                 </p>
                 <h2 className="font-heading text-2xl font-bold text-foreground md:text-3xl">

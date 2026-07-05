@@ -254,7 +254,7 @@ export default function FundIdea() {
           <p className="font-heading text-4xl font-bold tabular-nums" data-testid="fundidea-projection">
             ~{fmtUsd(projected)}
           </p>
-          <p className="mt-3 text-[11px] leading-relaxed text-white/55">{PROJECTION_DISCLAIMER}</p>
+          <p className="mt-3 text-2xs leading-relaxed text-white/55">{PROJECTION_DISCLAIMER}</p>
         </div>
 
         {/* Calm, optional hand-off — never gated, never pressured */}

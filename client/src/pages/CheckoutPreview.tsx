@@ -60,7 +60,7 @@ function PayForm({ amount, onDone }: { amount: number; onDone: () => void }) {
         onConfirm={() => confirm()}
       />
       {hasExpress && (
-        <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.1em] text-muted-foreground/60" data-testid="checkout-or">
+        <div className="flex items-center gap-3 text-3xs uppercase tracking-[0.1em] text-muted-foreground/60" data-testid="checkout-or">
           <span className="h-px flex-1 bg-[hsl(var(--kiddo-border))]" />
           or pay with card
           <span className="h-px flex-1 bg-[hsl(var(--kiddo-border))]" />
@@ -78,7 +78,7 @@ function PayForm({ amount, onDone }: { amount: number; onDone: () => void }) {
         {submitting ? "Adding…" : `Add ${fmt(amount)} to the fund`}
       </button>
       {msg && <p className="text-sm text-amber-700" data-testid="checkout-msg">{msg}</p>}
-      <p className="text-center text-[11px] text-muted-foreground">Saved for next time.</p>
+      <p className="text-center text-2xs text-muted-foreground">Saved for next time.</p>
     </div>
   );
 }
@@ -157,11 +157,17 @@ export default function CheckoutPreview() {
         </p>
         <h1 className="font-heading mt-1 text-3xl font-bold text-foreground">How much?</h1>
         <p className="mt-1 text-sm text-muted-foreground">It goes straight into the fund.</p>
+        {/* Honesty: this page proves the in-app/one-tap/vault UX but does NOT credit a
+            fund (the PI carries no fundId/source — see CHECKOUT_IN_APP_SPEC.md). Say so,
+            so a demo never implies money landed. */}
+        <p className="mt-1.5 text-2xs font-medium text-amber-700/80" data-testid="checkout-preview-note">
+          Checkout preview · Stripe test mode. No real charge, and nothing is added to a live fund yet.
+        </p>
 
         {done ? (
           <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-6 text-center">
-            <p className="font-heading text-xl font-bold text-emerald-700">{fmt(amount)} added</p>
-            <p className="mt-1 text-sm text-emerald-700/80">It's in the fund.</p>
+            <p className="font-heading text-xl font-bold text-emerald-700">Test payment confirmed</p>
+            <p className="mt-1 text-sm text-emerald-700/80">Preview only. {fmt(amount)} was not added to a real fund.</p>
             <button
               type="button"
               onClick={() => setLocation("/staging")}

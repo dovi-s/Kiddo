@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { capFirst } from "@/lib/format-name";
+import { FadeImage } from "@/components/ui/fade-image";
 import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import type { Fund } from "@shared/schema";
@@ -111,7 +112,7 @@ export function FundTabsStaging({ funds, activeFundId: activeFundIdProp, onSelec
                 }}
               >
                 {photo ? (
-                  <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <FadeImage src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : initial}
               </span>
               <span

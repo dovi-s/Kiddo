@@ -158,13 +158,13 @@ export function RecurringRequestsNudge({
                 ? `Enabling Kiddo+ on ${displayChild}'s fund lets ${firstName} set up monthly contributions. The fund's existing one-time gifts and Memory Book stay either way.`
                 : `Enabling Kiddo+ on ${displayChild}'s fund lets all of them set up monthly contributions. The fund's existing one-time gifts and Memory Book stay either way.`}
             </p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+            <p className="mt-1.5 text-2xs text-muted-foreground/85">
               <span className="font-semibold text-foreground">$3.99/month</span>
               <span className="text-muted-foreground/70">, about 13¢ a day.</span>
             </p>
             {/* Cancel transparency, consistent with PlusUpgradePromptCard. The
                 nothing-lost half is already covered in the body above. */}
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/70">
+            <p className="mt-1 text-2xs leading-relaxed text-muted-foreground/70">
               Cancel anytime in Settings.
             </p>
             <div className="mt-3 flex gap-2">

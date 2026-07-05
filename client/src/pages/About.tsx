@@ -176,6 +176,23 @@ export default function About() {
         </div>
       </section>
 
+      {/* Belief — the mission line given room to own the space (2026-07-01) */}
+      <section className="bg-[hsl(var(--kiddo-evergreen))] py-24 md:py-36">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <FadeIn>
+            <p className="mb-7 text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(var(--kiddo-gold))]">
+              Our belief
+            </p>
+            <h2 className="font-heading text-4xl md:text-6xl font-bold tracking-[-0.03em] leading-[1.05] text-[hsl(var(--kiddo-cream))]">
+              Invest in someone,<br className="hidden sm:block" /> not something.
+            </h2>
+            <p className="mx-auto mt-7 max-w-xl text-lg md:text-xl leading-relaxed text-[hsl(var(--kiddo-cream)/0.68)]">
+              Kiddo is where people invest in people, across generations. A real account your child inherits at 18, with the story of who built it.
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* Team */}
       <section className="py-20 md:py-28 gemini-warm-section">
         <div className="max-w-5xl mx-auto px-4">

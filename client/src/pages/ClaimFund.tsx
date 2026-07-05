@@ -201,7 +201,7 @@ export default function ClaimFund() {
               transition={{ duration: 0.45, ease: "easeOut", delay: 0.18 }}
               className="text-center mb-5"
             >
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-2">Welcome, owner</p>
+              <p className="text-2xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-2">Welcome, owner</p>
               <h1 className="font-heading text-3xl font-bold text-foreground leading-tight">
                 It's yours now, {claimedName}.
               </h1>
@@ -350,7 +350,7 @@ export default function ClaimFund() {
           >
             <span className="text-3xl shrink-0" aria-hidden="true">🔑</span>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">Claim your fund</p>
+              <p className="text-2xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">Claim your fund</p>
               <h1 className="font-heading text-2xl font-bold text-foreground leading-tight">It's yours now.</h1>
             </div>
           </motion.div>
@@ -420,7 +420,7 @@ export default function ClaimFund() {
                 minLength={8}
                 data-testid="claim-input-password"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">If you already have a Kiddo account with this email, enter that password to claim into it.</p>
+              <p className="text-3xs text-muted-foreground mt-1">If you already have a Kiddo account with this email, enter that password to claim into it.</p>
             </div>
 
             {/* role="alert" + aria-live makes screen readers announce
@@ -467,7 +467,7 @@ export default function ClaimFund() {
           </motion.div>
         </motion.div>
 
-        <p className="mt-6 text-center text-[11px] text-muted-foreground">
+        <p className="mt-6 text-center text-2xs text-muted-foreground">
           Already have a login? <a href="/login" className="underline hover:text-foreground">Sign in</a> instead.
         </p>
 

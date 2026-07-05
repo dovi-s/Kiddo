@@ -81,7 +81,7 @@ export function PlusFirstMediaCelebrationBanner({
           <div className="flex items-center gap-2 mb-1.5">
             <Camera size={14} className="text-[hsl(var(--kiddo-gold))]" />
             <p
-              className="text-[10px] font-bold uppercase"
+              className="text-3xs font-bold uppercase"
               style={{
                 color: "hsl(var(--kiddo-gold))",
                 letterSpacing: "0.14em",

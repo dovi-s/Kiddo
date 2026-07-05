@@ -123,7 +123,7 @@ export function HeroMoment({
           data-testid="hero-moment-fund-switch"
         >
           {fundInitial && (
-            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[linear-gradient(150deg,#3c6b53,#1f4435)] text-[10.5px] font-extrabold text-[hsl(var(--kiddo-cream))]">
+            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[linear-gradient(150deg,#3c6b53,#1f4435)] text-3xs font-extrabold text-[hsl(var(--kiddo-cream))]">
               {fundInitial}
             </span>
           )}
@@ -191,7 +191,7 @@ export function HeroMoment({
                     {gifterAvatars.map((g, i) => (
                       <span
                         key={i}
-                        className="flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-[hsl(var(--kiddo-evergreen))] text-[10px] font-bold text-white first:ml-0 [margin-left:-8px]"
+                        className="flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-[hsl(var(--kiddo-evergreen))] text-3xs font-bold text-white first:ml-0 [margin-left:-8px]"
                         style={{ background: g.color }}
                       >
                         {g.label}

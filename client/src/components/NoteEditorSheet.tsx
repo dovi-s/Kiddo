@@ -387,7 +387,7 @@ export function NoteEditorSheet({
                       <p className="text-xs font-semibold text-foreground mb-1">
                         Or leave a voice memory.
                       </p>
-                      <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+                      <p className="text-2xs text-muted-foreground mb-2.5 leading-relaxed">
                         {name} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}.
                       </p>
                       <MemoryMediaPicker
@@ -500,7 +500,7 @@ export function NoteEditorSheet({
                     className="rounded-2xl px-6 py-8"
                     style={{ background: "rgb(254,252,243)" }}
                   >
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">
+                    <p className="text-3xs font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">
                       From {parentName || "your family"}.
                     </p>
                     <p className="text-xs text-muted-foreground mb-5">Written for you.</p>
@@ -513,7 +513,7 @@ export function NoteEditorSheet({
                     </p>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground/50 text-center mt-5 italic">
+                  <p className="text-2xs text-muted-foreground/50 text-center mt-5 italic">
                     {capFirst(fundPronouns.subject)}'ll {reads} it on {fundPronouns.possAdj} {majorityOrdinal} birthday.
                   </p>
                 </div>

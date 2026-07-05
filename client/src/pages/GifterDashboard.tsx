@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Plus, Pause, Play, Pencil, Receipt, ChevronDown, Camera, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
@@ -263,7 +264,11 @@ function GifterHeroAvatar({ user }: { user: any }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const photoUrl: string | null = user?.profileImageUrl || null;
-  const initial = String(user?.preferredName || user?.firstName || user?.email || "?")
+  // firstName FIRST (2026-07): the greeting says "Welcome back, {firstName}" (Elena),
+  // so the avatar must match. preferredName led — but that's the KID-nickname ("Mom"),
+  // meaningless in the gifter context (other families see Elena, not Mom) — so the
+  // avatar read "M" while the greeting read "Elena". preferredName kept as a fallback.
+  const initial = String(user?.firstName || user?.preferredName || user?.email || "?")
     .trim()
     .charAt(0)
     .toUpperCase();
@@ -339,7 +344,7 @@ function GifterHeroAvatar({ user }: { user: any }) {
         data-testid="button-gifter-avatar"
       >
         {photoUrl ? (
-          <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+          <FadeImage src={photoUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <span className="font-heading text-xl font-semibold text-white sm:text-2xl">{initial}</span>
         )}
@@ -357,12 +362,12 @@ function GifterHeroAvatar({ user }: { user: any }) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
           <div className="absolute left-0 top-full z-50 mt-2 w-60 rounded-2xl border border-black/5 bg-white p-2 text-foreground shadow-xl">
-            <p className="px-3 pb-1.5 pt-1 text-[11px] leading-snug text-muted-foreground">
+            <p className="px-3 pb-1.5 pt-1 text-2xs leading-snug text-muted-foreground">
               Families see this photo beside your gifts.
             </p>
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-black/5"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-black/5 kiddo-press"
               onClick={() => { setMenuOpen(false); fileInputRef.current?.click(); }}
               data-testid="button-gifter-avatar-change"
             >
@@ -370,7 +375,7 @@ function GifterHeroAvatar({ user }: { user: any }) {
             </button>
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 kiddo-press"
               onClick={() => patchPhoto("")}
               data-testid="button-gifter-avatar-remove"
             >
@@ -924,7 +929,7 @@ export default function GifterDashboard() {
                 <div className="flex items-start gap-4">
                   {isAuthenticated && <GifterHeroAvatar user={user} />}
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
+                    <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
                     <h1 className="mt-2 font-heading text-3xl font-semibold sm:text-4xl">
                       Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
                     </h1>
@@ -946,30 +951,30 @@ export default function GifterDashboard() {
                 {isLoading && !data ? (
                   <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4" aria-hidden="true">
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Total gifted</p>
                       <span className="mt-1.5 block h-9 w-28 animate-pulse rounded-lg bg-white/15 sm:h-10" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Children</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Children</p>
                       <span className="mt-1.5 block h-7 w-8 animate-pulse rounded-lg bg-white/15" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Following</p>
                       <span className="mt-1.5 block h-7 w-8 animate-pulse rounded-lg bg-white/15" />
                     </div>
                   </div>
                 ) : (
                   <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Total gifted</p>
                       <p
                         className="mt-0.5 font-heading text-3xl font-bold tabular-nums sm:text-4xl"
                         aria-live={totalGiftedAnimating ? "off" : "polite"}
-                        aria-label={fmtMoney(totalGifted)}
-                      >{fmtMoney(animatedTotalGifted)}</p>
+                        aria-label={fmtMoney0(totalGifted)}
+                      >{fmtMoney0(animatedTotalGifted)}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
                       <p
                         className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
                         aria-live={savedFundCountAnimating ? "off" : "polite"}
@@ -977,7 +982,7 @@ export default function GifterDashboard() {
                       >{Math.round(animatedSavedFundCount)}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Following</p>
                       <p
                         className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
                         aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
@@ -1113,7 +1118,7 @@ export default function GifterDashboard() {
                           <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3" data-testid={`hero-editor-recurring-${sch.id}`}>
                             <div className="flex flex-wrap items-end gap-3">
                               <label className="flex-1 min-w-[120px]">
-                                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Amount</span>
+                                <span className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">Amount</span>
                                 <div className="mt-1 flex items-center rounded-lg border border-border bg-background px-3">
                                   <span className="text-sm text-muted-foreground">$</span>
                                   <input
@@ -1129,7 +1134,7 @@ export default function GifterDashboard() {
                                 </div>
                               </label>
                               <label className="flex-1 min-w-[120px]">
-                                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Cadence</span>
+                                <span className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">Cadence</span>
                                 <select
                                   value={editFrequency}
                                   onChange={(e) => setEditFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
@@ -1150,7 +1155,7 @@ export default function GifterDashboard() {
                                 Cancel
                               </Button>
                             </div>
-                            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                            <p className="mt-2 text-2xs leading-snug text-muted-foreground">
                               New amount and cadence take effect next cycle. You won't be charged anything extra today.
                             </p>
                           </div>
@@ -1254,7 +1259,7 @@ export default function GifterDashboard() {
                             {fmtMoney(sch.amount)} {sch.frequency} to {sch.fundName}
                           </p>
                           {sch.status === "paused" && (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-amber-800">
                               Paused
                             </span>
                           )}
@@ -1344,17 +1349,17 @@ export default function GifterDashboard() {
                               {tierLabel} on {sub.childName}'s fund
                             </p>
                             {isActive && (
-                              <span className="rounded-full bg-[hsl(var(--kiddo-evergreen))]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                              <span className="rounded-full bg-[hsl(var(--kiddo-evergreen))]/10 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                                 Active
                               </span>
                             )}
                             {isExpired && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Expired
                               </span>
                             )}
                             {sub.status === "refunded" && (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-amber-800">
                                 Refunded
                               </span>
                             )}
@@ -1511,7 +1516,7 @@ export default function GifterDashboard() {
                           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{phaseLabel(fund.childPhase)}</p>
                           <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">{fund.childName}</h3>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {fund.giftCount > 0 ? `${fund.giftCount} gifts sent • ${fmtMoney(fund.totalGifted)} from you` : "Saved for the next event"}
+                            {fund.giftCount > 0 ? `${fund.giftCount} gifts sent • ${fmtMoney0(fund.totalGifted)} from you` : "Saved for the next event"}
                           </p>
                         </div>
                         <Heart className="h-5 w-5 text-primary" />
@@ -1595,13 +1600,13 @@ export default function GifterDashboard() {
                             {hasManagedMix && (
                               <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
                                 <TrendingUp className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="text-[11px] font-medium text-foreground/80">Managed mix</span>
+                                <span className="text-2xs font-medium text-foreground/80">Managed mix</span>
                               </span>
                             )}
                             {tickers.map((t) => (
                               <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
                                 <StockLogo ticker={t} size={14} fallbackText={false} className="shrink-0" />
-                                <span className="text-[11px] font-medium text-foreground/80">{companyNameForTicker(t)}</span>
+                                <span className="text-2xs font-medium text-foreground/80">{companyNameForTicker(t)}</span>
                               </span>
                             ))}
                           </div>
@@ -1660,7 +1665,7 @@ export default function GifterDashboard() {
                                           <span className="flex items-center gap-1.5 truncate font-medium text-foreground">
                                             {companyName || "Managed mix"}
                                             {g.recurring && (
-                                              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-3xs font-semibold text-muted-foreground">
                                                 <Repeat className="h-2.5 w-2.5" />
                                                 Monthly
                                               </span>
@@ -1704,7 +1709,7 @@ export default function GifterDashboard() {
                                             <blockquote className="whitespace-pre-line rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-xs leading-relaxed text-foreground">
                                               {g.thankYou.message}
                                               {g.thankYou.sentAt && (
-                                                <span className="mt-1 block text-[10px] text-muted-foreground">{fmtDate(g.thankYou.sentAt)}</span>
+                                                <span className="mt-1 block text-3xs text-muted-foreground">{fmtDate(g.thankYou.sentAt)}</span>
                                               )}
                                             </blockquote>
                                             {/* The loop closing twice: a just-read thank-you is the
@@ -1791,7 +1796,7 @@ export default function GifterDashboard() {
                           <p className="mt-1 text-sm text-muted-foreground leading-snug">
                             Your {fmtMoney(fund.totalGifted)} to {fund.childName} could be worth this when {fund.childName} turns {attribution.majorityAge}, if it stays invested.
                           </p>
-                          <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">
+                          <p className="mt-2 text-3xs text-muted-foreground/60 leading-snug">
                             {PROJECTION_DISCLAIMER}
                           </p>
                         </div>

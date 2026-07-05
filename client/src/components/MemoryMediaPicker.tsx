@@ -22,6 +22,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Camera, Lock, Mic, Video, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
 import { getPronouns } from "@/lib/pronouns";
@@ -297,7 +298,7 @@ export function MemoryMediaPicker({
                   daily-framing addition here is the single most leveraged
                   upgrade-conversion improvement per the locked pre-launch
                   strategic frame upgrade-conversion plan. */}
-              <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+              <p className="mt-1.5 text-2xs text-muted-foreground/85">
                 <span className="font-semibold text-foreground">$3.99/month</span>
                 <span className="text-muted-foreground/70">, about 13¢ a day.</span>
               </p>
@@ -359,7 +360,7 @@ export function MemoryMediaPicker({
               {t.has && (
                 <span
                   aria-hidden="true"
-                  className="ml-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]"
+                  className="ml-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]"
                 >
                   ✓
                 </span>
@@ -424,7 +425,7 @@ export function MemoryMediaPicker({
             data-testid="media-photo-url"
           />
           {hasPhoto && (
-            <img src={value.photoUrl} alt="" className="mt-1 max-h-32 rounded-lg object-cover" />
+            <FadeImage src={value.photoUrl} alt="" className="mt-1 max-h-32 rounded-lg object-cover" />
           )}
         </div>
       )}
@@ -558,7 +559,7 @@ export function MemoryMediaPicker({
             </div>
           )}
           {!hasAudio && !recording && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               {/* Pronoun + majority-age aware. "Emma will hear" / "They'll
                   hear" with "her/his/their" + ordinal birthday — drops the
                   awkward "Emma'll" template that was the earlier pattern. */}
@@ -569,7 +570,7 @@ export function MemoryMediaPicker({
       )}
 
       {error && (
-        <p className="mt-2 text-[11px] font-semibold text-destructive">{error}</p>
+        <p className="mt-2 text-2xs font-semibold text-destructive">{error}</p>
       )}
     </div>
   );

@@ -153,7 +153,7 @@ export function TwoFactorCard() {
               <div className="mt-3 flex justify-center rounded-lg bg-white p-3">
                 <QRCodeSVG value={setupData.otpauthUri} size={160} />
               </div>
-              <p className="mt-3 text-[11px] text-muted-foreground">Can't scan? Enter this key manually:</p>
+              <p className="mt-3 text-2xs text-muted-foreground">Can't scan? Enter this key manually:</p>
               <p className="mt-1 break-all rounded-lg bg-background px-2 py-1.5 text-center text-xs font-mono tabular-nums text-foreground" data-testid="text-2fa-secret">{setupData.secret}</p>
               <p className="mt-3 text-xs font-semibold text-foreground">2. Enter the 6-digit code it shows</p>
               <input
@@ -197,7 +197,7 @@ export function TwoFactorCard() {
           {phase === "backup" && (
             <div className="mt-4 rounded-xl border border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.06)] p-4">
               <p className="text-xs font-bold text-foreground">Save your backup codes</p>
-              <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
+              <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
                 Each works once if you lose your authenticator. Store them somewhere safe. You won't see them again.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-1.5">
@@ -220,7 +220,7 @@ export function TwoFactorCard() {
           {phase === "disable" && (
             <div className="mt-4 rounded-xl border border-border bg-muted/20 p-4">
               <p className="text-xs font-semibold text-foreground">Enter a code to turn off two-factor</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">A current authenticator code or a backup code.</p>
+              <p className="mt-1 text-2xs text-muted-foreground">A current authenticator code or a backup code.</p>
               <input
                 inputMode="text"
                 value={code}

@@ -339,7 +339,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                           setStep("details");
                         }
                       }}
-                      className="w-full p-4 rounded-2xl border-2 text-left transition-all duration-150 border-primary bg-card shadow-md ring-4 ring-primary/5"
+                      className="w-full p-4 rounded-2xl border-2 text-left transition-all duration-150 border-primary bg-card shadow-md ring-4 ring-primary/5 kiddo-press"
                       data-testid="option-add-child-fund"
                     >
                       <div className="flex items-center gap-3">
@@ -400,7 +400,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             />
                           </div>
                         </div>
-                        <p className="text-[11px] text-muted-foreground -mt-1">Legal name required for the UTMA account title.</p>
+                        <p className="text-2xs text-muted-foreground -mt-1">Legal name required for the UTMA account title.</p>
                         {/* Live UTMA-title preview — appears as the parent
                             types. Reduces "what gets recorded?" anxiety
                             (DriveWealth registers this string verbatim) and
@@ -410,7 +410,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             className="rounded-lg border border-border/50 bg-muted/40 px-3 py-2 -mt-1"
                             data-testid={`utma-title-preview-${index}`}
                           >
-                            <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                            <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                               Account will be titled
                             </p>
                             <p className="mt-1 text-[12px] font-mono leading-snug text-foreground break-words">
@@ -457,10 +457,10 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             </PopoverContent>
                           </Popover>
                           {child.birthdate && validateBirthdate(child.birthdate) && (
-                            <p className="mt-1 text-[11px] text-destructive">{validateBirthdate(child.birthdate)}</p>
+                            <p className="mt-1 text-2xs text-destructive">{validateBirthdate(child.birthdate)}</p>
                           )}
                           {(!child.birthdate || !validateBirthdate(child.birthdate)) && (
-                            <p className="mt-1 text-[11px] text-muted-foreground">Child funds are for children under 18.</p>
+                            <p className="mt-1 text-2xs text-muted-foreground">Child funds are for children under 18.</p>
                           )}
                         </div>
                         <div>
@@ -507,7 +507,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             const subj = pronouns.subject;
                             const obj = pronouns.object;
                             return (
-                              <p className="mt-2 text-[11.5px] italic text-muted-foreground/80 leading-relaxed">
+                              <p className="mt-2 text-2xs italic text-muted-foreground/80 leading-relaxed">
                                 Memory Book voice: <span className="text-foreground/85">"People wrote things for {obj} long before {subj} could read."</span>
                               </p>
                             );
@@ -524,7 +524,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             placeholder="e.g., 1234"
                             data-testid={`input-add-child-ssn-${index}`}
                           />
-                          <p className="mt-1 text-[11px] text-muted-foreground">Last 4 now. We'll ask for the full 9 before the first investment, encrypted at rest.</p>
+                          <p className="mt-1 text-2xs text-muted-foreground">Last 4 now. We'll ask for the full 9 before the first investment, encrypted at rest.</p>
                         </div>
 
                         <div>
@@ -570,7 +570,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                               <option key={s.code} value={s.code}>{s.name}</option>
                             ))}
                           </select>
-                          <p className="mt-1 text-[11px] text-muted-foreground">
+                          <p className="mt-1 text-2xs text-muted-foreground">
                             UTMA age of majority is set by state law. Most states are 18, a few are 19 or 21.
                           </p>
                           {/* Live "what this means" — turns the state pick
@@ -594,7 +594,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                 className="mt-2.5 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] px-3.5 py-2.5"
                                 data-testid={`majority-explainer-${index}`}
                               >
-                                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                                   What this means
                                 </p>
                                 <p className="mt-1 text-[12.5px] leading-relaxed text-foreground">
@@ -629,7 +629,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                 <p className="text-xs font-bold text-foreground leading-snug">
                                   I understand {childFirst}'s fund is irrevocable.
                                 </p>
-                                <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
+                                <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
                                   Once invested, the money belongs to {childFirst}. I manage it as custodian until {childFirst} turns {ageOfMajority} (your state's UTMA age of majority). That's the whole point.
                                 </p>
                               </div>
@@ -646,7 +646,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                           >
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-foreground">Successor custodian (optional)</p>
-                              <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                              <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">
                                 {child.successorName.trim()
                                   ? `${child.successorName.trim()} will step in if anything happens to you.`
                                   : `Who manages ${child.name.trim() || "the fund"} if something happens to you?`}
@@ -680,7 +680,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                 data-testid={`input-successor-relation-${index}`}
                                 className="w-full h-10 px-3 border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary bg-background"
                               />
-                              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                              <p className="text-2xs text-muted-foreground/80 leading-relaxed">
                                 We won't contact them yet. This is just here so {child.name.trim() || "the fund"} doesn't end up with a court-appointed stranger.
                               </p>
                             </div>
@@ -751,7 +751,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             key={t}
                             type="button"
                             onClick={() => toggleTradition(t)}
-                            className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all ${
+                            className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all kiddo-press ${
                               selected
                                 ? "border-primary bg-primary/5"
                                 : "border-border bg-card hover:border-muted-foreground/40"

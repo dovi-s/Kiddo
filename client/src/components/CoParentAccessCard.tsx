@@ -265,11 +265,12 @@ export function CoParentAccessCard({
                         {(collab.email || "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        {/* Email on its own line so it gets the full row width —
-                            it was truncating to "marcus@r…" on narrow phones when
-                            the status badge shared its line. Badge + role now sit
-                            together on the line below. */}
-                        <p className="text-sm font-bold text-foreground truncate">{collab.email}</p>
+                        {/* Email on its own line + break-all so the full address
+                            stays readable (you need it to know WHO has access) —
+                            it was hard-truncating to "marcus@r…" on narrow phones
+                            when the status badge shared its line. Badge + role now
+                            sit together on the line below. */}
+                        <p className="text-sm font-bold text-foreground break-all">{collab.email}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className={`rounded-full px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.05em] ${
                             collab.status === "accepted"

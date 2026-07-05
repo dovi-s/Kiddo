@@ -395,7 +395,7 @@ export function SinceLastVisitDigest({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p
-            className="mb-1.5 text-[10px] font-bold uppercase"
+            className="mb-1.5 text-3xs font-bold uppercase"
             style={{ color: "hsl(var(--kiddo-evergreen))", letterSpacing: "0.14em" }}
           >
             While you were away

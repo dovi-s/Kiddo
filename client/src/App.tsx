@@ -914,8 +914,17 @@ function App() {
     // deferred with the native track.)
     const rememberedFundId = getActiveFundId();
     if (rememberedFundId) {
-      void import("@/lib/prefetch").then(({ prefetchDashboard }) => {
+      void import("@/lib/prefetch").then(({ prefetchDashboard, prefetchActivity, prefetchMemoryBook, prefetchSettings, onIdle }) => {
         prefetchDashboard(queryClient, rememberedFundId);
+        // Warm the OTHER bottom-nav tabs on idle (after the dashboard's critical
+        // load wins the network). With staleTime keeping them warm once fetched,
+        // every tab switch then lands on CONTENT, not a cold skeleton — the
+        // Airbnb/Apple "it's already there" feel. Idle so it never races the hero.
+        onIdle(() => {
+          prefetchActivity(queryClient, rememberedFundId);
+          prefetchMemoryBook(queryClient, rememberedFundId);
+          prefetchSettings(queryClient);
+        });
       });
     }
   }, []);
@@ -937,6 +946,9 @@ function App() {
     const fundSlug = segments[0];
     const eventSlug = segments[1];
     if (!fundSlug) return;
+    // Internal/preview routes prefixed "__" aren't funds, so skip the public-fund
+    // prefetch (avoids a console 404).
+    if (fundSlug.startsWith("__")) return;
     void import("@/lib/prefetch").then(({ prefetchPublicGiftPage }) => {
       prefetchPublicGiftPage(queryClient, fundSlug, eventSlug ?? null);
     });

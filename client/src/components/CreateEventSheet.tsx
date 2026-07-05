@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
+import { FadeImage } from "@/components/ui/fade-image";
 import { haptic } from "@/lib/haptics";
 import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 import { toast } from "@/hooks/use-toast";
@@ -648,7 +649,7 @@ export function CreateEventSheet({
             }
           }}
         >
-          <img src={useChildPhoto ? childPhotoUrl : coverPreview} alt="Cover"
+          <FadeImage src={useChildPhoto ? childPhotoUrl : coverPreview} alt="Cover"
             draggable={false}
             style={{
               width: "100%",
@@ -686,7 +687,7 @@ export function CreateEventSheet({
             <button type="button"
               onClick={() => { setUseChildPhoto(true); setCoverFile(null); setCoverPreview(""); haptic("selection"); }}
               style={{ width: 90, height: 90, borderRadius: 14, border: "1.5px dashed hsl(var(--kiddo-ink) / 0.18)", background: "white", cursor: "pointer", padding: 0, overflow: "hidden", position: "relative" }}>
-              <img src={childPhotoUrl} alt={fundName || "Child"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <FadeImage src={childPhotoUrl} alt={fundName || "Child"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", inset: 0, background: "hsl(var(--kiddo-ink) / 0.38)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <User size={14} color="white" />
                 <span style={{ fontSize: 10, fontWeight: 700, color: "white", marginTop: 3 }}>{fundName?.split(" ")[0] || "Photo"}</span>
@@ -1064,7 +1065,7 @@ export function CreateEventSheet({
                   const typeBadge = selectedGiftingType ?? selectedGoalTypeDef;
                   return (
                     <div style={{ position: "relative", minHeight: 200, background: previewCover ? undefined : `linear-gradient(135deg, ${G} 0%, rgb(43,88,64) 100%)`, overflow: "hidden" }}>
-                      {previewCover && <img src={previewCover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+                      {previewCover && <FadeImage src={previewCover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.72) 0%, hsl(var(--kiddo-ink) / 0.2) 60%, transparent 100%)" }} />
                       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", padding: 16, minHeight: 200 }}>
                         <div style={{ flex: 1 }} />

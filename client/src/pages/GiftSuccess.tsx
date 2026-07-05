@@ -7,6 +7,7 @@ import { Check, Copy, Share2, Heart, Gift, Mail, Bookmark, Smartphone } from "lu
 import { WhatsAppIcon, MessageIcon } from "@/components/ui/share-modal"
 import { projectFundValue } from "@shared/projection"
 import { Button } from "@/components/ui/button"
+import { FadeImage } from "@/components/ui/fade-image"
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
 import { StockLogo } from "@/components/ui/stock-logo"
@@ -238,6 +239,7 @@ export default function GiftSuccess() {
     } catch { /* sessionStorage blocked — loop just won't fire, no harm */ }
     recordDemoLiveGift({
       fundId,
+      eventId: params.get("eventId") || undefined,
       senderName: senderNameParam,
       amount: amountParam,
       ticker: tickerParam || undefined,
@@ -927,7 +929,7 @@ export default function GiftSuccess() {
         >
           {childPhotoUrl ? (
             <div className="relative">
-              <img
+              <FadeImage
                 src={childPhotoUrl}
                 alt={childFirstName || "Their fund"}
                 className="h-24 w-24 rounded-full border-[3px] border-white object-cover shadow-xl"
@@ -1146,25 +1148,25 @@ export default function GiftSuccess() {
             {hadPriorPosition && afterShares !== null && beforeShares !== null && stakeGrowthPct !== null && beforeValue !== null && afterValue !== null ? (
               // BEFORE / AFTER: prior position existed, this gift grew it
               <>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
                   <span>{childFirstName ? `${childFirstName}'s` : "The"}</span>
                   <StockLogo ticker={ticker} size={14} className="inline-block" />
                   <span>{companyName} position</span>
                 </p>
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   <div className="text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80 mb-0.5">Before</p>
+                    <p className="text-3xs uppercase tracking-wide text-muted-foreground/80 mb-0.5">Before</p>
                     <p className="font-heading text-base font-bold text-foreground/70 tabular-nums">
-                      {formatShares(beforeShares)} <span className="text-[11px] font-normal text-muted-foreground/70">shares</span>
+                      {formatShares(beforeShares)} <span className="text-2xs font-normal text-muted-foreground/70">shares</span>
                     </p>
-                    <p className="text-[11px] text-muted-foreground tabular-nums">{formatMoneyShort(beforeValue)}</p>
+                    <p className="text-2xs text-muted-foreground tabular-nums">{formatMoneyShort(beforeValue)}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                    <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
                     <p className="font-heading text-base font-bold text-foreground tabular-nums">
-                      {formatShares(afterShares)} <span className="text-[11px] font-normal text-muted-foreground">shares</span>
+                      {formatShares(afterShares)} <span className="text-2xs font-normal text-muted-foreground">shares</span>
                     </p>
-                    <p className="text-[11px] text-foreground tabular-nums font-semibold">{formatMoneyShort(afterValue)}</p>
+                    <p className="text-2xs text-foreground tabular-nums font-semibold">{formatMoneyShort(afterValue)}</p>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-[hsl(var(--kiddo-evergreen)/0.15)] text-center">
@@ -1177,7 +1179,7 @@ export default function GiftSuccess() {
             ) : afterShares !== null ? (
               // FRESH POSITION: this gift started the position
               <>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
                   <span>{childFirstName ? `${childFirstName}'s first` : "First"}</span>
                   <StockLogo ticker={ticker} size={14} className="inline-block" />
                   <span>{companyName} shares</span>
@@ -1205,7 +1207,7 @@ export default function GiftSuccess() {
                 </p>
               </>
             )}
-            <p className="mt-2.5 text-[10px] text-muted-foreground/60 text-center">
+            <p className="mt-2.5 text-3xs text-muted-foreground/60 text-center">
               Final shares and value confirmed after market execution.
             </p>
           </motion.div>
@@ -1236,7 +1238,7 @@ export default function GiftSuccess() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl leading-none">{eventEmoji}</span>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                   {reached
                     ? `Goal reached for ${eventInfo.name}`
                     : `New total toward ${eventInfo.name}`}
@@ -1256,7 +1258,7 @@ export default function GiftSuccess() {
                   transition={{ delay: 0.78, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 />
               </div>
-              <p className="mt-2.5 text-[11.5px] text-muted-foreground leading-relaxed">
+              <p className="mt-2.5 text-2xs text-muted-foreground leading-relaxed">
                 {reached
                   ? `${childName} hit the goal. Every dollar from here just keeps growing.`
                   : `${fmtMoney(Math.max(0, goal - total))} to go. Every gift gets ${childName} closer.`}
@@ -1518,7 +1520,7 @@ export default function GiftSuccess() {
             Birthday reminders, parent-shared Memory Book updates, and one final note when they turn {majorityAge}. Parent-controlled, opt-in only, and never performance claims or spam. One-click unsubscribe in every email.
           </p>
           {senderName && !senderLooksGeneric && (
-            <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+            <p className="mt-2 text-2xs text-muted-foreground/80 leading-relaxed">
               Heads up: your first name now appears in {childFirstName ? `${childFirstName}'s` : "the"} family Memory Book and on the gift page as a "who's already given" name. Full name stays private.
             </p>
           )}
@@ -1746,7 +1748,7 @@ export default function GiftSuccess() {
               dollar amount needs to repeat exactly here. Also surfaces
               the brokerage-failure-vs-market-loss distinction explicitly
               (was implicit in "Investing can go up or down" — too soft). */}
-          <p className="text-[10px] text-muted-foreground/60 text-center px-4">
+          <p className="text-3xs text-muted-foreground/60 text-center px-4">
             These are real shares, held in a brokerage account. When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
           </p>
         </motion.div>

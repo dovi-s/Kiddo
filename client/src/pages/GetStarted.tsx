@@ -170,7 +170,7 @@ function Shell({
               <div className="flex gap-1.5" aria-hidden="true">
                 {Array.from({ length: progress.total }).map((_, i) => <span key={i} className={`h-1.5 rounded-full ${i < progress.current ? "w-7 bg-primary" : "w-3 bg-border"}`} />)}
               </div>
-              <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>
+              <span className="text-2xs uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>
             </div>
           ) : <Logo size="sm" className="text-primary" linkTo="/" />}
           <div className="w-11" />
@@ -828,7 +828,7 @@ export default function GetStarted() {
                         on narrow viewports that crashed into the
                         labels above. Fixed 2026-05-15 per the parent's
                         "labels get cut off, spacing is weird" flag. */}
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{item.copy}</p>
+                    <p className="mt-1 text-2xs leading-snug text-muted-foreground">{item.copy}</p>
                   </div>
                 ))}
               </AnimatedBlock>
@@ -1025,7 +1025,7 @@ export default function GetStarted() {
                       className="get-started-input"
                       data-testid="input-recipient-last-name"
                     />
-                    <p className="text-[11px] text-muted-foreground/80 leading-snug pl-1">
+                    <p className="text-2xs text-muted-foreground/80 leading-snug pl-1">
                       Used on tax documents and the brokerage account when set. You can add it later.
                     </p>
                   </div>
@@ -1227,7 +1227,7 @@ export default function GetStarted() {
                         the parent any way to fix the math for their
                         state. The audit caught that the load-bearing
                         aha number was wrong for ~15% of US parents. */}
-                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. Past performance does not guarantee future results.</p>
+                    <p className="mt-2 text-3xs leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. Past performance does not guarantee future results.</p>
                   </motion.div>
                 </div>
               </AnimatedBlock>
@@ -1258,7 +1258,7 @@ export default function GetStarted() {
                         <option key={s.code} value={s.code}>{s.name}</option>
                       ))}
                     </select>
-                    <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/80">
+                    <p className="mt-1.5 text-3xs leading-snug text-muted-foreground/80">
                       {recipientState
                         ? `In your state, UTMA control transfers to ${displayName} at age ${effectiveMajorityAge}. Projection updated.`
                         : "We need this to get the handoff date right. UTMA control transfers at 21 in most states, 18 in some (19 in Alabama and Nebraska)."}
@@ -1401,7 +1401,7 @@ export default function GetStarted() {
                         360px viewport, wrapping 4 lines and pushing the
                         "Investing" / "Memory Book" labels into a visually
                         cut-off feel. Fixed 2026-05-15. */}
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{item.copy}</p>
+                    <p className="mt-1 text-2xs leading-snug text-muted-foreground">{item.copy}</p>
                   </div>
                 ))}
               </AnimatedBlock>

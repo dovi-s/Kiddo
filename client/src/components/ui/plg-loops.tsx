@@ -228,7 +228,7 @@ export function RecurringSetupModal({
               data-testid="input-reminder-email"
               className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/20 focus:border-stone-400"
             />
-            <p className="mt-2 text-[11px] text-stone-500">
+            <p className="mt-2 text-2xs text-stone-500">
               {defaultEmail && !emailTouched
                 ? "Pre-filled from your gift receipt. Change it if you want reminders sent to a different inbox."
                 : "Where we'll send the reminder. One email per reminder, unsubscribe anytime."}
@@ -255,7 +255,7 @@ export function RecurringSetupModal({
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-stone-500">
+            <p className="mt-2 text-2xs text-stone-500">
               We'll suggest this amount in the reminder email. You can change it when you actually send the gift.
             </p>
           </div>
@@ -473,7 +473,7 @@ export function CollaboratorInviteModal({
                   <p className="text-sm text-muted-foreground mb-2">{r.description}</p>
                   <div className="flex flex-wrap gap-1">
                     {r.permissions.map((p) => (
-                      <span key={p} className="text-[10px] bg-background text-muted-foreground px-2 py-0.5 rounded-full border border-border/50">
+                      <span key={p} className="text-3xs bg-background text-muted-foreground px-2 py-0.5 rounded-full border border-border/50">
                         {p}
                       </span>
                     ))}

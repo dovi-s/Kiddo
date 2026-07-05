@@ -323,7 +323,7 @@ export default function Age18Welcome() {
                   return (
                     <figure className="m-0 border-l-2 border-[hsl(var(--kiddo-gold))]/50 pl-3">
                       <p className="text-sm italic leading-relaxed text-foreground/85">&ldquo;{excerpt}&rdquo;</p>
-                      <figcaption className="mt-1 text-[11px] text-muted-foreground">
+                      <figcaption className="mt-1 text-2xs text-muted-foreground">
                         {author || "someone who showed up"}{yr ? ` · the first note, ${yr}` : ""}
                       </figcaption>
                     </figure>
@@ -342,7 +342,7 @@ export default function Age18Welcome() {
                     </motion.span>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <p className="text-2xs text-muted-foreground leading-relaxed">
                   Every gift they sent kept compounding. The Memory Book has all of it: notes, photos, the moments behind each one.
                 </p>
               </motion.div>
@@ -400,7 +400,7 @@ export default function Age18Welcome() {
                   <span className="font-semibold text-foreground">{formatMoney(projectedMultiGen, { decimals: 0 })}</span>
                   . That's enough to start another Kiddo for the next generation.
                 </p>
-                <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                <p className="text-3xs text-muted-foreground/70 leading-snug">
                   {PROJECTION_DISCLAIMER}
                 </p>
               </div>

@@ -50,7 +50,7 @@ export function MilestoneShareCard({ threshold, recipientName, giftCount, people
           eyebrow alone carries the milestone label without doubling
           the visual celebration. */}
       <div className="flex items-start justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
+        <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
           Milestone
         </p>
       </div>
