@@ -58,6 +58,7 @@ import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, G
 import SealedVoiceNote from "@/components/SealedVoiceNote";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
+import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnlighteningReveal } from "@/components/ui/gemini";
@@ -1212,13 +1213,13 @@ export default function MemoryBook() {
         ? formatMoneyFriendly(ctx.currentValue)
         : null;
     const portfolioSentenceWarm = tickerCo && valueNow
-      ? ` It's invested in ${tickerCo} and now worth ${valueNow}.`
+      ? investingLiveCopy(` It's invested in ${tickerCo} and now worth ${valueNow}.`, ` It's going into ${tickerCo}, invested once investing is live.`)
       : "";
     const portfolioSentenceBrief = tickerCo && valueNow
-      ? ` ${tickerCo} now worth ${valueNow}.`
+      ? investingLiveCopy(` ${tickerCo} now worth ${valueNow}.`, ` Going into ${tickerCo} once investing is live.`)
       : "";
     const portfolioSentenceFormal = tickerCo && valueNow
-      ? ` Your gift was allocated to ${tickerCo} and is currently valued at ${valueNow}.`
+      ? investingLiveCopy(` Your gift was allocated to ${tickerCo} and is currently valued at ${valueNow}.`, ` Your gift is set to be invested in ${tickerCo} once investing is live.`)
       : "";
     // Time-aware OWNER variant. When the now-adult owner thanks a gift made
     // before she came of age, name how old she actually was ("when I was 6")
@@ -5471,11 +5472,11 @@ export default function MemoryBook() {
                             // is looking for "where did this gift go,"
                             // not the technical execution-model branch.
                             if (ticker) {
-                              investLine = `Invested in ${ticker}`;
+                              investLine = investingLiveCopy(`Invested in ${ticker}`, `Going into ${ticker}`);
                             } else if (exec === "family" || exec === "cash") {
-                              investLine = `Sent as cash · invested across the diversified mix`;
+                              investLine = investingLiveCopy(`Sent as cash · invested across the diversified mix`, `Sent as cash · going into the diversified mix`);
                             } else {
-                              investLine = `Invested across the diversified mix`;
+                              investLine = investingLiveCopy(`Invested across the diversified mix`, `Going into the diversified mix`);
                             }
                             // Fresh-gift detection — under 7 days old. Used
                             // to OMIT the gain pill (a "+$0 (+0.0%)" delta
@@ -5547,7 +5548,7 @@ export default function MemoryBook() {
                                          layer hasn't surfaced a value yet.
                                       3. No value, not fresh → silent.
                                          Better than wrong. */}
-                                  {currentValue !== null && valueDiffersFromCost ? (
+                                  {INVESTING_LIVE && currentValue !== null && valueDiffersFromCost ? (
                                     <span className="text-3xs font-semibold flex items-center gap-1.5">
                                       {/* Gain/loss ± pill CUT (2026-07): the performance delta
                                           — especially a RED loss (−$X) — is a money-lens that
