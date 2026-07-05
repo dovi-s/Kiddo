@@ -139,6 +139,63 @@ export interface IStorage {
   deleteCollaboratorsByFund(fundId: string): Promise<number>;
 }
 
+// Activity types that ALSO fire a device push (Web Push) when created. Curated
+// to the meaningful, non-payment, recipient-facing moments — NOT every activity
+// (that would be notification spam), and NOT payment/billing events (gift landed,
+// recurring charge, subscription, holds, withdrawals — those route through the
+// payment/webhook flow and are owned there). Deliberately EXCLUDED as noise/auth/
+// low-value: market, note, test, magic_link_signin, password_reset, memory_entry_
+// edited/deleted, fund_strategy_changed, kid_stock_suggestion, kyc_*/ssn_missing
+// (compliance-sensitive — add if desired). Tune freely: adding/removing a type
+// here changes push behavior EVERYWHERE that activity is created, no call-site edits.
+const PUSH_WORTHY_ACTIVITY_TYPES = new Set<string>([
+  // Relationship / Memory Book (the moat made audible)
+  "collaborator_accepted",     // a co-parent joined
+  "memory_guestbook_note",     // someone left a note in the Memory Book
+  "parent_thank_you",          // a thank-you arrived
+  // Lifecycle milestones (the emotional core)
+  "sealed_letter_delivered",   // a sealed letter reached the child
+  "kid_claimed_fund",          // the at-18 handoff happened
+  "fund_inherited",
+  "milestone",
+  "milestone_unique_gifters",
+  "milestone_returning_gifter",
+  "milestone_money_cross",
+  "milestone_anniversary",
+  // Timely, low-frequency nudges
+  "birthday_reminder",
+  "holiday_reminder",
+  "year_end_recap",
+  // Needs-you (actionable, non-payment)
+  "stalled_handoff",
+  "recipient_details_missing",
+  "profile_incomplete",
+]);
+
+// Where each push deep-links when tapped. Falls back to /activity (the feed).
+// The fund id is appended at fire time so the tap lands on the right child's screen.
+const PUSH_URL_BY_TYPE: Record<string, string> = {
+  // The fund itself — money/lifecycle moments
+  kid_claimed_fund: "/dashboard",
+  fund_inherited: "/dashboard",
+  stalled_handoff: "/dashboard",
+  milestone: "/dashboard",
+  milestone_unique_gifters: "/dashboard",
+  milestone_returning_gifter: "/dashboard",
+  milestone_money_cross: "/dashboard",
+  milestone_anniversary: "/dashboard",
+  birthday_reminder: "/dashboard",
+  holiday_reminder: "/dashboard",
+  // The Memory Book — words/moments
+  memory_guestbook_note: "/memory",
+  sealed_letter_delivered: "/memory",
+  parent_thank_you: "/memory",
+  // Settings — things to fix
+  recipient_details_missing: "/settings",
+  profile_incomplete: "/settings",
+  // collaborator_accepted + year_end_recap fall back to /activity
+};
+
 export class DatabaseStorage implements IStorage {
   async getFund(id: string): Promise<Fund | undefined> {
     const [fund] = await db.select().from(funds).where(eq(funds.id, id));
@@ -377,6 +434,19 @@ export class DatabaseStorage implements IStorage {
 
   async createActivity(activity: InsertActivity): Promise<Activity> {
     const [created] = await db.insert(activities).values(activity).returning();
+    // Mirror meaningful non-payment moments to a device push (fire-and-forget;
+    // no-op if the recipient hasn't opted in). Dynamic import keeps storage
+    // decoupled from the push layer. Payment events are absent from the allowlist
+    // by design — their pushes route through the payment/webhook flow.
+    const uid = created?.userId;
+    if (uid && created.type && PUSH_WORTHY_ACTIVITY_TYPES.has(created.type)) {
+      const base = PUSH_URL_BY_TYPE[created.type] || "/activity";
+      const url = created.fundId ? `${base}?fund=${created.fundId}` : base;
+      const payload = { title: created.title || "Kiddo", body: created.description || "", url };
+      void import("./pushService")
+        .then(({ sendPushToUser }) => sendPushToUser(uid, payload))
+        .catch(() => {});
+    }
     return created;
   }
 

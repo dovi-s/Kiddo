@@ -34,5 +34,10 @@ export const RESERVED_FUND_SLUGS: ReadonlySet<string> = new Set([
 ]);
 
 export function isReservedFundSlug(segment: string | null | undefined): boolean {
-  return RESERVED_FUND_SLUGS.has(String(segment || "").trim().toLowerCase());
+  const s = String(segment || "").trim().toLowerCase();
+  // `__`-prefixed paths are throwaway dev/prototype routes (e.g. /__voice,
+  // /__shared) — never fund slugs. Reserving the prefix stops the public-fund
+  // resolver from firing a spurious /api/public/funds/__x 404 prefetch on them.
+  if (s.startsWith("__")) return true;
+  return RESERVED_FUND_SLUGS.has(s);
 }

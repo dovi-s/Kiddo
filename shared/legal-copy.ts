@@ -112,7 +112,9 @@ export function investingLiveCopy(liveText: string, pendingText: string): string
 //     GiftCheckout (SIPC/large-gift lines — the "Where this gift goes" + share
 //     estimate already route through investingLiveCopy), FundSnapshot, FAQ,
 //     Pricing, Login, Legal, CalculatorAt18, HowItWorks, Home, GiftSuccess,
-//     Claim, Account, Footer, ui/education, ui/ux-foundations.
+//     Claim, Account, Settings (Money tab "Investing is active" status +
+//     body route through investingLiveCopy), Footer, ui/education,
+//     ui/ux-foundations.
 //   ⚠️ KidView — currently UNCONDITIONED, not just a re-read item. The
 //     COMPANY_EXPLAINERS dictionary states present-tense ownership ("You own a
 //     tiny piece of Disney…", ~41 strings) and the "What you own" section

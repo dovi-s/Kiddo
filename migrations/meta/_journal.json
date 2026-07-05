@@ -337,6 +337,20 @@
       "when": 1780000000000,
       "tag": "0048_recurring_precharge_notice",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1780100000000,
+      "tag": "0049_activities_composite_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1780200000000,
+      "tag": "0050_push_subscriptions",
+      "breakpoints": true
     }
   ]
 }

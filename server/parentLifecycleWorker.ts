@@ -5,6 +5,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { renderKiddoEmail } from "./templates/baseTemplate";
 import { queueMobilePush } from "./mobilePushWorker";
+import { isCategoryEnabled, type EmailPreferenceKey, type EmailPreferences } from "@shared/emailPreferences";
 
 const PARENT_LIFECYCLE_STATE_PATH = path.join(process.cwd(), ".local", "parent-lifecycle-state.json");
 const PARENT_LIFECYCLE_QUEUE_PATH = path.join(process.cwd(), ".local", "parent-lifecycle-queue.jsonl");
@@ -725,6 +726,47 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
   }
 }
 
+// Map a queued lifecycle email type to the Settings email-preference
+// category that controls it. The three families mirror the toggles
+// folded into EmailPreferenceCenterCard (2026-07-03). null = not
+// preference-gated.
+function lifecyclePrefCategory(type: string | undefined): EmailPreferenceKey | null {
+  switch (type) {
+    case "activation_day_1":
+    case "activation_day_3":
+    case "activation_day_7":
+      return "activationNudges";
+    case "first_gift":
+    case "milestone":
+      return "fundMilestones";
+    case "birthday_reminder":
+    case "dormant_reengagement":
+      return "birthdayDormant";
+    default:
+      return null;
+  }
+}
+
+// Per-tick cache of a recipient's email preferences so a fund with
+// several queued entries doesn't re-query for the same user. Fails OPEN
+// (null → treated as opted-in) on any DB error: better to send a wanted
+// email than to silently swallow one on a transient failure.
+async function loadUserEmailPrefs(
+  userId: string,
+  cache: Map<string, EmailPreferences | null>,
+): Promise<EmailPreferences | null> {
+  if (cache.has(userId)) return cache.get(userId) ?? null;
+  let prefs: EmailPreferences | null = null;
+  try {
+    const r = await pool.query(`SELECT email_preferences FROM users WHERE id = $1`, [userId]);
+    prefs = (r.rows[0]?.email_preferences as EmailPreferences) || null;
+  } catch {
+    prefs = null;
+  }
+  cache.set(userId, prefs);
+  return prefs;
+}
+
 async function processQueue(log: (message: string, source?: string) => void) {
   let raw = "";
   try {
@@ -738,6 +780,8 @@ async function processQueue(log: (message: string, source?: string) => void) {
 
   const deliveryLog = await loadDeliveryLog();
   let deliveredCount = 0;
+  let suppressedCount = 0;
+  const prefCache = new Map<string, EmailPreferences | null>();
 
   for (const line of lines) {
     let parsed: QueueEntry | null = null;
@@ -749,6 +793,26 @@ async function processQueue(log: (message: string, source?: string) => void) {
     if (!parsed) continue;
     const id = typeof parsed.id === "string" && parsed.id ? parsed.id : crypto.createHash("sha1").update(line).digest("hex");
     if (deliveryLog.deliveredById[id]) continue;
+
+    // Honor the recipient's Settings email preferences. The lifecycle
+    // drip covers three preference-gated families (activation nudges,
+    // fund milestones, birthday/dormant); if the parent turned that
+    // category off, consume the entry without sending so it neither
+    // delivers now nor retro-fires if they re-enable later. Skips both
+    // the email and its companion push.
+    const prefCategory = lifecyclePrefCategory(parsed.type);
+    if (prefCategory && parsed.userId) {
+      const prefs = await loadUserEmailPrefs(String(parsed.userId), prefCache);
+      if (!isCategoryEnabled(prefs, prefCategory)) {
+        deliveryLog.deliveredById[id] = {
+          deliveredAt: new Date().toISOString(),
+          type: String(parsed.type || "unknown"),
+          channel: "suppressed_opt_out",
+        };
+        suppressedCount += 1;
+        continue;
+      }
+    }
     const rendered = renderQueuedEmail(parsed);
     if (!rendered) continue;
 
@@ -797,9 +861,14 @@ async function processQueue(log: (message: string, source?: string) => void) {
     deliveredCount += 1;
   }
 
-  if (deliveredCount > 0) {
+  if (deliveredCount > 0 || suppressedCount > 0) {
     await saveDeliveryLog(deliveryLog);
+  }
+  if (deliveredCount > 0) {
     log(`processed ${deliveredCount} parent lifecycle email(s)`, "parent-lifecycle-worker");
+  }
+  if (suppressedCount > 0) {
+    log(`suppressed ${suppressedCount} parent lifecycle email(s) by preference`, "parent-lifecycle-worker");
   }
 }
 

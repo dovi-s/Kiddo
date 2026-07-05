@@ -692,8 +692,14 @@ export const activities = pgTable("activities", {
   metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
-  index("activities_user_id_idx").on(table.userId),
-  index("activities_fund_id_idx").on(table.fundId),
+  // Composite (col, created_at) so the feed's "WHERE user/fund = ? ORDER BY
+  // created_at DESC LIMIT n" resolves as a single index scan instead of matching on
+  // the single-column index and then SORTING every matched row — the ~5s feed on a
+  // heavy account. The composite still covers the bare WHERE user_id / fund_id lookups
+  // (leftmost-prefix), so it replaces the old single-column indexes cleanly.
+  // ⚠️ Needs a migration to take effect (drizzle generate + push/migrate).
+  index("activities_user_created_idx").on(table.userId, table.createdAt),
+  index("activities_fund_created_idx").on(table.fundId, table.createdAt),
 ]);
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
@@ -1047,6 +1053,31 @@ export const webhookEvents = pgTable("webhook_events", {
   index("webhook_events_type_idx").on(table.eventType),
   index("webhook_events_status_idx").on(table.status),
 ]);
+
+// Web Push subscriptions — one row per browser/device that opted into push.
+// endpoint + keys come from the browser's PushManager.subscribe(); the server
+// uses them with web-push (VAPID) to deliver OS-level notifications even when the
+// app is closed. Pruned on 404/410 (expired) at send time. Gated by PUSH_NOTIFICATIONS.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => [
+  index("push_subscriptions_user_idx").on(table.userId),
+]);
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
 // Blocked gifters. Two scopes:
 //   - 'global'  : admin-applied. Email (or userId, if known) cannot

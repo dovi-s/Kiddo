@@ -55,6 +55,26 @@ export const EMAIL_PREFERENCE_CATEGORIES = [
     label: "Year-end Wrapped",
     description: "December year-in-review with growth and notable moments.",
   },
+  // Parent engagement drip (server: parentLifecycleWorker). These fire
+  // only for a parent-held child fund and are opt-out like the rest.
+  // Kept distinct from the warmth notes above: "Fund milestones" tracks
+  // gift-total thresholds (not kid ages), and "Birthday reminders" is the
+  // pre-birthday heads-up (not the fund's on-the-day birthday note).
+  {
+    key: "activationNudges",
+    label: "Getting-started nudges",
+    description: "Setup follow-ups on days 1, 3, and 7 after you start the fund.",
+  },
+  {
+    key: "fundMilestones",
+    label: "Fund milestones",
+    description: "When the first gift lands and each time the fund passes $100, $500, and $1,000.",
+  },
+  {
+    key: "birthdayDormant",
+    label: "Birthday reminders and check-ins",
+    description: "A heads-up before a birthday, and a gentle nudge after a long quiet stretch.",
+  },
 ] as const;
 
 export type EmailPreferenceKey = typeof EMAIL_PREFERENCE_CATEGORIES[number]["key"];

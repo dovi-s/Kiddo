@@ -17,6 +17,7 @@ import bcrypt from "bcryptjs";
 import { sql, eq, and, desc, inArray, isNotNull, gte } from "drizzle-orm";
 import { db, pool } from "./db";
 import { isAuthenticated, isAdmin } from "./auth";
+import { storeSubscription, removeSubscription, sendPushToUser, getPushPublicKey, isPushConfigured } from "./pushService";
 import { isMagicLinkAuthEnabled } from "./services/magicLinkAuth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
@@ -1631,6 +1632,48 @@ export async function registerRoutes(
       String(req.query.sig || (req.body && req.body.sig) || ""),
     ).catch(() => false);
     res.status(ok ? 200 : 400).json({ ok });
+  });
+
+  // ── Web Push notifications ──────────────────────────────────────────────
+  // Public VAPID key + whether push is configured (client needs both to subscribe).
+  app.get("/api/push/public-key", (_req, res) => {
+    res.json({ publicKey: getPushPublicKey(), enabled: isPushConfigured() });
+  });
+  // Register the current browser's push subscription for the logged-in user.
+  app.post("/api/push/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const sub = req.body?.subscription;
+      if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
+        return res.status(400).json({ error: "invalid subscription" });
+      }
+      await storeSubscription(req.user.id, sub, req.get("user-agent") || undefined);
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ error: "failed to subscribe" });
+    }
+  });
+  // Drop a subscription (user revoked, or signed out of this device).
+  app.post("/api/push/unsubscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const endpoint = req.body?.endpoint;
+      if (endpoint) await removeSubscription(String(endpoint));
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ error: "failed to unsubscribe" });
+    }
+  });
+  // Self-test: push to the caller's own devices — verifies the full pipeline.
+  app.post("/api/push/test", isAuthenticated, async (req: any, res) => {
+    // Durable per-user cap so the self-test can't be hammered into a push-send loop.
+    if (!(await checkRateLimit(`push-test:${req.user.id}`, 10, 10 * 60 * 1000))) {
+      return res.status(429).json({ error: "Too many test notifications. Try again in a few minutes." });
+    }
+    const result = await sendPushToUser(req.user.id, {
+      title: "Kiddo",
+      body: "Push notifications are working.",
+      url: "/dashboard",
+    });
+    res.json(result);
   });
 
   // Admin view: aggregated PMF survey responses with the 40% Sean
@@ -4005,7 +4048,9 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const userFunds = await storage.getFundsByUser(userId);
       const ensuredFundsById = new Map<string, any>();
-      for (const fund of userFunds) {
+      // Parallelized — was a sequential per-fund await loop (N round-trips; a multi-fund
+      // parent like the demo paid ~N× latency, a chunk of the /api/events cold-load time).
+      await Promise.all(userFunds.map(async (fund) => {
         try {
           const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
           ensuredFundsById.set(ensured.id, ensured);
@@ -4013,7 +4058,7 @@ export async function registerRoutes(
           console.error("Failed to ensure permanent event for fund:", fund.id, err);
           ensuredFundsById.set(fund.id, fund);
         }
-      }
+      }));
       const events = await storage.getEventsByUser(userId);
       // Owner email — used to exclude parent contributions from the
       // permanent "Gift anytime" event's totals. Without this filter,
@@ -4030,7 +4075,8 @@ export async function registerRoutes(
         events.filter((e: any) => e.isPermanent).map((e: any) => e.fundId)
       ));
       const unattributedGiftStatsByFund = new Map<string, { volume: number; count: number }>();
-      for (const fundId of permanentEventFundIds) {
+      // Parallelized — was a sequential getGiftsByFund per permanent-event fund.
+      await Promise.all(permanentEventFundIds.map(async (fundId) => {
         try {
           const fundGifts = await storage.getGiftsByFund(fundId);
           const unattributed = fundGifts.filter((g: any) => {
@@ -4050,7 +4096,7 @@ export async function registerRoutes(
             count: unattributed.length,
           });
         } catch { /* ignore */ }
-      }
+      }));
       res.json(events.map((event: any) => {
         if (event.isPermanent) {
           const unattributed = unattributedGiftStatsByFund.get(event.fundId);
@@ -11607,6 +11653,43 @@ export async function registerRoutes(
         }
       }
 
+      // ── N+1 KILL (perf) ──────────────────────────────────────────────
+      // The per-activity enrichment below used to await getFund + getGift + an
+      // owner-users query FOR EVERY ROW. On a fund-scoped feed every row shares the
+      // same fund + owner, so it refetched identical rows dozens of times — the cause
+      // of the ~7.4s, all-skeleton feed. Batch each lookup into a Map ONCE instead.
+      const distinctFundIds = Array.from(new Set(activities.map((a) => a.fundId).filter(Boolean) as string[]));
+      const fundMap = new Map<string, any>();
+      await Promise.all(distinctFundIds.map(async (fid) => {
+        try { const f = await storage.getFund(fid); if (f) fundMap.set(fid, f); } catch { /* skip */ }
+      }));
+
+      const giftIdSet = new Set<string>();
+      for (const a of activities) {
+        if (!a.metadata) continue;
+        try { const m = JSON.parse(a.metadata as string); if (m?.giftId) giftIdSet.add(String(m.giftId)); } catch { /* skip */ }
+      }
+      const giftMap = new Map<string, any>();
+      if (giftIdSet.size > 0) {
+        try {
+          const giftRows = await db.select().from(gifts).where(inArray(gifts.id, Array.from(giftIdSet)));
+          for (const g of giftRows) giftMap.set(String(g.id), g);
+        } catch (err) { console.warn('[Activities] Gift batch enrichment failed', err); }
+      }
+
+      const ownerEmailMap = new Map<string, string>(); // fund.userId -> lowercased owner email
+      const ownerUserIds = Array.from(new Set(Array.from(fundMap.values()).map((f: any) => f?.userId).filter(Boolean).map(String)));
+      if (ownerUserIds.length > 0) {
+        try {
+          const ownerRows = await db.select().from(users).where(inArray(users.id, ownerUserIds));
+          for (const o of ownerRows) {
+            const e = String((o as any)?.email || "").trim().toLowerCase();
+            if (e) ownerEmailMap.set(String((o as any).id), e);
+          }
+        } catch { /* owner batch non-fatal */ }
+      }
+      // ─────────────────────────────────────────────────────────────────
+
       const enriched = await Promise.all(
         activities.map(async (activity) => {
           let fund = null;
@@ -11622,11 +11705,7 @@ export async function registerRoutes(
           let resolvedEventName: string | null = null;
 
           if (activity.fundId) {
-            try {
-              fund = await storage.getFund(activity.fundId);
-            } catch (err) {
-              console.warn('[Activities] Fund enrichment failed for activity', activity.id, err);
-            }
+            fund = fundMap.get(activity.fundId) ?? null;
           }
 
           if (activity.metadata) {
@@ -11646,24 +11725,19 @@ export async function registerRoutes(
                 resolvedEventName = activityEventNameMap.get(meta.eventId) ?? null;
               }
               if (meta?.giftId) {
-                const gift = await storage.getGift(meta.giftId);
+                const gift = giftMap.get(String(meta.giftId)) ?? null;
                 if (gift) {
                   giftStatus = gift.status || null;
                   resolvedSenderEmail = (gift as any).senderEmail || null;
                   // Parent's own contribution = sender email matches owner.
                   // Compute it here so the client doesn't need both pieces.
                   if (resolvedSenderEmail && fund && (fund as any).userId) {
-                    try {
-                      // storage.getUser doesn't exist on DatabaseStorage; query
-                      // users table directly via the same db handle the rest of
-                      // this file uses. Pre-existing bug surfaced by tsc once
-                      // the typed-mutation work landed in this region.
-                      const [owner] = await db.select().from(users).where(eq(users.id, String((fund as any).userId))).limit(1);
-                      const ownerEmail = String((owner as any)?.email || "").trim().toLowerCase();
-                      if (ownerEmail) {
-                        resolvedIsParentContribution = String(resolvedSenderEmail).trim().toLowerCase() === ownerEmail;
-                      }
-                    } catch { /* owner lookup non-fatal */ }
+                    // Owner email comes from the batched ownerEmailMap (was a per-row
+                    // users query refetching the same owner dozens of times).
+                    const ownerEmail = ownerEmailMap.get(String((fund as any).userId));
+                    if (ownerEmail) {
+                      resolvedIsParentContribution = String(resolvedSenderEmail).trim().toLowerCase() === ownerEmail;
+                    }
                   }
                   // metadata.isParentContribution still wins when present
                   // (truthy or false) — only fall back when not provided.
@@ -12953,7 +13027,7 @@ export async function registerRoutes(
 
   app.post('/api/stripe/checkout/gift', async (req, res) => {
     try {
-      const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous, clientSource } = req.body;
+      const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, voiceSealUntil18, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous, clientSource } = req.body;
       const baseUrl = getAppBaseUrl(req);
       // Allowed client-source values. Mobile sends one of these
       // explicitly; web omits the field and the server defaults to
@@ -13189,6 +13263,7 @@ export async function registerRoutes(
           photoUrl: normalizedPhotoUrl || undefined,
           videoUrl: normalizedVideoUrl || undefined,
           audioUrl: normalizedAudioUrl || undefined,
+          voiceSealUntil18: Boolean(voiceSealUntil18),
           mediaToken: giftMediaToken,
           coverFees: coverFees || false,
           hasLegacyPremiumEventCoverage,
@@ -13242,6 +13317,7 @@ export async function registerRoutes(
         photoUrl: normalizedPhotoUrl || undefined,
         videoUrl: normalizedVideoUrl || undefined,
         audioUrl: normalizedAudioUrl || undefined,
+        voiceSealUntil18: Boolean(voiceSealUntil18),
         // C3: opaque token when media was persisted server-side (above). When
         // undefined, stripeService keeps the media URLs inline (legacy).
         mediaToken: giftMediaToken,
