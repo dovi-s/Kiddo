@@ -1378,7 +1378,7 @@ export default function GiftSuccess() {
               <Gift className="w-5 h-5 text-[hsl(var(--kiddo-evergreen))]" />
             </div>
             <h2 className="font-heading text-lg font-semibold" data-testid="text-gift-amount">
-              You sent ${amount} to {fundName}
+              You sent ${amountDisplay} to {fundName}
             </h2>
           </div>
 

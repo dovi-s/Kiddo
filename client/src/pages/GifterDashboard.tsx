@@ -1441,7 +1441,7 @@ export default function GifterDashboard() {
                       again, follow updates, sponsor a year).  */}
                   <h2 className="font-heading text-2xl font-semibold text-foreground">Funds you've gifted to</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Each card shows the fund's value, every gift you've sent and what it's worth now, and thank-yous from the family.
+                    Each card shows every gift you've sent and thank-yous from the family.
                   </p>
                 </div>
                 <Link href={startFundHref}>
@@ -1884,7 +1884,7 @@ export default function GifterDashboard() {
                 <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/20 p-8 text-center">
                   <Mail className="mx-auto h-5 w-5 text-primary" />
                   <p className="mt-3 font-medium text-foreground">No saved funds yet</p>
-                  <p className="mt-2 text-sm text-muted-foreground">The next time you finish a gift, use "Save this fund" and it will show up here with fund value, milestones, and memory updates.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">The next time you finish a gift, use "Save this fund" and it will show up here with your gifts, milestones, and memory updates.</p>
                 </div>
               )}
             </div>

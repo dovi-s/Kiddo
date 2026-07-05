@@ -1242,7 +1242,15 @@ export default function GiftCheckout() {
         setIsSubmitting(false);
         return;
       }
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      // Neither an embedded clientSecret nor a hosted url came back (unexpected
+      // 200 with an empty/malformed body). Surface an error instead of leaving
+      // the button stuck spinning on "Opening secure checkout…".
+      setPayError("We couldn't start checkout. Please try again.");
+      setIsSubmitting(false);
     } catch (err: any) {
       console.error("Payment error:", err);
       setPayError(err.message || "Something went wrong. Please try again.");
@@ -1919,7 +1927,7 @@ export default function GiftCheckout() {
                       className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base sm:text-sm resize-none outline-none focus:border-[hsl(var(--kiddo-evergreen))] placeholder:text-muted-foreground"
                     />
                     <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount} onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_occasion_start", { destination: "preview_step", amount: activeAmount }); setStep("preview"); }} data-testid="button-start-gift">
-                      {currentOccasion.emoji} Give ${isValidAmount ? activeAmount.toFixed(2) : "..."} to {recipientName}
+                      {currentOccasion.emoji} Give ${isValidAmount ? (activeAmount % 1 === 0 ? activeAmount : activeAmount.toFixed(2)) : "…"} to {recipientName}
                       <ArrowRight size={16} className="ml-2" />
                     </Button>
                     <p className="text-center text-xs text-muted-foreground">No account needed. Takes seconds.</p>
@@ -2744,7 +2752,7 @@ export default function GiftCheckout() {
               )}
 
               <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!hasValidExecutionChoice} onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_preview_continue", { executionModel: effectiveExecutionModel, selectedStock: effectiveSelectedTicker }); setStep("payment"); }} data-testid="button-continue-to-payment">
-                Gift ${activeAmount.toFixed(0)} to {amountStepChildLabel}
+                Gift ${activeAmount % 1 === 0 ? activeAmount : activeAmount.toFixed(2)} to {amountStepChildLabel}
                 <ArrowRight size={16} className="ml-2" />
               </Button>
               <p className="text-center text-2xs text-muted-foreground">Prices vary and investing involves risk, the same way a gift card loses value over time.</p>
