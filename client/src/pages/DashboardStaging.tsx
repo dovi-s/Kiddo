@@ -8551,13 +8551,19 @@ export default function DashboardStaging() {
                 const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : null;
                 const per = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
                 const cadences = new Set(active.map((c: any) => c.frequency || "monthly"));
-                if (active.length === 1 || cadences.size === 1) {
-                  // One schedule, or several sharing a cadence: show the real amount
-                  // in that cadence ("$25/day", or summed "$75/month"). NOT a monthly-
-                  // equivalent, which for a daily schedule gave a random-looking
-                  // "$760.94/mo" that matched nothing else on screen.
+                if (active.length === 1) {
+                  // Single schedule: the honest amount in its cadence + next date.
+                  const c0: any = active[0];
+                  statusLine = `${formatMoneyFriendly(parseFloat(String(c0?.amount || "0")))} a ${per(c0?.frequency)}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                } else if (cadences.size === 1) {
+                  // Several schedules sharing a cadence: show the summed amount ("$50 a
+                  // month") AND the count. The count used to be dropped here, so a parent
+                  // with two $25/mo plans saw a bare "$50 a month" that read like ONE
+                  // schedule (founder flagged: the quantity wasn't clear). Lead with the
+                  // count so it survives truncation; the per-schedule rows below carry
+                  // each real amount + its own next date.
                   const total = active.reduce((s: number, c: any) => s + parseFloat(String(c?.amount || "0")), 0);
-                  statusLine = `${formatMoneyFriendly(total)} a ${per((active[0] as any)?.frequency)}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                  statusLine = `${active.length} recurring · ${formatMoneyFriendly(total)} a ${per((active[0] as any)?.frequency)}${nextLabel ? ` · next ${nextLabel}` : ""}`;
                 } else {
                   // Mixed cadences ($25/day + $10/year): no honest single amount, so
                   // a combined monthly-equivalent reads as a random number. Show the
