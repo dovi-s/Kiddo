@@ -8193,7 +8193,7 @@ export default function DashboardLab() {
                 </div>
                 <div className="space-y-1.5 ml-[40px]">
                   <p className="text-sm text-foreground/90 leading-relaxed">
-                    <span className="font-semibold text-foreground tabular-nums">${giftAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-foreground tabular-nums">{formatMoneyFriendly(giftAmount)}</span>
                     {destinationLabel ? <> in {destinationLabel}</> : null}.
                     {" "}Actual shares of real companies, held in {childFirstName}&apos;s name.
                   </p>
@@ -8201,7 +8201,7 @@ export default function DashboardLab() {
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       At {fundMajorityAge}, that single gift could be worth around{" "}
                       <span className="font-semibold text-[hsl(var(--kiddo-evergreen))] tabular-nums">
-                        ${projectedAtMajority.toFixed(2)}
+                        {formatMoneyFriendly(projectedAtMajority)}
                       </span>.
                     </p>
                   )}
@@ -9335,7 +9335,7 @@ export default function DashboardLab() {
                               handoff step) so both sides read as one
                               coherent story. */}
                           <span className="font-medium tabular-nums text-foreground/70">{fmtRow(periodCash)}</span>{" "}
-                          of that is still in cash, investing in 1 to 2 business days.
+                          of that is still in cash, investing in 1–2 business days.
                           <ChevronRight size={12} className="ml-0.5 inline align-middle opacity-60" aria-hidden />
                         </button>
                       )}
@@ -10111,7 +10111,7 @@ export default function DashboardLab() {
                   cash: cash > 0.5
                     ? `${formatMoneyFriendly(cash)} is sitting as cash, ready to invest.`
                     : settling > 0.5
-                      ? `${formatMoneyFriendly(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Settling now. Usually moments via card or Apple Pay, up to 1 to 2 business days for bank transfers.`
+                      ? `${formatMoneyFriendly(settling)} on its way to ${childFirst === "them" ? "the fund" : `${childFirst}'s fund`}. Card or Apple Pay clears in moments; bank transfers take 1–2 business days.`
                       : `All of ${childFirst === "them" ? "the gifts are" : `${childFirst}'s gifts are`} invested. Nothing pending.`,
                   managed: `${formatMoneyFriendly(managedVal)} in a diversified managed mix.`,
                   chosen: `${formatMoneyFriendly(chosenVal)} in individual stocks, picked just for ${childFirst}.`,
@@ -10440,7 +10440,7 @@ export default function DashboardLab() {
                                       and feedback_no_greenwashing_losses.md. */}
                                   {hasBothSections && investedTotal > 0 && (
                                     <p className="px-1 pt-1 text-2xs font-medium text-muted-foreground/70 tabular-nums">
-                                      Total: {formatCurrency(chosenVal)} · {Math.round((chosenVal / investedTotal) * 100)}% of invested
+                                      Total: {formatCurrency(chosenVal)} · {Math.round((chosenVal / investedTotal) * 100)}% of holdings
                                     </p>
                                   )}
                                 </div>
@@ -10538,7 +10538,7 @@ export default function DashboardLab() {
                                       is intentionally absent. */}
                                   {hasBothSections && investedTotal > 0 && (
                                     <p className="px-1 pt-1 text-2xs font-medium text-muted-foreground/70 tabular-nums">
-                                      Total: {formatCurrency(managedVal)} · {Math.round((managedVal / investedTotal) * 100)}% of invested
+                                      Total: {formatCurrency(managedVal)} · {Math.round((managedVal / investedTotal) * 100)}% of holdings
                                     </p>
                                   )}
                                 </div>
@@ -14208,7 +14208,7 @@ export default function DashboardLab() {
                 Because that 7% is already after inflation, the number is in today's dollars: what it could buy now, not an inflated future figure.
               </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                This is hypothetical. Not guaranteed. Markets go up and down. But gifts that last? Those are guaranteed.
+                This is hypothetical. Not guaranteed. Markets go up and down.
               </p>
               <button
                 type="button"
