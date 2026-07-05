@@ -7,7 +7,7 @@ import { demoBlocked } from "@/lib/demo-block";
 // row-types it was used for (Kid suggestion / Subscription / Age-18 invite)
 // now use semantically-correct icons: Lightbulb (gentle nudge), CreditCard
 // (billing event), Mail (invitation).
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History, Download } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import {
   canonicalLabel,
@@ -553,7 +553,12 @@ function parseSafeDate(value: unknown): Date | null {
 }
 
 function formatCurrency(n: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  // Friendly: drop the robotic ".00" on whole amounts ("+$50", not "+$50.00") but keep
+  // cents when they're real ("+$50.42"). The feed shows round gift/contribution amounts
+  // on a warm surface where trailing .00 reads like a bank statement; non-round sums
+  // (the 30-day reconciliation tiles) still show their cents.
+  const rounded = Math.round((Number.isFinite(n) ? n : 0) * 100) / 100;
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: rounded % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(rounded);
 }
 
 function parseAmount(value: unknown): number | null {
@@ -766,6 +771,10 @@ export default function Activity() {
   }, []);
   const [filter, setFilter] = useState<FilterType>(initialFilter);
   const [search, setSearch] = useState("");
+  // Search collapses to a tap-icon (cut-extra 2026-07): a full always-on search ROW
+  // was heavy for a feed most people just scroll. Open when toggled OR when a query
+  // is active, so a persisted search stays visible across navigation.
+  const [searchOpen, setSearchOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Per-row "New" dismissal. seenBeforeArrival freezes the "new since last
   // visit" set for the whole visit (so the page can answer "the badge said N,
@@ -880,8 +889,14 @@ export default function Activity() {
   // make /api/activities fund-aware for owned funds; this is the collision-free client
   // equivalent.) ownerModeFundIds is built above.
   const activeFundIsOwned = !!activeFundIdForActivity && ownerModeFundIds.has(String(activeFundIdForActivity));
-  const userScopedFeed = useActivities(200, isAuthenticated && !authLoading && !activeFundIsOwned, activeFundIdForActivity);
-  const fundScopedFeed = useFundActivities(activeFundIsOwned ? activeFundIdForActivity : undefined, 200);
+  // Feed limit 200→60: the feed renders every fetched row (no pagination) but the user
+  // sees ~8 before scrolling, and 200 items was a 7.4s / 110KB BLOCKING fetch that left
+  // the page in skeletons that whole time. 60 covers months of recent history, paints
+  // ~3x faster, and only caps the rare deep-history fund (most have <60 total). NOTE:
+  // the deeper root cause is a slow server response per item (~37ms/row) — a backend
+  // N+1 on /api/activities worth chasing separately for a truly instant feed.
+  const userScopedFeed = useActivities(60, isAuthenticated && !authLoading && !activeFundIsOwned, activeFundIdForActivity);
+  const fundScopedFeed = useFundActivities(activeFundIsOwned ? activeFundIdForActivity : undefined, 60);
   const activities = (activeFundIsOwned ? fundScopedFeed.data : userScopedFeed.data) ?? [];
   // Header label: Activity is per-fund-scoped, so name the kid the way Settings
   // does ("{child}'s activity") instead of the generic "Your activity". Stays
@@ -1866,18 +1881,15 @@ export default function Activity() {
           className="px-1 mb-6"
           data-testid="activity-hero"
         >
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+          <p className="text-3xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
             Activity
           </p>
           <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight" data-testid="heading-activity">
             {activityHeading}
           </h1>
-          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-            History, pending, and scheduled for this fund.{" "}
-            <Link href="/dashboard" className="underline underline-offset-2 hover:text-foreground">
-              Back to Dashboard →
-            </Link>
-          </p>
+          {/* Cut the subtitle: it restated the three tabs below it ("History, pending,
+              and scheduled") and the "Back to Dashboard" link duplicates the bottom nav.
+              The heading + tabs are self-evident. */}
         </motion.div>
 
         {/* "Needs your attention" — open action items derived
@@ -2061,9 +2073,12 @@ export default function Activity() {
                       : null,
                   },
                   {
+                    // Hidden when zero (cut-extra 2026-07): "Withdrawals $0" is noise on
+                    // a normal fund — most never withdraw. Surfaces only when it's real.
                     label: "Withdrawals",
                     value: last30Withdrawals > 0 ? `−${formatCurrency(last30Withdrawals)}` : formatCurrency(0),
                     tone: last30Withdrawals > 0 ? "negative" : "neutral",
+                    hidden: !(last30Withdrawals > 0),
                     meta: last30WithdrawalsCount > 0
                       ? `${last30WithdrawalsCount} ${last30WithdrawalsCount === 1 ? "withdrawal" : "withdrawals"}`
                       : null,
@@ -2078,6 +2093,9 @@ export default function Activity() {
                     label: "Market growth",
                     value: `${last30MarketGrowth >= 0 ? "+" : "−"}${formatCurrency(Math.abs(last30MarketGrowth))}`,
                     tone: last30MarketGrowth >= 0 ? "positive" : "negative",
+                    // Hidden when flat (cut-extra 2026-07): a "+$0" growth tile is noise on
+                    // a young/small fund; it reappears the moment there's real movement.
+                    hidden: Math.abs(last30MarketGrowth) < 0.01,
                     meta: null,
                   },
                   // Year-mode-only rows. Subscription paid (Kiddo+ / Family
@@ -2103,7 +2121,7 @@ export default function Activity() {
                         : "No refunds this period",
                     },
                   ] : []),
-                ].map(({ label, value, tone, meta }) => {
+                ].filter((s: any) => !s.hidden).map(({ label, value, tone, meta }) => {
                   // The "You added" tile is the entry point into the
                   // contributions detail modal — tap to see every dollar
                   // you've added (recurring + one-time, with sub-toggle).
@@ -2199,12 +2217,14 @@ export default function Activity() {
 
         {/* Search + filter */}
         <div style={{ marginBottom: 20 }}>
+          {(searchOpen || search) && (
           <div style={{ position: "relative", marginBottom: 10 }}>
             <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "rgb(175,164,156)", pointerEvents: "none" }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search activity..."
+              autoFocus
               // 16px font-size on mobile is the canonical iOS-Safari fix for
               // "input gains focus → page auto-zooms → user loses position."
               // We use Tailwind's text-base on phones + text-sm at sm: breakpoint
@@ -2214,7 +2234,7 @@ export default function Activity() {
               // equivalents.
               className="text-base sm:text-sm"
               style={{
-                width: "100%", padding: "10px 12px 10px 34px",
+                width: "100%", padding: "10px 38px 10px 34px",
                 border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", borderRadius: 12,
                 color: "hsl(var(--kiddo-ink))", background: "white",
                 outline: "none", boxSizing: "border-box" as const,
@@ -2223,7 +2243,18 @@ export default function Activity() {
               onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
               onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
             />
+            <button
+              type="button"
+              onClick={() => { setSearch(""); setSearchOpen(false); }}
+              aria-label="Close search"
+              className="kiddo-press"
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", display: "inline-flex", padding: 4, background: "none", border: "none", cursor: "pointer", color: "rgb(175,164,156)" }}
+              data-testid="button-search-close"
+            >
+              <XIcon size={16} />
+            </button>
           </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <div style={{ display: "flex", gap: 6, overflowX: "auto" as const, paddingBottom: 2, flex: 1, minWidth: 0 }} data-testid="filter-pills">
             {filterOptions.filter(opt => opt.value !== "growth" || hasGrowthRows).map(opt => (
@@ -2249,31 +2280,45 @@ export default function Activity() {
               </button>
             ))}
             </div>
-            {/* Export CSV — quiet button next to the filter pills. Exports
-                the currently filtered view (so a parent searching "googl"
-                exports only the matching rows). Hidden when there's
-                nothing visible to export. */}
+            {/* Search toggle — expands the field above (collapsed by default so the
+                feed leads). Hidden while the field is already open. */}
+            {!(searchOpen || search) && (
+              <button
+                type="button"
+                onClick={() => { haptic("selection"); setSearchOpen(true); }}
+                aria-label="Search activity"
+                title="Search activity"
+                className="kiddo-press"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, width: 34, height: 34,
+                  background: "rgba(26,61,43,0.06)", border: "1px solid rgba(26,61,43,0.18)",
+                  borderRadius: 999, color: "rgb(26,61,43)", cursor: "pointer",
+                }}
+                data-testid="button-search-toggle"
+              >
+                <Search size={15} />
+              </button>
+            )}
+            {/* Export CSV — a quiet ICON now (was a text pill). Exports the FILTERED
+                view, so it stays here with the filters (not the summary card). Hidden
+                when there's nothing visible to export. */}
             {filtered.length > 0 && (
               <button
                 type="button"
                 onClick={handleExportCsv}
+                aria-label="Download current view as CSV"
                 title="Download current view as CSV"
+                className="kiddo-press"
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  flexShrink: 0,
-                  padding: "6px 10px",
-                  background: "rgba(26,61,43,0.06)",
-                  border: "1px solid rgba(26,61,43,0.18)",
-                  borderRadius: 999,
-                  color: "rgb(26,61,43)",
-                  fontSize: 11, fontWeight: 700, letterSpacing: "0.02em",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, width: 34, height: 34,
+                  background: "rgba(26,61,43,0.06)", border: "1px solid rgba(26,61,43,0.18)",
+                  borderRadius: 999, color: "rgb(26,61,43)", cursor: "pointer",
                 }}
                 data-testid="button-export-csv"
               >
-                <ArrowUp size={11} style={{ transform: "rotate(180deg)" }} />
-                CSV
+                <Download size={15} />
               </button>
             )}
           </div>
@@ -2489,26 +2534,12 @@ export default function Activity() {
                   const createdAt = parseSafeDate(item.createdAt);
                   const amtNum = parseAmount(item.amount);
                   const isLast = i === group.items.length - 1;
-                  // Date label is context-aware: current-year rows say
-                  // "May 5"; prior-year rows append "May 5, 2024" so the
-                  // ledger reads accurately when scrolling through a fund's
-                  // long history. Old mockup pattern.
-                  //
-                  // Timezone: LOCAL (no timeZone arg) — was UTC, which
-                  // caused a header/footer mismatch for evening events
-                  // in non-UTC timezones. A US-Eastern parent who did a
-                  // strategy change at 10pm Thursday May 14 saw the
-                  // group header "Thursday, May 14" (local-time
-                  // toDateString) but the row's footer date "May 15"
-                  // (UTC). Both day-grouping (line 2054) and dayLabel
-                  // (line 2056) use local time, so the footer must too.
-                  // Locked 2026-05-18 per the date-mismatch audit.
-                  const now = new Date();
-                  const dateShort = createdAt
-                    ? createdAt.getFullYear() === now.getFullYear()
-                      ? createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                      : createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                    : null;
+                  // Per-row date REMOVED (cut-extra 2026-07): it duplicated the day
+                  // subheader ("Monday, May 18") + the month section ("MAY 2026") that
+                  // already date every row — the iOS-ledger pattern dates the GROUP, not
+                  // each row. (dayLabel below still uses LOCAL time, matching the local
+                  // day-grouping, so evening events in non-UTC zones stay on the right
+                  // day — the fix from the 2026-05-18 date-mismatch audit.)
                   // Day-level subheader. Renders above the row when this
                   // item's day differs from the previous item's day. Lets
                   // the eye skim a chronological wall of activity by day
@@ -2771,6 +2802,7 @@ export default function Activity() {
                         >
                       <button
                         type="button"
+                        className="kiddo-press"
                         onClick={() => {
                           haptic("selection");
                           // Opening the row clears its own "New" — add-only so a
@@ -2955,7 +2987,6 @@ export default function Activity() {
                               </span>
                             )}
                             <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{ownerViewingParentContrib ? "Contribution" : config.label}</span>
-                            {dateShort && <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>· {dateShort}</span>}
                             {/* Gift-source chip: renders only when the
                                 gift came via a specific occasion page.
                                 Absence = main gift page (the implicit
@@ -3870,7 +3901,7 @@ export default function Activity() {
                                     haptic("selection");
                                     navigate(`/activity?tab=scheduled&highlight=${encodeURIComponent(String(c.id))}`);
                                   }}
-                                  className="mt-2 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
+                                  className="mt-2 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
                                   data-testid={`upcoming-manage-${c.id}`}
                                 >
                                   Pause or cancel →

@@ -3,9 +3,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Metric-matched fallback fonts — kill the FOUT/CLS flash while the real variable
+   fonts load. Arial is size-adjusted (values computed by `fontaine` from the
+   @fontsource woff2 metrics) to occupy the SAME box as DM Sans / Bricolage, so when
+   the real font swaps in there is ZERO layout shift — the jarring part of FOUT is
+   gone. These names sit in the font stacks below AFTER the real font, so they render
+   only during the brief load window. Regenerate with fontaine (readMetrics +
+   generateFontFace) if the fonts ever change. */
+@font-face {
+  font-family: "DM Sans Fallback";
+  src: local("Arial");
+  size-adjust: 105.6526%;
+  ascent-override: 93.8926%;
+  descent-override: 29.3415%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial");
+  size-adjust: 100.0447%;
+  ascent-override: 92.9585%;
+  descent-override: 26.9879%;
+  line-gap-override: 0%;
+}
+
 @theme inline {
-  --font-sans: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
-  --font-serif: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-sans: 'DM Sans Variable', 'DM Sans', 'DM Sans Fallback', system-ui, sans-serif;
+  --font-serif: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Bricolage Grotesque Fallback', system-ui, sans-serif;
+
+  /* Micro-type scale (DESIGN_SYSTEM §9). 11px/10px are used app-wide for dense
+     chrome — labels, captions, chips — below Tailwind's text-xs (12px) floor.
+     Named so they sit on the scale instead of hand-typed text-[11px]. Font-size
+     only (no paired line-height), so they render IDENTICALLY to the arbitrary
+     values they replace; line-height inherits exactly as before. */
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-3xs: 0.625rem;  /* 10px */
+  --text-4xs: 0.5625rem; /* 9px  — floor of the micro-ladder (legal fine print) */
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -174,12 +207,18 @@
      (single-token darken, brand-preserving). */
   --kiddo-muted: 32 7% 38%;
   --kiddo-border: 33 24% 86%;           /* #E5DDD4 */
+  --kiddo-divider: 40 23% 8% / 0.26;    /* section separators: warm ink @26% — a defined-but-editorial hairline (the old #E5DDD4 border read as a near-invisible whisper). One knob tunes every section divider; nudge the alpha to taste. */
   --kiddo-border-light: 33 24% 86% / 0.6; /* faded variant for inner row dividers */
   
-  --background: 38 8% 98%;             /* De-beiged near-white canvas. Saturation cut hard
-                                          (32% -> 8%) because the "beige feeling" is saturation,
-                                          not lightness — this is perceptibly cleaner/whiter, not
-                                          a subtle tone nudge. Faintly warm so it isn't clinical. */
+  --background: 38 30% 96%;            /* Warm off-cream canvas. Re-warmed 2026-07 (was 8%/98%
+                                          near-white). Finding from a 3-way render (current /
+                                          pure-white / full-cream): the near-white sat one point
+                                          off the 99%-L cards, so they barely separated and the
+                                          whole surface read FLAT. Pure white made it flatter still
+                                          (white-on-white). The crispness/layering the eye wants
+                                          comes from bg↔card CONTRAST — a warm canvas with near-
+                                          white cards that POP — not from going whiter. Held below
+                                          the full 41% cream so it reads intentional, not beige. */
   --foreground: 150 15% 12%;           /* Near-black ink */
   
   /* Mobile-first touch targets */
@@ -778,24 +817,25 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 }
 
 .mobile-nav-shell {
-  border: 1px solid hsl(var(--border) / 0.9);
-  border-radius: 24px;
+  border: none;
+  border-top: 1px solid hsl(var(--border) / 0.9);
+  border-radius: 20px 20px 0 0;
   background:
     linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.98));
   box-shadow:
-    0 18px 40px -26px rgba(24, 33, 28, 0.42),
-    0 8px 18px -16px rgba(24, 33, 28, 0.22),
+    0 -10px 30px -18px rgba(24, 33, 28, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.52);
   backdrop-filter: blur(14px) saturate(1.04);
   -webkit-backdrop-filter: blur(14px) saturate(1.04);
-  /* Symmetric internal floor (6px), tuned 2026-06-07. The home-indicator inset
-     is NOT applied here anymore: as internal padding it only inflated empty space
-     inside the pill (icons shoved up, pill bottom still jammed 12px from the
-     screen edge, overlapping the indicator — "too far down / bottom-heavy" on
-     notched phones, founder-reported). It now lives in the pill's `bottom`
-     position (MobileNav.tsx) so the WHOLE rail lifts above the home indicator
-     with a consistent gap. Non-notched phones (inset = 0) are unchanged. */
-  padding-bottom: 6px;
+  /* Flush, edge-to-edge bottom bar (native posture, 2026-07 — was a floating
+     pill: border-radius 24, all-round border, floating drop-shadow). Now: rounded
+     TOP only, a top hairline, and a soft UPWARD shadow lifting it off the content
+     above. The home-indicator safe-area rides here as INTERNAL padding so the
+     glass extends behind the indicator (no gap). Non-notched phones (inset = 0)
+     keep the 6px floor. padding-top balances the row so the icons+labels sit
+     centered in the bar proper rather than jammed against the top hairline. */
+  padding-top: 9px;
+  padding-bottom: calc(7px + env(safe-area-inset-bottom));
 }
 
 .get-started-screen {
@@ -1419,11 +1459,11 @@ body {
 .kiddo-app-page {
   min-height: 100vh;
   background: hsl(var(--kiddo-cream));
-  font-family: "DM Sans Variable", "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "DM Sans Variable", "DM Sans", "DM Sans Fallback", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .font-heading {
-  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", "Bricolage Grotesque Fallback", system-ui, sans-serif;
   /* -0.018em: large display type (the balance number, section headings) reads
      tighter + more crafted. Was -0.01em; the body sledgehammer keeps text at 0. */
   letter-spacing: -0.018em;
@@ -1453,6 +1493,45 @@ body {
     0 1px 3px rgba(26, 23, 16, 0.08),
     0 8px 24px rgba(26, 23, 16, 0.10);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Calmer cards on Settings + Activity (founder 2026-07-01: "settings/activity —
+   lots going on, cut down, on par"). These pages are DENSE with real controls +
+   info cards, so the heavy floaty shadow + hover-lift made every block read
+   "loud." Flatten to a quiet, list-like weight — content + features unchanged,
+   just calmer. Scoped by page testid so the dashboard (which earns its depth) is
+   untouched. Reversible: delete this block. */
+/* On-par-with-dashboard pass (2026-07-02). Settings + Activity are built from
+   inline `bg-card` (near-white 99% L) + `shadow-premium-*` cards on the cream page
+   (95% L), so every block pops as a white box — the opposite of the dashboard,
+   where content flows on the cream. Recede them: (1) remap the card fill to the
+   cream tone so cards stop popping, (2) kill the float shadow, (3) flatten the
+   .kiddo-card modules (Money Summary). Interactive fills (bg-primary/5, evergreen
+   tints) are untouched, so selected/tappable states still read. Delete to revert. */
+[data-testid="page-settings"],
+[data-testid="page-activity"] {
+  --card: 38 41% 95%; /* == --kiddo-cream: bg-card cards match the page → recede */
+  /* Soften every outline toward the cream so the receded groups read as flowing
+     page sections (the dashboard's near-borderless language), not outlined boxes. */
+  --kiddo-border: 36 24% 91%;
+  --border: 36 24% 91%;
+}
+[data-testid="page-settings"] [class*="shadow-premium"],
+[data-testid="page-activity"] [class*="shadow-premium"] {
+  box-shadow: none !important;
+}
+[data-testid="page-settings"] .kiddo-card,
+[data-testid="page-settings"] .kiddo-card-soft,
+[data-testid="page-activity"] .kiddo-card,
+[data-testid="page-activity"] .kiddo-card-soft {
+  background: transparent;
+  border-color: rgba(26, 23, 16, 0.08);
+  box-shadow: none;
+}
+[data-testid="page-settings"] .kiddo-card:hover,
+[data-testid="page-activity"] .kiddo-card:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .kiddo-card:hover {

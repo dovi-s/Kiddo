@@ -46,6 +46,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { UserPlus, KeyRound, Eye, Ban, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
@@ -91,10 +92,6 @@ type Collaborator = {
   status?: string | null;
   invitedAt?: string | null;
 };
-
-const VIEWER_PERMS = ["View balance", "View activity", "See Memory Book"];
-const ADMIN_PERMS = ["View balance", "View activity", "See Memory Book", "Create events", "Edit settings"];
-const DENIED_VIEWER = ["Create events", "Edit settings"];
 
 export function CoParentAccessCard({
   fund,
@@ -174,13 +171,10 @@ export function CoParentAccessCard({
     <SectionCard>
       <div className="p-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div>
-            <h2 className="text-base font-bold text-foreground">Co-parent access</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Share {childName ? `${childName}'s` : "this"} fund with a partner or guardian.
-            </p>
-          </div>
+        {/* heading + Invite on one row; the description moves full-width below so it
+            stays a SINGLE line on mobile (it was wrapping to two next to the button). */}
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-foreground">Co-parent access</h2>
           <Button
             size="sm"
             className="shrink-0 rounded-xl gap-1.5"
@@ -204,6 +198,9 @@ export function CoParentAccessCard({
             Invite
           </Button>
         </div>
+        <p className="mt-1 mb-5 text-sm text-muted-foreground">
+          Share {childName ? `${childName}'s` : "this"} fund with a partner or guardian.
+        </p>
 
         {/* How it works — shown only when the query has confirmed
             there are zero collaborators. Gating on isFetched (rather
@@ -223,8 +220,8 @@ export function CoParentAccessCard({
               ] as { Icon: LucideIcon; title: string; body: string }[]).map((item) => (
                 <div key={item.title} className="rounded-xl bg-card p-3">
                   <item.Icon className="mb-1.5 text-[hsl(var(--kiddo-evergreen))]" size={20} strokeWidth={2} aria-hidden />
-                  <p className="text-[11.5px] font-bold text-foreground mb-0.5">{item.title}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{item.body}</p>
+                  <p className="text-2xs font-bold text-foreground mb-0.5">{item.title}</p>
+                  <p className="text-2xs text-muted-foreground leading-relaxed">{item.body}</p>
                 </div>
               ))}
             </div>
@@ -258,8 +255,6 @@ export function CoParentAccessCard({
             <div className="space-y-3">
               {collaborators.map((collab) => {
                 const isAdmin = collab.role === "co-admin";
-                const granted = isAdmin ? ADMIN_PERMS : VIEWER_PERMS;
-                const denied = isAdmin ? [] : DENIED_VIEWER;
                 const invitedDate = collab.invitedAt
                   ? new Date(collab.invitedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                   : null;
@@ -270,45 +265,47 @@ export function CoParentAccessCard({
                         {(collab.email || "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                          <p className="text-sm font-bold text-foreground truncate">{collab.email}</p>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.05em] ${
+                        {/* Email on its own line so it gets the full row width —
+                            it was truncating to "marcus@r…" on narrow phones when
+                            the status badge shared its line. Badge + role now sit
+                            together on the line below. */}
+                        <p className="text-sm font-bold text-foreground truncate">{collab.email}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className={`rounded-full px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.05em] ${
                             collab.status === "accepted"
                               ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"
                               : "bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold-ink))]"
                           }`}>
                             {collab.status === "accepted" ? "active" : "pending"}
                           </span>
+                          <span className="text-xs text-muted-foreground">
+                            {collab.status === "accepted"
+                              ? `${isAdmin ? "Co-Admin" : "Viewer"} · Accepted`
+                              : invitedDate
+                                ? `Invited ${invitedDate} · Awaiting acceptance`
+                                : "Awaiting acceptance"}
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {collab.status === "accepted"
-                            ? `${isAdmin ? "Co-Admin" : "Viewer"} · Accepted`
-                            : invitedDate
-                              ? `Invited ${invitedDate} · Awaiting acceptance`
-                              : "Awaiting acceptance"}
-                        </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleDelete(collab.id)}
-                        className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
+                        className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-2xs font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
                         data-testid={`button-revoke-collab-${collab.id}`}
                       >
                         Revoke
                       </button>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {granted.map((p) => (
-                        <span key={p} className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                          ✓ {p}
-                        </span>
-                      ))}
-                      {denied.map((p) => (
-                        <span key={p} className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground/60">
-                          ✗ {p}
-                        </span>
-                      ))}
-                    </div>
+                    {/* The role IMPLIES the permissions — a Co-Admin badge already says
+                        "can manage," a Viewer badge says "view-only." Enumerating all five
+                        permissions as chips per member was engineering detail as UI, and it
+                        wrapped to a crammed 2-3 rows of pills on mobile. One plain-language
+                        line reads calmer and clearer; the granular grant is set at invite. */}
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground/85">
+                      {isAdmin
+                        ? "Full access: sees everything and can manage the fund. You stay the legal custodian."
+                        : "View-only: the balance, activity, and Memory Book. Can't change settings or create occasions."}
+                    </p>
                   </div>
                 );
               })}
@@ -322,7 +319,7 @@ export function CoParentAccessCard({
           <div className="flex items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
               {user?.profileImageUrl
-                ? <img src={user.profileImageUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+                ? <FadeImage src={user.profileImageUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
                 : ownerInitial}
             </div>
             <div className="flex-1 min-w-0">
