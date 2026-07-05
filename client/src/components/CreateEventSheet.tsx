@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, Loader2, ImagePlus, Trash2, Copy, Check, Share2, User, Lock,
-  Calendar as CalendarIcon, Sprout, Zap, Gift, type LucideIcon,
+  Calendar as CalendarIcon, Sprout, Zap, Gift, X, type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
@@ -14,6 +14,7 @@ import { isDemoBlockedError } from "@/lib/demo-block";
 import { Calendar } from "@/components/ui/calendar";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { GifterInvestmentRulesEditor } from "@/components/GifterInvestmentRulesEditor";
 
 export interface EditEventData {
   id?: string;
@@ -309,6 +310,16 @@ export function CreateEventSheet({
   const [copiedLink, setCopiedLink] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
+  // The preview's "For you only" card lets you change how gifts get invested.
+  // It used to hard-link to /settings, which unmounted this whole sheet and lost
+  // the half-built occasion. Now it opens the fund-wide editor in a nested sheet
+  // on top of this one — nothing is lost. localPrefs holds the just-saved values
+  // so the "Gifts invested as ..." label updates instantly, ahead of the
+  // dashboard-summary refetch that keeps the underlying prop fresh.
+  const [investEditorOpen, setInvestEditorOpen] = useState(false);
+  const [localPrefs, setLocalPrefs] = useState<InvestPrefs | undefined>(undefined);
+  const effectivePrefs = localPrefs ?? investPrefs;
+
   const queryClient = useQueryClient();
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
@@ -554,12 +565,12 @@ export function CreateEventSheet({
     : fundSlug ? `${window.location.origin}/${fundSlug}` : "";
 
   const investLabel = (() => {
-    if (!investPrefs) return STRATEGY_LABEL.growth;
-    if (investPrefs.defaultMode === "stock" && investPrefs.defaultTicker) return investPrefs.defaultTicker;
-    if (investPrefs.defaultMode === "cash") return "Held as cash";
+    if (!effectivePrefs) return STRATEGY_LABEL.growth;
+    if (effectivePrefs.defaultMode === "stock" && effectivePrefs.defaultTicker) return effectivePrefs.defaultTicker;
+    if (effectivePrefs.defaultMode === "cash") return "Held as cash";
     // Canonical names (lib/strategy.ts) so the occasion preview matches Settings
     // ("Growth Mix", not "Growth index portfolio" — "Mix" is load-bearing).
-    return STRATEGY_LABEL[investPrefs.managedStrategy as StrategyKey] ?? STRATEGY_LABEL.growth;
+    return STRATEGY_LABEL[effectivePrefs.managedStrategy as StrategyKey] ?? STRATEGY_LABEL.growth;
   })();
 
   // In edit mode the sheet opens directly on details/goal-details — back from
@@ -578,7 +589,9 @@ export function CreateEventSheet({
     if (step === "goal-type") return { title: "Savings goal", sub: isOwnerMode ? "What are you saving for?" : fundName ? `What is ${fundName} saving for?` : "What are they saving for?" };
     if (step === "details") return { title: isEditing && !isCreatingFromArchived ? "Edit occasion" : selectedGiftingType?.label ?? "Occasion", sub: isEditing && !isCreatingFromArchived ? "Update the details" : "Tell people what it's about" };
     if (step === "goal-details") return { title: isEditing && !isCreatingFromArchived ? "Edit goal" : selectedGoalTypeDef?.label ?? "Savings goal", sub: "Set the details" };
-    if (step === "preview") return { title: "Preview", sub: "How people will see it" };
+    // No subtitle: the preview body already leads with a "What people see" label,
+    // so "How people will see it" here just said the same thing twice.
+    if (step === "preview") return { title: "Preview", sub: null };
     if (step === "done") return { title: category === "savings_goal" ? "Goal created" : "Occasion is live", sub: null };
     return { title: "", sub: null };
   };
@@ -702,6 +715,7 @@ export function CreateEventSheet({
   if (!open) return null;
 
   return (
+    <>
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
@@ -1153,13 +1167,14 @@ export function CreateEventSheet({
                     <p style={{ fontSize: 11, color: MUTED, marginBottom: 1 }}>Gifts invested as</p>
                     <p style={{ fontSize: 13, fontWeight: 600, color: INK }}>{investLabel}</p>
                   </div>
-                  <a
-                    href={`/settings?tab=gifts${fundId ? `&fundId=${fundId}` : ""}`}
-                    onClick={(e) => { e.stopPropagation(); }}
-                    style={{ fontSize: 11.5, fontWeight: 600, color: G, textDecoration: "none", flexShrink: 0, padding: "4px 10px", borderRadius: 100, border: `1px solid rgba(26,61,43,0.25)`, background: "rgba(26,61,43,0.06)", whiteSpace: "nowrap" }}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); if (fundId) { haptic("selection"); setInvestEditorOpen(true); } }}
+                    disabled={!fundId}
+                    style={{ fontSize: 11.5, fontWeight: 600, color: G, cursor: fundId ? "pointer" : "default", flexShrink: 0, padding: "4px 10px", borderRadius: 100, border: `1px solid rgba(26,61,43,0.25)`, background: "rgba(26,61,43,0.06)", whiteSpace: "nowrap" }}
                   >
                     Change →
-                  </a>
+                  </button>
                 </div>
                 {category !== "savings_goal" && predictedSlug && (
                   <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
@@ -1240,5 +1255,72 @@ export function CreateEventSheet({
         </AnimatePresence>
       </motion.div>
     </div>
+
+    {/* Nested gift-investment editor — opens OVER this sheet (z-[80] > z-[70])
+        so changing the default never unmounts the half-built occasion. Mirrors
+        this file's own bottom-sheet idiom rather than the shared Radix Sheet,
+        which sits at z-50 (behind us) and can't restyle its own overlay. */}
+    {investEditorOpen && (
+      <div
+        className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4"
+        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }}
+        onClick={(e) => { if (e.target === e.currentTarget) setInvestEditorOpen(false); }}
+      >
+        <motion.div
+          initial={{ y: 44, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", damping: 28, stiffness: 320 }}
+          style={{
+            background: CREAM,
+            width: "100%", maxWidth: 480,
+            maxHeight: "92dvh", display: "flex", flexDirection: "column", overflow: "hidden",
+          }}
+          className="rounded-t-[24px] sm:rounded-[24px]"
+        >
+          <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
+            <span className="h-1.5 w-10 rounded-full bg-foreground/20" />
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "16px 20px 8px", flexShrink: 0 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="font-heading" style={{ fontSize: 17, fontWeight: 700, color: INK }}>How gifts are invested</p>
+              <p style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>Your fund-wide default for every gift.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { haptic("selection"); setInvestEditorOpen(false); }}
+              aria-label="Close"
+              style={{ flexShrink: 0, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer" }}
+            >
+              <span style={{ display: "flex", width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 999, background: "hsl(var(--kiddo-ink) / 0.08)", color: MUTED }}>
+                <X size={15} />
+              </span>
+            </button>
+          </div>
+          <div style={{ padding: "8px 20px 24px", overflowY: "auto", flex: 1 }}>
+            <GifterInvestmentRulesEditor
+              fund={{ id: fundId }}
+              onSuccess={(saved) => {
+                // Update the preview label instantly from the saved values, then
+                // refresh the caches the prop is derived from so it stays correct
+                // on the next open.
+                if (saved) {
+                  setLocalPrefs((prev) => ({
+                    ...(prev ?? investPrefs ?? {}),
+                    defaultMode: saved.defaultMode,
+                    defaultTicker: saved.defaultTicker,
+                  }));
+                }
+                if (fundId) {
+                  invalidateAndRefreshDashboardSummary(queryClient, fundId);
+                  queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "investment-preferences"] });
+                }
+                setInvestEditorOpen(false);
+              }}
+            />
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   );
 }

@@ -50,10 +50,9 @@ import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, safeLocalSet } from 
 import { PRONOUN_OPTIONS } from "@/lib/pronouns";
 import { toMonthlyEquivalent } from "@shared/recurring-math";
 import { getMajorityDate, getMajorityAgeForState, US_STATES } from "@shared/utma";
-import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
+import { GifterInvestmentRulesEditor } from "@/components/GifterInvestmentRulesEditor";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity, prefetchTaxDocuments, onIdle } from "@/lib/prefetch";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { FundTabs } from "@/components/layout/FundTabs";
 import {
   KIDDO_LEGACY_YEARLY,
   KORA_FAMILY_MONTHLY,
@@ -1415,13 +1414,6 @@ function projectionRangeForStrategy(
 // sits), but nothing is matched to a specific child. Re-add only if the
 // RIA memo blesses a recommendation surface.)
 
-// Family-default stock picker on Settings → Gifting Defaults. Derived from the
-// canonical universe (shared/stock-picks.ts) so the parent's "Family default"
-// menu is the exact same list gifters, the parent picker, the cash-invest
-// modal, and onboarding all see. Was a hand-synced copy that had drifted
-// (Adobe/Comcast, no Tesla/Microsoft/McDonald's).
-const GIFTER_STOCK_OPTIONS = CANON_STOCK_PICKS.map((s) => ({ ticker: s.ticker, name: s.name }));
-
 // Managed-mix custom allocations are ETFs only. Individual stocks live in
 // the gifter pick list ("Chosen with Love"), never in the managed mix.
 // Colors match the strategy-card palette in STRATEGIES above (VTI, VXUS,
@@ -1446,180 +1438,6 @@ const DEFAULT_CUSTOM_ALLOCATION_ROWS = [
 ];
 
 const MAX_CUSTOM_HOLDINGS = 10;
-
-function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess: () => void }) {
-  const { data, isLoading } = useQuery<{
-    defaultMode: "managed" | "stock" | "cash";
-    managedStrategy: "growth" | "balanced" | "custom";
-    defaultTicker: string;
-    allowGifterStockPick: boolean;
-    allowGifterCashGift: boolean;
-  }>({
-    queryKey: ["/api/funds", fund.id, "investment-preferences"],
-    queryFn: async () => {
-      const res = await fetch(`/api/funds/${fund.id}/investment-preferences`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load investment preferences");
-      return res.json();
-    },
-    enabled: !!fund?.id,
-    staleTime: 1000 * 30,
-  });
-
-  const [defaultMode, setDefaultMode] = useState<"managed" | "stock" | "cash">("managed");
-  const [defaultTicker, setDefaultTicker] = useState("DIS");
-  // Match the server defaults (server/fundInvestmentPreferences.ts DEFAULTS):
-  // gifter stock-picks are allowed by default (the "Chosen with Love" magic,
-  // and they land in a separate sleeve so they don't touch the managed mix);
-  // cash gifts are NOT allowed by default (keep gifts auto-investing — the
-  // "your gift bought shares" moment + no idle cash). These get reconciled with
-  // saved prefs on load; initializing them to the true defaults avoids showing
-  // the wrong state for a beat before the query resolves.
-  const [allowGifterStockPick, setAllowGifterStockPick] = useState(true);
-  const [allowGifterCashGift, setAllowGifterCashGift] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!data) return;
-    setDefaultMode(data.defaultMode || "managed");
-    setDefaultTicker(data.defaultTicker || "DIS");
-    setAllowGifterStockPick(Boolean(data.allowGifterStockPick));
-    setAllowGifterCashGift(Boolean(data.allowGifterCashGift));
-  }, [data]);
-
-  const hasChanged =
-    defaultMode !== (data?.defaultMode || "managed") ||
-    defaultTicker !== (data?.defaultTicker || "DIS") ||
-    allowGifterStockPick !== Boolean(data?.allowGifterStockPick) ||
-    allowGifterCashGift !== Boolean(data?.allowGifterCashGift);
-  // Warn on tab-close/refresh while a gift-settings change is staged but unsaved.
-  useUnsavedGuard(hasChanged);
-
-  const handleSave = async () => {
-    setSaving(true);
-    haptic("medium");
-    try {
-      const res = await fetch(`/api/funds/${fund.id}/investment-preferences`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          defaultMode,
-          defaultTicker,
-          allowGifterStockPick,
-          allowGifterCashGift,
-        }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast({ title: "Could not update gifting rules", description: payload.error || "Please try again", variant: "destructive" });
-        return;
-      }
-      if (demoBlocked(payload, toast)) return;
-      haptic("success");
-      toast({ title: "Gifting rules updated", description: "Future gifts will follow these defaults." });
-      onSuccess();
-    } catch {
-      toast({ title: "Could not update gifting rules", description: "Please try again", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Post-handoff owner has no "family" — it's just their own default.
-  const rulesIsOwnerHeld = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
-  const familyDefaultLabel = rulesIsOwnerHeld ? "default" : "family default";
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
-        <p className="kiddo-section-label">Default path for new gifts</p>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Pick one {familyDefaultLabel}. Most gifts follow this. Gifter stock picks or cash gifts only happen if you allow those overrides below.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => { setDefaultMode("managed"); haptic("selection"); }}
-          className={`w-full rounded-2xl border p-4 text-left transition-all kiddo-press ${defaultMode === "managed" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-          data-testid="option-gifting-default-managed"
-        >
-          <p className="text-sm font-medium text-foreground">Managed mix</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Use your fund's investing style, like Growth Mix or Balanced Mix.</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setDefaultMode("stock"); haptic("selection"); }}
-          className={`w-full rounded-2xl border p-4 text-left transition-all kiddo-press ${defaultMode === "stock" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-          data-testid="option-gifting-default-stock"
-        >
-          <p className="text-sm font-medium text-foreground">Specific stock</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Every gift follows one default stock unless a gifter override is allowed.</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setDefaultMode("cash"); haptic("selection"); }}
-          className={`w-full rounded-2xl border p-4 text-left transition-all kiddo-press ${defaultMode === "cash" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-          data-testid="option-gifting-default-cash"
-        >
-          <p className="text-sm font-medium text-foreground">Cash until invested</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Gifts land as cash and you decide when to invest later.</p>
-        </button>
-      </div>
-
-      {defaultMode === "stock" && (
-        <div className="space-y-2">
-          <p className="kiddo-section-label">Family default</p>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-            {GIFTER_STOCK_OPTIONS.map((stock) => (
-              <button
-                key={stock.ticker}
-                type="button"
-                onClick={() => { setDefaultTicker(stock.ticker); haptic("selection"); }}
-                className={`rounded-2xl border px-3 py-3 text-left transition-all kiddo-press ${defaultTicker === stock.ticker ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-                data-testid={`option-gifting-default-ticker-${stock.ticker}`}
-              >
-                <p className="text-sm font-medium text-foreground">{stock.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{stock.ticker}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Allow people to choose a stock</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">If off, gifts follow your {familyDefaultLabel}.</p>
-          </div>
-          <Switch checked={allowGifterStockPick} onCheckedChange={setAllowGifterStockPick} data-testid="switch-allow-gifter-stock-pick" />
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Allow people to send to cash instead</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">If off, people cannot send a gift to cash unless cash is your default.</p>
-          </div>
-          <Switch checked={allowGifterCashGift} onCheckedChange={setAllowGifterCashGift} data-testid="switch-allow-gifter-cash" />
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
-        <p className="kiddo-section-label">What people will see</p>
-        <p className="mt-2 text-sm text-foreground">
-          Use {familyDefaultLabel}
-          {allowGifterStockPick ? " · Choose a stock" : ""}
-          {allowGifterCashGift ? " · Let the family decide later" : ""}
-        </p>
-      </div>
-
-      <Button onClick={handleSave} disabled={isLoading || saving || !hasChanged} className="w-full" data-testid="button-save-gifting-rules">
-        {saving ? "Saving..." : "Save gifting rules"}
-      </Button>
-    </div>
-  );
-}
 
 function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCustom: boolean; onSuccess: () => void }) {
   const rawCurrentStrategy = fund.investmentStrategy || "growth";
@@ -1705,7 +1523,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   // Compute years-until-18 from the recipient's birthdate. Feeds the
   // projection-range context line below (NOT a recommendation — the
   // age-matched "Recommended for {child}" badge was removed 2026-06-03 per
-  // the self-directed posture; see the note above GIFTER_STOCK_OPTIONS).
+  // the self-directed posture — the picker is a neutral menu, not advice).
   // Years until the fund's REAL age of majority (state-specific: 18/19/21), NOT a
   // flat 18. The projection range below scales sigma by 1/sqrt(years), so a
   // hardcoded 18 made AL/NE (19) and CA/KY/MS/PA (21) funds show a too-wide band
@@ -4132,18 +3950,12 @@ const [editFundName, setEditFundName] = useState("");
     <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-settings">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 space-y-6">
-        {/* Fund switcher tabs for Settings — multi-fund parents need
-            to switch which kid's settings they're editing without
-            backtracking through Dashboard. Same component as the
-            Dashboard's FundTabs (introduced 2026-05-26); renders
-            nothing for single-fund parents. Audit 2026-05-26 caught
-            the gap: the hero copy "tap the name to switch child"
-            had no clear referent because there was no name-row to
-            tap on Settings (the AppHeader dropdown was the implicit
-            answer but discoverability was poor). With FundTabs
-            rendered here, the copy now points at a visible row of
-            tabs. */}
-        <FundTabs funds={funds} activeFundId={selectedSettingsFundId} />
+        {/* Fund switcher pills removed 2026-07 to match the live dashboard
+            (DashboardLab dropped its FundTabs too). The AppHeader
+            "{child}'s fund" dropdown is now the single fund switcher
+            app-wide: it drives ACTIVE_FUND_CHANGE_EVENT, which
+            selectedSettingsFundId listens to (~3126), so switching which
+            kid's settings you edit still works without a duplicate row. */}
 
         {/* In-content back link removed 2026-05-11. Settings is Tier-1
             fund-scoped per page-scope.ts; AppHeader (logo + fund switcher
@@ -4340,13 +4152,11 @@ const [editFundName, setEditFundName] = useState("");
             <p className="text-3xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
               Settings
             </p>
-            {/* The headline just NAMES the fund now. It used to double as a dropdown
-                picker, but that was redundant: the FundTabs pill row above already gives
-                multi-fund parents a visible, discoverable switcher (this comment and the
-                FundTabs one both cited the same "hero copy needs a tap referent" problem —
-                it got solved twice). selectedSettingsFundId listens to
-                ACTIVE_FUND_CHANGE_EVENT (~3133), so the pills fully drive Settings. One
-                switcher (the pills), one namer (this). Picker cut 2026-07. */}
+            {/* The headline just NAMES the fund; it used to double as a dropdown
+                picker but that was redundant. Fund switching now lives solely in
+                the AppHeader "{child}'s fund" dropdown (selectedSettingsFundId
+                listens to ACTIVE_FUND_CHANGE_EVENT at ~3126). One switcher (the
+                header), one namer (this). Pills cut 2026-07; inline picker cut earlier. */}
             {funds.length > 1 ? (
               <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight" data-testid="settings-fund-name">
                 {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "This fund"}
@@ -4362,7 +4172,7 @@ const [editFundName, setEditFundName] = useState("");
               {primaryFundIsPreviousOwner ? (
                 <>You're viewing {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} as the previous owner.{" "}</>
               ) : funds.length > 1 ? (
-                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund above"}.{" "}</>
+                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the selected fund"}.{" "}</>
               ) : (
                 <>Changes apply to this fund.{" "}</>
               )}
@@ -4373,7 +4183,15 @@ const [editFundName, setEditFundName] = useState("");
           </motion.div>
         )}
 
-        <div className="space-y-2">
+        {/* Sticky tab strip: pins just under the sticky AppHeader (~56px) so a
+            parent deep in a long tab (Money / Notifications scroll for several
+            screens) can switch sections without scrolling back to the top.
+            Matches the header's frosted-cream treatment (cream/0.9 + blur) so
+            content scrolls cleanly behind it — the blur is the separation, so no
+            permanent divider line at rest. -mx-4 px-4 bleeds the bg to the
+            screen edges. env() offset keeps it flush under the notch-extended
+            header in standalone PWA. Added 2026-07. */}
+        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px] space-y-2">
           <div className={`kiddo-tab-row max-w-full overflow-x-auto${primaryFundIsPreviousOwner ? " hidden" : ""}`} data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
             {/* "Membership" tab removed from the in-app navigation
                 on 2026-05-14 per the WHO/HOW IA Phase 1c. Account is
@@ -4393,7 +4211,11 @@ const [editFundName, setEditFundName] = useState("");
             {[
               { id: "child", label: ((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "You" : "Child" },
               { id: "gifts", label: "Gifts" },
-              { id: "notifications", label: "Notifications" },
+              // Responsive label: 4 equal-width tabs can't fit "Notifications"
+              // (~91px) on a phone, so show "Alerts" below sm and the full word
+              // from sm up (where the columns have room). Keeps the app-wide
+              // "Notifications" term on desktop; data-testid stays notifications.
+              { id: "notifications", label: <><span className="sm:hidden">Alerts</span><span className="hidden sm:inline">Notifications</span></> },
               { id: "money", label: "Money" },
             ].filter((tab) => !(primaryFundIsCoAdmin && tab.id === "money")).map((tab) => (
               <button
