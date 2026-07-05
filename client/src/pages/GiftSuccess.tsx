@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Check, Copy, Share2, Heart, Gift, Mail, Bookmark, Smartphone } from "lucide-react"
 import { WhatsAppIcon, MessageIcon } from "@/components/ui/share-modal"
 import { projectFundValue } from "@shared/projection"
+import { investingLiveCopy } from "@shared/legal-copy"
 import { Button } from "@/components/ui/button"
 import { FadeImage } from "@/components/ui/fade-image"
 import { haptic } from "@/lib/haptics"
@@ -912,7 +913,6 @@ export default function GiftSuccess() {
           className="mb-10 text-center"
         >
           <Logo size="lg" className="justify-center" linkTo={null} />
-          <div className="mt-1 text-xs font-medium text-muted-foreground">Gifts that last.</div>
         </motion.div>
 
         {/* Hero — the kid's face is the emotional anchor of the success
@@ -1000,7 +1000,10 @@ export default function GiftSuccess() {
         >
           {isRecurringSetup
             ? `to ${childFirstName ? `${childFirstName}'s` : "their"} fund, starting today.`
-            : `now invested in ${childFirstName ? `${childFirstName}'s` : "their"} future.`}
+            : investingLiveCopy(
+                `now invested in ${childFirstName ? `${childFirstName}'s` : "their"} future.`,
+                `in ${childFirstName ? `${childFirstName}'s` : "their"} fund, invested once investing is live.`,
+              )}
         </motion.p>
 
         {/* Settling-window note. Tells the gifter the gift takes 1 to 2
@@ -1208,7 +1211,7 @@ export default function GiftSuccess() {
               </>
             )}
             <p className="mt-2.5 text-3xs text-muted-foreground/60 text-center">
-              Final shares and value confirmed after market execution.
+              {investingLiveCopy("Final shares and value confirmed after market execution.", "Once investing is live, final shares and value are confirmed after market execution.")}
             </p>
           </motion.div>
         )}
@@ -1299,7 +1302,7 @@ export default function GiftSuccess() {
           transition={{ delay: 0.76 }}
           data-testid="text-gift-provenance"
         >
-          This gift was invested with Kiddo.
+          {investingLiveCopy("This gift was invested with Kiddo.", "This gift is safe with Kiddo, invested once investing is live.")}
         </motion.p>
 
         {/* Quiet "send another" affordance. NOT a card, NOT a primary
@@ -1749,7 +1752,10 @@ export default function GiftSuccess() {
               the brokerage-failure-vs-market-loss distinction explicitly
               (was implicit in "Investing can go up or down" — too soft). */}
           <p className="text-3xs text-muted-foreground/60 text-center px-4">
-            These are real shares, held in a brokerage account. When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
+            {investingLiveCopy(
+              "These are real shares, held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.",
+              "When investing is live, your gift buys real shares held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.",
+            )}
           </p>
         </motion.div>
 
