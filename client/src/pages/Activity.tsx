@@ -41,6 +41,7 @@ import { getDeepLinkHighlightStyle } from "@/lib/deep-link-highlight";
 import { MOTION } from "@/lib/motion";
 import { KiddoSkeleton } from "@/components/ui/skeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
 import { GiftSourceChip } from "@/components/GiftSourceChip";
 import { ActionItemList } from "@/components/ActionItemCard";
 import { useActionItems } from "@/hooks/use-action-items";
@@ -594,14 +595,20 @@ const RECURRING_RUN_TYPE = "__recurring_run__";
 const MIN_RECURRING_RUN = 3;
 
 function isRecurringContribItem(item: FeedActivity): boolean {
-  // Collapse only TRUE recurring cycles — those linked to a recurring schedule
-  // via parentContributionId (the webhook + seed both stamp it into the activity
-  // metadata for worker-fired cycles). A parent ONE-TIME addition is also a
-  // "parent_contribution" with isParentContribution=true, but carries NO
-  // parentContributionId — it must stay its own row (often a pick with its own
-  // ticker + note), not get absorbed into the "Monthly contributions" run where
-  // it would mislabel the group ("13 contributions · $1,350", no "$100 each")
-  // and lose its detail.
+  // Collapse only TRUE recurring cycles — a SUCCESSFUL parent_contribution row
+  // linked to a schedule via parentContributionId (the webhook + seed both stamp
+  // it into the activity metadata for worker-fired cycles).
+  //
+  // The type gate matters, not just the id: parent_contribution_failed (a charge
+  // that could not run) and recurring_paused (the at-majority stop) ALSO carry
+  // parentContributionId, but they moved NO money. Folding either into the
+  // "Monthly contributions · $X each" summary would sum a charge that never
+  // invested and bury an event the parent must actually see — never count a
+  // failure as a contribution. So require the successful type explicitly.
+  // (The gift_invested leg also carries the id but is deduped out of the feed
+  // upstream.) A parent ONE-TIME addition is a "parent_contribution" too but
+  // carries NO parentContributionId, so it correctly stays its own row.
+  if (normalizeActivityType((item as any).type) !== "parent_contribution") return false;
   try {
     const meta = parseMetadata((item as any).metadata);
     const pcId = (meta as any)?.parentContributionId;
@@ -632,8 +639,18 @@ function collapseRecurringRuns(items: FeedActivity[]): FeedActivity[] {
     run = [];
   };
   for (const item of items) {
-    if (isRecurringContribItem(item)) run.push(item);
-    else { flush(); out.push(item); }
+    if (isRecurringContribItem(item)) {
+      // Break the run on a fund change. A multi-kid parent's CROSS-fund feed
+      // (no single fund selected — every row carries its own fund chip)
+      // interleaves each child's monthly fire on the same dates. Without this
+      // guard the collapse merges them into one nonsense "3 contributions ·
+      // Mar – Mar" group that SUMS different children (Theo $100 + Nora $50 +
+      // Mia $85 = $235) — money from three kids shown as one child's run.
+      // Only fold consecutive fires belonging to the SAME fund. (In the normal
+      // single-fund view every row shares a fundId, so this is a no-op there.)
+      if (run.length && (run[0] as any).fundId !== (item as any).fundId) flush();
+      run.push(item);
+    } else { flush(); out.push(item); }
   }
   flush();
   return out;
@@ -1189,6 +1206,10 @@ export default function Activity() {
   });
 
   const [expandedScheduledId, setExpandedScheduledId] = useState<string | null>(null);
+  // Branded confirm for consequential schedule actions (cancel, add-extra-now),
+  // replacing the OS-native window.confirm. One state, one <ConfirmDialog/> at
+  // the root; each action fills in its own copy.
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const toggleScheduledExpand = (id: string) =>
     setExpandedScheduledId((cur) => (cur === id ? null : id));
 
@@ -1914,13 +1935,19 @@ export default function Activity() {
 
         {/* Three-tab control: History · Pending · Scheduled. Past · present · future. The
             primary navigation primitive for everything money-flow. */}
+        {/* Sticky tab strip: pins under the AppHeader (~56px) so the primary
+            History/Pending/Scheduled nav stays reachable while scrolling the
+            long History feed (it used to scroll off the top). Frosted-cream
+            wrapper matches the header + Settings tabs; -mx-4 px-4 bleeds to the
+            screen edges; mb-5 preserves the gap to the feed (moved off the inner
+            pill's marginBottom). Added 2026-07. */}
+        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-30 -mx-4 mb-5 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
         <div
           role="tablist"
           aria-label="Activity sections"
           style={{
             display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4,
             background: "hsl(var(--kiddo-ink) / 0.05)", borderRadius: 12, padding: 4,
-            marginBottom: 20,
           }}
           data-testid="activity-tabs"
         >
@@ -1969,6 +1996,7 @@ export default function Activity() {
               </button>
             );
           })}
+        </div>
         </div>
 
         {/* ============================ HISTORY TAB ============================ */}
@@ -4325,7 +4353,14 @@ export default function Activity() {
                                     {!isPaused && (
                                       <button
                                         type="button"
-                                        onClick={() => contributeNowMutation.mutate(idStr)}
+                                        onClick={() => {
+                                          setConfirmRequest({
+                                            title: amtNum != null && amtNum > 0 ? `Add ${formatCurrency(amtNum)} now?` : "Add an extra contribution now?",
+                                            body: "A one-time extra on top of your schedule. You'll confirm payment on the next screen.",
+                                            confirmLabel: "Continue to payment",
+                                            onConfirm: () => contributeNowMutation.mutate(idStr),
+                                          });
+                                        }}
                                         disabled={isMutating}
                                         style={{
                                           fontSize: 11.5, fontWeight: 700,
@@ -4360,8 +4395,14 @@ export default function Activity() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const ok = window.confirm("Cancel this recurring investment? It won't run again. You can always set up a new one.");
-                                        if (ok) cancelScheduleMutation.mutate(idStr);
+                                        setConfirmRequest({
+                                          title: "Cancel this recurring investment?",
+                                          body: "It won't run again. You can always set up a new one.",
+                                          confirmLabel: "Cancel it",
+                                          cancelLabel: "Keep it",
+                                          destructive: true,
+                                          onConfirm: () => cancelScheduleMutation.mutate(idStr),
+                                        });
                                       }}
                                       disabled={isMutating}
                                       style={{
@@ -4496,10 +4537,23 @@ export default function Activity() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const ok = window.confirm(isAutoCharge
-                                        ? `Stop ${r.senderName || "this gifter"}'s recurring gift? Their card won't be charged again for this fund.`
-                                        : `Stop reminding ${r.senderName || "this gifter"}? They won't receive future reminder emails for this fund.`);
-                                      if (ok) cancelReminderMutation.mutate(idStr);
+                                      setConfirmRequest(isAutoCharge
+                                        ? {
+                                            title: `Stop ${r.senderName || "this gifter"}'s recurring gift?`,
+                                            body: "Their card won't be charged again for this fund.",
+                                            confirmLabel: "Stop the gift",
+                                            cancelLabel: "Leave it on",
+                                            destructive: true,
+                                            onConfirm: () => cancelReminderMutation.mutate(idStr),
+                                          }
+                                        : {
+                                            title: `Stop reminding ${r.senderName || "this gifter"}?`,
+                                            body: "They won't receive future reminder emails for this fund.",
+                                            confirmLabel: "Stop reminders",
+                                            cancelLabel: "Keep reminders",
+                                            destructive: true,
+                                            onConfirm: () => cancelReminderMutation.mutate(idStr),
+                                          });
                                     }}
                                     disabled={isMutating}
                                     style={{
@@ -4818,6 +4872,9 @@ export default function Activity() {
           />
         );
       })()}
+
+      {/* Branded confirm for schedule/gifter actions (replaces window.confirm). */}
+      <ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
     </div>
   );
 }
