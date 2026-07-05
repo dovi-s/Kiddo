@@ -57,6 +57,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search } from "lucide-react";
 import SealedVoiceNote from "@/components/SealedVoiceNote";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnlighteningReveal } from "@/components/ui/gemini";
@@ -533,6 +534,9 @@ export default function MemoryBook() {
     return cancel;
   }, [fundId, isAuthenticated, queryClient]);
 
+  // Branded confirm for destructive Memory Book actions (delete entry), replacing
+  // the OS-native window.confirm on this emotional surface.
+  const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
   const [eventFilter, setEventFilter] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(search).get("event") || null;
@@ -1189,7 +1193,7 @@ export default function MemoryBook() {
     ctx?: { ticker?: string | null; currentValue?: number | null; giftDate?: string | Date | null }
   ): string {
     if (tone === "custom") return "";
-    const fmt = `$${parseFloat(amount || "0").toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const fmt = formatMoneyFriendly(parseFloat(amount || "0"));
     const child = childName || "our child";
     // Capitalize at composition time — the gifter typing "grandpa"
     // shouldn't produce "Dear grandpa,". Defensive: every salutation
@@ -1344,7 +1348,7 @@ export default function MemoryBook() {
       toast({
         title: `Thanked ${ids.length} gifts at once`,
         description: data?.totalGiftAmount
-          ? `Single email sent covering $${Number(data.totalGiftAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of giving.`
+          ? `Single email sent covering ${formatMoneyFriendly(Number(data.totalGiftAmount))} of giving.`
           : "Single email sent covering every pending gift from this gifter.",
       });
     } catch (err) {
@@ -3216,7 +3220,7 @@ export default function MemoryBook() {
                       }}
                       data-testid="button-add-first-entry"
                     >
-                      Share
+                      Share the gift link
                     </Button>
                     <Button
                       variant="outline"
@@ -4210,7 +4214,7 @@ export default function MemoryBook() {
                           Thank {senderFirst} for all {matchingRows.length} gifts at once
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across {matchingRows.length} gifts. One email instead of {matchingRows.length}.
+                          {formatMoneyFriendly(totalAmount)} across {matchingRows.length} gifts. One email instead of {matchingRows.length}.
                         </p>
                       </div>
                       <button
@@ -4232,7 +4236,7 @@ export default function MemoryBook() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-foreground">
-                            Thanking {senderFirst} for {matchingRows.length} gifts (${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                            Thanking {senderFirst} for {matchingRows.length} gifts ({formatMoneyFriendly(totalAmount)})
                           </p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             One consolidated email. Marks all {matchingRows.length} as thanked at once.
@@ -4805,8 +4809,14 @@ export default function MemoryBook() {
                                 <DropdownMenuItem
                                   onSelect={(e) => {
                                     e.preventDefault();
-                                    if (!window.confirm("Delete this memory entry?")) return;
-                                    deleteMutation.mutate(entry.id);
+                                    setConfirmReq({
+                                      title: "Delete this memory entry?",
+                                      body: "This removes it from the Memory Book. This can't be undone.",
+                                      confirmLabel: "Delete",
+                                      cancelLabel: "Keep it",
+                                      destructive: true,
+                                      onConfirm: () => deleteMutation.mutate(entry.id),
+                                    });
                                   }}
                                   className="text-red-600 focus:text-red-600"
                                   data-testid={`menu-delete-memory-${entry.id}`}
@@ -4859,7 +4869,7 @@ export default function MemoryBook() {
                                         toast({ title: "Not saved in the demo", description: data.message || "Reports work in your own fund." });
                                       } else if (res.ok) {
                                         haptic("success");
-                                        toast({ title: "Reported", description: "Thanks — our team will review it." });
+                                        toast({ title: "Reported", description: "Thanks. Our team will review it." });
                                       } else {
                                         toast({ title: data?.error || "Could not submit report", variant: "destructive" });
                                       }
@@ -7732,6 +7742,7 @@ export default function MemoryBook() {
           </motion.div>
         )}
       </AnimatePresence>
+      <ConfirmDialog request={confirmReq} onClose={() => setConfirmReq(null)} />
     </div>
   );
 }

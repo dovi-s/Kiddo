@@ -26,6 +26,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Image as ImageIcon, Video, Mic, Trash2, Pencil, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { demoBlocked } from "@/lib/demo-block";
@@ -76,6 +77,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
 
   const { data: entries = [] } = useQuery<MemoryEntryRow[]>({
     queryKey: ["memory", fundId],
@@ -154,9 +156,6 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
 
   async function handleCancel(entryId: string) {
     if (cancellingId) return;
-    if (!window.confirm("Cancel this sealed letter? You can write a new one any time, but this one will not be delivered.")) {
-      return;
-    }
     setCancellingId(entryId);
     haptic("medium");
     try {
@@ -184,10 +183,6 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
 
   async function handleCancelSeries(seriesId: string, count: number) {
     if (cancellingId) return;
-    const msg = count === 1
-      ? "Cancel this sealed letter series? You can write new letters any time, but the remaining year of deliveries will not happen."
-      : `Cancel this sealed letter series? You can write new letters any time, but the remaining ${count} years of deliveries will not happen.`;
-    if (!window.confirm(msg)) return;
     setCancellingId(seriesId);
     haptic("medium");
     try {
@@ -294,7 +289,16 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                       )}
                       <button
                         type="button"
-                        onClick={() => void handleCancelSeries(group.seriesId, count)}
+                        onClick={() => setConfirmReq({
+                          title: "Cancel this sealed letter series?",
+                          body: count === 1
+                            ? "You can write new letters any time, but the remaining year of deliveries won't happen."
+                            : `You can write new letters any time, but the remaining ${count} years of deliveries won't happen.`,
+                          confirmLabel: "Cancel the series",
+                          cancelLabel: "Keep it",
+                          destructive: true,
+                          onConfirm: () => void handleCancelSeries(group.seriesId, count),
+                        })}
                         disabled={cancellingId === group.seriesId}
                         className="text-muted-foreground hover:text-destructive transition-colors p-1"
                         aria-label="Cancel entire scheduled series"
@@ -367,7 +371,14 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                     )}
                     <button
                       type="button"
-                      onClick={() => void handleCancel(entry.id)}
+                      onClick={() => setConfirmReq({
+                        title: "Cancel this sealed letter?",
+                        body: "You can write a new one any time, but this one won't be delivered.",
+                        confirmLabel: "Cancel the letter",
+                        cancelLabel: "Keep it",
+                        destructive: true,
+                        onConfirm: () => void handleCancel(entry.id),
+                      })}
                       disabled={cancellingId === entry.id}
                       className="text-muted-foreground hover:text-destructive transition-colors p-1"
                       aria-label="Cancel scheduled letter"
@@ -395,6 +406,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
           </Button>
         )}
       </div>
+      <ConfirmDialog request={confirmReq} onClose={() => setConfirmReq(null)} />
     </div>
   );
 }

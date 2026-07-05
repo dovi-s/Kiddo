@@ -332,7 +332,7 @@ export function NoteEditorSheet({
                 <div className="flex items-start justify-between px-5 pt-5 pb-4 shrink-0">
                   <div className="flex-1 pr-4">
                     <p className="text-base font-bold text-foreground leading-snug">
-                      Write something for {name}. ✉️
+                      Write something for {name}.
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       {capFirst(fundPronouns.subject)}{fundPronouns.singular ? "'ll" : "'ll"} {reads} this on <span className="whitespace-nowrap">{fundPronouns.possAdj} {majorityOrdinal} birthday.</span>
@@ -451,7 +451,7 @@ export function NoteEditorSheet({
                             ))}
                           </ul>
                           <p className="text-xs text-muted-foreground/50 italic mt-3">
-                            These are just prompts. Write whatever feels right. She'll treasure it forever.
+                            These are just prompts. Write whatever feels right. {capFirst(fundPronouns.subject)}'ll treasure it forever.
                           </p>
                         </div>
                       </motion.div>
