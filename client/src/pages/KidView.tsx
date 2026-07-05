@@ -1571,6 +1571,9 @@ export default function KidView() {
                       <p className="mt-1 font-heading text-xl text-foreground">+{fmtMoney(growthSummary.gain)}</p>
                     </div>
                   </div>
+                  {!INVESTING_LIVE && (
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground/70">A preview at today's prices, until your fund starts investing.</p>
+                  )}
                 </div>
               )}
             </section>
