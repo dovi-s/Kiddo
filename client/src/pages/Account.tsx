@@ -973,8 +973,12 @@ export default function Account() {
           <p className="text-3xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
             Account
           </p>
+          {/* Lead with the account holder's REAL name, not preferredName.
+              preferredName is the KID-facing nickname ("Mom", "Dad") — it belongs
+              on the Memory Book / Kid View, not on the legal-identity account
+              page, where showing "Mom" as the account holder read as a bug. */}
           <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
-            {((user as any)?.preferredName?.trim() || (user as any)?.firstName?.trim()) || "Your account"}
+            {displayName || (user as any)?.email || "Your account"}
           </h1>
           {/* Cross-link to per-fund settings. From the Account
               context the user expects a fund picker, not a jump
@@ -1002,6 +1006,11 @@ export default function Account() {
           </p>
         </motion.div>
 
+        {/* Sticky tab strip: pins under the AppHeader (~56px) so Personal /
+            Plan & billing / Security stay reachable while scrolling a long tab.
+            Frosted-cream wrapper matches the header + Settings/Activity tabs;
+            -mx-4 px-4 bleeds to the screen edges. Added 2026-07. */}
+        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
         <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="account-tabs" role="tablist" aria-label="Account sections">
           {[
             { id: "personal", label: "Personal info" },
@@ -1021,6 +1030,7 @@ export default function Account() {
               {tab.label}
             </button>
           ))}
+        </div>
         </div>
 
         {/* ── Personal Info ── */}
@@ -1211,15 +1221,6 @@ export default function Account() {
                 </a>
               </div>
             </SectionCard>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground kiddo-press"
-            >
-              <LogOut size={15} />
-              Log out
-            </button>
           </motion.div>
         )}
 
@@ -1945,47 +1946,49 @@ export default function Account() {
                 add/remove ceremonies, falls through silently when
                 no passkeys are registered. */}
             <PasskeyManager />
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground kiddo-press"
-            >
-              <LogOut size={15} />
-              Log out
-            </button>
-
-            {/* Data-subject access (CCPA / parental access). Sits between
-                logout and delete as the standard data-rights cluster. Downloads
-                a JSON export of the user's own data; SSN + secrets excluded
-                server-side. See GET /api/me/export + policies/child-data-protection.md. */}
-            <button
-              type="button"
-              onClick={handleExportData}
-              disabled={exportingData}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-60 kiddo-press"
-              data-testid="button-export-data"
-            >
-              {exportingData ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-              {exportingData ? "Preparing your data…" : "Download my data"}
-            </button>
-
-            {/* Account deletion — App Store 5.1.1(v) compliance. Quiet but
-                findable at the bottom of Account settings, below logout.
-                Apple-Settings register per project_cancellation_dark_pattern_avoidance.md:
-                no "please stay" upsell, no guilt phrasing, no hidden cancel
-                button. Confirmation modal is rendered separately so the
-                destructive action requires a deliberate second step. */}
-            <button
-              type="button"
-              onClick={() => setDeleteAccountModalOpen(true)}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-red-600 kiddo-press"
-              data-testid="button-delete-account"
-            >
-              Delete my account
-            </button>
           </motion.div>
         )}
+
+        {/* Account-actions footer — persistent below EVERY tab (was previously
+            duplicated: a standalone Log out on the Personal tab AND this cluster
+            on Security). Account-level actions aren't tab-specific, so they live
+            once, at the page bottom, always findable. Order: log out → export →
+            delete (the standard data-rights cluster). Delete stays quiet-but-
+            findable (App Store 5.1.1(v)); its confirmation modal is rendered
+            separately so the destructive action needs a deliberate second step. */}
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground kiddo-press"
+          >
+            <LogOut size={15} />
+            Log out
+          </button>
+
+          {/* Data-subject access (CCPA / parental access). Downloads a JSON
+              export of the user's own data; SSN + secrets excluded server-side.
+              See GET /api/me/export + policies/child-data-protection.md. */}
+          <button
+            type="button"
+            onClick={handleExportData}
+            disabled={exportingData}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-60 kiddo-press"
+            data-testid="button-export-data"
+          >
+            {exportingData ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            {exportingData ? "Preparing your data…" : "Download my data"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDeleteAccountModalOpen(true)}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-red-600 kiddo-press"
+            data-testid="button-delete-account"
+          >
+            Delete my account
+          </button>
+        </div>
 
         <TrustMicroStrip />
 
