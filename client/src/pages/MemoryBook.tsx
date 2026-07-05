@@ -538,6 +538,10 @@ export default function MemoryBook() {
   // Branded confirm for destructive Memory Book actions (delete entry), replacing
   // the OS-native window.confirm on this emotional surface.
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
+  // Branded report sheet (replaces the OS-native window.prompt for T&S reports).
+  const [reportEntry, setReportEntry] = useState<{ id: string; sender: string; createdAt: any } | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const [eventFilter, setEventFilter] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(search).get("event") || null;
@@ -4840,44 +4844,14 @@ export default function MemoryBook() {
                                     client (rate-limited per-IP + per-target server-side). */}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onSelect={async (e) => {
+                                  onSelect={(e) => {
                                     e.preventDefault();
-                                    const sender = entry.gift?.senderName || "anonymous gifter";
-                                    // In-app report → POST /api/reports (T&S moderation
-                                    // queue, rate-limited per-IP + per-target). Replaces
-                                    // the old mailto so Report works everywhere — no mail
-                                    // client needed. Demo-aware (server returns
-                                    // {saved:false}; this is raw fetch so we detect it).
-                                    const reason = window.prompt(`Report this entry from ${sender}. What's wrong?`);
-                                    if (reason == null) return; // cancelled
-                                    if (reason.trim().length < 3) {
-                                      toast({ title: "Tell us briefly what's wrong", variant: "destructive" });
-                                      return;
-                                    }
-                                    try {
-                                      const res = await fetch("/api/reports", {
-                                        method: "POST",
-                                        credentials: "include",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                          targetType: "memory_entry",
-                                          targetId: entry.id,
-                                          reason: reason.trim(),
-                                          context: { sender, fundId, createdAt: entry.createdAt },
-                                        }),
-                                      });
-                                      const data = await res.json().catch(() => null);
-                                      if (data && data.saved === false) {
-                                        toast({ title: "Not saved in the demo", description: data.message || "Reports work in your own fund." });
-                                      } else if (res.ok) {
-                                        haptic("success");
-                                        toast({ title: "Reported", description: "Thanks. Our team will review it." });
-                                      } else {
-                                        toast({ title: data?.error || "Could not submit report", variant: "destructive" });
-                                      }
-                                    } catch {
-                                      toast({ title: "Could not submit report", variant: "destructive" });
-                                    }
+                                    // Opens the branded report sheet (below) instead of the
+                                    // OS-native window.prompt this used to fire. Submission
+                                    // still hits POST /api/reports (T&S queue, rate-limited,
+                                    // demo-aware).
+                                    setReportEntry({ id: entry.id, sender: entry.gift?.senderName || "anonymous gifter", createdAt: entry.createdAt });
+                                    setReportReason("");
                                   }}
                                   data-testid={`menu-report-memory-${entry.id}`}
                                 >
@@ -7745,6 +7719,92 @@ export default function MemoryBook() {
         )}
       </AnimatePresence>
       <ConfirmDialog request={confirmReq} onClose={() => setConfirmReq(null)} />
+
+      {/* Branded report sheet — replaces the OS-native window.prompt. Same POST
+          /api/reports (T&S queue, rate-limited, demo-aware) as before. */}
+      <AnimatePresence>
+        {reportEntry && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[90] flex items-center justify-center p-5"
+            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget && !reportSubmitting) setReportEntry(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 8 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ type: "spring", damping: 26, stiffness: 320 }}
+              role="dialog" aria-modal="true" aria-label="Report this content"
+              className="w-full max-w-[360px] rounded-3xl p-6"
+              style={{ background: "hsl(var(--kiddo-cream))", boxShadow: "0 24px 60px -12px rgba(0,0,0,0.35)" }}
+            >
+              <h2 className="font-heading text-lg font-bold text-foreground">Report this content</h2>
+              <p className="mt-1 text-sm text-muted-foreground">From {reportEntry.sender}. Tell us briefly what's wrong and our team will review it.</p>
+              <textarea
+                autoFocus
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="What's wrong with this?"
+                className="mt-4 w-full rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card px-3.5 py-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))] resize-none"
+                data-testid="input-report-reason"
+              />
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  disabled={reportSubmitting || reportReason.trim().length < 3}
+                  onClick={async () => {
+                    if (reportReason.trim().length < 3) return;
+                    setReportSubmitting(true);
+                    haptic("medium");
+                    try {
+                      const res = await fetch("/api/reports", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          targetType: "memory_entry",
+                          targetId: reportEntry.id,
+                          reason: reportReason.trim(),
+                          context: { sender: reportEntry.sender, fundId, createdAt: reportEntry.createdAt },
+                        }),
+                      });
+                      const data = await res.json().catch(() => null);
+                      if (data && data.saved === false) {
+                        toast({ title: "Not saved in the demo", description: data.message || "Reports work in your own fund." });
+                      } else if (res.ok) {
+                        haptic("success");
+                        toast({ title: "Reported", description: "Thanks. Our team will review it." });
+                      } else {
+                        toast({ title: data?.error || "Could not submit report", variant: "destructive" });
+                      }
+                      setReportEntry(null);
+                    } catch {
+                      toast({ title: "Could not submit report", variant: "destructive" });
+                    } finally {
+                      setReportSubmitting(false);
+                    }
+                  }}
+                  className="kiddo-press w-full rounded-full py-3 text-sm font-bold text-white disabled:opacity-50"
+                  style={{ background: "rgb(170,38,38)" }}
+                  data-testid="button-submit-report"
+                >
+                  {reportSubmitting ? "Sending…" : "Submit report"}
+                </button>
+                <button
+                  type="button"
+                  disabled={reportSubmitting}
+                  onClick={() => setReportEntry(null)}
+                  className="kiddo-press w-full rounded-full py-3 text-sm font-semibold text-foreground/70"
+                >
+                  Never mind
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
