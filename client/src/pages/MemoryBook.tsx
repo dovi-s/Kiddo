@@ -54,7 +54,7 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search } from "lucide-react";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound } from "lucide-react";
 import SealedVoiceNote from "@/components/SealedVoiceNote";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
@@ -6625,12 +6625,19 @@ export default function MemoryBook() {
                       title={`When on, this entry stays hidden in Kid View until the child turns ${fundMajorityAge}. The reveal moment.`}
                     >
                       <span className="flex items-center gap-1.5">
-                        <span aria-hidden="true">🔑</span>
+                        <KeyRound size={13} className="shrink-0" aria-hidden="true" />
                         <span className="text-[12px] leading-tight">{saveForBirthday ? `Saved for ${fundMajorityOrdinal} birthday` : `Save for ${fundMajorityOrdinal} birthday`}</span>
                       </span>
                     </button>
                   </div>
                 </div>
+                {/* The two controls above are separate axes: Visibility = WHO can
+                    see it; Save-for-birthday = WHEN the child sees it in Kid View.
+                    Spelled out because a "Family + Saved for 18th" combo isn't
+                    obvious (visible to family now, hidden from the kid until then). */}
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground/70">
+                  Two separate choices: who can see it, and when {childName || "your kid"} unlocks it in Kid View.
+                </p>
 
                 {/* "More options" disclosure — collapsed by default to
                     keep the composer at 5 visible sections (Type / What
