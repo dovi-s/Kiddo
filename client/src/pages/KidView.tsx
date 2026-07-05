@@ -669,7 +669,7 @@ export default function KidView() {
   const projectionCopy = isYoungerMode
     ? "If gifts keep coming in each year and investments grow over time, your fund can become something much bigger later."
     : "If gifts keep coming in each year and the investments keep compounding, this fund can look very different by the time you are older.";
-  const companiesHeading = content?.phase === "teen" || !isYoungerMode ? "What these companies do" : "Companies you partly own";
+  const companiesHeading = content?.phase === "teen" || !isYoungerMode ? "What these companies do" : (INVESTING_LIVE ? "Companies you partly own" : "Companies your fund is set up to own");
   const giftsHeading = isYoungerMode ? "Gifts from people who love you" : "Who helped build your fund";
 
   const handleShareFund = async () => {
@@ -1254,7 +1254,7 @@ export default function KidView() {
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.42 }}
             className="rounded-[24px] border border-border/60 bg-white p-5 mb-4"
           >
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">What you own right now</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">{INVESTING_LIVE ? "What you own right now" : "What your fund is set up to own"}</p>
             {!INVESTING_LIVE && (
               <p className="text-[13px] leading-relaxed text-muted-foreground/80 mb-3">Once your fund starts investing, these become real pieces you own.</p>
             )}
@@ -1628,6 +1628,12 @@ export default function KidView() {
                   {companiesHeading}
                 </h2>
               </div>
+              {/* Frames the per-company "You own a tiny piece of X" explainers below
+                  as the plan, not a claim, while investing is gated — matching the
+                  other two "What you own" sections. */}
+              {!INVESTING_LIVE && isYoungerMode && (
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground/80">Once your fund starts investing, these become real pieces you own.</p>
+              )}
               <div className="mt-4 space-y-3">
                 {/* Show ALL owned holdings with explainers, not just the first 3.
                     A kid owning 10 things and seeing only 3 explained is more
@@ -1736,7 +1742,7 @@ export default function KidView() {
                 <section className="rounded-[28px] border border-border/60 bg-card p-6">
                   <div className="flex items-center gap-2">
                     <BadgeCheck className="h-4 w-4 text-primary" />
-                    <h2 className="font-heading text-2xl font-semibold text-foreground">What you own</h2>
+                    <h2 className="font-heading text-2xl font-semibold text-foreground">{INVESTING_LIVE ? "What you own" : "What your fund is set up to own"}</h2>
                   </div>
                   {!INVESTING_LIVE && (
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Once investing is live, these become real shares you own.</p>
