@@ -54,9 +54,9 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound, PieChart } from "lucide-react";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound, PieChart, Check } from "lucide-react";
 import SealedVoiceNote from "@/components/SealedVoiceNote";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
 import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
 import { Button } from "@/components/ui/button";
@@ -368,12 +368,19 @@ function formatDate(dateStr: string) {
   if (sinceMs >= 0 && sinceMs < 5 * 60 * 1000) return "Just now";
   const DAY = 24 * 60 * 60 * 1000;
   const utcDayIndex = (t: number) => Math.floor(t / DAY);
+  // Time-of-day for the moment (founder ask: "show date AND time"). Kept in UTC to
+  // match the date's timeZone:"UTC" — mixing a UTC date with a local time (or
+  // flipping the date to local) shifts near-midnight entries back a day, the exact
+  // bug the UTC day-boundaries above guard against. Appended to the datestamp'd
+  // entries; the mid-range relative buckets ("3 days ago") stay time-less since an
+  // exact clock time reads oddly next to fuzzy relative days.
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
   const daysAgo = utcDayIndex(Date.now()) - utcDayIndex(d.getTime());
-  if (daysAgo === 0) return "Today";
-  if (daysAgo === 1) return "Yesterday";
+  if (daysAgo === 0) return `Today · ${timeStr}`;
+  if (daysAgo === 1) return `Yesterday · ${timeStr}`;
   if (daysAgo >= 2 && daysAgo <= 6) return `${daysAgo} days ago`;
   if (daysAgo >= 7 && daysAgo <= 13) return "Last week";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} · ${timeStr}`;
 }
 
 function formatMoney(value: number) {
