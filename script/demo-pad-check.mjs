@@ -1,0 +1,21 @@
+import { chromium, devices } from "playwright";
+const base="http://127.0.0.1:5000";
+const b=await chromium.launch();
+const ctx=await b.newContext({...devices["iPhone 14 Pro"]});
+const p=await ctx.newPage();
+await p.addInitScript(()=>sessionStorage.setItem("kora-launched","1"));
+await p.goto(base+"/login",{waitUntil:"domcontentloaded",timeout:60000});
+await p.getByTestId("input-login-email").fill("elena@riverafamily.com");
+await p.getByTestId("input-login-password").fill("riverafamily");
+await p.getByTestId("button-login").click();
+await p.waitForURL(/dashboard|funds|\/$/i,{timeout:60000}).catch(()=>{});
+await p.goto(base+"/dashboard",{waitUntil:"domcontentloaded",timeout:60000});
+await p.waitForTimeout(4000);
+const r=await p.evaluate(()=>{
+  const attr=document.documentElement.hasAttribute("data-demo-chrome");
+  const page=document.querySelector(".kiddo-app-page");
+  const pb=page?getComputedStyle(page).paddingBottom:"(no .kiddo-app-page)";
+  return {attr, pb};
+});
+console.log("data-demo-chrome on <html>:", r.attr, "| .kiddo-app-page padding-bottom:", r.pb);
+await b.close();

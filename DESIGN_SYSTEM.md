@@ -85,3 +85,54 @@ to 1–2 signature moments or fold it in. Two visual voices = the "off" feeling.
 The foundations survived scrutiny. The *execution and consistency* are the work.
 That's the whole diagnosis: Kiddo doesn't need a rebrand — it needs its own brand
 executed with rigor.
+
+## 9. Enforcement — the operational layer (2026-06-25 whole-app design sweep)
+The §1-8 spec is right; a 6-agent sweep confirmed the gap is purely that components
+**bypass** it. The tokens exist (radius scale in index.css, motion in `lib/motion.ts`,
+`.kiddo-card`); the drift is inline overrides. Found app-wide: ~24 font sizes
+(`text-[10.5px]`…), ~10 radii (`rounded-2xl` on cards = NOT in scale; should be
+`var(--radius-card)` 20px), ~11 shadows, 3 motion sources, and `share-modal.tsx` = 1,200
+lines of raw `style={{}}`. Plus two near-duplicate sheet primitives and 3 close patterns.
+
+**The migration sequence (build new clean, don't tweak chaos):**
+1. **Primitives first** — collapse `dialog.tsx` + `sheet.tsx` → one sheet/modal; one
+   `ModalCloseButton` (44px) everywhere; `share-modal.tsx` off inline → utilities; one
+   `<SectionHeader>`. This is the leverage point; everything else migrates against it.
+2. **Surface by surface** — replace inline `text-[…px]`/`rounded-[…]`/`rounded-2xl`(cards)/
+   inline `boxShadow`/inline `duration:`/`cubic-bezier(` with the tokens. Render-verify each.
+3. **One motion language** — toasts use the sheet easing; reveals expand (don't snap);
+   lists stagger 50–80ms; chevrons rotate with content.
+
+**The endgame = a design-lint guard** (extend `lint-content.cjs`) that bans: `text-[…px]`,
+inline `style={{ fontSize }}`, `rounded-[…]` + `rounded-2xl` on cards, inline `boxShadow`,
+inline `duration:`/`cubic-bezier(` in JS. Until it lands, §1-9 IS the PR review checklist.
+Hold the line: ~6 type sizes, 5 radii, 3 shadows, one motion language, one of every component.
+
+## 10. Mobile is NOT desktop — and the mobile app IS the web app (founder, 2026-06-25)
+**Critical context:** the React Native app (`apps/mobile/`) is **RETIRED**. The shipping
+mobile surface is the **web app wrapped in Capacitor + installable as a PWA** (pivot 2026-06-17;
+RN "can only approximate a web app the founder loves, never match it"). So "make mobile feel
+native" does NOT mean a separate native build — it means **the web app's phone experience must
+feel native-grade, because on a phone it literally IS the app.** This is good news: one
+codebase, and this work CONVERGES with the whole design-system effort.
+
+The bar: a parent who installs Kiddo should never think "this is a website in a shell." The
+web app at its mobile breakpoint must feel born-on-the-phone, using the responsive layout +
+Capacitor APIs (`@capacitor/status-bar`, haptics, safe-area). Non-negotiables:
+- **Thumb zone.** Primary actions live in the bottom third (reachable one-handed). Don't put
+  the main CTA at the top because the web does.
+- **Sheets, not center-modals.** Everything is a bottom-sheet that slides up and **drags down
+  to dismiss** (momentum + rubber-band), never a centered web dialog.
+- **Native gestures.** Swipe-back, swipe-to-dismiss, pull-to-refresh, long-press. The OS
+  conventions, per platform (iOS edge-back vs Android back).
+- **Platform haptics** on every meaningful tap/confirm/landing (light/selection/success).
+- **Safe areas + insets.** Respect the notch and home indicator; nothing under them.
+- **Touch, not hover.** No hover-dependent affordances; ≥44px targets; instant press feedback.
+- **Native-feeling motion + scroll.** Page transitions that read like push/slide on the phone
+  breakpoint, not desktop fades; momentum scroll; the gift-landing choreography tuned to feel
+  native on touch.
+- **Less density, bigger type.** A desktop layout merely shrunk reads cramped on a phone; the
+  mobile breakpoint gets its own air, thumb-reachable actions, and bottom-sheet patterns.
+The failure mode is NOT "it's the website" (it is, by design) — it's "this is the **desktop**
+layout shrunk." If the phone view feels like a scaled-down desktop instead of a native app,
+it failed. Same content, phone-native composition.

@@ -136,3 +136,51 @@ any flag flip. Until then the branch is inert (no PI in the wild carries `source
 
 The whole thing is one architecture: **Customer + saved method + embedded element**,
 shipped on-session first, off-session layered behind the existing legal gates.
+
+---
+
+## Phase 1 — remaining work to go `/checkout-preview` → a REAL deposit (2026-06-25)
+
+**State of the rail (verified):** the crediting backend is **already built and guarded.**
+`handlePaymentIntentSucceeded` has the `source === 'in_app'` + `fundId` branch that adapts
+the PI → session → the proven, idempotent `handleGiftPayment`. The endpoints
+(`/api/checkout/payment-intent`, `/charge-saved`, `/payment-methods`) are real and
+flag-guarded. **The ONLY reason `/checkout-preview` doesn't credit a fund is that it
+deliberately passes no `fundId`/`source` metadata** (it's a UX thesis-prover), so the
+guarded branch safely no-ops. On-session parent deposit is **"build now, no legal gate"**
+(table above) — the counsel gate is for OFF-session only. So this is a caller + auth +
+test task, not new money plumbing, and not counsel-gated.
+
+**The remaining work (do NOT build a parallel money path — reuse `handleGiftPayment`):**
+
+1. **Auth the endpoints.** `/api/checkout/payment-intent` + `/charge-saved` currently run
+   unauthenticated with a shared preview Customer (`checkout-preview@kiddo.test`). For a
+   real deposit: require `isAuthenticated`, use the **authed parent's** Customer
+   (`getOrCreateCustomer(user.email, …, user.id)`). Keep the preview's anonymous mode only
+   behind an explicit `preview:true` flag if the demo page must keep working logged-out.
+2. **Accept + validate `fundId`.** Both endpoints take a `fundId`; assert the authed user
+   **owns** that fund (`storage.getFund(fundId).userId === user.id`) before charging.
+3. **Pass the full metadata contract** (the table in "metadata contract" above), mirroring
+   the hosted parent-contribution checkout: `source:'in_app'`, `fundId`,
+   `isParentContribution:'true'`, `fundUserId`, `senderName`/`senderEmail` (the parent),
+   `baseAmount`/`netToFund` (explicit dollar strings, no fee drift), plus optional
+   `executionModel`/`selectedTicker`/`message`. A parent deposit = a parent contribution
+   (no auto Memory-Book entry).
+4. **Real entry point.** Point a real "Add cash"/top-up surface (e.g. `InvestCashModal` or a
+   dashboard deposit button) at this embedded flow when `IN_APP_CHECKOUT` is on — passing the
+   authed user's active `fundId`. `/checkout-preview` can stay the no-metadata demo (now
+   honestly labeled) OR render with a real `fundId` when authed.
+5. **Verify the guard fires once.** With the metadata present, `handlePaymentIntentSucceeded`
+   → `handleGiftPayment` credits exactly once; confirm the idempotency guards
+   (`getGiftByPaymentIntent`/`existingTx`) hold on redelivery.
+6. **The 4-case `stripe listen` test (founder-driven, the real gate — shared with the gift
+   path):** (1) hosted gift credits once, (2) embedded deposit credits once, (3) redelivered
+   event → no second credit, (4) refund reverses. Runbook: `CHECKOUT_FORWARDER_TEST.md`.
+7. **Do NOT flip `IN_APP_CHECKOUT` in a prod-like env until all 4 pass.** Hosted Checkout
+   stays the live path until then.
+
+**Not a launch blocker:** the flag is off, hosted Checkout works, and launch is gated on
+counsel + custody + config (`FOUNDER_ACTION_PLAN.md`), not this. It's a high-ROI conversion
+lever (one-tap parent top-up) to build when you're ready to run the 4-case test — note that,
+like gifts, a credited deposit lands in the fund's (currently simulated) balance and only
+*invests* once custody is live.

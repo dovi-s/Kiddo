@@ -205,6 +205,13 @@ Mined for our open questions. Net effect: the procedural unknowns are now answer
 
 **→ The Alpaca partnerships email now collapses to TWO custodial-specific asks only:** (1) handoff = in-place re-registration vs ACAT *(already in the ticket-309412 reply)*, and (2) Kiddo-specific commercials — per-account/clearing economics, AUM floor, and whether partners share the FDIC-sweep interest. Everything procedural is answered above.
 
+### 🟢 RADZI REPLIED ON THE HANDOFF (2026-06-25) — directionally in-place, mechanism still soft
+
+Radzi replied to Dovi's handoff + production follow-up (ticket 309412):
+- **Handoff:** *"custodial accounts are designed to transition into a standard individual brokerage account once the beneficiary reaches the age of majority."* This is the **third** signal pointing to in-place (docs: beneficiary "assumes full control of the account" + the fractional-liquidation rule being ACATS-out-specific; now support: "transitions into a standard individual brokerage account"). BUT he answered the WHAT, not the HOW — did **not** explicitly confirm (a) same account / not an ACATS, (b) fractional positions + cost basis preserved, no liquidation, no taxable event, or (c) the trigger (automatic at majority vs Alpaca ops vs an API call we make). For the counsel packet + tax disclosures we need that one explicit sentence.
+- **Production:** punted to *"the customer success team assigned to your organization"* — but we're sandbox-only with no CS assigned yet, so it's a non-answer until we get routed.
+- **→ Follow-up SENT 2026-06-25:** pins the mechanism three ways (yes/no on same-account vs ACATS, cost-basis-preserved/no-liquidation, and the trigger) + converts the CS punt into a concrete routing request for production onboarding + commercials. **AWAITING.** If the reply is "in-place, cost basis preserved," make-or-break #3 clears and Alpaca passes all 3 gates.
+
 ## The plan (sandbox-first, decide on evidence)
 
 1. **Alpaca sandbox today** (free, self-serve). Prototype the three make-or-break
@@ -324,7 +331,7 @@ is a sandbox/call, not a full pitch.
 | Gate | Alpaca | DriveWealth |
 |---|---|---|
 | Fractional notional buy works IN custodial (run `npm run smoke:alpaca-custodial`) | ✅ **PASS** (2026-06-24, real fill qty=0.169 in custodial) | ☐ pass / ☐ fail |
-| At-majority handoff to the child exists (custodial → individual) | 🟡 likely (docs imply in-place re-registration; confirm 1 sentence — ticket 309412) | ☐ pass / ☐ fail |
+| At-majority handoff to the child exists (custodial → individual) | 🟡 likely+ (2026-06-25: support confirms it transitions to a standard individual account; in-place/cost-basis mechanism follow-up sent — ticket 309412) | ☐ pass / ☐ fail |
 | We can operate WITHOUT being our own broker-dealer | ✅ **PASS** (Alpaca Securities = BD of record; tech-partner path confirmed in webinar — RIA-vs-not is the separate counsel question) | ☐ pass / ☐ fail |
 
 **Step 2 — score the survivors (1-5 each; weight in parens). Highest total wins:**
