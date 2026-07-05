@@ -514,7 +514,7 @@ export default function Account() {
       } else if (res.status === 410 && data.expired) {
         // Sub fully expired — start a new checkout instead. Mirrors
         // the Settings reactivate flow.
-        toast({ title: "Subscription expired", description: "Starting a new checkout for you..." });
+        toast({ title: "Subscription expired", description: "Starting a new checkout for you…" });
         if (opts?.plan === "starter" && opts?.fundId) {
           await handleUpgradeStarter(opts.fundId);
         } else {
@@ -1211,10 +1211,20 @@ export default function Account() {
             {/* Plan + legal */}
             <SectionCard>
               <div className="divide-y divide-[hsl(var(--kiddo-border))]">
-                <div className="flex items-center justify-between gap-4 p-4">
+                {/* Tap-through to the Plan & billing tab instead of a static
+                    duplicate of the plan status that already lives there. */}
+                <button
+                  type="button"
+                  onClick={() => selectTab("plan")}
+                  className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/30 kiddo-press"
+                  data-testid="link-current-plan"
+                >
                   <span className="text-sm text-muted-foreground">Current plan</span>
-                  <span className="text-sm font-semibold text-foreground">{planLabel}</span>
-                </div>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">{planLabel}</span>
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  </span>
+                </button>
                 <a href="/legal" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30 kiddo-press">
                   <span className="text-sm text-muted-foreground">Legal disclosures</span>
                   <ChevronRight size={16} className="text-muted-foreground" />
@@ -1344,7 +1354,7 @@ export default function Account() {
                       </p>
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" className="rounded-xl" disabled={downgrading} onClick={handleDowngradeToPlus} data-testid="button-account-planfit-confirm">
-                          {downgrading ? "Saving..." : "Confirm"}
+                          {downgrading ? "Saving…" : "Confirm"}
                         </Button>
                         <Button size="sm" variant="ghost" className="rounded-xl" disabled={downgrading} onClick={() => setDowngradeConfirm(false)} data-testid="button-account-planfit-cancel">
                           Not now
@@ -1384,7 +1394,7 @@ export default function Account() {
                       onClick={() => handleReactivateSubscription({ plan: userPlan === "starter" ? "starter" : "family" })}
                       data-testid="button-account-reactivate-plan"
                     >
-                      {reactivating ? "Reactivating..." : "Keep my plan"}
+                      {reactivating ? "Reactivating…" : "Keep my plan"}
                     </Button>
                   </div>
                 </div>
@@ -1439,7 +1449,7 @@ export default function Account() {
                         disabled={openingPortal}
                         data-testid="button-account-manage-billing"
                       >
-                        {openingPortal ? "Opening..." : "Manage billing"}
+                        {openingPortal ? "Opening…" : "Manage billing"}
                       </Button>
                       <Button
                         size="sm"
@@ -1783,7 +1793,7 @@ export default function Account() {
                           className="rounded-xl"
                           data-testid="button-save-password"
                         >
-                          {savingPassword ? "Saving..." : "Update password"}
+                          {savingPassword ? "Saving…" : "Update password"}
                         </Button>
                         <Button
                           size="sm"
@@ -1906,7 +1916,7 @@ export default function Account() {
                       className="rounded-xl"
                       data-testid="button-save-trusted-contact"
                     >
-                      {savingTrustedContact ? "Saving..." : trustedContactHasAny ? "Update" : "Save"}
+                      {savingTrustedContact ? "Saving…" : trustedContactHasAny ? "Update" : "Save"}
                     </Button>
                     {trustedContactHasAny && (
                       <Button
@@ -2087,7 +2097,7 @@ export default function Account() {
                     onClick={() => handleCancelSubscription()}
                     data-testid="button-account-confirm-cancel"
                   >
-                    {canceling ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Canceling...</> : "Yes, cancel"}
+                    {canceling ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Canceling…</> : "Yes, cancel"}
                   </Button>
                 </div>
               </div>
