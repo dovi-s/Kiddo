@@ -65,6 +65,8 @@ export type ScheduledLetterEditorProps = {
   parentName: string;
   pronoun?: string | null;
   recipientBirthdate?: string | null;
+  /** State-specific UTMA majority age (18-21). Defaults to 18 when omitted. */
+  majorityAge?: number;
   /** Whether the parent's fund coverage allows sealed letters (Plus/Family/trial).
    *  When false, the composer renders the FeatureWallModal instead of the form.
    *  Caller should compute this from the fund's coverage state. */
@@ -110,11 +112,25 @@ export function ScheduledLetterEditor({
   parentName,
   pronoun: _pronoun,
   recipientBirthdate,
+  majorityAge,
   isPlusOnFund,
   existingEntry,
   onSaved,
 }: ScheduledLetterEditorProps) {
   const isEditMode = !!existingEntry?.id;
+  // State-specific majority age (UTMA is 18-21). Ordinal for the "through their
+  // Nth birthday" series copy so a 21-state fund doesn't say "18th".
+  const safeMajorityAge = majorityAge && majorityAge > 0 ? majorityAge : 18;
+  const majorityOrdinal = (() => {
+    const n = safeMajorityAge;
+    const lastTwo = n % 100;
+    if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
+    const lastOne = n % 10;
+    if (lastOne === 1) return `${n}st`;
+    if (lastOne === 2) return `${n}nd`;
+    if (lastOne === 3) return `${n}rd`;
+    return `${n}th`;
+  })();
   // When editing a series entry, series-level operations (changing the
   // repeat cadence, regenerating future entries) are out of MVP scope.
   // Edit mode only adjusts THIS specific entry's content/media/date.
@@ -473,7 +489,7 @@ export function ScheduledLetterEditor({
                     </div>
                     {repeat === "yearly" && (
                       <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s 18th birthday. Same content each year. Edit or cancel any individual year, or cancel the whole series.
+                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s {majorityOrdinal} birthday. Same content each year. Edit or cancel any individual year, or cancel the whole series.
                       </p>
                     )}
                   </div>

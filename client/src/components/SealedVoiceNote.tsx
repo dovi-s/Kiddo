@@ -28,6 +28,8 @@ interface Props {
   audience?: "gifter" | "parent";
   /** Child's first name for the framing copy. */
   childName?: string;
+  /** State-specific UTMA majority age (18-21). Defaults to 18 when omitted. */
+  majorityAge?: number;
   /** Called once the audio is stored and ready to attach to a memory entry. */
   onComplete: (result: SealedVoiceResult) => void;
   /** Optional eyebrow/headline overrides so each surface can phrase it. */
@@ -44,7 +46,7 @@ const PICK_MIME = () => {
   return c.find((t) => { try { return (window as any).MediaRecorder?.isTypeSupported?.(t); } catch { return false; } });
 };
 
-export default function SealedVoiceNote({ fundId, audience = "parent", childName, onComplete, eyebrow, headline }: Props) {
+export default function SealedVoiceNote({ fundId, audience = "parent", childName, majorityAge, onComplete, eyebrow, headline }: Props) {
   const [stage, setStage] = useState<Stage>("intro");
   const [seconds, setSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -63,6 +65,19 @@ export default function SealedVoiceNote({ fundId, audience = "parent", childName
   useEffect(() => { setPlaying(false); }, [stage]);
 
   const name = (childName || "them").trim();
+  // State-specific majority age (UTMA is 18-21 depending on state). Ordinal for
+  // the "on their Nth birthday" framing so a 21-state fund doesn't say "18th".
+  const safeMajorityAge = majorityAge && majorityAge > 0 ? majorityAge : 18;
+  const majorityOrdinal = (() => {
+    const n = safeMajorityAge;
+    const lastTwo = n % 100;
+    if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
+    const lastOne = n % 10;
+    if (lastOne === 1) return `${n}st`;
+    if (lastOne === 2) return `${n}nd`;
+    if (lastOne === 3) return `${n}rd`;
+    return `${n}th`;
+  })();
 
   const startRecording = useCallback(async () => {
     setError(null); setSeconds(0);
@@ -144,7 +159,7 @@ export default function SealedVoiceNote({ fundId, audience = "parent", childName
               {headline ?? `Say something to ${name}`}
             </h3>
             <p className="mt-2 max-w-xs text-sm leading-relaxed" style={{ color: `${EVERGREEN}b3` }}>
-              They'll hear your actual voice on their 18th birthday.
+              They'll hear your actual voice on their {majorityOrdinal} birthday.
             </p>
             <motion.button onClick={startRecording} whileTap={{ scale: 0.94 }} aria-label="Start recording"
               className="mt-7 flex h-20 w-20 items-center justify-center rounded-full text-white shadow-lg" style={{ background: GOLD }}>
@@ -187,7 +202,7 @@ export default function SealedVoiceNote({ fundId, audience = "parent", childName
             <div className="mt-7 flex w-full max-w-xs flex-col gap-2.5">
               <motion.button onClick={seal} whileTap={{ scale: 0.97 }}
                 className="flex w-full items-center justify-center gap-2 rounded-full py-3 text-[15px] font-semibold text-white shadow-md" style={{ background: GOLD }}>
-                <Lock size={16} /> Seal it until they're 18
+                <Lock size={16} /> Seal it until they're {safeMajorityAge}
               </motion.button>
               <button onClick={reRecord} className="flex w-full items-center justify-center gap-2 py-1.5 text-sm font-medium" style={{ color: `${EVERGREEN}99` }}>
                 <RotateCcw size={14} /> Record again
@@ -211,7 +226,7 @@ export default function SealedVoiceNote({ fundId, audience = "parent", childName
             </motion.div>
             <h3 className="mt-5 font-heading text-xl font-bold" style={{ color: EVERGREEN }}>Sealed.</h3>
             <p className="mt-2 max-w-xs text-sm leading-relaxed" style={{ color: `${EVERGREEN}b3` }}>
-              {name === "them" ? "They" : name} will hear your voice on their 18th birthday. Not a day before.
+              {name === "them" ? "They" : name} will hear your voice on their {majorityOrdinal} birthday. Not a day before.
             </p>
           </motion.div>
         )}

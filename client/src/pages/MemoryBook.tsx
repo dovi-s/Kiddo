@@ -2791,10 +2791,11 @@ export default function MemoryBook() {
                 fundId={fundId ?? ""}
                 audience="parent"
                 childName={childName ?? undefined}
+                majorityAge={fundMajorityAge}
                 onComplete={({ audioUrl, transcript }) => {
                   createMutation.mutate({
                     type: "note",
-                    content: (transcript || "").trim() || `A voice message for ${childName || "you"}, sealed until their 18th birthday.`,
+                    content: (transcript || "").trim() || `A voice message for ${childName || "you"}, sealed until their ${fundMajorityOrdinal} birthday.`,
                     authorName: (authorName || user?.firstName || "").trim() || "A parent",
                     audioUrl,
                     audioTranscript: transcript ?? undefined,

@@ -1313,6 +1313,7 @@ export default function Age18Plan() {
         parentName={parentName}
         pronoun={(activeFund as any)?.pronoun}
         recipientBirthdate={activeFund?.recipientBirthdate ? String(activeFund.recipientBirthdate) : null}
+        majorityAge={majorityAge}
         // Same Plus-on-fund gate the NoteEditorSheet's media picker
         // uses: noteEditorRequiresPlus=true means the parent is on
         // Free for this fund (the picker shows the wall). For the
