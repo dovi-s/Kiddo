@@ -172,7 +172,7 @@ export default function Home() {
                   For the child and the people who love them
                 </p>
                 <h1 className="max-w-3xl font-heading text-4xl font-bold tracking-[-0.03em] text-foreground sm:text-5xl md:text-6xl">
-                  The investment account they inherit at 18, with the story of who built it.
+                  The investment account they inherit as an adult, with the story of who built it.
                 </h1>
                 <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
                   Kiddo turns birthday money, holiday gifts, and recurring gifts into a real custodial fund, while saving the notes,
