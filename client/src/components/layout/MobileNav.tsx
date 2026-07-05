@@ -27,7 +27,7 @@ export function MobileNav() {
   const handleNavTouch = (href: string, fundId?: string) => {
     if (href === "/dashboard") prefetchDashboard(queryClient, fundId);
     else if (href.startsWith("/memory") && fundId) prefetchMemoryBook(queryClient, fundId);
-    else if (href === "/activity") prefetchActivity(queryClient, 50);
+    else if (href === "/activity") prefetchActivity(queryClient, fundId);
     // /settings has no dedicated prefetcher — page is small + uses session
     // data already in cache from auth.
   };
@@ -89,6 +89,81 @@ export function MobileNav() {
   // they know). Dashboard intentionally NOT given this dot — see the
   // discussion in the design comment at the dot render below.
   const memoryUnreadCount = useMemoryUnreadCount(storedFundId);
+
+  // ── Swipe between the main tabs (founder 2026-06-25: "swipe through the pages
+  //    Theo/Memory/Activity/Settings, smooth, not a refresh"). A clear horizontal
+  //    swipe on a tab surface navigates to the adjacent tab; NavTransition slides
+  //    the page in. Guarded so it never fights vertical scroll, the chip-row
+  //    horizontal scrollers, an open sheet, or the left-edge back gesture.
+  useEffect(() => {
+    const onTabSurface =
+      isAuthenticated && !shouldHide && !isPublicPage && !shouldHidePrimaryNav(location);
+    if (!onTabSurface || typeof window === "undefined") return;
+    if (isFundSubPage(location)) return; // sub-pages aren't swipe stops
+
+    const indexFor = (p: string) => {
+      if (p.startsWith("/dashboard") || p.startsWith("/staging")) return 0;
+      if (p.startsWith("/memory")) return 1;
+      if (p.startsWith("/activity") || p.startsWith("/event/")) return 2;
+      if (p.startsWith("/settings")) return 3;
+      return -1;
+    };
+    const curIdx = indexFor(location);
+    if (curIdx < 0) return;
+
+    const fundId =
+      (storedFundId && funds.find((f) => f.id === storedFundId)?.id) || funds[0]?.id || null;
+    const tabs = ["/dashboard", fundId ? `/memory/${fundId}` : "/memory", "/activity", "/settings"];
+
+    const inHorizontalScroller = (start: Element | null) => {
+      let n: Element | null = start;
+      while (n && n !== document.body) {
+        if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 4) {
+          const ox = getComputedStyle(n).overflowX;
+          if (ox === "auto" || ox === "scroll") return true;
+        }
+        n = n.parentElement;
+      }
+      return false;
+    };
+
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      const t = e.touches[0];
+      // An open sheet/dialog owns gestures; the left 28px is the edge-back zone;
+      // a horizontal scroller under the finger should scroll, not switch tabs.
+      if (document.querySelector('[role="dialog"]') || t.clientX <= 28 || inHorizontalScroller(e.target as Element)) {
+        tracking = false;
+        return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.4) return; // not a clear horizontal swipe
+      const nextIdx = curIdx + (dx < 0 ? 1 : -1); // swipe left → next tab, right → prev
+      if (nextIdx < 0 || nextIdx >= tabs.length) return;
+      handleNavTouch(tabs[nextIdx], fundId ?? undefined);
+      haptic("selection");
+      setLocation(tabs[nextIdx]);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [location, funds, storedFundId, isAuthenticated, shouldHide, isPublicPage, setLocation]);
 
   if (shouldHide || isPublicPage || isLoading || !isAuthenticated) return null;
   // /account hides the bottom-nav entirely — all four tabs (Home /
@@ -177,13 +252,12 @@ export function MobileNav() {
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="mobile-nav-shell fixed inset-x-3 z-50 md:hidden"
-      // Lift the whole floating rail above the iOS home indicator: a flat 12px
-      // (bottom-3) left it overlapping the indicator on notched phones. The
-      // safe-area inset rides the POSITION (not internal padding) so the pill
-      // stays compact and balanced and clears the indicator with a steady gap.
-      // Non-notched devices: inset = 0 → identical to the old bottom-3.
-      style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      className="mobile-nav-shell fixed inset-x-0 bottom-0 z-50 md:hidden"
+      // Flush, edge-to-edge bottom bar (native tab-bar posture, 2026-07 — was a
+      // floating pill: inset-x-3 + a bottom offset). The iOS home-indicator
+      // safe-area now rides INSIDE the shell as padding-bottom (index.css) so the
+      // glass background extends behind the indicator instead of leaving a gap.
+      // The slide-up intro (y:100 -> 0) and the gold active-pill are unaffected.
     >
       <div
         /* py-1 (2026-06-07): the grid AND each tab both carried vertical
@@ -332,7 +406,7 @@ export function MobileNav() {
                   )}
                 </div>
                 <span
-                  className={`relative mt-1 max-w-full truncate text-[11px] transition-colors duration-150 ${
+                  className={`relative mt-1 max-w-full truncate text-2xs transition-colors duration-150 ${
                     isShare ? "font-semibold text-[hsl(var(--kora-ink))]" : isActive ? "text-primary font-semibold" : "text-muted-foreground"
                   }`}
                 >

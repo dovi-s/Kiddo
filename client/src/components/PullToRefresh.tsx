@@ -2,15 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
-// Custom pull-to-refresh for the installed (standalone) PWA. A standalone PWA
-// has no browser chrome, so iOS/Android give it NO native pull-to-refresh — the
-// gesture that works in a Safari tab simply isn't provided. This re-creates it
-// in JS: pull down from the very top of the page, past a threshold, and the
-// React Query cache refetches.
-//
-// Gated to standalone ONLY. In a normal browser tab the OS still provides native
-// pull-to-refresh, so we stay completely inert there (the component renders null
-// and attaches no listeners) — no double gesture, no risk to browser scrolling.
+// Custom, branded pull-to-refresh. Runs EVERYWHERE (tab + installed PWA): we
+// disabled the browser's native pull-to-refresh app-wide via `overscroll-behavior`
+// (it was firing by accident), so this JS gesture is now the ONE refresh path.
+// Pull down from the top of the scrolled content, past a threshold, and the React
+// Query cache refetches. Deliberate by design (72px threshold + 0.5 damping +
+// at-top + vertical-only guards), so a normal scroll flick never triggers it.
 //
 // Spinner-only (we don't translate the page content). That keeps it
 // non-invasive: it never wraps or transforms the app's scroll container, so it
@@ -26,27 +23,48 @@ export function PullToRefresh() {
   const busyRef = useRef(false);
 
   useEffect(() => {
-    const isStandalone =
-      (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches) ||
-      (navigator as any).standalone === true;
-    if (!isStandalone) return; // browser tab → native pull-to-refresh; do nothing.
-
+    // Runs EVERYWHERE now (2026-07-01). We disabled the browser's native
+    // pull-to-refresh app-wide via `overscroll-behavior` (it fired by accident),
+    // so this branded gesture is the only refresh — it must work in a tab too, not
+    // just standalone. Deliberate by design: a 72px threshold + 0.5 damping means
+    // it never triggers on a normal scroll flick.
     const THRESHOLD = 72;
     const MAX = 110;
-    const atTop = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
     const apply = (v: number) => { pullRef.current = v; setPull(v); };
 
+    // Is the scroll container UNDER the finger at its top? window.scrollY alone is
+    // wrong here — the dashboard (and other pages) scroll inside a DIV, not the
+    // window. Walk up from the touched node to the real scroller and check that.
+    const scrollerAtTop = (target: EventTarget | null): boolean => {
+      let n: Node | null = target instanceof Node ? target : null;
+      while (n && n instanceof HTMLElement) {
+        if (n.scrollHeight > n.clientHeight + 1) {
+          const oy = getComputedStyle(n).overflowY;
+          if (oy === "auto" || oy === "scroll") return n.scrollTop <= 0;
+        }
+        n = n.parentElement;
+      }
+      return (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+    };
+
+    let startX = 0;
     const onStart = (e: TouchEvent) => {
-      if (busyRef.current || e.touches.length !== 1 || !atTop()) { startY.current = null; return; }
+      if (busyRef.current || e.touches.length !== 1) { startY.current = null; return; }
+      // A sheet/dialog owns its own gestures; and only start a pull when the
+      // content under the finger is actually scrolled to the top.
+      if (document.querySelector('[role="dialog"]') || !scrollerAtTop(e.target)) { startY.current = null; return; }
       startY.current = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
       pulling.current = false;
     };
     const onMove = (e: TouchEvent) => {
       if (startY.current == null || busyRef.current) return;
       const dy = e.touches[0].clientY - startY.current;
-      if (dy <= 0 || !atTop()) {
+      const dx = e.touches[0].clientX - startX;
+      // Upward, or clearly horizontal (a tab swipe) → not a pull-to-refresh.
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) {
         if (pulling.current) { pulling.current = false; apply(0); }
-        if (!atTop()) startY.current = null;
+        if (dy <= 0) startY.current = null;
         return;
       }
       pulling.current = true;

@@ -42,6 +42,15 @@ export function prefetchDashboard(queryClient: QueryClient, fundId: string | nul
 
 export function prefetchMemoryBook(queryClient: QueryClient, fundId: string | null | undefined): void {
   if (!fundId) return;
+  // Warm the fund itself (["fund", fundId]) — the Memory Book hero + ~47 childName
+  // spots read recipientFirstName from it. Without this it cold-flashes GENERIC
+  // ("diversified mix", "Their book") before the async fund query lands. MUST mirror
+  // the page's key + endpoint exactly (MemoryBook.tsx ~883: useQuery(["fund", fundId])).
+  void queryClient.prefetchQuery({
+    queryKey: ["fund", fundId],
+    queryFn: () => safeFetchJson(`/api/funds/${fundId}`),
+    staleTime: NEIGHBOR_STALE,
+  });
   void queryClient.prefetchQuery({
     queryKey: ["memory", fundId],
     queryFn: () => safeFetchJson(`/api/funds/${fundId}/memory`),
@@ -54,10 +63,14 @@ export function prefetchMemoryBook(queryClient: QueryClient, fundId: string | nu
   });
 }
 
-export function prefetchActivity(queryClient: QueryClient, limit: number = 50): void {
+export function prefetchActivity(queryClient: QueryClient, fundId: string | null | undefined, limit: number = 60): void {
+  // MUST mirror useActivities' key EXACTLY: ["/api/activities", limit, fundId || "all"].
+  // The limit MUST equal the page's (useActivities now fetches 60 — cut from 200 for perf
+  // 2026-06-25). A mismatched limit warms a key the Activity page never reads, so the
+  // prefetch is wasted and the page still fetches cold (skeleton-flash on the slowest tab).
   void queryClient.prefetchQuery({
-    queryKey: ["/api/activities", limit],
-    queryFn: () => safeFetchJson(`/api/activities?limit=${limit}`),
+    queryKey: ["/api/activities", limit, fundId || "all"],
+    queryFn: () => safeFetchJson(`/api/activities?limit=${limit}${fundId ? `&fundId=${fundId}` : ""}`),
     staleTime: NEIGHBOR_STALE,
   });
   // Activity also fetches /api/me/scheduled for the Pending/Scheduled tabs —

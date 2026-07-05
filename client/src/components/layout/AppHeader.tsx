@@ -11,6 +11,7 @@ import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { FadeImage } from "@/components/ui/fade-image";
 import { ShareModal, type SharePage } from "@/components/ui/share-modal";
 import { readFundLiveValue } from "@/lib/fund-live-value";
 import { MOTION_DURATION } from "@/lib/motion";
@@ -155,7 +156,9 @@ export function AppHeader() {
   // Scoped to /staging only — the live dashboard hero is a different (diagonal,
   // carded) gradient and keeps the existing flat treatment untouched.
   const isStagingHero = location.startsWith("/staging");
-  const [heroSeamBg, setHeroSeamBg] = useState("hsl(158 45% 19%)");
+  // Hex (== hsl(158 45% 19%)) so the status-bar `theme-color` can track this exact
+  // value — theme-color is most reliable as hex across iOS.
+  const [heroSeamBg, setHeroSeamBg] = useState("#1b4636");
   useEffect(() => {
     if (!isStagingHero) return;
     // Staging hero gradient stops: [pct, H, S, L]. Keep in sync with the
@@ -165,6 +168,15 @@ export function AppHeader() {
       [46, 158, 49, 15],
       [100, 157, 49, 8],
     ];
+    // hsl → hex (theme-color tracks this exact value; hex is the safe format on iOS).
+    const hslToHex = (h: number, s: number, l: number) => {
+      s /= 100; l /= 100;
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = (x: number) => Math.round(255 * x).toString(16).padStart(2, "0");
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    };
     const colorAt = (frac: number) => {
       const p = Math.min(100, Math.max(0, frac * 100));
       let a = STOPS[0];
@@ -176,7 +188,7 @@ export function AppHeader() {
       const h = a[1] + (b[1] - a[1]) * t;
       const s = a[2] + (b[2] - a[2]) * t;
       const l = a[3] + (b[3] - a[3]) * t;
-      return `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`;
+      return hslToHex(h, s, l);
     };
     let raf = 0;
     const update = () => {
@@ -232,8 +244,14 @@ export function AppHeader() {
   useEffect(() => {
     const HERO_TOP = "#1b4636"; // === hsl(158 45% 19%), the Gilt-Ledger bottle-green header/hero top tone
     const CREAM = "#f9f7f3";    // === the default theme-color in index.html
+    // The status-bar tint (`theme-color`) MUST equal the header's CURRENT background
+    // — including the continuous darkening while the bar tracks the staging hero
+    // gradient — so the clock/wifi/battery strip never reads lighter than the bar
+    // under it (founder 2026-06-25). Mirrors the header's own backgroundColor
+    // expression exactly (see the <motion.header> style below).
+    const headerColor = !heroChrome ? CREAM : (isStagingHero ? heroSeamBg : HERO_TOP);
     const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute("content", heroChrome ? HERO_TOP : CREAM);
+    meta?.setAttribute("content", headerColor);
     document.documentElement.style.backgroundColor = isOnDashboard ? HERO_TOP : "";
     // Native (Capacitor) shell: also drive the REAL OS status bar (clock / wifi /
     // battery glyphs) so they flip light over the green hero and dark on cream —
@@ -251,7 +269,7 @@ export function AppHeader() {
         try {
           sb.setStyle?.({ style: heroChrome ? "DARK" : "LIGHT" });
           if (cap.getPlatform?.() === "android") {
-            sb.setBackgroundColor?.({ color: heroChrome ? HERO_TOP : CREAM });
+            sb.setBackgroundColor?.({ color: headerColor });
           }
         } catch { /* native bridge unavailable — ignore */ }
       }
@@ -260,7 +278,7 @@ export function AppHeader() {
       meta?.setAttribute("content", CREAM);
       document.documentElement.style.backgroundColor = "";
     };
-  }, [heroChrome, isOnDashboard]);
+  }, [heroChrome, isOnDashboard, isStagingHero, heroSeamBg]);
 
   const { data: funds = [] } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
@@ -470,7 +488,13 @@ export function AppHeader() {
           transition: (isStagingHero && heroChrome && !bgFlipping)
             ? "border-color 0.2s ease-out"
             : "background-color 0.2s ease-out, border-color 0.2s ease-out",
-          height: 58,
+          // black-translucent status bar (index.html): the header now extends UNDER
+          // the iOS notch so its background fills the status-bar strip and tracks the
+          // hero color on scroll (founder: "the iphone part should match the header").
+          // padTop reserves the notch height — 0 in a browser tab, so no visual change
+          // there; the content row stays a clean 58px below the clock in standalone.
+          paddingTop: "env(safe-area-inset-top)",
+          height: "calc(58px + env(safe-area-inset-top))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -568,7 +592,7 @@ export function AppHeader() {
 
               {badgeText && (
                 <span
-                  className="hidden shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold tracking-[0.02em] sm:inline-block"
+                  className="hidden shrink-0 rounded-full px-2 py-0.5 text-4xs font-bold tracking-[0.02em] sm:inline-block"
                   style={{ background: "hsl(var(--kiddo-evergreen) / 0.10)", color: "hsl(var(--kiddo-evergreen))" }}
                 >
                   {badgeText}
@@ -613,7 +637,7 @@ export function AppHeader() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate font-semibold text-foreground">Your funds</p>
-                    <p className="text-[11px] text-muted-foreground">All {funds.length} together</p>
+                    <p className="text-2xs text-muted-foreground">All {funds.length} together</p>
                   </div>
                   {isFundsOverview && <Check size={14} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
                 </button>
@@ -646,7 +670,7 @@ export function AppHeader() {
                   >
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-xs font-bold text-white overflow-hidden">
                       {fund.childPhotoUrl
-                        ? <img src={fund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
+                        ? <FadeImage src={fund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
                         : (fund.recipientFirstName || fund.name || "F").slice(0, 1).toUpperCase()
                       }
                     </div>
@@ -654,7 +678,7 @@ export function AppHeader() {
                       <p className="truncate font-semibold text-foreground">
                         {fund.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s Fund` : fund.name || "Fund"}
                       </p>
-                      <p className="text-[11px] text-muted-foreground tabular-nums">{formatCurrency(val)}</p>
+                      <p className="text-2xs text-muted-foreground tabular-nums">{formatCurrency(val)}</p>
                     </div>
                     {isActive && <Check size={14} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
                   </button>
@@ -724,7 +748,7 @@ export function AppHeader() {
                 aria-label="Account"
               >
                 {photoUrl ? (
-                  <img
+                  <FadeImage
                     src={photoUrl}
                     alt=""
                     // 32×32 inside a 36×36 button (h-8 w-8 vs h-9 w-9 button) —
@@ -769,8 +793,13 @@ export function AppHeader() {
               would be a stealth-context-switch foot-gun. Same reasoning
               on /account: user-scoped page → the active fund is
               irrelevant → an active Share button there would silently
-              share Emma's link if tapped, same foot-gun. */}
-          {withFund && !suppressFundChrome && !isOnDashboard && (
+              share Emma's link if tapped, same foot-gun.
+              Dashboard exception (2026-07): the hero owns Share while it is in
+              view; once the hero scrolls out (scrolledPastHero — only ever true
+              on the dashboard), the header Share eases back in so a desktop user
+              scrolled down the long dashboard still has one-click share. Mobile
+              is covered by the bottom-nav Share pill (this button is md:flex). */}
+          {withFund && !suppressFundChrome && (!isOnDashboard || scrolledPastHero) && (
             <button
               type="button"
               onClick={handleShare}
@@ -780,7 +809,7 @@ export function AppHeader() {
               // utility — chrome audit fix. Gold is the brand-primary action
               // color (kiddo-gold), so the hover stays in the same hue family,
               // just slightly darker. active:scale stays for tap feedback.
-              className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-bold text-white bg-[rgb(184,121,26)] transition-all hover:bg-[rgb(155,99,17)] focus-visible:bg-[rgb(155,99,17)] focus-visible:outline-none active:scale-[0.97]"
+              className={`hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-bold text-white bg-[rgb(184,121,26)] transition-all hover:bg-[rgb(155,99,17)] focus-visible:bg-[rgb(155,99,17)] focus-visible:outline-none active:scale-[0.97]${isOnDashboard ? " animate-in fade-in slide-in-from-top-1 duration-300" : ""}`}
               style={{ letterSpacing: "-0.01em" }}
               data-testid="header-share-link"
             >

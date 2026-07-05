@@ -32,6 +32,17 @@ import { hasActiveDeepLink } from "@/lib/deep-link-highlight";
 const TAB_PATHS = ["/dashboard", "/activity", "/memory", "/settings"];
 const isTabPath = (p: string) => TAB_PATHS.some((t) => p.startsWith(t));
 
+// Visual left→right order of the bottom-nav tabs (Share is an action, not a stop).
+// Used to give a tab SWIPE a direction: a higher index slides in from the right,
+// lower from the left — so swiping between tabs reads as moving sideways through them.
+const tabOrderIndex = (p: string) => {
+  if (p.startsWith("/dashboard") || p.startsWith("/staging")) return 0;
+  if (p.startsWith("/memory")) return 1;
+  if (p.startsWith("/activity") || p.startsWith("/event/")) return 2;
+  if (p.startsWith("/settings")) return 3;
+  return -1;
+};
+
 // Per-path scroll memory. Module-level so it survives the component's own
 // re-renders (and is shared across the single NavTransition instance).
 const scrollMemory = new Map<string, number>();
@@ -42,6 +53,13 @@ const scrollMemory = new Map<string, number>();
 // from the side" without exposing a strip of background. 24% is plainly felt on
 // a phone (the 44px first pass was too subtle to notice). One knob to tune.
 const SLIDE_PCT = 24;
+
+// PROTOTYPE — flip to feel a crisper, more native "push": the entering page slides in
+// nearly OPAQUE (a light 0.85→1 fade instead of 0→1) WITH a leading-edge shadow that fades
+// as it lands — so it reads as a solid page sliding OVER the previous one (the iOS push
+// depth cue) rather than a soft, website-y cross-fade. Default OFF keeps the founder-tuned
+// cross-fade live and changes nothing; toggle to A/B the feel in dev. 2026-06-25.
+const CRISP_PUSH = true;
 
 export function NavTransition({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -63,6 +81,13 @@ export function NavTransition({ children }: { children: React.ReactNode }) {
   }
   const tabSwitch =
     isNav && isTabPath(prevLocationRef.current) && isTabPath(location);
+  // Tab switches now SLIDE (founder ask: swipe between tabs feels like moving
+  // sideways through them) — direction by the tab's left→right order, not the
+  // push/pop stack. Higher index → enters from the right, lower → from the left.
+  if (tabSwitch) {
+    const d = tabOrderIndex(location) - tabOrderIndex(prevLocationRef.current);
+    if (d !== 0) direction = d > 0 ? 1 : -1;
+  }
 
   // Commit the stack + prev-location AFTER render (never mutate refs that drive
   // this render's output during render — keeps StrictMode double-renders clean).
@@ -180,19 +205,30 @@ export function NavTransition({ children }: { children: React.ReactNode }) {
   // switches (instant, iOS tab-bar feel), and reduced-motion. Scroll handling
   // above still runs in every case.
   const skip =
-    firstRenderRef.current || tabSwitch || prefersReducedMotion;
+    firstRenderRef.current || prefersReducedMotion;
 
+  // CRISP_PUSH adds a leading-edge shadow that animates from present → gone as the page
+  // lands (so nothing lingers at rest), and starts the page nearly opaque. The shadow sits
+  // on the LEADING edge — left for forward, right for back — hence the -direction offset.
+  const crisp = CRISP_PUSH && !skip;
+  const leadingShadow = `${-direction * 12}px 0 32px hsl(var(--kiddo-ink) / 0.13)`;
   return (
     <motion.div
       key={location}
-      initial={skip ? false : { opacity: 0, x: `${direction * SLIDE_PCT}%` }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={
+        skip
+          ? false
+          : crisp
+            ? { opacity: 0.85, x: `${direction * SLIDE_PCT}%`, boxShadow: leadingShadow }
+            : { opacity: 0, x: `${direction * SLIDE_PCT}%` }
+      }
+      animate={crisp ? { opacity: 1, x: 0, boxShadow: "0px 0 0px hsl(var(--kiddo-ink) / 0)" } : { opacity: 1, x: 0 }}
       transition={
         skip
           ? { duration: 0 }
           : { duration: 0.28, ease: MOTION_EASE.outExpo }
       }
-      style={{ minHeight: "100dvh" }}
+      style={{ minHeight: "100dvh", ...(crisp ? { background: "hsl(var(--kiddo-cream))" } : {}) }}
     >
       {children}
     </motion.div>

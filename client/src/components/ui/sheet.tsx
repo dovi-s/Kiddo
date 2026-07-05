@@ -91,11 +91,18 @@ const SheetContent = React.forwardRef<
           </>
         ) : (
           <>
-            <SheetPrimitive.Close 
-              className="absolute right-4 top-4 rounded-xl p-2.5 bg-muted/50 opacity-80 ring-offset-background transition-all duration-150 hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none active:scale-95"
-              onClick={() => haptic('light')}
+            {/* Canonical close affordance — matches ModalCloseButton exactly
+                (44px hit target, 28px muted chip, X size 15, `selection` haptic)
+                so the close is identical across every modal/sheet. DESIGN_SYSTEM
+                §9: one close, everywhere. Kept on the Radix Close mechanism. */}
+            <SheetPrimitive.Close
+              aria-label="Close"
+              className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+              onClick={() => haptic('selection')}
             >
-              <X className="h-5 w-5" />
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted">
+                <X size={15} />
+              </span>
               <span className="sr-only">Close</span>
             </SheetPrimitive.Close>
             {children}
