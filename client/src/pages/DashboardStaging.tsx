@@ -3819,21 +3819,8 @@ export default function DashboardStaging() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, activeFund?.id, isFundCovered, isOwnerMode]);
 
-  // Notification deep link: ?openAutoInvest=1
-  useEffect(() => {
-    const params = new URLSearchParams(search || "");
-    if (params.get("openAutoInvest") !== "1") return;
-    const next = new URLSearchParams(search || "");
-    next.delete("openAutoInvest");
-    const nextSearch = next.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
-    if (hasAutoInvestAccess) {
-      setEditingContribId(null);
-      setAutoInvestStep("amount");
-      setAutoInvestModalOpen(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, hasAutoInvestAccess]);
+  // (Auto-invest deep-link effect lives below, after parentContributions is
+  // declared — it needs that list to prefill an edit.)
 
   // Notification deep link: ?section=holdings - scroll to holdings after data loads
   useEffect(() => {
@@ -3899,6 +3886,48 @@ export default function DashboardStaging() {
   );
   const activeAutoInvest = parentContributions.find((c) => c.status === "active");
   const pausedAutoInvest = parentContributions.find((c) => c.status === "paused");
+
+  // Deep link: ?openAutoInvest=1 opens the auto-invest sheet. The optional
+  // &editId=X form EDITS an existing schedule — the Activity page's "Edit"
+  // button links here. Without the editId branch, "Edit" opened a blank CREATE
+  // flow (editingContribId=null) instead of the schedule it claimed to edit, so
+  // a parent tapping Edit got a brand-new setup. We now find the row and prefill
+  // exactly like the in-dashboard edit affordance does. Guarded by a ref so it
+  // fires once even though parentContributions (needed to prefill an edit) can
+  // land after mount and re-trigger the effect.
+  const autoInvestDeepLinkConsumed = useRef(false);
+  useEffect(() => {
+    if (autoInvestDeepLinkConsumed.current) return;
+    const params = new URLSearchParams(search || "");
+    if (params.get("openAutoInvest") !== "1") return;
+    if (!hasAutoInvestAccess) return;
+    const editId = params.get("editId");
+    // For an edit link, wait until schedules are loaded so we can prefill from
+    // the real row; bail this pass (the effect re-runs when they arrive).
+    const contrib = editId ? parentContributions.find((c) => String(c.id) === String(editId)) : null;
+    if (editId && !contrib) return;
+    autoInvestDeepLinkConsumed.current = true;
+
+    const next = new URLSearchParams(search || "");
+    next.delete("openAutoInvest");
+    next.delete("editId");
+    const nextSearch = next.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
+
+    if (contrib) {
+      setEditingContribId(String(contrib.id));
+      setAutoInvestAmount(contrib.amount);
+      setAutoInvestFrequency(contrib.frequency as "daily" | "weekly" | "monthly" | "yearly");
+      setAutoInvestSelectedBankId(contrib.bankAccountId || "");
+      setAutoInvestExecutionModel((contrib.executionModel as "auto" | "pick") || "auto");
+      setAutoInvestTicker(contrib.selectedTicker || "");
+    } else {
+      setEditingContribId(null);
+    }
+    setAutoInvestStep("amount");
+    setAutoInvestModalOpen(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, hasAutoInvestAccess, parentContributions]);
 
   // LAB: the dashboard mounts before the per-fund queries resolve, so the
   // recurring line, the at-majority projection, and the collapse stats briefly
