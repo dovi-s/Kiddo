@@ -385,7 +385,7 @@ export function DetailHistoryModal({
             }}>
               {tab === "history" && (
                 historyRows.length === 0 ? (
-                  <EmptyState label="Nothing in history yet." sub="Activity for this view will appear here." />
+                  <EmptyState label="Nothing here yet." sub="Contributions will show up here." />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
                     {historyRows.map((row) => (
@@ -397,7 +397,7 @@ export function DetailHistoryModal({
               {tab === "pending" && (
                 pendingRows.length === 0 ? (
                   <EmptyState
-                    label="Nothing settling right now."
+                    label="Nothing in transit right now."
                     sub="Money on its way to the market shows up here."
                   />
                 ) : (
@@ -410,7 +410,7 @@ export function DetailHistoryModal({
               )}
               {tab === "scheduled" && showScheduled && (
                 scheduledRows!.length === 0 ? (
-                  <EmptyState label="No upcoming runs scheduled." sub="" />
+                  <EmptyState label="No upcoming charges." sub="" />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                     {scheduledRows!.map((s) => (

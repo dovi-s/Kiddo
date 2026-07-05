@@ -1173,7 +1173,7 @@ export default function Activity() {
       window.location.href = url;
     },
     onError: (err: any) => {
-      toast({ title: "We couldn't process that", description: err?.message || "Try again in a moment.", variant: "destructive" });
+      toast({ title: "Could not start checkout", description: err?.message || "Try again in a moment.", variant: "destructive" });
     },
   });
 
@@ -1198,7 +1198,7 @@ export default function Activity() {
       // (we stop emailing) and auto-charge subscriptions (Stripe sub is
       // cancelled server-side). The per-row confirm already told the parent
       // exactly which one they're stopping.
-      toast({ title: "Schedule stopped", description: "This gifter's schedule for the fund has ended." });
+      toast({ title: "Schedule stopped", description: "This gifter's schedule has ended." });
     },
     onError: (err: any) => {
       toast({ title: "Could not stop the schedule", description: err?.message || "Try again in a moment.", variant: "destructive" });
@@ -1449,7 +1449,7 @@ export default function Activity() {
   // server endpoint, no extra round trip.
   const handleExportCsv = () => {
     if (filtered.length === 0) {
-      toast({ title: "Nothing to export", description: "Filtered list is empty." });
+      toast({ title: "Nothing to export", description: "There's nothing in this view to export." });
       return;
     }
     // CSV cell escaper — wraps in quotes when the value contains a comma,
@@ -3791,7 +3791,7 @@ export default function Activity() {
                     Nothing in transit right now.
                   </p>
                   <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6 }}>
-                    All gifts and additions are settled and invested. ✅
+                    All gifts and additions are settled and invested.
                   </p>
                 </div>
               </EnlighteningReveal>
@@ -3897,7 +3897,7 @@ export default function Activity() {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                   <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
-                                    Recurring investment runs {next ? next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "soon"}
+                                    Recurring investment {next ? `on ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : "soon"}
                                   </p>
                                   {amtNum != null && (
                                     <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
@@ -3974,7 +3974,7 @@ export default function Activity() {
                     No recurring investments yet.
                   </p>
                   <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6, marginBottom: 18 }}>
-                    Set up a recurring investment and the fund grows every month. Automatically.
+                    Set up a recurring investment so the fund keeps growing on its own.
                   </p>
                   <Button
                     // Solid evergreen primary — brand gold is reserved for
@@ -4107,38 +4107,33 @@ export default function Activity() {
                                       {amtNum != null ? `${formatCurrency(amtNum)} every ${c.frequency === "weekly" ? "week" : c.frequency === "yearly" ? "year" : c.frequency === "daily" ? "day" : "month"}` : `Recurring · ${c.frequency}`}
                                     </p>
                                     <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                                      {/* Failure indicator — shown when the
-                                          recurring worker failed within the
-                                          last 14 days (server-enriched via
-                                          `hasRecentFailure`). Surfaces a
-                                          silent-failure mode that was
-                                          previously invisible to parents
-                                          (Stripe declined → email
-                                          reminder → schedule kept "Active"
-                                          status with no UI clue). */}
-                                      {c.hasRecentFailure && !isPaused && (
-                                        <span
-                                          style={{
-                                            fontSize: 9.5, fontWeight: 700, borderRadius: 999, padding: "2px 7px",
-                                            background: "rgb(254,228,228)",
-                                            color: "rgb(170,38,38)",
-                                            display: "inline-flex", alignItems: "center", gap: 3,
-                                          }}
-                                          title="Last automatic charge failed; an email reminder went out."
-                                        >
-                                          <AlertCircle size={10} />
-                                          Last cycle failed
-                                        </span>
-                                      )}
-                                      <span
-                                        style={{
-                                          fontSize: 9.5, fontWeight: 700, borderRadius: 999, padding: "2px 7px",
-                                          background: isOwnerHistorical ? "rgb(238,235,231)" : isPaused ? "rgb(254,243,199)" : "rgb(220,247,228)",
-                                          color: isOwnerHistorical ? "rgb(112,103,95)" : isPaused ? "rgb(146,64,14)" : "rgb(15,82,42)",
-                                        }}
-                                      >
-                                        {isOwnerHistorical ? "Ended" : isPaused ? "Paused" : "Active"}
-                                      </span>
+                                      {/* One status pill, never two. A recent failure
+                                          (server `hasRecentFailure`) used to add a SECOND
+                                          red "Last cycle failed" pill beside the green
+                                          "Active" one, which read as failed-and-active at
+                                          once. Fold it into a single amber "Retrying": still
+                                          active, last charge failed, will try again on the
+                                          next date. Full detail stays in the row description
+                                          + the expanded panel. Amber signals attention
+                                          without the green/red contradiction. */}
+                                      {(() => {
+                                        const failedActive = Boolean(c.hasRecentFailure) && !isPaused && !isOwnerHistorical;
+                                        const amber = isPaused || failedActive;
+                                        return (
+                                          <span
+                                            style={{
+                                              fontSize: 9.5, fontWeight: 700, borderRadius: 999, padding: "2px 7px",
+                                              background: isOwnerHistorical ? "rgb(238,235,231)" : amber ? "rgb(254,243,199)" : "rgb(220,247,228)",
+                                              color: isOwnerHistorical ? "rgb(112,103,95)" : amber ? "rgb(146,64,14)" : "rgb(15,82,42)",
+                                              display: "inline-flex", alignItems: "center", gap: 3,
+                                            }}
+                                            title={failedActive ? "Last automatic charge failed. It will try again on the next date." : undefined}
+                                          >
+                                            {failedActive ? <AlertCircle size={10} /> : null}
+                                            {isOwnerHistorical ? "Ended" : isPaused ? "Paused" : failedActive ? "Retrying" : "Active"}
+                                          </span>
+                                        );
+                                      })()}
                                       {/* History icon → opens the detail modal
                                           scoped to this schedule. Click stops
                                           propagation so the existing card-tap-
@@ -4246,11 +4241,11 @@ export default function Activity() {
                                   // transferred. Not "you paused this" and not
                                   // resumable by the owner.
                                   if (isOwnerHistorical || pauseReason === "majority_handoff") {
-                                    return "This recurring was set up before the fund became yours. It ended at the handoff. The fund is fully yours now.";
+                                    return "Set up before the fund became yours. It ended at the handoff, and it's fully yours now.";
                                   }
                                   if (!pauseReason) return null;
                                   if (pauseReason === "subscription_ended") {
-                                    return "Auto-paused because Kiddo+ lapsed. Resume your subscription and this schedule turns back on.";
+                                    return "Paused because Kiddo+ lapsed. Resume your subscription and this schedule turns back on.";
                                   }
                                   if (pauseReason === "user") return "You paused this. Resume anytime, no charge until the next scheduled date.";
                                   return null;
@@ -4501,7 +4496,7 @@ export default function Activity() {
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                     <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>
-                                      {r.senderName || "Someone"} · {isAutoCharge ? "recurring" : "reminder"}
+                                      {r.senderName || "Someone"} · {isAutoCharge ? "Recurring gift" : "Reminder"}
                                     </p>
                                     {amtNum != null && (
                                       <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(120,110,100)" }}>
@@ -4531,8 +4526,8 @@ export default function Activity() {
                                 <div style={{ marginTop: 12, marginLeft: 48 }}>
                                   <p style={{ fontSize: 11.5, color: "rgb(120,110,100)", lineHeight: 1.45, marginBottom: 10 }}>
                                     {isAutoCharge
-                                      ? `${r.senderName || "This gifter"} set up a recurring gift that charges their card automatically. They manage it from their gifter dashboard. Stopping it here cancels their schedule for this fund; they won't be charged again.`
-                                      : `${r.senderName || "This gifter"} set up a recurring reminder when they gave. They manage pause/resume themselves from the email. You can stop the reminders entirely from here.`}
+                                      ? `${r.senderName || "This gifter"} set up a recurring gift charged to their card. Stopping it here cancels it for this fund.`
+                                      : `${r.senderName || "This gifter"} gets an emailed reminder each cycle. You can stop the reminders here.`}
                                   </p>
                                   <button
                                     type="button"
@@ -4849,13 +4844,13 @@ export default function Activity() {
             title={
               activeFundIsOwned
                 ? (hasOwnContribs ? "Contributions" : "Contributions from your parent")
-                : "Your investments"
+                : "What you've added"
             }
             subtitle={
               activeFundIsOwned
                 ? (hasOwnContribs
                     ? `What ${custodianAddedLabel} added before the handoff, and what you've added since.`
-                    : `${custodianAddedLabel} added ${formatCurrency(ownerAllTotal)} across ${allContribRows.length} ${allContribRows.length === 1 ? "contribution" : "contributions"}, before this became yours.`)
+                    : `${custodianAddedLabel} added ${formatCurrency(ownerAllTotal)} across ${allContribRows.length} ${allContribRows.length === 1 ? "contribution" : "contributions"} before this became yours.`)
                 : "Every dollar you've added to this fund."
             }
             summaryStats={stats}
