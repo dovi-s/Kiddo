@@ -1788,17 +1788,20 @@ export default function DashboardLab() {
   const summaryScrollTo = useCallback((target: "recurring" | "onetime" | "cash") => {
     // Read-only views (previous owner / viewer of a handed-off fund) render a
     // DIFFERENT recurring card ("recurring-readonly") than the writable deck
-    // ("recurring-list-view"). Target whichever is actually on the page, or the
-    // "Your recurring investments" breakdown row jumps to a tag that isn't there
-    // and nothing scrolls. Resolved at click time via the live DOM.
-    const recurringTestId = (typeof document !== "undefined" && document.querySelector('[data-testid="recurring-list-view"]'))
-      ? "recurring-list-view"
-      : "recurring-readonly";
-    const testIdByTarget: Record<typeof target, string> = {
-      recurring: recurringTestId,
+    // ("recurring-list-view"). We can't resolve which up front: when the target
+    // lives in a collapse that hasn't opened yet, NEITHER is mounted, so a
+    // DOM-probe defaults to the wrong one and the scroll polls forever for a tag
+    // that never appears (the closed-collapse jump silently did nothing). Pass
+    // BOTH candidates and let scrollToTestId land on whichever actually mounts.
+    const testIdByTarget: Record<typeof target, string | string[]> = {
+      recurring: ["recurring-list-view", "recurring-readonly"],
       onetime: "card-one-time-contribution-v2",
       cash: "button-invest-cash",
     };
+    const liveNode = (id: string | string[]): HTMLElement | null =>
+      (Array.isArray(id) ? id : [id])
+        .map((t) => document.querySelector(`[data-testid="${CSS.escape(t)}"]`))
+        .find((n): n is HTMLElement => n instanceof HTMLElement) ?? null;
     // OPEN the collapse that holds the target before scrolling — a closed
     // LabCollapse removes its content from the DOM, so the scroll had nothing
     // to land on (founder: jump links did nothing unless the dropdown was
@@ -1819,6 +1822,21 @@ export default function DashboardLab() {
     setSummaryHaloTarget(target);
     const cancel = scrollToTestId(testIdByTarget[target], {
       onFound: () => {
+        // The target lives inside a LabCollapse we JUST opened, and it renders
+        // under AnimatePresence — so the node scrollToTestId found at mount is
+        // REPLACED as the panel expands. The initial scrollIntoView therefore runs
+        // on a node that is mid-expand (and about to be detached), and nets zero —
+        // the tap looks dead. Re-scroll AFTER the 0.34s expand settles, and
+        // RE-QUERY the live node each time (the captured element is detached by
+        // then). The last pass wins and lands on the settled inner section.
+        // (Verified via a scroll-timeline probe: without this the section stayed
+        // ~590px below the fold, scrollY never moved.)
+        [420, 720, 1020].forEach((d) => window.setTimeout(() => {
+          const node = liveNode(testIdByTarget[target]);
+          if (node) {
+            try { node.scrollIntoView({ behavior: "smooth", block: "center" }); } catch { /* best-effort */ }
+          }
+        }, d));
         window.setTimeout(() => setSummaryHaloTarget((cur) => (cur === target ? null : cur)), HIGHLIGHT_HOLD_MS);
       },
       onMissed: () => {
@@ -8195,7 +8213,7 @@ export default function DashboardLab() {
                   <p className="text-sm text-foreground/90 leading-relaxed">
                     <span className="font-semibold text-foreground tabular-nums">{formatMoneyFriendly(giftAmount)}</span>
                     {destinationLabel ? <> in {destinationLabel}</> : null}.
-                    {" "}Actual shares of real companies, held in {childFirstName}&apos;s name.
+                    {" "}{investingLiveCopy(`Actual shares of real companies, held in ${childFirstName}'s name.`, `Invested in ${childFirstName}'s name once investing is live.`)}
                   </p>
                   {projectedAtMajority != null && (
                     <p className="text-sm text-muted-foreground leading-relaxed">
@@ -9928,7 +9946,7 @@ export default function DashboardLab() {
                 <div className="kiddo-card p-6 text-center">
                   <p className="text-sm font-bold text-foreground">{recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s investments will appear here after the first gift.` : "Investments will appear here after the first gift."}</p>
                   <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                    Every gift gets invested automatically.
+                    {investingLiveCopy("Every gift gets invested automatically.", "Every gift gets invested automatically once investing is live.")}
                   </p>
                 </div>
               ) : (() => {
