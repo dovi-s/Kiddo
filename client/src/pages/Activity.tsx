@@ -671,6 +671,64 @@ function collapseRecurringRuns(items: FeedActivity[]): FeedActivity[] {
   return out;
 }
 
+// ── Recurring-config-churn collapse ──────────────────────────────────────
+// Distinct from the contribution-run collapse above. A parent tuning a recurring
+// plan (change the amount, swap the ticker, cancel, re-create) fires one
+// "Recurring investment updated / cancelled" row per edit. A BURST of these —
+// four in two days while someone dials a plan in — reads as noise that buries the
+// gifts. Fold a CONSECUTIVE run (nothing else between them) of these low-signal
+// schedule edits into one expandable "adjusted N times" summary. A lone edit
+// (run < MIN) stays a normal row; a "started" only folds when it's part of a real
+// burst. Only in the default "all" browse, like the run collapse above. Title-
+// keyed off the same canonical list the report/deep-link machinery uses (3160s).
+const SCHEDULE_CHANGE_TITLES = [
+  "Recurring investment started",
+  "Recurring investment updated",
+  "Recurring investment cancelled",
+  "Recurring investment turned on",
+  "Recurring investment turned off",
+  "Recurring investment resumed",
+  "Auto-invest started",   // legacy — pre-rename rows
+  "Auto-invest updated",   // legacy
+  "Auto-invest cancelled", // legacy
+];
+const RECURRING_CONFIG_RUN_TYPE = "__recurring_config_run__";
+const MIN_CONFIG_RUN = 3;
+
+function isScheduleChangeItem(item: FeedActivity): boolean {
+  return SCHEDULE_CHANGE_TITLES.includes((item as any).title || "");
+}
+
+function collapseRecurringConfigRuns(items: FeedActivity[]): FeedActivity[] {
+  const out: FeedActivity[] = [];
+  let run: FeedActivity[] = [];
+  const flush = () => {
+    if (run.length >= MIN_CONFIG_RUN) {
+      const newest: any = run[0];                 // feed is newest-first
+      const oldest: any = run[run.length - 1];
+      out.push({
+        ...newest,
+        id: `recurring-config-run-${newest.id || newest.createdAt}`,
+        type: RECURRING_CONFIG_RUN_TYPE,
+        __configRun: { items: run.slice(), count: run.length, newestAt: newest.createdAt, oldestAt: oldest.createdAt },
+      } as any);
+    } else {
+      out.push(...run);
+    }
+    run = [];
+  };
+  for (const item of items) {
+    if (isScheduleChangeItem(item)) {
+      // Same cross-fund guard as the contribution collapse: never merge one
+      // child's edits with another's in a multi-kid feed.
+      if (run.length && (run[0] as any).fundId !== (item as any).fundId) flush();
+      run.push(item);
+    } else { flush(); out.push(item); }
+  }
+  flush();
+  return out;
+}
+
 function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast: boolean; expanded: boolean; onToggle: () => void }) {
   const items: any[] = run.__run?.items ?? [];
   const count: number = run.__run?.count ?? items.length;
@@ -714,6 +772,56 @@ function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast
               <div key={(it.id as string) || idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", fontSize: 12.5, color: "rgb(90,82,74)", borderTop: idx > 0 ? "1px solid hsl(var(--kiddo-ink) / 0.04)" : "none" }}>
                 <span>{d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
                 <span style={{ fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>+{formatCurrency(amt)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Summary row for a folded burst of recurring-plan edits. Mirrors
+// RecurringRunRow's shell (sage border, 36px Repeat tile, expandable) but carries
+// a COUNT, not a dollar total — summing "updated $25/mo" + "cancelled $100/yr"
+// would be nonsense. Expanded, it lists each edit's stored title + date so the
+// parent can still see exactly what they changed.
+function RecurringConfigRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast: boolean; expanded: boolean; onToggle: () => void }) {
+  const items: any[] = run.__configRun?.items ?? [];
+  const count: number = run.__configRun?.count ?? items.length;
+  const newest = parseSafeDate(run.__configRun?.newestAt);
+  const oldest = parseSafeDate(run.__configRun?.oldestAt);
+  const md = (d: Date | null) => (d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
+  const range = oldest && newest ? (md(oldest) === md(newest) ? md(newest) : `${md(oldest)} – ${md(newest)}`) : "";
+  return (
+    <div style={{ borderLeft: "3px solid rgb(150,176,158)", background: "linear-gradient(to right, rgba(150,176,158,0.07) 0%, transparent 64%)", borderRadius: 8, marginLeft: -3, paddingLeft: 8 }} data-testid={`activity-recurring-config-run-${run.id}`}>
+      <button type="button" onClick={onToggle} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 0", borderBottom: (!isLast || expanded) ? "1px solid hsl(var(--kiddo-ink) / 0.06)" : "none", width: "100%", textAlign: "left", background: "transparent", cursor: "pointer" }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "rgb(234,239,233)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(96,124,104,0.16)" }}>
+          <Repeat size={16} style={{ color: "rgb(96,124,104)" }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3 }}>Recurring plan adjusted</p>
+          <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>
+            {count} changes · {range}
+          </p>
+          <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(96,124,104)", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {expanded ? "Hide" : "Show all"} {count}
+            <ChevronDown size={12} style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+          </p>
+        </div>
+      </button>
+      {expanded ? (
+        <div style={{ paddingLeft: 48, paddingBottom: 10 }}>
+          {items.map((it, idx) => {
+            const d = parseSafeDate(it.createdAt);
+            const desc = typeof it.description === "string" && it.description ? it.description : "";
+            return (
+              <div key={(it.id as string) || idx} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", fontSize: 12.5, color: "rgb(90,82,74)", borderTop: idx > 0 ? "1px solid hsl(var(--kiddo-ink) / 0.04)" : "none" }}>
+                <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                  <span style={{ fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>{it.title || "Recurring investment updated"}</span>
+                  {desc ? <span style={{ color: "rgb(140,130,122)" }}>{` · ${desc}`}</span> : null}
+                </span>
+                <span style={{ whiteSpace: "nowrap", color: "rgb(140,130,122)" }}>{md(d)}</span>
               </div>
             );
           })}
@@ -1454,7 +1562,9 @@ export default function Activity() {
   // the user is filtering ("auto" = show me my contributions) or searching,
   // they want every row, so show them flat.
   const grouped = groupByMonth(
-    filter === "all" && !search.trim() ? collapseRecurringRuns(filtered) : filtered,
+    filter === "all" && !search.trim()
+      ? collapseRecurringConfigRuns(collapseRecurringRuns(filtered))
+      : filtered,
   );
 
   // CSV export — exports the currently FILTERED view (so the user can
@@ -2575,6 +2685,20 @@ export default function Activity() {
                       />
                     );
                   }
+                  // Collapsed burst of recurring-plan edits — same early-return
+                  // shape as the contribution run above.
+                  if ((item as any).type === RECURRING_CONFIG_RUN_TYPE) {
+                    const runId = String((item as any).id);
+                    return (
+                      <RecurringConfigRunRow
+                        key={runId}
+                        run={item}
+                        isLast={i === group.items.length - 1}
+                        expanded={expandedId === runId}
+                        onToggle={() => { haptic("selection"); setExpandedId(expandedId === runId ? null : runId); }}
+                      />
+                    );
+                  }
                   const rowId = String(item?.id || `${item?.createdAt || "row"}-${item?.title || "activity"}`);
                   const isExpanded = expandedId === rowId;
                   const createdAt = parseSafeDate(item.createdAt);
@@ -3163,17 +3287,7 @@ export default function Activity() {
                           // titles stay listed here for backward compat
                           // with rows already in the DB; remove them
                           // once the data is fully backfilled.
-                          const isScheduleChange = [
-                            "Recurring investment started",
-                            "Recurring investment updated",
-                            "Recurring investment cancelled",
-                            "Recurring investment turned on",
-                            "Recurring investment turned off",
-                            "Recurring investment resumed",
-                            "Auto-invest started",   // legacy — pre-rename rows
-                            "Auto-invest updated",   // legacy
-                            "Auto-invest cancelled", // legacy
-                          ].includes(item.title || "");
+                          const isScheduleChange = SCHEDULE_CHANGE_TITLES.includes(item.title || "");
                           const scheduleAmount = typeof (meta as any).amount === "string" || typeof (meta as any).amount === "number" ? Number((meta as any).amount) : null;
                           const scheduleFreq = typeof (meta as any).frequency === "string" ? (meta as any).frequency : null;
                           const scheduleTicker = typeof (meta as any).selectedTicker === "string" ? (meta as any).selectedTicker : null;
@@ -3218,8 +3332,30 @@ export default function Activity() {
                           // gift / memory rows, Dashboard for holdings/schedule
                           // rows. Reuses the deep-link pattern (?gift= for
                           // specific gifts, hash anchors for sections).
-                          type ActionChip = { label: string; href: string; testId: string; external?: boolean };
+                          type ActionChip = { label: string; href?: string; testId: string; external?: boolean; onClick?: () => void };
                           const chips: ActionChip[] = [];
+                          // Add-it-now: a failed recurring charge told the parent to "add it
+                          // manually" but gave them nowhere to do it. Wire the missed
+                          // contribution to the same one-tap contribute-now checkout the
+                          // Scheduled tab uses (confirm dialog → Stripe), so the recovery
+                          // action lives right on the row that reported the problem. Needs the
+                          // parent-contribution id the worker stamps into metadata. Listed
+                          // first so it reads as the primary action, ahead of "Report an issue."
+                          if (normalizedType === "parent_contribution_failed") {
+                            const pcId = typeof (meta as any).parentContributionId === "string" ? (meta as any).parentContributionId : null;
+                            if (pcId) {
+                              chips.push({
+                                label: "Add it now →",
+                                testId: `chip-add-now-${rowId}`,
+                                onClick: () => setConfirmRequest({
+                                  title: amtNum != null && amtNum > 0 ? `Add ${formatCurrency(amtNum)} now?` : "Add this contribution now?",
+                                  body: "Runs the contribution the automatic charge missed. You'll confirm payment on the next screen.",
+                                  confirmLabel: "Continue to payment",
+                                  onConfirm: () => contributeNowMutation.mutate(pcId),
+                                }),
+                              });
+                            }
+                          }
                           if (fundIdForActivity) {
                             if (isGiftReceived && giftId) {
                               chips.push({
@@ -3747,11 +3883,29 @@ export default function Activity() {
                                           textDecoration: "none" as const,
                                           display: "inline-flex" as const, alignItems: "center" as const,
                                         };
+                                        if (chip.onClick) {
+                                          // Action chip (e.g. "Add it now") — runs a mutation
+                                          // / opens a confirm rather than navigating. Same pill
+                                          // styling so the row's actions read as one set.
+                                          return (
+                                            <button
+                                              key={chip.testId}
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); haptic("selection"); chip.onClick!(); }}
+                                              data-testid={chip.testId}
+                                              style={sharedStyle}
+                                              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.14)")}
+                                              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.08)")}
+                                            >
+                                              {chip.label}
+                                            </button>
+                                          );
+                                        }
                                         if (chip.external) {
                                           // Stripe receipt URL or mailto link — open
                                           // in a new tab/native handler instead of
                                           // routing through the SPA navigator.
-                                          const isMailto = chip.href.startsWith("mailto:");
+                                          const isMailto = (chip.href ?? "").startsWith("mailto:");
                                           return (
                                             <a
                                               key={chip.testId}
@@ -3772,7 +3926,7 @@ export default function Activity() {
                                           <button
                                             key={chip.testId}
                                             type="button"
-                                            onClick={(e) => { e.stopPropagation(); haptic("selection"); navigate(chip.href); }}
+                                            onClick={(e) => { e.stopPropagation(); haptic("selection"); navigate(chip.href!); }}
                                             data-testid={chip.testId}
                                             style={sharedStyle}
                                             onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.14)")}
