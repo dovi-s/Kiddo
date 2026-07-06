@@ -1079,6 +1079,43 @@ export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
+// Inbound partnership interest from the (unlisted) /partners page. A public form
+// (no auth) where an org tells us who they are and how they reach families.
+// Persisted instead of a raw mailto so a lead is never lost to email
+// deliverability. Reviewed from the admin side via `status`. Holds no sensitive
+// data beyond a business contact email; rate-limited at the route.
+export const partnerInquiries = pgTable("partner_inquiries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgName: text("org_name").notNull(),
+  orgType: text("org_type"), // hospital | registry | pediatric | school | employer | other
+  contactName: text("contact_name"),
+  email: text("email").notNull(),
+  message: text("message"),
+  status: text("status").notNull().default("new"), // new | reviewed | archived
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("partner_inquiries_status_idx").on(table.status),
+  index("partner_inquiries_created_idx").on(table.createdAt),
+]);
+
+export const insertPartnerInquirySchema = createInsertSchema(partnerInquiries).omit({
+  id: true,
+  status: true,
+  ipAddress: true,
+  userAgent: true,
+  createdAt: true,
+}).extend({
+  orgName: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(200),
+  orgType: z.string().trim().max(60).optional().nullable(),
+  contactName: z.string().trim().max(120).optional().nullable(),
+  message: z.string().trim().max(4000).optional().nullable(),
+});
+export type InsertPartnerInquiry = z.infer<typeof insertPartnerInquirySchema>;
+export type PartnerInquiry = typeof partnerInquiries.$inferSelect;
+
 // Blocked gifters. Two scopes:
 //   - 'global'  : admin-applied. Email (or userId, if known) cannot
 //                 contribute to ANY fund. Set at the T&S queue when an

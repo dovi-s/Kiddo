@@ -79,7 +79,7 @@ import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllo
 import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fundInvestmentPreferences";
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftAllocations, giftIntents, pendingGiftMedia, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftAllocations, giftIntents, pendingGiftMedia, trustedDevices, passkeys, foundingMembers, partnerInquiries, insertPartnerInquirySchema } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { isAllowedStockPick } from "@shared/stock-picks";
@@ -15976,6 +15976,50 @@ export async function registerRoutes(
   });
 
   // ===== REFERRALS =====
+  // Inbound partnership interest from the (unlisted) /partners page. Persisted
+  // instead of a mailto so a lead survives email deliverability and is retrievable.
+  // Public + rate-limited (5/hour/IP). No minor data; a business contact only.
+  app.post('/api/partners/inquiry', async (req, res) => {
+    try {
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      if (!(await checkRateLimit(`partner-inquiry:${ip}`, 5, 60 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many requests. Please try again in a little while." });
+      }
+      const parsed = insertPartnerInquirySchema.safeParse({
+        orgName: req.body.orgName,
+        orgType: req.body.orgType || null,
+        contactName: req.body.contactName || null,
+        email: req.body.email,
+        message: req.body.message || null,
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Please add your organization name and a valid email." });
+      }
+      await db.insert(partnerInquiries).values({
+        ...parsed.data,
+        ipAddress: ip,
+        userAgent: req.get("user-agent") || null,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Error saving partner inquiry:", error);
+      res.status(500).json({ error: "Something went wrong. Please try again." });
+    }
+  });
+
+  // Super-admin: list partnership inquiries (newest first). No admin tab yet;
+  // retrievable here until one is added.
+  app.get('/api/admin/partner-inquiries', isAuthenticated, async (req: any, res) => {
+    if (!requireSuperAdmin(req, res)) return;
+    try {
+      const rows = await db.select().from(partnerInquiries).orderBy(desc(partnerInquiries.createdAt)).limit(500);
+      res.json({ inquiries: rows });
+    } catch (error) {
+      console.error("Error listing partner inquiries:", error);
+      res.status(500).json({ error: "Failed to load partner inquiries." });
+    }
+  });
+
   app.post('/api/referrals/events', async (req, res) => {
     try {
       const parsed = insertReferralEventSchema.safeParse({
@@ -17779,6 +17823,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Frequency must be daily, weekly, monthly, or yearly' });
       }
 
+      // Guard the ticker the same way the gift path does (isAllowedStockPick).
+      // Without this a crafted request could set a "pick" recurring to any off-list
+      // or unsuitable ticker, and once custody is live the recurring worker would
+      // try to buy it. Only enforced for pick mode; auto/managed carry no ticker.
+      if (executionModel === "pick" && !isAllowedStockPick(selectedTicker)) {
+        return res.status(400).json({ error: "That stock isn't available to pick." });
+      }
+
       if (!bankAccountId) {
         return res.status(400).json({ error: 'Choose a connected bank account before starting recurring investments' });
       }
@@ -17921,6 +17973,11 @@ export async function registerRoutes(
         }
       }
       if (executionModel && ['auto', 'pick', 'family'].includes(executionModel)) {
+        // Same allowlist guard as create + the gift path: an edit must not be able to
+        // point a "pick" schedule at an off-list / unsuitable ticker either.
+        if (executionModel === 'pick' && !isAllowedStockPick(selectedTicker)) {
+          return res.status(400).json({ error: "That stock isn't available to pick." });
+        }
         updates.executionModel = executionModel;
         updates.selectedTicker = executionModel === 'pick' && selectedTicker ? String(selectedTicker).toUpperCase() : null;
       }
