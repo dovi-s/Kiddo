@@ -68,6 +68,20 @@ export function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
+// Drops the robotic ".00" on whole-dollar amounts ($25 not $25.00) while keeping
+// real cents. Shared so the activity subsystem (DetailHistoryModal, the feed,
+// the contribution detail) reads like the rest of the app instead of a ledger.
+// Mirrors the per-page copies in Dashboard/MemoryBook.
+export function formatMoneyFriendly(value: number): string {
+  const rounded = Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(rounded);
+}
+
 export function parseAmount(value: unknown): number | null {
   if (value == null) return null;
   const n = typeof value === "number" ? value : Number.parseFloat(String(value));
@@ -109,7 +123,10 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   if (t === "parent_contribution")
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Contribution" };
   if (t === "parent_contribution_failed")
-    return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
+    // Label = category ("Recurring investment"); the "Failed" pill carries the status.
+    // (canonicalLabel wins in getTypeConfig; kept in sync so the fallback never resurfaces
+    // the old triple-"failed" wording.)
+    return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
   if (t === "memory_milestone_added")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
   if (t === "memory_entry_edited")

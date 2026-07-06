@@ -32,7 +32,7 @@ import {
   parseMetadata,
   parseSafeDate,
   parseAmount,
-  formatCurrency,
+  formatMoneyFriendly,
   extractTicker,
   StatusPill,
   isParentPaidType,
@@ -563,14 +563,20 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
             <p style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
               {row.title || "Activity"}
             </p>
-            {amtNum != null && (
+            {amtNum != null && (() => {
+              // A failed charge moved $0, so never render it as money-in. Drop
+              // the "+" and use muted ink (the row already carries a red
+              // "Charge failed" pill). Mirrors the main Activity feed.
+              const isFailed = row.type === "parent_contribution_failed" || row.type === "payment_failed";
+              return (
               <p className="font-heading" style={{
                 fontSize: 14.5, fontWeight: 700, lineHeight: 1.3,
-                color: amtNum >= 0 ? "hsl(var(--kiddo-ink))" : "rgb(185,28,28)",
+                color: isFailed ? "hsl(var(--kiddo-ink) / 0.45)" : amtNum >= 0 ? "hsl(var(--kiddo-ink))" : "rgb(185,28,28)",
               }}>
-                {amtNum > 0 ? "+" : ""}{formatCurrency(amtNum)}
+                {!isFailed && amtNum > 0 ? "+" : ""}{formatMoneyFriendly(amtNum)}
               </p>
-            )}
+              );
+            })()}
           </div>
           {/* Note rendering. Suppress the legacy "Auto-invest contribution
               to {fund}" boilerplate — that's a system-generated string from

@@ -17,12 +17,12 @@ import {
   isInternalOnlyType,
   mapItemToCategory,
 } from "@shared/activity-semantics";
-import { StatusPill } from "@/lib/activity-helpers";
+import { StatusPill, formatMoneyFriendly } from "@/lib/activity-helpers";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
-import { STRATEGY_SHORT, STRATEGY_EMOJI } from "@/lib/strategy";
+import { STRATEGY_SHORT, STRATEGY_ICONS } from "@/lib/strategy";
 import { cashAfterLabel, rewriteSettlementSentence } from "@/lib/cash-settlement";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -46,6 +46,7 @@ import { GiftSourceChip } from "@/components/GiftSourceChip";
 import { ActionItemList } from "@/components/ActionItemCard";
 import { useActionItems } from "@/hooks/use-action-items";
 import type { Activity as ActivityType } from "@shared/schema";
+import { INVESTING_LIVE } from "@shared/legal-copy";
 
 // Three-tab mental model: past / present / future. The user-facing Activity surface always
 // lives at one of these three.
@@ -254,7 +255,12 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   if (t === "sponsor_plus_expired")
     return { ...PALETTE.NEUTRAL_MUTED, icon: <Clock size={16} />, label: "Plus ended" };
   if (t === "parent_contribution_failed")
-    return { ...PALETTE.ALERT_FAILED, icon: <AlertCircle size={16} />, label: "Charge failed" };
+    // Eyebrow carries the CATEGORY ("Recurring investment"), matching the successful
+    // recurring row — the "Failed" status lives on the pill. The eyebrow used to say
+    // "Charge failed," which sat right next to the "Failed" pill and under a
+    // "Recurring investment failed" title: the same word three times on one row
+    // (founder catch 2026-07). One status signal, not three.
+    return { ...PALETTE.ALERT_FAILED, icon: <AlertCircle size={16} />, label: "Recurring investment" };
   // Memory family — purple palette (kid-domain story).
   //
   // Eyebrow labels use consistent verb form across all three Memory
@@ -300,7 +306,7 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   if (t === "fund_created")
     return { ...PALETTE.GIFT, icon: <Sprout size={16} />, label: "Fund created" };
   if (t === "fund_activated")
-    return { ...PALETTE.GIFT, icon: <Sprout size={16} />, label: "Investing live" };
+    return { ...PALETTE.GIFT, icon: <Sprout size={16} />, label: INVESTING_LIVE ? "Investing live" : "Fund launched" };
   if (t === "fund_strategy_changed")
     return { ...PALETTE.MEMORY, icon: <Sliders size={16} />, label: "Strategy" };
   if (t === "custom_allocations_changed")
@@ -485,6 +491,10 @@ function rewriteLegacyAutoInvestTitle(t: string | null | undefined): string {
   // and "contributed" for the same parent-into-mix action. Locked 2026-06-17.
   const added = t.match(/^(You|.+?) added (\$[\d,]+(?:\.\d{2})?)$/);
   if (added) return `${added[1]} contributed ${added[2]}`;
+  // Failed recurring charge: the stored title "Recurring investment failed" doubled
+  // the "Failed" status pill and the eyebrow. Title now states the event plainly; the
+  // pill carries status, the eyebrow carries the category. Locked 2026-07.
+  if (t === "Recurring investment failed") return "Automatic charge didn't go through";
   return t;
 }
 
@@ -544,6 +554,11 @@ function rewriteLegacyDescription(d: string | null | undefined): string | null {
   // server now write "the diversified mix". Normalize so a parent scanning the
   // feed never sees the same destination labeled two ways. Locked 2026-06-17.
   out = out.replace(/\bthe full mix\b/g, "the diversified mix");
+  // Failed-charge body cleanup: it opened by restating the title ("Last automatic
+  // charge could not run.") and closed with a wordy email sentence, so the row said
+  // "it failed" four ways. Drop the restated lead; tighten the tail to one action.
+  out = out.replace(/^Last automatic charge could not run\.\s*/, "");
+  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add it manually to stay on track.");
   return out;
 }
 
@@ -2100,7 +2115,10 @@ export default function Activity() {
                     // Sign handled manually (formatCurrency on the magnitude) to
                     // match the Withdrawals tile and render a clean −$ in a down
                     // window. Shown in both last30 and year modes.
-                    label: "Market growth",
+                    // Investing is still gated (INVESTING_LIVE === false), so this
+                    // number is a preview at real market prices, not booked growth.
+                    // Hedge the label to match the dashboard's "(preview)" pattern.
+                    label: INVESTING_LIVE ? "Market growth" : "Market growth (preview)",
                     value: `${last30MarketGrowth >= 0 ? "+" : "−"}${formatCurrency(Math.abs(last30MarketGrowth))}`,
                     tone: last30MarketGrowth >= 0 ? "positive" : "negative",
                     // Hidden when flat (cut-extra 2026-07): a "+$0" growth tile is noise on
@@ -2655,9 +2673,9 @@ export default function Activity() {
                   // webhook titles) so the feed never mixes "added" and
                   // "contributed" for the same parent-into-mix action.
                   const rawEffectiveTitle = ownerViewingParentContrib
-                    ? `${parentContribName} contributed $${(amtNum != null ? amtNum : 0).toFixed(2)}`
+                    ? `${parentContribName} contributed ${formatMoneyFriendly(amtNum != null ? amtNum : 0)}`
                     : overrideToParentContrib
-                      ? `You contributed $${(amtNum != null ? amtNum : 0).toFixed(2)}`
+                      ? `You contributed ${formatMoneyFriendly(amtNum != null ? amtNum : 0)}`
                       : rewriteLegacyAutoInvestTitle(item.title);
                   // The "+$X" amount badge already states the figure, so drop a
                   // trailing dollar amount from the title on gift/contribution
@@ -2877,14 +2895,28 @@ export default function Activity() {
                               {effectiveTitle}
                             </p>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                              {amtNum != null && (
+                              {amtNum != null && (() => {
+                                // A failed charge moved $0, so never render it as
+                                // money-in. Drop the "+" and use muted ink (the row
+                                // already carries a red "Charge failed" pill).
+                                const isFailed = rawType === "parent_contribution_failed" || rawType === "payment_failed";
+                                // Withdrawals + refunds arrive positive but are money
+                                // LEAVING the fund — render a muted "−$X" so the row
+                                // agrees with the summary tiles (never green "+$X").
+                                const isMoneyOut = rawType === "withdrawal" || rawType === "refund";
+                                // A sell ("moved to cash") is a reallocation inside the
+                                // fund, not income and not a loss — neutral muted, no "+".
+                                const isReallocation = rawType === "sell";
+                                const isMuted = isFailed || isMoneyOut || isReallocation;
+                                return (
                                 <p className="font-heading" style={{
                                   fontSize: 15, fontWeight: 700, lineHeight: 1.3,
-                                  color: amtNum >= 0 ? "hsl(var(--kiddo-ink))" : "rgb(185,28,28)",
+                                  color: isMuted ? "hsl(var(--kiddo-ink) / 0.45)" : amtNum >= 0 ? "hsl(var(--kiddo-ink))" : "rgb(185,28,28)",
                                 }}>
-                                  {amtNum > 0 ? "+" : ""}{formatCurrency(amtNum)}
+                                  {isMoneyOut ? "−" : (!isMuted && amtNum > 0 ? "+" : "")}{formatCurrency(amtNum)}
                                 </p>
-                              )}
+                                );
+                              })()}
                               <motion.span
                                 animate={{ rotate: isExpanded ? 180 : 0 }}
                                 transition={MOTION.fast}
@@ -3369,11 +3401,11 @@ export default function Activity() {
                                     Never on gifter or Memory Book surfaces —
                                     those are different philosophies. */}
                                 {(normalizedType === "fund_strategy_changed" || normalizedType === "custom_allocations_changed") && (() => {
-                                  const STRATEGY_LABELS: Record<string, { label: string; emoji: string }> = {
-                                    conservative: { label: STRATEGY_SHORT.conservative, emoji: STRATEGY_EMOJI.conservative },
-                                    balanced:     { label: STRATEGY_SHORT.balanced,     emoji: STRATEGY_EMOJI.balanced },
-                                    growth:       { label: STRATEGY_SHORT.growth,       emoji: STRATEGY_EMOJI.growth },
-                                    custom:       { label: STRATEGY_SHORT.custom,       emoji: STRATEGY_EMOJI.custom },
+                                  const STRATEGY_LABELS: Record<string, { label: string; Icon: typeof STRATEGY_ICONS[keyof typeof STRATEGY_ICONS] }> = {
+                                    conservative: { label: STRATEGY_SHORT.conservative, Icon: STRATEGY_ICONS.conservative },
+                                    balanced:     { label: STRATEGY_SHORT.balanced,     Icon: STRATEGY_ICONS.balanced },
+                                    growth:       { label: STRATEGY_SHORT.growth,       Icon: STRATEGY_ICONS.growth },
+                                    custom:       { label: STRATEGY_SHORT.custom,       Icon: STRATEGY_ICONS.custom },
                                   };
                                   if (normalizedType === "fund_strategy_changed") {
                                     // Accept both metadata shapes: the newer
@@ -3384,26 +3416,33 @@ export default function Activity() {
                                     // → • New" instead of "Growth → Balanced".
                                     const prevKey = String((meta as any).previousStrategy || (meta as any).from || "").toLowerCase();
                                     const nextKey = String((meta as any).newStrategy || (meta as any).to || "").toLowerCase();
-                                    const prev = STRATEGY_LABELS[prevKey] || { label: prevKey || "Previous", emoji: "•" };
-                                    const next = STRATEGY_LABELS[nextKey] || { label: nextKey || "New", emoji: "•" };
+                                    const prev = STRATEGY_LABELS[prevKey] || { label: prevKey || "Previous", Icon: null };
+                                    const next = STRATEGY_LABELS[nextKey] || { label: nextKey || "New", Icon: null };
+                                    // Brand glyphs (Shield / Scale / TrendingUp / Sliders), the same
+                                    // ones the dashboard StrategyIcon uses — not the old system emoji.
+                                    const PrevIcon = prev.Icon;
+                                    const NextIcon = next.Icon;
+                                    // Evergreen, not the Memory-category purple this box used to borrow:
+                                    // a strategy change is a money/portfolio action, and evergreen is
+                                    // strategy's canonical color (see the dashboard StrategyIcon tints).
                                     return (
                                       <div style={{
-                                        background: "rgba(126,68,180,0.05)",
-                                        border: "1px solid rgba(126,68,180,0.18)",
+                                        background: "hsl(var(--kiddo-evergreen) / 0.05)",
+                                        border: "1px solid hsl(var(--kiddo-evergreen) / 0.14)",
                                         borderRadius: 10,
                                         padding: "12px 14px",
                                       }} data-testid={`mutation-strategy-${rowId}`}>
-                                        <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "rgb(126,68,180)", marginBottom: 8 }}>
+                                        <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "hsl(var(--kiddo-evergreen))", marginBottom: 8 }}>
                                           Strategy change
                                         </p>
                                         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: "hsl(var(--kiddo-ink))", flexWrap: "wrap" }}>
                                           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "hsl(var(--kiddo-ink) / 0.04)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)", color: "rgb(100,92,86)" }}>
-                                            <span aria-hidden>{prev.emoji}</span>
+                                            {PrevIcon && <PrevIcon size={13} strokeWidth={2.25} aria-hidden />}
                                             <span style={{ fontWeight: 600 }}>{prev.label}</span>
                                           </span>
                                           <span style={{ color: "hsl(var(--kiddo-ink) / 0.42)", fontSize: 16 }} aria-hidden>→</span>
-                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(126,68,180,0.10)", border: "1px solid rgba(126,68,180,0.26)", color: "rgb(60,30,100)" }}>
-                                            <span aria-hidden>{next.emoji}</span>
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "hsl(var(--kiddo-evergreen) / 0.10)", border: "1px solid hsl(var(--kiddo-evergreen) / 0.24)", color: "hsl(var(--kiddo-evergreen))" }}>
+                                            {NextIcon && <NextIcon size={13} strokeWidth={2.25} aria-hidden />}
                                             <span style={{ fontWeight: 700 }}>{next.label}</span>
                                           </span>
                                         </div>
@@ -3429,12 +3468,12 @@ export default function Activity() {
                                   if (diffs.length === 0) return null;
                                   return (
                                     <div style={{
-                                      background: "rgba(126,68,180,0.05)",
-                                      border: "1px solid rgba(126,68,180,0.18)",
+                                      background: "hsl(var(--kiddo-evergreen) / 0.05)",
+                                      border: "1px solid hsl(var(--kiddo-evergreen) / 0.14)",
                                       borderRadius: 10,
                                       padding: "12px 14px",
                                     }} data-testid={`mutation-allocations-${rowId}`}>
-                                      <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "rgb(126,68,180)", marginBottom: 8 }}>
+                                      <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "hsl(var(--kiddo-evergreen))", marginBottom: 8 }}>
                                         Custom mix · what moved
                                       </p>
                                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -4768,7 +4807,7 @@ export default function Activity() {
           }
           if (!isContribType && !isOverrideGift) return row;
           const amtNum = parseAmount(row.amount);
-          const amtStr = `$${(amtNum != null ? amtNum : 0).toFixed(2)}`;
+          const amtStr = formatMoneyFriendly(amtNum != null ? amtNum : 0);
           // Owner mode: attribute by who added it.
           if (activeFundIsOwned) {
             const parents = contribIsParents(row);
@@ -4818,14 +4857,20 @@ export default function Activity() {
         });
         const recurringCount = allContribRows.filter(isRecurringRow).length;
         const onetimeCount = allContribRows.length - recurringCount;
-        const totalAdded = subFilteredRows.reduce((s, r) => {
+        // A failed charge added $0, so exclude it from the money stats (Total/Times/
+        // Average/Most recent) while leaving it VISIBLE in the row list below.
+        const addedRows = subFilteredRows.filter((r) => {
+          const t = String((r as any).type || "").toLowerCase();
+          return t !== "parent_contribution_failed" && t !== "payment_failed";
+        });
+        const totalAdded = addedRows.reduce((s, r) => {
           const n = parseAmount(r.amount);
           return s + (n != null && n > 0 ? n : 0);
         }, 0);
-        const avgAdded = subFilteredRows.length > 0 ? totalAdded / subFilteredRows.length : 0;
+        const avgAdded = addedRows.length > 0 ? totalAdded / addedRows.length : 0;
         const lastDate = (() => {
           let latest: Date | null = null;
-          for (const r of subFilteredRows) {
+          for (const r of addedRows) {
             const d = parseSafeDate(r.createdAt);
             if (d && (!latest || d.getTime() > latest.getTime())) latest = d;
           }
@@ -4833,8 +4878,8 @@ export default function Activity() {
         })();
         const stats: DetailStat[] = [
           { label: "Total added", value: formatCurrency(totalAdded), tone: totalAdded > 0 ? "positive" : "neutral" },
-          { label: "Times added", value: `${subFilteredRows.length}`, tone: "neutral" },
-          { label: "Average", value: subFilteredRows.length > 0 ? formatCurrency(avgAdded) : formatCurrency(0), tone: "neutral" },
+          { label: "Times added", value: `${addedRows.length}`, tone: "neutral" },
+          { label: "Average", value: addedRows.length > 0 ? formatCurrency(avgAdded) : formatCurrency(0), tone: "neutral" },
           { label: "Most recent", value: lastDate ? lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "None yet", tone: "neutral" },
         ];
         return (
