@@ -52,10 +52,22 @@ export type KidStory = {
 };
 
 // ── date helpers (deterministic; no Math.random) ──────────────────────────
+// Deterministic, VARIED time-of-day so seeded entries don't all inherit one
+// clock time (isoYearsMonthsAgo used to carry the reset-run's exact time — e.g.
+// "3:40 AM" on every Memory Book row; onMonth hardcoded noon). Spread across a
+// realistic 8am–8pm UTC window, ordered by the entry's own params so it stays
+// reproducible run-to-run. Only the time-of-day varies; the date is untouched.
+function seededClock(seed: number): { h: number; m: number; s: number } {
+  const n = Math.abs(Math.round(seed));
+  return { h: 8 + ((n * 7 + 3) % 13), m: (n * 17 + 29) % 60, s: (n * 31 + 7) % 60 };
+}
+
 function isoYearsMonthsAgo(yearsAgo: number, monthsAgo = 0): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() - yearsAgo);
   d.setMonth(d.getMonth() - monthsAgo);
+  const { h, m, s } = seededClock(yearsAgo * 13 + monthsAgo * 7 + 1);
+  d.setUTCHours(h, m, s, 0);
   return d.toISOString();
 }
 
@@ -67,7 +79,8 @@ function onMonth(yearsAgo: number, month: number, day = 15): string {
   const now = new Date();
   const thisYear = new Date(Date.UTC(now.getFullYear(), month, day, 12, 0, 0));
   const anchorYear = thisYear.getTime() > now.getTime() ? now.getFullYear() - 1 : now.getFullYear();
-  return new Date(Date.UTC(anchorYear - yearsAgo, month, day, 12, 0, 0)).toISOString();
+  const { h, m, s } = seededClock(yearsAgo * 400 + month * 31 + day);
+  return new Date(Date.UTC(anchorYear - yearsAgo, month, day, h, m, s)).toISOString();
 }
 
 // Pick from a rotating list, OFFSET per kid so the most-recent entry differs
