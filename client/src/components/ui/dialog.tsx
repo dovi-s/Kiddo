@@ -102,6 +102,21 @@ const DialogContent = React.forwardRef<
           </>
         )}
         {children}
+        {/* Bottom safe-area spacer for the mobile sheet. Sheets slide to
+            bottom-0 = the screen edge, so on devices with a home indicator the
+            last content (a sticky action bar, the last option) sits under it and
+            reads as "cut off." A trailing flex-shrink-0 spacer of exactly
+            env(safe-area-inset-bottom) pushes content clear. Universal: reaches
+            even p-0 sheets that manage their own inner padding (most of them).
+            0-height on any device without an inset, so it never regresses
+            desktop or non-notch phones. */}
+        {sheet && (
+          <div
+            aria-hidden="true"
+            className="shrink-0 sm:hidden"
+            style={{ height: "env(safe-area-inset-bottom, 0px)" }}
+          />
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   )
