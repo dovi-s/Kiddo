@@ -2845,7 +2845,7 @@ export default function Activity() {
                           }}
                           data-testid="first-gift-banner"
                         >
-                          <span style={{ fontSize: 18, lineHeight: 1 }}>🎁</span>
+                          <Gift size={18} style={{ color: "rgb(146,108,46)", flexShrink: 0 }} />
                           <div>
                             <p style={{ fontSize: 11.5, fontWeight: 800, color: "rgb(146,108,46)", letterSpacing: "0.04em", textTransform: "uppercase" as const }}>
                               The first gift
