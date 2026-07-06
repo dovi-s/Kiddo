@@ -123,10 +123,11 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   if (t === "parent_contribution")
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Contribution" };
   if (t === "parent_contribution_failed")
-    // Label = category ("Recurring investment"); the "Failed" pill carries the status.
-    // (canonicalLabel wins in getTypeConfig; kept in sync so the fallback never resurfaces
-    // the old triple-"failed" wording.)
-    return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
+    // A recurring auto-invest charge that couldn't run is a RECOVERABLE hiccup —
+    // the schedule lives and auto-retries — so it wears the calm amber "Retrying"
+    // frame (matching the dashboard card), NOT an alarming red "Failed". Label =
+    // category ("Recurring investment"); the "Retrying" pill carries the status.
+    return { bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
   if (t === "memory_milestone_added")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
   if (t === "memory_entry_edited")
@@ -171,7 +172,10 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
 export function StatusPill({ status, type }: { status?: string | null; type?: string | null }) {
   let resolved = status || null;
   if (!resolved && type) {
-    if (type === "parent_contribution_failed" || type === "payment_failed") resolved = "failed";
+    // A recurring auto-invest decline auto-retries -> calm amber "Retrying".
+    // A subscription payment failure is more serious (plan lapses) -> red "Failed".
+    if (type === "parent_contribution_failed") resolved = "retrying";
+    else if (type === "payment_failed") resolved = "failed";
   }
   if (!resolved) return null;
   const map: Record<string, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
@@ -180,6 +184,7 @@ export function StatusPill({ status, type }: { status?: string | null; type?: st
     invested:   { label: "Invested",   bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <ArrowUp size={9} /> },
     settled:    { label: "Settled",    bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <Check size={9} /> },
     failed:     { label: "Failed",     bg: "rgb(254,228,228)", color: "rgb(170,38,38)",  icon: <AlertCircle size={9} /> },
+    retrying:   { label: "Retrying",   bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Repeat size={9} /> },
     refunded:   { label: "Refunded",   bg: "rgb(245,245,245)", color: "rgb(100,92,86)",  icon: <Clock size={9} /> },
     host_hold:  { label: "On hold",    bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Clock size={9} /> },
   };
