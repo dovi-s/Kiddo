@@ -134,8 +134,15 @@ export function MobileNav() {
       if (e.touches.length !== 1) { tracking = false; return; }
       const t = e.touches[0];
       // An open sheet/dialog owns gestures; the left 28px is the edge-back zone;
-      // a horizontal scroller under the finger should scroll, not switch tabs.
-      if (document.querySelector('[role="dialog"]') || t.clientX <= 28 || inHorizontalScroller(e.target as Element)) {
+      // a horizontal scroller under the finger should scroll, not switch tabs;
+      // a swipe-dismissable banner (the "while you were away" digest et al.) owns
+      // its own sideways fling — without this, dismissing one ALSO switches tabs.
+      if (
+        document.querySelector('[role="dialog"]') ||
+        t.clientX <= 28 ||
+        inHorizontalScroller(e.target as Element) ||
+        !!(e.target as Element | null)?.closest?.("[data-swipe-dismiss]")
+      ) {
         tracking = false;
         return;
       }

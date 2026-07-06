@@ -107,6 +107,11 @@ export function CollapseDismissSection({
           className={className}
           style={{ overflow: "hidden", ...style }}
           {...rest}
+          // Marks this as a horizontal swipe-dismiss surface so the global
+          // tab-swipe (MobileNav) bails when a touch STARTS inside it —
+          // otherwise a sideways fling both dismisses the banner AND switches
+          // tabs (Theo -> Memory). Only when actually draggable.
+          data-swipe-dismiss={onRequestDismiss ? "true" : undefined}
         >
           {children}
         </motion.section>
