@@ -19,6 +19,7 @@
         "test:memory-utils": "tsx script/test-memory-utils.ts",
         "test:memorialized-silence": "tsx script/test-memorialized-silence.ts",
         "test:activity-semantics": "tsx script/test-activity-semantics.ts",
+        "test:sitemap-coverage": "tsx script/test-sitemap-coverage.ts",
         "test:launch-readiness": "tsx script/launch-readiness.ts",
         "test:smoke": "tsx script/smoke.ts",
         "test:monetization": "tsx script/test-monetization.ts",
