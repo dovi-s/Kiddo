@@ -63,6 +63,8 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { capFirst } from "@/lib/format-name";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import StagingLandscapeHero from "@/components/StagingLandscapeHero";
+import PotentialScrubber from "@/components/PotentialScrubber";
 import { FadeImage } from "@/components/ui/fade-image";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
@@ -143,6 +145,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
+import { HoldingStoryRing, HoldingStoriesViewer } from "@/components/HoldingStories";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
 import {
   type FeedActivity,
@@ -157,9 +160,10 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { haptic } from "@/lib/haptics";
 import { GIFTER_AVATAR_COLORS, gifterAvatarColorIdx } from "@/lib/gifter-avatar";
+import { GifterStoriesViewer, gifterMomentsFromGifts, gifterHasNew, markGifterSeen } from "@/components/GifterStories";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getPronouns } from "@/lib/pronouns";
-import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
+import { getDeepLinkHighlightSoftStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
@@ -196,7 +200,7 @@ import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
-import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
+import { STRATEGY_LABEL, STRATEGY_EMOJI, STRATEGY_SHORT } from "@/lib/strategy";
 import { demoBlocked } from "@/lib/demo-block";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
@@ -477,6 +481,15 @@ function StrategyIcon({
   );
 }
 
+// Sticky footer for the multi-step invest sheets (one-time / recurring / cash).
+// The destination step lists ~29 stocks in the scroll body, which used to bury the
+// Back/Continue actions below the fold (founder catch 2026-07: "the buttons should
+// always be visible"). Pin the nav row to the bottom of the scroll viewport so the
+// actions never scroll off. -mx-6/-mb-6 cancel the scroll body's p-6 padding so the
+// bar spans edge-to-edge and sits flush; bg + border-t let content scroll cleanly behind.
+const STICKY_SHEET_NAV = "sticky bottom-0 z-10 -mx-6 -mb-6 mt-1 border-t border-[hsl(var(--kiddo-border))] bg-background px-6 pt-3.5 pb-3.5";
+
+
 // Possessive-aware label for a strategy in the parent's voice: "Emma's Conservative Mix".
 // Falls back to the bare friendly name when no child name is available so we never render
 // "their Conservative Mix" (clinical) — just "Conservative Mix" (still warm).
@@ -602,7 +615,7 @@ type MarketQuoteResponse = {
     isEstimate?: boolean;
   }>;
 };
-type ParentContribution = { id: string; userId?: string | null; bankAccountId?: string | null; amount: string; frequency: string; status: string; pauseReason?: string | null; nextRunDate?: string; lastRunDate?: string | Date | null; totalContributed?: string | null; executionModel?: string | null; selectedTicker?: string | null; createdAt?: string | Date | null };
+type ParentContribution = { id: string; userId?: string | null; bankAccountId?: string | null; amount: string; frequency: string; status: string; pauseReason?: string | null; nextRunDate?: string; lastRunDate?: string | Date | null; totalContributed?: string | null; executionModel?: string | null; selectedTicker?: string | null; createdAt?: string | Date | null; hasRecentFailure?: boolean; lastFailureAt?: string | null };
 type DashboardTransaction = {
   id: string;
   type: string;
@@ -1537,6 +1550,16 @@ export default function DashboardStaging() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
+  // TEMP PREVIEW (founder taste-call): render the downloaded landscape-hero
+  // prototype (client/public/hero-proto.html) in the real hero slot so it can
+  // be felt in context with the rest of the app scrolling below. Default ON on
+  // /staging; append ?heroProto=0 to see the original green hero for an instant
+  // A/B, or ?heroProto=flat to see the SAME rolling-value + band slider on a
+  // flat evergreen backdrop (backdrop A/B: living sky vs flat green, same model).
+  // Undo = delete this flag + the iframe block below (+ hero-proto.html). Never
+  // promote to /dashboard. Staging-only sandbox.
+  const heroProto = searchParams.get("heroProto") !== "0";
+  const heroFlat = searchParams.get("heroProto") === "flat";
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   // Honor the OS reduce-motion setting for the gift-arc travel (the balance
@@ -1852,6 +1875,12 @@ export default function DashboardStaging() {
   const [sellingHolding, setSellingHolding] = useState<Holding | null>(null);
   const [managedSellWarning, setManagedSellWarning] = useState<Holding | null>(null);
   const [selectedHolding, setSelectedHolding] = useState<Holding | null>(null);
+  // PROTOTYPE: "Learn what you own" stories — which holding's deck is open.
+  const [storyTicker, setStoryTicker] = useState<string | null>(null);
+  // PROTOTYPE: per-person "stories" (their gifts, notes and media as a warm,
+  // swipeable run). Opened from the roster face; the ring glows for a real new
+  // moment until opened. See client/src/components/GifterStories.tsx.
+  const [storyGifter, setStoryGifter] = useState<GifterProfile | null>(null);
   const [holdingsV2Page, setHoldingsV2Page] = useState(0);
   const [investPickerOpen, setInvestPickerOpen] = useState(false);
   const holdingsV2ScrollRef = useRef<HTMLDivElement | null>(null);
@@ -2194,6 +2223,31 @@ export default function DashboardStaging() {
   const [oneTimeNoteSaved, setOneTimeNoteSaved] = useState(false);
   const [oneTimeMedia, setOneTimeMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
   const [startingOneTime, setStartingOneTime] = useState(false);
+  // Set when the one-time sheet is opened to CATCH UP a recurring charge that
+  // couldn't run (via "Pay it now"). Drives a context banner + suppresses the
+  // discretionary quick-amount chips, so the sheet reads as "settle the charge
+  // that didn't go through" — not a fresh one-time deposit. Cleared when the
+  // sheet closes.
+  const [oneTimeCatchUp, setOneTimeCatchUp] = useState<{ amount: string } | null>(null);
+  // "Pay it now" for a recurring charge that couldn't run. We never silently
+  // re-charge — instead we open the one-time contribute flow PRE-FILLED with the
+  // missed charge's amount + destination, so running it is one tap ("add it
+  // manually", made effortless). Shared by the Retrying card and the schedule
+  // detail modal's primary action so the recovery path is identical everywhere.
+  const payMissedRecurring = (schedule: any) => {
+    const amt = schedule?.amount != null ? String(schedule.amount) : "";
+    if (amt) setOneTimeAmount(amt);
+    if (String(schedule?.executionModel || "") === "pick" && schedule?.selectedTicker) {
+      setOneTimeExecutionModel("pick");
+      setOneTimeTicker(String(schedule.selectedTicker).toUpperCase());
+    } else {
+      setOneTimeExecutionModel("auto");
+    }
+    setOneTimeCatchUp(amt ? { amount: amt } : null);
+    setOneTimeStep("amount");
+    setOneTimeModalOpen(true);
+    haptic("medium");
+  };
   // Mirror of the recurring "done" step but for the one-time flow. The
   // one-time path leaves the app for Stripe checkout and returns via
   // ?parentContrib=1, so we can't end on a step transition the way recurring
@@ -2481,20 +2535,27 @@ export default function DashboardStaging() {
   // loading briefly even though it's done'); Dashboard fixed in
   // parallel because the same query backs the Dashboard setup-
   // progress nudges too.
-  const { data: bankAccounts = [], isLoading: bankLoading } = useQuery<any[]>({
+  const { data: bankAccountsRaw, isLoading: bankLoading } = useQuery<any[]>({
     queryKey: ["/api/bank-accounts"],
     queryFn: async () => {
       const res = await fetch("/api/bank-accounts", { credentials: "include" });
       if (!res.ok) return [];
       const data = await res.json();
-      writeLocalCache("kiddo.bank-accounts.v1", data);
-      return data;
+      const list = Array.isArray(data) ? data : [];
+      writeLocalCache("kiddo.bank-accounts.v1", list);
+      return list;
     },
     enabled: isAuthenticated,
     initialData: () => readLocalCache<any[]>("kiddo.bank-accounts.v1"),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
   });
+  // A destructuring "= []" default only catches undefined, NOT null — a null
+  // response body (a user with no banks) or a stale cached null slips through and
+  // crashes bankAccounts.length during render (AppErrorBoundary hit on fresh/cold
+  // sessions; warm browsers with a cached array never see it). Coalesce to an
+  // array so all downstream .length/.find sites are null-safe.
+  const bankAccounts: any[] = Array.isArray(bankAccountsRaw) ? bankAccountsRaw : [];
   const autoInvestQuoteSymbols = useMemo(() => AUTO_INVEST_STOCKS.map((stock) => stock.symbol).join(","), []);
   const { data: autoInvestQuoteData } = useQuery<MarketQuoteResponse>({
     queryKey: ["market-quotes", autoInvestQuoteSymbols],
@@ -3905,6 +3966,23 @@ export default function DashboardStaging() {
   const activeAutoInvest = parentContributions.find((c) => c.status === "active");
   const pausedAutoInvest = parentContributions.find((c) => c.status === "paused");
 
+  // Change-detection for the edit flow: editing a schedule but changing nothing
+  // shouldn't offer "Save changes" as if work was done. Compare the current draft
+  // against the schedule being edited (found by editingContribId, so it holds no
+  // matter how the modal opened — list action, deep link, etc.). A create (no
+  // editingContribId) is always "dirty" so its CTA stays enabled. Amount compared
+  // numerically so "100" vs "100.00" isn't a false change.
+  const autoInvestEditOriginal = editingContribId
+    ? parentContributions.find((c) => String(c.id) === String(editingContribId))
+    : null;
+  const autoInvestHasEdits = !editingContribId || !autoInvestEditOriginal || (
+    parseFloat(autoInvestAmount || "0") !== parseFloat(String((autoInvestEditOriginal as any).amount || "0")) ||
+    autoInvestFrequency !== (autoInvestEditOriginal as any).frequency ||
+    (autoInvestExecutionModel || "auto") !== String((autoInvestEditOriginal as any).executionModel || "auto") ||
+    (autoInvestTicker || "").toUpperCase() !== String((autoInvestEditOriginal as any).selectedTicker || "").toUpperCase() ||
+    (autoInvestSelectedBankId || "") !== String((autoInvestEditOriginal as any).bankAccountId || "")
+  );
+
   // Deep link: ?openAutoInvest=1 opens the auto-invest sheet. The optional
   // &editId=X form EDITS an existing schedule — the Activity page's "Edit"
   // button links here. Without the editId branch, "Edit" opened a blank CREATE
@@ -3914,21 +3992,28 @@ export default function DashboardStaging() {
   // fires once even though parentContributions (needed to prefill an edit) can
   // land after mount and re-trigger the effect.
   const autoInvestDeepLinkConsumed = useRef(false);
+  // When the sheet is opened via a deep link from ANOTHER page (Activity's "Edit"),
+  // remember where to return so closing/saving lands the user back where they were
+  // instead of stranding them on the dashboard. Null for in-dashboard edits.
+  const autoInvestReturnToRef = useRef<string | null>(null);
   useEffect(() => {
     if (autoInvestDeepLinkConsumed.current) return;
     const params = new URLSearchParams(search || "");
     if (params.get("openAutoInvest") !== "1") return;
     if (!hasAutoInvestAccess) return;
     const editId = params.get("editId");
+    const returnTo = params.get("returnTo");
     // For an edit link, wait until schedules are loaded so we can prefill from
     // the real row; bail this pass (the effect re-runs when they arrive).
     const contrib = editId ? parentContributions.find((c) => String(c.id) === String(editId)) : null;
     if (editId && !contrib) return;
     autoInvestDeepLinkConsumed.current = true;
+    autoInvestReturnToRef.current = returnTo && returnTo.startsWith("/") ? returnTo : null;
 
     const next = new URLSearchParams(search || "");
     next.delete("openAutoInvest");
     next.delete("editId");
+    next.delete("returnTo");
     const nextSearch = next.toString();
     window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
 
@@ -3946,6 +4031,20 @@ export default function DashboardStaging() {
     setAutoInvestModalOpen(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, hasAutoInvestAccess, parentContributions]);
+
+  // Return-to-origin: when the sheet CLOSES (any way — Save, Cancel, Esc, overlay)
+  // after being opened via a cross-page deep link, send the user back where they
+  // came from. Watches the open→closed transition so it fires for a programmatic
+  // close (Save) too, which onOpenChange alone would miss.
+  const autoInvestWasOpenRef = useRef(false);
+  useEffect(() => {
+    if (autoInvestWasOpenRef.current && !autoInvestModalOpen) {
+      const back = autoInvestReturnToRef.current;
+      autoInvestReturnToRef.current = null;
+      if (back) setLocation(back);
+    }
+    autoInvestWasOpenRef.current = autoInvestModalOpen;
+  }, [autoInvestModalOpen, setLocation]);
 
   // LAB: the dashboard mounts before the per-fund queries resolve, so the
   // recurring line, the at-majority projection, and the collapse stats briefly
@@ -6951,6 +7050,92 @@ export default function DashboardStaging() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
+              {heroProto ? (() => {
+                /* TEMP (founder taste-call): the landscape hero as a REAL React
+                   component wired to this fund's live data — no hardcoded
+                   prototype numbers. Real balance count-up, real gift/people
+                   counts, the app's canonical projection on the scrubber, the
+                   real Share CTA, real child name + handoff date. Isolated +
+                   scoped in StagingLandscapeHero; staging-only; ?heroProto=0 to
+                   see the original green hero. */
+                const childName = recipientFirstNameDisplay || "your child";
+                const validCount = gifts.filter((g) => {
+                  const s = String(g.status || "").toLowerCase();
+                  return s !== "failed" && s !== "refunded";
+                }).length;
+                const now = new Date();
+                const monthGiftTotal = gifts.reduce((sum, g: any) => {
+                  const s = String(g.status || "").toLowerCase();
+                  if (s === "failed" || s === "refunded") return sum;
+                  const d = g.createdAt ? new Date(String(g.createdAt)) : null;
+                  if (d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+                    return sum + (parseFloat(String(g.amount)) || 0);
+                  }
+                  return sum;
+                }, 0);
+                const majAge = age18Transition?.majorityAge || majorityAge || 18;
+                const yrsToMaj = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+                const curAge = Math.max(0, Math.round(majAge - yrsToMaj)); // whole years — for the slider's bounds + labels
+                // Projection horizon uses the FRACTIONAL current age (not the rounded
+                // one), so the compounding years match the Projection page exactly —
+                // a rounded age drifted the two surfaces ~1-3.5% apart (more at 9%).
+                const curAgeExact = Math.max(0, majAge - yrsToMaj);
+                // Parent auto-invest ONLY. Recurring GIFTS are excluded from the
+                // projection assumption (don't bank on a gifter repeating every year)
+                // — this matches the Projection page's `activeMonthly` and the "$100 a
+                // month" chip. Math.round mirrors the page so weekly schedules agree.
+                const heroMonthly = Math.round(sumMonthlyEquivalent(
+                  parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                ));
+                const projectAt = (age: number, rate?: number) => {
+                  const yrs = Math.max(0, age - curAgeExact);
+                  const contribYears = Math.max(0, Math.min(age, majAge) - curAgeExact);
+                  return projectFundValue({ startingValue: totalValue, monthlyContribution: heroMonthly, yearsAhead: yrs, contributionYears: contribYears, ...(rate != null ? { annualReturnRate: rate } : {}) });
+                };
+                // Near-handoff flatness gate — the SAME rule the main hero uses
+                // (~line 7790): anchor the resting Potential strip on the at-majority
+                // number ONLY when real market growth (7% projection minus a
+                // 0%-return, deposits-only baseline) clears 10% of today. A kid a few
+                // months from 21 would otherwise get a flat "At 21 ~$24K" that reads
+                // broken (inflated by deposits, not growth), so fall back to the
+                // long-horizon "At 65". Theo has ~7yr of runway so this stays "At 21".
+                const atMajGrowthPortion = projectAt(majAge) - projectAt(majAge, 0);
+                const majHasRunway = !!age18Transition && yrsToMaj > 0.08 && totalValue > 0
+                  && atMajGrowthPortion > totalValue * 0.10;
+                // Fallback is the slider MIDPOINT, not 65 — a resting age pinned to
+                // the far rail reads as maxed/broken (the static widget parks its dot
+                // there; the strip only teases text, but keep them aligned). Midpoint
+                // = compelling long-horizon growth with room to drag both directions.
+                const restAnchorAge = majHasRunway ? majAge : Math.round((curAge + 65) / 2);
+                const handoffLabel = age18Transition?.eighteenthBirthday
+                  ? formatAgeTransitionDate(age18Transition.eighteenthBirthday)
+                  : (handoffDateLabel || "");
+                const viewerFirstName = (user?.firstName || "").trim() || (user as any)?.preferredName?.trim() || "";
+                return (
+                  <StagingLandscapeHero
+                    flatBackdrop={heroFlat}
+                    restAnchorAge={restAnchorAge}
+                    childName={childName}
+                    liveValue={rawTotalValue}
+                    cachedValue={(isDemoAccount ? demoBalancePrior : cachedHeroFundValue) ?? rawTotalValue}
+                    rollEasing={heroSettleEase}
+                    giftCount={validCount}
+                    peopleCount={contributorCount}
+                    monthGiftTotal={monthGiftTotal}
+                    currentAge={curAge}
+                    majorityAge={majAge}
+                    handoffLabel={handoffLabel}
+                    projectAt={projectAt}
+                    monthlyContribution={heroMonthly}
+                    giftFlashAmount={newGiftFlash && flashGiftAmount ? flashGiftAmount : null}
+                    giftFlashName={flashGifterName || ""}
+                    viewerName={isOwnerMode ? "" : viewerFirstName}
+                    onOpenPotential={activeFund?.id ? () => { haptic("selection"); setLocation(`/projection/${activeFund.id}`); } : undefined}
+                    onShare={() => { haptic("medium"); handleShareLink(); }}
+                    isReadOnly={isReadOnlyFund}
+                  />
+                );
+              })() : (
               <div
                 className="lab-hero-card"
                 style={{
@@ -7005,58 +7190,12 @@ export default function DashboardStaging() {
                       than the identity text. Centering aligns all three on one
                       axis. */}
                   <div className="lab-hero-meta">
-                      {/* Mobile-only — desktop already carries fund
-                          identity in the DesktopSidebar's nav and fund
-                          switcher, so a glyph here would be redundant
-                          chrome. md:hidden hides it at the >=768px
-                          breakpoint where the sidebar takes over. */}
-                      {(() => {
-                        const childPhotoUrl = (activeFund as any)?.childPhotoUrl as string | null | undefined;
-                        // PHOTO-OR-NOTHING (2026-06-23, founder): with no child photo
-                        // we render NO avatar (was a generic initial-in-a-circle). The
-                        // "T" only echoed the name right beside it ("Theo's future") and
-                        // read as a templated default; dropping it makes a real photo an
-                        // EARNED personal touch and lets the name carry identity alone.
-                        if (!childPhotoUrl) return null;
-                        return (
-                            <div
-                              aria-hidden
-                              className="md:hidden"
-                              style={{
-                                width: 32, height: 32, flexShrink: 0,
-                                borderRadius: "50%",
-                                overflow: "hidden",
-                                boxShadow: "0 0 0 2px rgba(255,255,255,0.30), 0 1px 4px rgba(0,0,0,0.18)",
-                                background: "rgba(255,255,255,0.10)",
-                              }}
-                            >
-                              {/* Load hints added 2026-05-20 per user
-                                  report ('the photo is taking a long
-                                  time to load'). This is the focal-
-                                  point image of the Dashboard hero,
-                                  above the fold, on the most-visited
-                                  surface. fetchPriority='high' tells
-                                  the browser to prioritize this image
-                                  over other resource fetches on the
-                                  page. decoding='async' moves the
-                                  decode off the main thread so it
-                                  does not block other rendering.
-                                  loading='eager' is explicit (default
-                                  for above-the-fold, but clearer
-                                  here). See feedback_image_load_hints
-                                  _pattern.md for the canonical
-                                  treatment of focal-point images. */}
-                              <FadeImage
-                                src={childPhotoUrl}
-                                alt=""
-                                loading="eager"
-                                decoding="async"
-                                fetchPriority="high"
-                                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                              />
-                            </div>
-                          );
-                      })()}
+                      {/* STAGING (2026-07-05, founder): the child photo MOVED OUT of
+                          the hero and into the header's fund switcher (left of
+                          "{Kid}'s Fund"), mirroring the account avatar on the right —
+                          so the header reads as an identity lockup (whose fund | you)
+                          and the hero stays about the money/future. Photo-or-nothing is
+                          preserved on the header trigger. */}
                       <div className="lab-hero-meta-col">
                       {/* STAGING emotional moment, beat 1: lead with the CHILD as
                           identity ("Theo's future"), not "Fund · UTMA" chrome — a
@@ -7564,6 +7703,47 @@ export default function DashboardStaging() {
                         </div>
                       )}
 
+                      {/* A/B: the landscape's age-scrubber + honest 5-9% range dropped
+                          onto the GREEN hero, so we can compare whether the scrubber
+                          is the valuable part or the whole landscape. Sits ABOVE the
+                          Share CTA on purpose — the persuasion arc is balance → the
+                          dream (Potential) → the action (Share). Staging-only. */}
+                      {(() => {
+                        const majAgeG = age18Transition?.majorityAge || majorityAge || 18;
+                        const yrsToMajG = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+                        const curAgeG = Math.max(0, Math.round(majAgeG - yrsToMajG));
+                        // Fractional age + parent-only monthly, same as the landscape
+                        // hero above, so the scrubber agrees with the Projection page.
+                        const curAgeGExact = Math.max(0, majAgeG - yrsToMajG);
+                        const moG = Math.round(sumMonthlyEquivalent(
+                          parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                        ));
+                        const projectAtG = (age: number, rate?: number) => {
+                          const yrs = Math.max(0, age - curAgeGExact);
+                          const contribYears = Math.max(0, Math.min(age, majAgeG) - curAgeGExact);
+                          return projectFundValue({ startingValue: totalValue, monthlyContribution: moG, yearsAhead: yrs, contributionYears: contribYears, ...(rate != null ? { annualReturnRate: rate } : {}) });
+                        };
+                        if (!(totalValue > 0) || !age18Transition || Boolean((activeFund as any)?.transferredAt)) return null;
+                        // Same near-handoff flatness gate as the landscape hero + the
+                        // main hero: rest on the at-majority age only when real market
+                        // growth clears 10% of today; else the long horizon (65).
+                        const atMajGrowthG = projectAtG(majAgeG) - projectAtG(majAgeG, 0);
+                        // Fallback = slider midpoint, NOT 65 — the widget parks its dot
+                        // on this age, and a dot pinned to the far rail reads maxed/broken.
+                        const restAgeG = (yrsToMajG > 0.08 && atMajGrowthG > totalValue * 0.10)
+                          ? majAgeG : Math.round((curAgeG + 65) / 2);
+                        return (
+                          <div style={{ marginTop: 4, marginBottom: 18, color: "rgba(255,255,255,0.92)" }}>
+                            <PotentialScrubber
+                              projectAt={projectAtG}
+                              majorityAge={majAgeG}
+                              currentAge={curAgeG}
+                              restAge={restAgeG}
+                              onOpenPotential={activeFund?.id ? () => { haptic("selection"); setLocation(`/projection/${activeFund.id}`); } : undefined}
+                            />
+                          </div>
+                        );
+                      })()}
                       {/* CTA row. Share button hidden for read-only roles
                           (viewers + previous owners post-handoff). For a
                           previous owner, the gift link is the kid's now;
@@ -7591,6 +7771,9 @@ export default function DashboardStaging() {
                               // button stretches full-width in the mobile
                               // column; no-op at natural width on desktop.
                               display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+                              // Full-width primary CTA (A/B) now that the projection pill
+                              // it used to share the row with is gone.
+                              flex: "1 1 100%", width: "100%",
                               boxShadow: "0 1px 2px rgba(14,37,24,0.22), 0 5px 14px rgba(14,37,24,0.16), inset 0 1px 0 rgba(255,255,255,0.18)",
                             }}
                           >
@@ -7598,7 +7781,11 @@ export default function DashboardStaging() {
                             Share {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} link
                           </button>
                         )}
-                        {(() => {
+                        {/* Projection pill hidden (A/B): the Potential scrubber below
+                            now carries the at-21 number + the honest range, so this
+                            pill just said the same thing twice. Behind `false` for an
+                            easy restore. */}
+                        {false && (() => {
                           // LAB: until the recurring data lands, the projection
                           // computes from $0/mo and reads far too low, then jumps.
                           // Show a calm pulse placeholder (the skeleton the founder
@@ -7623,7 +7810,7 @@ export default function DashboardStaging() {
                           // abstract "$920k at 65". The emotional pull, the
                           // billion-dollar-way framing: a warm "on track"
                           // statement, not a bare number-with-a-far-off-age.
-                          const yrsToMaj = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+                          const yrsToMaj = Math.max(0, (age18Transition?.daysUntil18 ?? 0) / 365.25);
                           // Use the EXACT canonical at-majority math (same as the
                           // handoff "On track for $X" + Projection page + worker):
                           // sum ALL active recurring (parent + gifter-with-sub) via
@@ -7812,6 +7999,7 @@ export default function DashboardStaging() {
                   )}
                 </div>
               </div>
+              )}
             </motion.section>
 
             {/* SinceLastVisitDigest — relocated here (was wedged above the hero)
@@ -7964,15 +8152,26 @@ export default function DashboardStaging() {
                   type="button"
                   onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
                   className="w-full rounded-2xl border border-[hsl(var(--kiddo-gold)/0.3)] bg-[hsl(var(--kiddo-gold)/0.09)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.14)]"
-                  style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "cash")}
+                  // Deep-link "landed here": a soft DEEPEN of the tile's own gold
+                  // (0.09 -> 0.18), no hard ring. The card variant's 2px inset ring
+                  // drew a boxy "AI" outline; this matches the ring-less gleam the
+                  // recurring / one-time sections now use, tuned for a tile that's
+                  // already gold-tinted (a wash would've made it lighter, not lit).
+                  style={{
+                    transition: "background 0.7s ease",
+                    ...(summaryHaloTarget === "cash" ? { background: "hsl(var(--kiddo-gold) / 0.18)" } : {}),
+                  }}
                   data-testid="button-invest-cash"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      {/* Coins (NOUN: "this card is about cash"), not TrendingUp. Bare —
-                          the gold-on-gold chip behind it was low-contrast + read as generic
-                          "icon kit"; the evergreen icon pops cleaner straight on the gold. */}
-                      <Coins size={28} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+                      {/* Wallet (NOUN: "your cash, held and ready"), not TrendingUp
+                          (that reads as growth/action). Picked over Coins — coins connote
+                          loose change, while this card is real cash ready to deploy — and
+                          over a $ glyph, which would double up on the "$50" amount shown
+                          right beside it. Bare: the gold-on-gold chip behind it was low-
+                          contrast; the evergreen icon pops cleaner straight on the gold. */}
+                      <Wallet size={28} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
                       <div className="min-w-0">
                         <p className="text-2xs font-semibold uppercase text-muted-foreground">
                           {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
@@ -8636,7 +8835,7 @@ export default function DashboardStaging() {
                     type="button"
                     onClick={() => { haptic("selection"); onRecurringTap(); }}
                     data-testid="chip-recurring-status"
-                    className={`flex-1 md:flex-none min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
+                    className={`flex-1 md:flex-none md:min-w-[280px] min-w-0 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
                   >
                     <Repeat size={14} className="shrink-0" />
                     <span className="flex-1 min-w-0 truncate">{statusLine}</span>
@@ -9087,6 +9286,13 @@ export default function DashboardStaging() {
 
               return (
                 <>
+                {/* live-priced preview line REMOVED per founder (2026-07-06). It only
+                    ever surfaced meaningfully in the demo / seeded test funds: a REAL
+                    pre-launch fund collects gifts as cash (no holdings, no growth
+                    numbers to caveat), so the line was noise there. If growth is ever
+                    shown for a real fund while INVESTING_LIVE is false, re-add a caveat
+                    here (it framed the fund-so-far Market growth, the chart, and
+                    per-holding gains). */}
                 <LabCollapse
                   marginTop={16}
                   testid="lab-summary-details"
@@ -9347,18 +9553,15 @@ export default function DashboardStaging() {
                           className="mt-2 block max-w-sm text-left text-2xs leading-relaxed text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
-                          {/* Settling-state copy enhancement 2026-05-14
-                              per FUND_STATES_SPEC.md item 1. Original
-                              copy stopped at "waiting to invest" which
-                              left the parent without a time horizon.
-                              Adding "Available in 1 to 2 business
-                              days" matches the locked settling-window
-                              vocabulary used on the gifter side
-                              (GiftSuccess.tsx, mobile GifterFlow
-                              handoff step) so both sides read as one
-                              coherent story. */}
+                          {/* periodCash is `cash` = held/idle cash that
+                              EXCLUDES settling, so it is NOT auto-investing
+                              on a settling window, and investing is gated
+                              anyway. Mirror the hero's held-cash truth
+                              ("Held as cash. Invest any time.") instead of
+                              promising a 1 to 2 business day settle that
+                              doesn't apply to this bucket. */}
                           <span className="font-medium tabular-nums text-foreground/70">{fmtRow(periodCash)}</span>{" "}
-                          of that is still in cash, investing in 1–2 business days.
+                          of that is still in cash. Invest it any time.
                           <ChevronRight size={12} className="ml-0.5 inline align-middle opacity-60" aria-hidden />
                         </button>
                       )}
@@ -10234,6 +10437,10 @@ export default function DashboardStaging() {
                             const ticker = h.ticker.toUpperCase();
                             const handleAddMore = () => {
                               haptic("medium");
+                              // "Add more" always opens the uncapped one-time flow for
+                              // this ticker; deploying idle cash is a SEPARATE intent
+                              // handled by the "Cash is waiting" CTA, so it no longer
+                              // traps the parent at their cash balance.
                               setOneTimeAmount("50");
                               setOneTimeStep("amount");
                               setOneTimeExecutionModel("pick");
@@ -10243,15 +10450,7 @@ export default function DashboardStaging() {
                               setOneTimeNoteSaved(false);
                               setOneTimeModalOpen(true);
                             };
-                            return (
-                              <div
-                                key={`v2-${h.id}-${overlapSide ?? "solo"}`}
-                                /* STAGING: flushed (Tier 0) — holdings are a LIST, not 8
-                                   floating cards. Each row sits flush with a subtle hover,
-                                   brokerage-style (Robinhood/Fidelity), consistent with the
-                                   de-carded breakdown. Tappable without needing a box. */
-                                className="w-full p-3 -mx-3 rounded-xl transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.04)]"
-                              >
+                            const rowInner = (
                                 <div className="flex items-center justify-between gap-3">
                                   <button
                                     type="button"
@@ -10259,7 +10458,9 @@ export default function DashboardStaging() {
                                     className="flex flex-1 min-w-0 items-center gap-3 text-left transition-transform active:scale-[0.99]"
                                     data-testid={`holding-row-${h.id}`}
                                   >
-                                    <StockLogo ticker={h.ticker} size={36} />
+                                    <HoldingStoryRing ticker={h.ticker} size={36} onOpen={() => setStoryTicker(h.ticker.toUpperCase())}>
+                                      <StockLogo ticker={h.ticker} size={36} />
+                                    </HoldingStoryRing>
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-1.5 min-w-0">
                                         <p className="truncate text-sm font-bold text-foreground">{dNameDisplay}</p>
@@ -10289,36 +10490,33 @@ export default function DashboardStaging() {
                                       aria-label={`View ${dName} details`}
                                     >
                                       <p className="text-sm font-bold text-foreground tabular-nums">{formatCurrency(hValue)}</p>
-                                      {hCost > 0 && Math.abs(hGain) > 0.01 && (
+                                      {hCost > 0 && Math.abs(hGain) > 0.01 ? (
                                         <p className={`text-2xs font-semibold tabular-nums whitespace-nowrap ${hGain >= 0 ? "text-green-600" : "text-red-500"}`}>
                                           {hGain >= 0 ? "+" : ""}{formatCurrency(hGain)} ({hGain >= 0 ? "+" : ""}{hGainPct.toFixed(2)}%)
                                         </p>
-                                      )}
+                                      ) : hCost > 0 ? (
+                                        // Flat position — a fresh buy priced at cost (e.g. cash
+                                        // just invested into MAT). Show a NEUTRAL zero, not a
+                                        // blank line: blank read as missing data (founder catch),
+                                        // and grey/no-"+" never fakes a gain the way green would.
+                                        <p className="text-2xs font-semibold tabular-nums whitespace-nowrap text-muted-foreground/60">
+                                          {formatCurrency(0)} (0.00%)
+                                        </p>
+                                      ) : null}
                                     </button>
-                                    {isChosen && !isReadOnlyFund ? (
-                                      <button
-                                        type="button"
-                                        onClick={handleAddMore}
-                                        aria-label={`Add more ${dName}`}
-                                        title={`Add more ${dName}`}
-                                        data-testid={`button-add-more-${h.id}`}
-                                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] active:scale-95 transition-all"
-                                      >
-                                        <Plus size={14} strokeWidth={2.5} />
-                                      </button>
-                                    ) : !isReadOnlyFund ? (
-                                      // Managed-mix rows have no "+" (you customize the whole mix,
-                                      // not individual sleeves) — but in an editable fund the
-                                      // hand-picked rows above DO, so without this their values
-                                      // would right-align 42px further right than the hand-picked
-                                      // ones (the "value column steps at the group seam" snag).
-                                      // Reserve the +-button's exact footprint so every value in
-                                      // the list shares ONE right edge. (Read-only funds have no +
-                                      // on any row, so they're already consistent — no spacer.)
-                                      <div className="h-8 w-8 shrink-0" aria-hidden="true" />
-                                    ) : null}
                                   </div>
                                 </div>
+                            );
+                            return (
+                              <div
+                                key={`v2-${h.id}-${overlapSide ?? "solo"}`}
+                                /* STAGING: flushed (Tier 0) — holdings are a LIST, not 8
+                                   floating cards. Each row sits flush with a subtle hover,
+                                   brokerage-style (Robinhood/Fidelity), consistent with the
+                                   de-carded breakdown. Tappable without needing a box. */
+                                className="w-full p-3 -mx-3 rounded-xl transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.04)]"
+                              >
+                                {rowInner}
                               </div>
                             );
                           };
@@ -10410,28 +10608,40 @@ export default function DashboardStaging() {
                                         <div className="relative flex items-center gap-1.5">
                                           <AnimatePresence>
                                             {investPickerOpen && (
+                                              // The two options CASCADE out (One time, then
+                                              // Recurring) instead of popping in as one block —
+                                              // a staggered roll-out reads as crafted, not a
+                                              // toggle. Silkier easing + a touch more travel than
+                                              // the old 0.15s group fade. Reverse-staggers on exit.
                                               <motion.div
                                                 key="invest-picker"
-                                                initial={{ opacity: 0, scale: 0.92, x: 6 }}
-                                                animate={{ opacity: 1, scale: 1, x: 0 }}
-                                                exit={{ opacity: 0, scale: 0.92, x: 6 }}
-                                                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                                                initial="hidden"
+                                                animate="show"
+                                                exit="hidden"
+                                                variants={{
+                                                  show: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
+                                                  hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
+                                                }}
                                                 className="flex items-center gap-1.5"
                                               >
-                                                <button
+                                                <motion.button
                                                   type="button"
+                                                  variants={{ hidden: { opacity: 0, x: 10, scale: 0.94 }, show: { opacity: 1, x: 0, scale: 1 } }}
+                                                  transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
                                                   onClick={() => { haptic("selection"); setInvestPickerOpen(false); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("pick"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
                                                   className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
                                                 >
                                                   One time
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
                                                   type="button"
+                                                  variants={{ hidden: { opacity: 0, x: 10, scale: 0.94 }, show: { opacity: 1, x: 0, scale: 1 } }}
+                                                  transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
                                                   onClick={() => { haptic("selection"); setInvestPickerOpen(false); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
                                                   className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
                                                 >
                                                   Recurring
-                                                </button>
+                                                </motion.button>
                                               </motion.div>
                                             )}
                                           </AnimatePresence>
@@ -11527,7 +11737,7 @@ export default function DashboardStaging() {
                 // STAGING: flushed to match the holdings sub-groups (label + flush
                 // content, no card) — "Your part" is the same shape as "What X owns".
                 return (
-                  <div className="overflow-hidden" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-list-view">
+                  <div className="overflow-hidden" style={getDeepLinkHighlightSoftStyle(summaryHaloTarget === "recurring")} data-testid="recurring-list-view">
                     {/* Section header + status — INSIDE the card as the
                         first block. Apple Settings group pattern: small
                         uppercase eyebrow, supporting summary line right
@@ -11657,6 +11867,23 @@ export default function DashboardStaging() {
                             // The owner's OWN plans aren't majority_handoff, so
                             // they stay fully manageable.
                             const isHandoffEnded = contrib.pauseReason === "majority_handoff";
+                            // Needs you — a recent charge failed but the schedule is
+                            // still live (not paused, not handed off): the NEXT charge
+                            // proceeds, but the missed one needs the parent to add it
+                            // manually (the worker does NOT re-run failures). Mirror the
+                            // Activity Scheduled tab's amber "Needs you" pill so the two
+                            // surfaces agree instead of this one flatly reading "Active"
+                            // on a stalled schedule.
+                            const failedActive = Boolean(contrib.hasRecentFailure) && !isPausedRow && !isHandoffEnded;
+                            // A schedule that has never run yet (just set up, first charge still
+                            // ahead) hasn't bought anything — so it correctly appears in NO holding
+                            // and NO past contribution, which reads as "broken, refresh error"
+                            // without a cue (founder catch 2026-07: "I added Crocs, it's nowhere").
+                            // Distinguish it: "Starts {date}" + a "Scheduled" pill, vs an ongoing
+                            // schedule's "Next {date}" + "Active". Never-fired = no lastRunDate AND
+                            // nothing contributed yet.
+                            const hasFired = Boolean(contrib.lastRunDate) || (parseFloat(String((contrib as any).totalContributed ?? "0")) || 0) > 0;
+                            const isUpcomingFirst = !hasFired && !isPausedRow && !isHandoffEnded && !failedActive;
                             // Read-only when EITHER the whole fund is read-only to this user (viewer
                             // / previous-owner — they 403 on every mutation, so a handed-off parent
                             // must not see live manage buttons on a fund they no longer control) OR
@@ -11707,6 +11934,12 @@ export default function DashboardStaging() {
                             const isSoloHero = total === 1;
                             return (
                               <li key={contrib.id} className={`relative ${isHighlighted ? "ring-2 ring-[hsl(var(--kiddo-evergreen))] ring-offset-2 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.04)] transition-all duration-500" : "transition-all duration-500"}`}>
+                                {/* Row gets its OWN relative box so the absolute action
+                                    cluster centers on the ROW, not the whole <li> — which
+                                    grows taller when the failedActive "Pay it now" chip
+                                    renders below, dropping the icons out of line with the
+                                    pill (founder catch 2026-07). */}
+                                <div className="relative">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -11783,7 +12016,7 @@ export default function DashboardStaging() {
                                       </span>
                                       {bank ? ` · ${bank.bankName || "Bank"} ····${bank.last4 || ""}` : ""}
                                       {contrib.nextRunDate && !isPausedRow
-                                        ? ` · Next ${new Date(String(contrib.nextRunDate)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`
+                                        ? ` · ${isUpcomingFirst ? "Starts" : "Next"} ${new Date(String(contrib.nextRunDate)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`
                                         : ""}
                                     </p>
                                     {(() => {
@@ -11823,10 +12056,10 @@ export default function DashboardStaging() {
                                   </div>
                                   <span
                                     className={`shrink-0 rounded-full px-2 py-0.5 text-3xs font-bold ${
-                                      isReadOnly ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
+                                      isReadOnly ? "bg-muted text-muted-foreground" : isPausedRow || failedActive ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
                                     }`}
                                   >
-                                    {isHandoffEnded ? "Ended" : isPausedRow ? "Paused" : "Active"}
+                                    {isHandoffEnded ? "Ended" : isPausedRow ? "Paused" : failedActive ? "Charge missed" : isUpcomingFirst ? "Scheduled" : "Active"}
                                   </span>
                                 </button>
                                 {/* Right-side action cluster — History opens
@@ -11872,6 +12105,24 @@ export default function DashboardStaging() {
                                     </button>
                                   )}
                                 </div>
+                                </div>
+                                {/* Recovery one-tap: a Retrying schedule surfaces
+                                    "Pay it now" right on the card (opens the one-time
+                                    flow pre-filled) so the fix isn't buried in the
+                                    detail modal. Sibling to the row button, not
+                                    nested (button-in-button is invalid). */}
+                                {failedActive && !isReadOnly && (
+                                  <div className={`-mt-1.5 pb-2.5 ${isSoloHero ? "pl-[52px]" : "pl-11"}`}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); payMissedRecurring(contrib); }}
+                                      data-testid={`recurring-pay-now-${contrib.id}`}
+                                      className="inline-flex items-center gap-1 text-3xs font-bold text-amber-800 hover:text-amber-900 transition-colors kiddo-press"
+                                    >
+                                      Pay it now →
+                                    </button>
+                                  </div>
+                                )}
                               </li>
                             );
                           })}
@@ -11912,7 +12163,7 @@ export default function DashboardStaging() {
                   owner's actual schedule history lives in "View past
                   investments" on the one-time card next to this. */}
               {isReadOnlyFund && (
-                <div className="p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
+                <div className="p-5 flex flex-col flex-1" style={getDeepLinkHighlightSoftStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
                   <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                     Recurring investments
                   </p>
@@ -11968,7 +12219,7 @@ export default function DashboardStaging() {
               {/* ── One-time investment card ── */}
               {/* STAGING: flushed to match holdings sub-groups (the card→flush call).
                   Hierarchy now reads via order (recurring leads), not elevation. */}
-              <div className="flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "onetime")} data-testid="card-one-time-contribution-v2">
+              <div className="flex flex-col flex-1" style={getDeepLinkHighlightSoftStyle(summaryHaloTarget === "onetime")} data-testid="card-one-time-contribution-v2">
                 <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                   One-time investment
                 </p>
@@ -12045,7 +12296,7 @@ export default function DashboardStaging() {
                     })() : (
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
-                          <Plus size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
+                          <HandCoins size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {isReadOnlyFund
@@ -12087,17 +12338,16 @@ export default function DashboardStaging() {
                     </button>
                   ) : lastOwnGift ? (
                     <div className="space-y-2">
-                      {/* Hierarchy: solid evergreen primary = invest in the fund (managed
-                          mix, age-appropriate), outlined evergreen secondary = repeat the
-                          same stock as last time, text tertiary = custom. Brand gold is
-                          reserved for the Share CTA per locked rule — using it here was a
-                          drift; this card's primary now uses the canonical evergreen so
-                          the parent-investment action reads distinct from share-the-link.
-                          The default routes through auto-allocator so contributions diversify
-                          per the active strategy instead of concentrating a chosen-with-love
-                          position. */}
+                      {/* Both add options use the calm dashed evergreen pill that mirrors
+                          recurring's "+ Add another" (founder "on par" pass): invest-in-the-mix
+                          on top, repeat-the-same-stock below, then custom/view-all as text.
+                          The loud solid primary was dropped so one-time no longer out-shouts
+                          the recurring block beside it; hierarchy now comes from order + label,
+                          not button weight. Default routes through the auto-allocator so
+                          contributions diversify per the active strategy. */}
                       <Button
-                        className="w-full rounded-xl"
+                        variant="outline"
+                        className="w-full rounded-xl border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
                         size="sm"
                         onClick={() => {
                           haptic("medium");
@@ -12124,7 +12374,7 @@ export default function DashboardStaging() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full rounded-xl border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.06)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.12)]"
+                            className="w-full rounded-xl border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
                             onClick={() => {
                               haptic("light");
                               setOneTimeAmount(String(lastOwnGift.amount.toFixed(0)));
@@ -12168,8 +12418,15 @@ export default function DashboardStaging() {
                     </div>
                   ) : activeAutoInvest ? (
                     <div className="space-y-2">
+                      {/* Soft evergreen fill (not the loud solid primary): this one-time
+                          block sits BESIDE the recurring block under "Your part", and a
+                          full-strength solid button made one-time out-shout the core
+                          recurring behavior + unbalanced the section (founder: "not on
+                          par"). This calmer weight reads as a clear-but-secondary CTA,
+                          parallel to recurring's subtle "+ Add another". */}
                       <Button
-                        className="w-full rounded-xl"
+                        variant="outline"
+                        className="w-full rounded-xl border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
                         size="sm"
                         disabled={contributingNow}
                         onClick={() => {
@@ -12181,7 +12438,7 @@ export default function DashboardStaging() {
                       >
                         {contributingNow ? (
                           <span className="flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <span className="w-3.5 h-3.5 border-2 border-[hsl(var(--kiddo-evergreen)/0.3)] border-t-[hsl(var(--kiddo-evergreen))] rounded-full animate-spin" />
                             Opening checkout...
                           </span>
                         ) : `Add ${formatMoneyFriendly(parseFloat(activeAutoInvest.amount))}`}
@@ -12198,7 +12455,7 @@ export default function DashboardStaging() {
                   ) : (
                     <Button
                       variant="outline"
-                      className="w-full rounded-xl"
+                      className="w-full rounded-xl border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
                       size="sm"
                       onClick={() => { haptic("light"); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
                       data-testid="button-one-time-contribution-v2"
@@ -13063,11 +13320,13 @@ export default function DashboardStaging() {
                                       )}
                                     </div>
                                     <button
+                                      type="button"
                                       onClick={() => setExpandedTileIdV2(null)}
                                       aria-label="Close occasion details"
-                                      style={{ background: "rgba(26,23,16,0.06)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgb(80,72,64)", fontSize: 13, flexShrink: 0 }}
+                                      className="kiddo-press"
+                                      style={{ background: "rgba(26,23,16,0.06)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgb(80,72,64)", flexShrink: 0 }}
                                     >
-                                      ✕
+                                      <X size={15} strokeWidth={2.2} aria-hidden />
                                     </button>
                                   </div>
                                 </>
@@ -13084,7 +13343,7 @@ export default function DashboardStaging() {
                                       )}
                                     </div>
                                   </div>
-                                  <button onClick={() => setExpandedTileIdV2(null)} style={{ background: "rgba(26,23,16,0.06)", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgb(100,90,80)", fontSize: 13, flexShrink: 0 }}>✕</button>
+                                  <button type="button" onClick={() => setExpandedTileIdV2(null)} aria-label="Close occasion details" className="kiddo-press" style={{ background: "rgba(26,23,16,0.06)", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgb(100,90,80)", flexShrink: 0 }}><X size={14} strokeWidth={2.2} aria-hidden /></button>
                                 </div>
                               )}
 
@@ -14115,6 +14374,33 @@ export default function DashboardStaging() {
             {/* Recessive footer treatment (no floating card) — fine print should recede
                 on the de-carded dashboard, not float as the last card-soup pill. */}
             <TrustMicroStrip flush />
+            {/* Seamless jump back to the top after a long scroll — the hero + the
+                count-up are the reward up there. Calm, recessive affordance to
+                match the fine-print footer above it; scrolls the window smoothly. */}
+            <button
+              type="button"
+              onClick={() => { haptic("selection"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              data-testid="button-back-to-top"
+              aria-label="Back to top"
+              className="kiddo-press"
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
+                width: "100%", margin: "6px 0 22px", padding: "8px 0",
+                background: "transparent", border: "none", cursor: "pointer",
+              }}
+            >
+              <span style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 38, height: 38, borderRadius: 9999,
+                background: "hsl(var(--kiddo-evergreen) / 0.06)",
+                color: "hsl(var(--kiddo-evergreen) / 0.72)",
+              }}>
+                <ArrowUp size={16} strokeWidth={2.2} aria-hidden />
+              </span>
+              <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "hsl(var(--kiddo-evergreen) / 0.5)" }}>
+                Back to top
+              </span>
+            </button>
           </>
         )}
       </main>
@@ -14297,7 +14583,7 @@ export default function DashboardStaging() {
       )}
 
       {/* One-time contribution modal */}
-      <Dialog open={oneTimeModalOpen} onOpenChange={(v) => { if (!v) { setOneTimeModalOpen(false); setOneTimeStep("amount"); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeShowRails(false); setOneTimeMedia(EMPTY_MEMORY_MEDIA); } }}>
+      <Dialog open={oneTimeModalOpen} onOpenChange={(v) => { if (!v) { setOneTimeModalOpen(false); setOneTimeStep("amount"); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeShowRails(false); setOneTimeMedia(EMPTY_MEMORY_MEDIA); setOneTimeCatchUp(null); } }}>
         <DialogContent sheet className="sm:max-w-sm p-0 gap-0 max-h-[88vh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add a one-time investment</DialogTitle>
 
@@ -14313,7 +14599,7 @@ export default function DashboardStaging() {
               (justify-between), not clustered together on the left. */}
           <div className="px-6 pt-5 shrink-0 flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-              <Coins size={11} /> One-time
+              <Coins size={11} /> {oneTimeCatchUp ? "Catch-up" : "One-time"}
             </span>
             <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-foreground/75">
               {isOwnerMode ? "Your fund" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "This fund"}
@@ -14324,6 +14610,15 @@ export default function DashboardStaging() {
             {/* STEP 1: Amount */}
             {oneTimeStep === "amount" && (
               <>
+
+                {oneTimeCatchUp && (
+                  <div className="rounded-xl border border-[hsl(var(--kiddo-border))] bg-muted/40 px-3.5 py-3">
+                    <p className="text-xs font-semibold text-foreground">Catching up an automatic investment</p>
+                    <p className="text-2xs text-muted-foreground mt-0.5">
+                      {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} recurring investment of {formatCurrency(Number.parseFloat(oneTimeCatchUp.amount) || 0)} didn't go through. Running it now adds it to the same place, as a one-time deposit.
+                    </p>
+                  </div>
+                )}
 
                 {uninvestedCash > 0 && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
@@ -14376,27 +14671,34 @@ export default function DashboardStaging() {
                         autoFocus
                       />
                     </div>
-                    <div className="mt-4 flex gap-2 justify-center flex-wrap">
-                      {[25, 50, 100, 250].map((amt) => (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => setOneTimeAmount(String(amt))}
-                          className={`text-[13px] font-semibold px-4 py-1.5 rounded-full border transition-colors ${
-                            oneTimeAmount === String(amt)
-                              ? "border-primary text-primary bg-primary/10"
-                              : "border-border text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          ${amt}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Discretionary quick-amounts are for a fresh deposit. In catch-up
+                        mode the amount is already the exact charge that didn't run, so we
+                        hide them (the number stays editable if the parent wants to change it). */}
+                    {!oneTimeCatchUp && (
+                      <div className="mt-4 flex gap-2 justify-center flex-wrap">
+                        {[25, 50, 100, 250].map((amt) => (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => setOneTimeAmount(String(amt))}
+                            className={`text-[13px] font-semibold px-4 py-1.5 rounded-full border transition-colors ${
+                              oneTimeAmount === String(amt)
+                                ? "border-primary text-primary bg-primary/10"
+                                : "border-border text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            ${amt}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {/* STAGING: dropped "Estimated processing updates live once you choose a
                         payment method" — premature on the amount step (payment isn't chosen
                         until step 3) and confusing here. The fee detail lives on the payment
                         step where it's actually shown. */}
-                    <p className="mt-3 text-center text-2xs text-muted-foreground">$5 minimum</p>
+                    <p className="mt-3 text-center text-2xs text-muted-foreground">
+                      {oneTimeCatchUp ? "You can adjust the amount if you need to." : "$5 minimum"}
+                    </p>
                   </div>
                 </div>
 
@@ -14462,7 +14764,13 @@ export default function DashboardStaging() {
                 <Button
                   className="w-full rounded-full"
                   disabled={!oneTimeAmount || parseFloat(oneTimeAmount) < 5}
-                  onClick={() => setOneTimeStep("target")}
+                  // A catch-up already knows its destination — payMissedRecurring
+                  // pre-fills the missed charge's execution model (the recurring
+                  // plan's own mix/stock). Asking "Where should it go?" (and
+                  // offering Hold-as-cash) contradicts the banner's "adds it to the
+                  // same place," so skip the target step straight to confirm. Fresh
+                  // one-time deposits still choose, since they have no set destination.
+                  onClick={() => setOneTimeStep(oneTimeCatchUp ? "confirm" : "target")}
                 >
                   Continue
                 </Button>
@@ -14479,7 +14787,7 @@ export default function DashboardStaging() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     {oneTimeExecutionModel === "cash"
                       ? `${formatMoneyFriendly(parseFloat(oneTimeAmount))} will sit as cash in the fund until you invest it from the dashboard.`
-                      : `Kiddo invests ${formatMoneyFriendly(parseFloat(oneTimeAmount))} as soon as it clears.`}
+                      : investingLiveCopy(`Kiddo invests ${formatMoneyFriendly(parseFloat(oneTimeAmount))} as soon as it clears.`, `Kiddo invests ${formatMoneyFriendly(parseFloat(oneTimeAmount))} once investing is live.`)}
                   </p>
                 </div>
 
@@ -14695,7 +15003,7 @@ export default function DashboardStaging() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className={`${STICKY_SHEET_NAV} flex gap-2`}>
                   <Button
                     variant="outline"
                     className="rounded-full"
@@ -14732,9 +15040,9 @@ export default function DashboardStaging() {
                         return `${amt} stays as cash in ${whose} fund until you invest it.`;
                       if (oneTimeExecutionModel === "pick" && oneTimeTicker) {
                         const nm = quotedAutoInvestStocks.find(s => s.symbol === oneTimeTicker.toUpperCase())?.name ?? oneTimeTicker.toUpperCase();
-                        return `${amt} buys ${nm} as soon as it clears.`;
+                        return investingLiveCopy(`${amt} buys ${nm} as soon as it clears.`, `${amt} is set for ${nm}, investing once it's live.`);
                       }
-                      return `${amt} goes into ${capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}, invested as soon as it clears.`;
+                      return investingLiveCopy(`${amt} goes into ${capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}, invested as soon as it clears.`, `${amt} goes into ${capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}, investing once it's live.`);
                     })()}
                   </p>
                 </div>
@@ -14993,7 +15301,9 @@ export default function DashboardStaging() {
                   <Button
                     variant="outline"
                     className="rounded-full"
-                    onClick={() => setOneTimeStep("target")}
+                    // Mirror the skip: a catch-up never saw the target step, so Back
+                    // returns to amount rather than a step it never passed through.
+                    onClick={() => setOneTimeStep(oneTimeCatchUp ? "amount" : "target")}
                   >
                     Back
                   </Button>
@@ -15124,7 +15434,7 @@ export default function DashboardStaging() {
                     <div className="min-w-0 flex-1">
                       <h3 className="font-heading text-lg font-bold text-foreground">Anonymous people</h3>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {selectedGifter.giftCount} {selectedGifter.giftCount === 1 ? "gift" : "gifts"} · {formatCurrency(selectedGifter.totalNetAmount)} total
+                        {selectedGifter.giftCount} {selectedGifter.giftCount === 1 ? "gift" : "gifts"} · {formatMoneyFriendly(selectedGifter.totalNetAmount)} total
                       </p>
                       {anonAggregate.anyLive && Math.abs(anonAggregate.delta) >= 0.01 && anonAggregate.totalPaid > 0 && (() => {
                         const pct = (anonAggregate.delta / anonAggregate.totalPaid) * 100;
@@ -15133,7 +15443,7 @@ export default function DashboardStaging() {
                           <p className="text-xs mt-1 tabular-nums">
                             <span style={{ color: "rgb(100,92,86)" }}>{formatCurrency(anonAggregate.totalNow)} today</span>
                             <span style={{ color: up ? "rgb(22,128,67)" : "rgb(190,30,30)", fontWeight: 700 }}>
-                              {" · "}{up ? "+" : ""}{formatCurrency(anonAggregate.delta)} ({up ? "+" : ""}{pct.toFixed(1)}%) {up ? "🌱" : ""}
+                              {" · "}{up ? "+" : ""}{formatCurrency(anonAggregate.delta)} ({up ? "+" : ""}{pct.toFixed(1)}%)
                             </span>
                           </p>
                         );
@@ -15210,31 +15520,34 @@ export default function DashboardStaging() {
                             {gTicker && (
                               <StockLogo ticker={gTicker} size={18} className="shrink-0" />
                             )}
-                            <span style={{
-                              fontSize: 10.5, fontWeight: 700,
-                              color: gTicker ? "rgb(26,67,50)" : "rgb(120,110,100)",
-                              background: gTicker ? "rgba(26,67,50,0.09)" : "rgba(26,23,16,0.06)",
-                              borderRadius: 999, padding: "2px 8px",
-                            }}>
-                              {/* "✓" prefix removed — every entry in this list is
-                                  by definition either invested OR shows a "🌱 Settling"
-                                  pill alongside, so the checkmark was telling the parent
-                                  what the absence-of-Settling already tells them. */}
-                              {investLabel}
-                            </span>
-                            {gHoldingName && (
-                              <span style={{ fontSize: 12, color: "rgb(80,72,64)", fontWeight: 500 }}>
-                                {gHoldingName}
+                            {/* One identifier per stock, not three. The row used to show
+                                [logo] + "AAPL" pill + "Apple" name — the logo already brands
+                                the company, so the ticker pill AND the name were a redundant
+                                second and third label (founder catch 2026-07). Stock gifts now
+                                read [logo] + friendly name; managed-mix gifts (no logo/name)
+                                keep the pill that names the mix ("{child}'s mix"). */}
+                            {gTicker ? (
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "rgb(40,36,30)" }}>
+                                {gHoldingName || gTicker.toUpperCase()}
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: 10.5, fontWeight: 700,
+                                color: "rgb(120,110,100)",
+                                background: "rgba(26,23,16,0.06)",
+                                borderRadius: 999, padding: "2px 8px",
+                              }}>
+                                {investLabel}
                               </span>
                             )}
                             {isPending && (
                               <span style={{ fontSize: 9.5, fontWeight: 700, background: "hsl(143,28%,94%)", color: "hsl(143,40%,30%)", padding: "1px 6px", borderRadius: 999 }}>
-                                🌱 Settling
+                                Settling
                               </span>
                             )}
                           </div>
                           <p className="font-heading" style={{ fontSize: 16, fontWeight: 700, color: "rgb(26,23,16)", flexShrink: 0 }}>
-                            {formatCurrency(Number.isFinite(netAmt) ? netAmt : 0)}
+                            {formatMoneyFriendly(Number.isFinite(netAmt) ? netAmt : 0)}
                           </p>
                         </div>
                         <div style={{ marginTop: 7, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "3px 10px" }}>
@@ -15266,7 +15579,7 @@ export default function DashboardStaging() {
                                     fontSize: 11, fontWeight: 700,
                                     color: delta >= 0 ? "rgb(22,128,67)" : "rgb(190,30,30)",
                                   }}>
-                                    {delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))} 🌱
+                                    {delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))}
                                   </span>
                                 )}
                               </div>
@@ -15321,6 +15634,10 @@ export default function DashboardStaging() {
             const isOwnerPopup = !!user?.email && selectedGifter.gifts.some(g =>
               String(g.senderEmail || "").trim().toLowerCase() === String(user.email).trim().toLowerCase()
             );
+            // The detail's profile icon opens this person's story (their gifts,
+            // notes and media). Ringed so it reads as tappable; brighter when a
+            // real new moment is waiting.
+            const popupHasNew = !isOwnerPopup && gifterHasNew(selectedGifter.name, selectedGifter.gifts);
             const sortedGifts = [...selectedGifter.gifts].sort(
               (a, b) => new Date(String(b.createdAt || 0)).getTime() - new Date(String(a.createdAt || 0)).getTime()
             );
@@ -15401,32 +15718,49 @@ export default function DashboardStaging() {
               <>
                 <div className="px-6 pb-4 pt-6">
                   <div className="flex items-center gap-4">
-                    <div style={{ position: "relative" }}>
-                      <div
-                        style={{
-                          width: 52, height: 52, borderRadius: 9999, flexShrink: 0,
-                          background: color.bg,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          overflow: "hidden",
-                          boxShadow: isOwnerPopup
-                            ? "0 0 0 2.5px hsl(var(--kiddo-evergreen)), 0 2px 8px rgba(26,23,16,0.12)"
-                            : "0 2px 8px rgba(26,23,16,0.12)",
-                        }}
-                      >
-                        {(selectedGifter.avatarUrl || (isOwnerPopup ? user?.profileImageUrl : null)) ? (
-                          // The gifter's real profile photo in the detail modal
-                          // hero — same swap as the small roster avatar so the
-                          // face reads consistently (Dad's photo, not initials).
-                          <FadeImage
-                            src={(selectedGifter.avatarUrl || user?.profileImageUrl) as string}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span style={{ color: color.text, fontSize: 18, fontWeight: 800 }}>
-                            {selectedGifter.initials}
-                          </span>
-                        )}
+                    <button
+                      type="button"
+                      onClick={() => { haptic("selection"); markGifterSeen(selectedGifter.name, selectedGifter.gifts); setStoryGifter(selectedGifter); setSelectedGifter(null); }}
+                      aria-label={`See ${isOwnerPopup ? "your" : selectedGifter.name + "'s"} story`}
+                      style={{ position: "relative", background: "transparent", border: "none", padding: 0, cursor: "pointer" }}
+                    >
+                      {/* Story ring — the same "tap for a story" language as the
+                          holding logos, in the gifter's own warm tone so it reads
+                          as love, not news. A new moment glows bright + warm; once
+                          seen it goes quiet (grey), exactly like the stock rings. */}
+                      <div style={{
+                        borderRadius: 9999, padding: 2.5, flexShrink: 0,
+                        background: popupHasNew
+                          ? `conic-gradient(from 215deg, ${color.bg}, hsl(41,88%,56%), ${color.bg})`
+                          : "hsl(var(--kiddo-ink) / 0.16)",
+                        boxShadow: popupHasNew ? `0 0 14px 1px ${color.bg}` : "0 2px 8px rgba(26,23,16,0.12)",
+                        transition: "background 0.4s ease",
+                      }}>
+                        <div style={{ borderRadius: 9999, padding: 2, background: "hsl(var(--background))" }}>
+                          <div
+                            style={{
+                              width: 52, height: 52, borderRadius: 9999,
+                              background: color.bg,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {(selectedGifter.avatarUrl || (isOwnerPopup ? user?.profileImageUrl : null)) ? (
+                              // The gifter's real profile photo in the detail modal
+                              // hero — same swap as the small roster avatar so the
+                              // face reads consistently (Dad's photo, not initials).
+                              <FadeImage
+                                src={(selectedGifter.avatarUrl || user?.profileImageUrl) as string}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span style={{ color: color.text, fontSize: 18, fontWeight: 800 }}>
+                                {selectedGifter.initials}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       {isThanked && (
                         <div style={{
@@ -15440,7 +15774,7 @@ export default function DashboardStaging() {
                           </svg>
                         </div>
                       )}
-                    </div>
+                    </button>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-heading text-lg font-bold text-foreground">
@@ -15462,7 +15796,7 @@ export default function DashboardStaging() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2 mt-0.5">
                         <p className="text-sm text-muted-foreground">
-                          {selectedGifter.giftCount} {selectedGifter.giftCount === 1 ? "gift" : "gifts"} · {formatCurrency(selectedGifter.totalNetAmount)} gifted
+                          {selectedGifter.giftCount} {selectedGifter.giftCount === 1 ? "gift" : "gifts"} · {formatMoneyFriendly(selectedGifter.totalNetAmount)} gifted
                         </p>
                         {isThanked && (
                           <span className="rounded-full" style={{ fontSize: 10, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", background: "hsl(var(--kiddo-evergreen) / 0.09)", padding: "2px 7px" }}>
@@ -15485,7 +15819,7 @@ export default function DashboardStaging() {
                               {formatCurrency(aggregateNowWorth.totalNow)} today
                             </span>
                             <span style={{ color: up ? "rgb(22,128,67)" : "rgb(190,30,30)", fontWeight: 700 }}>
-                              {" · "}{up ? "+" : ""}{formatCurrency(aggregateNowWorth.delta)} ({up ? "+" : ""}{pct.toFixed(1)}%) {up ? "🌱" : ""}
+                              {" · "}{up ? "+" : ""}{formatCurrency(aggregateNowWorth.delta)} ({up ? "+" : ""}{pct.toFixed(1)}%)
                             </span>
                           </p>
                         );
@@ -15524,7 +15858,7 @@ export default function DashboardStaging() {
                       className="w-full flex items-center justify-center gap-2 rounded-full border border-[hsl(43,75%,55%/0.35)] bg-[hsl(43,75%,55%/0.10)] py-2 text-[12.5px] font-semibold text-[hsl(43,55%,30%)] hover:bg-[hsl(43,75%,55%/0.18)] transition-colors"
                       data-testid="button-bulk-thanks"
                     >
-                      💌 Thank all {unthankedCount} at once →
+                      Thank all {unthankedCount} at once →
                     </button>
                   </div>
                 )}
@@ -15668,35 +16002,9 @@ export default function DashboardStaging() {
                         onMouseEnter={(e) => { if (g.id) e.currentTarget.style.background = "rgba(26,23,16,0.025)"; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                       >
-                        {/* First-gift ribbon — celebrates the
-                            chronologically-earliest gift this gifter ever
-                            sent. Tiny but iconic; renders only above the
-                            row that earned it. Honors the design lens
-                            (Emma at 18 looking back at "the first time
-                            grandpa gave"). Mirrors the Activity History
-                            tab's first-gift banner pattern. */}
-                        {isFirstGiftRow && (
-                          <div
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 5,
-                              fontSize: 9.5,
-                              fontWeight: 800,
-                              letterSpacing: "0.06em",
-                              textTransform: "uppercase" as const,
-                              color: "rgb(146,108,46)",
-                              background: "rgba(184,121,26,0.10)",
-                              padding: "2px 7px",
-                              borderRadius: 999,
-                              marginBottom: 8,
-                            }}
-                            data-testid={`gifter-modal-first-gift-ribbon-${g.id}`}
-                          >
-                            <span style={{ fontSize: 11, lineHeight: 1 }}>🎁</span>
-                            First gift
-                          </div>
-                        )}
+                        {/* First-gift ribbon removed per founder (2026-07-05): the
+                            "🎁 First gift" badge read as decorative chrome on the
+                            gifter detail; the gift row carries enough on its own. */}
                         {/* Amount + status row */}
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
@@ -15711,26 +16019,29 @@ export default function DashboardStaging() {
                             {gTicker && (
                               <StockLogo ticker={gTicker} size={18} className="shrink-0" />
                             )}
-                            <span style={{
-                              fontSize: 10.5, fontWeight: 700,
-                              color: gTicker ? "rgb(26,67,50)" : "rgb(120,110,100)",
-                              background: gTicker ? "rgba(26,67,50,0.09)" : "rgba(26,23,16,0.06)",
-                              borderRadius: 999, padding: "2px 8px",
-                            }}>
-                              {/* "✓" prefix removed — every entry in this list is
-                                  by definition either invested OR shows a "🌱 Settling"
-                                  pill alongside, so the checkmark was telling the parent
-                                  what the absence-of-Settling already tells them. */}
-                              {investLabel}
-                            </span>
-                            {gHoldingName && (
-                              <span style={{ fontSize: 12, color: "rgb(80,72,64)", fontWeight: 500 }}>
-                                {gHoldingName}
+                            {/* One identifier per stock, not three. The row used to show
+                                [logo] + "AAPL" pill + "Apple" name — the logo already brands
+                                the company, so the ticker pill AND the name were a redundant
+                                second and third label (founder catch 2026-07). Stock gifts now
+                                read [logo] + friendly name; managed-mix gifts (no logo/name)
+                                keep the pill that names the mix ("{child}'s mix"). */}
+                            {gTicker ? (
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "rgb(40,36,30)" }}>
+                                {gHoldingName || gTicker.toUpperCase()}
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: 10.5, fontWeight: 700,
+                                color: "rgb(120,110,100)",
+                                background: "rgba(26,23,16,0.06)",
+                                borderRadius: 999, padding: "2px 8px",
+                              }}>
+                                {investLabel}
                               </span>
                             )}
                             {isPending && (
                               <span style={{ fontSize: 9.5, fontWeight: 700, background: "hsl(143,28%,94%)", color: "hsl(143,40%,30%)", padding: "1px 6px", borderRadius: 999 }}>
-                                🌱 Settling
+                                Settling
                               </span>
                             )}
                             {/* Per-gift recurring tag. Two signals trigger
@@ -15823,7 +16134,7 @@ export default function DashboardStaging() {
                                 is pure redundancy. The screen's own context already says it. */}
                           </div>
                           <p className="font-heading" style={{ fontSize: 16, fontWeight: 700, color: "rgb(26,23,16)", flexShrink: 0 }}>
-                            {formatCurrency(Number.isFinite(netAmt) ? netAmt : 0)}
+                            {formatMoneyFriendly(Number.isFinite(netAmt) ? netAmt : 0)}
                           </p>
                         </div>
 
@@ -15867,7 +16178,7 @@ export default function DashboardStaging() {
                                     fontWeight: 700,
                                     color: delta >= 0 ? "rgb(22,128,67)" : "rgb(190,30,30)",
                                   }}>
-                                    {delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))} 🌱
+                                    {delta >= 0 ? "+" : "−"}{formatCurrency(Math.abs(delta))}
                                   </span>
                                 )}
                               </div>
@@ -16066,10 +16377,31 @@ export default function DashboardStaging() {
         </DialogContent>
       </Dialog>
 
+      {/* PROTOTYPE: full-screen "Learn what you own" stories. Hand-written decks
+          cover every holding in the demo fund (AAPL/GOOGL/DIS/RBLX/NTDOY/MCD +
+          the VTI/VXUS market variants); any-ticker/always-fresh coverage is the
+          live pipeline (server/holdingStoriesCuration.ts), parked until enabled. */}
+      <HoldingStoriesViewer ticker={storyTicker} open={!!storyTicker} onClose={() => setStoryTicker(null)} />
+
+      {/* PROTOTYPE: per-person stories — the roster face opens that person's
+          gifts, notes and media as a warm, swipeable run (their slice of the
+          Memory Book), media playing in-app. */}
+      <GifterStoriesViewer
+        open={!!storyGifter}
+        name={storyGifter?.name || ""}
+        initials={storyGifter?.initials || ""}
+        avatarUrl={storyGifter?.avatarUrl || null}
+        colorRgb={storyGifter ? GIFTER_AVATAR_COLORS[storyGifter.colorIdx]?.bg : undefined}
+        childName={recipientFirstNameDisplay || null}
+        moments={storyGifter ? gifterMomentsFromGifts(storyGifter.gifts) : []}
+        onClose={() => setStoryGifter(null)}
+      />
+
       <Suspense fallback={null}>
         <HoldingDetailSheet
           holding={selectedHolding}
           onClose={() => setSelectedHolding(null)}
+          onOpenStory={(tk) => setStoryTicker(tk.toUpperCase())}
           recipientName={recipientFirstNameDisplay || undefined}
           totalPortfolioValue={totalValue}
           gifts={gifts}
@@ -16097,11 +16429,10 @@ export default function DashboardStaging() {
             setLocation("/settings?tab=money#investment-strategy");
           }}
           onAddMore={(ticker) => {
-            if (uninvestedCash > 0) {
-              setInvestCashInitialTicker(ticker);
-              setInvestCashOpen(true);
-              return;
-            }
+            // "Add more" always opens the uncapped one-time flow for this
+            // ticker; deploying idle cash is a SEPARATE intent handled by the
+            // "Cash is waiting" CTA, so it no longer traps the parent at their
+            // cash balance.
             setOneTimeAmount("50");
             setOneTimeStep("amount");
             setOneTimeExecutionModel("pick");
@@ -16490,14 +16821,59 @@ export default function DashboardStaging() {
               const freqWord = (f: string) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
               return (
               <>
-                {isEditing && (
-                  <div>
-                    <h2 className="font-heading text-xl font-semibold text-foreground">
-                      Edit your recurring investment
-                    </h2>
-                    <p className="mt-1.5 text-sm text-muted-foreground">
-                      {`Currently ${formatCurrency(prevAmount)}/${freqWord(prevFreq)} (${formatCurrency(prevAnnualized)}/yr). Adjust below.`}
-                    </p>
+                {/* Show the destination on the amount step whenever it's meaningful:
+                    always when editing (the recurring already has a target), and on a NEW
+                    recurring once the parent has explicitly picked a stock on step 2 and
+                    navigated back (confirms the pick stuck). Not shown for a new recurring
+                    still on the default mix — nothing chosen yet, so nothing to imply locked. */}
+                {(isEditing || (autoInvestExecutionModel === "pick" && autoInvestTicker)) && (
+                  <div className="space-y-3">
+                    {isEditing && (
+                      <div>
+                        <h2 className="font-heading text-xl font-semibold text-foreground">
+                          Edit your recurring investment
+                        </h2>
+                        <p className="mt-1.5 text-sm text-muted-foreground">
+                          {/* Show only what they set (e.g. "$100.00/month") — don't
+                              annualize it for them. The yearly figure they never chose was
+                              gratuitous here; the edit delta-preview below still shows the
+                              annual/at-18 impact when they actually CHANGE the amount. */}
+                          {`Currently ${formatCurrency(prevAmount)}/${freqWord(prevFreq)}. Adjust below.`}
+                        </p>
+                      </div>
+                    )}
+                    {/* Destination context (founder catch 2026-07): the amount step showed the
+                        amount but never WHAT the recurring buys — it read like editing an
+                        unlabeled stock, with no logo. Surface the target (the fund-default
+                        mix, a chosen stock, or cash) with its logo so it's obvious where each
+                        deposit lands. The full picker is still step 2 ("Where should it go"). */}
+                    {(() => {
+                      const dMode = (investPrefs as any)?.defaultMode ?? "managed";
+                      const pickTicker = autoInvestExecutionModel === "pick" && autoInvestTicker ? autoInvestTicker.toUpperCase() : null;
+                      const stockTicker = pickTicker ?? (dMode === "stock" && (investPrefs as any)?.defaultTicker ? String((investPrefs as any).defaultTicker).toUpperCase() : null);
+                      const isCashDest = !pickTicker && dMode === "cash";
+                      const strategyKey = (investPrefs as any)?.managedStrategy ?? "growth";
+                      const poss = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s ` : "";
+                      const mixLabel = STRATEGY_LABEL[strategyKey as keyof typeof STRATEGY_LABEL] || (strategyKey === "custom" ? "Custom Mix" : "Growth Mix");
+                      const label = stockTicker ? stockTicker : isCashDest ? "Held as cash until you invest it" : `${poss}${mixLabel}`;
+                      return (
+                        <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--kiddo-border))] bg-muted/30 px-3.5 py-2.5" data-testid="recurring-destination">
+                          {stockTicker ? (
+                            <StockLogo ticker={stockTicker} size={26} />
+                          ) : isCashDest ? (
+                            <div className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-[hsl(var(--kiddo-gold)/0.12)]">
+                              <Coins size={15} className="text-[hsl(var(--kiddo-evergreen))]" />
+                            </div>
+                          ) : (
+                            <StrategyIcon strategyKey={strategyKey} size={26} />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">{investingLiveCopy("Each deposit invests in", "Each deposit will invest in")}</p>
+                            <p className="text-sm font-semibold text-foreground truncate">{label}</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -16670,7 +17046,7 @@ export default function DashboardStaging() {
                           {showProjection && prevFv !== null && fv !== null && Math.abs((fvDelta ?? 0)) >= 50 && (
                             <div className="pt-1.5 border-t border-[hsl(var(--kiddo-evergreen)/0.15)] space-y-1">
                               <p className="text-[12px] text-[hsl(var(--kiddo-evergreen)/0.85)] leading-relaxed">
-                                By {childPossessive} 18th: <span className="line-through text-[hsl(var(--kiddo-evergreen)/0.45)]">{fmt0(prevFv)}</span>
+                                By {childPossessive} {majorityOrdinal}: <span className="line-through text-[hsl(var(--kiddo-evergreen)/0.45)]">{fmt0(prevFv)}</span>
                                 {" → "}
                                 <span className="font-semibold">{fmt0(fv)}</span>
                               </p>
@@ -16710,7 +17086,10 @@ export default function DashboardStaging() {
                   onClick={() => setAutoInvestStep("target")}
                   data-testid="button-auto-invest-next-target"
                 >
-                  {isEditing ? "Review changes" : "Continue"}
+                  {/* "Continue" in both modes — this advances to the destination step,
+                      not a review, so "Review changes" (old edit-mode label) both
+                      overpromised (no review here) and hid that a step follows. */}
+                  Continue
                 </Button>
               </>
               );
@@ -16896,7 +17275,7 @@ export default function DashboardStaging() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className={`${STICKY_SHEET_NAV} flex gap-2`}>
                   <Button variant="outline" className="rounded-full" onClick={() => setAutoInvestStep("amount")}>
                     Back
                   </Button>
@@ -17015,7 +17394,7 @@ export default function DashboardStaging() {
                     One last thing.
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Once invested, this money belongs to {recipientFirstNameDisplay || "them"}. That's the whole point.
+                    Once invested, this money belongs to {recipientFirstNameDisplay || "them"}.
                   </p>
                 </div>
 
@@ -17045,7 +17424,9 @@ export default function DashboardStaging() {
                   </Button>
                   <Button
                     className="flex-1 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
-                    disabled={savingAutoInvest}
+                    // Editing with nothing changed → nothing to save, so the CTA is
+                    // disabled and reads "No changes yet" instead of a live "Save changes".
+                    disabled={savingAutoInvest || (!!editingContribId && !autoInvestHasEdits)}
                     onClick={handleSaveAutoInvest}
                     data-testid="button-save-auto-invest"
                   >
@@ -17054,7 +17435,14 @@ export default function DashboardStaging() {
                     ) : (
                       <Repeat size={15} className="mr-1.5" />
                     )}
-                    {savingAutoInvest ? "Setting up..." : recipientFirstNameDisplay ? `Start investing for ${recipientFirstNameDisplay}` : "Start investing"}
+                    {/* Editing an existing plan SAVES changes; only a brand-new plan
+                        "starts" investing. The old copy said "Start investing for Theo"
+                        even mid-edit, which read as creating a second plan. */}
+                    {savingAutoInvest
+                      ? (editingContribId ? "Saving..." : "Setting up...")
+                      : editingContribId
+                        ? (autoInvestHasEdits ? "Save changes" : "No changes yet")
+                        : recipientFirstNameDisplay ? `Start investing for ${recipientFirstNameDisplay}` : "Start investing"}
                   </Button>
                 </div>
 
@@ -17077,7 +17465,7 @@ export default function DashboardStaging() {
                     {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} reads it` : `${capFirst(childPronouns.subject)} read${childPronouns.singular ? "s" : ""} it`} on {childPronouns.possAdj} {majorityOrdinal} birthday.
                   </p>
                   <p className="mt-2 text-xs text-[hsl(var(--kiddo-evergreen))] leading-relaxed">
-                    We'll stamp this note onto every cycle. Each ${parseFloat(autoInvestAmount || "0").toFixed(0)} you add carries this love forward.
+                    We'll stamp this note onto every cycle.
                   </p>
                 </div>
                 <textarea
@@ -17578,7 +17966,7 @@ export default function DashboardStaging() {
               </div>
 
               <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 mb-4">
-                Moving an investment to cash can mean a tax form at year-end. For a child's fund, money still belongs to the child.
+                Moving an investment to cash can mean a tax form at year-end. The cash stays in the fund.
               </p>
 
               </div>
@@ -17787,12 +18175,10 @@ export default function DashboardStaging() {
                         <span className="text-amber-900 font-semibold tabular-nums">$0/yr</span>
                         <span className="text-amber-900/55 text-2xs">unless you set up a new one</span>
                       </div>
-                      <div className="pt-1.5 border-t border-amber-200/60 space-y-1">
-                        <p className="text-[12px] text-amber-900/85 leading-relaxed">
-                          By {cancelChildFirst}'s 18th: <span className="line-through text-amber-900/45">{cancelFmt0(cancelFv)}</span>
-                          {" → "}
-                          <span className="font-semibold">$0</span>
-                        </p>
+                      <div className="pt-1.5 border-t border-amber-200/60">
+                        {/* Just the one impact line. The "By {child}'s {majority}: $X → $0"
+                            arrow above it was cut (2026-07) — it restated exactly what
+                            "−$X less" says, one framing too many for a cancel confirm. */}
                         <p className="text-[12px] font-semibold text-amber-800 leading-relaxed">
                           −{cancelFmt0(cancelFv)} less for {cancelChildFirst} at {majorityAge}<span className="text-amber-900/55 font-normal">*</span>
                         </p>
@@ -17831,15 +18217,27 @@ export default function DashboardStaging() {
 
             return (
               <div className="p-6 space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-primary">Recurring investment</p>
-                  <h2 className="mt-1 font-heading text-xl font-semibold text-foreground tabular-nums">
-                    {formatCurrency(parseFloat(contrib.amount))}
-                    <span className="text-base font-normal text-muted-foreground">/{freqLabel(contrib.frequency)}</span>
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    into {targetLabel} · {isPausedRow ? "Paused" : "Active"}
-                  </p>
+                {/* Destination logo lockup (matches the schedule rows + dashboard
+                    cards): a pick shows its brand logo, a managed schedule its strategy
+                    glyph. This sheet was the one recurring surface still logo-less. */}
+                <div className="flex items-center gap-3">
+                  {sheetPickMeta && contrib.selectedTicker ? (
+                    <div style={{ width: 40, height: 40, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "rgb(248,247,244)", border: "1px solid rgba(26,67,50,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <StockLogo ticker={String(contrib.selectedTicker).toUpperCase()} size={26} />
+                    </div>
+                  ) : (
+                    <StrategyIcon strategyKey={(activeFund as any)?.investmentStrategy} size={40} paused={isPausedRow} />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-primary">Recurring investment</p>
+                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground tabular-nums">
+                      {formatCurrency(parseFloat(contrib.amount))}
+                      <span className="text-base font-normal text-muted-foreground">/{freqLabel(contrib.frequency)}</span>
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      into {targetLabel} · {isPausedRow ? "Paused" : "Active"}
+                    </p>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <button
@@ -18025,17 +18423,29 @@ export default function DashboardStaging() {
           const ticker = (schedule as any).executionModel === "pick" && typeof (schedule as any).selectedTicker === "string"
             ? (schedule as any).selectedTicker.toUpperCase()
             : null;
+          // Name the actual tier ("into the Growth mix") rather than the generic
+          // "managed mix", matching the Activity feed. STRATEGY_SHORT is the bare
+          // form for a "…mix" context. This is the DESCRIPTIVE destination line, not
+          // the stable identity/title (which stays preset-agnostic on purpose), so
+          // naming the current preset here is correct. Falls back to "the managed
+          // mix" for cash/custom-unknown so it never reads "the undefined mix".
+          const managedStratKey = String((activeFund as any)?.investmentStrategy || "").toLowerCase();
+          const managedStratShort = (STRATEGY_SHORT as Record<string, string>)[managedStratKey];
           const destLabel = ticker
             ? `into ${ticker}`
             : (schedule as any).executionModel === "family"
-              ? "into family mix"
-              : "into managed mix";
+              ? "into the family mix"
+              : `into ${managedStratShort ? `the ${managedStratShort} mix` : "the managed mix"}`;
           const isPaused = (schedule as any).status === "paused";
           // A schedule paused BY the age-18 handoff didn't pause — it ENDED, and
           // the owner can't resume it (they set up their own recurring instead).
           // Mirror the recurring-section's isHandoffEnded (~8529) so this modal
           // reads "Ended", not the misleading "Paused" (which implies resumable).
           const isHandoffEnded = (schedule as any).pauseReason === "majority_handoff";
+          // Last charge couldn't run and the schedule is auto-retrying — mirrors
+          // the card's failedActive so the header stops saying "Next charge" (as if
+          // nothing happened) and reads "Retrying" instead, agreeing with the row.
+          const hasRecentFailure = Boolean((schedule as any).hasRecentFailure) && !isPaused && !isHandoffEnded;
           // Payment method + next-charge info now lands in the hero
           // (subtitle + stats grid) instead of a recursive Scheduled tab
           // that just re-displayed the schedule the parent had already
@@ -18061,14 +18471,23 @@ export default function DashboardStaging() {
             // Replaces "Cycle amount" — that value is already in the modal
             // title ($25.00/mo). "Next charge" is the question the parent
             // actually asks looking at this surface.
-            { label: "Next charge", value: nextChargeLabel, tone: isPaused ? "neutral" : "positive" },
+            // Always "Next charge" — the value is the next SCHEDULED charge date, not a
+            // re-attempt of the missed one (the worker doesn't re-run failures; see
+            // recurringContributionWorker). Labeling it "Retrying: {date}" implied the
+            // failed charge re-runs on that date. The failure is signaled by the status
+            // pill + the "Pay it now" primaryAction below, not by relabeling this date.
+            { label: "Next charge", value: nextChargeLabel, tone: hasRecentFailure || isPaused ? "neutral" : "positive" },
             { label: "Started", value: startedDate ? startedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
           ];
           // Subtitle merges destination + payment method so the parent
           // sees "where" + "how it's paid" at a glance — the two facts
           // the deleted Scheduled tab carried beyond what the trigger
           // card already showed.
-          const subtitleParts = [destLabel];
+          // Drop the destination when the title already carries it: a picked
+          // ticker makes the title "CROX · $100/wk", so "into CROX" just repeats
+          // it. Keep it for managed/family mix, where the title has no ticker and
+          // this subtitle is the only place the destination shows.
+          const subtitleParts = ticker ? [] : [destLabel];
           if (pmLabel) subtitleParts.push(pmLabel);
           if (isHandoffEnded) subtitleParts.push("ended");
           else if (isPaused) subtitleParts.push("paused");
@@ -18078,9 +18497,23 @@ export default function DashboardStaging() {
               open
               onClose={closeDetailScope}
               title={`${ticker || "Recurring"} · ${amt != null ? formatCurrency(amt) : ""}/${(schedule as any).frequency === "weekly" ? "wk" : (schedule as any).frequency === "yearly" ? "yr" : "mo"}`}
-              subtitle={composedSubtitle}
+              subtitle={composedSubtitle || undefined}
+              // Logo/icon left of the title so this hero matches the row it opened
+              // from (pick → brand logo, managed → strategy icon).
+              leading={ticker
+                ? <StockLogo ticker={ticker} size={32} />
+                : <StrategyIcon strategyKey={(activeFund as any)?.investmentStrategy} size={32} paused={isPaused} />}
               summaryStats={stats}
               rows={scopedRows}
+              // A recoverable decline surfaces "Pay it now" as the PRIMARY action
+              // (opens the one-time flow pre-filled) — the right recovery, versus
+              // the row's "Report an issue" fallback (a decline isn't a bug). Owners
+              // / read-only viewers can't charge a plan they don't own, so no action.
+              primaryAction={hasRecentFailure && !isOwnerMode && !isReadOnlyFund ? {
+                label: "Pay it now",
+                onClick: () => { closeDetailScope(); payMissedRecurring(schedule); },
+                testId: "detail-modal-pay-now",
+              } : undefined}
               // Post-handoff owner OR a read-only viewer/previous-owner: read-only
               // history, no manage CTA (the action sheet's pause/edit/cancel all
               // 403 on a plan the current user isn't owner-of-record for).
