@@ -53,6 +53,9 @@ export function parseMetadata(raw: unknown): Record<string, unknown> {
 
 export function extractTicker(meta: Record<string, unknown>, title?: string | null): string | null {
   if (meta.ticker && typeof meta.ticker === "string") return meta.ticker.toUpperCase();
+  // Recurring (auto_invest) rows stamp the pick under `selectedTicker`, not
+  // `ticker` — read it too so those rows get the brand logo like gifts do.
+  if (meta.selectedTicker && typeof meta.selectedTicker === "string") return meta.selectedTicker.toUpperCase();
   const text = title || "";
   const m = text.match(/^([A-Z]{1,5})\s+gift/i) || text.match(/into\s+([A-Z]{1,5})\b/i);
   return m ? m[1].toUpperCase() : null;
@@ -86,6 +89,32 @@ export function parseAmount(value: unknown): number | null {
   if (value == null) return null;
   const n = typeof value === "number" ? value : Number.parseFloat(String(value));
   return Number.isFinite(n) ? n : null;
+}
+
+// Display-time cleanup of legacy/seed activity descriptions. Copy of the feed's
+// canonical rewriteLegacyDescription (Activity.tsx) so the DetailHistoryModal +
+// Dashboard render the SAME cleaned copy the feed does — without it, this surface
+// showed raw seed text ("Last automatic charge could not run. Next attempt Aug 3.
+// We sent you an email reminder…") while the feed showed the honest short version.
+// Keep in sync with Activity.tsx (it's the reference; this converges up to it).
+export function rewriteLegacyDescription(d: string | null | undefined): string | null {
+  if (!d) return d ?? null;
+  const t = d.trim();
+  if (t === "No note." || /^\$[\d,]+(\.\d{2})? gift received$/i.test(t)) return null;
+  let out = d;
+  out = out.replace(/\bacross 1 positions\b/g, "across 1 position");
+  out = out.replace(/(\d+)\.(\d{1,4})\s+shares?\b/g, (_m, whole: string, frac: string) => {
+    const trimmed = frac.replace(/0+$/, "");
+    if (trimmed === "") return whole === "1" ? `${whole} share` : `${whole} shares`;
+    return `${whole}.${trimmed} shares`;
+  });
+  out = out.replace(/\b1-2 business days\b/g, "1 to 2 business days");
+  out = out.replace(/\b1\s*-\s*2 business days\b/g, "1 to 2 business days");
+  out = out.replace(/\bthe full mix\b/g, "the diversified mix");
+  out = out.replace(/^Last automatic charge could not run\.\s*/, "");
+  out = out.replace(/Next attempt (\w+\.? \d+)\.?/i, "Your plan is still on and charges again $1.");
+  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add the missed one if you'd like.");
+  return out;
 }
 
 // Configures the row's icon tile (background, color, icon) for a given
@@ -124,9 +153,12 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Contribution" };
   if (t === "parent_contribution_failed")
     // A recurring auto-invest charge that couldn't run is a RECOVERABLE hiccup —
-    // the schedule lives and auto-retries — so it wears the calm amber "Retrying"
-    // frame (matching the dashboard card), NOT an alarming red "Failed". Label =
-    // category ("Recurring investment"); the "Retrying" pill carries the status.
+    // the schedule lives (the NEXT charge proceeds) but the missed one needs the
+    // parent to add it manually (the worker does NOT re-run it) — so it wears the
+    // calm amber "Needs you" frame (matching the dashboard card), NOT an alarming
+    // red "Failed". "Needs you" (not "Retrying") because nothing auto-retries the
+    // missed charge; it pairs with the "Add it now" action. Label = category
+    // ("Recurring investment"); the "Needs you" pill carries the status.
     return { bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
   if (t === "memory_milestone_added")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
@@ -169,10 +201,36 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
   return { ...v, label: canonicalLabel(type) ?? v.label };
 }
 
+// Shared display-time normalizers so EVERY surface (the main feed AND the
+// /activity/:id detail page) reads the same honest copy for legacy/seeded rows,
+// instead of only the feed getting cleaned. Kept minimal + focused on the
+// failed-charge state (the stored copy that predated the honest rewrite). The
+// main feed still has its own richer rewrite; this is the shared subset.
+export function normalizeActivityTitle(title?: string | null): string | null {
+  if (!title) return title ?? null;
+  // "Recurring investment failed" tripled the eyebrow + the status pill.
+  if (title.trim() === "Recurring investment failed") return "Automatic charge didn't go through";
+  return title;
+}
+
+export function normalizeActivityDescription(desc?: string | null): string | null {
+  if (!desc) return desc ?? null;
+  let out = desc;
+  // Stale failed-charge body: restated the title, promised a false "Next attempt"
+  // (nothing re-runs), and trailed a wordy email line. Make it honest + calm.
+  out = out.replace(/^Last automatic charge could not run\.\s*/, "");
+  out = out.replace(/Next attempt (\w+\.? \d+)\.?/i, "Your plan is still on and charges again $1.");
+  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add the missed one if you'd like.");
+  return out;
+}
+
 export function StatusPill({ status, type }: { status?: string | null; type?: string | null }) {
   let resolved = status || null;
   if (!resolved && type) {
-    // A recurring auto-invest decline auto-retries -> calm amber "Retrying".
+    // A recurring auto-invest decline is NOT retried and does NOT break the plan
+    // (it charges again next cycle); the parent can optionally add the missed one.
+    // So the honest state is "Charge missed" -> calm amber, not "Retrying" (a lie:
+    // nothing re-runs) and not "Needs you" (overstated: the plan self-continues).
     // A subscription payment failure is more serious (plan lapses) -> red "Failed".
     if (type === "parent_contribution_failed") resolved = "retrying";
     else if (type === "payment_failed") resolved = "failed";
@@ -184,7 +242,7 @@ export function StatusPill({ status, type }: { status?: string | null; type?: st
     invested:   { label: "Invested",   bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <ArrowUp size={9} /> },
     settled:    { label: "Settled",    bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <Check size={9} /> },
     failed:     { label: "Failed",     bg: "rgb(254,228,228)", color: "rgb(170,38,38)",  icon: <AlertCircle size={9} /> },
-    retrying:   { label: "Retrying",   bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Repeat size={9} /> },
+    retrying:   { label: "Charge missed", bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={9} /> },
     refunded:   { label: "Refunded",   bg: "rgb(245,245,245)", color: "rgb(100,92,86)",  icon: <Clock size={9} /> },
     host_hold:  { label: "On hold",    bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Clock size={9} /> },
   };

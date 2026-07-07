@@ -20,8 +20,8 @@
 // URL into activity metadata and these chips light up automatically with
 // no UI change required.
 
-import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { X as XIcon, ChevronDown, Calendar, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
@@ -40,6 +40,7 @@ import {
   buildReportIssueHref,
   GIFT_TYPES,
   normalizeActivityType,
+  rewriteLegacyDescription,
 } from "@/lib/activity-helpers";
 
 export type DetailStat = {
@@ -73,6 +74,10 @@ export interface DetailHistoryModalProps {
   // Hero section
   title: string;
   subtitle?: string | null;
+  // Optional visual identity rendered to the LEFT of the title (e.g. a stock
+  // logo or strategy icon), so the detail hero matches the row it opened from.
+  // Undefined → title sits flush-left as before (backward-compatible).
+  leading?: ReactNode;
   summaryStats: DetailStat[];
 
   // Optional sub-toggle that the caller controls (e.g., for the
@@ -94,6 +99,13 @@ export interface DetailHistoryModalProps {
 
   // Bottom CTA (e.g., "Edit recurring →"). Optional.
   bottomCta?: { label: string; onClick: () => void; testId?: string };
+
+  // Optional primary action rendered above the bottomCta (e.g., "Pay it
+  // now" for a recurring schedule whose last charge failed). When present
+  // it takes the solid primary Button slot and any bottomCta demotes to an
+  // outline button below it. `busy` disables it while the action is in
+  // flight, mirroring the trigger card's contribute-now loading state.
+  primaryAction?: { label: string; onClick: () => void; testId?: string; busy?: boolean };
 }
 
 type ModalTab = "history" | "pending" | "scheduled";
@@ -103,12 +115,21 @@ export function DetailHistoryModal({
   onClose,
   title,
   subtitle,
+  leading,
   summaryStats,
   subToggle,
   rows,
   scheduledRows,
   bottomCta,
+  primaryAction,
 }: DetailHistoryModalProps) {
+  // Swipe-down-to-dismiss, matching every other bottom sheet in the app. Drag is
+  // started ONLY from the handle (dragListener=false + dragControls) so it never
+  // fights the scrollable History/Pending content. Framer owns the transform here
+  // (this is a motion sheet, not a Radix one), so we use its drag, not the shared
+  // useSheetDragDismiss hook.
+  const dragControls = useDragControls();
+
   // Lock body scroll while open. Prevents the underlying Activity page from
   // scrolling under the modal on iOS (the canonical sheet-modal bug).
   useEffect(() => {
@@ -215,6 +236,17 @@ export function DetailHistoryModal({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={MOTION.modal}
+            drag="y"
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragSnapToOrigin
+            onDragEnd={(_, info) => {
+              // Past the pull threshold OR a fast downward flick → dismiss;
+              // otherwise dragSnapToOrigin springs it back to rest.
+              if (info.offset.y > 110 || info.velocity.y > 600) onClose();
+            }}
             role="dialog"
             aria-modal="true"
             aria-label={title}
@@ -239,7 +271,17 @@ export function DetailHistoryModal({
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "14px 18px 0 18px",
             }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: "hsl(var(--kiddo-ink) / 0.10)", margin: "0 auto" }} className="md:hidden" />
+              {/* Grab handle — the drag initiator. Padded hit area + touch-none so
+                  dragging it starts the sheet drag (not a body scroll). Desktop is
+                  centered (no swipe), so the handle is mobile-only. */}
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                data-testid="sheet-drag-handle"
+                className="md:hidden"
+                style={{ margin: "0 auto", padding: "4px 44px", touchAction: "none", cursor: "grab" }}
+              >
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "hsl(var(--kiddo-ink) / 0.14)" }} />
+              </div>
               <button
                 type="button"
                 onClick={onClose}
@@ -259,14 +301,19 @@ export function DetailHistoryModal({
 
             {/* Hero */}
             <div style={{ padding: "16px 20px 14px" }}>
-              <p className="font-heading" style={{ fontSize: 20, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
-                {title}
-              </p>
-              {subtitle && (
-                <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.62)", marginTop: 4 }}>
-                  {subtitle}
-                </p>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {leading && <div style={{ flexShrink: 0, lineHeight: 0 }}>{leading}</div>}
+                <div style={{ minWidth: 0 }}>
+                  <p className="font-heading" style={{ fontSize: 20, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
+                    {title}
+                  </p>
+                  {subtitle && (
+                    <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.62)", marginTop: 4 }}>
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+              </div>
               {summaryStats.length > 0 && (
                 <div style={{
                   marginTop: 14,
@@ -388,9 +435,13 @@ export function DetailHistoryModal({
                   <EmptyState label="Nothing here yet." sub="Contributions will show up here." />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
-                    {historyRows.map((row) => (
-                      <DetailRow key={String(row.id || `${row.createdAt}-${row.title}`)} row={row} />
-                    ))}
+                    {foldRecurringHistory(historyRows).map((entry) =>
+                      entry.kind === "run" ? (
+                        <RecurringRunGroup key={entry.id} items={entry.items} />
+                      ) : (
+                        <DetailRow key={String(entry.row.id || `${entry.row.createdAt}-${entry.row.title}`)} row={entry.row} />
+                      )
+                    )}
                   </div>
                 )
               )}
@@ -421,25 +472,44 @@ export function DetailHistoryModal({
               )}
             </div>
 
-            {/* Bottom CTA */}
-            {bottomCta && (
+            {/* Bottom CTA(s) */}
+            {(primaryAction || bottomCta) && (
               <div style={{
                 padding: "12px 20px",
                 borderTop: "1px solid hsl(var(--kiddo-ink) / 0.08)",
                 background: "white",
+                display: "flex", flexDirection: "column" as const, gap: 8,
               }}>
-                <Button
-                  // Solid evergreen primary, not brand gold. Gold is reserved
-                  // for THE Share CTA (AppHeader / sidebar). This modal's
-                  // bottom CTA is a parent-action ("Manage recurring →"),
-                  // never a share — should never compete visually with the
-                  // canonical share button.
-                  className="w-full rounded-full"
-                  onClick={() => { haptic("medium"); bottomCta.onClick(); }}
-                  data-testid={bottomCta.testId || "detail-modal-bottom-cta"}
-                >
-                  {bottomCta.label}
-                </Button>
+                {/* Primary action (e.g. "Pay it now" on a failed schedule)
+                    takes the solid evergreen slot. When it's present the
+                    bottomCta below demotes to an outline so the two don't
+                    read as competing primaries. */}
+                {primaryAction && (
+                  <Button
+                    className="w-full rounded-full"
+                    disabled={!!primaryAction.busy}
+                    onClick={() => { haptic("medium"); primaryAction.onClick(); }}
+                    data-testid={primaryAction.testId || "detail-modal-primary-action"}
+                  >
+                    {primaryAction.label}
+                  </Button>
+                )}
+                {bottomCta && (
+                  <Button
+                    // Solid evergreen primary, not brand gold. Gold is reserved
+                    // for THE Share CTA (AppHeader / sidebar). This modal's
+                    // bottom CTA is a parent-action ("Manage recurring →"),
+                    // never a share — should never compete visually with the
+                    // canonical share button. Demotes to outline when a
+                    // primaryAction owns the solid slot above it.
+                    variant={primaryAction ? "outline" : "default"}
+                    className="w-full rounded-full"
+                    onClick={() => { haptic("medium"); bottomCta.onClick(); }}
+                    data-testid={bottomCta.testId || "detail-modal-bottom-cta"}
+                  >
+                    {bottomCta.label}
+                  </Button>
+                )}
               </div>
             )}
           </motion.div>
@@ -520,6 +590,92 @@ function ScheduledRow({ row }: { row: DetailScheduledRow }) {
 // Row layout used inside the modal. Flatter than the main Activity row
 // (no expand toggle — the modal IS the focused view, no need to nest
 // another expand). Always shows reconcile box + chips inline when present.
+// ── Recurring-cycle collapse (History tab) ───────────────────────────────────
+// A schedule that fired $100/mo for years renders as a wall of identical rows.
+// Fold consecutive TRUE recurring cycles into one expandable "Monthly
+// contributions · N · $X each" summary, mirroring the Activity feed. Only pure
+// recurring cycles fold (parent_contribution + a parentContributionId); one-time
+// additions, stock buys, gifts, and failed charges have a different type or no
+// parentContributionId, so they stay their own rows with their own icons.
+const MIN_RECURRING_RUN = 3;
+
+function isRecurringCycleRow(row: FeedActivity): boolean {
+  if (normalizeActivityType((row as any).type) !== "parent_contribution") return false;
+  const pcId = (parseMetadata((row as any).metadata) as any)?.parentContributionId;
+  return typeof pcId === "string" && pcId.length > 0;
+}
+
+type HistoryEntry =
+  | { kind: "row"; row: FeedActivity }
+  | { kind: "run"; id: string; items: FeedActivity[] };
+
+function foldRecurringHistory(rows: FeedActivity[]): HistoryEntry[] {
+  const out: HistoryEntry[] = [];
+  let run: FeedActivity[] = [];
+  const flush = () => {
+    if (run.length >= MIN_RECURRING_RUN) {
+      out.push({ kind: "run", id: `run-${String((run[0] as any).id || (run[0] as any).createdAt)}`, items: run.slice() });
+    } else {
+      run.forEach((r) => out.push({ kind: "row", row: r }));
+    }
+    run = [];
+  };
+  for (const row of rows) {
+    if (isRecurringCycleRow(row)) run.push(row);
+    else { flush(); out.push({ kind: "row", row }); }
+  }
+  flush();
+  return out;
+}
+
+function RecurringRunGroup({ items }: { items: FeedActivity[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const count = items.length;
+  const total = items.reduce((s, r) => s + (parseAmount((r as any).amount) || 0), 0);
+  const amounts = items.map((r) => parseAmount((r as any).amount) || 0);
+  const uniform = amounts.length > 0 && amounts.every((a) => a === amounts[0]);
+  const newest = parseSafeDate((items[0] as any).createdAt);
+  const oldest = parseSafeDate((items[items.length - 1] as any).createdAt);
+  const my = (d: Date | null) => (d ? d.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "");
+  const range = oldest && newest ? `${my(oldest)} – ${my(newest)}` : "";
+  return (
+    <div style={{ background: "white", border: "1px solid hsl(var(--kiddo-ink) / 0.08)", borderRadius: 14, overflow: "hidden" }} data-testid="detail-recurring-run">
+      <button type="button" onClick={() => setExpanded((v) => !v)} style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: "rgb(234,239,233)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(96,124,104,0.16)" }}>
+          <Repeat size={16} style={{ color: "rgb(96,124,104)" }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3 }}>Monthly contributions</p>
+            <p className="font-heading" style={{ fontSize: 14.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", whiteSpace: "nowrap" }}>+{formatMoneyFriendly(total)}</p>
+          </div>
+          <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>
+            {count} contributions{range ? ` · ${range}` : ""}{uniform ? ` · ${formatMoneyFriendly(amounts[0])} each` : ""}
+          </p>
+          <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(96,124,104)", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {expanded ? "Hide" : "Show all"} {count}
+            <ChevronDown size={12} style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+          </p>
+        </div>
+      </button>
+      {expanded && (
+        <div style={{ padding: "0 14px 12px 60px", display: "flex", flexDirection: "column" as const }}>
+          {items.map((it, idx) => {
+            const d = parseSafeDate((it as any).createdAt);
+            const amt = parseAmount((it as any).amount) || 0;
+            return (
+              <div key={String((it as any).id || idx)} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", fontSize: 12.5, color: "rgb(90,82,74)", borderTop: idx > 0 ? "1px solid hsl(var(--kiddo-ink) / 0.05)" : "none" }}>
+                <span>{d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
+                <span style={{ fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>+{formatMoneyFriendly(amt)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: boolean }) {
   const meta = parseMetadata((row as any).metadata);
   const config = getTypeConfig(row.type);
@@ -597,8 +753,10 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
             const isBoilerplateRecurring = /^auto-invest contribution to /i.test(message);
             const isTestPattern = /^(test|testing|tstgin|tstng|qqqqq|tester)\b/i.test(message);
             const shouldSuppressMessage = !message || isBoilerplateRecurring || isTestPattern;
+            // Run the feed's legacy-copy cleanup so this modal shows the SAME
+            // honest text (e.g. the tightened failed-charge line), not raw seed copy.
             const shown = shouldSuppressMessage
-              ? (row.description || null)
+              ? rewriteLegacyDescription(row.description)
               : `"${message}"`;
             if (!shown) return null;
             return (
@@ -667,7 +825,9 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
           )}
           {nextRetryDate && Number.isFinite(nextRetryDate.getTime()) && (
             <>
-              <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Next attempt</p>
+              {/* "Next charge", NOT "Next attempt": the worker does not re-run the
+                  missed charge — it advances to the next normal cycle. */}
+              <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Next charge</p>
               <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                 {nextRetryDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </p>

@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
-import { STRATEGY_SHORT, STRATEGY_ICONS } from "@/lib/strategy";
+import { STRATEGY_SHORT, STRATEGY_ICONS, type StrategyKey } from "@/lib/strategy";
 import { cashAfterLabel, rewriteSettlementSentence } from "@/lib/cash-settlement";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -32,6 +32,7 @@ import { useActivities, useFundActivities } from "@/hooks/use-activities";
 import { markNotificationsRead, getLastReadAt, isBellNoise, isRepresentedByActionItem } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { applyDemoRecurringToContributions, readDemoThankYousByGift, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 import { toast } from "@/hooks/use-toast";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { useFunds } from "@/hooks/use-funds";
@@ -41,6 +42,8 @@ import { getDeepLinkHighlightStyle } from "@/lib/deep-link-highlight";
 import { MOTION } from "@/lib/motion";
 import { KiddoSkeleton } from "@/components/ui/skeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { RecurringEditSheet } from "@/components/RecurringEditSheet";
+import { RecurringPauseSheet } from "@/components/RecurringPauseSheet";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
 import { GiftSourceChip } from "@/components/GiftSourceChip";
 import { ActionItemList } from "@/components/ActionItemCard";
@@ -430,6 +433,9 @@ function parseMetadata(raw: unknown): Record<string, unknown> {
 
 function extractTicker(meta: Record<string, unknown>, title?: string | null): string | null {
   if (meta.ticker && typeof meta.ticker === "string") return meta.ticker.toUpperCase();
+  // Recurring (auto_invest) rows stamp the pick under `selectedTicker`, not
+  // `ticker` — read it too so those rows get the brand logo like gifts do.
+  if (meta.selectedTicker && typeof meta.selectedTicker === "string") return meta.selectedTicker.toUpperCase();
   // fallback: parse "AAPL gift invested" or "invested into AAPL"
   const text = title || "";
   const m = text.match(/^([A-Z]{1,5})\s+gift/i) || text.match(/into\s+([A-Z]{1,5})\b/i);
@@ -558,7 +564,11 @@ function rewriteLegacyDescription(d: string | null | undefined): string | null {
   // charge could not run.") and closed with a wordy email sentence, so the row said
   // "it failed" four ways. Drop the restated lead; tighten the tail to one action.
   out = out.replace(/^Last automatic charge could not run\.\s*/, "");
-  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add it manually to stay on track.");
+  // "Next attempt {date}" implied the failed charge re-runs — it does NOT. The
+  // plan just charges again next cycle; state that plainly so the parent doesn't
+  // wait a month expecting a recovery that never comes.
+  out = out.replace(/Next attempt (\w+\.? \d+)\.?/i, "Your plan is still on and charges again $1.");
+  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add the missed one if you'd like.");
   return out;
 }
 
@@ -699,6 +709,22 @@ function isScheduleChangeItem(item: FeedActivity): boolean {
   return SCHEDULE_CHANGE_TITLES.includes((item as any).title || "");
 }
 
+// The managed-mix tier (Growth / Balanced / Conservative / Custom) is DERIVED from
+// fund.investmentStrategy, not stored on the activity row — client mirror of the
+// server's normalizeManagedStrategy (fundInvestmentPreferences.ts). Keep in sync:
+// balanced/conservative/custom pass through; everything else (incl. the
+// "auto_invest" column default and null) is Growth. Lets Activity name a
+// diversified-mix contribution's tier ("the Growth mix") + show its icon by
+// looking the fund up in the already-loaded funds list — no per-row metadata,
+// no extra fetch.
+function fundMixTier(fund: any): StrategyKey {
+  const s = String(fund?.investmentStrategy || "").toLowerCase();
+  if (s === "balanced") return "balanced";
+  if (s === "conservative") return "conservative";
+  if (s === "custom") return "custom";
+  return "growth";
+}
+
 function collapseRecurringConfigRuns(items: FeedActivity[]): FeedActivity[] {
   const out: FeedActivity[] = [];
   let run: FeedActivity[] = [];
@@ -729,7 +755,7 @@ function collapseRecurringConfigRuns(items: FeedActivity[]): FeedActivity[] {
   return out;
 }
 
-function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast: boolean; expanded: boolean; onToggle: () => void }) {
+function RecurringRunRow({ run, destination, isLast, expanded, onToggle }: { run: any; destination?: string | null; isLast: boolean; expanded: boolean; onToggle: () => void }) {
   const items: any[] = run.__run?.items ?? [];
   const count: number = run.__run?.count ?? items.length;
   const total: number = run.__run?.total ?? 0;
@@ -756,6 +782,10 @@ function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast
           <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>
             {count} contributions · {range}{uniform ? ` · ${formatCurrency(amounts[0])} each` : ""}
           </p>
+          {/* Where the folded cycles went — the summary otherwise drops the
+              destination the individual rows show ("Investing across the Growth
+              mix"), leaving the parent asking "where did this money go?". */}
+          {destination ? <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>Into {destination}</p> : null}
           {note ? <p style={{ fontSize: 12, fontStyle: "italic", color: "rgb(140,130,122)", marginTop: 4, overflowWrap: "anywhere" }}>&ldquo;{note}&rdquo;</p> : null}
           <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(96,124,104)", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
             {expanded ? "Hide" : "Show all"} {count}
@@ -999,6 +1029,12 @@ export default function Activity() {
   // kept showing rows from the previously-active fund. Same parallel bug
   // and listener-based fix as Projection / TaxDocuments / Age18Plan.
   const [activeFundIdForActivity, setActiveFundIdForActivity] = useState<string>(() => getActiveFundId());
+  // In-place recurring edit (no jump to the dashboard). Holds the schedule row
+  // being edited; the RecurringEditSheet opens when it's set.
+  const [editSheetContrib, setEditSheetContrib] = useState<any | null>(null);
+  // Pause-options sheet (1 month / indefinitely / cancel instead) — matches the
+  // dashboard flow instead of a bare pause toggle. Holds the schedule being paused.
+  const [pauseOptionsSchedule, setPauseOptionsSchedule] = useState<any | null>(null);
   // Owner-mode: the set of the viewer's funds that have been handed off to them as the
   // adult owner (accessRole 'owner' + transferredAt). Used to flip "{child}'s fund" ->
   // "your fund" per row in this cross-fund feed. Reuses the cached /api/funds query (same
@@ -1029,28 +1065,41 @@ export default function Activity() {
   // make /api/activities fund-aware for owned funds; this is the collision-free client
   // equivalent.) ownerModeFundIds is built above.
   const activeFundIsOwned = !!activeFundIdForActivity && ownerModeFundIds.has(String(activeFundIdForActivity));
+  // The active fund from the shared useFunds() list — read BEFORE the feed hooks so
+  // the feed SOURCE can key off the access role.
+  const activeFundForHeader = (allFundsForOwnerMode as any[]).find(
+    (f: any) => String(f?.id) === String(activeFundIdForActivity),
+  );
+  // Co-parent / successor fix (2026-07-07): a collaborator's activity rows live under
+  // the fund OWNER's userId, so the user-scoped /api/activities returns NOTHING for them
+  // (empirically 0 of a fund's rows are under the co-parent's id — their /activity read
+  // completely empty). Same root cause as the post-handoff owner case; same fix — read
+  // the FUND-scoped feed, which the server now authorizes for accepted collaborators.
+  // Gate on "has access but is not the owner-of-record" (accessRole present and not
+  // "owner"). Owners stay on the user-scoped feed (unchanged).
+  const activeFundAccessRole = (activeFundForHeader as any)?.accessRole ?? null;
+  const activeFundIsCollaborator = !!activeFundIdForActivity && !activeFundIsOwned
+    && activeFundAccessRole != null && activeFundAccessRole !== "owner";
+  const useFundScopedFeed = activeFundIsOwned || activeFundIsCollaborator;
   // Feed limit 200→60: the feed renders every fetched row (no pagination) but the user
   // sees ~8 before scrolling, and 200 items was a 7.4s / 110KB BLOCKING fetch that left
   // the page in skeletons that whole time. 60 covers months of recent history, paints
   // ~3x faster, and only caps the rare deep-history fund (most have <60 total). NOTE:
   // the deeper root cause is a slow server response per item (~37ms/row) — a backend
   // N+1 on /api/activities worth chasing separately for a truly instant feed.
-  const userScopedFeed = useActivities(60, isAuthenticated && !authLoading && !activeFundIsOwned, activeFundIdForActivity);
-  const fundScopedFeed = useFundActivities(activeFundIsOwned ? activeFundIdForActivity : undefined, 60);
-  const activities = (activeFundIsOwned ? fundScopedFeed.data : userScopedFeed.data) ?? [];
+  const userScopedFeed = useActivities(60, isAuthenticated && !authLoading && !useFundScopedFeed, activeFundIdForActivity);
+  const fundScopedFeed = useFundActivities(useFundScopedFeed ? activeFundIdForActivity : undefined, 60);
+  const activities = (useFundScopedFeed ? fundScopedFeed.data : userScopedFeed.data) ?? [];
   // Header label: Activity is per-fund-scoped, so name the kid the way Settings
   // does ("{child}'s activity") instead of the generic "Your activity". Stays
   // "Your activity" only when the viewer actually OWNS the active fund (a
   // post-handoff adult viewing their own) or no child name is available —
   // matching the per-row "your" vs "{child}'s" flip used throughout this feed.
-  const activeFundForHeader = (allFundsForOwnerMode as any[]).find(
-    (f: any) => String(f?.id) === String(activeFundIdForActivity),
-  );
   const activeChildFirst = capFirst((activeFundForHeader as any)?.recipientFirstName);
   const activityHeading = activeFundIsOwned || !activeChildFirst ? "Your activity" : `${activeChildFirst}'s activity`;
-  const feedLoading = activeFundIsOwned ? fundScopedFeed.isLoading : userScopedFeed.isLoading;
-  const feedError = activeFundIsOwned ? fundScopedFeed.isError : userScopedFeed.isError;
-  const refetch = activeFundIsOwned ? fundScopedFeed.refetch : userScopedFeed.refetch;
+  const feedLoading = useFundScopedFeed ? fundScopedFeed.isLoading : userScopedFeed.isLoading;
+  const feedError = useFundScopedFeed ? fundScopedFeed.isError : userScopedFeed.isError;
+  const refetch = useFundScopedFeed ? fundScopedFeed.refetch : userScopedFeed.refetch;
 
   // Landing on the Activity page IS "I've seen the latest." Clears the
   // bottom-nav and sidebar Activity dot. Without this, the only way to
@@ -1187,7 +1236,19 @@ export default function Activity() {
   // here to match Activity's per-fund design — without this, parents see
   // recurring schedules from sibling/test funds on the active fund's
   // page (e.g., Bob's $25/mo showing on Emma's Activity).
-  const scheduledContribs = (scheduledData?.contributions ?? []).filter(
+  // Demo: overlay session-added recurring schedules (e.g. a Crocs/SBUX plan set up
+  // in the demo, recorded client-side) so the Schedules tab + Pending match the
+  // dashboard, which already applies this. Without it, a demo prospect who sets up
+  // a recurring saw it on the dashboard but NOT in the tab literally named
+  // "Schedules". No-op for real users (schedules come from the server). The History
+  // feed already overlays these via useActivities → applyDemoRecurringToActivities;
+  // this closes the remaining Schedules/Pending seam. Reactive via the
+  // useDemoOverlayVersion() subscription below (re-renders re-derive this).
+  const scheduledContribs = applyDemoRecurringToContributions(
+    (scheduledData?.contributions ?? []),
+    Boolean((user as any)?.isDemoAccount),
+    activeFundIdForActivity,
+  ).filter(
     (c: any) => !activeFundIdForActivity || c.fundId === activeFundIdForActivity,
   );
   const scheduledReminders = (scheduledData?.reminders ?? []).filter(
@@ -1223,6 +1284,39 @@ export default function Activity() {
     enabled: isAuthenticated && !authLoading && !!activeFundIdForActivity,
     staleTime: 60_000,
   });
+
+  // Thank-yous for the active fund — powers the "reply under the gift" thread:
+  // a gift a parent has THANKED (status 'sent') shows the thank-you beneath it in
+  // the expanded detail. Endpoint 403s for non-owners → [] → no reply, harmless.
+  const isDemoAccountForActivity = Boolean((user as any)?.isDemoAccount);
+  const overlayVersion = useDemoOverlayVersion();
+  const { data: thankYousData } = useQuery<Array<{ id: string; giftId: string | null; message: string; senderName?: string | null; status?: string | null; sentAt?: string | null }>>({
+    queryKey: ["/api/funds", activeFundIdForActivity, "thank-yous"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${activeFundIdForActivity}/thank-yous`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isAuthenticated && !authLoading && !!activeFundIdForActivity,
+    staleTime: 60_000,
+  });
+  // giftId → the sent thank-you message. Real sends come from the endpoint
+  // (status 'sent'); demo sends are server-blocked, so they come from the
+  // per-tab overlay (merged on top).
+  const sentThankYouByGift = useMemo(() => {
+    const map = new Map<string, { message: string; senderName?: string | null; sentAt?: string | null }>();
+    for (const ty of thankYousData ?? []) {
+      const gid = typeof ty?.giftId === "string" ? ty.giftId : null;
+      const isSent = ty?.status === "sent" || !!ty?.sentAt;
+      if (gid && isSent && typeof ty?.message === "string" && ty.message.trim()) {
+        map.set(gid, { message: ty.message, senderName: ty.senderName ?? null, sentAt: ty.sentAt ?? null });
+      }
+    }
+    readDemoThankYousByGift(isDemoAccountForActivity, activeFundIdForActivity).forEach((t, gid) => {
+      map.set(gid, { message: t.message, senderName: t.senderName ?? null, sentAt: t.sentAt });
+    });
+    return map;
+  }, [thankYousData, isDemoAccountForActivity, activeFundIdForActivity, overlayVersion]);
 
   // Mutations for the Scheduled tab management surface. Endpoints already
   // existed (Dashboard uses them); Activity just hooks them up so parents
@@ -1623,33 +1717,10 @@ export default function Activity() {
     toast({ title: "Activity exported", description: `${filtered.length} row${filtered.length === 1 ? "" : "s"} downloaded as CSV.` });
   };
 
-  // First-gift detection. Walks the FULL activities array (not the
-  // filtered/searched view) to find the chronologically earliest external
-  // gift_received row — the iconic "first gift" moment that per the design
-  // lens (Emma at 18 looking back) deserves a small celebration in the
-  // ledger. We pin the first-gift activity ID and let the row renderer
-  // check against it. External-gifters only: parent's own gift_received
-  // rows (isParentContribution) don't count as the "first gift" momentum
-  // signal — that's a parent contribution, not a community moment.
-  const firstGiftId = useMemo(() => {
-    let earliest: { id: string; ts: number } | null = null;
-    for (const a of activities as FeedActivity[]) {
-      if (normalizeActivityType(a?.type) !== "gift_received") continue;
-      const enriched = a as any;
-      const meta = parseMetadata((a as any).metadata);
-      const isParent =
-        typeof enriched.isParentContribution === "boolean"
-          ? enriched.isParentContribution
-          : meta.isParentContribution === true;
-      if (isParent) continue;
-      const ts = a.createdAt ? new Date(a.createdAt).getTime() : NaN;
-      if (!Number.isFinite(ts)) continue;
-      if (!earliest || ts < earliest.ts) {
-        earliest = { id: String(a.id), ts };
-      }
-    }
-    return earliest?.id ?? null;
-  }, [activities]);
+  // (First-gift banner removed 2026-07. The ledger stays factual — a celebratory
+  // banner over the first gift editorialized a milestone the row already shows, and
+  // Memory Book's "Where it began" ribbon is the designated emotional home for that
+  // moment. No need to mark it twice.)
 
   // Summary stats from full unfiltered feed — uses the same paired-gift
   // dedupe so a single $250 grandpa gift counts as $250, not $500
@@ -1844,6 +1915,14 @@ export default function Activity() {
     // gift_received from the parent themselves = one-time contribution
     const isParentOneTime = (t === "gift_received" || t === "gift_received_cash") && isParentGift(i);
     if (!isRecurringFire && !isParentOneTime) return s;
+    // Co-parent view (2026-07-07): the fund-scoped feed carries BOTH custodians'
+    // contributions, so "Your contributions" must scope to the VIEWER's own — else
+    // a co-parent's total silently absorbs the other parent's money.
+    if (activeFundIsCollaborator) {
+      const viewerEmail = String((user as any)?.email ?? "").trim().toLowerCase();
+      const em = String((i as any).senderEmail ?? (parseMetadata((i as any).metadata) as any)?.senderEmail ?? "").trim().toLowerCase();
+      if (!viewerEmail || em !== viewerEmail) return s;
+    }
     const n = parseAmount(i.amount);
     return s + (n != null && n > 0 ? n : 0);
   }, 0);
@@ -2079,7 +2158,7 @@ export default function Activity() {
           {[
             { id: "history" as const, label: "History" },
             { id: "pending" as const, label: "Pending", count: pendingTotalCount },
-            { id: "scheduled" as const, label: "Scheduled", count: scheduledTotalCount },
+            { id: "scheduled" as const, label: "Schedules", count: scheduledTotalCount },
           ].map((t) => {
             const active = tab === t.id;
             return (
@@ -2321,24 +2400,9 @@ export default function Activity() {
                   return <div key={label}>{inner}</div>;
                 })}
               </div>
-              {/* Lifetime anchor — moved OUT of the period header (it read as
-                  "N gifts in the last 30 days" sitting next to the selector) to a
-                  clearly-lifetime footer BELOW the period-scoped tiles. Keeps a
-                  sparse window from looking broken on a fund with years of history,
-                  without the scope clash. Shown only when the lifetime story is
-                  meaningfully bigger than the window's. */}
-              {(() => {
-                const allTimeGifts = allVisible.filter((i) => {
-                  const t = normalizeActivityType(i.type);
-                  if (t !== "gift_received" && t !== "gift_received_cash" && t !== "large_gift_hold_started") return false;
-                  return !isParentGift(i);
-                }).length;
-                return allTimeGifts > Math.max(last30GiftsCount * 2, 5) ? (
-                  <p style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid hsl(var(--kiddo-ink) / 0.07)", fontSize: 11.5, color: "rgb(140,130,122)" }}>
-                    {allTimeGifts.toLocaleString("en-US")} gifts from others, all-time
-                  </p>
-                ) : null;
-              })()}
+              {/* Lifetime "N gifts from others, all-time" footer removed 2026-07
+                  (founder): it clashed with the 30-day-scoped tiles above it and
+                  read as clutter. The period tiles carry the money summary. */}
             </div>
           </EnlighteningReveal>
         )}
@@ -2675,10 +2739,32 @@ export default function Activity() {
                   // contributions. Returns before the per-row machinery below.
                   if ((item as any).type === RECURRING_RUN_TYPE) {
                     const runId = String((item as any).id);
+                    // Destination of the folded cycles. Only labeled when it's
+                    // UNIFORM across the run (the common case: one schedule into the
+                    // fund's mix, or one stock). A mixed run (two schedules firing
+                    // together) omits it rather than mislabel where the money went.
+                    const runItems: any[] = (item as any).__run?.items ?? [];
+                    const destKeys = new Set(runItems.map((it) => {
+                      const m = parseMetadata((it as any).metadata);
+                      const t = typeof (m as any).selectedTicker === "string" ? (m as any).selectedTicker.toUpperCase()
+                        : typeof (m as any).ticker === "string" ? (m as any).ticker.toUpperCase() : null;
+                      return t || "__mix__";
+                    }));
+                    let runDestination: string | null = null;
+                    if (destKeys.size === 1) {
+                      const only = [...destKeys][0];
+                      if (only === "__mix__") {
+                        const runFund = (allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String((item as any).fundId));
+                        runDestination = `the ${STRATEGY_SHORT[fundMixTier(runFund)]} mix`;
+                      } else {
+                        runDestination = only;
+                      }
+                    }
                     return (
                       <RecurringRunRow
                         key={runId}
                         run={item}
+                        destination={runDestination}
                         isLast={i === group.items.length - 1}
                         expanded={expandedId === runId}
                         onToggle={() => { haptic("selection"); setExpandedId(expandedId === runId ? null : runId); }}
@@ -2752,9 +2838,20 @@ export default function Activity() {
                   const config = getTypeConfig(effectiveType);
 
                   const isGiftOrContrib = GIFT_TYPES.includes(rawType) || rawType === "parent_contribution" || overrideToParentContrib;
-                  const ticker = isGiftOrContrib ? extractTicker(meta, item.title) : null;
+                  // A single-stock logo makes sense wherever a row names ONE ticker —
+                  // not just gifts/contributions. Recurring-into-<stock> (auto_invest)
+                  // and cash-invested-into-<stock> (cash_invested/buy) rows earn the
+                  // same brand mark. extractTicker reads meta.ticker, so managed-mix
+                  // rows (no ticker) fall through to the strategy glyph unchanged.
+                  const canShowTickerLogo = isGiftOrContrib
+                    || rawType === "auto_invest"
+                    || rawType === "cash_invested"
+                    || rawType === "buy";
+                  const ticker = canShowTickerLogo ? extractTicker(meta, item.title) : null;
                   const giftMessage = typeof meta.message === "string" && meta.message ? meta.message : null;
-                  const isFirstGift = firstGiftId === rowId;
+                  // The gift this row represents, for matching a sent thank-you (the reply).
+                  const rowGiftId = typeof (meta as any).giftId === "string" ? (meta as any).giftId : null;
+                  const sentThankYou = rowGiftId ? sentThankYouByGift.get(rowGiftId) : undefined;
                   // "New since you last looked" marker. Only when there is a real
                   // prior-read reference (seenBeforeArrival > 0); a first-ever
                   // visitor has no "since," so nothing is falsely flagged new.
@@ -2793,14 +2890,36 @@ export default function Activity() {
                     const sn = typeof (meta as any).senderName === "string" ? (meta as any).senderName.trim() : "";
                     return sn ? sn.split(/\s+/)[0] : "Your parent";
                   })();
+                  // Co-parent / successor attribution (2026-07-07). Now that a collaborator
+                  // reads the FUND-scoped feed, a parent contribution's stored title is
+                  // owner-POV ("You contributed"). Re-attribute per VIEWER so a co-parent
+                  // NEVER sees a false "You" for the OTHER custodian's money. Identity keys
+                  // off senderEmail (the real actor — elena@ vs marcus@); contributorName
+                  // ("Mom") is a generic label, not per-actor, so it can't be trusted here.
+                  const rowActorEmail = String((item as any).senderEmail ?? (meta as any).senderEmail ?? "").trim().toLowerCase();
+                  const viewerEmail = String((user as any)?.email ?? "").trim().toLowerCase();
+                  const contribIsViewers = !!rowActorEmail && !!viewerEmail && rowActorEmail === viewerEmail;
+                  // Actor's real first name for the collaborator view ("Elena Rivera" →
+                  // "Elena"); never "Your parent" here (the viewer is a co-parent, not the
+                  // kid). Neutral honest fallback when the row carries no name.
+                  const collaboratorContribName = (() => {
+                    const sn = typeof (meta as any).senderName === "string" ? (meta as any).senderName.trim() : "";
+                    if (sn) return sn.split(/\s+/)[0];
+                    return "A co-parent";
+                  })();
+                  // Only re-attribute when this parent contribution is NOT the viewer's own.
+                  // Falls back to "You" (below) when it IS theirs.
+                  const collabViewingOthersContrib = activeFundIsCollaborator && isParentContribRow && !contribIsViewers;
                   // Verb unified to "contributed" (matches the seed/server +
                   // webhook titles) so the feed never mixes "added" and
                   // "contributed" for the same parent-into-mix action.
                   const rawEffectiveTitle = ownerViewingParentContrib
                     ? `${parentContribName} contributed ${formatMoneyFriendly(amtNum != null ? amtNum : 0)}`
-                    : overrideToParentContrib
-                      ? `You contributed ${formatMoneyFriendly(amtNum != null ? amtNum : 0)}`
-                      : rewriteLegacyAutoInvestTitle(item.title);
+                    : collabViewingOthersContrib
+                      ? `${collaboratorContribName} contributed ${formatMoneyFriendly(amtNum != null ? amtNum : 0)}`
+                      : overrideToParentContrib
+                        ? `You contributed ${formatMoneyFriendly(amtNum != null ? amtNum : 0)}`
+                        : rewriteLegacyAutoInvestTitle(item.title);
                   // The "+$X" amount badge already states the figure, so drop a
                   // trailing dollar amount from the title on gift/contribution
                   // rows — otherwise a contribution names the amount twice ("You
@@ -2808,9 +2927,24 @@ export default function Activity() {
                   const effectiveTitle = isGiftOrContrib
                     ? rawEffectiveTitle.replace(/ \$[\d,]+(?:\.\d{2})?$/, "")
                     : rawEffectiveTitle;
-                  const effectiveDescription = overrideToParentContrib
-                    ? (ticker ? `Investing into ${ticker}` : "Investing across the diversified mix")
+                  // Name the managed-mix tier for a diversified-mix contribution
+                  // ("the Growth mix") instead of the generic "diversified mix" — the
+                  // tier comes from the row's fund (already in the funds list), the same
+                  // source the dashboard's "Managed mix · Growth" reads. showMixDest also
+                  // gates the strategy glyph rendered beside the description below.
+                  const rowFundForMix = (allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String((item as any).fundId));
+                  const rowMixTier = fundMixTier(rowFundForMix);
+                  const rowMixPhrase = `the ${STRATEGY_SHORT[rowMixTier]} mix`;
+                  let effectiveDescription = overrideToParentContrib
+                    ? (ticker ? `Investing into ${ticker}` : `Investing across ${rowMixPhrase}`)
                     : rewriteSettlementSentence(rewriteLegacyDescription(item.description), item.createdAt);
+                  // Native parent_contribution + gift-into-mix rows come through the else
+                  // branch carrying the server's generic "the diversified mix" — name the
+                  // fund's tier there too, so every managed-mix row (override OR native)
+                  // reads identically. showMixDest (drives the glyph below) keys off the
+                  // final text so it's true in both branches.
+                  if (!ticker) effectiveDescription = effectiveDescription.replace(/\bthe diversified mix\b/i, rowMixPhrase);
+                  const showMixDest = !ticker && effectiveDescription.includes(rowMixPhrase);
                   // Hoisted kid-suggestion state so the Approve/Decline bar
                   // renders OUTSIDE the expanded panel (always visible on
                   // suggestion rows), not buried behind a tap. Same fields
@@ -2825,37 +2959,6 @@ export default function Activity() {
 
                   return (
                     <Fragment key={rowId}>
-                      {/* First-gift celebration banner — appears once,
-                          immediately before the iconic first external gift
-                          row. Honors the design lens (the moment grandpa
-                          first gifts is the moment Kiddo becomes real)
-                          without dragging the rest of the ledger into
-                          ribbon-fest. */}
-                      {isFirstGift && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            padding: "10px 12px",
-                            margin: "8px -6px 6px -6px",
-                            background: "linear-gradient(135deg, rgb(253,250,243) 0%, rgb(247,242,235) 100%)",
-                            border: "1px solid rgba(184,121,26,0.20)",
-                            borderRadius: 12,
-                          }}
-                          data-testid="first-gift-banner"
-                        >
-                          <Gift size={18} style={{ color: "rgb(146,108,46)", flexShrink: 0 }} />
-                          <div>
-                            <p style={{ fontSize: 11.5, fontWeight: 800, color: "rgb(146,108,46)", letterSpacing: "0.04em", textTransform: "uppercase" as const }}>
-                              The first gift
-                            </p>
-                            <p style={{ fontSize: 11.5, color: "rgb(95,85,72)", lineHeight: 1.4 }}>
-                              The moment {ownerModeFundIds.has(String((item as any).fundId)) ? "your" : `${capFirst(item.recipientFirstName) || "your child"}'s`} fund became real.
-                            </p>
-                          </div>
-                        </div>
-                      )}
                       {dayLabel && (
                         <p
                           style={{
@@ -3063,19 +3166,28 @@ export default function Activity() {
                               ? effectiveDescription
                               : (giftMessage ? `"${giftMessage}"` : effectiveDescription);
                             if (!shown) return null;
-                            return (
-                              <p style={{
-                                fontSize: 12.5, lineHeight: 1.45, marginTop: 3,
-                                color: "hsl(var(--kiddo-ink) / 0.55)",
-                                fontStyle: shown.startsWith('"') ? "italic" : "normal",
-                                // Gift notes WRAP and show in full — was nowrap+ellipsis,
-                                // which cut "feliz cumpleaños…" mid-message on mobile. The
-                                // notes are short and they're the heart of the feed.
-                                overflowWrap: "anywhere",
-                              }}>
-                                {shown}
-                              </p>
-                            );
+                            const pStyle = {
+                              fontSize: 12.5, lineHeight: 1.45,
+                              color: "hsl(var(--kiddo-ink) / 0.55)",
+                              fontStyle: shown.startsWith('"') ? "italic" as const : "normal" as const,
+                              // Gift notes WRAP and show in full — was nowrap+ellipsis,
+                              // which cut "feliz cumpleaños…" mid-message on mobile. The
+                              // notes are short and they're the heart of the feed.
+                              overflowWrap: "anywhere" as const,
+                            };
+                            // Diversified-mix contribution: prefix the strategy glyph so the
+                            // tier reads as a crafted unit ("📈 Investing across the Growth
+                            // mix"). Same STRATEGY_ICONS glyph the dashboard mix card uses.
+                            if (showMixDest) {
+                              const MixIcon = STRATEGY_ICONS[rowMixTier];
+                              return (
+                                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
+                                  <MixIcon size={13} style={{ color: "hsl(var(--kiddo-ink) / 0.5)", flexShrink: 0 }} />
+                                  <p style={pStyle}>{shown}</p>
+                                </div>
+                              );
+                            }
+                            return <p style={{ ...pStyle, marginTop: 3 }}>{shown}</p>;
                           })()}
 
                           {/* Meta row */}
@@ -3332,7 +3444,7 @@ export default function Activity() {
                           // gift / memory rows, Dashboard for holdings/schedule
                           // rows. Reuses the deep-link pattern (?gift= for
                           // specific gifts, hash anchors for sections).
-                          type ActionChip = { label: string; href?: string; testId: string; external?: boolean; onClick?: () => void };
+                          type ActionChip = { label: string; href?: string; testId: string; external?: boolean; onClick?: () => void; subtle?: boolean };
                           const chips: ActionChip[] = [];
                           // Add-it-now: a failed recurring charge told the parent to "add it
                           // manually" but gave them nowhere to do it. Wire the missed
@@ -3349,7 +3461,7 @@ export default function Activity() {
                                 testId: `chip-add-now-${rowId}`,
                                 onClick: () => setConfirmRequest({
                                   title: amtNum != null && amtNum > 0 ? `Add ${formatCurrency(amtNum)} now?` : "Add this contribution now?",
-                                  body: "Runs the contribution the automatic charge missed. You'll confirm payment on the next screen.",
+                                  body: "This adds the contribution that didn't go through. You'll confirm payment on the next screen.",
                                   confirmLabel: "Continue to payment",
                                   onConfirm: () => contributeNowMutation.mutate(pcId),
                                 }),
@@ -3370,7 +3482,15 @@ export default function Activity() {
                                 testId: `chip-memory-${rowId}`,
                               });
                             }
-                            if (isInvest) {
+                            // Schedule LIFECYCLE rows (started / updated / cancelled) share the
+                            // `auto_invest` type with real fired investments (server routes.ts
+                            // stamps type:'auto_invest' on both), so isInvest is true for them —
+                            // but setting up / editing / cancelling a schedule buys NOTHING. Offering
+                            // "View holdings" there dropped the parent in the holdings section where
+                            // the thing they just scheduled isn't (it hasn't fired yet), which read as
+                            // "the button took me to the wrong place." Only real invest executions get
+                            // "View holdings"; schedule rows get "Manage schedules" (below) instead.
+                            if (isInvest && !isScheduleChange) {
                               // Singular "View holding" only when this row
                               // really points to ONE specific holding —
                               // either a single named ticker or a single
@@ -3459,10 +3579,16 @@ export default function Activity() {
                               ``,
                             ].filter(Boolean).join("\n");
                             chips.push({
-                              label: "Report an issue →",
+                              // Rare support-escalation action — rendered as a quiet
+                              // muted link, NOT a green action pill, so it doesn't compete
+                              // with the useful chips (Add it now, View in Memory Book) or
+                              // read as noise repeated down every row. No arrow (arrows are
+                              // for primary navigation).
+                              label: "Report an issue",
                               href: `mailto:support@kiddofund.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
                               testId: `chip-report-${rowId}`,
                               external: true,
+                              subtle: true,
                             });
                           }
                           return (
@@ -3817,7 +3943,14 @@ export default function Activity() {
                                     )}
                                     {nextRetryDate && Number.isFinite(nextRetryDate.getTime()) && (
                                       <>
-                                        <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Next attempt</p>
+                                        {/* "Next charge", NOT "Next attempt": the worker does
+                                            NOT re-run the missed charge (dunning quick-retry is
+                                            default-off) — it advances to the next scheduled cycle.
+                                            "Next attempt" told parents the failed one would re-run,
+                                            so they waited a month and stayed short. This is the
+                                            next NORMAL charge; the missed one is recovered via
+                                            "Add it now". Matches the server copy + DashboardStaging. */}
+                                        <p style={{ fontSize: 11, color: "rgb(140,130,122)", fontWeight: 600 }}>Next charge</p>
                                         <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>
                                           {nextRetryDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                                         </p>
@@ -3833,6 +3966,22 @@ export default function Activity() {
                                   <p style={{ fontSize: 13.5, color: "hsl(var(--kiddo-ink) / 0.78)", lineHeight: 1.55, fontStyle: "italic", paddingLeft: 10, borderLeft: "2px solid rgba(26,67,50,0.20)" }}>
                                     &ldquo;{giftMessage}&rdquo;
                                   </p>
+                                )}
+
+                                {/* The thank-you as a REPLY beneath the gift — only when
+                                    the gift was actually thanked (status 'sent', or the demo
+                                    overlay). Indented past the gift's quote so it reads as a
+                                    response in a little thread, matching the "From … / message"
+                                    email feel above it. */}
+                                {sentThankYou && (
+                                  <div style={{ marginTop: 2, marginLeft: 16, paddingLeft: 10, borderLeft: "2px solid rgba(26,67,50,0.12)" }} data-testid={`thank-you-reply-${rowId}`}>
+                                    <p style={{ fontSize: 11, color: "hsl(var(--kiddo-ink) / 0.5)", fontWeight: 600, marginBottom: 2 }}>
+                                      You replied
+                                    </p>
+                                    <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.7)", lineHeight: 1.5, fontStyle: "italic" }}>
+                                      &ldquo;{sentThankYou.message}&rdquo;
+                                    </p>
+                                  </div>
                                 )}
 
                                 {/* (Removed: the fallback description paragraph
@@ -4202,24 +4351,17 @@ export default function Activity() {
                           const amtNum = parseAmount(c.amount);
                           const totalNum = parseAmount(c.totalContributed);
                           const ticker = c.executionModel === "pick" && typeof c.selectedTicker === "string" ? c.selectedTicker.toUpperCase() : null;
+                          // Name the managed-mix tier ("into the Growth mix") from the row's
+                          // fund — same derivation as the contribution rows + the dashboard —
+                          // instead of the generic "diversified mix", which named the shape but
+                          // not the actual mix. Pick → ticker; family plan keeps its distinct
+                          // "family mix" label (a shared-strategy-across-kids signal).
+                          const rowMixTier = fundMixTier((allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String(c.fundId)));
                           const strategyLabel = ticker
                             ? `into ${ticker}`
                             : c.executionModel === "family"
                               ? "into family mix"
-                              : // "managed mix" → "diversified mix" 2026-05-20.
-                                // Cross-surface unification with Pricing /
-                                // Dashboard / GiftCheckout / FundsOverview
-                                // (which all use "diversified mix"). "Managed"
-                                // carried an active-management connotation
-                                // (active mutual-fund-style framing) that
-                                // conflicts with the locked passive-ETF
-                                // discipline. "Diversified" is factual and
-                                // matches the canonical product language.
-                                // "family mix" branch above stays — that's
-                                // a Family-plan-specific distinction (shared
-                                // strategy across kids) that carries real
-                                // load-bearing information for Family parents.
-                                "into the diversified mix";
+                              : `into the ${STRATEGY_SHORT[rowMixTier]} mix`;
                           const isExpanded = expandedScheduledId === String(c.id);
                           const note = typeof c.note === "string" && c.note.trim() ? c.note.trim() : null;
                           const idStr = String(c.id);
@@ -4286,13 +4428,25 @@ export default function Activity() {
                                   textAlign: "left",
                                 }}
                               >
+                                {/* Destination glyph (matches the dashboard recurring cards):
+                                    a pick shows its brand logo, a managed schedule shows its
+                                    strategy glyph, family/fallback keeps the recurring ↻. Makes
+                                    each row scannable by WHERE it invests; the "Recurring
+                                    investments" heading + "$X every month" carry the recurring
+                                    signal, so the generic ↻ tile wasn't load-bearing. Ticker
+                                    logos ride a neutral tile so a green brand mark doesn't blend
+                                    into the evergreen fill. */}
                                 <div style={{
-                                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                                  background: isPaused ? "rgb(254,243,199)" : "rgb(237,244,238)",
+                                  width: 36, height: 36, borderRadius: 10, flexShrink: 0, overflow: "hidden",
+                                  background: ticker ? "rgb(248,247,244)" : isPaused ? "rgb(254,243,199)" : "rgb(237,244,238)",
                                   display: "flex", alignItems: "center", justifyContent: "center",
-                                  border: `1px solid ${isPaused ? "rgba(184,121,26,0.18)" : "rgba(26,67,50,0.15)"}`,
+                                  border: `1px solid ${ticker ? "rgba(26,67,50,0.12)" : isPaused ? "rgba(184,121,26,0.18)" : "rgba(26,67,50,0.15)"}`,
                                 }}>
-                                  <Repeat size={16} style={{ color: isPaused ? "rgb(184,121,26)" : "rgb(26,67,50)" }} />
+                                  {ticker
+                                    ? <StockLogo ticker={ticker} size={22} />
+                                    : c.executionModel === "family"
+                                      ? <Repeat size={16} style={{ color: isPaused ? "rgb(184,121,26)" : "rgb(26,67,50)" }} />
+                                      : (() => { const MixIcon = STRATEGY_ICONS[rowMixTier]; return <MixIcon size={16} style={{ color: isPaused ? "rgb(184,121,26)" : "rgb(26,67,50)" }} />; })()}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -4304,11 +4458,13 @@ export default function Activity() {
                                           (server `hasRecentFailure`) used to add a SECOND
                                           red "Last cycle failed" pill beside the green
                                           "Active" one, which read as failed-and-active at
-                                          once. Fold it into a single amber "Retrying": still
-                                          active, last charge failed, will try again on the
-                                          next date. Full detail stays in the row description
-                                          + the expanded panel. Amber signals attention
-                                          without the green/red contradiction. */}
+                                          once. Fold it into a single amber "Needs you": the
+                                          schedule is still active, but the last charge failed
+                                          and the missed one needs the parent to add it manually
+                                          (nothing auto-retries it) — so it pairs with "Add it
+                                          now". Full detail stays in the row description + the
+                                          expanded panel. Amber signals attention without the
+                                          green/red contradiction. */}
                                       {(() => {
                                         const failedActive = Boolean(c.hasRecentFailure) && !isPaused && !isOwnerHistorical;
                                         const amber = isPaused || failedActive;
@@ -4320,10 +4476,15 @@ export default function Activity() {
                                               color: isOwnerHistorical ? "rgb(112,103,95)" : amber ? "rgb(146,64,14)" : "rgb(15,82,42)",
                                               display: "inline-flex", alignItems: "center", gap: 3,
                                             }}
-                                            title={failedActive ? "Last automatic charge failed. It will try again on the next date." : undefined}
+                                            // Honest tooltip: the SCHEDULE stays active and charges
+                                            // again next cycle — the missed charge itself is NOT
+                                            // auto-re-run (see recurringContributionWorker: dunning
+                                            // retry is default-off). Don't imply the failed one
+                                            // retries on its own; point to the manual recovery.
+                                            title={failedActive ? "Last automatic charge didn't go through. The schedule stays active and charges again next cycle; add the missed one manually to stay on track." : undefined}
                                           >
                                             {failedActive ? <AlertCircle size={10} /> : null}
-                                            {isOwnerHistorical ? "Ended" : isPaused ? "Paused" : failedActive ? "Retrying" : "Active"}
+                                            {isOwnerHistorical ? "Ended" : isPaused ? "Paused" : failedActive ? "Needs you" : "Active"}
                                           </span>
                                         );
                                       })()}
@@ -4522,7 +4683,13 @@ export default function Activity() {
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                                     <button
                                       type="button"
-                                      onClick={() => pauseToggleMutation.mutate({ id: idStr, status: isPaused ? "active" : "paused" })}
+                                      onClick={() => {
+                                        // Resume is a direct toggle; pausing opens the
+                                        // options sheet (1 month / indefinitely / cancel),
+                                        // matching the dashboard instead of a bare pause.
+                                        if (isPaused) pauseToggleMutation.mutate({ id: idStr, status: "active" });
+                                        else setPauseOptionsSchedule(c);
+                                      }}
                                       disabled={isMutating}
                                       style={{
                                         fontSize: 11.5, fontWeight: 700,
@@ -4538,35 +4705,13 @@ export default function Activity() {
                                       {isPaused ? <Play size={11} /> : <Pause size={11} />}
                                       {isPaused ? "Resume" : "Pause"}
                                     </button>
-                                    {!isPaused && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setConfirmRequest({
-                                            title: amtNum != null && amtNum > 0 ? `Add ${formatCurrency(amtNum)} now?` : "Add an extra contribution now?",
-                                            body: "A one-time extra on top of your schedule. You'll confirm payment on the next screen.",
-                                            confirmLabel: "Continue to payment",
-                                            onConfirm: () => contributeNowMutation.mutate(idStr),
-                                          });
-                                        }}
-                                        disabled={isMutating}
-                                        style={{
-                                          fontSize: 11.5, fontWeight: 700,
-                                          padding: "6px 11px", borderRadius: 999,
-                                          background: "rgb(26,61,43)",
-                                          color: "white",
-                                          border: "none",
-                                          cursor: isMutating ? "wait" : "pointer",
-                                          display: "inline-flex", alignItems: "center", gap: 4,
-                                        }}
-                                        data-testid={`button-contribute-now-${idStr}`}
-                                      >
-                                        Add now
-                                      </button>
-                                    )}
+                                    {/* "Add now" (an off-cycle extra) removed from this row per
+                                        founder call — it cluttered the manage set and the primary
+                                        recovery action ("Add it now") lives on a FAILED-charge row,
+                                        not on a healthy active schedule. Pause / Edit / Cancel stay. */}
                                     <button
                                       type="button"
-                                      onClick={() => navigate(`/dashboard?fund=${c.fundId}&openAutoInvest=1&editId=${idStr}`)}
+                                      onClick={() => { haptic("selection"); setEditSheetContrib(c); }}
                                       style={{
                                         fontSize: 11.5, fontWeight: 700,
                                         padding: "6px 11px", borderRadius: 999,
@@ -4684,7 +4829,13 @@ export default function Activity() {
                                   display: "flex", alignItems: "center", justifyContent: "center",
                                   border: "1px solid rgba(126,68,180,0.18)",
                                 }}>
-                                  <BellRing size={16} style={{ color: "rgb(126,68,180)" }} />
+                                  {/* Auto-charge = a real recurring gift → ↻ (matches the parent
+                                      recurring rows). Reminder-only = an email nudge → the bell,
+                                      where "notification" is exactly right. The purple tile keeps
+                                      gifter schedules visually distinct from the parent's green ones. */}
+                                  {isAutoCharge
+                                    ? <Repeat size={16} style={{ color: "rgb(126,68,180)" }} />
+                                    : <BellRing size={16} style={{ color: "rgb(126,68,180)" }} />}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
@@ -4698,11 +4849,25 @@ export default function Activity() {
                                     )}
                                   </div>
                                   <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.55)", marginTop: 3 }}>
+                                    {/* Name where it lands: a gifter recurring has no pick of
+                                        its own (recurring_gifts stores no destination), so it
+                                        follows the fund default — the child's managed mix. Same
+                                        tier derivation + framing as the parent rows, so "where's
+                                        it going?" is answered right on the row. */}
                                     {isAutoCharge
-                                      ? `Gives to ${capFirst(r.recipientFirstName) || "the child"} automatically`
+                                      ? `Gives to ${capFirst(r.recipientFirstName) || "the child"} automatically · into the ${STRATEGY_SHORT[fundMixTier((allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String(r.fundId)))]} mix`
                                       : `Email reminder to gift ${capFirst(r.recipientFirstName) || "the child"}`}
                                     {next ? ` · next ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}
                                   </p>
+                                  {/* Gifter lifetime total (server sums their actual gifts by
+                                      email — the recurring row itself tracks none). The gifter is
+                                      the customer, so "what they've given" is worth surfacing.
+                                      Only shown when the server could match gifts to an email. */}
+                                  {typeof r.totalGiven === "number" && r.totalGiven > 0 && (
+                                    <p style={{ fontSize: 12, fontWeight: 600, color: "rgb(126,68,180)", marginTop: 4 }}>
+                                      {formatCurrency(r.totalGiven)} given{typeof r.giftCount === "number" && r.giftCount > 0 ? ` · ${r.giftCount} gift${r.giftCount === 1 ? "" : "s"}` : ""}
+                                    </p>
+                                  )}
                                 </div>
                                 <ChevronDown
                                   size={16}
@@ -4864,6 +5029,23 @@ export default function Activity() {
               subtitle={composedSubtitle}
               summaryStats={stats}
               rows={scopedRows}
+              primaryAction={(scheduleOwnerHistorical || !(schedule as any).hasRecentFailure) ? undefined : {
+                // Last charge failed → let the parent run the missed
+                // contribution manually instead of waiting for the next
+                // cycle. Reuses the SAME contribute-now flow (+ confirm)
+                // as the Scheduled tab's "Add now" pill.
+                label: "Pay it now",
+                busy: contributeNowMutation.isPending && contributeNowMutation.variables === detailScope.scheduleId,
+                onClick: () => {
+                  setConfirmRequest({
+                    title: amt != null && amt > 0 ? `Add ${formatCurrency(amt)} now?` : "Add the missed contribution now?",
+                    body: "This adds the contribution that didn't go through. You'll confirm payment on the next screen.",
+                    confirmLabel: "Continue to payment",
+                    onConfirm: () => contributeNowMutation.mutate(detailScope.scheduleId),
+                  });
+                },
+                testId: `button-contribute-now-detail-${detailScope.scheduleId}`,
+              }}
               bottomCta={scheduleOwnerHistorical ? undefined : {
                 // Deep-link Dashboard's Edit / Pause / Cancel action sheet
                 // via ?openManage={id}. Single management surface across
@@ -4988,10 +5170,22 @@ export default function Activity() {
             ...row,
             type: "parent_contribution" as any,
             title: `You added ${amtStr}`,
-            description: ticker ? `Investing into ${ticker}` : "Investing across the diversified mix",
+            // Name the mix tier from the row's fund (same derivation as the main
+            // render), so owner-mode contribution rows read "the Growth mix" too.
+            description: ticker
+              ? `Investing into ${ticker}`
+              : `Investing across the ${STRATEGY_SHORT[fundMixTier((allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String((row as any).fundId)))]} mix`,
           };
         };
-        const allContribRows = allFeed.filter(isParentContribRow).map(applyParentContribDisplay);
+        const allContribRows = allFeed
+          .filter(isParentContribRow)
+          // Co-parent view (2026-07-07): "What you've added" is the VIEWER's own
+          // ledger, so scope to the viewer's contributions — the fund-scoped feed
+          // a collaborator now reads carries BOTH custodians'. ownerEmailLowerForFilter
+          // is the viewer's email here; rowSenderEmail is the row's actual actor.
+          .filter((row) => !activeFundIsCollaborator
+            || (!!ownerEmailLowerForFilter && rowSenderEmail(row) === ownerEmailLowerForFilter))
+          .map(applyParentContribDisplay);
         // Owner mode: has the owner added any of their OWN contributions since
         // the handoff? Drives whether the header stays "from your parent" (only
         // the parent's legacy contributions) or goes neutral ("Contributions")
@@ -5069,6 +5263,49 @@ export default function Activity() {
 
       {/* Branded confirm for schedule/gifter actions (replaces window.confirm). */}
       <ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
+
+      {/* In-place recurring edit — opens over Activity instead of jumping to the
+          dashboard. The sheet invalidates the scheduled + contributions queries on
+          save; we also refetch here so the row updates without a navigation. */}
+      <RecurringEditSheet
+        open={!!editSheetContrib}
+        onClose={() => setEditSheetContrib(null)}
+        contrib={editSheetContrib}
+        childFirstName={editSheetContrib?.recipientFirstName}
+        onSaved={() => { void queryClient.invalidateQueries({ queryKey: ["/api/me/scheduled"] }); }}
+        onChangeDestination={editSheetContrib ? () => {
+          const id = String(editSheetContrib.id);
+          const fund = editSheetContrib.fundId;
+          setEditSheetContrib(null);
+          navigate(`/dashboard?fund=${fund}&openAutoInvest=1&editId=${id}&returnTo=/activity`);
+        } : undefined}
+      />
+
+      {/* Pause options — matches the dashboard's "1 month / indefinitely / cancel
+          instead" flow instead of a bare toggle. Both pause choices pause; cancel
+          hands off to the existing branded cancel confirm. */}
+      <RecurringPauseSheet
+        open={!!pauseOptionsSchedule}
+        onClose={() => setPauseOptionsSchedule(null)}
+        onPause={() => {
+          const id = String(pauseOptionsSchedule?.id ?? "");
+          setPauseOptionsSchedule(null);
+          if (id) pauseToggleMutation.mutate({ id, status: "paused" });
+        }}
+        onCancelInstead={() => {
+          const id = String(pauseOptionsSchedule?.id ?? "");
+          setPauseOptionsSchedule(null);
+          if (!id) return;
+          setConfirmRequest({
+            title: "Cancel this recurring investment?",
+            body: "It won't run again. You can always set up a new one.",
+            confirmLabel: "Cancel it",
+            cancelLabel: "Keep it",
+            destructive: true,
+            onConfirm: () => cancelScheduleMutation.mutate(id),
+          });
+        }}
+      />
     </div>
   );
 }
