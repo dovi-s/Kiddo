@@ -9,6 +9,7 @@ import { pool, db } from "./db";
 import { captureError, captureEvent, initOpsMonitoring, sendOpsAlert } from "./ops";
 import { startGifterNotificationWorker } from "./gifterNotificationWorker";
 import { startRecurringContributionWorker } from "./recurringContributionWorker";
+import { startHoldingsRevaluationWorker } from "./holdingsRevaluationWorker";
 import { logStorageMode } from "./objectStorage";
 import { startParentLifecycleWorker } from "./parentLifecycleWorker";
 import { startMobilePushWorker } from "./mobilePushWorker";
@@ -36,7 +37,7 @@ import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
 import { buildPlatformReadiness, summarizePlatformReadiness } from "@shared/platformReadiness";
-import { US_STATES } from "@shared/utma";
+import { renderSitemapXml } from "./sitemap";
 import { inArray, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
@@ -395,83 +396,10 @@ app.get("/robots.txt", (req, res) => {
 });
 
 app.get("/sitemap.xml", (req, res) => {
-  const base = getPublicBaseUrl(req);
-  const now = new Date().toISOString();
-  // Every PUBLIC, indexable, non-user-scoped page. The satellite SEO surface
-  // (comparisons, tools, programmatic state pages) is the gifter-intent funnel
-  // — these were built but absent from the sitemap, so search engines weren't
-  // told they exist. Private/user-scoped routes stay out (and are also blocked
-  // in robots.txt above); orphan/noindex pages (/partners, /demo) stay out by
-  // design. See SEO_GTM_STRATEGY.md.
-  const routes: Array<{ path: string; changefreq: string; priority: string }> = [
-    // Core funnel
-    { path: "/", changefreq: "weekly", priority: "1.0" },
-    { path: "/get-started", changefreq: "weekly", priority: "0.9" },
-    { path: "/how-it-works", changefreq: "monthly", priority: "0.8" },
-    { path: "/give-a-gift", changefreq: "monthly", priority: "0.8" },
-    { path: "/pricing", changefreq: "monthly", priority: "0.7" },
-    { path: "/founding-members", changefreq: "monthly", priority: "0.7" },
-    { path: "/personal-funds", changefreq: "monthly", priority: "0.6" },
-    { path: "/age-18", changefreq: "monthly", priority: "0.6" },
-    // Gifter-intent SEO satellites (the strategic core: comparison + tools)
-    { path: "/compare", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/at-18-calculator", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/robux-vs-utma", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/trump-account-vs-utma", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/utma-by-state", changefreq: "monthly", priority: "0.7" },
-    // Content hubs (children discovered via the hub + entries below)
-    { path: "/blog", changefreq: "weekly", priority: "0.6" },
-    { path: "/stories", changefreq: "weekly", priority: "0.6" },
-    // Trust / info
-    { path: "/faq", changefreq: "monthly", priority: "0.7" },
-    { path: "/security", changefreq: "monthly", priority: "0.5" },
-    { path: "/about", changefreq: "monthly", priority: "0.6" },
-    { path: "/contact", changefreq: "monthly", priority: "0.4" },
-    { path: "/legal", changefreq: "monthly", priority: "0.4" },
-  ];
-  // Programmatic: one UTMA page per state. Self-maintaining from shared
-  // US_STATES; canonical URL is lowercase (matches UtmaByStateIndex links).
-  for (const s of US_STATES) {
-    routes.push({ path: `/tools/utma-by-state/${s.code.toLowerCase()}`, changefreq: "monthly", priority: "0.6" });
-  }
-  // Programmatic: comparison pages. Keep in sync with COMPARISONS in
-  // client/src/pages/Compare.tsx (small, stable set).
-  const COMPARE_SLUGS = ["earlybird", "acorns-early", "greenlight", "stockpile", "529", "savings-account", "fidelity-utma"];
-  for (const slug of COMPARE_SLUGS) {
-    routes.push({ path: `/compare/${slug}`, changefreq: "monthly", priority: "0.7" });
-  }
-  // Blog articles (the gifter-intent SEO clusters — see SEO_CLUSTERS_PLAN.md).
-  // Markdown-file-driven; the server bundle can't read the client glob, so keep
-  // this in sync with client/src/content/blog/*.md (add a slug when a post ships).
-  const BLOG_SLUGS = [
-    "best-way-to-invest-birthday-money-for-kids",
-    "how-to-ask-family-to-invest-instead-of-buying-toys",
-    "how-to-set-up-a-fund-before-your-baby-shower",
-    "gifts-for-a-kid-who-has-everything",
-    "utma-vs-529-for-family-gifting",
-    "earlybird-alternative",
-    "utma-financial-aid-fafsa",
-  ];
-  for (const slug of BLOG_SLUGS) {
-    routes.push({ path: `/blog/${slug}`, changefreq: "monthly", priority: "0.6" });
-  }
-  // Story entries (the occasion-narrative SEO surface). Same markdown-driven,
-  // server-can't-read-the-client-glob constraint as BLOG_SLUGS above: keep in
-  // sync with client/src/content/stories/*.md (one entry per file; add a slug
-  // when a story ships). The /stories hub is listed above; these are its
-  // indexable children — both are index,follow in client getSeoForPath, so they
-  // belong in the sitemap too (they were previously omitted).
-  const STORY_SLUGS = ["emma-birthday-fund", "noah-baby-shower-fund"];
-  for (const slug of STORY_SLUGS) {
-    routes.push({ path: `/stories/${slug}`, changefreq: "monthly", priority: "0.5" });
-  }
-  const urlset = routes
-    .map(
-      (r) =>
-        `<url><loc>${base}${r.path}</loc><lastmod>${now}</lastmod><changefreq>${r.changefreq}</changefreq><priority>${r.priority}</priority></url>`,
-    )
-    .join("");
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlset}</urlset>`;
+  // All routing logic lives in server/sitemap.ts (buildSitemapRoutes) so it can
+  // be unit-tested without HTTP. Dynamic URLs (states, comparisons, blog, story)
+  // are derived from their sources of truth there, not hand-maintained here.
+  const xml = renderSitemapXml(getPublicBaseUrl(req), new Date().toISOString());
   res.type("application/xml").status(200).send(xml);
 });
 
@@ -920,6 +848,7 @@ app.use((req, res, next) => {
   startParentLifecycleWorker(log);
   startMobilePushWorker(log);
   startRecurringContributionWorker(log);
+  startHoldingsRevaluationWorker(log); // OFF unless HOLDINGS_REVALUATION_MINUTES set (marks simulated holdings to live prices)
   startAge18TransitionWorker(log);
   startStalledHandoffWorker(log);
   startDemoResetWorker(log);

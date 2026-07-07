@@ -6,6 +6,8 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { usePageSeo } from "@/lib/seo";
+import { investingLiveCopy } from "@shared/legal-copy";
+import { COMPARE_SLUGS } from "@shared/compare-slugs";
 
 type ComparisonCard = {
   slug: string;
@@ -392,7 +394,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "Savings Account",
     comparisonRows: [
       { label: "Primary use", competitor: "Short-term cash savings", kora: "Long-term investing" },
-      { label: "Invests in real stocks", competitor: "No", kora: "Yes" },
+      { label: "Invests in real stocks", competitor: "No", kora: investingLiveCopy("Yes", "Yes, at launch") },
       { label: "Family can gift easily", competitor: "No", kora: "Yes, via shareable link" },
       { label: "FDIC / SIPC coverage", competitor: "FDIC", kora: "SIPC at launch" },
       { label: "Risk of loss", competitor: "Very low", kora: "Yes" },
@@ -487,6 +489,25 @@ const comparisonPages: Record<string, ComparisonPage> = {
       "Kiddo does not provide investment advice. Consider your own time horizon and risk tolerance before investing. Fees, features, and account terms at Fidelity may change. Always confirm current offerings with the provider directly.",
   },
 };
+
+// Dev guard: the comparison content above must stay in lockstep with the shared
+// COMPARE_SLUGS list that the server sitemap is built from (shared/compare-slugs.ts).
+// If they drift, a /compare/:slug page would 404 or fall out of the sitemap. Fail
+// loudly in dev so it's caught before it ships (the sitemap coverage test is the
+// server-side backstop).
+if (import.meta.env.DEV) {
+  const shared = [...COMPARE_SLUGS].slice().sort().join(",");
+  const pageKeys = Object.keys(comparisonPages).sort().join(",");
+  const cardSlugs = comparisonCards.map((c) => c.slug).sort().join(",");
+  if (pageKeys !== shared) {
+    // eslint-disable-next-line no-console
+    console.error(`[compare] comparisonPages keys (${pageKeys}) do not match shared COMPARE_SLUGS (${shared}). Update shared/compare-slugs.ts.`);
+  }
+  if (cardSlugs !== shared) {
+    // eslint-disable-next-line no-console
+    console.error(`[compare] comparisonCards slugs (${cardSlugs}) do not match shared COMPARE_SLUGS (${shared}). Update shared/compare-slugs.ts.`);
+  }
+}
 
 const hubSnapshotRows: HubSnapshotRow[] = [
   { product: "Kiddo", bestFor: "Investment gifting: family gifts that become real investments", giftingLink: "Yes", noAccountGift: "Yes", memoryBook: "Yes" },
