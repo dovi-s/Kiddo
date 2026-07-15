@@ -2651,7 +2651,7 @@ export class WebhookHandlers {
       const introLines = [
         sponsorFirst ? `Hi ${sponsorFirst},` : `Hi,`,
         '',
-        `Thank you for gifting a Kiddo Founding Member slot to ${recipientName}. They were just emailed the good news — they're founding member #${entry.position} of 1,000.`,
+        `Thank you for gifting a Kiddo Founding Member slot to ${recipientName}. They were just emailed the good news. They're founding member #${entry.position} of 1,000.`,
         '',
         `When Kiddo launches, ${recipientName} will claim their slot via the email link we sent them. They keep the $19/yr lifetime price-lock and the Founding Member badge for as long as they're with Kiddo.`,
         '',
@@ -2879,7 +2879,7 @@ export class WebhookHandlers {
         const { renderKiddoEmail } = await import("./templates/baseTemplate");
         const childName = fund.recipientFirstName || fund.name || "the fund";
         const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
-        const subject = `$${amountUsd.toFixed(0)} added to ${childName}'s fund — ${monthLabel}`;
+        const subject = `$${amountUsd.toFixed(0)} added to ${childName}'s fund, ${monthLabel}`;
         const body = [
           `Your $${amountUsd.toFixed(2)} recurring landed in ${childName}'s fund.`,
           "",

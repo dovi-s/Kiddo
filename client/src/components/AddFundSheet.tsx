@@ -630,7 +630,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                   I understand {childFirst}'s fund is irrevocable.
                                 </p>
                                 <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
-                                  Once invested, the money belongs to {childFirst}. I manage it as custodian until {childFirst} turns {ageOfMajority} (your state's UTMA age of majority). That's the whole point.
+                                  Once invested, the money belongs to {childFirst}. I manage it as custodian until {childFirst} turns {ageOfMajority} (your state's UTMA age of majority).
                                 </p>
                               </div>
                             </label>
@@ -704,7 +704,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
 
                     <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        New funds keep it simple: gifts follow your family default, and anyone can also pick a specific stock. Cash gifts stay off until you allow them. You can change any of this in Settings.
+                        Gifts follow your family default, and anyone can pick a specific stock instead. Cash gifts stay off until you allow them. Change any of this later in Settings.
                       </p>
                     </div>
 

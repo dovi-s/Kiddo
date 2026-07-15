@@ -52,6 +52,7 @@ import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
 import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
+import { KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY } from "@shared/monetization";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 
 // Per-fund collaborators cache. Same readLocalCache / writeLocalCache
@@ -175,9 +176,13 @@ export function CoParentAccessCard({
             stays a SINGLE line on mobile (it was wrapping to two next to the button). */}
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-bold text-foreground">Co-parent access</h2>
+          {/* Outline (not filled) so this secondary action doesn't read as a
+              heavy green block competing with the section title on mobile.
+              Compact height + tighter padding keep it proportionate. */}
           <Button
+            variant="outline"
             size="sm"
-            className="shrink-0 rounded-xl gap-1.5"
+            className="shrink-0 rounded-xl gap-1.5 h-8 px-3 text-xs"
             onClick={() => {
               haptic("light");
               // Free users: open the FeatureWallModal so the tap
@@ -260,18 +265,18 @@ export function CoParentAccessCard({
                   : null;
                 return (
                   <div key={collab.id} className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4">
+                    {/* Avatar + email on the top line (email gets the full row
+                        width so it no longer hard-truncates to "marcus@r…" on
+                        narrow phones). Status badge and Revoke share the line
+                        below — status left, action right — with the role beneath.
+                        Keeping Revoke OFF the email line is what frees the width. */}
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-cream-dark))] border border-[hsl(var(--kiddo-border))] text-sm font-bold text-foreground">
                         {(collab.email || "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        {/* Email on its own line + break-all so the full address
-                            stays readable (you need it to know WHO has access) —
-                            it was hard-truncating to "marcus@r…" on narrow phones
-                            when the status badge shared its line. Badge + role now
-                            sit together on the line below. */}
                         <p className="text-sm font-bold text-foreground break-all">{collab.email}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
                           <span className={`rounded-full px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.05em] ${
                             collab.status === "accepted"
                               ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"
@@ -279,34 +284,50 @@ export function CoParentAccessCard({
                           }`}>
                             {collab.status === "accepted" ? "active" : "pending"}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {collab.status === "accepted"
-                              ? `${isAdmin ? "Co-Admin" : "Viewer"} · Accepted`
-                              : invitedDate
-                                ? `Invited ${invitedDate} · Awaiting acceptance`
-                                : "Awaiting acceptance"}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(collab.id)}
+                            className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-2xs font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
+                            data-testid={`button-revoke-collab-${collab.id}`}
+                          >
+                            Revoke
+                          </button>
                         </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {/* Accepted: just the role — the ACTIVE pill above already says
+                              "accepted," so "· Accepted" here was the same status twice.
+                              Pending keeps its suffix because it carries real detail (the
+                              invited date + that it's still awaiting). */}
+                          {collab.status === "accepted"
+                            ? (isAdmin ? "Co-Admin" : "Viewer")
+                            : invitedDate
+                              ? `Invited ${invitedDate} · Awaiting acceptance`
+                              : "Awaiting acceptance"}
+                        </p>
+                        {/* The role IMPLIES the permissions — a Co-Admin badge already says
+                            "can manage," a Viewer badge says "view-only." Enumerating all five
+                            permissions as chips per member was engineering detail as UI, and it
+                            wrapped to a crammed 2-3 rows of pills on mobile. One plain-language
+                            line reads calmer and clearer; the granular grant is set at invite.
+                            Tense-aware (2026-07): a PENDING invitee doesn't see or manage
+                            anything yet, so the present-tense wording is future-framed ("Once
+                            they accept: ...") until acceptance, and reads accurately in both
+                            states rather than promising access that isn't live.
+                            Positioned INSIDE the content column (not a full-width sibling of
+                            the avatar row) so it aligns under the email instead of hanging out
+                            to the left under the avatar — the misalignment read as off on
+                            mobile (founder catch 2026-07). */}
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground/85">
+                          {collab.status === "accepted"
+                            ? (isAdmin
+                                ? "Full access: sees everything and can manage the fund. You stay the legal custodian."
+                                : "View-only: the balance, activity, and Memory Book. Can't change settings or create occasions.")
+                            : (isAdmin
+                                ? "Once they accept: full access to see everything and manage the fund. You stay the legal custodian."
+                                : "Once they accept: view-only access to the balance, activity, and Memory Book.")}
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(collab.id)}
-                        className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-2xs font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
-                        data-testid={`button-revoke-collab-${collab.id}`}
-                      >
-                        Revoke
-                      </button>
                     </div>
-                    {/* The role IMPLIES the permissions — a Co-Admin badge already says
-                        "can manage," a Viewer badge says "view-only." Enumerating all five
-                        permissions as chips per member was engineering detail as UI, and it
-                        wrapped to a crammed 2-3 rows of pills on mobile. One plain-language
-                        line reads calmer and clearer; the granular grant is set at invite. */}
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground/85">
-                      {isAdmin
-                        ? "Full access: sees everything and can manage the fund. You stay the legal custodian."
-                        : "View-only: the balance, activity, and Memory Book. Can't change settings or create occasions."}
-                    </p>
                   </div>
                 );
               })}
@@ -345,7 +366,7 @@ export function CoParentAccessCard({
           <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm font-semibold text-foreground">Invite a co-parent with Kiddo+</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              $3.99/month or $29/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up on the kid's timeline alongside yours.
+              ${KORA_STARTER_MONTHLY}/month or ${KORA_STARTER_YEARLY}/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up alongside yours.
             </p>
             <Button
               size="sm"

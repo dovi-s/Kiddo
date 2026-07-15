@@ -21,7 +21,7 @@ const MILESTONE_FRAMES: Record<number, { heading: (name: string) => string; refl
   10: {
     heading: (name) => `${name} is 10`,
     reflection: (name, years) =>
-      `Halfway to 18. The fund has had ${years} years to compound; the next 8 are when the math gets steep.`,
+      `Halfway to 18. ${years} years in, and the next 8 are the ones that add up.`,
   },
   13: {
     heading: (name) => `${name} is 13`,

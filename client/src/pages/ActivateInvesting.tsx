@@ -590,23 +590,17 @@ export default function ActivateInvesting() {
                   Activate your fund
                 </h1>
                 <p className="text-muted-foreground leading-relaxed text-sm" data-testid="text-welcome-description">
-                  This takes about 3 minutes. Once you are verified, every gift your child receives can be automatically invested in real stocks. Identity verification is a legal requirement to open the investment account and make the fund real.
+                  This takes about 3 minutes. Verifying your identity is a legal requirement to open the investment account. Once you're verified, every gift your child receives can invest automatically.
                 </p>
                 <p className="text-sm text-muted-foreground italic">
-                  If you wait, gifts can still arrive, but they stay in cash until you come back and activate investing. Once verified, that cash starts investing automatically.
+                  Gifts can still arrive before you verify; they stay in cash until you activate investing, then invest automatically.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-start gap-3 shadow-sm" data-testid="card-benefit-auto-invest">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <TrendingUp size={20} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">Verification unlocks investing</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Once verified, gifts settle into real stocks without extra steps.</p>
-                  </div>
-                </div>
+                {/* The "verification unlocks investing" benefit card was removed — it
+                    restated the intro paragraph above. The two cards below are
+                    DISTINCT benefits (ownership, SIPC), so the list stays meaningful. */}
                 <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-start gap-3 shadow-sm" data-testid="card-benefit-real-stocks">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Wallet size={20} className="text-primary" />

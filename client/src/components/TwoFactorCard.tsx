@@ -137,7 +137,7 @@ export function TwoFactorCard() {
                   type="button"
                   onClick={() => { haptic("selection"); setupMutation.mutate(); }}
                   disabled={setupMutation.isPending}
-                  className="rounded-xl bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                  className="rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[hsl(var(--kiddo-evergreen))]/90 disabled:opacity-50"
                   data-testid="button-2fa-enable-start"
                 >
                   {setupMutation.isPending ? "Starting..." : "Turn on two-factor"}
@@ -184,7 +184,7 @@ export function TwoFactorCard() {
                   type="button"
                   onClick={() => enableMutation.mutate()}
                   disabled={!code.trim() || (needsPassword && !password) || enableMutation.isPending}
-                  className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                   data-testid="button-2fa-enable-confirm"
                 >
                   {enableMutation.isPending ? "Verifying..." : "Verify & turn on"}
@@ -209,7 +209,7 @@ export function TwoFactorCard() {
                 <button type="button" onClick={copyBackup} className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground">
                   {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? "Copied" : "Copy codes"}
                 </button>
-                <button type="button" onClick={reset} className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background" data-testid="button-2fa-backup-done">
+                <button type="button" onClick={reset} className="flex-1 rounded-xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-3 py-2 text-xs font-semibold text-white" data-testid="button-2fa-backup-done">
                   I've saved them
                 </button>
               </div>

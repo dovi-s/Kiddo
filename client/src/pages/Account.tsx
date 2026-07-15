@@ -112,7 +112,7 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 text-[hsl(var(--kiddo-evergreen))] hover:text-[hsl(var(--kiddo-evergreen))]"
+            className="shrink-0 h-8 rounded-xl border border-[hsl(var(--kiddo-border))] px-3 text-xs font-semibold text-foreground hover:bg-muted/40"
             onClick={() => { setEditing(true); haptic("light"); }}
             data-testid="button-change-email"
           >
@@ -1010,7 +1010,7 @@ export default function Account() {
             Plan & billing / Security stay reachable while scrolling a long tab.
             Frosted-cream wrapper matches the header + Settings/Activity tabs;
             -mx-4 px-4 bleeds to the screen edges. Added 2026-07. */}
-        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
+        <div className="sticky top-[calc(var(--app-safe-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
         <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="account-tabs" role="tablist" aria-label="Account sections">
           {[
             { id: "personal", label: "Personal info" },
@@ -1122,7 +1122,7 @@ export default function Account() {
                           autoFocus
                           data-testid="input-profile-name"
                         />
-                        <Button size="sm" onClick={handleSaveName} data-testid="button-save-profile-name">Save</Button>
+                        <Button size="sm" className="!bg-[hsl(var(--kiddo-evergreen))] hover:!bg-[hsl(var(--kiddo-evergreen))]/90 text-white" onClick={handleSaveName} data-testid="button-save-profile-name">Save</Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
                       </div>
                     ) : (
@@ -1140,7 +1140,7 @@ export default function Account() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="shrink-0 text-[hsl(var(--kiddo-evergreen))] hover:text-[hsl(var(--kiddo-evergreen))]"
+                      className="shrink-0 h-8 rounded-xl border border-[hsl(var(--kiddo-border))] px-3 text-xs font-semibold text-foreground hover:bg-muted/40"
                       onClick={() => { setNameValue(displayName); setEditingName(true); haptic("light"); }}
                       data-testid="button-edit-profile-name"
                     >
@@ -1197,7 +1197,7 @@ export default function Account() {
                   </p>
                   <Button
                     size="sm"
-                    className="mt-3 rounded-xl"
+                    className="mt-3 rounded-xl !bg-[hsl(var(--kiddo-evergreen))] hover:!bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
                     disabled={savingPreferredName || preferredName === ((user as any)?.preferredName || "")}
                     onClick={handleSavePreferredName}
                     data-testid="button-save-preferred-name"
@@ -1826,10 +1826,8 @@ export default function Account() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-foreground">Trusted contact</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Someone we can reach if we can't reach you. Used only for account
-                      safety, identity confirmation, or suspected financial exploitation.
-                      Optional today. Once investing is live, it's required for
-                      FINRA-regulated accounts via our broker-dealer partner.
+                      Someone we can reach if we can't reach you, only for account safety
+                      or suspected fraud. Optional now; required once investing is live.
                     </p>
                   </div>
                 </div>
@@ -1913,7 +1911,7 @@ export default function Account() {
                       size="sm"
                       onClick={handleSaveTrustedContact}
                       disabled={savingTrustedContact || !trustedContactDirty}
-                      className="rounded-xl"
+                      className="rounded-xl !bg-[hsl(var(--kiddo-evergreen))] hover:!bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
                       data-testid="button-save-trusted-contact"
                     >
                       {savingTrustedContact ? "Saving…" : trustedContactHasAny ? "Update" : "Save"}
@@ -1941,7 +1939,7 @@ export default function Account() {
                 <div>
                   <p className="text-sm font-bold text-foreground">SIPC protection</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    When investing is live, securities are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then protected up to $500,000 against broker-dealer failure, not market loss. This does not protect against market losses.
+                    Once investing is live, securities are held by our broker-dealer partner (Member FINRA/SIPC), and eligible accounts are protected up to $500,000 against broker-dealer failure, not against market losses.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>
@@ -1967,29 +1965,36 @@ export default function Account() {
             delete (the standard data-rights cluster). Delete stays quiet-but-
             findable (App Store 5.1.1(v)); its confirmation modal is rendered
             separately so the destructive action needs a deliberate second step. */}
+        {/* Grouped as a single row-card (matching the Plan + legal group above and
+            the Settings metadata rows) rather than two heavy full-width bordered
+            pills, which read as dated next to the rest of the page. */}
         <div className="mt-2">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground kiddo-press"
-          >
-            <LogOut size={15} />
-            Log out
-          </button>
+          <div className="kiddo-card overflow-hidden">
+            <div className="divide-y divide-[hsl(var(--kiddo-border))]">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 p-4 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/30 kiddo-press"
+              >
+                <LogOut size={16} className="shrink-0 text-muted-foreground" />
+                Log out
+              </button>
 
-          {/* Data-subject access (CCPA / parental access). Downloads a JSON
-              export of the user's own data; SSN + secrets excluded server-side.
-              See GET /api/me/export + policies/child-data-protection.md. */}
-          <button
-            type="button"
-            onClick={handleExportData}
-            disabled={exportingData}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-60 kiddo-press"
-            data-testid="button-export-data"
-          >
-            {exportingData ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-            {exportingData ? "Preparing your data…" : "Download my data"}
-          </button>
+              {/* Data-subject access (CCPA / parental access). Downloads a JSON
+                  export of the user's own data; SSN + secrets excluded server-side.
+                  See GET /api/me/export + policies/child-data-protection.md. */}
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={exportingData}
+                className="flex w-full items-center gap-2.5 p-4 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/30 disabled:opacity-60 kiddo-press"
+                data-testid="button-export-data"
+              >
+                {exportingData ? <Loader2 size={16} className="shrink-0 animate-spin text-muted-foreground" /> : <Download size={16} className="shrink-0 text-muted-foreground" />}
+                {exportingData ? "Preparing your data…" : "Download my data"}
+              </button>
+            </div>
+          </div>
 
           <button
             type="button"
@@ -2001,7 +2006,11 @@ export default function Account() {
           </button>
         </div>
 
-        <TrustMicroStrip />
+        {/* The Security tab already carries the SIPC disclosure in its richer
+            "SIPC protection" card (with the sipc.org / FINRA / how-we-protect
+            links), so the footer strip would be a duplicate there. Show it on the
+            other tabs so the disclosure stays present everywhere. */}
+        {accountTab !== "security" && <TrustMicroStrip />}
 
         {/* Account deletion confirmation dialog. Renders the multi-step
             flow described in project_account_deletion_spec.md:

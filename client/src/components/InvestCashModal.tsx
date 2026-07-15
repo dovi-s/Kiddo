@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import { demoBlocked } from "@/lib/demo-block";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 import { projectFundValue } from "@shared/projection";
+import { investingLiveCopy, PROJECTION_DISCLAIMER, INVESTING_LIVE } from "@shared/legal-copy";
 
 // Derived from the canonical universe (shared/stock-picks.ts) — the cash-invest
 // picker (adult / owner-mode) now reads the SAME list as the gift page, parent
@@ -80,6 +81,14 @@ interface InvestCashModalProps {
   onSuccess?: () => void;
 }
 
+// Sticky footer for the destination step: "Pick one company" reveals a ~29-stock grid
+// that used to push the "Review investment" button below the fold (founder catch
+// 2026-07: "the buttons should always be visible"). Pin the action to the bottom of the
+// scroll viewport. -mx-6/-mb-6 cancel the scroll body's px-6/pb-6 so the bar sits flush;
+// bg + border-t let the stock grid scroll cleanly behind it. (Home-indicator safe
+// area is handled globally by the sheet's bottom spacer in ui/dialog.tsx.)
+const STICKY_SHEET_NAV = "sticky bottom-0 z-10 -mx-6 mt-1 border-t border-[hsl(var(--kiddo-border))] bg-background px-6 pt-3.5 pb-3.5";
+
 export function InvestCashModal({
   open,
   onClose,
@@ -133,21 +142,28 @@ export function InvestCashModal({
     staleTime: 60_000,
   });
 
+  // Reset ONLY on the closed→open transition. Resetting on every cashAmount change
+  // clobbered the post-invest "done" screen: a successful invest drops cashAmount
+  // (e.g. $50 → $0), which used to re-fire this and bounce the step back to "choose"
+  // with $0 available, showing the impossible "Enter an amount between $0.01 and
+  // $0.00" (founder bug report). Now cashAmount changes while open never reset it.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setStep("choose");
       setInvestMode(initialTicker ? "stock" : "default");
       setSelectedTicker(initialTicker || "");
       setSelectedBankId("");
       setInvestAmount(cashAmount > 0 ? cashAmount.toFixed(2) : "");
     }
+    wasOpen.current = open;
   }, [cashAmount, initialTicker, open]);
 
   const contextMessages: Record<CashContext, string> = {
     kyc_pending: "Verification is complete. You can invest some, all, or none of this cash.",
     held_as_cash: `This fund holds gifts as cash until you choose what to invest.`,
     sold_proceeds: `These are the proceeds from a recent stock sale, ready to reinvest.`,
-    gifts_settled: `${childName}'s gifts have settled and are ready to invest.`,
+    gifts_settled: `${childName}'s gift money is in and ready to invest.`,
   };
 
   const selectedStockName = STOCK_CHOICES.find((s) => s.ticker === selectedTicker)?.name || selectedTicker;
@@ -172,9 +188,12 @@ export function InvestCashModal({
       : `Using ${childName}'s fund default: ${prefs ? getDefaultLabel(prefs) : "fund strategy"}`;
 
   const marketOpen = isMarketOpen();
-  const executionNote = marketOpen
-    ? "Markets are open. This executes at the current price."
-    : "Will execute at the next market open (weekdays, 9:30am ET).";
+  const executionNote = investingLiveCopy(
+    marketOpen
+      ? "Markets are open. This executes at the current price."
+      : "Will execute at the next market open (weekdays, 9:30am ET).",
+    "This records your choice. It invests once investing goes live.",
+  );
 
   const handleConfirm = async () => {
     setInvesting(true);
@@ -241,7 +260,10 @@ export function InvestCashModal({
         toast({
           title: enabled ? "Investing future gifts automatically" : "Future gifts will sit as cash",
           description: enabled
-            ? "Future cash will invest automatically per the fund default."
+            ? investingLiveCopy(
+                "Future cash will invest automatically per the fund default.",
+                "Future cash is set to invest automatically once investing goes live.",
+              )
             : "Cash will sit until you manually invest it.",
         });
       }
@@ -283,13 +305,24 @@ export function InvestCashModal({
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent sheet className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[90vh]" aria-describedby={undefined}>
-        <DialogHeader className="px-6 pt-6 pb-0 shrink-0">
+        {/* Mode + fund pills — matches the one-time / recurring invest sheets so the
+            cash flow reads as the same family. This sheet was the only invest surface
+            missing the "{child}'s fund" context pill (founder catch 2026-07). */}
+        <div className="px-6 pt-5 shrink-0 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+            <Banknote size={11} /> Cash
+          </span>
+          <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-foreground/75">
+            {childName}'s fund
+          </span>
+        </div>
+        <DialogHeader className="px-6 pt-3 pb-0 shrink-0">
           <DialogTitle className="font-heading text-xl font-semibold">
             {step === "done" ? "All set" : "Put cash to work"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 pt-4 space-y-5 overflow-y-auto flex-1 min-h-0">
+        <div className="px-6 pb-4 pt-4 space-y-5 overflow-y-auto flex-1 min-h-0">
           {step === "choose" && (
             <>
               {/* Cash amount + context */}
@@ -297,7 +330,11 @@ export function InvestCashModal({
                 <p className="text-2xs font-semibold uppercase text-muted-foreground">Available cash</p>
                 <p className="text-3xl font-bold text-foreground font-heading">{formatCurrency(cashAmount)}</p>
                 <p className="text-sm text-muted-foreground">{contextMessages[cashContext]}</p>
-                {!marketOpen && (
+                {/* Market-hours note only makes sense once investing is LIVE. While
+                    gated, nothing executes at the next open, so this line would be a
+                    false timing claim; the confirm-step executionNote carries the
+                    honest "invests once investing goes live" copy instead. */}
+                {INVESTING_LIVE && !marketOpen && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Clock size={12} className="text-muted-foreground" />
                     <p className="text-xs text-muted-foreground">Markets closed. Executes at next open.</p>
@@ -455,22 +492,24 @@ export function InvestCashModal({
                 )}
               </div>
 
-              <Button
-                className="w-full h-12 rounded-xl font-semibold"
-                disabled={
-                  (investMode !== "keep" && investMode !== "withdraw" && amountInvalid) ||
-                  (investMode === "stock" && !selectedTicker) ||
-                  (investMode === "withdraw" && activeBanks.length === 0)
-                }
-                onClick={() => {
-                  if (investMode === "keep") { onClose(); return; }
-                  if (investMode === "withdraw") { setStep("confirm"); haptic("light"); return; }
-                  setStep("confirm");
-                  haptic("light");
-                }}
-              >
-                {investMode === "keep" ? "Keep as cash" : investMode === "withdraw" ? "Review withdrawal" : "Review investment"}
-              </Button>
+              <div className={STICKY_SHEET_NAV}>
+                <Button
+                  className="w-full h-12 rounded-xl font-semibold"
+                  disabled={
+                    (investMode !== "keep" && investMode !== "withdraw" && amountInvalid) ||
+                    (investMode === "stock" && !selectedTicker) ||
+                    (investMode === "withdraw" && activeBanks.length === 0)
+                  }
+                  onClick={() => {
+                    if (investMode === "keep") { onClose(); return; }
+                    if (investMode === "withdraw") { setStep("confirm"); haptic("light"); return; }
+                    setStep("confirm");
+                    haptic("light");
+                  }}
+                >
+                  {investMode === "keep" ? "Keep as cash" : investMode === "withdraw" ? "Review withdrawal" : "Review investment"}
+                </Button>
+              </div>
             </>
           )}
 
@@ -571,12 +610,21 @@ export function InvestCashModal({
                   ) : (
                     <>
                       <p className="text-lg font-semibold text-foreground">
-                        {formatCurrency(roundedAmountToInvest)} is being invested
+                        {investingLiveCopy(
+                          `${formatCurrency(roundedAmountToInvest)} is being invested`,
+                          `${formatCurrency(roundedAmountToInvest)} is set to invest`,
+                        )}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {investMode === "stock" && selectedTicker
-                          ? `${childName}'s cash is buying ${selectedStockName} (${selectedTicker}).${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`
-                          : `${childName}'s fund is back to work.${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`}
+                          ? investingLiveCopy(
+                              `${childName}'s cash is buying ${selectedStockName} (${selectedTicker}).${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`,
+                              `${childName}'s cash is set to buy ${selectedStockName} (${selectedTicker}) once investing goes live.`,
+                            )
+                          : investingLiveCopy(
+                              `${childName}'s fund is back to work.${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`,
+                              `We've recorded your choice. ${formatCurrency(roundedAmountToInvest)} invests once investing goes live.`,
+                            )}
                         {remainingCash > 0.009 ? ` ${formatCurrency(remainingCash)} remains available as cash.` : ""}
                       </p>
                     </>
@@ -610,10 +658,15 @@ export function InvestCashModal({
                   return (
                     <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-2.5">
                       <span className="text-base leading-none mt-0.5" aria-hidden>🌱</span>
-                      <p className="text-sm text-foreground leading-relaxed">
-                        Left to grow, this {formatCurrency(roundedAmountToInvest)} could be about{" "}
-                        <span className="font-semibold">{fmt0(future)}</span> by the time {childName} turns {majorityAge ?? 18}.
-                      </p>
+                      <div>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          Left to grow, this {formatCurrency(roundedAmountToInvest)} could be about{" "}
+                          <span className="font-semibold">{fmt0(future)}</span> by the time {childName} turns {majorityAge ?? 18}.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                          {PROJECTION_DISCLAIMER}
+                        </p>
+                      </div>
                     </div>
                   );
                 })()}

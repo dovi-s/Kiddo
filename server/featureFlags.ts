@@ -75,4 +75,5 @@ export const KNOWN_FLAGS: Array<{ key: string; description: string; defaultValue
   { key: "physical_memory_book", description: "Show the 'Physical Memory Book (coming soon)' card on Age18Plan.", defaultValue: true },
   { key: "kiddo_card", description: "Show the 'Kiddo Card (coming soon)' card on Age18Plan.", defaultValue: true },
   { key: "mobile_push_enabled", description: "Master switch for mobile push notifications. Disable to dampen during outages.", defaultValue: true },
+  { key: "recurring_card_update", description: "Surface an 'Update card' recovery on a Charge-missed recurring row (opens the Stripe billing portal). OFF until the billing-portal config exposes payment-method update AND the propagation is confirmed against a live Stripe test.", defaultValue: false },
 ];

@@ -36,8 +36,9 @@ function fmtUsd(n: number, decimals = 0): string {
 export function buildYearEndWrappedEmail(input: YearEndWrappedInput): EmailMessage {
   const { to, parentFirstName, childFirstName, year, startBalanceUsd, endBalanceUsd, totalGiftedUsd, giftCount, uniqueGifterCount, topGifterName, topGifterAmountUsd, largestSingleGiftUsd, dashboardUrl, memoryBookUrl, unsubscribeUrl } = input;
   const greeting = parentFirstName?.trim() ? `Hi ${parentFirstName.trim()},` : "Hi there,";
+  // Net change = deposits while investing is dark (no returns yet), so it's shown
+  // as a dollar delta, NOT a "% return for the year" (that would frame gifts as growth).
   const growthUsd = endBalanceUsd - startBalanceUsd;
-  const growthPct = startBalanceUsd > 0 ? (growthUsd / startBalanceUsd) * 100 : null;
   const topGifterLine = topGifterName && topGifterAmountUsd
     ? `Top gifter: ${topGifterName.trim()} (${fmtUsd(topGifterAmountUsd)} across the year).`
     : null;
@@ -47,7 +48,7 @@ export function buildYearEndWrappedEmail(input: YearEndWrappedInput): EmailMessa
     `${childFirstName}'s ${year}.`,
     ``,
     `Started the year at ${fmtUsd(startBalanceUsd)}. Ended at ${fmtUsd(endBalanceUsd)}.`,
-    growthPct != null ? `That's ${growthUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(growthUsd))} (${growthPct >= 0 ? "+" : ""}${growthPct.toFixed(1)}%) for the year.` : `Net change for the year: ${growthUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(growthUsd))}.`,
+    `Net change this year: ${growthUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(growthUsd))}.`,
     ``,
     `${giftCount} gift${giftCount === 1 ? "" : "s"} arrived from ${uniqueGifterCount} ${uniqueGifterCount === 1 ? "person" : "people"}.`,
     `Total gifted this year: ${fmtUsd(totalGiftedUsd)}.`,
@@ -56,7 +57,7 @@ export function buildYearEndWrappedEmail(input: YearEndWrappedInput): EmailMessa
     ``,
     memoryBookUrl
       ? `If you want to mark the year with a note, the Memory Book is where it lands.`
-      : `One quiet year of compounding, banked.`,
+      : `One quiet year, banked.`,
   ].filter(Boolean).join("\n");
   const { html } = renderKiddoEmail({
     heading: `${childFirstName}'s ${year}`,
@@ -71,7 +72,7 @@ export function buildYearEndWrappedEmail(input: YearEndWrappedInput): EmailMessa
     `${childFirstName}'s ${year}.`,
     ``,
     `Started at ${fmtUsd(startBalanceUsd)}. Ended at ${fmtUsd(endBalanceUsd)}.`,
-    growthPct != null ? `Net: ${growthUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(growthUsd))} (${growthPct >= 0 ? "+" : ""}${growthPct.toFixed(1)}%).` : `Net: ${growthUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(growthUsd))}.`,
+    `Net: ${growthUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(growthUsd))}.`,
     ``,
     `${giftCount} gift${giftCount === 1 ? "" : "s"} from ${uniqueGifterCount} people. ${fmtUsd(totalGiftedUsd)} total.`,
     largestSingleGiftUsd > 0 ? `Largest single gift: ${fmtUsd(largestSingleGiftUsd)}.` : null,

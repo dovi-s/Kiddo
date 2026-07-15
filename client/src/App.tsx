@@ -18,6 +18,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NavTransition } from "@/components/layout/NavTransition";
+import { markVtRouteReady } from "@/lib/view-transition";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { GlobalShareModal } from "@/components/GlobalShareModal";
 import { DemoBanner } from "@/components/DemoBanner";
@@ -55,6 +56,22 @@ function lazyWithRetry<T extends ComponentType<any>>(factory: () => Promise<{ de
         throw err;
       }),
   );
+}
+
+// Like lazyWithRetry, but renders SYNCHRONOUSLY once preload() has resolved — no
+// Suspense fallback on the first navigation. View Transitions freeze the
+// destination's first frame, and a plain React.lazy suspends on that first render
+// even when the chunk is cached, so VT froze the loading skeleton. Preloaded
+// eagerly in prefetchCriticalRoutes; degrades to the Suspense-lazy until then.
+function preloadableLazy<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  let Loaded: T | null = null;
+  const Lazy = lazyWithRetry(factory);
+  function Wrapped(props: any) {
+    const C = Loaded;
+    return C ? <C {...props} /> : <Lazy {...props} />;
+  }
+  (Wrapped as any).preload = () => factory().then((m) => { Loaded = m.default; }).catch(() => {});
+  return Wrapped as typeof Wrapped & { preload: () => Promise<void> };
 }
 
 const NotFound = lazyWithRetry(() => import("@/pages/not-found"));
@@ -116,10 +133,10 @@ const DashboardStaging = lazyWithRetry(() => import("@/pages/DashboardStaging"))
 const Partners = lazyWithRetry(() => import("@/pages/Partners"));
 const Security = lazyWithRetry(() => import("@/pages/Security"));
 const Age18 = lazyWithRetry(() => import("@/pages/Age18"));
-const Age18Plan = lazyWithRetry(() => import("@/pages/Age18Plan"));
-const TaxDocuments = lazyWithRetry(() => import("@/pages/TaxDocuments"));
+const Age18Plan = preloadableLazy(() => import("@/pages/Age18Plan"));
+const TaxDocuments = preloadableLazy(() => import("@/pages/TaxDocuments"));
 const TaxDocsExplainer = lazyWithRetry(() => import("@/pages/TaxDocsExplainer"));
-const Projection = lazyWithRetry(() => import("@/pages/Projection"));
+const Projection = preloadableLazy(() => import("@/pages/Projection"));
 const FundSnapshot = lazyWithRetry(() => import("@/pages/FundSnapshot"));
 const MemoryBook = lazyWithRetry(() => import("@/pages/MemoryBook"));
 const MemoryRedirect = lazyWithRetry(() => import("@/pages/MemoryRedirect"));
@@ -632,12 +649,23 @@ let _prefetchDone = false;
 function prefetchCriticalRoutes() {
   if (_prefetchDone) return;
   _prefetchDone = true;
+  const warm = (p: Promise<unknown>) => { void p.catch(() => {}); };
+  // EAGER (not idle): the View-Transition push routes. VT freezes the destination's
+  // first frame, so if the chunk isn't loaded at tap time the Suspense skeleton gets
+  // frozen. Load them immediately AND mark each ready when it resolves — the VT only
+  // fires for a route whose chunk is ready (view-transition.ts), so a tap before the
+  // chunk lands falls back to the graceful framer slide instead of freezing.
+  const eager = (comp: { preload: () => Promise<void> }, route: string) => {
+    comp.preload().then(() => markVtRouteReady(route)).catch(() => {});
+  };
+  eager(Projection, "/projection");
+  eager(Age18Plan, "/age-18-plan");
+  eager(TaxDocuments, "/tax-documents");
   const run = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (fn: () => void) => setTimeout(fn, 120);
   run(() => {
     // Best-effort warm-ups. A failed prefetch (transient network) must NEVER
     // surface as an uncaught promise rejection in the console — swallow it
     // here; the route's own lazyWithRetry import handles real navigation.
-    const warm = (p: Promise<unknown>) => { void p.catch(() => {}); };
     warm(import("@/pages/DashboardLab")); // the ported dashboard (/dashboard); classic parked at /dashboard-classic
     warm(import("@/pages/Settings"));
     warm(import("@/pages/Account"));
@@ -649,6 +677,8 @@ function prefetchCriticalRoutes() {
     warm(import("@/pages/GetStarted"));
     warm(import("@/pages/GiftCheckout"));
     warm(import("@/pages/GiftSuccess"));
+    // (Projection / Age18Plan / TaxDocuments are warmed EAGERLY above — they're the
+    // View-Transition push routes and must be chunk-ready before the first tap.)
   });
 }
 

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { Check, X, ChevronDown } from "lucide-react";
+import { Check, X, ChevronDown, Gift, Repeat, BookOpen, CheckCircle2, Building2, GraduationCap, Star, TrendingUp, Cake, Baby, Lightbulb, Bell, type LucideIcon } from "lucide-react";
 import { useActivities, useFundActivities } from "@/hooks/use-activities";
 import { useFunds } from "@/hooks/use-funds";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -313,27 +313,30 @@ function saveUnreadIds(ids: Set<string>) {
 
 type FeedActivity = Activity & { fundName?: string | null; recipientFirstName?: string | null };
 
-function getNotifEmoji(a: Activity): string {
+// Branded glyph per notification type (Lucide, not emoji) so the panel
+// matches the dashboard's icon system. Color is applied at the call site
+// from the row's tone.
+function getNotifIcon(a: Activity): LucideIcon {
   const t = a.type || "";
   const title = (a.title || "").toLowerCase();
   const desc = (a.description || "").toLowerCase();
-  if (t === "gift_received" || t === "gift_invested") return "🎁";
-  if (t === "auto_invest" || t === "cash_invested") return "↻";
-  if (t.startsWith("memory_") || t === "memory_entry_added") return "📖";
-  if (t === "kyc_approved") return "✅";
-  if (t === "bank_linked") return "🏦";
-  if (t === "age18_handoff_ready") return "🎓";
-  if (t.includes("plan_activated") || t === "subscription_started") return "⭐";
-  if (title.includes("crossed") || title.includes("milestone") || title.includes("hit ")) return "🌟";
+  if (t === "gift_received" || t === "gift_invested") return Gift;
+  if (t === "auto_invest" || t === "cash_invested") return Repeat;
+  if (t.startsWith("memory_") || t === "memory_entry_added") return BookOpen;
+  if (t === "kyc_approved") return CheckCircle2;
+  if (t === "bank_linked") return Building2;
+  if (t === "age18_handoff_ready") return GraduationCap;
+  if (t.includes("plan_activated") || t === "subscription_started") return Star;
+  if (title.includes("crossed") || title.includes("milestone") || title.includes("hit ")) return TrendingUp;
   // Birthday-specific: only when title/description actually mentions birthday
-  if (title.includes("birthday") || desc.includes("birthday")) return "🎂";
+  if (title.includes("birthday") || desc.includes("birthday")) return Cake;
   // Graduation / holiday / other event types by title keywords
-  if (title.includes("graduation") || title.includes("graduate")) return "🎓";
-  if (title.includes("baby") || title.includes("shower")) return "🍼";
-  if (title.includes("holiday") || title.includes("christmas") || title.includes("hanukkah")) return "🎄";
+  if (title.includes("graduation") || title.includes("graduate")) return GraduationCap;
+  if (title.includes("baby") || title.includes("shower")) return Baby;
+  if (title.includes("holiday") || title.includes("christmas") || title.includes("hanukkah")) return Gift;
   // Lifecycle nudges - these are reminders/prompts, not celebrations
-  if (t.startsWith("lifecycle_")) return "💡";
-  return "📣";
+  if (t.startsWith("lifecycle_")) return Lightbulb;
+  return Bell;
 }
 
 type IconTone = "green" | "gold" | "amber" | "sage";
@@ -349,11 +352,11 @@ function getIconTone(a: Activity): IconTone {
   return "green";
 }
 
-const toneStyles: Record<IconTone, { bg: string; border: string }> = {
-  green: { bg: "rgba(26,61,43,0.086)", border: "rgba(26,61,43,0.125)" },
-  sage:  { bg: "rgba(43,88,64,0.086)", border: "rgba(43,88,64,0.125)" },
-  amber: { bg: "rgba(122,92,30,0.086)", border: "rgba(122,92,30,0.125)" },
-  gold:  { bg: "rgba(197,130,30,0.086)", border: "rgba(197,130,30,0.125)" },
+const toneStyles: Record<IconTone, { bg: string; border: string; fg: string }> = {
+  green: { bg: "rgba(26,61,43,0.086)", border: "rgba(26,61,43,0.125)", fg: "#1A3D2B" },
+  sage:  { bg: "rgba(43,88,64,0.086)", border: "rgba(43,88,64,0.125)", fg: "#2B5840" },
+  amber: { bg: "rgba(122,92,30,0.086)", border: "rgba(122,92,30,0.125)", fg: "#7A5C1E" },
+  gold:  { bg: "rgba(197,130,30,0.086)", border: "rgba(197,130,30,0.125)", fg: "#C5821E" },
 };
 
 const fundPillColors = [
@@ -1210,9 +1213,9 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 // are static (already-read; nothing to dismiss).
                 const renderRow = (activity: FeedActivity, opts: { dim?: boolean; index?: number } = {}) => {
                   const isUnread = isActivityUnread(activity);
-                  const emoji = getNotifEmoji(activity);
+                  const NotifIcon = getNotifIcon(activity);
                   const tone = getIconTone(activity);
-                  const { bg: iconBg, border: iconBorder } = toneStyles[tone];
+                  const { bg: iconBg, border: iconBorder, fg: iconFg } = toneStyles[tone];
                   const fundIdx = activity.fundId ? (fundIndexMap.get(activity.fundId) ?? 0) : 0;
                   const pillStyle = fundPillColors[fundIdx % fundPillColors.length];
                   const childName = capFirst((activity as FeedActivity).recipientFirstName) || capFirst(funds.find((f) => f.id === activity.fundId)?.recipientFirstName) || null;
@@ -1287,11 +1290,10 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 17,
                           lineHeight: 1,
                         }}
                       >
-                        {emoji}
+                        <NotifIcon size={18} strokeWidth={2} color={iconFg} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>

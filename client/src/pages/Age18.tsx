@@ -111,7 +111,7 @@ export default function Age18() {
 
       <section className="pt-24 pb-14 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Age-18 transition</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Age-18 transition</p>
           {/* "theirs", not "hers" (2026-06-04): the hero + meta are the
               impression-setters on a public page about EVERY family's kid;
               a generic-she H1 reads as not-for-you to half the audience.
@@ -119,7 +119,7 @@ export default function Age18() {
               "(some states say 19 or 21)" hedge keeps the 18 shorthand
               honest before nine more instances of it land; the full state
               note stays at the bottom. */}
-          <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+          <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
             At 18, the fund becomes theirs.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
@@ -146,7 +146,7 @@ export default function Age18() {
       <section className="pb-14 md:pb-20">
         <div className="mx-auto max-w-4xl px-4">
           <div className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-12">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground">
               How it actually works.
             </h2>
             <div className="mt-8 space-y-8">

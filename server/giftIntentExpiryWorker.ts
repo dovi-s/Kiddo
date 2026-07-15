@@ -149,7 +149,7 @@ async function sendGifterHeadsUp(
     ``,
     `To start a fresh intent: ${giveAGiftUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
 
   try {
@@ -329,7 +329,7 @@ async function giveUpOnDeclinedIntent(
     ``,
     `To start fresh: ${giveAGiftUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   try {
     const { html } = renderKiddoEmail({

@@ -36,6 +36,14 @@ export function Nav() {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
+      // Reserve the iOS status-bar / Dynamic Island inset the same way AppHeader
+      // does. The PWA status bar is black-translucent (index.html), so web content
+      // draws UNDER the clock; without this the marketing bar jams up into the
+      // notch ("cut off too high"). paddingTop keeps the h-16 bar below the inset
+      // and lets the nav's blurred background fill the status-bar strip. Resolves
+      // to 0 in a normal browser tab (no notch), to the real inset / 59px floor in
+      // an installed PWA. Mirrors --app-safe-top usage across the app shell.
+      style={{ paddingTop: "var(--app-safe-top)" }}
       className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg"
     >
       {/* Equal flex-1 wings keep the center links TRULY centered regardless

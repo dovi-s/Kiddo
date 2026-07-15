@@ -34,6 +34,12 @@ These two unblock the entire P0 surface. Nothing else matters until they're movi
    - Get **DriveWealth** on a sales call in parallel (same question set).
    - Fill the scorecard → decide → set `CUSTODIAN_PROVIDER` and implement that one
      adapter (the interface + Alpaca client are already built).
+   - *Downstream of the pick (investing-EXECUTION readiness, not the launch gate):*
+     once the custodian is chosen and money actually executes, the post-buy gaps in
+     `INVESTMENT_READINESS.md` get built — loudest is **dividends/corporate actions
+     (gap #1)**. Line it up with the projection's total-return promise: **enable DRIP**
+     at the custodian + make **"growth so far" include dividends** (today it's
+     price-only, so live growth would understate + diverge from the "~$50k at 21" math).
 
 3. **Public stranger photo/voice uploads — RECOMMENDED DEFAULT (2026-06-15): gate
    OFF at launch.** Draw the line at the *sender*, not the feature: ship money gifts,

@@ -213,7 +213,10 @@ export function canonicalLabel(type?: string | null): string | null {
   if (t === "recurring_resumed") return "Recurring resumed";
   if (t === "auto_invest") return "Recurring investment";
   if (t === "parent_contribution") return "Contribution";
-  if (t === "parent_contribution_failed") return "Charge failed";
+  // Eyebrow is the CATEGORY (matches the successful "Recurring investment" row); the
+  // "Failed" status lives on the pill. Was "Charge failed," which stacked with the pill
+  // AND a "Recurring investment failed" title = the word three times (founder catch 2026-07).
+  if (t === "parent_contribution_failed") return "Recurring investment";
   if (t === "recurring_request") return "Recurring request";
 
   // Co-parent / collaborator
@@ -248,7 +251,7 @@ export function canonicalLabel(type?: string | null): string | null {
 
   // Account / fund decisions
   if (t === "fund_created") return "Fund created";
-  if (t === "fund_activated") return "Investing live";
+  if (t === "fund_activated") return "Fund active";
   if (t === "fund_strategy_changed") return "Strategy";
   if (t === "custom_allocations_changed") return "Custom mix";
   if (t === "event_created") return "Occasion";

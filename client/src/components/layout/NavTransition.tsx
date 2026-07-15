@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { MOTION_EASE } from "@/lib/motion";
 import { hasActiveDeepLink } from "@/lib/deep-link-highlight";
+import { installForwardViewTransitions, isViewTransitionActive } from "@/lib/view-transition";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NavTransition — the app's "spatial navigation" layer.
@@ -102,6 +103,13 @@ export function NavTransition({ children }: { children: React.ReactNode }) {
     }
     firstRenderRef.current = false;
   }, [location]);
+
+  // ── View Transitions install (once) ────────────────────────────────────────
+  // Upgrades FORWARD navigation to a real two-sided push (outgoing page slides
+  // out under the incoming one) where the browser supports it. Feature-detected
+  // inside; a no-op elsewhere. When it's driving a transition, the framer slide
+  // below stands down (see `skip`) so the page animates once, not twice.
+  useEffect(() => installForwardViewTransitions(), []);
 
   // ── Scroll memory: continuously record the current path's scroll ───────────
   useEffect(() => {
@@ -205,7 +213,7 @@ export function NavTransition({ children }: { children: React.ReactNode }) {
   // switches (instant, iOS tab-bar feel), and reduced-motion. Scroll handling
   // above still runs in every case.
   const skip =
-    firstRenderRef.current || prefersReducedMotion;
+    firstRenderRef.current || prefersReducedMotion || isViewTransitionActive();
 
   // CRISP_PUSH adds a leading-edge shadow that animates from present → gone as the page
   // lands (so nothing lingers at rest), and starts the page nearly opaque. The shadow sits

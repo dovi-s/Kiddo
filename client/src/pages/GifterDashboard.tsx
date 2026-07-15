@@ -917,7 +917,11 @@ export default function GifterDashboard() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-              className="relative overflow-hidden rounded-[28px] p-6 text-white sm:p-8"
+              // Full-bleed on mobile (edge-to-edge immersive header, matching the
+              // dashboard + GiftCheckout hero), contained rounded card on sm+ where
+              // this max-w-5xl page reads as a desktop surface. -mx-4 cancels the
+              // container's mobile px-4; -mt-2 tightens the gap under the logo bar.
+              className="relative overflow-hidden -mx-4 -mt-2 rounded-none p-6 text-white sm:mx-0 sm:mt-0 sm:rounded-[28px] sm:p-8"
               style={{ background: "linear-gradient(145deg, hsl(var(--kiddo-evergreen)) 0%, hsl(153 48% 11%) 100%)" }}
               data-testid="gifter-hero"
             >

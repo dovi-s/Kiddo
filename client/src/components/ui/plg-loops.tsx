@@ -410,8 +410,14 @@ export function CollaboratorInviteModal({
     { 
       id: "co-admin", 
       label: "Co-Admin", 
-      description: "Can manage events and settings",
-      permissions: ["All viewer permissions", "Create events", "Edit fund settings", "Send thank-yous"]
+      description: "Can manage events and thank-yous",
+      // Co-admin is enforced server-side for exactly these: create/edit events
+      // (routes.ts ~11017/11167) + send thank-yous (~15645). Fund SETTINGS
+      // (profile, strategy, kid-view, gifter-notifications) are OWNER-ONLY on
+      // the server — they touch custodian/SSN/state/majority-age fields — so
+      // "Edit fund settings" was dropped: the modal must not promise a power a
+      // co-admin gets a silent 403 on. (Audit 2026-07.)
+      permissions: ["All viewer permissions", "Create and edit events", "Send thank-yous"]
     },
   ];
 

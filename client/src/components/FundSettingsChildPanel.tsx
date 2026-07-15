@@ -161,7 +161,7 @@ export function FundSettingsChildPanel({
           </div>
         </section>
       )}
-      <FundDetailsCard fund={fund} onEditFund={onEditFund} />
+      <FundDetailsCard fund={fund} />
       {!fundIsOwnerHeld && !fundIsCollaborator && <SuccessorCustodianCard fund={fund} />}
       <LegalDocumentsCard />
       {!fundIsCollaborator && <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />}

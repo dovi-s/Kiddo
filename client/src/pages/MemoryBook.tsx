@@ -54,7 +54,7 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound, PieChart, Check } from "lucide-react";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound, PieChart, Check, Maximize2, type LucideIcon } from "lucide-react";
 import SealedVoiceNote from "@/components/SealedVoiceNote";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
@@ -64,7 +64,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
-import { gifterShortName } from "@/lib/gifter-name";
+import { gifterShortName, isAnonGifterName } from "@/lib/gifter-name";
 import { gifterAvatarColor } from "@/lib/gifter-avatar";
 import { prefetchDashboard, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { scrollToTestId } from "@/lib/scroll-to-element";
@@ -72,9 +72,11 @@ import { getDeepLinkHighlightStyle, getDeepLinkHighlightCardStyle, hasActiveDeep
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { FadeImage } from "@/components/ui/fade-image";
+import { VoiceNotePlayer } from "@/components/ui/voice-note-player";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
+import { readDemoLiveGiftsForFund, recordDemoThankYou } from "@/lib/demo-live-gifts";
+import { isDemoNoop } from "@/lib/demo-block";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useFunds } from "@/hooks/use-funds";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
@@ -84,6 +86,35 @@ import { readLocalCache, writeLocalCache, safeLocalSet } from "@/lib/local-cache
 import { filterMemoryEntries, getVisibleMemoryEntries, validateMemoryMedia } from "./memoryBookUtils";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { projectFundValue } from "@shared/projection";
+
+// A timeline photo that opens the shared lightbox on tap (click-to-enlarge).
+// A quiet corner glyph signals it's tappable without competing with the photo;
+// stopPropagation keeps the tap from firing the entry's own row actions.
+function EnlargeablePhoto({ src, onOpen, imgClassName, wrapClassName, testId }: {
+  src: string;
+  onOpen: () => void;
+  imgClassName?: string;
+  wrapClassName?: string;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); haptic("light"); onOpen(); }}
+      aria-label="View photo full size"
+      data-testid={testId}
+      className={`group relative block w-full cursor-zoom-in ${wrapClassName || ""}`}
+    >
+      <FadeImage src={src} alt="" className={imgClassName} />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/90 opacity-70 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 group-active:opacity-100"
+      >
+        <Maximize2 size={13} />
+      </span>
+    </button>
+  );
+}
 
 const MEMORY_ACTIVE_STALE_MS = 5_000;
 const MEMORY_LIVE_REFRESH_MS = 15_000;
@@ -308,8 +339,7 @@ function getEntryIdentity(
     ? String(entry.gift?.senderName || "").trim()
     : String(entry.authorName || "").trim();
   const lcSender = rawSender.toLowerCase();
-  const isTestSender = TEST_SENDER_NAMES.includes(lcSender);
-  const isAnonSender = !rawSender || /^someone who loves/i.test(rawSender) || lcSender === "anonymous" || isTestSender;
+  const isAnonSender = isAnonGifterName(rawSender);
   const senderEmailLower = String(entry.gift?.senderEmail || "").trim().toLowerCase();
   // Owner detection — gift entries match by senderEmail; parent
   // memories (type='note', 'parent_note', 'photo') match by treating
@@ -418,6 +448,25 @@ function visibilityLabel(value?: "public" | "family" | "private") {
   return "Anyone with link";
 }
 
+// The three audiences a memory entry can have. The kebab used to expose this as a
+// single "Visibility" row that CYCLED public -> family -> private on each tap —
+// so you couldn't pick a state directly, only advance to whatever came next in an
+// unseen order (founder catch 2026-07: "not really doing its thing"). These render
+// as three directly-selectable rows instead, each spelling out who actually sees
+// it, with a check on the current one. The bare word "Public" also read as
+// ambiguous, so each row carries the plain-language audience.
+type MemoryVisibility = "public" | "family" | "private";
+const MEMORY_VISIBILITY_OPTIONS: Array<{ value: MemoryVisibility; label: string; who: string; Icon: typeof Globe }> = [
+  { value: "public", label: "Public", who: "Anyone with the share link", Icon: Globe },
+  { value: "family", label: "Family", who: "You and co-parents", Icon: Users },
+  { value: "private", label: "Private", who: "Only you", Icon: Lock },
+];
+const MEMORY_VISIBILITY_TOAST: Record<MemoryVisibility, string> = {
+  public: "Now visible to anyone with the link",
+  family: "Now visible to family only",
+  private: "Now private, only you can see it",
+};
+
 function deriveMemoryHeaderStats(
   entries: MemoryEntry[] | undefined,
   fundData: {
@@ -434,20 +483,7 @@ function deriveMemoryHeaderStats(
   // people who showed up. So for anon gifts we use a per-entry key (the
   // entry id) to keep them as distinct contributors. Named senders still
   // dedup by lowercased name (Mom giving 5 times = 1 person).
-  const isAnonName = (name: string) => {
-    const n = String(name || "").trim();
-    if (!n) return true;
-    if (/^someone who loves/i.test(n)) return true;
-    if (n.toLowerCase() === "anonymous") return true;
-    // Known test-data sender names — patterns developers used while
-    // testing the gift flow before isTestUser flagging existed. These
-    // shouldn't render as named contributors in production-shaped UI.
-    // Bucketing them with anonymous keeps the roster honest without
-    // requiring a DB cleanup of historical test rows.
-    const lc = n.toLowerCase();
-    if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
-    return false;
-  };
+  const isAnonName = isAnonGifterName;
   // Count every contribution honestly so the Memory Book reconciles with the
   // Dashboard, the source of truth (Theo = 82 gifts / $9,275). A contribution
   // is a gift_message OR the first-cycle parent_note that carries a recurring
@@ -1184,8 +1220,7 @@ export default function MemoryBook() {
     // as "missing" — the parent would see an anonymous-looking entry
     // appear under Awaiting, which can't be acted on. Same predicate
     // shape as deriveMemoryHeaderStats and the gifterRoster aggregate.
-    const isTestSender = ["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lcSender);
-    const isAnon = !senderName || /^someone who loves/i.test(senderName) || lcSender === "anonymous" || isTestSender;
+    const isAnon = isAnonGifterName(senderName);
     if (!!ownerEmailLowerForMemory && senderEmail === ownerEmailLowerForMemory) return "self";
     // Co-parent / account-holder contributions aren't thankable gifts (the
     // household funding the account — recurring OR one-time). Before the mom-flip
@@ -1418,6 +1453,17 @@ export default function MemoryBook() {
       } else if (data.copiedText) {
         await navigator.clipboard.writeText(data.copiedText).catch(() => {});
         outcome = "copied";
+      }
+      // Demo can't persist the send (server-blocked), so record it client-side
+      // — that's what lets the thank-you show up as a reply under the gift in
+      // Activity, so the demo "actually works" end to end.
+      if (isDemoAccount && ty?.giftId) {
+        recordDemoThankYou({
+          fundId,
+          giftId: String(ty.giftId),
+          message: composerMessage,
+          senderName: typeof ty?.senderName === "string" ? ty.senderName : null,
+        });
       }
       await refetchThankYous();
       setComposerGiftId(null);
@@ -2433,13 +2479,7 @@ export default function MemoryBook() {
     const people = new Set<string>();
     // Mirrors computeMemoryStats above — anon gifters are distinct humans,
     // so we key them by the entry id rather than the generic shared name.
-    const isAnonName = (name: string) => {
-      const n = String(name || "").trim();
-      if (!n) return true;
-      if (/^someone who loves/i.test(n)) return true;
-      if (n.toLowerCase() === "anonymous") return true;
-      return false;
-    };
+    const isAnonName = isAnonGifterName;
     for (const e of entries) {
       // Same contribution rule as deriveMemoryHeaderStats: a gift_message OR the
       // first-cycle parent_note carrying a recurring auto-invest gift. Counts in
@@ -2521,18 +2561,7 @@ export default function MemoryBook() {
     // sees "7 gifts · 7 people" instead of the misleading "7 gifts · 1
     // person." This matches the people-count rule in deriveMemoryHeaderStats
     // (each anon gift = a distinct human) without cluttering the roster.
-    const isAnonName = (name: string) => {
-      const n = String(name || "").trim();
-      if (!n) return true;
-      if (/^someone who loves/i.test(n)) return true;
-      const lc = n.toLowerCase();
-      if (lc === "anonymous") return true;
-      // Test-data sender names — same list as deriveMemoryHeaderStats so
-      // the roster and the people-count agree on what counts as a real
-      // named contributor vs a dev test artifact.
-      if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
-      return false;
-    };
+    const isAnonName = isAnonGifterName;
     const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean; avatarUrl: string | null }>();
     for (const e of sortedEntries) {
       // A contribution = a gift_message OR the first-cycle parent_note that
@@ -3238,7 +3267,7 @@ export default function MemoryBook() {
                 action={
                   <>
                     <Button
-                      className="bg-[hsl(var(--kiddo-evergreen))] rounded-full text-white hover:bg-[hsl(var(--kiddo-evergreen)/0.92)]"
+                      className="kiddo-gold-button rounded-full"
                       onClick={() => {
                         haptic("selection");
                         setLocation("/dashboard");
@@ -3984,7 +4013,11 @@ export default function MemoryBook() {
                         }`}
                         data-testid="button-memory-primary-awaiting"
                       >
-                        Awaiting thanks
+                        {/* "Awaiting" (not "Awaiting thanks"): the longer label got
+                            clipped by the pinned "More filters" button on a phone, reading
+                            as a half-cut word. Short form matches the thanks chips in More
+                            filters and lets all three lenses sit without scrolling. */}
+                        Awaiting
                       </button>
                       )}
                       </div>
@@ -4020,7 +4053,7 @@ export default function MemoryBook() {
                         { key: "all", label: "All" },
                         { key: "gift_message", label: "Gifts" },
                         { key: "milestone", label: "Milestones" },
-                        { key: "photo", label: "Photos" },
+                        { key: "photo", label: "Photos & video" },
                         { key: "note", label: "Notes" },
                       ].map((opt) => (
                         <button
@@ -4064,16 +4097,33 @@ export default function MemoryBook() {
                         </div>
                       </div>
                     )}
+                    {/* Year filter — relocated here from the view row (it IS a filter,
+                        and it was the widest control cramming that row on a phone). Shown
+                        only when the story spans two or more calendar years. */}
+                    {yearOptions.length > 1 && (
+                      <div className="flex items-center gap-2" data-testid="memory-year-filter-bar">
+                        <span className="shrink-0 text-3xs font-bold uppercase tracking-wide text-muted-foreground mr-1">Year:</span>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(e.target.value)}
+                          className="h-9 flex-1 min-w-0 rounded-xl border border-border bg-background px-3 text-sm text-foreground"
+                          data-testid="select-memory-year"
+                        >
+                          <option value="all">All years</option>
+                          {yearOptions.map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Search on its own row (full width); year picker +
-                    Story|Timeline + Read share a row below. Was a 4-column
-                    grid that collapsed to 4 stacked rows on mobile (search,
-                    year, segmented, read) — too much vertical chrome before
-                    the entries. View-shaping affordances now group naturally
-                    on a single row regardless of breakpoint, with flex-wrap
-                    handling extreme-narrow widths gracefully. */}
+                {/* Search field on its own row when open; the view row below holds
+                    Search-toggle + Story|Timeline + Open-as-book. The year picker used
+                    to live here too and crammed the row on a phone — it now sits with the
+                    other filters under "More filters", leaving three tidy view affordances
+                    that fit one line at every width. */}
                 <div className="space-y-3">
                   {(searchOpen || searchQuery) && (
                   <div className="relative">
@@ -4100,7 +4150,12 @@ export default function MemoryBook() {
                     </button>
                   </div>
                   )}
-                  <div className="flex flex-wrap items-center gap-2">
+                  {/* Two intact clusters (narrow-left / view-right) with
+                      justify-between so on a phone this reads as one deliberate
+                      toolbar and, when it must wrap, breaks between the clusters
+                      rather than orphaning the book link on its own line. */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                     {/* Search toggle — expands the field above (collapsed by default so
                         the entries lead). Hidden while the field is already open. */}
                     {!(searchOpen || searchQuery) && (
@@ -4115,24 +4170,11 @@ export default function MemoryBook() {
                         <Search className="h-4 w-4" />
                       </button>
                     )}
-                    {/* Year picker hides when entries only span one year —
-                        a brand-new fund doesn't need a year selector that
-                        offers "All years" + "2026" as the only options. The
-                        selector reappears automatically the moment the
-                        Memory Book has entries from a second calendar year. */}
-                    {yearOptions.length > 1 && (
-                      <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(e.target.value)}
-                        className="h-11 rounded-2xl border border-border bg-background px-3 text-sm text-foreground"
-                        data-testid="select-memory-year"
-                      >
-                        <option value="all">All years</option>
-                        {yearOptions.map((year) => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    )}
+                    {/* Year picker moved into "More filters" (it's a filter, and it was
+                        the widest control cramming this view row on a phone). It reappears
+                        there automatically once the Memory Book spans a second year. */}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                     {/* Story / Timeline segmented control — small polish
                         2026-05-25: added transition-colors so the bg + text
                         color swap on toggle reads as a soft transition not
@@ -4161,17 +4203,20 @@ export default function MemoryBook() {
                         every visitor wonder "what's this?" on cold
                         load. Now a small muted text link — still
                         discoverable, no longer demanding attention.
-                        Power users who want the ceremony surface find
-                        it; everyone else reads the timeline without
-                        the side-eye. */}
+                        On a phone the label collapses to just the icon
+                        (aria-labelled) so it stops eating toolbar width;
+                        the "Open as book" words return at sm+. */}
                     <button
                       onClick={() => { haptic("medium"); setBookPageIndex(0); setBookSlideDirection(0); setBookOpen(true); }}
-                      className="h-11 ml-auto inline-flex items-center gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Open as book"
+                      title="Open as book"
+                      className="kiddo-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-muted-foreground transition-colors hover:text-foreground sm:w-auto sm:gap-1.5 sm:border-0 sm:bg-transparent sm:px-2 sm:text-xs sm:font-medium"
                       data-testid="button-open-book-view"
                     >
-                      <BookOpen size={12} />
-                      Open as book
+                      <BookOpen size={16} className="sm:h-3 sm:w-3" />
+                      <span className="hidden sm:inline">Open as book</span>
                     </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4324,11 +4369,11 @@ export default function MemoryBook() {
               // case is the most important: that's a CELEBRATION (every
               // reachable gifter thanked), not a "nothing here" failure
               // signal. Generic copy lost that distinction.
-              type EmptyShape = { icon: string; title: string; subtitle: string; tone: "celebratory" | "neutral" };
+              type EmptyShape = { icon: LucideIcon; title: string; subtitle: string; tone: "celebratory" | "neutral" };
               const empty: EmptyShape = (() => {
                 if (searchQuery.trim()) {
                   return {
-                    icon: "🔍",
+                    icon: Search,
                     title: `No matches for "${searchQuery.trim()}"`,
                     subtitle: "Try a shorter search, or clear it to see the full Memory Book.",
                     tone: "neutral",
@@ -4337,7 +4382,7 @@ export default function MemoryBook() {
                 if (gifterFilter) {
                   const name = gifterFilter.toLowerCase() === "anonymous" ? "anonymous gifters" : gifterShortName(gifterFilter);
                   return {
-                    icon: "🌱",
+                    icon: Users,
                     title: `Nothing from ${name} matches.`,
                     subtitle: "Try a different filter, or clear it to see every story.",
                     tone: "neutral",
@@ -4345,7 +4390,7 @@ export default function MemoryBook() {
                 }
                 if (thankYouFilter === "awaiting") {
                   return {
-                    icon: "🌱",
+                    icon: Check,
                     title: childName ? `Caught up on thanks for ${childName}.` : "Caught up on thanks.",
                     subtitle: "Every reachable gifter has been thanked. (Anonymous gifters can't be reached, so they don't need to count.)",
                     tone: "celebratory",
@@ -4353,7 +4398,7 @@ export default function MemoryBook() {
                 }
                 if (thankYouFilter === "thanked") {
                   return {
-                    icon: "💌",
+                    icon: Send,
                     title: "No thanks sent yet.",
                     subtitle: "When you send your first thank-you, it shows up here.",
                     tone: "neutral",
@@ -4361,7 +4406,7 @@ export default function MemoryBook() {
                 }
                 if (thankYouFilter === "drafted") {
                   return {
-                    icon: "✏️",
+                    icon: Pencil,
                     title: "No drafts in progress.",
                     subtitle: "Thank-you drafts you save and come back to live here.",
                     tone: "neutral",
@@ -4369,15 +4414,15 @@ export default function MemoryBook() {
                 }
                 if (activeFilter === "photo") {
                   return {
-                    icon: "📷",
-                    title: isOwnerMode ? "No photos in your book yet." : childName ? `No photos in ${childName}'s book yet.` : "No photos yet.",
-                    subtitle: "Add a photo memory or attach one when you invest.",
+                    icon: Camera,
+                    title: isOwnerMode ? "No photos or videos in your book yet." : childName ? `No photos or videos in ${childName}'s book yet.` : "No photos or videos yet.",
+                    subtitle: "Add a photo or video memory, or attach one to a gift.",
                     tone: "neutral",
                   };
                 }
                 if (activeFilter === "milestone") {
                   return {
-                    icon: "🌟",
+                    icon: Star,
                     title: "First milestone is on its way.",
                     subtitle: isOwnerMode ? "Each $X crossing in your fund will celebrate here." : childName ? `Each $X crossing in ${childName}'s fund will celebrate here.` : "Each $X crossing in the fund will celebrate here.",
                     tone: "neutral",
@@ -4385,7 +4430,7 @@ export default function MemoryBook() {
                 }
                 if (activeFilter === "note") {
                   return {
-                    icon: "✏️",
+                    icon: Pencil,
                     title: isOwnerMode ? "No memories written for you yet." : childName ? `No memories written for ${childName} yet.` : "No memories written yet.",
                     subtitle: "First steps. First words. First day of school. The moments that matter live here.",
                     tone: "neutral",
@@ -4393,7 +4438,7 @@ export default function MemoryBook() {
                 }
                 if (activeFilter === "gift_message") {
                   return {
-                    icon: "🎁",
+                    icon: Gift,
                     title: isOwnerMode ? "No gifts in your book yet." : childName ? `No gifts in ${childName}'s book yet.` : "No gifts yet.",
                     subtitle: "Share the gift link to get the first one in.",
                     tone: "neutral",
@@ -4401,7 +4446,7 @@ export default function MemoryBook() {
                 }
                 if (featuredOnly) {
                   return {
-                    icon: "📌",
+                    icon: Pin,
                     title: "Nothing pinned yet.",
                     subtitle: "Pin the moments you want at the top of the Memory Book.",
                     tone: "neutral",
@@ -4409,14 +4454,14 @@ export default function MemoryBook() {
                 }
                 if (selectedYear !== "all") {
                   return {
-                    icon: "📅",
+                    icon: Calendar,
                     title: `Nothing in ${selectedYear} yet.`,
                     subtitle: "Try another year, or clear the filter to see the full story.",
                     tone: "neutral",
                   };
                 }
                 return {
-                  icon: "🌱",
+                  icon: BookOpen,
                   title: "Nothing here in this view.",
                   subtitle: isOwnerMode ? "Try a different filter, or clear them all to see your full story." : childName ? `Try a different filter, or clear them all to see ${childName}'s full story.` : "Try a different filter, or clear them all to see the full story.",
                   tone: "neutral",
@@ -4428,7 +4473,7 @@ export default function MemoryBook() {
                   className={`mb-5 md:mb-6 rounded-2xl px-4 py-7 md:py-8 text-center ${isCelebratory ? "border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)]" : "border border-border/50 bg-card"}`}
                   data-testid="empty-filtered-memory"
                 >
-                  <div className="text-3xl leading-none mb-2.5" aria-hidden>{empty.icon}</div>
+                  <empty.icon size={30} strokeWidth={1.75} aria-hidden className={`mx-auto mb-2.5 ${isCelebratory ? "text-[hsl(var(--kiddo-evergreen))]" : "text-muted-foreground"}`} />
                   <p className={`text-sm font-semibold ${isCelebratory ? "text-[hsl(var(--kiddo-evergreen))]" : "text-foreground"}`}>
                     {empty.title}
                   </p>
@@ -4653,11 +4698,12 @@ export default function MemoryBook() {
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg leading-none" aria-hidden>🌱</span>
                           <div className="min-w-0 flex-1">
+                            {/* "Where it began" carries the moment on its own — the
+                                "The moment {kid}'s fund became real." subtitle was cut
+                                (2026-07): two editorializing lines stacked said the same
+                                thing twice, even on the emotional surface. */}
                             <p className="text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">
                               Where it began
-                            </p>
-                            <p className="text-[12px] text-[rgb(95,85,72)] leading-snug mt-0.5">
-                              The moment {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund became real.
                             </p>
                           </div>
                         </div>
@@ -4796,31 +4842,42 @@ export default function MemoryBook() {
                               <Pin size={14} className="mr-2" />
                               {entry.isFeatured ? "Unpin from top" : "Pin to top"}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={async (e) => {
-                                e.preventDefault();
-                                const order: Array<"public" | "family" | "private"> = ["public", "family", "private"];
-                                const current = (entry.visibility || "public") as "public" | "family" | "private";
-                                const next = order[(order.indexOf(current) + 1) % order.length];
-                                const labels: Record<string, string> = { public: "Anyone with link", family: "Family only", private: "Private" };
-                                try {
-                                  const ok = await updateEntryMeta(entry.id, { visibility: next });
-                                  if (ok) {
-                                    haptic("selection");
-                                    toast({ title: `Visibility: ${labels[next]}` });
-                                  }
-                                } catch {
-                                  toast({ title: "Could not update", variant: "destructive" });
-                                }
-                              }}
-                              data-testid={`menu-visibility-memory-${entry.id}`}
-                            >
-                              {entry.visibility === "private" ? <Lock size={14} className="mr-2" /> : entry.visibility === "family" ? <Users size={14} className="mr-2" /> : <Globe size={14} className="mr-2" />}
-                              <span className="flex-1">Visibility</span>
-                              <span className="text-xs text-muted-foreground">
-                                {entry.visibility === "private" ? "Private" : entry.visibility === "family" ? "Family" : "Public"}
-                              </span>
-                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="px-2 py-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                              Who can see this
+                            </DropdownMenuLabel>
+                            {MEMORY_VISIBILITY_OPTIONS.map((opt) => {
+                              const isCurrent = (entry.visibility || "public") === opt.value;
+                              return (
+                                <DropdownMenuItem
+                                  key={opt.value}
+                                  className="items-start gap-2"
+                                  onSelect={async (e) => {
+                                    e.preventDefault();
+                                    if (isCurrent) return;
+                                    try {
+                                      const ok = await updateEntryMeta(entry.id, { visibility: opt.value });
+                                      if (ok) {
+                                        haptic("selection");
+                                        toast({ title: MEMORY_VISIBILITY_TOAST[opt.value] });
+                                      }
+                                    } catch {
+                                      toast({ title: "Could not update", variant: "destructive" });
+                                    }
+                                  }}
+                                  data-testid={`menu-visibility-${opt.value}-memory-${entry.id}`}
+                                >
+                                  <opt.Icon size={14} className="mt-0.5 shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-medium">{opt.label}</span>
+                                      {isCurrent && <Check size={13} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
+                                    </div>
+                                    <p className="text-2xs leading-snug text-muted-foreground">{opt.who}</p>
+                                  </div>
+                                </DropdownMenuItem>
+                              );
+                            })}
                             {entry.type !== "gift_message" ? (
                               <>
                                 <DropdownMenuSeparator />
@@ -5406,14 +5463,14 @@ export default function MemoryBook() {
                               data-testid={`audio-${entry.id}`}
                             >
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))] text-[14px]" aria-hidden>🎙</span>
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))]" aria-hidden><Mic size={14} strokeWidth={2} /></span>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
                                   <p className="text-2xs text-muted-foreground/80 leading-tight">They wanted {isOwnerMode ? "you" : childName ? childName : "her"} to hear this.</p>
                                 </div>
                                 <span className="text-[hsl(var(--kiddo-gold)/0.55)]" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
-                              <audio src={entry.audioUrl} controls className="w-full h-9" />
+                              <VoiceNotePlayer src={entry.audioUrl} />
                             </div>
                           )}
                           {(() => {
@@ -5865,14 +5922,13 @@ export default function MemoryBook() {
                             </div>
                           </div>
                           {entry.photoUrl && (
-                            <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
-                              <FadeImage
-                                src={entry.photoUrl}
-                                alt=""
-                                className="w-full h-48 sm:h-52 object-cover"
-                                data-testid={`img-milestone-${entry.id}`}
-                              />
-                            </div>
+                            <EnlargeablePhoto
+                              src={entry.photoUrl}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              wrapClassName="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]"
+                              imgClassName="w-full h-48 sm:h-52 object-cover"
+                              testId={`img-milestone-${entry.id}`}
+                            />
                           )}
                           {embeddedVideo && (
                             <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
@@ -5894,11 +5950,11 @@ export default function MemoryBook() {
                       {entry.type === "photo" && (
                         <div>
                           {entry.photoUrl && (
-                            <FadeImage
+                            <EnlargeablePhoto
                               src={entry.photoUrl}
-                              alt=""
-                              className="w-full h-56 sm:h-64 object-cover"
-                              data-testid={`img-photo-entry-${entry.id}`}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              imgClassName="w-full h-56 sm:h-64 object-cover"
+                              testId={`img-photo-entry-${entry.id}`}
                             />
                           )}
                           {embeddedVideo && (
@@ -6010,14 +6066,51 @@ export default function MemoryBook() {
                                 <span className="text-muted-foreground/65">{entry.type === "parent_investment_start" ? "Investment started" : "Quiet investment"}</span>
                               </div>
                             )}
+                            {/* Recurring note: show WHERE it's going + the logo, like
+                                every other entry. The note is stamped once from a
+                                recurring auto-invest, so it carries the linked gift's
+                                amount + destination — it was rendering as a bare note
+                                with no money meta, out of step with the gift rows. The
+                                note stays the hero above; this is a small line beneath. */}
+                            {entry.type === "parent_note" && (() => {
+                              const g = entry.gift as any;
+                              if (!g?.parentContributionId) return null;
+                              const t = g.selectedTicker ? String(g.selectedTicker).toUpperCase() : null;
+                              return (
+                                <div className="mt-3 flex items-center gap-2 text-xs" data-testid={`recurring-meta-${entry.id}`}>
+                                  <span className="font-semibold text-foreground/80 tabular-nums">{displayAmount(g.amount)}</span>
+                                  <span className="text-muted-foreground/55">·</span>
+                                  {t ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
+                                      <StockLogo ticker={t} size={12} />
+                                      {t}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
+                                      <PieChart size={11} className="text-[hsl(var(--kiddo-evergreen))]" />
+                                      {isOwnerMode ? "Your mix" : childName ? `${childName}'s mix` : "Diversified mix"}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
+                          {entry.photoUrl && (
+                            <EnlargeablePhoto
+                              src={entry.photoUrl}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              wrapClassName="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]"
+                              imgClassName="w-full h-48 sm:h-52 object-cover"
+                              testId={`img-parent-${entry.id}`}
+                            />
+                          )}
                           {entry.audioUrl && (
                             <div className="mt-3 rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)] bg-background px-4 py-3" data-testid={`audio-parent-${entry.id}`}>
                               <div className="mb-2 flex items-center gap-2">
                                 <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
                                 <span className="text-muted-foreground/45 ml-auto" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
-                              <audio src={entry.audioUrl} controls className="w-full h-9" />
+                              <VoiceNotePlayer src={entry.audioUrl} />
                               {(entry as any).audioTranscript && (
                                 <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
                                   &ldquo;{(entry as any).audioTranscript}&rdquo;
@@ -6091,14 +6184,13 @@ export default function MemoryBook() {
                             )}
                           </div>
                           {entry.photoUrl && (
-                            <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
-                              <FadeImage
-                                src={entry.photoUrl}
-                                alt=""
-                                className="w-full h-48 sm:h-52 object-cover"
-                                data-testid={`img-note-${entry.id}`}
-                              />
-                            </div>
+                            <EnlargeablePhoto
+                              src={entry.photoUrl}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              wrapClassName="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]"
+                              imgClassName="w-full h-48 sm:h-52 object-cover"
+                              testId={`img-note-${entry.id}`}
+                            />
                           )}
                           {embeddedVideo && (
                             <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
@@ -6119,7 +6211,7 @@ export default function MemoryBook() {
                                 <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
                                 <span className="text-muted-foreground/45 ml-auto" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
-                              <audio src={entry.audioUrl} controls className="w-full h-9" />
+                              <VoiceNotePlayer src={entry.audioUrl} />
                               {(entry as any).audioTranscript && (
                                 <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
                                   &ldquo;{(entry as any).audioTranscript}&rdquo;
@@ -6273,6 +6365,14 @@ export default function MemoryBook() {
                               });
                               const data = await res.json().catch(() => ({}));
                               if (!res.ok) throw new Error(data?.message || data?.error || "Upload failed");
+                              // Demo funds no-op every /memory POST (200 { demo,
+                              // saved:false }, no url) — show the honest demo
+                              // message, not the confusing "No URL returned".
+                              if (isDemoNoop(data)) {
+                                setSharePhotoError(data?.message || "Photos aren't saved in the demo, but your own fund keeps them.");
+                                haptic("light");
+                                return;
+                              }
                               const url = data?.url || data?.photoUrl;
                               if (!url) throw new Error("No URL returned");
                               setSharePhotoUrl(String(url));
@@ -6832,7 +6932,7 @@ export default function MemoryBook() {
                   <label className="text-sm font-normal text-foreground mb-2 block">Voice note (optional) 🎙</label>
                   {audioUrl ? (
                     <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3 mb-2">
-                      <audio src={audioUrl} controls className="w-full h-9" data-testid="audio-preview" />
+                      <VoiceNotePlayer src={audioUrl} label="Your voice note" testId="audio-preview" />
                       {audioTranscript && (
                         <p className="mt-2 text-[12px] italic text-foreground/80 leading-relaxed" data-testid="text-audio-transcript">
                           &ldquo;{audioTranscript}&rdquo;
@@ -8041,7 +8141,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
               <StaticWaveform size="md" />
             </span>
           </div>
-          <audio src={audioUrl} controls style={{ width: "100%", height: 36 }} data-testid={`book-audio-${entry.id}`} />
+          <VoiceNotePlayer src={audioUrl} testId={`book-audio-${entry.id}`} />
         </div>
       )}
 

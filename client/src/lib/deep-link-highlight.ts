@@ -66,6 +66,29 @@ export function getDeepLinkHighlightStyle(isHighlighted: boolean): CSSProperties
   };
 }
 
+/** Soft variant — for FLUSH, card-LESS sections: a label + flush rows that
+ *  have no border/background of their own (e.g. DashboardLab's "Your part"
+ *  recurring / one-time groups, which are deliberately flush "no card" to match
+ *  the holdings sub-groups). The card variant's crisp 2px ring + 16px radius
+ *  drew a hard CARD box around content that's meant to be border-less — it read
+ *  as a baggy, mismatched box (worse when the group also contains its own
+ *  bordered "+ Add another", giving a box-in-box). This is a gentle gold WASH
+ *  with only a whisper of edge: a soft "you landed here" spotlight that suits
+ *  flush content and fades like the others. Radius kept small (12) so the wash
+ *  reads soft, not card-like. */
+export function getDeepLinkHighlightSoftStyle(isHighlighted: boolean, radius = 12): CSSProperties {
+  return {
+    // Ring-less soft gleam. The old 1px gold ring drew a literal BOX around the
+    // section, which read as a tacked-on "highlight" (founder: "so AI, not on
+    // par"). Dropped the ring and softened the wash so it's a gentle warm glow
+    // that fades as the eye settles — the scroll motion already tells you where
+    // you landed, so the cue only needs to whisper, not outline.
+    background: isHighlighted ? "hsl(var(--kiddo-gold) / 0.06)" : undefined,
+    ...(isHighlighted ? { borderRadius: radius } : {}),
+    transition: "background 0.7s ease",
+  };
+}
+
 /** Card variant — for surfaces where the highlight needs to land on a CARD
  *  element with its OWN border-radius and box-shadow (Memory Book story view,
  *  any future "card-in-a-wrapper" layout). Composes with the card's existing
@@ -80,13 +103,26 @@ export function getDeepLinkHighlightStyle(isHighlighted: boolean): CSSProperties
  *  Pass the card's existing baseBoxShadow string (typically the same string
  *  you'd put in a Tailwind `shadow-[...]` arbitrary value) so the gold ring
  *  composes onto it. When not highlighted, returns the base shadow unchanged. */
-export function getDeepLinkHighlightCardStyle(isHighlighted: boolean, baseBoxShadow = ""): CSSProperties {
+export function getDeepLinkHighlightCardStyle(
+  isHighlighted: boolean,
+  baseBoxShadow = "",
+  // Radius the gold halo rounds to WHILE highlighted (px), so the ring matches
+  // the app's card language instead of snapping to a sharp rectangle. Defaults
+  // to 16 (rounded-2xl / .kiddo-card, the app's card standard) — needed because
+  // some targets get their rounding from a PARENT wrapper and are themselves a
+  // bare content div (e.g. DashboardLab's `recurring-list-view` = just
+  // `overflow-hidden`, no radius → the ring drew as a weird square). Only
+  // applied while highlighted, so a target's resting geometry is never touched.
+  // Pass a different value for a card whose corners aren't 16px.
+  radius = 16,
+): CSSProperties {
   const goldRing = "inset 0 0 0 2px hsl(var(--kiddo-gold) / 0.55)";
   return {
     background: isHighlighted ? "hsl(var(--kiddo-gold) / 0.10)" : undefined,
     boxShadow: isHighlighted
       ? (baseBoxShadow ? `${baseBoxShadow}, ${goldRing}` : goldRing)
       : (baseBoxShadow || undefined),
+    ...(isHighlighted ? { borderRadius: radius } : {}),
     transition: "background 0.4s ease, box-shadow 0.4s ease",
   };
 }

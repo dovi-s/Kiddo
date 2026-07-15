@@ -191,8 +191,8 @@ export default function Partners() {
 
       <section className="pt-24 pb-12 md:pt-32 md:pb-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">For partners</p>
-          <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">For partners</p>
+          <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
             You reach new families. We help them start.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
@@ -226,7 +226,7 @@ export default function Partners() {
       <section className="pb-16">
         <div className="mx-auto max-w-4xl px-4">
           <div className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-12">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">Who we want to work with</h2>
+            <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground">Who we want to work with</h2>
             <p className="mt-4 text-base leading-8 text-muted-foreground">
               Organizations that meet families at the beginning: hospitals and birth centers, baby registries,
               pediatric and family practices, schools and PTAs, and employers offering family benefits. If you reach

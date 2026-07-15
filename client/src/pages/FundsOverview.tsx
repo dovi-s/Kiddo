@@ -528,7 +528,7 @@ export default function FundsOverview() {
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-funds-overview">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
-          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+          <div className="kiddo-card p-8 text-center">
             <p className="font-heading text-lg font-semibold text-foreground">
               Could not load your funds overview.
             </p>
@@ -539,7 +539,7 @@ export default function FundsOverview() {
               <button
                 type="button"
                 onClick={() => refetch()}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-4 py-2 text-sm font-semibold text-white"
               >
                 Try again
               </button>
@@ -607,7 +607,7 @@ export default function FundsOverview() {
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-funds-overview">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
-          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+          <div className="kiddo-card p-8 text-center">
             <p className="font-heading text-lg font-semibold text-foreground">
               {hasNoFunds ? "This view is for funds you manage." : "The overview unlocks at 2 or more funds."}
             </p>
@@ -621,7 +621,7 @@ export default function FundsOverview() {
                 <button
                   type="button"
                   onClick={() => setLocation("/my-gifts")}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-4 py-2 text-sm font-semibold text-white"
                   data-testid="button-funds-empty-view-gifts"
                 >
                   View your gifts
@@ -640,7 +640,7 @@ export default function FundsOverview() {
               <button
                 type="button"
                 onClick={() => setLocation("/dashboard")}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-4 py-2 text-sm font-semibold text-white"
               >
                 Open Dashboard
                 <ArrowRight size={14} />
@@ -737,7 +737,7 @@ export default function FundsOverview() {
             uses. Cards staged in 80ms apart for the staged-reveal
             motion vocabulary. No emotional copy here; each kid's
             individual surface carries the warmth. */}
-        <section className="rounded-3xl border border-border bg-card p-5">
+        <section className="kiddo-card p-5">
           <p className="kiddo-section-label mb-3">Each fund</p>
           <div className="space-y-2">
             {sortedFunds.map((f, i) => {
@@ -917,7 +917,7 @@ export default function FundsOverview() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.05 }}
-            className="rounded-3xl border border-border bg-card p-5"
+            className="kiddo-card p-5"
           >
             <p className="kiddo-section-label mb-3">This month</p>
             <div className="space-y-2 text-sm">
@@ -964,7 +964,7 @@ export default function FundsOverview() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.075 }}
-            className="rounded-3xl border border-border bg-card p-5"
+            className="kiddo-card p-5"
           >
             <div className="flex items-baseline justify-between gap-3 mb-3">
               <p className="kiddo-section-label">Growing automatically</p>
@@ -1073,7 +1073,7 @@ export default function FundsOverview() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.10 }}
-            className="rounded-3xl border border-border bg-card p-5"
+            className="kiddo-card p-5"
           >
             <p className="kiddo-section-label mb-3">Coming up</p>
             <div className="space-y-2">
@@ -1123,7 +1123,7 @@ export default function FundsOverview() {
             <button
               type="button"
               onClick={() => setGiftersSheetOpen(true)}
-              className="w-full text-left rounded-3xl border border-border bg-card p-5 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none"
+              className="w-full text-left kiddo-card p-5 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none"
               data-testid="across-all-funds-gifters-trigger"
               aria-label="View gifters across all funds"
             >

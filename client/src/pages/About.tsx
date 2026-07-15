@@ -33,7 +33,7 @@ export default function About() {
         <GeminiHeroGradient />
         <div className="max-w-3xl mx-auto px-4 relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground tracking-tight leading-tight" data-testid="text-about-headline">
+            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground tracking-[-0.03em] leading-tight" data-testid="text-about-headline">
               Most birthday gifts are forgotten by <GradientText>Tuesday</GradientText>.
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl">
@@ -80,7 +80,7 @@ export default function About() {
                 <BookOpen className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Memory Book</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">Memory Book</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
                   A record of every gift, every note, and who it came from.
                 </h2>
@@ -106,7 +106,7 @@ export default function About() {
                 <Eye className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Kid View</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">Kid View</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
                   {investingLiveCopy("They own real shares, and can see what those shares are worth.", "Real shares in companies their family chose, owned in their name.")}
                 </h2>
@@ -134,7 +134,7 @@ export default function About() {
                 <Gift className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">The moment it all comes together</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">The moment it all comes together</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
                   When the fund becomes theirs, they get the money and the whole story behind it.
                 </h2>

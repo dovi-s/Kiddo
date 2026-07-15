@@ -124,7 +124,7 @@ export function GifterInvestmentRulesEditor({
       <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
         <p className="kiddo-section-label">Default path for new gifts</p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Pick one {familyDefaultLabel}. Most gifts follow this. Gifter stock picks or cash gifts only happen if you allow those overrides below.
+          Pick one {familyDefaultLabel} for most gifts. Stock picks or cash gifts need the overrides below.
         </p>
       </div>
 
@@ -203,6 +203,19 @@ export function GifterInvestmentRulesEditor({
           {allowGifterCashGift ? " · Let the family decide later" : ""}
         </p>
       </div>
+
+      {/* Forward-only reassurance, mirroring the Settings strategy-change "What
+          changes" disclosure — before you save, make it clear this only steers
+          FUTURE gifts and never touches money already invested. Shows only when a
+          change is actually staged (same gate as the Save button). */}
+      {hasChanged && (
+        <div className="rounded-xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.06)] p-3" data-testid="gifting-rules-change-note">
+          <p className="text-2xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">What changes</p>
+          <p className="mt-1 text-xs leading-relaxed text-foreground">
+            This sets how gifts are invested from here on. Anything already invested stays exactly as it is. Nothing is sold or moved.
+          </p>
+        </div>
+      )}
 
       <Button onClick={handleSave} disabled={isLoading || saving || !hasChanged} className="w-full" data-testid="button-save-gifting-rules">
         {saving ? "Saving..." : "Save gifting rules"}

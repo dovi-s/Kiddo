@@ -158,7 +158,7 @@ import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
 import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
-import { gifterShortName, gifterIdentityKey } from "@/lib/gifter-name";
+import { gifterShortName, gifterIdentityKey, isAnonGifterName } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
 import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
@@ -979,12 +979,9 @@ function getGiftExecutionLabel(executionModel?: string | null, selectedTicker?: 
 // explicit booleans, not inferred from string patterns. The string
 // fallback exists only for backward compat with older gift rows.
 function displayGifterName(name?: string | null, isAnonymous?: boolean): string {
-  if (isAnonymous === true) return "Anonymous";
-  const normalized = String(name || "").trim();
-  if (!normalized || /^someone who loves/i.test(normalized) || normalized.toLowerCase() === "anonymous") {
-    return "Anonymous";
-  }
-  return normalized;
+  // Anon rule is single-source in shared/gifter-anon.ts (via @/lib/gifter-name).
+  if (isAnonymous === true || isAnonGifterName(name)) return "Anonymous";
+  return String(name || "").trim();
 }
 
 function stripStockSuffix(name?: string | null): string {

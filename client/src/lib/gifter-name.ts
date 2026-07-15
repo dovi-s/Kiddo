@@ -52,14 +52,19 @@ const cleanToken = (w: string): string => w.toLowerCase().replace(/[.,]/g, "");
  * This decides IDENTITY only. The DISPLAYED name is the caller's job (resolve to
  * the most-recent gift's name, with the account's preferredName overriding).
  */
+// The canonical anon-gifter predicate lives in shared/ so client AND server use
+// one source (shared/gifter-anon.ts). Imported for local use below + re-exported
+// so existing `@/lib/gifter-name` importers keep working unchanged.
+import { isAnonGifterName } from "@shared/gifter-anon";
+export { isAnonGifterName };
+
 export function gifterIdentityKey(
   senderName?: string | null,
   senderEmail?: string | null,
   isAnonymous?: boolean,
 ): string {
   const n = String(senderName || "").trim();
-  const isAnon =
-    isAnonymous === true || !n || /^someone who loves/i.test(n) || n.toLowerCase() === "anonymous";
+  const isAnon = isAnonymous === true || isAnonGifterName(senderName);
   if (isAnon) return "anon";
   const email = String(senderEmail || "").trim().toLowerCase();
   return email ? `e:${email}` : `n:${n.toLowerCase()}`;

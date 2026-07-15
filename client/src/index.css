@@ -225,6 +225,12 @@
   --touch-target-min: 44px;
   --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
 
+  /* Status-bar / notch inset the sticky AppHeader reserves so its content sits
+     BELOW the clock / Dynamic Island. In a browser tab the browser owns the
+     status bar, so this is the raw inset (0 on non-notched, real value with
+     viewport-fit=cover). See the standalone override below. */
+  --app-safe-top: env(safe-area-inset-top, 0px);
+
   --card: 38 38% 99%;
   --card-foreground: 150 15% 12%;
 
@@ -286,6 +292,24 @@
   --chart-3: 36 72% 52%;
   --chart-4: 36 50% 65%;
   --chart-5: 180 30% 40%;
+}
+
+/* Installed PWA (Add to Home Screen). The status bar is black-translucent
+   (index.html), so iOS draws the app UNDER the clock / Dynamic Island and the
+   header must reserve that strip itself. env(safe-area-inset-top) is the correct
+   inset on a notched device — but iOS can report 0 in standalone (a launch
+   config cached before viewport-fit=cover, i.e. an older install, or a device
+   quirk), which jams the header up into the status bar. Floor the inset so the
+   header always clears it. max() means a real inset is used unchanged and never
+   doubled; the floor only engages when the reported inset collapses to 0. Floor is
+   59px (the Dynamic Island inset on current iPhones) so a collapsed-inset install
+   still clears the clock on the newest hardware — was 50px, which left the header
+   jammed ~9px under the Dynamic Island. Older notched devices that report a real
+   inset use it unchanged; only the rare collapsed-to-0 case sees the 59px floor. */
+@media (display-mode: standalone) {
+  :root {
+    --app-safe-top: max(env(safe-area-inset-top, 0px), 59px);
+  }
 }
 
 .dark {
@@ -814,6 +838,10 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   -webkit-backdrop-filter: blur(16px) saturate(1.08);
   border-bottom: 1px solid hsl(var(--border) / 0.8);
   box-shadow: 0 1px 0 hsl(var(--background) / 0.75);
+  /* Reserve the iOS status-bar / Dynamic Island inset so this sticky top bar
+     clears the notch in the black-translucent PWA (0 in a normal browser tab).
+     Mirrors AppHeader / Nav. */
+  padding-top: var(--app-safe-top);
 }
 
 .mobile-nav-shell {
@@ -1642,7 +1670,13 @@ body {
 }
 
 .kiddo-tab-row {
-  display: inline-flex;
+  /* Full-width flex with equal columns so the strip fills its container
+     (matching Activity's grid) instead of hugging left and leaving a gap on
+     the right. Applies on all sizes; Settings/Account both use this class.
+     The Settings "Notifications" tab uses a responsive "Alerts" label on
+     mobile so 4 equal columns fit a phone without clipping. Added 2026-07. */
+  display: flex;
+  width: 100%;
   gap: 4px;
   border-radius: 16px;
   background: hsl(var(--kiddo-cream-dark));
@@ -1650,8 +1684,11 @@ body {
 }
 
 .kiddo-tab-item {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
   border-radius: 10px;
-  padding: 8px 18px;
+  padding: 8px 12px;
   font-size: 0.82rem;
   color: hsl(var(--kiddo-muted));
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
@@ -2224,6 +2261,10 @@ body {
   background: hsl(var(--background) / 0.85);
   border-bottom: 1px solid hsl(var(--border) / 0.3);
   transition: backdrop-filter 0.3s ease, background 0.3s ease;
+  /* Reserve the iOS status-bar / Dynamic Island inset so this sticky top bar
+     clears the notch in the black-translucent PWA (0 in a normal browser tab).
+     Mirrors AppHeader / Nav. */
+  padding-top: var(--app-safe-top);
 }
 .gemini-glass-nav.scrolled {
   background: hsl(var(--background) / 0.92);
@@ -2517,4 +2558,33 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+/* ── View Transitions: forward two-sided push ──────────────────────────────
+   Native iOS/Android push feel on the web. The whole page (root) is snapshotted;
+   forward navigation parallaxes the OUTGOING page left + dims it while the
+   incoming page slides in from the right OVER it (a leading-edge shadow sells the
+   depth). Driven by the JS installer in lib/view-transition.ts, which is
+   feature-detected + reduced-motion + tab-switch aware and sets data-vt-dir only
+   for a real forward push. Back stays on NavTransition's framer slide (the
+   History API gives no hook to wrap a popstate re-render). */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(root) { animation-duration: 320ms; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 320ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+    /* A push SLIDES; override the API's default cross-fade so pages don't ghost. */
+    mix-blend-mode: normal;
+  }
+  html[data-vt-dir="forward"]::view-transition-old(root) { animation-name: vt-push-old; }
+  html[data-vt-dir="forward"]::view-transition-new(root) { animation-name: vt-push-new; }
+  @keyframes vt-push-old {
+    from { transform: translateX(0);     filter: brightness(1); }
+    to   { transform: translateX(-24%);  filter: brightness(0.8); }
+  }
+  @keyframes vt-push-new {
+    from { transform: translateX(100%); box-shadow: -16px 0 44px rgba(20, 58, 44, 0.18); }
+    to   { transform: translateX(0);    box-shadow: -16px 0 0 rgba(20, 58, 44, 0); }
+  }
 }

@@ -29,8 +29,8 @@ export default function Blog() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-3xl text-center">
             <Mascot size="lg" className="mx-auto mb-6" context="faq-hero" />
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Blog</p>
-            <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Blog</p>
+            <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
               Gifts that grow. Guides that help.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
@@ -49,7 +49,7 @@ export default function Blog() {
               viewport={{ once: true, margin: "-50px" }}
               className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-10"
             >
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Featured article</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Featured article</p>
               <h2 className="mt-4 font-heading text-3xl font-semibold text-foreground md:text-4xl">{featuredPost.title}</h2>
               <p className="mt-3 text-sm text-muted-foreground">{featuredPost.publishedAt} {featuredPost.readTime ? `· ${featuredPost.readTime}` : ""}</p>
               <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground">{featuredPost.description}</p>
@@ -115,7 +115,7 @@ export default function Blog() {
               <BookOpenText className="h-4 w-4" />
               Built for parents, gifters, and the next big occasion
             </div>
-            <h2 className="mt-6 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            <h2 className="mt-6 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
               Ready to make the next occasion easier?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">

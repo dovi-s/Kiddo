@@ -39,6 +39,26 @@ export function toMonthlyEquivalent(amount: number, frequency: RecurringFrequenc
   }
 }
 
+// Above this monthly-equivalent, a recurring contribution is almost certainly a
+// fat-finger — most often a DAILY amount typed as if it were the monthly amount
+// (daily multiplies by ~30.4). Left unchecked, the projection honestly compounds
+// it into an absurd "potential" (e.g. $10k/day = ~$304k/mo = ~$34M at 21), which
+// reads as broken to a demo visitor at peak intent. We stop the plan from saving
+// above this ceiling. Tune it up if a genuine high-contribution case appears.
+export const MAX_PLAUSIBLE_MONTHLY_CONTRIBUTION = 10000;
+
+// Given a per-deposit amount + frequency, report whether the implied monthly
+// contribution crosses the plausibility ceiling, and the monthly figure itself
+// (so the caller can show "that's ~$X/month"). ONE place so the client guard and
+// any future server-side check agree.
+export function checkRecurringPlausibility(
+  amount: number,
+  frequency: RecurringFrequency,
+): { ok: boolean; monthlyEquivalent: number } {
+  const monthlyEquivalent = toMonthlyEquivalent(amount, frequency);
+  return { ok: monthlyEquivalent <= MAX_PLAUSIBLE_MONTHLY_CONTRIBUTION, monthlyEquivalent };
+}
+
 // Sum a list of schedules into a single monthly-equivalent total. Filter to
 // active schedules at the call site — this helper doesn't know which
 // statuses count.

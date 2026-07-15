@@ -32,6 +32,7 @@
 // equivalent) for the daily tick wiring once this lands.
 
 import fs from "fs/promises";
+import { isAnonGifterName } from "@shared/gifter-anon";
 import path from "path";
 import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
@@ -236,9 +237,7 @@ async function tick(log: LogFn): Promise<void> {
     // could be just "First" or pseudonymous). If empty or anonymous-
     // pattern, the greeting drops to "Hi there,".
     const rawName = String(row.sender_name || "").trim();
-    const isAnonymousName = !rawName
-      || /^anonymous$/i.test(rawName)
-      || /^someone who loves /i.test(rawName);
+    const isAnonymousName = isAnonGifterName(rawName);
     const firstName = isAnonymousName ? null : rawName.split(/\s+/)[0];
 
     const perRecipient = perRecipientByEmail.get(email) || [];

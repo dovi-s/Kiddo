@@ -1,0 +1,139 @@
+<!doctype html>
+<!--
+  DRAFT / PROTOTYPE — "For Organizations" validation landing page.
+  Standalone mockup for founder review. NOT wired into the app, NOT a live route.
+  Honest framing: we are not live yet; the page gauges interest only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kiddo for Organizations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#F5F1E7; --cream-2:#FBF9F3; --ink:#1E1B14; --muted:#6E6656;
+    --evergreen:#1E5A46; --evergreen-deep:#0E3226; --gold:#E0A526; --border:#E4DDcf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);
+    font-family:'DM Sans',system-ui,-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{font-family:'Bricolage Grotesque','DM Sans',sans-serif;font-weight:600;letter-spacing:-0.02em;margin:0}
+  a{color:inherit}
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+  .brand{display:flex;align-items:center;gap:9px;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:20px;color:var(--evergreen)}
+  .brand .dot{width:22px;height:22px;border-radius:7px;background:var(--evergreen);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+  .tag{font-size:12.5px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:5px 11px}
+  /* hero */
+  .hero{padding:54px 0 20px}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--evergreen);opacity:.85}
+  .hero h1{font-size:clamp(38px,6.4vw,62px);line-height:1.02;margin:16px 0 0}
+  .hero p.sub{font-size:clamp(16px,2.2vw,19px);color:#3a352b;max-width:600px;margin:20px 0 0}
+  .cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:30px}
+  .btn{background:var(--gold);color:#3a2a06;border:none;border-radius:14px;padding:14px 24px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none;display:inline-block;
+    box-shadow:0 1px 2px rgba(14,37,24,.18),0 6px 16px rgba(14,37,24,.12)}
+  .btn.secondary{background:transparent;color:var(--evergreen);box-shadow:none;font-weight:600;padding:14px 4px}
+  /* honest banner */
+  .note{margin-top:34px;background:rgba(30,90,70,.05);border:1px solid var(--border);border-radius:16px;
+    padding:16px 18px;font-size:14.5px;color:#3a352b;max-width:720px}
+  .note b{color:var(--evergreen)}
+  /* who it's for */
+  section{padding:44px 0}
+  .sec-label{font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+  .card{background:var(--cream-2);border:1px solid var(--border);border-radius:18px;padding:22px}
+  .card h3{font-size:19px}
+  .card p{font-size:14.5px;color:var(--muted);margin:9px 0 0}
+  /* how */
+  .how{background:var(--evergreen-deep);color:#F3EEE2;border-radius:24px;padding:38px 34px;margin-top:8px}
+  .how .sec-label{color:rgba(243,238,226,.6)}
+  .how h2{color:#fff;font-size:clamp(24px,3.4vw,32px);margin-top:10px;max-width:620px}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:26px}
+  .step .n{font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;color:var(--gold)}
+  .step p{margin:8px 0 0;font-size:14.5px;color:rgba(243,238,226,.82)}
+  .promise{margin-top:26px;font-size:15px;color:rgba(243,238,226,.92);border-top:1px solid rgba(243,238,226,.14);padding-top:18px;max-width:640px}
+  /* form */
+  .form{background:var(--cream-2);border:1px solid var(--border);border-radius:24px;padding:34px;margin-top:8px;max-width:640px}
+  .form h2{font-size:26px}
+  .form p.k{color:var(--muted);font-size:14.5px;margin:8px 0 22px}
+  .field{display:block;margin-bottom:14px}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#3a352b;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:12px 13px;font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+  .field textarea{resize:none;height:78px}
+  footer{padding:40px 0 56px;color:var(--muted);font-size:13px;border-top:1px solid var(--border);margin-top:40px}
+  @media (max-width:720px){.cards,.steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot">K</span> Kiddo</div>
+    <span class="tag">For organizations</span>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">For employers, foundations &amp; donors</div>
+    <h1>Fund a child's<br/>future for real.</h1>
+    <p class="sub">Put permanent, invested dollars into children's accounts. The money becomes the child's own, and it grows up with them. No ads to families, no strings, and the impact is yours to show.</p>
+    <div class="cta-row">
+      <a class="btn" href="#interest">Tell us you're interested</a>
+      <a class="btn secondary" href="#how">See how it works</a>
+    </div>
+    <div class="note"><b>We are early and not live yet.</b> This page is here to find the organizations who want in first. Tell us you would fund kids' futures, and you will be first in line when we launch.</div>
+  </div>
+
+  <section id="who">
+    <div class="sec-label">Who this is for</div>
+    <div class="cards">
+      <div class="card">
+        <h3>Employers</h3>
+        <p>Invest in your employees' kids' futures. A benefit people feel, that almost no one else offers.</p>
+      </div>
+      <div class="card">
+        <h3>Foundations &amp; donors</h3>
+        <p>Fund a group of kids who need a head start. Verified impact, and it can be tax-deductible through our charitable arm.</p>
+      </div>
+      <div class="card">
+        <h3>Local business</h3>
+        <p>Fund every kid in your town or school. Real goodwill people remember, for the cost of an ad.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="how">
+      <div class="sec-label">How it works</div>
+      <h2>You fund a group of kids. The money lands in real accounts and stays theirs.</h2>
+      <div class="steps">
+        <div class="step"><div class="n">01</div><p>You choose a group to fund, like your employees' kids, or every newborn in a county.</p></div>
+        <div class="step"><div class="n">02</div><p>The money is invested in each child's own long-term account. It is permanent and unconditional.</p></div>
+        <div class="step"><div class="n">03</div><p>You get a verified record of the impact, and the credit to tell on your own channels.</p></div>
+      </div>
+      <p class="promise">Every child gets the same thing, whoever funds it: a real account, their Memory Book, and full ownership when they come of age. Never an ad, never a pitch.</p>
+    </div>
+  </section>
+
+  <section id="interest">
+    <div class="form">
+      <h2>Tell us you're interested</h2>
+      <p class="k">No commitment. We will reach out when we are ready, and you will be first.</p>
+      <div class="field"><label>Organization</label><input type="text" placeholder="Company or foundation name" /></div>
+      <div class="field"><label>You are a</label>
+        <select><option>Employer</option><option>Foundation or donor</option><option>Local business</option><option>Something else</option></select>
+      </div>
+      <div class="field"><label>Email</label><input type="email" placeholder="you@org.com" /></div>
+      <div class="field"><label>Anything you want us to know</label><textarea placeholder="Who you'd want to fund, roughly how much, or just hello."></textarea></div>
+      <button class="btn" type="button">Send</button>
+    </div>
+  </section>
+
+  <footer>
+    Kiddo is early and not yet live. This page exists to gauge interest from organizations. Nothing here is an offer, and no money moves today.
+  </footer>
+</div>
+</body>
+</html>

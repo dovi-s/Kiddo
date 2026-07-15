@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Bell, BookOpen, ArrowRight } from "lucide-react";
+import { Check, Bell, BookOpen, ArrowRight, Key } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -348,7 +348,7 @@ export default function ClaimFund() {
             transition={{ duration: 0.45, ease: "easeOut", delay: 0.15 }}
             className="flex items-start gap-3 mb-4"
           >
-            <span className="text-3xl shrink-0" aria-hidden="true">🔑</span>
+            <Key className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={28} strokeWidth={2} aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="text-2xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">Claim your fund</p>
               <h1 className="font-heading text-2xl font-bold text-foreground leading-tight">It's yours now.</h1>

@@ -3,11 +3,12 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, useSearch, Link } from "wouter";
 import { demoBlocked } from "@/lib/demo-block";
+import { isAnonGifterName } from "@/lib/gifter-name";
 // Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md. The three
 // row-types it was used for (Kid suggestion / Subscription / Age-18 invite)
 // now use semantically-correct icons: Lightbulb (gentle nudge), CreditCard
 // (billing event), Mail (invitation).
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History, Download } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History, Download, Heart, Users, Cake, Mic, Camera } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import {
   canonicalLabel,
@@ -17,7 +18,7 @@ import {
   isInternalOnlyType,
   mapItemToCategory,
 } from "@shared/activity-semantics";
-import { StatusPill, formatMoneyFriendly } from "@/lib/activity-helpers";
+import { StatusPill, HintPill, formatMoneyFriendly } from "@/lib/activity-helpers";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
@@ -42,6 +43,7 @@ import { getDeepLinkHighlightStyle } from "@/lib/deep-link-highlight";
 import { MOTION } from "@/lib/motion";
 import { KiddoSkeleton } from "@/components/ui/skeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { ManagedMixIcon, ManagedMixGlyph } from "@/components/ui/managed-mix-icon";
 import { RecurringEditSheet } from "@/components/RecurringEditSheet";
 import { RecurringPauseSheet } from "@/components/RecurringPauseSheet";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
@@ -263,7 +265,12 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
     // "Charge failed," which sat right next to the "Failed" pill and under a
     // "Recurring investment failed" title: the same word three times on one row
     // (founder catch 2026-07). One status signal, not three.
-    return { ...PALETTE.ALERT_FAILED, icon: <AlertCircle size={16} />, label: "Recurring investment" };
+    // CALM AMBER, not alarming red: a missed recurring charge is recoverable and
+    // the plan self-continues, so the icon wears the SAME amber as the "Charge
+    // missed" pill beside it + the detail-modal icon (rgb(161,88,0) on
+    // rgb(255,247,230)) — NOT ALERT_FAILED red, which overclaimed a crisis and
+    // clashed with its own calm pill. Red stays for payment_failed (plan lapses).
+    return { bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
   // Memory family — purple palette (kid-domain story).
   //
   // Eyebrow labels use consistent verb form across all three Memory
@@ -371,21 +378,21 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
   // reads as a moment, not a transaction. Color stays warm (gold/cream
   // family) so milestones feel like ribbons, not status changes.
   if (t === "milestone_money_cross")
-    return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🌱</span>, label: "Milestone" };
+    return { ...PALETTE.MILESTONE_GOLD, icon: <TrendingUp size={15} strokeWidth={2} />, label: "Milestone" };
   if (t === "milestone_growth_passed_gifts")
-    return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🌱</span>, label: "Milestone" };
+    return { ...PALETTE.MILESTONE_GOLD, icon: <TrendingUp size={15} strokeWidth={2} />, label: "Milestone" };
   if (t === "milestone_returning_gifter")
-    return { ...PALETTE.SUBTLE_CREAM, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>💚</span>, label: "Returning gifter" };
+    return { ...PALETTE.SUBTLE_CREAM, icon: <Heart size={15} strokeWidth={2} />, label: "Returning gifter" };
   if (t === "milestone_unique_gifters")
-    return { ...PALETTE.SUBTLE_CREAM, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🤲</span>, label: "Community" };
+    return { ...PALETTE.SUBTLE_CREAM, icon: <Users size={15} strokeWidth={2} />, label: "Community" };
   if (t === "milestone_anniversary")
-    return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🎂</span>, label: "Anniversary" };
+    return { ...PALETTE.MILESTONE_GOLD, icon: <Cake size={15} strokeWidth={2} />, label: "Anniversary" };
   if (t === "milestone_first_voice")
-    return { ...PALETTE.MEMORY, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🎙️</span>, label: "First voice" };
+    return { ...PALETTE.MEMORY, icon: <Mic size={15} strokeWidth={2} />, label: "First voice" };
   if (t === "milestone_first_photo")
-    return { ...PALETTE.MEMORY, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>📷</span>, label: "First photo" };
+    return { ...PALETTE.MEMORY, icon: <Camera size={15} strokeWidth={2} />, label: "First photo" };
   if (t === "milestone_first_kid_pick_approved")
-    return { ...PALETTE.MEMORY, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>, label: "First pick" };
+    return { ...PALETTE.MEMORY, icon: <Star size={15} strokeWidth={2} />, label: "First pick" };
   // Age-phase milestones (age16/17/18). The age18 family includes the
   // climax of the entire product — kid accepting their fund at 18 — so it
   // gets the brand evergreen + sprout treatment, distinct from generic
@@ -698,6 +705,7 @@ const SCHEDULE_CHANGE_TITLES = [
   "Recurring investment turned on",
   "Recurring investment turned off",
   "Recurring investment resumed",
+  "Recurring charge skipped",
   "Auto-invest started",   // legacy — pre-rename rows
   "Auto-invest updated",   // legacy
   "Auto-invest cancelled", // legacy
@@ -1427,6 +1435,20 @@ export default function Activity() {
   // replacing the OS-native window.confirm. One state, one <ConfirmDialog/> at
   // the root; each action fills in its own copy.
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
+
+  // Shared recovery for a missed charge — the "Add it now" inline chip on a
+  // "Charge missed" row calls this from BOTH detail scopes (schedule detail and
+  // the "What you've added" contributions detail), so the flow is identical:
+  // branded confirm → same contribute-now checkout the Scheduled tab uses.
+  const askAddMissed = (scheduleId: string, amt: number | null) => {
+    if (!scheduleId) return;
+    setConfirmRequest({
+      title: amt != null && amt > 0 ? `Add ${formatCurrency(amt)} now?` : "Add the missed contribution now?",
+      body: "This runs the charge that didn't go through and adds it to the same place, as a one-time deposit. You'll confirm payment next.",
+      confirmLabel: "Continue to payment",
+      onConfirm: () => contributeNowMutation.mutate(scheduleId),
+    });
+  };
   const toggleScheduledExpand = (id: string) =>
     setExpandedScheduledId((cur) => (cur === id ? null : id));
 
@@ -1927,10 +1949,15 @@ export default function Activity() {
     return s + (n != null && n > 0 ? n : 0);
   }, 0);
 
-  // Withdrawals + refunds (both money leaving the fund).
+  // Withdrawals + refunds (both money leaving the fund). Refunds fold into this
+  // "money out" total ONLY in 30-day mode, where there's no separate Refunds tile.
+  // Year mode renders a dedicated Refunds tile (~line 2359), so folding refunds
+  // here too double-counted the same refund across both tiles (a $50 refund read
+  // as $100 out, and inflated the withdrawal count). Audit fix 2026-07.
   const last30Withdrawals = last30.reduce((s, i) => {
     const t = normalizeActivityType(i.type);
-    if (t !== "withdrawal" && t !== "refund") return s;
+    const counts = t === "withdrawal" || (t === "refund" && !summaryRange.isYear);
+    if (!counts) return s;
     const n = parseAmount(i.amount);
     return s + (n != null && n > 0 ? Math.abs(n) : 0);
   }, 0);
@@ -2004,7 +2031,7 @@ export default function Activity() {
         ? enriched.senderEmail
         : typeof (meta as any).senderEmail === "string" ? (meta as any).senderEmail : "";
       const senderName = typeof (meta as any).senderName === "string" ? (meta as any).senderName : "";
-      const isAnon = !senderEmail && (!senderName || /^someone who loves|^anonymous$/i.test(senderName.trim()));
+      const isAnon = !senderEmail && isAnonGifterName(senderName);
       if (isAnon) {
         // Each anonymous gift = a distinct human, keyed by the activity id
         // so two anon gifts don't collapse to one bucket.
@@ -2025,7 +2052,9 @@ export default function Activity() {
   }).length;
   const last30WithdrawalsCount = last30.filter((i) => {
     const t = normalizeActivityType(i.type);
-    return t === "withdrawal" || t === "refund";
+    // Match last30Withdrawals: refunds count here only in 30-day mode (no separate
+    // Refunds tile); year mode counts them in their own tile instead.
+    return t === "withdrawal" || (t === "refund" && !summaryRange.isYear);
   }).length;
 
   // Year-mode-only metrics — surface subscription billing + refunds as
@@ -2068,6 +2097,12 @@ export default function Activity() {
     return Number.isFinite(next) && next > 0 && next <= upcomingWindowMs;
   });
   const pendingTotalCount = pendingFromFeed.length + upcomingContribs.length;
+  // A missed recurring charge isn't "in transit" (it failed, moved no money) so it
+  // correctly stays in History, not this tab. But when Pending is otherwise empty,
+  // the all-clear copy ("all settled and invested") would overclaim while a charge
+  // is unresolved — so surface a quiet nudge to Schedules (where "Add it now" lives)
+  // instead. hasRecentFailure = a decline within the last 14 days (server-computed).
+  const unresolvedFailureCount = (scheduledContribs as any[]).filter((c) => c?.hasRecentFailure).length;
 
   // ===== SCHEDULED TAB DATA =====
   const scheduledTotalCount = scheduledContribs.length + scheduledReminders.length;
@@ -2145,7 +2180,7 @@ export default function Activity() {
             wrapper matches the header + Settings tabs; -mx-4 px-4 bleeds to the
             screen edges; mb-5 preserves the gap to the feed (moved off the inner
             pill's marginBottom). Added 2026-07. */}
-        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-30 -mx-4 mb-5 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
+        <div className="sticky top-[calc(var(--app-safe-top)+56px)] z-30 -mx-4 mb-5 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
         <div
           role="tablist"
           aria-label="Activity sections"
@@ -2752,7 +2787,7 @@ export default function Activity() {
                     }));
                     let runDestination: string | null = null;
                     if (destKeys.size === 1) {
-                      const only = [...destKeys][0];
+                      const only = Array.from(destKeys)[0];
                       if (only === "__mix__") {
                         const runFund = (allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String((item as any).fundId));
                         runDestination = `the ${STRATEGY_SHORT[fundMixTier(runFund)]} mix`;
@@ -2944,6 +2979,19 @@ export default function Activity() {
                   // reads identically. showMixDest (drives the glyph below) keys off the
                   // final text so it's true in both branches.
                   if (!ticker) effectiveDescription = effectiveDescription.replace(/\bthe diversified mix\b/i, rowMixPhrase);
+                  // A declined charge whose reconcile card shows below (Charged to
+                  // ····XXXX + Next charge) plus the inline "Add it now" chip shouldn't
+                  // ALSO name the card, the date, or the action in this sentence — that
+                  // repeats all three and reads crammed on mobile. Keep only what the
+                  // structured rows don't say: the reason (declined) + the reassurance
+                  // (plan's on); the chip carries the CTA. Matches DetailHistoryModal.
+                  // Only when a card is on file (so the reconcile card carries the
+                  // specifics). 2026-07-08.
+                  const rowTypeForFail = normalizeActivityType((item as any).type);
+                  if ((rowTypeForFail === "parent_contribution_failed" || rowTypeForFail === "payment_failed")
+                      && typeof (meta as any).paymentMethodLast4 === "string" && (meta as any).paymentMethodLast4) {
+                    effectiveDescription = "That card was declined. Your plan is still on.";
+                  }
                   const showMixDest = !ticker && effectiveDescription.includes(rowMixPhrase);
                   // Hoisted kid-suggestion state so the Approve/Decline bar
                   // renders OUTSIDE the expanded panel (always visible on
@@ -3175,14 +3223,14 @@ export default function Activity() {
                               // notes are short and they're the heart of the feed.
                               overflowWrap: "anywhere" as const,
                             };
-                            // Diversified-mix contribution: prefix the strategy glyph so the
-                            // tier reads as a crafted unit ("📈 Investing across the Growth
-                            // mix"). Same STRATEGY_ICONS glyph the dashboard mix card uses.
+                            // Diversified-mix contribution: prefix the managed-mix glyph so the
+                            // destination reads as a crafted unit. The managed mix is a basket,
+                            // not a risk tier — it uses the Layers mark, never the strategy-tier
+                            // icon (which would collide with "Theo's Growth" and the gain arrow).
                             if (showMixDest) {
-                              const MixIcon = STRATEGY_ICONS[rowMixTier];
                               return (
                                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
-                                  <MixIcon size={13} style={{ color: "hsl(var(--kiddo-ink) / 0.5)", flexShrink: 0 }} />
+                                  <ManagedMixGlyph size={13} style={{ color: "hsl(var(--kiddo-ink) / 0.5)", flexShrink: 0 }} />
                                   <p style={pStyle}>{shown}</p>
                                 </div>
                               );
@@ -3282,7 +3330,18 @@ export default function Activity() {
                                 {childLabel}
                               </span>
                             )}
-                            <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{ownerViewingParentContrib ? "Contribution" : config.label}</span>
+                            {/* Name the contribution sub-kind (Recurring vs One-time)
+                                in the label slot — both are "Contribution" by type, so
+                                an isolated recurring cycle and a one-time addition read
+                                identically without this. Owner mode keeps the neutral
+                                "Contribution" (its rows are the parent's legacy adds). */}
+                            <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>
+                              {ownerViewingParentContrib
+                                ? "Contribution"
+                                : effectiveType === "parent_contribution"
+                                  ? (isRecurringContribItem(item) ? "Recurring" : "One-time")
+                                  : config.label}
+                            </span>
                             {/* Gift-source chip: renders only when the
                                 gift came via a specific occasion page.
                                 Absence = main gift page (the implicit
@@ -3457,11 +3516,14 @@ export default function Activity() {
                             const pcId = typeof (meta as any).parentContributionId === "string" ? (meta as any).parentContributionId : null;
                             if (pcId) {
                               chips.push({
-                                label: "Add it now →",
+                                // No trailing arrow: opens an in-place confirm, doesn't
+                                // navigate (page-wide arrow grammar). Matches the detail
+                                // modal chip + the Scheduled card — one canonical "Add it now".
+                                label: "Add it now",
                                 testId: `chip-add-now-${rowId}`,
                                 onClick: () => setConfirmRequest({
-                                  title: amtNum != null && amtNum > 0 ? `Add ${formatCurrency(amtNum)} now?` : "Add this contribution now?",
-                                  body: "This adds the contribution that didn't go through. You'll confirm payment on the next screen.",
+                                  title: amtNum != null && amtNum > 0 ? `Add ${formatCurrency(amtNum)} now?` : "Add the missed contribution now?",
+                                  body: "This runs the charge that didn't go through and adds it to the same place, as a one-time deposit. You'll confirm payment next.",
                                   confirmLabel: "Continue to payment",
                                   onConfirm: () => contributeNowMutation.mutate(pcId),
                                 }),
@@ -3505,17 +3567,18 @@ export default function Activity() {
                                 ? tickers.length
                                 : (ticker ? 1 : 0);
                               const isPlural = positionCount !== 1;
+                              // Singular "View holding" points at ONE ticker — so deep-link
+                              // straight to THAT holding's detail (an overlay sheet), not the
+                              // holdings section top where the parent still has to hunt for it
+                              // (and it may sit inside a collapsed group). `holding=` opens the
+                              // sheet directly; `section=holdings` stays as a graceful fallback
+                              // for any surface that doesn't yet handle the holding param.
+                              const singleTicker = tickers.length === 1 ? tickers[0] : ticker;
                               chips.push({
-                                // Deep-link to the holdings section so the
-                                // parent lands directly on what the chip
-                                // promises, instead of the fund hero where
-                                // they'd have to scroll past the hero +
-                                // "Quick links" + "Who Loves Emma" to find
-                                // the holdings. Dashboard.tsx:2062 already
-                                // handles ?section=holdings → smooth
-                                // scrollIntoView on mount.
                                 label: isPlural ? "View holdings →" : "View holding →",
-                                href: `/dashboard?fund=${fundIdForActivity}&section=holdings`,
+                                href: isPlural || !singleTicker
+                                  ? `/dashboard?fund=${fundIdForActivity}&section=holdings`
+                                  : `/dashboard?fund=${fundIdForActivity}&section=holdings&holding=${encodeURIComponent(String(singleTicker).toUpperCase())}`,
                                 testId: `chip-holdings-${rowId}`,
                               });
                             }
@@ -3548,17 +3611,19 @@ export default function Activity() {
                               external: true,
                             });
                           }
-                          // Report issue — pre-fills a support email with
-                          // the row's identifying info so the parent never
-                          // has to explain "which transaction" or hunt for
-                          // an ID. Only surfaced on money-flow rows where a
-                          // dispute could realistically apply.
+                          // Report issue — pre-fills a support email with the row's
+                          // identifying info. Scoped to rows where "is this right / did
+                          // this really happen?" genuinely applies: gifts from OTHERS,
+                          // failed charges, money movements (cash invested / withdrawal),
+                          // billing, and refunds. Deliberately NOT on your OWN routine
+                          // successes ("You contributed $100") or status/config rows
+                          // (recurring started, plan activated) — you did those, so a
+                          // per-row dispute link there was just noise repeated down the feed.
                           const reportableTypes = [
                             "gift_received", "gift_invested", "gift_received_cash",
-                            "parent_contribution", "parent_contribution_failed",
-                            "auto_invest", "cash_invested", "withdrawal",
+                            "parent_contribution_failed",
+                            "cash_invested", "withdrawal",
                             "subscription_renewal", "subscription_started", "payment_failed",
-                            "starter_plan_activated", "family_plan_activated",
                             "refund",
                           ];
                           if (reportableTypes.includes(normalizedType)) {
@@ -4022,7 +4087,11 @@ export default function Activity() {
                                   {chips.length > 0 && (
                                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                                       {chips.map((chip) => {
-                                        const sharedStyle = {
+                                        // Subtle chips (Report an issue) render as a quiet
+                                        // muted link, not a green action pill, so they recede
+                                        // behind the useful actions instead of shouting on
+                                        // every row.
+                                        const pillStyle = {
                                           fontSize: 11, fontWeight: 700, color: "hsl(143,47%,22%)",
                                           background: "rgba(26,67,50,0.08)",
                                           border: "1px solid rgba(26,67,50,0.18)",
@@ -4032,6 +4101,18 @@ export default function Activity() {
                                           textDecoration: "none" as const,
                                           display: "inline-flex" as const, alignItems: "center" as const,
                                         };
+                                        const subtleStyle = {
+                                          fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-ink) / 0.42)",
+                                          background: "transparent", border: "none",
+                                          borderRadius: 999, padding: "5px 6px",
+                                          cursor: "pointer", fontFamily: "inherit",
+                                          transition: "color 0.12s",
+                                          textDecoration: "none" as const,
+                                          display: "inline-flex" as const, alignItems: "center" as const,
+                                        };
+                                        const sharedStyle = chip.subtle ? subtleStyle : pillStyle;
+                                        const onEnter = (e: any) => { if (chip.subtle) e.currentTarget.style.color = "hsl(var(--kiddo-ink) / 0.7)"; else e.currentTarget.style.background = "rgba(26,67,50,0.14)"; };
+                                        const onLeave = (e: any) => { if (chip.subtle) e.currentTarget.style.color = "hsl(var(--kiddo-ink) / 0.42)"; else e.currentTarget.style.background = "rgba(26,67,50,0.08)"; };
                                         if (chip.onClick) {
                                           // Action chip (e.g. "Add it now") — runs a mutation
                                           // / opens a confirm rather than navigating. Same pill
@@ -4043,8 +4124,8 @@ export default function Activity() {
                                               onClick={(e) => { e.stopPropagation(); haptic("selection"); chip.onClick!(); }}
                                               data-testid={chip.testId}
                                               style={sharedStyle}
-                                              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.14)")}
-                                              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.08)")}
+                                              onMouseEnter={onEnter}
+                                              onMouseLeave={onLeave}
                                             >
                                               {chip.label}
                                             </button>
@@ -4064,8 +4145,8 @@ export default function Activity() {
                                               onClick={(e) => { e.stopPropagation(); haptic("selection"); }}
                                               data-testid={chip.testId}
                                               style={sharedStyle}
-                                              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.14)")}
-                                              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.08)")}
+                                              onMouseEnter={onEnter}
+                                              onMouseLeave={onLeave}
                                             >
                                               {chip.label}
                                             </a>
@@ -4123,18 +4204,45 @@ export default function Activity() {
                 }}>
                   <div style={{
                     width: 56, height: 56, borderRadius: 9999,
-                    background: "rgb(237,244,238)",
+                    background: unresolvedFailureCount > 0 ? "rgb(255,247,230)" : "rgb(237,244,238)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     margin: "0 auto 14px",
                   }}>
-                    <Check size={22} style={{ color: "rgb(26,67,50)" }} />
+                    {unresolvedFailureCount > 0
+                      ? <AlertCircle size={22} style={{ color: "rgb(161,88,0)" }} />
+                      : <Check size={22} style={{ color: "rgb(26,67,50)" }} />}
                   </div>
                   <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: "hsl(var(--kiddo-ink))", marginBottom: 6 }}>
                     Nothing in transit right now.
                   </p>
-                  <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6 }}>
-                    All gifts and additions are settled and invested.
-                  </p>
+                  {/* Don't claim "all settled and invested" while a charge is
+                      unresolved — point to Schedules, where "Add it now" lives. */}
+                  {unresolvedFailureCount > 0 ? (
+                    <>
+                      <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6, marginBottom: 14 }}>
+                        {unresolvedFailureCount === 1
+                          ? "One recurring charge didn't go through, but your plan is still on. Add the missed one whenever you like."
+                          : `${unresolvedFailureCount} recurring charges didn't go through, but your plans are still on. Add the missed ones whenever you like.`}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { haptic("selection"); setTab("scheduled"); }}
+                        className="kiddo-press"
+                        style={{
+                          fontSize: 13, fontWeight: 700, color: "rgb(161,88,0)",
+                          background: "rgb(255,247,230)", border: "1px solid rgba(161,88,0,0.2)",
+                          borderRadius: 9999, padding: "8px 16px", cursor: "pointer",
+                        }}
+                        data-testid="pending-empty-see-schedules"
+                      >
+                        See Schedules →
+                      </button>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6 }}>
+                      All gifts and additions are settled and invested.
+                    </p>
+                  )}
                 </div>
               </EnlighteningReveal>
             ) : (
@@ -4446,7 +4554,7 @@ export default function Activity() {
                                     ? <StockLogo ticker={ticker} size={22} />
                                     : c.executionModel === "family"
                                       ? <Repeat size={16} style={{ color: isPaused ? "rgb(184,121,26)" : "rgb(26,67,50)" }} />
-                                      : (() => { const MixIcon = STRATEGY_ICONS[rowMixTier]; return <MixIcon size={16} style={{ color: isPaused ? "rgb(184,121,26)" : "rgb(26,67,50)" }} />; })()}
+                                      : <ManagedMixGlyph size={16} style={{ color: isPaused ? "rgb(184,121,26)" : "rgb(26,67,50)" }} />}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -4458,34 +4566,32 @@ export default function Activity() {
                                           (server `hasRecentFailure`) used to add a SECOND
                                           red "Last cycle failed" pill beside the green
                                           "Active" one, which read as failed-and-active at
-                                          once. Fold it into a single amber "Needs you": the
-                                          schedule is still active, but the last charge failed
-                                          and the missed one needs the parent to add it manually
-                                          (nothing auto-retries it) — so it pairs with "Add it
-                                          now". Full detail stays in the row description + the
-                                          expanded panel. Amber signals attention without the
-                                          green/red contradiction. */}
+                                          once. Fold it into a single amber "Charge missed":
+                                          the schedule is still active, but the last charge
+                                          failed and the missed one needs the parent to add it
+                                          manually (nothing auto-retries it) — so it pairs with
+                                          "Add it now". Same canonical wording as the detail
+                                          modal + StatusPill, never "Needs you"/"Retrying" here.
+                                          Full detail stays in the row description + the expanded
+                                          panel. Amber signals attention without the green/red
+                                          contradiction. */}
                                       {(() => {
                                         const failedActive = Boolean(c.hasRecentFailure) && !isPaused && !isOwnerHistorical;
                                         const amber = isPaused || failedActive;
+                                        // Honest hint: the SCHEDULE stays active and charges again
+                                        // next cycle — the missed charge itself is NOT auto-re-run
+                                        // (recurringContributionWorker dunning retry is default-off).
+                                        // Point to the manual recovery. Reveals on hover AND tap now
+                                        // (HintPill), so the "why" is reachable on mobile too, where
+                                        // the old hover-only `title` showed nothing.
                                         return (
-                                          <span
-                                            style={{
-                                              fontSize: 9.5, fontWeight: 700, borderRadius: 999, padding: "2px 7px",
-                                              background: isOwnerHistorical ? "rgb(238,235,231)" : amber ? "rgb(254,243,199)" : "rgb(220,247,228)",
-                                              color: isOwnerHistorical ? "rgb(112,103,95)" : amber ? "rgb(146,64,14)" : "rgb(15,82,42)",
-                                              display: "inline-flex", alignItems: "center", gap: 3,
-                                            }}
-                                            // Honest tooltip: the SCHEDULE stays active and charges
-                                            // again next cycle — the missed charge itself is NOT
-                                            // auto-re-run (see recurringContributionWorker: dunning
-                                            // retry is default-off). Don't imply the failed one
-                                            // retries on its own; point to the manual recovery.
-                                            title={failedActive ? "Last automatic charge didn't go through. The schedule stays active and charges again next cycle; add the missed one manually to stay on track." : undefined}
-                                          >
-                                            {failedActive ? <AlertCircle size={10} /> : null}
-                                            {isOwnerHistorical ? "Ended" : isPaused ? "Paused" : failedActive ? "Needs you" : "Active"}
-                                          </span>
+                                          <HintPill
+                                            label={isOwnerHistorical ? "Ended" : isPaused ? "Paused" : failedActive ? "Charge missed" : "Active"}
+                                            bg={isOwnerHistorical ? "rgb(238,235,231)" : amber ? "rgb(254,243,199)" : "rgb(220,247,228)"}
+                                            color={isOwnerHistorical ? "rgb(112,103,95)" : amber ? "rgb(146,64,14)" : "rgb(15,82,42)"}
+                                            icon={failedActive ? <AlertCircle size={10} /> : null}
+                                            hint={failedActive ? "The last automatic charge didn't go through. Nothing is required: your plan stays on and charges again next cycle. Add the missed one only if you want to catch it up." : undefined}
+                                          />
                                         );
                                       })()}
                                       {/* History icon → opens the detail modal
@@ -4578,10 +4684,15 @@ export default function Activity() {
                                 const paymentSource = c.paymentSource as
                                   | { kind: "bank" | "card"; last4: string | null; label: string }
                                   | undefined;
-                                const paymentSourceLabel = paymentSource
-                                  ? paymentSource.last4
-                                    ? `${paymentSource.label} •••• ${paymentSource.last4}`
-                                    : paymentSource.label
+                                // Only surface the payment line when we have a REAL
+                                // identity (a last4). A recurring investment is always
+                                // bank-funded (setup forces a bank), so the server's
+                                // no-last4 fallback ("card on file") is both vague and
+                                // wrong for this surface — hide it rather than show it,
+                                // matching the dashboard detail (bank-only, hidden when
+                                // no last4). Real schedules show "Chase •••• 1234".
+                                const paymentSourceLabel = paymentSource && paymentSource.last4
+                                  ? `${paymentSource.label} •••• ${paymentSource.last4}`
                                   : null;
                                 // Pause-reason humanization — `subscription_ended`
                                 // is the load-bearing case (Plus plan lapsed →
@@ -4647,25 +4758,30 @@ export default function Activity() {
                                       started date, cycle count. Lightweight
                                       meta-data band, not chrome-y. */}
                                   {(paymentSourceLabel || startedLabel || (cycleCount && cycleCount > 0)) && (
+                                    // Wrap, don't clip: nowrap + overflow-x made the last
+                                    // stat ("Fired 84 times") shear off at the card edge as
+                                    // "Fired 84 tir…". These are glanceable facts, not a
+                                    // scroll strip — let them flow to a second line so every
+                                    // one stays whole. Row-gap keeps two lines tidy.
                                     <div style={{
-                                      display: "flex", flexWrap: "wrap", gap: "4px 14px",
+                                      display: "flex", flexWrap: "wrap", gap: "5px 12px",
                                       marginBottom: 12,
-                                      fontSize: 11.5, color: "rgb(110,100,90)",
+                                      fontSize: 11, color: "rgb(110,100,90)",
                                     }}>
                                       {paymentSourceLabel && !isOwnerHistorical && (
-                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                                           <span style={{ color: "rgb(155,144,136)" }}>Charges</span>
                                           <span style={{ color: "rgb(60,52,42)", fontWeight: 600 }}>{paymentSourceLabel}</span>
                                         </span>
                                       )}
                                       {startedLabel && (
-                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                                           <span style={{ color: "rgb(155,144,136)" }}>Since</span>
                                           <span style={{ color: "rgb(60,52,42)", fontWeight: 600 }}>{startedLabel}</span>
                                         </span>
                                       )}
                                       {cycleCount != null && cycleCount > 0 && (
-                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                                           <span style={{ color: "rgb(155,144,136)" }}>Fired</span>
                                           <span style={{ color: "rgb(60,52,42)", fontWeight: 600 }}>{cycleCount} {cycleCount === 1 ? "time" : "times"}</span>
                                         </span>
@@ -4730,7 +4846,7 @@ export default function Activity() {
                                       onClick={() => {
                                         setConfirmRequest({
                                           title: "Cancel this recurring investment?",
-                                          body: "It won't run again. You can always set up a new one.",
+                                          body: "It won't run again, and existing contributions stay invested. You can set up a new one anytime.",
                                           confirmLabel: "Cancel it",
                                           cancelLabel: "Keep it",
                                           destructive: true,
@@ -4976,14 +5092,15 @@ export default function Activity() {
           const cycles = amt && amt > 0 ? Math.round(total / amt) : scopedRows.filter((r) => normalizeActivityType(r.type) === "parent_contribution").length;
           const startedDate = schedule.createdAt ? new Date(schedule.createdAt) : null;
           const ticker = schedule.executionModel === "pick" && typeof schedule.selectedTicker === "string" ? schedule.selectedTicker.toUpperCase() : null;
+          // Name the actual tier ("into the Growth mix") rather than the generic
+          // "diversified mix" — matches the feed rows + the dashboard detail hero.
+          const scheduleFund = (allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String(schedule.fundId));
+          const mixTier = fundMixTier(scheduleFund);
           const destLabel = ticker
             ? `into ${ticker}`
             : schedule.executionModel === "family"
-              ? "into family mix"
-              : // See comment on the strategyLabel twin in this file
-                // (~line 3360) — "managed mix" unified to "diversified
-                // mix" 2026-05-20. Same reasoning applies here.
-                "into the diversified mix";
+              ? "into the family mix"
+              : `into the ${STRATEGY_SHORT[mixTier]} mix`;
           const isPaused = schedule.status === "paused";
           // Payment method + next-charge info now lands in the hero
           // (subtitle + stats grid) instead of a recursive Scheduled tab
@@ -4993,8 +5110,11 @@ export default function Activity() {
           const paymentSource = (schedule as any).paymentSource as
             | { kind: "bank" | "card"; last4: string | null; label: string }
             | undefined;
-          const pmLabel = paymentSource
-            ? paymentSource.last4 ? `${paymentSource.label} •••• ${paymentSource.last4}` : paymentSource.label
+          // Only show a payment identity we actually have (a last4). The server's
+          // no-last4 fallback ("card on file") is vague and wrong for a bank-funded
+          // recurring — hide it, matching the card + the dashboard detail.
+          const pmLabel = paymentSource && paymentSource.last4
+            ? `${paymentSource.label} •••• ${paymentSource.last4}`
             : null;
           const nextRunDate = schedule.nextRunDate ? new Date(schedule.nextRunDate) : null;
           const nextChargeLabel = isPaused
@@ -5004,7 +5124,7 @@ export default function Activity() {
               : "Not scheduled";
           const stats: DetailStat[] = [
             { label: "Total invested", value: formatCurrency(total), tone: total > 0 ? "positive" : "neutral" },
-            { label: "Cycles fired", value: cycles > 0 ? `${cycles} ${cycles === 1 ? "cycle" : "cycles"}` : "Not yet", tone: "neutral" },
+            { label: "Times invested", value: cycles > 0 ? String(cycles) : "Not yet", tone: "neutral" },
             // Replaces "Cycle amount" — the cycle amount is already in
             // the modal title ($25.00/mo). "Next charge" is the question
             // the parent actually asks looking at this surface.
@@ -5016,8 +5136,12 @@ export default function Activity() {
             { label: "Started", value: startedDate ? startedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
           ];
           // Subtitle merges destination + payment method so "where" and
-          // "how it's paid" read at a glance.
-          const subtitleParts = [destLabel];
+          // "how it's paid" read at a glance. Drop the destination when the
+          // title already carries it: a picked ticker makes the title
+          // "SBUX · $25/mo", so "into SBUX" just repeats it (the logo + title
+          // already say where it goes). Keep it for managed/family mix, where
+          // the title has no ticker and this is the only place it shows.
+          const subtitleParts = ticker ? [] : [destLabel];
           if (pmLabel) subtitleParts.push(pmLabel);
           if (isPaused) subtitleParts.push("paused");
           const composedSubtitle = subtitleParts.join(" · ");
@@ -5026,26 +5150,25 @@ export default function Activity() {
               open
               onClose={closeDetailScope}
               title={`${ticker || "Recurring"} · ${amt != null ? formatCurrency(amt) : ""}/${schedule.frequency === "weekly" ? "wk" : schedule.frequency === "yearly" ? "yr" : "mo"}`}
-              subtitle={composedSubtitle}
+              subtitle={composedSubtitle || undefined}
+              // Logo/icon left of the title so the hero matches the row it opened
+              // from (pick → brand logo, managed → the managed-mix basket mark).
+              // Was missing entirely here, so a picked-stock schedule opened with
+              // no logo.
+              leading={ticker
+                ? <StockLogo ticker={ticker} size={32} />
+                : <ManagedMixIcon size={32} />}
               summaryStats={stats}
               rows={scopedRows}
-              primaryAction={(scheduleOwnerHistorical || !(schedule as any).hasRecentFailure) ? undefined : {
-                // Last charge failed → let the parent run the missed
-                // contribution manually instead of waiting for the next
-                // cycle. Reuses the SAME contribute-now flow (+ confirm)
-                // as the Scheduled tab's "Add now" pill.
-                label: "Pay it now",
-                busy: contributeNowMutation.isPending && contributeNowMutation.variables === detailScope.scheduleId,
-                onClick: () => {
-                  setConfirmRequest({
-                    title: amt != null && amt > 0 ? `Add ${formatCurrency(amt)} now?` : "Add the missed contribution now?",
-                    body: "This adds the contribution that didn't go through. You'll confirm payment on the next screen.",
-                    confirmLabel: "Continue to payment",
-                    onConfirm: () => contributeNowMutation.mutate(detailScope.scheduleId),
-                  });
-                },
-                testId: `button-contribute-now-detail-${detailScope.scheduleId}`,
-              }}
+              // Last charge failed → the "Charge missed" row shows an inline
+              // "Add it now" chip (right under the copy that invites it), which
+              // runs the SAME contribute-now flow (+ confirm) as the Scheduled
+              // tab's "Add now" pill. Replaces the old bottom-only "Pay it now"
+              // button so the recovery lives on the row, consistently with the
+              // contributions detail.
+              onAddMissed={(scheduleOwnerHistorical || !(schedule as any).hasRecentFailure)
+                ? undefined
+                : () => askAddMissed(detailScope.scheduleId, amt)}
               bottomCta={scheduleOwnerHistorical ? undefined : {
                 // Deep-link Dashboard's Edit / Pause / Cancel action sheet
                 // via ?openManage={id}. Single management surface across
@@ -5144,6 +5267,13 @@ export default function Activity() {
           if (!isContribType && !isOverrideGift) return row;
           const amtNum = parseAmount(row.amount);
           const amtStr = formatMoneyFriendly(amtNum != null ? amtNum : 0);
+          // Name the actual tier ("the Growth mix") wherever the server left the
+          // generic "the diversified mix" — so this modal agrees with the main feed
+          // (Activity.tsx:2946), which already does this rewrite. Without it, the
+          // same contribution read "Growth mix" in the feed but "diversified mix" here.
+          const rowTierPhrase = `the ${STRATEGY_SHORT[fundMixTier((allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String((row as any).fundId)))]} mix`;
+          const namedMix = (desc: any): any =>
+            typeof desc === "string" ? desc.replace(/\bthe diversified mix\b/i, rowTierPhrase) : desc;
           // Owner mode: attribute by who added it.
           if (activeFundIsOwned) {
             const parents = contribIsParents(row);
@@ -5157,12 +5287,14 @@ export default function Activity() {
             // by the header — drop it on recurring rows so the list reads as a
             // clean dated ledger. Keep it on one-time contributions (meaningful).
             if (isRecurringRow(row)) out.description = undefined;
+            else out.description = namedMix(out.description);
             if (parents) out.__suppressReport = true;
             return out as FeedActivity;
           }
-          // Parent mode (unchanged): parent_contribution rows keep their stored
-          // title; overridden gift rows render as "You added $X".
-          if (isContribType) return row;
+          // Parent mode: parent_contribution rows keep their stored title; only
+          // name the mix tier so the description matches the feed. Overridden gift
+          // rows render as "You added $X" below.
+          if (isContribType) return { ...row, description: namedMix((row as any).description) };
           const meta = parseMetadata((row as any).metadata);
           const tickerRaw = (meta as any).ticker;
           const ticker = typeof tickerRaw === "string" ? tickerRaw.toUpperCase() : null;
@@ -5257,6 +5389,14 @@ export default function Activity() {
               onChange: (v) => setContributionsSubFilter(v as typeof contributionsSubFilter),
             }}
             rows={subFilteredRows}
+            // A "Charge missed" row here (a failed recurring charge that shows up
+            // in the ledger) gets the same inline "Add it now" recovery — the pcId
+            // is stamped in the row's metadata.
+            onAddMissed={(row) => {
+              const m = parseMetadata((row as any).metadata);
+              const pcId = typeof (m as any).parentContributionId === "string" ? (m as any).parentContributionId : null;
+              if (pcId) askAddMissed(pcId, parseAmount(row.amount));
+            }}
           />
         );
       })()}
@@ -5271,14 +5411,9 @@ export default function Activity() {
         open={!!editSheetContrib}
         onClose={() => setEditSheetContrib(null)}
         contrib={editSheetContrib}
+        fund={editSheetContrib ? (allFundsForOwnerMode as any[]).find((f) => String(f?.id) === String(editSheetContrib.fundId)) : undefined}
         childFirstName={editSheetContrib?.recipientFirstName}
         onSaved={() => { void queryClient.invalidateQueries({ queryKey: ["/api/me/scheduled"] }); }}
-        onChangeDestination={editSheetContrib ? () => {
-          const id = String(editSheetContrib.id);
-          const fund = editSheetContrib.fundId;
-          setEditSheetContrib(null);
-          navigate(`/dashboard?fund=${fund}&openAutoInvest=1&editId=${id}&returnTo=/activity`);
-        } : undefined}
       />
 
       {/* Pause options — matches the dashboard's "1 month / indefinitely / cancel
@@ -5298,7 +5433,7 @@ export default function Activity() {
           if (!id) return;
           setConfirmRequest({
             title: "Cancel this recurring investment?",
-            body: "It won't run again. You can always set up a new one.",
+            body: "It won't run again, and existing contributions stay invested. You can set up a new one anytime.",
             confirmLabel: "Cancel it",
             cancelLabel: "Keep it",
             destructive: true,

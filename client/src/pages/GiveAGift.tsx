@@ -20,8 +20,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Link } from "wouter";
+import { investingLiveCopy } from "@shared/legal-copy";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Gift, Heart, Mail, Sprout } from "lucide-react";
+import { ArrowRight, Check, Gift, Heart, Mail } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ const PRESET_AMOUNTS = [25, 50, 100, 250, 500] as const;
 export default function GiveAGift() {
   const { toast } = useToast();
   usePageSeo({
-    title: "Give a gift that lasts | Kiddo",
+    title: "Give a child a head start | Kiddo",
     description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll send them a warm note.",
     robots: "index,follow",
   });
@@ -258,7 +259,7 @@ export default function GiveAGift() {
                     Copy reflects all three honestly so the gifter
                     isn't left wondering. */}
                 <p className="text-xs text-muted-foreground pt-2 leading-relaxed">
-                  We send one warm note to the parent, not a follow-up drip. The intent stays open for 60 days. If they haven't acted with about 10 days left, we'll email you a heads-up so you can nudge them yourself. Kiddo's role is the welcome, yours is the relationship.
+                  We send the parent one warm note, never a drip. The gift stays open for 60 days. If they haven't acted with about 10 days left, we'll email you so you can nudge them yourself.
                 </p>
               </div>
               <div className="flex flex-col gap-3 max-w-xs mx-auto">
@@ -292,12 +293,25 @@ export default function GiveAGift() {
           <div className="mx-auto mb-6 max-w-xl rounded-2xl border border-border bg-muted/30 px-4 py-3 text-center text-xs text-muted-foreground">
             Already have a gift link from a parent? <span className="font-semibold text-foreground">Tap it instead.</span> It's the faster path. Straight to checkout.
           </div>
+          {/* Hero — light MARKETING register (deliberately NOT the dark app
+              hero used on the dashboard/gifter surfaces; this page renders the
+              landing Nav/Footer and is SEO-indexed). A soft warm gold halo gives
+              the headline a "moment" without breaking the clean light look, and
+              the eyebrow → headline → subhead reveal is staggered for a crafted
+              entrance instead of one flat fade. */}
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="text-center mb-10"
+            initial="hidden"
+            animate="show"
+            variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.04 } } }}
+            className="relative isolate text-center mb-10"
           >
+            {/* Warm halo — the light-register counterpart to the dashboard hero's
+                gold glow (cream/gold, low opacity, never dark). Sits behind the
+                headline; pointer-events-none so it never intercepts taps. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-6 -z-10 h-60 w-[42rem] max-w-[130vw] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,hsl(var(--kiddo-gold)/0.16),transparent)] blur-2xl"
+            />
             {/* Eyebrow rewrite 2026-05-18. Prior copy "For anyone
                 who loves a kid" tried to capture audience by
                 emotional descriptor and landed as predatory ('who's
@@ -306,17 +320,29 @@ export default function GiveAGift() {
                 emotional overreach: if you're one of these, you're
                 in the right place. Same audience, cleaner read,
                 Apple-Settings register. */}
-            <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-3">
-              <Sprout size={14} className="text-primary" />
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-3"
+            >
+              <Heart size={14} className="text-primary" />
               <span>Aunt, grandparent, godparent, friend</span>
-            </div>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
-              Give a gift that lasts.
-            </h1>
-            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
+            </motion.div>
+            <motion.h1
+              variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="font-heading text-4xl md:text-5xl font-bold tracking-tight"
+            >
+              Give a child a head start.
+            </motion.h1>
+            <motion.p
+              variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground"
+            >
               Want to invest for a child but their parents don't have a Kiddo fund yet?
-              Tell us about your gift. We'll let the parents know. They set up the fund. Your gift becomes a real investment in the child's name.
-            </p>
+              Tell us about your gift. We'll let the parents know. They set up the fund. {investingLiveCopy("Your gift becomes a real investment in the child's name.", "Your gift is set aside in the child's name, invested once their fund is live.")}
+            </motion.p>
           </motion.div>
 
           <motion.form
@@ -395,7 +421,7 @@ export default function GiveAGift() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                A parent or guardian sets up the fund and becomes the legal custodian. The money is your gift, but Kiddo keeps custody simple by routing every fund through the parent. They control the account until the kid is 18.
+                A parent or guardian sets up the fund as legal custodian and controls the account until the kid turns 18. Your gift routes through them.
               </p>
             </section>
 

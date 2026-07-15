@@ -23,9 +23,11 @@ import { useRef, useState, useEffect } from "react";
 import { Camera, Lock, Mic, Video, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FadeImage } from "@/components/ui/fade-image";
+import { VoiceNotePlayer } from "@/components/ui/voice-note-player";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
 import { getPronouns } from "@/lib/pronouns";
+import { isDemoNoop } from "@/lib/demo-block";
 
 type MediaKind = "photo" | "video" | "voice" | null;
 
@@ -160,6 +162,13 @@ export function MemoryMediaPicker({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Upload failed");
+      // Demo funds no-op every /memory POST (blockDemoMutations returns
+      // 200 { demo, saved:false } with no url). Surface the honest "not saved
+      // in the demo" message instead of the confusing "No URL returned".
+      if (isDemoNoop(data)) {
+        setError(data?.message || "Media isn't saved in the demo, but it will be in your own fund.");
+        return;
+      }
       const url = data?.url || data?.photoUrl || data?.videoUrl || data?.audioUrl;
       if (!url) throw new Error("No URL returned");
       if (kind === "photo") onChange({ ...value, photoUrl: String(url) });
@@ -487,7 +496,7 @@ export function MemoryMediaPicker({
         <div className="mt-3 space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3">
           {hasAudio ? (
             <div className="space-y-2">
-              <audio src={value.audioUrl} controls className="w-full h-9" data-testid="media-audio-preview" />
+              <VoiceNotePlayer src={value.audioUrl} label="Your recording" testId="media-audio-preview" />
               {value.audioTranscript && (
                 <p className="text-[12px] italic text-muted-foreground">&ldquo;{value.audioTranscript}&rdquo;</p>
               )}

@@ -5,7 +5,9 @@
 // contributions detail modal landed and started rendering the same row shape.
 
 import type { Activity as ActivityType } from "@shared/schema";
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, CreditCard, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle } from "lucide-react";
+import { useState, useId, type ReactNode } from "react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, CreditCard, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, Info } from "lucide-react";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { canonicalLabel } from "@shared/activity-semantics";
 
 export type FeedActivity = ActivityType & {
@@ -155,10 +157,11 @@ function resolveTypeVisual(type?: string | null): { bg: string; color: string; i
     // A recurring auto-invest charge that couldn't run is a RECOVERABLE hiccup —
     // the schedule lives (the NEXT charge proceeds) but the missed one needs the
     // parent to add it manually (the worker does NOT re-run it) — so it wears the
-    // calm amber "Needs you" frame (matching the dashboard card), NOT an alarming
-    // red "Failed". "Needs you" (not "Retrying") because nothing auto-retries the
-    // missed charge; it pairs with the "Add it now" action. Label = category
-    // ("Recurring investment"); the "Needs you" pill carries the status.
+    // calm amber "Charge missed" frame (matching the dashboard card + Activity
+    // Scheduled tab), NOT an alarming red "Failed". "Charge missed" (not "Retrying",
+    // which would be a lie — nothing auto-retries) pairs with the "Add it now"
+    // action. Label here = category ("Recurring investment"); the StatusPill below
+    // carries the "Charge missed" status.
     return { bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
   if (t === "memory_milestone_added")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
@@ -224,6 +227,14 @@ export function normalizeActivityDescription(desc?: string | null): string | nul
   return out;
 }
 
+// StatusPill is a plain status MARKER, not an explainer. Every surface it renders
+// on (the Activity feed, the detail modal, the detail page) already shows the row
+// DESCRIPTION, which carries the specific "why + what to do" (e.g. "Your Visa
+// ····4242 was declined. Your plan is still on and charges again Aug 8."). A
+// tap/hover popup on the pill would just repeat that visible copy — payment info
+// belongs on the page, not hidden behind a tap. The compact SCHEDULE row (no
+// description) still uses HintPill for its "Charge missed" pill, where the popup IS
+// the only explanation.
 export function StatusPill({ status, type }: { status?: string | null; type?: string | null }) {
   let resolved = status || null;
   if (!resolved && type) {
@@ -260,6 +271,74 @@ export function StatusPill({ status, type }: { status?: string | null; type?: st
   );
 }
 
+// A status pill that reveals a one-line explanation on BOTH hover (mouse) and
+// tap (touch). Its predecessor was a native hover-only `title` (invisible on a
+// phone); a first fix used absolute positioning that got clipped and pushed
+// off-screen inside the feed's narrow containers on mobile. This renders the
+// bubble through the Radix Popover, which PORTALS out of any clipping ancestor
+// and keeps itself on-screen (collision padding + auto-flip), so it can never be
+// cut off. Hover shows it on a mouse; tap pins it on touch; tapping elsewhere or
+// Escape closes it. With no `hint` it renders a plain static badge. The trigger
+// stops click propagation so tapping it never also fires the row's tap-to-expand.
+export function HintPill({
+  label, bg, color, icon, hint,
+}: { label: ReactNode; bg: string; color: string; icon?: ReactNode; hint?: string }) {
+  const [pinned, setPinned] = useState(false);
+  const [hover, setHover] = useState(false);
+  const hintId = useId();
+  const open = !!hint && (pinned || hover);
+
+  const pillStyle = {
+    display: "inline-flex", alignItems: "center", gap: 3,
+    fontSize: 9.5, fontWeight: 700, background: bg, color,
+    borderRadius: 999, padding: "2px 7px", lineHeight: 1.2,
+  } as const;
+
+  if (!hint) {
+    return <span style={pillStyle}>{icon}{label}</span>;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { if (!o) { setPinned(false); setHover(false); } }}>
+      <PopoverAnchor asChild>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-describedby={open ? hintId : undefined}
+          onClick={(e) => { e.stopPropagation(); setPinned((p) => !p); setHover(false); }}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          style={{ ...pillStyle, border: "none", cursor: "pointer", fontFamily: "inherit", WebkitTapHighlightColor: "transparent" }}
+        >
+          {icon}{label}
+          <Info size={9} aria-hidden style={{ opacity: 0.6, marginLeft: 1 }} />
+        </button>
+      </PopoverAnchor>
+      <PopoverContent
+        side="bottom"
+        align="end"
+        sideOffset={6}
+        collisionPadding={10}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-auto max-w-[240px] border-0 bg-transparent p-0 shadow-none"
+      >
+        <div
+          id={hintId}
+          role="tooltip"
+          style={{
+            background: "rgb(38,34,26)", color: "rgb(245,241,232)",
+            fontSize: 11, fontWeight: 500, lineHeight: 1.45,
+            padding: "8px 10px", borderRadius: 10, textAlign: "left",
+            boxShadow: "0 8px 26px rgba(26,23,16,0.22)",
+          }}
+        >
+          {hint}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // Whether a row is a parent-paid type — the set that should show the
 // reconcile mini-card (payment method, descriptor, retry date) in the
 // expanded view, AND the set the per-schedule modal filters on.
@@ -279,12 +358,17 @@ export function isParentPaidType(type?: string | null): boolean {
 
 // Whether a row qualifies for the "Report an issue" pre-filled support flow.
 // Money-flow rows where a dispute could realistically apply.
+// Rows where "is this right / did this really happen?" genuinely applies: gifts
+// from OTHERS, failed charges, money movements, billing, refunds. Deliberately NOT
+// your OWN routine successes ("You contributed $100") or status/config rows
+// (recurring started, plan activated) — a per-row dispute link there was just
+// noise. Kept in sync with the feed's local list (Activity.tsx). Used by the
+// detail modal so both surfaces scope report-issue identically.
 export const REPORTABLE_TYPES = new Set([
   "gift_received", "gift_invested", "gift_received_cash",
-  "parent_contribution", "parent_contribution_failed",
-  "auto_invest", "cash_invested", "withdrawal",
+  "parent_contribution_failed",
+  "cash_invested", "withdrawal",
   "subscription_renewal", "subscription_started", "payment_failed",
-  "starter_plan_activated", "family_plan_activated",
   "refund",
 ]);
 

@@ -4,9 +4,9 @@ import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Share2, Info } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useFunds } from "@/hooks/use-funds";
+import { useFunds, findFundInCaches } from "@/hooks/use-funds";
 import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAge18Transition } from "@/lib/age-transition";
 import { getPronouns } from "@/lib/pronouns";
 import { sumMonthlyEquivalent, WEEKS_PER_MONTH, DAYS_PER_MONTH } from "@shared/recurring-math";
@@ -93,8 +93,15 @@ export default function Projection() {
   const [, params] = useRoute("/projection/:fundId");
   const fundId = params?.fundId || "";
 
+  const queryClient = useQueryClient();
   const { data: funds = [] } = useFunds();
-  const activeFund = funds.find((f) => f.id === fundId);
+  // Frame-one fund resolution. useFunds() briefly returns [] on this page's first
+  // render (its query is gated on an async auth re-check), which flashed the
+  // "!activeFund" skeleton mid-transition — and a View Transition would FREEZE that
+  // skeleton. findFundInCaches walks the durable caches (query cache → localStorage
+  // snapshot useFunds persists) so the fund is present on frame one and the page
+  // lands straight on content.
+  const activeFund = funds.find((f) => f.id === fundId) ?? findFundInCaches(queryClient, fundId);
 
   // Subscription state for the proactive Plus prompt below (only fires
   // for Free-plan users on 3rd+ view of this page). Read via the
@@ -184,8 +191,13 @@ export default function Projection() {
   const yearsTo18 = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
   const currentAge = age18Transition ? Math.max(0, majorityAge - yearsTo18) : 0;
 
-  const { data: parentContributions = [] } = useQuery<any[]>({
-    queryKey: ["projection-parent-contributions", fundId],
+  // SAME query key + endpoint as the dashboard's parent-contributions query, so
+  // arriving here from the dashboard (the "Potential ›" tap) reuses the already-
+  // cached rows — the monthly lever seeds INSTANTLY instead of sitting at $0/mo
+  // during a re-fetch and rendering a lower, dashboard-mismatched projection
+  // (founder catch 2026-07-09). A cold deep-link still fetches, then settles.
+  const { data: parentContributions = [], isFetched: contributionsFetched } = useQuery<any[]>({
+    queryKey: ["/api/funds", fundId, "parent-contributions"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/parent-contributions`, { credentials: "include" });
       if (!res.ok) return [];
@@ -248,9 +260,15 @@ export default function Projection() {
   // milestone when none is far enough out (e.g. an adult-owned fund near 65).
   useEffect(() => {
     if (visibleMilestones.length === 0) return;
+    // Default to the HANDOFF (majority age) — the meaningful "this becomes theirs"
+    // milestone, and the same age the dashboard hero rests on, so "At 21" reads the
+    // same on both surfaces. Falls back to the long-horizon default when majority
+    // isn't a visible milestone (rare states) or is already behind the child.
+    const handoffIdx = visibleMilestones.indexOf(majorityAge as any);
+    if (handoffIdx !== -1 && majorityAge > currentAge) { setMilestoneIdx(handoffIdx); return; }
     const smart = visibleMilestones.findIndex((a) => a - currentAge >= MIN_DEFAULT_HORIZON_YEARS);
     setMilestoneIdx(smart === -1 ? visibleMilestones.length - 1 : smart);
-  }, [visibleMilestones, currentAge]);
+  }, [visibleMilestones, currentAge, majorityAge]);
 
   // Seed from `activeMonthly` once schedules load. The page entry has to MATCH
   // the dashboard hero's number, otherwise the parent taps "$165k at 65" on the
@@ -270,6 +288,21 @@ export default function Projection() {
       setMonthlySeeded(true);
     }
   }, [activeMonthly, monthlySeeded]);
+
+  // Don't paint the projected number / chart until the recurring is actually known,
+  // so a COLD deep-link to /projection never flashes a low, $0/mo-based figure before
+  // contributions load (founder catch 2026-07-09). True immediately on a warm nav
+  // from the dashboard (shared cache seeds the monthly), so no skeleton shows there.
+  // Ready = we've seeded a real monthly, OR the query settled and there's genuinely
+  // no recurring (a correct $0 for that parent). Safety net: never let the skeleton
+  // persist — if the query is slow or the session is odd, reveal after a short beat
+  // regardless. A bounded ~1.8s wait beats an indefinite skeleton.
+  const [projectionRevealTimeout, setProjectionRevealTimeout] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setProjectionRevealTimeout(true), 1800);
+    return () => window.clearTimeout(t);
+  }, []);
+  const projectionReady = monthlySeeded || (contributionsFetched && activeMonthly === 0) || projectionRevealTimeout;
 
   // UTMA accounts cap parent contributions at age 18 (control transfers to the
   // child). Personal accounts have no such cap — the parent funds their own
@@ -436,7 +469,7 @@ export default function Projection() {
     const verb = named ? "is" : "are";
     const childPossessive = named ? `${childOrPronoun}'s` : "their";
     const monthlyTag = monthly > 0 ? ` (with ${fmtMoney(monthly)}/mo)` : "";
-    const text = `I started a fund for ${childOrPronoun}. ${fmtMoney(totalValue)} today → could be ${fmtMoney(projected)} by the time ${childOrPronoun} ${verb} ${targetAge}${monthlyTag} 🌱
+    const text = `I started a fund for ${childOrPronoun}. ${fmtMoney(totalValue)} today → could be ${fmtMoney(projected)} by the time ${childOrPronoun} ${verb} ${targetAge}${monthlyTag}
 
 Add a gift if you want to be part of ${childPossessive} story:
 ${shareUrl}`;
@@ -521,14 +554,14 @@ ${shareUrl}`;
             "Feel the future" subhead retoned to product-register —
             the slider's purpose is to explore projections, not perform
             emotion. */}
-        <div>
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
+          <h1 className="font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
             {isOwnerMode ? "Your" : possessive} Potential
           </h1>
-          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-            Drag the age slider to explore projected values. The number updates as you move.
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+            Drag the slider to any age to see where the fund could grow.
           </p>
-        </div>
+        </motion.div>
 
         {/* Desktop: two columns — hero (number + slider) on the left, the
             chart + levers + share on the right — so the page reads as
@@ -545,8 +578,12 @@ ${shareUrl}`;
           transition={{ duration: 0.4 }}
           className="rounded-3xl p-6 text-white space-y-6"
           style={{
-            background: "linear-gradient(135deg, rgb(26,67,50) 0%, rgb(34,80,60) 50%, rgb(46,94,72) 100%)",
-            boxShadow: "0 12px 40px rgba(26,67,50,0.25)",
+            // Match the canonical dashboard hero's evergreen (brand tokens, deep at
+            // the bottom) instead of a bespoke lighter-at-the-bottom green, so both
+            // "hero" surfaces read as the same material. 160deg (not the dashboard's
+            // 180) because this one is a card, so a slight diagonal catches the light.
+            background: "linear-gradient(160deg, hsl(158 45% 19%) 0%, hsl(var(--kiddo-evergreen)) 52%, hsl(var(--kiddo-evergreen-deep)) 100%)",
+            boxShadow: "0 12px 40px hsl(158 45% 19% / 0.28)",
           }}
           data-testid="section-headline"
         >
@@ -687,7 +724,9 @@ ${shareUrl}`;
               data-testid="text-projection-value"
               style={{ letterSpacing: "-0.02em" }}
             >
-              {fmtMoney(projectedDisplay)}
+              {projectionReady
+                ? fmtMoney(projectedDisplay)
+                : <span className="inline-block h-[0.8em] w-[3.4em] align-[-0.06em] rounded-xl bg-white/15 animate-pulse" aria-hidden />}
             </p>
             {/* Rate-band subtitle — shows the OTHER two rates' projections
                 alongside the headline so the parent feels the variance
@@ -698,7 +737,7 @@ ${shareUrl}`;
                 (nothing to project) so the line doesn't appear with
                 three identical "today" values. Per the 2026-05-13 audit
                 on whether we're showing the magnitude brilliantly. */}
-            {yearsAhead > 0 && (
+            {projectionReady && yearsAhead > 0 && (
               <p className="text-2xs text-white/55 mt-2 tabular-nums">
                 {projectedByRate
                   .filter((r) => r.id !== rateId)
@@ -737,12 +776,12 @@ ${shareUrl}`;
                   contributions) is a misattribution here. Personal/self-
                   funded accounts keep the warm "You added". */}
               <p className="text-sm text-white/80">{isUtma ? "Money in" : "You added"}</p>
-              <p className="text-sm font-bold tabular-nums text-white">{fmtMoney(moneyInDisplay)}</p>
+              <p className="text-sm font-bold tabular-nums text-white">{projectionReady ? fmtMoney(moneyInDisplay) : <span className="inline-block h-[0.7em] w-[3em] rounded bg-white/15 animate-pulse align-middle" aria-hidden />}</p>
             </div>
             <div className="flex items-baseline justify-between">
               <p className="text-sm text-white/80">Market added</p>
               <p className="text-sm font-bold tabular-nums text-[hsl(143,55%,72%)]">
-                +{fmtMoney(marketAddedDisplay)}
+                {projectionReady ? <>+{fmtMoney(marketAddedDisplay)}</> : <span className="inline-block h-[0.7em] w-[3em] rounded bg-white/15 animate-pulse align-middle" aria-hidden />}
               </p>
             </div>
           </div>
@@ -774,18 +813,22 @@ ${shareUrl}`;
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.05 }}
-          className="rounded-2xl border border-border bg-card p-5"
+          className="kiddo-card p-5"
           data-testid="projection-trajectory-card"
         >
           <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-3">
             Growth trajectory
           </p>
-          <ProjectionTrajectoryChart
-            points={trajectoryPoints}
-            targetAge={targetAge}
-            currentValue={totalValue}
-            currentAge={currentAge}
-          />
+          {projectionReady ? (
+            <ProjectionTrajectoryChart
+              points={trajectoryPoints}
+              targetAge={targetAge}
+              currentValue={totalValue}
+              currentAge={currentAge}
+            />
+          ) : (
+            <div className="h-40 rounded-xl bg-muted/40 animate-pulse" aria-hidden />
+          )}
         </motion.div>
 
         {/* Monthly contribution lever. The "until [Child] turns 18" subline matters:
@@ -796,7 +839,7 @@ ${shareUrl}`;
           type="button"
           onClick={openChangeSheet}
           data-testid="button-change-monthly"
-          className="w-full flex items-center justify-between rounded-2xl border border-border bg-card hover:bg-muted/40 transition-colors p-4"
+          className="w-full flex items-center justify-between kiddo-card hover:bg-muted/40 transition-colors p-4"
         >
           <div className="text-left min-w-0">
             <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
@@ -833,7 +876,7 @@ ${shareUrl}`;
         </button>
 
         {/* Return rate — tertiary, below the monthly lever */}
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <div className="kiddo-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
               Assumed return
@@ -887,10 +930,10 @@ ${shareUrl}`;
           type="button"
           onClick={handleShare}
           data-testid="button-share-projection"
-          className="w-full rounded-2xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.92)] text-white py-4 font-bold transition-colors flex items-center justify-center gap-2"
+          className="w-full rounded-2xl kiddo-gold-button py-4 font-bold transition-colors flex items-center justify-center gap-2"
         >
           <Share2 size={16} />
-          Share {isOwnerMode ? "your" : possessive} potential 🎁
+          Share {isOwnerMode ? "your" : possessive} potential
         </button>
           </div>{/* /right column (chart + levers + share) */}
         </div>{/* /two-column wrapper */}

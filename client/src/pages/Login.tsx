@@ -275,7 +275,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={!twoFactorCode.trim() || isVerifyingTwoFactor}
-                  className="w-full h-11 rounded-xl bg-foreground text-background font-semibold disabled:opacity-50"
+                  className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                   data-testid="button-2fa-verify"
                 >
                   {isVerifyingTwoFactor ? "Verifying..." : "Verify and sign in"}

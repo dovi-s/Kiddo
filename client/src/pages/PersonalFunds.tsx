@@ -23,8 +23,8 @@ export default function PersonalFunds() {
 
       <section className="pt-24 pb-16 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Coming soon</p>
-          <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Coming soon</p>
+          <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
             A gift fund for your own life milestones.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
@@ -74,7 +74,7 @@ export default function PersonalFunds() {
       <section className="pb-12 md:pb-16">
         <div className="mx-auto max-w-4xl px-4">
           <div className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-12">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground">
               What personal funds will do.
             </h2>
             <div className="mt-6 space-y-5 text-base leading-8 text-muted-foreground">
@@ -96,7 +96,7 @@ export default function PersonalFunds() {
       <section className="pb-20 md:pb-28">
         <div className="mx-auto max-w-3xl px-4">
           <div className="rounded-[32px] border border-border bg-card p-8 text-center shadow-premium-sm md:p-12">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground">
               Why it is not live yet.
             </h2>
             <p className="mt-4 text-base leading-8 text-muted-foreground">

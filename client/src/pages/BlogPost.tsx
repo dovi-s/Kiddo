@@ -78,7 +78,7 @@ export default function BlogPost() {
               <span>{post.publishedAt}</span>
               {post.readTime ? <span>{post.readTime}</span> : null}
             </div>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-foreground mt-6">
+            <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-[-0.03em] text-foreground mt-6">
               {post.title}
             </h1>
             <p className="text-lg leading-8 text-muted-foreground mt-5">{post.description}</p>
@@ -89,7 +89,7 @@ export default function BlogPost() {
             ) : null}
 
             <div className="mt-6 rounded-3xl border border-border bg-muted/20 p-6 md:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Make this useful now</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Make this useful now</p>
               <h2 className="mt-3 font-heading text-2xl font-semibold text-foreground">
                 Read it now. Set it up before the next occasion.
               </h2>

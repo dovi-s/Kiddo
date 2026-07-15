@@ -23,6 +23,7 @@
         "test:launch-readiness": "tsx script/launch-readiness.ts",
         "test:smoke": "tsx script/smoke.ts",
         "test:monetization": "tsx script/test-monetization.ts",
+        "analytics:crux2": "tsx script/crux2.ts",
         "test:dashboard-money-math": "tsx script/test-dashboard-money-math.ts",
         "test:dashboard-summary-refresh": "tsx script/test-dashboard-summary-refresh.ts",
         "test:sell-quick-amounts": "tsx script/test-sell-quick-amounts.ts",

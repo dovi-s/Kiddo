@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail, BookOpen } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { NoteEditorSheet } from "@/components/NoteEditorSheet";
 import { ScheduledLetterEditor } from "@/components/ScheduledLetterEditor";
 import { ScheduledLettersList } from "@/components/ScheduledLettersList";
-import { useFunds } from "@/hooks/use-funds";
+import { useFunds, fundsFromCaches } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -173,7 +173,12 @@ export default function Age18Plan() {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  const activeFund = funds.find((f) => f.id === storedFundId) ?? funds[0];
+  // Frame-one fund resolution (see findFundInCaches / Projection.tsx): useFunds()
+  // briefly returns [] on push-nav (async auth re-check), which flashed the loading
+  // skeleton — and a View Transition would FREEZE it. Fall back to the durable caches
+  // (query cache → localStorage snapshot) so the fund is present on frame one.
+  const effectiveFunds = funds.length ? funds : fundsFromCaches(queryClient);
+  const activeFund = effectiveFunds.find((f) => f.id === storedFundId) ?? effectiveFunds[0];
   // Post-handoff adult owner. NOTE: Age18Plan is otherwise parent-framed throughout (it's the
   // pre-handoff prep surface); this only fixes the flagged third-person self-reference on the
   // letter CTA. The page as a whole still needs a fuller owner-mode pass (like TaxDocuments got).
@@ -645,7 +650,7 @@ export default function Age18Plan() {
                   >
                     {formatCurrency(animatedHeroProjection)}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1.5">at 7% yearly average*</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">at 7% average (gifts only)*</p>
                 </div>
               )}
             </div>
@@ -690,6 +695,15 @@ export default function Age18Plan() {
                 </p>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                   Enough for {whatThisCouldPayFor(sliderProjectedValue)}.
+                </p>
+                {/* Anchor this number to the gifts-only floor (the hero figure) so
+                    the page's two "at {majority}" numbers read as ONE range —
+                    with-monthly vs gifts-alone — instead of two competing headline
+                    figures a parent has to reconcile. */}
+                <p className="text-2xs text-muted-foreground/70 mt-2 leading-snug">
+                  {sliderMonthly > 0
+                    ? <>With <span className="font-medium text-foreground tabular-nums">${sliderMonthly}/mo</span> added. Gifts alone reach <span className="tabular-nums">{formatCurrency(heroProjection)}</span>.</>
+                    : "Gifts only, no monthly added."}
                 </p>
               </div>
 
@@ -841,13 +855,11 @@ export default function Age18Plan() {
                 </div>
               ))}
             </div>
-            {totalValue > 0 && age18Transition && (
-              <div className="mt-4 bg-[hsl(var(--kiddo-evergreen)/0.08)] rounded-xl px-4 py-3">
-                <p className="text-xs text-[hsl(var(--kiddo-evergreen))] font-medium">
-                  On track for <strong>{formatCurrency(projectFundValue({ startingValue: totalValue, monthlyContribution: 0, yearsAhead: age18Transition.daysUntil18 / 365.25 }))}</strong> by {majorityAge} at 7% yearly average.<span className="opacity-60">*</span>
-                </p>
-              </div>
-            )}
+            {/* The "On track for $X (gifts only)" restatement was removed here — it
+                repeated the hero number verbatim (same projectFundValue call), and
+                on a page that also leads with the "Projected value" centerpiece, a
+                third number reading made "which figure is it?" worse. The number
+                lives once, in the hero. */}
           </div>
           <div className="h-px bg-border/40 mx-5 mt-5" />
           <div className="px-5 py-4">
@@ -887,8 +899,8 @@ export default function Age18Plan() {
                   if (parentLetter.photoUrl) parts.push("photo");
                   const summary = parts.length === 0 ? "Letter started" : parts.join(" + ") + " saved";
                   return (
-                    <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] mb-1">
-                      ✓ {summary}
+                    <p className="flex items-center gap-1 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] mb-1">
+                      <Check size={13} strokeWidth={2.5} className="shrink-0" /> {summary}
                     </p>
                   );
                 })()}
@@ -935,10 +947,10 @@ export default function Age18Plan() {
               <button
                 type="button"
                 onClick={() => { haptic("selection"); setScheduledLetterOpen(true); }}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
                 data-testid="button-schedule-sealed-letter"
               >
-                🕯️ Schedule another letter for a specific moment (13th birthday, graduation, every birthday, etc.) →
+                <Mail size={13} className="shrink-0" aria-hidden="true" /> Schedule another letter for a specific moment (13th birthday, graduation, every birthday, etc.) →
               </button>
             </div>
           </div>
@@ -992,11 +1004,11 @@ export default function Age18Plan() {
                 card. */}
             <div className="space-y-2 mb-4">
               {[
-                "Gifts, notes, photos, and milestones, kept in one place.",
-                "Names and messages from everyone who gave.",
-              ].map((line, i) => (
+                { line: "Gifts, notes, photos, and milestones, kept in one place.", Icon: BookOpen },
+                { line: "Names and messages from everyone who gave.", Icon: Users },
+              ].map(({ line, Icon }, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className="text-sm shrink-0">📖</span>
+                  <Icon size={16} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" aria-hidden="true" />
                   <p className="text-sm text-muted-foreground leading-snug">{line}</p>
                 </div>
               ))}

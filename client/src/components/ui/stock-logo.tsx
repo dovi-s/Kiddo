@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { AssetToken, hasAssetToken } from "@/components/ui/asset-token";
 
 interface StockLogoProps {
   ticker?: string | null;
@@ -18,6 +19,15 @@ export function StockLogo({ ticker, symbol, size = 36, className, fallbackText =
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const upper = String(ticker || symbol || "STK").trim().toUpperCase() || "STK";
+  // Broad-market ETFs (VTI/VOO/VXUS/BND…) all resolve to the SAME issuer logo
+  // (Vanguard), so three mix constituents read as three identical marks. Render
+  // the category token instead (skyline/globe/treasury/coin) for those tickers —
+  // the single chokepoint that makes VTI/VXUS/BND/Cash consistent on every
+  // holdings surface. Individual companies keep their real logo. Gated to
+  // >=20px so tiny inline pills (where token detail would be muddy) keep the logo.
+  if (hasAssetToken(upper) && size >= 20) {
+    return <AssetToken ticker={upper} size={size} className={className} />;
+  }
   const src = `https://assets.parqet.com/logos/symbol/${upper}?format=jpg`;
   const testId = `stock-logo-${upper}`;
 

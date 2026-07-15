@@ -484,7 +484,7 @@ export default function FAQ() {
               className="mb-10 text-center"
             >
               <h1
-                className="mb-4 font-heading text-3xl font-semibold tracking-tight text-foreground md:text-5xl"
+                className="mb-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl"
                 data-testid="text-page-title"
               >
                 Questions? Good. Here are the answers.

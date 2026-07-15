@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Download, FileText, Info, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useFunds } from "@/hooks/use-funds";
+import { useFunds, fundsFromCaches } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { haptic } from "@/lib/haptics";
@@ -105,13 +105,17 @@ export default function TaxDocuments() {
   // we don't add a redundant picker here. Falls back to the first fund if no
   // active is stored. If the parent has zero funds, render the empty state.
   const activeFund = useMemo<Fund | null>(() => {
-    if (funds.length === 0) return null;
+    // Frame-one fund resolution (see findFundInCaches): useFunds() briefly returns []
+    // on push-nav (auth-gated), flashing the loading skeleton a View Transition would
+    // freeze. Fall back to the durable caches (query cache → localStorage snapshot).
+    const fs = funds.length ? funds : fundsFromCaches(queryClient);
+    if (fs.length === 0) return null;
     if (storedFundId) {
-      const match = funds.find((f) => f.id === storedFundId);
+      const match = fs.find((f) => f.id === storedFundId);
       if (match) return match;
     }
-    return funds[0];
-  }, [funds, storedFundId]);
+    return fs[0];
+  }, [funds, storedFundId, queryClient]);
 
   // Post-handoff owner: the UTMA terminated at the age of majority and this is
   // now the owner's own individual account. Kiddie tax, the custodian/beneficiary

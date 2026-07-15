@@ -40,8 +40,8 @@ export default function Stories() {
                 specific story is a verified customer. When real
                 customer stories ship (with verified quotes + permission),
                 the page copy can return to the stronger framing. */}
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Stories</p>
-            <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Stories</p>
+            <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
               The kinds of stories Kiddo is built for.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
@@ -121,7 +121,7 @@ export default function Stories() {
               <Quote className="h-4 w-4" />
               Stories become proof when families share them
             </div>
-            <h2 className="mt-6 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            <h2 className="mt-6 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
               Is your family using Kiddo?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">

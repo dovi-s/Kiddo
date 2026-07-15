@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { projectFundValue, yearsBetween, PROJECTION_DISCLAIMER } from "@shared/projection";
 import { canonicalLabel } from "@shared/activity-semantics";
-import { StatusPill } from "@/lib/activity-helpers";
+import { StatusPill, normalizeActivityTitle, normalizeActivityDescription } from "@/lib/activity-helpers";
 import type { Activity } from "@shared/schema";
 
 type ActivityWithFund = Activity & { fundName: string | null; recipientFirstName: string | null; status?: string | null };
@@ -212,8 +212,8 @@ export default function ActivityDetail() {
                   <TypeIcon size={24} className={typeConfig.color} />
                 </div>
                 <div className="flex-1">
-                  <h1 className="text-xl font-semibold text-foreground" data-testid="text-activity-title">{activity.title || "Fund update"}</h1>
-                  <p className="text-muted-foreground mt-1" data-testid="text-activity-description">{activity.description || "No additional details."}</p>
+                  <h1 className="text-xl font-semibold text-foreground" data-testid="text-activity-title">{normalizeActivityTitle(activity.title) || "Fund update"}</h1>
+                  <p className="text-muted-foreground mt-1" data-testid="text-activity-description">{normalizeActivityDescription(activity.description) || "No additional details."}</p>
                 </div>
               </div>
 

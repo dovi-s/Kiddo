@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { isAnonGifterName } from "@shared/gifter-anon";
 import fs from "fs/promises";
 import path from "path";
 import { pool } from "./db";
@@ -736,7 +737,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   // given" social-proof list. This is the only paper trail they get; it
   // should be complete.
   const namedSender = entry.senderName ? String(entry.senderName).trim() : "";
-  const isAnonymous = !namedSender || /^anonymous$/i.test(namedSender) || /^someone who loves /i.test(namedSender);
+  const isAnonymous = isAnonGifterName(namedSender);
   const visibilityLine = isAnonymous
     ? "You sent this anonymously, so no name appears on the Memory Book or the gift page."
     : `Your first name (${namedSender.split(/\s+/)[0]}) appears in ${childName}'s family Memory Book and as a "who's already given" name on their gift page. Full name stays private. Reply to this email if you'd like it changed.`;

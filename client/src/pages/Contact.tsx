@@ -18,8 +18,8 @@ export default function Contact() {
 
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="mx-auto max-w-4xl">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">Contact</p>
-          <h1 className="mt-4 font-heading text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Contact</p>
+          <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
             We respond to every message.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">

@@ -54,6 +54,24 @@ export const MARKET_QUOTE_ESTIMATES: Record<string, number> = {
   BBW: 32.00,
   CMG: 32.00,
   SONY: 20.00,
+  // Completed the universe's fallback coverage (snapped to live Yahoo quotes
+  // 2026-07). These 8 universe tickers previously had NO estimate, so a total
+  // quote-provider outage would have valued them at the bare $100 placeholder.
+  // The holdings-revaluation worker skips estimate-only quotes, but the
+  // gift-buy share calc + price display use this fallback directly, so every
+  // ticker a fund can hold now has a realistic stand-in.
+  CMCSA: 23.79,
+  DPZ: 311.66,
+  DUOL: 125.76,
+  NTDOY: 11.09,
+  VUG: 85.50,
+  VYM: 159.48,
+  SCHD: 32.39,
+  QQQ: 712.60,
+  TGT: 130.21,
+  ABNB: 148.93,
+  CHWY: 20.85,
+  ADBE: 219.72,
 };
 
 export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | "Stock"; source: "auto_invest" | "stock_pick" | "both" }> = {
@@ -330,6 +348,24 @@ export async function getMarketQuote(symbol: string): Promise<MarketQuote | null
 async function warmMarketQuoteCache() {
   const symbols = Object.keys(ADMIN_ASSET_UNIVERSE);
   await Promise.allSettled(symbols.map((symbol) => getMarketQuote(symbol)));
+}
+
+// Batch fetch: resolve many tickers to a ticker -> MarketQuote map in one call.
+// Mirrors warmMarketQuoteCache's Promise.allSettled pattern (per-symbol cached +
+// deduped). Non-universe tickers and hard failures are simply absent from the
+// map (caller decides how to handle a miss); the map DOES include estimate
+// fallbacks (quote.isEstimate === true) so callers that must not bake a
+// fabricated value should filter those out themselves.
+export async function getMarketQuotes(symbols: string[]): Promise<Map<string, MarketQuote>> {
+  const distinct = Array.from(
+    new Set(symbols.map((s) => String(s || "").trim().toUpperCase()).filter(Boolean)),
+  );
+  const map = new Map<string, MarketQuote>();
+  const results = await Promise.allSettled(distinct.map((s) => getMarketQuote(s)));
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled" && r.value) map.set(distinct[i], r.value);
+  });
+  return map;
 }
 
 export function startMarketQuoteCacheRefresher() {

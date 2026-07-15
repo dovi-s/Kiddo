@@ -25,7 +25,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/account": "Account",
   "/profile": "Profile",
   "/activate": "Activate",
-  "/age-18-plan": "Age 18",
   "/tax-documents": "Taxes",
   // Household-glance surface. "Funds" reads as the section name
   // (parallel to "Activity", "Settings"); the dropdown trigger right
@@ -34,10 +33,17 @@ const PAGE_TITLES: Record<string, string> = {
   "/funds": "Funds",
 };
 
-function getPageTitle(location: string): string {
+function getPageTitle(location: string, majorityAge?: number): string {
   if (location.startsWith("/memory")) return "Memory Book";
   if (location.startsWith("/events")) return "Occasions";
   if (location.startsWith("/dashboard")) return "Home";
+  // The route is named /age-18-plan but the handoff age is the fund's STATE
+  // majority (18 or 21). Reflect the REAL age so a 21-majority fund (e.g. CA)
+  // never reads "Age 18" over a page whose every line says 21. Falls back to 18
+  // when there's no active fund in context.
+  if (location === "/age-18-plan" || location.startsWith("/age-18-plan/") || location.startsWith("/age-18-plan?")) {
+    return `Age ${majorityAge ?? 18}`;
+  }
   // /design-lab is the dashboard redesign sandbox — same AppHeader, same
   // "Home" title, so the lab's chrome matches the real dashboard while it's
   // being evaluated (2026-06-07, founder noticed the blank title). Harmless
@@ -159,6 +165,28 @@ export function AppHeader() {
   // Hex (== hsl(158 45% 19%)) so the status-bar `theme-color` can track this exact
   // value — theme-color is most reliable as hex across iOS.
   const [heroSeamBg, setHeroSeamBg] = useState("#1b4636");
+  // The color ONE header-height above the seam (extrapolated up the sky gradient),
+  // so the staging landscape header can render as a 2-stop slice of the sky (top ->
+  // seam) instead of a flat cap — reads as the actual top of the sky.
+  const [heroSeamTop, setHeroSeamTop] = useState("#1b4636");
+  // STAGING landscape-hero tone (2026-07-06). The landscape hero broadcasts its
+  // current sky-top color + whether it wants light text (dark sky) so the header
+  // matches its background AND flips its text light/dark per time-of-day —
+  // otherwise the green chrome + always-light text clash with a pale day sky.
+  const [stagingTone, setStagingTone] = useState<{ seam: string; light: boolean } | null>(null);
+  useEffect(() => {
+    if (!isStagingHero) { setStagingTone(null); return; }
+    const on = (e: Event) => setStagingTone((e as CustomEvent).detail || null);
+    window.addEventListener("kiddo:staging-hero-tone", on);
+    return () => window.removeEventListener("kiddo:staging-hero-tone", on);
+  }, [isStagingHero]);
+  // (Seam bg is driven by the scroll tracker below, which reads the scene's
+  // live data-sky*/data-atmos* attrs and blends the color-grade — it also fires
+  // on the tone event, so no separate flat-seam setter is needed here. A flat
+  // setter using the raw, un-graded sky color would race and clobber it.)
+  // Header text/icons over the hero: light on a dark sky, dark on a pale sky.
+  // Non-landscape dashboards keep the always-light-over-green behavior.
+  const chromeTextLight = heroChrome && (stagingTone ? stagingTone.light : true);
   useEffect(() => {
     if (!isStagingHero) return;
     // Staging hero gradient stops: [pct, H, S, L]. Keep in sync with the
@@ -190,6 +218,20 @@ export function AppHeader() {
       const l = a[3] + (b[3] - a[3]) * t;
       return hslToHex(h, s, l);
     };
+    // Landscape hero: interpolate its OWN sky gradient (data-sky0/1/2 hex, at
+    // offsets 0 / .55 / 1 — matching the SVG <linearGradient>) at the seam line,
+    // so the header tracks the scrolling sky in lock-step and updates per
+    // time-of-day. Read from the element's data-attrs (always fresh) so there's
+    // no stale-closure on the current tod.
+    const hexToRgb = (h: string) => { const x = h.replace("#", ""); return [parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16), parseInt(x.slice(4, 6), 16)]; };
+    const rgbToHex = (r: number, g: number, b: number) => { const t = (v: number) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0"); return `#${t(r)}${t(g)}${t(b)}`; };
+    const skyRgbAt = (frac: number, s0: string, s1: string, s2: string) => {
+      // Allow mild extrapolation ABOVE the horizon (negative frac) so the header,
+      // which sits above the sky-top, can continue the gradient instead of flat-capping.
+      const p = Math.max(-0.35, Math.min(1.1, frac));
+      const [a, b, t] = p <= 0.55 ? [hexToRgb(s0), hexToRgb(s1), p / 0.55] : [hexToRgb(s1), hexToRgb(s2), (p - 0.55) / 0.45];
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    };
     let raf = 0;
     const update = () => {
       raf = 0;
@@ -197,8 +239,29 @@ export function AppHeader() {
       if (!hero) return;
       const r = hero.getBoundingClientRect();
       if (r.height <= 0) return;
-      // Fraction of the hero gradient sitting at the header's bottom edge (58px).
-      setHeroSeamBg(colorAt((58 - r.top) / r.height));
+      // Fraction of the hero/scene sitting at the header's bottom edge (58px).
+      const frac = (58 - r.top) / r.height;
+      if (hero.getAttribute("data-landscape")) {
+        const s0 = hero.getAttribute("data-sky0"), s1 = hero.getAttribute("data-sky1"), s2 = hero.getAttribute("data-sky2");
+        if (s0 && s1 && s2) {
+          // The scene's `atmos` color-grade rect tints the visible sky; blend it
+          // over the raw gradient so the header matches what's on screen.
+          const ao = parseFloat(hero.getAttribute("data-atmosop") || "0");
+          const atmos = hexToRgb(hero.getAttribute("data-atmos") || "#000000");
+          const skyHex = (f: number) => {
+            let [cr, cg, cb] = skyRgbAt(f, s0, s1, s2);
+            if (ao > 0) { cr = cr * (1 - ao) + atmos[0] * ao; cg = cg * (1 - ao) + atmos[1] * ao; cb = cb * (1 - ao) + atmos[2] * ao; }
+            return rgbToHex(cr, cg, cb);
+          };
+          // The header is a 58px-tall SLICE of the sky: bottom = the seam, top = one
+          // header-height further up the (extrapolated) gradient — so it reads as the
+          // actual top of the sky, not a flat cap. Both track together on scroll.
+          setHeroSeamBg(skyHex(frac));
+          setHeroSeamTop(skyHex(frac - 58 / r.height));
+        }
+        return;
+      }
+      setHeroSeamBg(colorAt(frac));
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
     update();
@@ -207,9 +270,14 @@ export function AppHeader() {
     // uses an IntersectionObserver rather than a window scroll position).
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onScroll);
+    // The landscape re-broadcasts its tone on every time-of-day change; re-read
+    // the (freshly rendered) data-sky attrs so a toggle updates the header even
+    // without a scroll.
+    window.addEventListener("kiddo:staging-hero-tone", onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onScroll);
+      window.removeEventListener("kiddo:staging-hero-tone", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
   }, [isStagingHero, location]);
@@ -252,7 +320,7 @@ export function AppHeader() {
     const headerColor = !heroChrome ? CREAM : (isStagingHero ? heroSeamBg : HERO_TOP);
     const meta = document.querySelector('meta[name="theme-color"]');
     meta?.setAttribute("content", headerColor);
-    document.documentElement.style.backgroundColor = isOnDashboard ? HERO_TOP : "";
+    document.documentElement.style.backgroundColor = isOnDashboard ? (isStagingHero ? heroSeamBg : HERO_TOP) : "";
     // Native (Capacitor) shell: also drive the REAL OS status bar (clock / wifi /
     // battery glyphs) so they flip light over the green hero and dark on cream —
     // the per-route control a pure Safari PWA can't do, but the wrapped store app
@@ -387,7 +455,7 @@ export function AppHeader() {
     return () => document.removeEventListener("pointerdown", handler);
   }, [fundPickerOpen]);
 
-  const pageTitle = getPageTitle(location);
+  const pageTitle = getPageTitle(location, Number((activeFund as any)?.majorityAge) || undefined);
   const withFund = showsFundContext(location) && activeFund;
 
   // On mobile the bottom nav already labels AND highlights the four primary
@@ -445,6 +513,23 @@ export function AppHeader() {
   // owner's OWN UI reads "your"; only the gift PAGE a recipient lands on stays "{kid}'s"
   // (the people she shares with really do give TO her).
   const isOwnerMode = Boolean(activeFund && (activeFund as any).transferredAt && (activeFund as any).accessRole === "owner");
+  // 2026-07-05 (founder): the child photo lives in this header fund switcher — a
+  // small avatar left of "{Kid}'s Fund", mirroring the account avatar on the
+  // right so the header reads as an identity lockup (whose fund | you). It was
+  // MOVED here out of the dashboard hero (see DashboardStaging/Lab hero), so the
+  // hero stays about the money/future. Shows on EVERY fund-scoped page (Home,
+  // Memory, Activity, Settings, and the fund sub-pages) — the same reach as the
+  // account avatar on the right, so the lockup is consistent app-wide. No
+  // duplication risk off the dashboard: those pages have no hero photo, and the
+  // dashboard hero's copy was removed. The avatar sits INSIDE the fund-name
+  // trigger, which only renders under `withFund && !isUserScoped`, so it's
+  // already absent on /account and never shows a stray face. Photo-or-nothing is
+  // preserved: no photo → no avatar, the fund name carries identity. Not shown
+  // for the household overview ("Your funds") or owner mode ("Your Fund"), which
+  // aren't a single child.
+  const headerKidPhoto = activeFund && !isFundsOverview && !isOwnerMode
+    ? String((activeFund as any).childPhotoUrl || "").trim()
+    : "";
   const statusLabel = activeFund ? ((activeFund as any).status === "active" ? "Active" : "Draft") : "";
   // Badge suppressed on any non-fund-scoped page (household /funds
   // and user-scoped /account both). The "UTMA · Active" label is a
@@ -479,6 +564,13 @@ export function AppHeader() {
           backgroundColor: heroChrome
             ? (isStagingHero ? heroSeamBg : "hsl(158 45% 19%)")
             : "hsl(var(--kiddo-cream) / 0.94)",
+          // STAGING landscape only: overlay a 2-stop gradient (top-of-sky -> seam)
+          // so the header reads as the actual top slice of the sky, not a flat cap.
+          // backgroundImage layers over backgroundColor (which stays the animatable
+          // base for the cream flip); non-landscape / scrolled-past = no image.
+          backgroundImage: heroChrome && isStagingHero && stagingTone
+            ? `linear-gradient(180deg, ${heroSeamTop} 0%, ${heroSeamBg} 100%)`
+            : "none",
           backdropFilter: heroChrome ? "none" : "blur(20px)",
           WebkitBackdropFilter: heroChrome ? "none" : "blur(20px)",
           borderBottom: heroChrome ? "1px solid transparent" : "1px solid hsl(var(--kiddo-ink) / 0.10)",
@@ -493,8 +585,11 @@ export function AppHeader() {
           // hero color on scroll (founder: "the iphone part should match the header").
           // padTop reserves the notch height — 0 in a browser tab, so no visual change
           // there; the content row stays a clean 58px below the clock in standalone.
-          paddingTop: "env(safe-area-inset-top)",
-          height: "calc(58px + env(safe-area-inset-top))",
+          // --app-safe-top is env(safe-area-inset-top) with a floor in installed-PWA
+          // mode (see index.css) so the header can't jam under the Dynamic Island when
+          // iOS reports a 0 inset in standalone.
+          paddingTop: "var(--app-safe-top)",
+          height: "calc(58px + var(--app-safe-top))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -535,7 +630,7 @@ export function AppHeader() {
             </button>
           )}
           <h1
-            className={`font-heading shrink-0 text-[15px] font-bold transition-colors ${heroChrome ? "text-[hsl(var(--kiddo-cream))]" : "text-foreground"}${hideTitleOnMobile ? " sr-only md:not-sr-only" : ""}`}
+            className={`font-heading shrink-0 text-[15px] font-bold transition-colors ${chromeTextLight ? "text-[hsl(var(--kiddo-cream))]" : "text-foreground"}${hideTitleOnMobile ? " sr-only md:not-sr-only" : ""}`}
             data-testid="header-page-title"
           >
             {pageTitle}
@@ -551,7 +646,7 @@ export function AppHeader() {
                   (/account) — the fund-switcher trigger doesn't render
                   there, so there's nothing to separate from anyway. */}
               {pageTitle && (
-                <span className={`shrink-0 text-[18px] leading-none transition-colors ${heroChrome ? "text-[hsl(var(--kiddo-cream)/0.3)]" : "text-foreground/15"}${hideTitleOnMobile ? " hidden md:inline" : ""}`}>·</span>
+                <span className={`shrink-0 text-[18px] leading-none transition-colors ${chromeTextLight ? "text-[hsl(var(--kiddo-cream)/0.3)]" : "text-foreground/15"}${hideTitleOnMobile ? " hidden md:inline" : ""}`}>·</span>
               )}
 
               {/* Fund name — always tappable. Even with one fund, the
@@ -570,9 +665,20 @@ export function AppHeader() {
                   setFundPickerOpen((v) => !v);
                   haptic("light");
                 }}
-                className={`flex min-w-0 items-center gap-1 truncate text-[13px] cursor-pointer transition-colors ${heroChrome ? "text-[hsl(var(--kiddo-cream)/0.85)] hover:text-[hsl(var(--kiddo-cream))]" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex min-w-0 items-center gap-1 truncate text-[13px] cursor-pointer transition-colors ${chromeTextLight ? "text-[hsl(var(--kiddo-cream)/0.85)] hover:text-[hsl(var(--kiddo-cream))]" : "text-muted-foreground hover:text-foreground"}`}
                 data-testid="header-fund-name"
               >
+                {/* Kid avatar — leftmost, part of the switcher tap target, so the
+                    face IS the fund control (mirrors the account avatar on the
+                    right). mr-1.5 widens only the avatar↔name gap, leaving the
+                    name↔chevron spacing untouched. Bare (no ring), matching the
+                    account avatar's frameless treatment; a photo reads on both the
+                    green-over-hero and cream-scrolled header states. */}
+                {headerKidPhoto && (
+                  <span className="mr-1.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] md:hidden" aria-hidden>
+                    <FadeImage src={headerKidPhoto} alt="" className="h-full w-full object-cover" />
+                  </span>
+                )}
                 <span className="truncate">
                   {isFundsOverview
                     ? "Your funds"
@@ -587,7 +693,7 @@ export function AppHeader() {
                     went cream-on-cream and vanished. Now it matches the fund-name
                     text beside it — cream over the green hero, muted-ink over cream
                     — and eases instead of snapping (transition-[color,transform]). */}
-                <ChevronDown size={12} className={`shrink-0 transition-[color,transform] duration-200 ease-out ${heroChrome ? "text-[hsl(var(--kiddo-cream)/0.7)]" : "text-muted-foreground"} ${fundPickerOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={12} className={`shrink-0 transition-[color,transform] duration-200 ease-out ${chromeTextLight ? "text-[hsl(var(--kiddo-cream)/0.7)]" : "text-muted-foreground"} ${fundPickerOpen ? "rotate-180" : ""}`} />
               </button>
 
               {badgeText && (
@@ -772,7 +878,7 @@ export function AppHeader() {
                   size={16}
                   strokeWidth={1.6}
                   style={{
-                    color: heroChrome ? "hsl(var(--kiddo-cream))" : "rgb(26,61,43)",
+                    color: chromeTextLight ? "hsl(var(--kiddo-cream))" : "rgb(26,61,43)",
                     display: photoUrl ? "none" : "block",
                   }}
                 />

@@ -448,6 +448,205 @@ export function applyDemoRecurringToContributions<T>(
   return [...contributions, ...overlay];
 }
 
+// --- Skip-a-cycle overlay ----------------------------------------------------
+// The server no-ops a skip on the shared demo (like every demo write), so it
+// can't persist "next charge moved a month". We record how many times each
+// schedule was skipped per-tab and advance its DISPLAYED next-charge date by
+// that many cadence periods — so the demo visibly does what it says. Per-tab,
+// demo-only. Same "the demo actually works" discipline as the recurring/buy
+// overlays.
+const SKIP_KEY = "kiddo.demo.skips.v1";
+
+function readRawSkips(): Record<string, number> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.sessionStorage.getItem(SKIP_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return obj && typeof obj === "object" ? (obj as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Record a skip on a demo schedule (increments its per-tab skip count). */
+export function recordDemoSkip(scheduleId: string): void {
+  if (typeof window === "undefined" || !scheduleId) return;
+  try {
+    const skips = readRawSkips();
+    skips[scheduleId] = (skips[scheduleId] || 0) + 1;
+    window.sessionStorage.setItem(SKIP_KEY, JSON.stringify(skips));
+    emitOverlayChange();
+  } catch {
+    /* sessionStorage blocked — the skip just won't stick, no harm */
+  }
+}
+
+function advanceRunDate(from: Date, frequency: string, times: number): Date {
+  const d = new Date(from);
+  const f = String(frequency || "monthly").toLowerCase();
+  for (let i = 0; i < times; i++) {
+    if (f === "daily") d.setDate(d.getDate() + 1);
+    else if (f === "weekly") d.setDate(d.getDate() + 7);
+    else if (f === "yearly") d.setFullYear(d.getFullYear() + 1);
+    else d.setMonth(d.getMonth() + 1);
+  }
+  return d;
+}
+
+/** Advance the displayed nextRunDate of any demo schedule that's been skipped. */
+export function applyDemoSkipsToContributions<T>(contributions: T[], enabled: boolean): T[] {
+  if (!enabled) return contributions;
+  const skips = readRawSkips();
+  if (Object.keys(skips).length === 0) return contributions;
+  return contributions.map((c: any) => {
+    const n = skips[String(c?.id)];
+    if (!n || !c?.nextRunDate) return c;
+    const advanced = advanceRunDate(new Date(c.nextRunDate), c.frequency, n);
+    return { ...c, nextRunDate: advanced.toISOString() };
+  }) as unknown as T[];
+}
+
+// --- Caught-up overlay -------------------------------------------------------
+// A demo "Add it now" is a MOCK checkout (no real contribution is written), so the
+// server's recovered-check never sees a success and the seeded "Charge missed"
+// state lingers. Record the catch-up per-tab and clear the failure flag so the
+// demo VISIBLY resolves — the "Charge missed" pill + "Add it now" disappear, just
+// like prod does the moment a real catch-up lands. Per-tab, demo-only.
+const CAUGHT_UP_KEY = "kiddo.demo.caughtup.v1";
+
+function readRawCaughtUp(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.sessionStorage.getItem(CAUGHT_UP_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Record that a demo schedule's missed charge was caught up (per-tab). */
+export function recordDemoCaughtUp(scheduleId: string): void {
+  if (typeof window === "undefined" || !scheduleId) return;
+  try {
+    const ids = readRawCaughtUp();
+    if (!ids.includes(String(scheduleId))) ids.push(String(scheduleId));
+    window.sessionStorage.setItem(CAUGHT_UP_KEY, JSON.stringify(ids));
+    emitOverlayChange();
+  } catch {
+    /* sessionStorage blocked — the resolve just won't stick, no harm */
+  }
+}
+
+/** Clear the recent-failure flag on any demo schedule that's been caught up. */
+export function applyDemoCaughtUpToContributions<T>(contributions: T[], enabled: boolean): T[] {
+  if (!enabled) return contributions;
+  const ids = readRawCaughtUp();
+  if (ids.length === 0) return contributions;
+  const set = new Set(ids);
+  return contributions.map((c: any) =>
+    set.has(String(c?.id)) ? { ...c, hasRecentFailure: false } : c,
+  ) as unknown as T[];
+}
+
+// --- Thank-you overlay -------------------------------------------------------
+// Demo can't persist a thank-you SEND (the server blocks /thank-yous/*/send), so
+// a "sent" thank-you is recorded per-tab here and surfaced as a reply under the
+// gift in Activity — same "the demo actually works" discipline as the recurring/
+// buy overlays. One entry per gift (latest send wins).
+const THANKYOU_KEY = "kiddo-demo-thankyous";
+const THANKYOU_MAX = 80;
+
+export type DemoThankYou = {
+  fundId: string;
+  giftId: string;
+  message: string;
+  senderName?: string | null;
+  sentAt: string;
+};
+
+function readRawThankYous(): DemoThankYou[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.sessionStorage.getItem(THANKYOU_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? (arr as DemoThankYou[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordDemoThankYou(t: Omit<DemoThankYou, "sentAt"> & { sentAt?: string }): void {
+  if (typeof window === "undefined" || !t.fundId || !t.giftId) return;
+  try {
+    const entry: DemoThankYou = { ...t, sentAt: t.sentAt || new Date().toISOString() };
+    const rest = readRawThankYous().filter((x) => x.giftId !== t.giftId);
+    const next = [entry, ...rest].slice(0, THANKYOU_MAX);
+    window.sessionStorage.setItem(THANKYOU_KEY, JSON.stringify(next));
+    emitOverlayChange();
+  } catch {
+    /* sessionStorage blocked — the reply just won't show, no harm */
+  }
+}
+
+/** giftId → sent demo thank-you for the fund. Empty off demo. */
+export function readDemoThankYousByGift(
+  enabled: boolean,
+  fundId?: string | null,
+): Map<string, DemoThankYou> {
+  const map = new Map<string, DemoThankYou>();
+  if (!enabled) return map;
+  for (const t of readRawThankYous()) {
+    if (fundId && t.fundId !== fundId) continue;
+    map.set(t.giftId, t);
+  }
+  return map;
+}
+
+// A demo recurring SETUP also gets an activity row — a real account writes a
+// "Recurring investment started" row on create, so without this the demo showed
+// the schedule in the list but nowhere in Activity ("I set it up, why isn't it in
+// activity?", founder catch 2026-07). amount is null because setting up a schedule
+// moves no money yet (it's future-dated) — the row states the cadence + destination,
+// not a "+$X". Same per-tab, demo-only, render-time-overlay discipline as the rest.
+function recurringToActivity(r: DemoRecurring): Activity {
+  const nAmt = parseFloat(String(r.amount).replace(/[^0-9.]/g, "")) || 0;
+  const amt = nAmt % 1 === 0 ? String(nAmt) : nAmt.toFixed(2); // drop the robotic .00
+  const freq = String(r.frequency || "monthly").toLowerCase();
+  const per = freq === "weekly" ? "week" : freq === "daily" ? "day" : freq === "yearly" ? "year" : "month";
+  const dest = r.selectedTicker ? String(r.selectedTicker).toUpperCase() : "the diversified mix";
+  return {
+    id: `demo-recurring-act-${r.fundId}-${r.createdAt}`,
+    userId: "demo",
+    fundId: r.fundId,
+    type: "auto_invest",
+    title: "Recurring investment started",
+    description: `$${amt}/${per} into ${dest}`,
+    amount: null,
+    // Stamp the ticker so the Activity feed renders the brand logo (a
+    // pick schedule); managed-mix schedules carry none and show the strategy glyph.
+    metadata: JSON.stringify(r.selectedTicker
+      ? { demo: true, ticker: String(r.selectedTicker).toUpperCase() }
+      : { demo: true }),
+    createdAt: new Date(r.createdAt),
+  } as Activity;
+}
+
+/** Prepend demo recurring setups as `auto_invest` activity rows (feed + bell). */
+export function applyDemoRecurringToActivities(
+  activities: Activity[],
+  enabled: boolean,
+  fundId?: string | null,
+): Activity[] {
+  if (!enabled) return activities;
+  const live = readRawRecurring().filter((r) => !fundId || r.fundId === fundId);
+  if (live.length === 0) return activities;
+  const overlay = live
+    .map(recurringToActivity)
+    .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+  return [...overlay, ...activities];
+}
+
 // --- Sell overlay (Stage 2c) -------------------------------------------------
 // Selling MOVES money (invested → cash); it doesn't add or destroy any, so the
 // hero total must stay constant. A correct demo sell therefore does TWO things
@@ -552,7 +751,11 @@ function sellToActivity(s: DemoSell): Activity {
     title: `Moved ${s.ticker} to cash`,
     description: `Sold ${sh.toFixed(4).replace(/\.?0+$/, "")} ${s.ticker} shares · $${proceeds} to cash`,
     amount: proceeds,
-    metadata: JSON.stringify({ demo: true }),
+    // Pass ticker + shares through (same keys the real sell endpoint stamps —
+    // routes.ts ~9506) so Activity's expanded "What moved" panel names the
+    // position ("2.4 SBUX → Cash") instead of the generic "Holding" fallback it
+    // shows when the metadata has no ticker.
+    metadata: JSON.stringify({ demo: true, ticker: s.ticker, shares: sh.toFixed(4) }),
     createdAt: new Date(s.createdAt),
   };
 }
@@ -676,7 +879,11 @@ function buyToActivity(b: DemoBuy): Activity {
     title: `Invested $${amt}`,
     description: `Moved $${amt} of cash into ${where}`,
     amount: amt,
-    metadata: JSON.stringify({ demo: true }),
+    // Stamp the ticker so the feed shows the brand logo when the cash went into
+    // a single stock; a diversified-mix buy carries none (strategy glyph instead).
+    metadata: JSON.stringify(b.ticker
+      ? { demo: true, ticker: String(b.ticker).toUpperCase() }
+      : { demo: true }),
     createdAt: new Date(b.createdAt),
   };
 }

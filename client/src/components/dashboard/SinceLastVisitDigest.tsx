@@ -24,9 +24,10 @@
 // a small synthetic growth, once per session (the demo clears its cache on
 // login), so the beat is demonstrable. Dismissible via CollapseDismissSection.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { isAnonGifterName } from "@/lib/gifter-name";
 import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const LASTSEEN_PREFIX = "kiddo.fund.lastSeen.v1:";
@@ -128,8 +129,7 @@ function fmtShortDate(ts: number): string {
 }
 
 function isAnonSender(name: string): boolean {
-  const n = name.trim().toLowerCase();
-  return !n || n === "anonymous" || /^someone who loves/i.test(n);
+  return isAnonGifterName(name);
 }
 
 // "A, B, plus C." / "A, plus B." / "A."
@@ -138,6 +138,41 @@ function joinParts(parts: string[]): string {
   if (parts.length === 1) return `${parts[0]}.`;
   return `${parts.slice(0, -1).join(", ")}, plus ${parts[parts.length - 1]}.`;
 }
+
+// A money value that COUNTS UP to `value` after `delayMs`, via rAF (no re-render
+// per frame). Respects reduced-motion (snaps). Used only by the "alive" digest.
+function CountUpMoney({ value, delayMs, plus, className }: { value: number; delayMs: number; plus?: boolean; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const render = (v: number) => { el.textContent = (plus ? "+" : "") + fmtMoney0(v); };
+    let reduce = false;
+    try { reduce = !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches; } catch { /* ignore */ }
+    if (reduce) { render(value); return; }
+    render(0);
+    let raf = 0;
+    const t = window.setTimeout(() => {
+      const start = performance.now();
+      const dur = 900;
+      const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+      const step = (now: number) => {
+        const p = Math.min((now - start) / dur, 1);
+        render(value * ease(p));
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, delayMs);
+    return () => { window.clearTimeout(t); if (raf) cancelAnimationFrame(raf); };
+  }, [value, delayMs, plus]);
+  return <span ref={ref} className={className}>{(plus ? "+" : "") + fmtMoney0(0)}</span>;
+}
+
+const WYA_ALIVE_CSS = `
+.wya-row{opacity:0;transform:translateY(9px);animation:wya-in .5s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes wya-in{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.wya-row{animation:none;opacity:1;transform:none}}
+`;
 
 export function SinceLastVisitDigest({
   fundId,
@@ -149,6 +184,7 @@ export function SinceLastVisitDigest({
   revealDelayMs = DIGEST_REVEAL_DELAY_MS,
   revealed: revealedProp,
   viewerIsContributor = true,
+  alive = false,
 }: {
   fundId: string | null;
   currentValue: number;
@@ -177,6 +213,10 @@ export function SinceLastVisitDigest({
   // anchors it to the hero roll's ACTUAL start, so the digest can't land mid-roll
   // on a slow machine). When omitted, the internal revealDelayMs timer is used.
   revealed?: boolean;
+  // OPT-IN "alive" presentation (staging prototype): the headline delta counts up
+  // and the breakdown cascades in line-by-line — a dynamic-but-calm MOMENT that
+  // lands and rests (not a finance ticker). Default off, so Lab/others are unchanged.
+  alive?: boolean;
 }) {
   // The reference the digest diffs against: the per-session frozen baseline if
   // it exists, else the persisted marker (last session). Per fund — recomputes
@@ -371,6 +411,65 @@ export function SinceLastVisitDigest({
   }
   if (digest.growth >= 1) parts.push(`${fmtMoney0(digest.growth)} in market growth`);
   const body = joinParts(parts);
+
+  // ALIVE prototype (opt-in): the aggregate delta counts up, and the breakdown
+  // cascades in line-by-line — a dynamic-but-calm MOMENT (lands, then rests).
+  if (alive) {
+    const rows: { label: string; amount: number; kind: "gift" | "you" | "growth" }[] = [];
+    if (digest.otherGiftCount > 0) {
+      rows.push({
+        label: digest.otherGifterCount === 1 && digest.singleOtherName ? digest.singleOtherName : people(digest.otherGifterCount),
+        amount: digest.othersSum,
+        kind: "gift",
+      });
+    }
+    if (digest.ownSum >= 1) rows.push({ label: viewerIsContributor ? "You" : "Recurring investments", amount: digest.ownSum, kind: "you" });
+    if (digest.growth >= 1) rows.push({ label: "Market growth", amount: digest.growth, kind: "growth" });
+    const dotColor = (k: string) => k === "gift" ? "hsl(var(--kiddo-gold))" : k === "you" ? "hsl(var(--kiddo-evergreen))" : "hsl(var(--kiddo-evergreen) / 0.5)";
+    return (
+      <CollapseDismissSection
+        open={!dismissed}
+        enterCollapsed
+        onRequestDismiss={handleDismiss}
+        className="mb-4 rounded-3xl border p-5 shadow-premium-sm sm:p-6"
+        style={{
+          borderColor: "hsl(var(--kiddo-evergreen) / 0.28)",
+          background: "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, #fff 55%, hsl(var(--kiddo-evergreen) / 0.07) 100%)",
+        }}
+        data-testid="since-last-visit-digest"
+      >
+        <style dangerouslySetInnerHTML={{ __html: WYA_ALIVE_CSS }} />
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="mb-1.5 text-3xs font-bold uppercase" style={{ color: "hsl(var(--kiddo-evergreen))", letterSpacing: "0.14em" }}>
+              While you were away
+            </p>
+            <h2 className="font-heading text-[clamp(15px,4.3vw,20px)] font-semibold text-foreground leading-snug">
+              {subject} is up <CountUpMoney value={digest.delta} delayMs={0} className="tabular-nums" /> since {fmtShortDate(digest.sinceTs)}
+            </h2>
+            <div className="mt-2.5 flex flex-col gap-1.5">
+              {rows.map((r, i) => (
+                <div key={i} className="wya-row flex items-center gap-2.5 text-sm" style={{ animationDelay: `${420 + i * 150}ms` }}>
+                  <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: dotColor(r.kind) }} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate font-medium text-muted-foreground">{r.label}</span>
+                  <CountUpMoney value={r.amount} delayMs={420 + i * 150} plus className="shrink-0 font-bold tabular-nums text-[hsl(var(--kiddo-evergreen))]" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="shrink-0 -mr-1 -mt-1 rounded-full p-1.5 text-muted-foreground/70 hover:text-foreground hover:bg-black/5 transition-colors"
+            data-testid="since-last-visit-dismiss"
+            aria-label="Dismiss the since-you-were-away summary"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </CollapseDismissSection>
+    );
+  }
 
   return (
     <CollapseDismissSection

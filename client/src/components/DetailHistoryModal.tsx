@@ -25,6 +25,8 @@ import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { X as XIcon, ChevronDown, Calendar, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { toast } from "@/hooks/use-toast";
+import { usePublicFlags } from "@/hooks/use-public-flags";
 import { MOTION } from "@/lib/motion";
 import {
   type FeedActivity,
@@ -40,6 +42,7 @@ import {
   buildReportIssueHref,
   GIFT_TYPES,
   normalizeActivityType,
+  normalizeActivityTitle,
   rewriteLegacyDescription,
 } from "@/lib/activity-helpers";
 
@@ -97,15 +100,18 @@ export interface DetailHistoryModalProps {
   // hidden entirely (e.g., one-time contributions can't have a schedule).
   scheduledRows?: DetailScheduledRow[];
 
-  // Bottom CTA (e.g., "Edit recurring →"). Optional.
+  // Bottom CTA (e.g., "Manage recurring"). Optional. Schedule-level management
+  // only — the missed-charge recovery is NOT a bottom button (see onAddMissed).
   bottomCta?: { label: string; onClick: () => void; testId?: string };
 
-  // Optional primary action rendered above the bottomCta (e.g., "Pay it
-  // now" for a recurring schedule whose last charge failed). When present
-  // it takes the solid primary Button slot and any bottomCta demotes to an
-  // outline button below it. `busy` disables it while the action is in
-  // flight, mirroring the trigger card's contribute-now loading state.
-  primaryAction?: { label: string; onClick: () => void; testId?: string; busy?: boolean };
+  // Row-level recovery for a failed charge. When set, the "Charge missed"
+  // row renders a solid "Add it now" chip inline, directly under the
+  // reason + reassurance copy — the button IS the invitation, so the prose
+  // no longer restates it. The recovery lives where the explanation is,
+  // identically in the schedule detail and the "What you've added"
+  // contributions detail. One canonical affordance + label ("Add it now")
+  // across the card, the feed, and this modal.
+  onAddMissed?: (row: FeedActivity) => void;
 }
 
 type ModalTab = "history" | "pending" | "scheduled";
@@ -121,8 +127,14 @@ export function DetailHistoryModal({
   rows,
   scheduledRows,
   bottomCta,
-  primaryAction,
+  onAddMissed,
 }: DetailHistoryModalProps) {
+  // "Update card" recovery on a Charge-missed row is flag-gated (default OFF). When
+  // on, and the caller allowed recovery (onAddMissed present), a failed row can open
+  // the Stripe billing portal to fix the card the plan charges going forward. See the
+  // /api/parent-contributions/:id/update-card endpoint for why this is the portal.
+  const { recurring_card_update: cardUpdateEnabled } = usePublicFlags();
+
   // Swipe-down-to-dismiss, matching every other bottom sheet in the app. Drag is
   // started ONLY from the handle (dragListener=false + dragControls) so it never
   // fights the scrollable History/Pending content. Framer owns the transform here
@@ -439,7 +451,7 @@ export function DetailHistoryModal({
                       entry.kind === "run" ? (
                         <RecurringRunGroup key={entry.id} items={entry.items} />
                       ) : (
-                        <DetailRow key={String(entry.row.id || `${entry.row.createdAt}-${entry.row.title}`)} row={entry.row} />
+                        <DetailRow key={String(entry.row.id || `${entry.row.createdAt}-${entry.row.title}`)} row={entry.row} onAddMissed={onAddMissed} cardUpdateEnabled={cardUpdateEnabled} />
                       )
                     )}
                   </div>
@@ -454,7 +466,7 @@ export function DetailHistoryModal({
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
                     {pendingRows.map((row) => (
-                      <DetailRow key={String(row.id || `${row.createdAt}-${row.title}`)} row={row} pendingMode />
+                      <DetailRow key={String(row.id || `${row.createdAt}-${row.title}`)} row={row} pendingMode onAddMissed={onAddMissed} cardUpdateEnabled={cardUpdateEnabled} />
                     ))}
                   </div>
                 )
@@ -472,44 +484,29 @@ export function DetailHistoryModal({
               )}
             </div>
 
-            {/* Bottom CTA(s) */}
-            {(primaryAction || bottomCta) && (
+            {/* Bottom CTA. Recovery ("Add it now") is NOT here — it lives inline on
+                the failed row (see onAddMissed → RowChips) so the action sits with the
+                copy that invites it. This slot is for schedule-level management only. */}
+            {bottomCta && (
               <div style={{
                 padding: "12px 20px",
                 borderTop: "1px solid hsl(var(--kiddo-ink) / 0.08)",
                 background: "white",
                 display: "flex", flexDirection: "column" as const, gap: 8,
               }}>
-                {/* Primary action (e.g. "Pay it now" on a failed schedule)
-                    takes the solid evergreen slot. When it's present the
-                    bottomCta below demotes to an outline so the two don't
-                    read as competing primaries. */}
-                {primaryAction && (
-                  <Button
-                    className="w-full rounded-full"
-                    disabled={!!primaryAction.busy}
-                    onClick={() => { haptic("medium"); primaryAction.onClick(); }}
-                    data-testid={primaryAction.testId || "detail-modal-primary-action"}
-                  >
-                    {primaryAction.label}
-                  </Button>
-                )}
-                {bottomCta && (
-                  <Button
-                    // Solid evergreen primary, not brand gold. Gold is reserved
-                    // for THE Share CTA (AppHeader / sidebar). This modal's
-                    // bottom CTA is a parent-action ("Manage recurring →"),
-                    // never a share — should never compete visually with the
-                    // canonical share button. Demotes to outline when a
-                    // primaryAction owns the solid slot above it.
-                    variant={primaryAction ? "outline" : "default"}
-                    className="w-full rounded-full"
-                    onClick={() => { haptic("medium"); bottomCta.onClick(); }}
-                    data-testid={bottomCta.testId || "detail-modal-bottom-cta"}
-                  >
-                    {bottomCta.label}
-                  </Button>
-                )}
+                <Button
+                  // Solid evergreen primary, not brand gold. Gold is reserved
+                  // for THE Share CTA (AppHeader / sidebar). This modal's
+                  // bottom CTA is a parent-action ("Manage recurring →"),
+                  // never a share — should never compete visually with the
+                  // canonical share button.
+                  variant="default"
+                  className="w-full rounded-full"
+                  onClick={() => { haptic("medium"); bottomCta.onClick(); }}
+                  data-testid={bottomCta.testId || "detail-modal-bottom-cta"}
+                >
+                  {bottomCta.label}
+                </Button>
               </div>
             )}
           </motion.div>
@@ -676,7 +673,7 @@ function RecurringRunGroup({ items }: { items: FeedActivity[] }) {
   );
 }
 
-function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: boolean }) {
+function DetailRow({ row, pendingMode, onAddMissed, cardUpdateEnabled }: { row: FeedActivity; pendingMode?: boolean; onAddMissed?: (row: FeedActivity) => void; cardUpdateEnabled?: boolean }) {
   const meta = parseMetadata((row as any).metadata);
   const config = getTypeConfig(row.type);
   const createdAt = parseSafeDate(row.createdAt);
@@ -694,6 +691,28 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
   const nextRetryDate = typeof nextRetryRaw === "string" ? new Date(nextRetryRaw) : null;
   const hasReconcile = !!(reconcileLast4 || reconcileDescriptor || reconcileReceiptUrl);
   const showReconcile = isParentPaidType(row.type) && hasReconcile;
+  // A failed charge (schedule detail OR contributions detail) gets an inline
+  // "Add it now" recovery chip when the caller wired onAddMissed. This is the
+  // clickable action the "Add the missed one if you'd like" copy points at.
+  const isFailedContrib = row.type === "parent_contribution_failed" || row.type === "payment_failed";
+  const onAddNow = isFailedContrib && onAddMissed ? () => onAddMissed(row) : undefined;
+  // Root-cause recovery: "Add it now" fixes THIS charge; "Update card" fixes the card
+  // the plan charges going forward (opens the Stripe billing portal). Same permission
+  // as "Add it now" (only shows when the caller allowed recovery), flag-gated, and only
+  // when we can tie the row back to its plan (parentContributionId in metadata).
+  const failedPlanId = typeof (meta as any).parentContributionId === "string" ? (meta as any).parentContributionId : null;
+  const onUpdateCard = onAddNow && cardUpdateEnabled && failedPlanId
+    ? async () => {
+        try {
+          const res = await fetch(`/api/parent-contributions/${failedPlanId}/update-card`, { method: "POST", credentials: "include" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.url) throw new Error(data?.message || data?.error || "Could not open card update.");
+          window.location.href = data.url as string;
+        } catch (err: any) {
+          toast({ title: "Couldn't open card update", description: err?.message || "Try again in a moment.", variant: "destructive" });
+        }
+      }
+    : undefined;
 
   return (
     <div
@@ -717,7 +736,12 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
-              {row.title || "Activity"}
+              {/* Normalize the legacy "Recurring investment failed" title to
+                  "Automatic charge didn't go through" here too — this modal was
+                  the one surface still rendering the raw title, so it stacked
+                  with the "Charge missed" pill + "Recurring investment" eyebrow
+                  (the triple-label the main feed + detail page already fix). */}
+              {normalizeActivityTitle(row.title) || "Activity"}
             </p>
             {amtNum != null && (() => {
               // A failed charge moved $0, so never render it as money-in. Drop
@@ -755,8 +779,16 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
             const shouldSuppressMessage = !message || isBoilerplateRecurring || isTestPattern;
             // Run the feed's legacy-copy cleanup so this modal shows the SAME
             // honest text (e.g. the tightened failed-charge line), not raw seed copy.
+            // EXCEPTION — a declined charge whose reconcile card is showing: the card
+            // (Charged to ····4242), the next-charge date, AND the "Add it now" chip
+            // all render as structured rows just below. So the prose keeps only what
+            // they don't say — the reason (declined) and the reassurance (plan's on) —
+            // and drops the CTA sentence the button already carries. Two short lines
+            // read calm on mobile instead of crammed.
             const shown = shouldSuppressMessage
-              ? rewriteLegacyDescription(row.description)
+              ? (isFailedContrib && reconcileLast4
+                  ? "That card was declined. Your plan is still on."
+                  : rewriteLegacyDescription(row.description))
               : `"${message}"`;
             if (!shown) return null;
             return (
@@ -770,7 +802,13 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
             );
           })()}
           <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, flexWrap: "wrap" as const }}>
-            <StatusPill status={row.status} type={row.type} />
+            {/* A failed charge already says "failed" twice above — the bold title
+                ("Automatic charge didn't go through") and the amber icon carry the
+                state, and the prose gives the reason + reassurance. The "Charge
+                missed" pill was a THIRD restatement of the same fact on the same
+                row. Show the failure once: suppress the pill for failed rows and
+                let the title own it. (Non-failed rows keep their pill.) */}
+            {!isFailedContrib && <StatusPill status={row.status} type={row.type} />}
             {ticker && (
               <span style={{
                 fontSize: 9.5, fontWeight: 800, borderRadius: 6, padding: "2px 7px",
@@ -780,7 +818,15 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
                 {ticker}
               </span>
             )}
-            <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{config.label}</span>
+            {/* Distinguish a recurring cycle from a one-time addition — both are
+                "Contribution" by type, so name the sub-kind in the label slot the
+                generic "Contribution" used to fill. Everything else (gifts, growth,
+                schedule edits) keeps its own label. */}
+            <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>
+              {normalizedType === "parent_contribution"
+                ? (isRecurringCycleRow(row) ? "Recurring" : "One-time")
+                : config.label}
+            </span>
             {createdAt && (
               <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>
                 {/* Drop the year for current-year rows, like the main Activity
@@ -823,7 +869,14 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
               <p style={{ fontSize: 12, color: "hsl(var(--kiddo-ink))", fontWeight: 600 }}>{reconcileDescriptor}</p>
             </>
           )}
-          {nextRetryDate && Number.isFinite(nextRetryDate.getTime()) && (
+          {/* No "Next charge" on a FAILED row's reconcile card. It belongs to the
+              schedule, not to this one declined event — and the schedule-detail
+              header already shows "Next charge", so repeating it here (with a
+              different date format, no less) was pure duplication. The reconcile on
+              a failed charge answers one question: which card got declined. The
+              "Your plan is still on" prose already carries the reassurance that a
+              next charge is coming. Non-failed rows still show it if present. */}
+          {!isFailedContrib && nextRetryDate && Number.isFinite(nextRetryDate.getTime()) && (
             <>
               {/* "Next charge", NOT "Next attempt": the worker does not re-run the
                   missed charge — it advances to the next normal cycle. */}
@@ -845,6 +898,8 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
         receiptUrl={reconcileReceiptUrl}
         tradeConfirmationUrl={tradeConfirmationUrl}
         showReportIssue={REPORTABLE_TYPES.has(normalizedType) && (row as any).__suppressReport !== true}
+        onAddNow={onAddNow}
+        onUpdateCard={onUpdateCard}
         rowId={String(row.id || "")}
         fundId={(row as any).fundId || null}
         type={normalizedType}
@@ -860,6 +915,8 @@ function RowChips({
   receiptUrl,
   tradeConfirmationUrl,
   showReportIssue,
+  onAddNow,
+  onUpdateCard,
   rowId,
   fundId,
   type,
@@ -870,6 +927,8 @@ function RowChips({
   receiptUrl: string | null;
   tradeConfirmationUrl: string | null;
   showReportIssue: boolean;
+  onAddNow?: () => void;
+  onUpdateCard?: () => void;
   rowId: string;
   fundId: string | null;
   type: string;
@@ -877,7 +936,17 @@ function RowChips({
   amount: number | null;
   createdAt: Date | null;
 }) {
-  const chips: { label: string; href: string; testId: string }[] = [];
+  const chips: { label: string; href?: string; onClick?: () => void; testId: string; solid?: boolean }[] = [];
+  if (onAddNow) {
+    // Solid green pill, first in line, so the recovery reads as the primary
+    // action on a "Charge missed" row (not a footnote among the quiet chips).
+    chips.push({ label: "Add it now", onClick: onAddNow, testId: `chip-addnow-${rowId}`, solid: true });
+  }
+  if (onUpdateCard) {
+    // Secondary (tinted, not solid): fixes the card going forward. Sits next to
+    // "Add it now" so catch-up and root-fix are both one tap from the failed row.
+    chips.push({ label: "Update card", onClick: onUpdateCard, testId: `chip-updatecard-${rowId}` });
+  }
   if (receiptUrl) {
     chips.push({ label: "View receipt ↗", href: receiptUrl, testId: `chip-receipt-${rowId}` });
   }
@@ -886,7 +955,8 @@ function RowChips({
   }
   if (showReportIssue) {
     chips.push({
-      label: "Report an issue →",
+      // No arrow — arrows are for primary navigation; this is a quiet fallback.
+      label: "Report an issue",
       href: buildReportIssueHref({ activityId: rowId, fundId, type, title, amount, createdAt }),
       testId: `chip-report-${rowId}`,
     });
@@ -895,7 +965,68 @@ function RowChips({
   return (
     <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
       {chips.map((chip) => {
-        const isMailto = chip.href.startsWith("mailto:");
+        const isMailto = !!chip.href && chip.href.startsWith("mailto:");
+        // Report-issue renders as a quiet muted link, not a green action pill, so
+        // it recedes behind the useful chips (receipt, trade confirmation) —
+        // matching the feed's treatment.
+        const isReport = chip.testId.startsWith("chip-report-");
+        const solidStyle = {
+          fontSize: 11, fontWeight: 700, color: "white",
+          background: "hsl(143,47%,22%)",
+          border: "1px solid hsl(143,47%,22%)",
+          borderRadius: 999, padding: "5px 12px",
+          cursor: "pointer", fontFamily: "inherit",
+          textDecoration: "none" as const,
+          display: "inline-flex" as const, alignItems: "center" as const,
+          transition: "background 0.12s",
+        };
+        const pillStyle = {
+          fontSize: 11, fontWeight: 700, color: "hsl(143,47%,22%)",
+          background: "rgba(26,67,50,0.08)",
+          border: "1px solid rgba(26,67,50,0.18)",
+          borderRadius: 999, padding: "5px 11px",
+          cursor: "pointer", fontFamily: "inherit",
+          textDecoration: "none" as const,
+          display: "inline-flex" as const, alignItems: "center" as const,
+          transition: "background 0.12s",
+        };
+        const subtleStyle = {
+          fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-ink) / 0.42)",
+          background: "transparent", border: "none",
+          borderRadius: 999, padding: "5px 6px",
+          cursor: "pointer", fontFamily: "inherit",
+          textDecoration: "none" as const,
+          display: "inline-flex" as const, alignItems: "center" as const,
+          transition: "color 0.12s",
+        };
+        const style = chip.solid ? solidStyle : isReport ? subtleStyle : pillStyle;
+        const onEnter = (el: HTMLElement) => {
+          if (chip.solid) el.style.background = "hsl(143,47%,18%)";
+          else if (isReport) el.style.color = "hsl(var(--kiddo-ink) / 0.7)";
+          else el.style.background = "rgba(26,67,50,0.14)";
+        };
+        const onLeave = (el: HTMLElement) => {
+          if (chip.solid) el.style.background = "hsl(143,47%,22%)";
+          else if (isReport) el.style.color = "hsl(var(--kiddo-ink) / 0.42)";
+          else el.style.background = "rgba(26,67,50,0.08)";
+        };
+        // Recovery chip is a real button (runs a handler); links stay anchors so
+        // receipts/trade confirmations open in a new tab without unmounting the modal.
+        if (chip.onClick) {
+          return (
+            <button
+              key={chip.testId}
+              type="button"
+              data-testid={chip.testId}
+              onClick={(e) => { e.stopPropagation(); haptic("medium"); chip.onClick!(); }}
+              style={style}
+              onMouseEnter={(e) => onEnter(e.currentTarget)}
+              onMouseLeave={(e) => onLeave(e.currentTarget)}
+            >
+              {chip.label}
+            </button>
+          );
+        }
         return (
           <a
             key={chip.testId}
@@ -904,18 +1035,9 @@ function RowChips({
             rel={isMailto ? undefined : "noopener noreferrer"}
             data-testid={chip.testId}
             onClick={(e) => { e.stopPropagation(); haptic("selection"); }}
-            style={{
-              fontSize: 11, fontWeight: 700, color: "hsl(143,47%,22%)",
-              background: "rgba(26,67,50,0.08)",
-              border: "1px solid rgba(26,67,50,0.18)",
-              borderRadius: 999, padding: "5px 11px",
-              cursor: "pointer", fontFamily: "inherit",
-              textDecoration: "none" as const,
-              display: "inline-flex" as const, alignItems: "center" as const,
-              transition: "background 0.12s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.14)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(26,67,50,0.08)")}
+            style={style}
+            onMouseEnter={(e) => onEnter(e.currentTarget)}
+            onMouseLeave={(e) => onLeave(e.currentTarget)}
           >
             {chip.label}
           </a>

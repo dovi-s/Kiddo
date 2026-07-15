@@ -481,7 +481,18 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       if (!fund) {
         return res.status(404).json({ error: "Fund not found" });
       }
-      if (fund.userId !== (req.user as any).id) {
+      // Owner OR an accepted collaborator (co-admin / viewer) may READ the feed —
+      // mirrors requireOwnedFundParam. Previously owner-only, which left an accepted
+      // co-parent's /activity page EMPTY: a fund's activity rows all live under the
+      // OWNER's userId, so the user-scoped /api/activities returns nothing for a
+      // collaborator, and this fund-scoped fallback then 403'd them. (2026-07-07)
+      const viewerId = (req.user as any).id;
+      let allowed = fund.userId === viewerId;
+      if (!allowed) {
+        const collab = await storage.getCollaboratorForFundAndUser(req.params.fundId, viewerId);
+        allowed = !!collab;
+      }
+      if (!allowed) {
         return res.status(403).json({ error: "Forbidden" });
       }
       const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 200);

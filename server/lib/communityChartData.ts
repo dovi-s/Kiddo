@@ -21,6 +21,7 @@
 // Sender-identity test/dev-junk filter — shared with every other gift-
 // aggregating surface so the rule never drifts. See shared/test-content.ts.
 import { looksLikeTestSender } from "@shared/test-content";
+import { isAnonGifterName } from "@shared/gifter-anon";
 
 const COMMUNITY_TOP_N = 6;
 
@@ -110,9 +111,7 @@ export function computeCommunityChartData(gifts: GiftLike[], fund: FundLike): Co
     // anon-label string (case-insensitive). The case-insensitive match
     // catches "Anonymous", "anonymous", "Someone who loves Emma",
     // "someone who loves emma", etc.
-    const nameLooksAnon = !rawName
-      || rawNameLower === anonLabelLower
-      || rawNameLower === "anonymous";
+    const nameLooksAnon = isAnonGifterName(rawName) || rawNameLower === anonLabelLower;
     const treatAsAnon = isAnonFlag || (!rawEmail && nameLooksAnon);
 
     let groupKey: string;

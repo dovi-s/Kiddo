@@ -120,8 +120,7 @@ export function PasskeyManager() {
           <h3 className="font-heading text-base font-semibold text-foreground">Passkeys</h3>
         </div>
         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-          Sign in with Face ID, Touch ID, Windows Hello, or a security key. No password needed.
-          Your account password keeps working as a fallback.
+          Sign in with Face ID, Touch ID, Windows Hello, or a security key. Your password still works too.
         </p>
       </div>
 

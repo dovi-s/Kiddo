@@ -11,6 +11,9 @@
 // where the word already sits inside a "mix" context, e.g. the parenthetical
 // "Emma's mix (Balanced)", so it doesn't read as "mix mix".
 
+import type { LucideIcon } from "lucide-react";
+import { TrendingUp, Scale, Shield, SlidersHorizontal } from "lucide-react";
+
 export type StrategyKey = "growth" | "balanced" | "conservative" | "custom";
 
 export const STRATEGY_LABEL: Record<StrategyKey, string> = {
@@ -39,4 +42,19 @@ export const STRATEGY_EMOJI: Record<StrategyKey, string> = {
   balanced: "⚖️",
   conservative: "🛡️",
   custom: "🎛️",
+};
+
+// Bespoke monochrome glyph per strategy — the SAME semantic read as the emoji
+// above (chart-up=growth, scales=balanced, shield=conservative, sliders=custom)
+// rendered as brand Lucide icons so strategy reads as one crafted system, not
+// colorful system emoji. This is what the dashboard StrategyIcon uses; centralize
+// it here so every surface (Activity strategy-change rows, sheets, etc.) can share
+// the same glyphs instead of re-typing an emoji map. Prefer THIS over
+// STRATEGY_EMOJI on any in-app parent surface; the emoji stays only where a bare
+// string glyph is the only option (plain-text/notification contexts).
+export const STRATEGY_ICONS: Record<StrategyKey, LucideIcon> = {
+  growth: TrendingUp,
+  balanced: Scale,
+  conservative: Shield,
+  custom: SlidersHorizontal,
 };

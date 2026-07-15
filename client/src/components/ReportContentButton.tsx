@@ -151,7 +151,7 @@ export function ReportContentButton({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-full bg-foreground px-3 py-1.5 text-2xs font-semibold text-background disabled:opacity-50"
+          className="rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-3 py-1.5 text-2xs font-semibold text-white disabled:opacity-50"
           data-testid={`button-submit-report-${targetId}`}
         >
           {submitting ? "Sending…" : "Send report"}

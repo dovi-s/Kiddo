@@ -9,6 +9,7 @@ import { projectFundValue } from "@shared/projection"
 import { investingLiveCopy } from "@shared/legal-copy"
 import { Button } from "@/components/ui/button"
 import { FadeImage } from "@/components/ui/fade-image"
+import { renderOccasionGlyph } from "@/components/ui/occasion-illustration"
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
 import { StockLogo } from "@/components/ui/stock-logo"
@@ -58,29 +59,9 @@ const COMPANY_INFO: Record<string, { name: string }> = {
   CMCSA: { name: "Comcast" },
 }
 
-// Mirrors the canonical EVENT_TYPE_EMOJI map used on Dashboard. Inline here
-// so GiftSuccess (a public/anonymous page) doesn't pull from a parent-only
-// module. Keep in sync when new event types are added.
-const EVENT_TYPE_EMOJI: Record<string, string> = {
-  birthday: "🎂",
-  graduation: "🎓",
-  holiday: "🎉",
-  christmas: "🎄",
-  hanukkah: "🕎",
-  baby: "🍼",
-  baby_shower: "🍼",
-  wedding: "💍",
-  car: "🚗",
-  first_car: "🚗",
-  college: "🎓",
-  home: "🏡",
-  travel: "✈️",
-  trip: "✈️",
-  business: "💼",
-  emergency: "🛡️",
-  custom: "🎁",
-  just_because: "💚",
-}
+// Occasion icons come from the branded glyph system (renderOccasionGlyph), with a
+// Lucide Gift as the fallback — the old inline EVENT_TYPE_EMOJI map was removed so
+// this public page never renders a raw emoji.
 
 export default function GiftSuccess() {
   const searchString = useSearch()
@@ -937,12 +918,14 @@ export default function GiftSuccess() {
                 data-testid="img-success-child-photo"
               />
               <span
-                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[hsl(var(--kiddo-evergreen)/0.12)] text-lg shadow-sm select-none"
+                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[hsl(var(--kiddo-evergreen))] shadow-sm"
                 aria-hidden="true"
-              >🌱</span>
+              ><Check size={16} strokeWidth={2.5} className="text-white" /></span>
             </div>
           ) : (
-            <span className="text-6xl select-none" aria-hidden="true" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>🌱</span>
+            <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]" aria-hidden="true" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>
+              <Gift size={44} strokeWidth={1.75} className="text-[hsl(var(--kiddo-evergreen))]" />
+            </span>
           )}
         </motion.div>
 
@@ -1041,9 +1024,6 @@ export default function GiftSuccess() {
             this. Fills the gap where a plain birthday occasion left the
             "what was this for?" question unanswered on the success page. */}
         {eventInfo && eventInfo.name && (eventInfo.goalAmount === null || eventInfo.goalAmount <= 0) && (() => {
-          const occasionEmoji = eventInfo.eventType
-            ? EVENT_TYPE_EMOJI[String(eventInfo.eventType).toLowerCase()] || "🎁"
-            : "🎁"
           return (
             <motion.div
               className="mb-6 flex justify-center"
@@ -1053,7 +1033,10 @@ export default function GiftSuccess() {
               data-testid="chip-success-occasion"
             >
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-1.5 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                <span className="text-base leading-none" aria-hidden="true">{occasionEmoji}</span>
+                {/* Branded occasion glyph; a Gift glyph as the fallback, never a raw emoji. */}
+                {renderOccasionGlyph({ eventType: eventInfo.eventType, size: 15 }) || (
+                  <Gift size={15} strokeWidth={2} aria-hidden="true" />
+                )}
                 {eventInfo.name}
               </span>
             </motion.div>
@@ -1084,29 +1067,11 @@ export default function GiftSuccess() {
           </motion.div>
         )}
 
-        {/* One-time gifters: "send another" CTA. The team-audit conversion
-            specialist flagged that one-time gifters land on success with
-            NO follow-up CTA (only recurring gifters get the dashboard
-            link). A gifter who just sent $50 and felt good is in the
-            highest-intent moment to send again or save the fund for
-            next year. The CTA routes back to the gift page (using
-            fundSlug when resolved, fundId as fallback) so the gifter
-            can immediately start another gift. Audit 2026-05-25. */}
-        {!isRecurringSetup && (fundSlug || fundId) && (
-          <motion.div
-            className="flex justify-center mb-6"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.66, duration: 0.4 }}
-            data-testid="cta-success-send-another"
-          >
-            <Link href={`/${fundSlug || fundId}`}>
-              <Button variant="outline" size="sm" className="rounded-full" data-testid="button-send-another">
-                {childFirstName ? `Send ${childFirstName} another` : "Send another gift"} →
-              </Button>
-            </Link>
-          </motion.div>
-        )}
+        {/* NOTE: the prominent "Send {child} another" button that used to sit
+            here (right after the confirmation) was removed — it duplicated the
+            quiet restrained "send another" link lower on the page (near the share
+            block), and asking "send another" the instant after "your gift is in"
+            undercut the moment. One send-again path, placed after the beat. */}
 
         {/* Affirmative anonymous confirmation. Replaces what would
             otherwise read as "Someone added $50..." (placeholder name)
@@ -1165,7 +1130,7 @@ export default function GiftSuccess() {
                     <p className="text-2xs text-muted-foreground tabular-nums">{formatMoneyShort(beforeValue)}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                    <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After</p>
                     <p className="font-heading text-base font-bold text-foreground tabular-nums">
                       {formatShares(afterShares)} <span className="text-2xs font-normal text-muted-foreground">shares</span>
                     </p>
@@ -1221,9 +1186,6 @@ export default function GiftSuccess() {
             (default) and goal-reached (🌟 celebration). Hidden for anytime
             gifts and goalless occasions; their warmth lives elsewhere. */}
         {eventInfo && eventInfo.goalAmount !== null && eventInfo.goalAmount > 0 && (() => {
-          const eventEmoji = eventInfo.eventType
-            ? EVENT_TYPE_EMOJI[String(eventInfo.eventType).toLowerCase()] || "🎁"
-            : "🎁"
           const total = eventInfo.giftVolume
           const goal = eventInfo.goalAmount
           const pct = Math.max(0, Math.min(100, (total / goal) * 100))
@@ -1240,7 +1202,9 @@ export default function GiftSuccess() {
               data-testid="card-event-goal-progress"
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl leading-none">{eventEmoji}</span>
+                {renderOccasionGlyph({ eventType: eventInfo.eventType, size: 19 }) || (
+                  <Gift size={19} strokeWidth={2} aria-hidden="true" className="text-[hsl(var(--kiddo-evergreen))]" />
+                )}
                 <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                   {reached
                     ? `Goal reached for ${eventInfo.name}`
@@ -1280,7 +1244,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns net of Kiddo's annual fee, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed.
+            At 7% historical average returns net of Kiddo's annual fee, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. Not guaranteed.
           </motion.p>
         ) : projectedAmount ? (
           <motion.p
@@ -1360,7 +1324,7 @@ export default function GiftSuccess() {
           >
             <Button className="flex-1 gap-2" onClick={handleFundShare} data-testid="button-share-gift-early">
               <Share2 className="w-4 h-4" />
-              Share this gift 🎁
+              Share this gift
             </Button>
             <Button variant="outline" className="gap-2 px-3" onClick={handleCopyLink} data-testid="button-copy-link-early">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

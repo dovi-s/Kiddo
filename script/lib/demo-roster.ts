@@ -57,18 +57,33 @@ export type KidStory = {
 // "3:40 AM" on every Memory Book row; onMonth hardcoded noon). Spread across a
 // realistic 8am–8pm UTC window, ordered by the entry's own params so it stays
 // reproducible run-to-run. Only the time-of-day varies; the date is untouched.
+//
+// ONE frozen clock for the whole seed run. Every relative date derives from this
+// single instant, so a long reseed that happens to cross a UTC midnight can't
+// split cycles across two calendar days (the [8,9] artifact). Exported so
+// seed-dunphys anchors the failure + next-run to the exact same "now".
+export const SEED_NOW = new Date();
+
 function seededClock(seed: number): { h: number; m: number; s: number } {
   const n = Math.abs(Math.round(seed));
   return { h: 8 + ((n * 7 + 3) % 13), m: (n * 17 + 29) % 60, s: (n * 31 + 7) % 60 };
 }
 
 function isoYearsMonthsAgo(yearsAgo: number, monthsAgo = 0): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - yearsAgo);
-  d.setMonth(d.getMonth() - monthsAgo);
+  // Build entirely in UTC (like onMonth below). The old version mixed local
+  // get/setFullYear/setMonth with setUTCHours, so across a DST boundary the
+  // calendar DAY rolled for some months (a monthly cycle landing on the 8th in
+  // summer but the 9th in winter) and pushed the "Started" stat off by a day.
+  // Pure Date.UTC pins every cycle to the same day-of-month. Date.UTC normalizes
+  // a negative month by rolling the year back, so month subtraction is safe.
+  const now = SEED_NOW;
   const { h, m, s } = seededClock(yearsAgo * 13 + monthsAgo * 7 + 1);
-  d.setUTCHours(h, m, s, 0);
-  return d.toISOString();
+  return new Date(Date.UTC(
+    now.getUTCFullYear() - yearsAgo,
+    now.getUTCMonth() - monthsAgo,
+    now.getUTCDate(),
+    h, m, s,
+  )).toISOString();
 }
 
 // Pin an occasion gift to a specific calendar month `yearsAgo` years back,
@@ -76,8 +91,8 @@ function isoYearsMonthsAgo(yearsAgo: number, monthsAgo = 0): string {
 // step back one more year). `day` varies per gifter so same-month gifts get
 // distinct, deterministically-ordered timestamps.
 function onMonth(yearsAgo: number, month: number, day = 15): string {
-  const now = new Date();
-  const thisYear = new Date(Date.UTC(now.getFullYear(), month, day, 12, 0, 0));
+  const now = SEED_NOW;
+  const thisYear = new Date(Date.UTC(now.getUTCFullYear(), month, day, 12, 0, 0));
   const anchorYear = thisYear.getTime() > now.getTime() ? now.getFullYear() - 1 : now.getFullYear();
   const { h, m, s } = seededClock(yearsAgo * 400 + month * 31 + day);
   return new Date(Date.UTC(anchorYear - yearsAgo, month, day, h, m, s)).toISOString();
@@ -259,7 +274,14 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
   // "You added" — at offset 1 the latest contribution landed ~31 days back,
   // just outside the window, and an active monthly contributor read as $0.
   // Paused/handed-off funds stay at offset 3 (stopped a few months back).
-  const recurringStartOffset = kid.recurringPaused ? 3 : 0;
+  // Theo carries the seeded "charge missed" (added in seed-dunphys). A monthly
+  // plan can't both succeed AND fail in the same month, so Theo's most recent
+  // SUCCESS is last month (offset 1), leaving THIS month open for the failed
+  // charge on the same cadence day. His "You added (30 days)" therefore reads $0,
+  // which is the honest consequence of a missed charge, not a bug. Every other
+  // active kid stays at offset 0 (a success this month, so their 30-day summary
+  // shows "You added").
+  const recurringStartOffset = kid.recurringPaused ? 3 : (kid.firstName === "Theo" ? 1 : 0);
   const recurringCycles = (kid.recurringPaused ? Math.min(fundAge, 14) : Math.min(fundAge, 7)) * 12;
   for (let i = 0; i < recurringCycles; i++) {
     list.push({

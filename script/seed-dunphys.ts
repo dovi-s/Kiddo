@@ -60,6 +60,7 @@ import {
 } from "./lib/demo-portfolio";
 import {
   giftsForKid,
+  SEED_NOW,
   rebalancesForKid,
   recurringNoteFor,
   momNoteFor,
@@ -124,7 +125,9 @@ const ACCOUNTS = [
     // Book, managing the kids' accounts), so the demo leads as Mom. Marcus still
     // engages (his sealed at-18 letter, co-parent access). Flipped 2026-06-11.
     role: "co-parent" as const,
-    profileImageUrl: "",
+    // Co-parent gets a real photo too (ORIGINAL AI-generated headshot, no real
+    // likeness). Both parents = faces; the gifter roster stays initials avatars.
+    profileImageUrl: "/demo/marcus.jpg",
   },
   {
     email: "elena@riverafamily.com",
@@ -134,7 +137,11 @@ const ACCOUNTS = [
     // Elena (Mom) is the PRIMARY CUSTODIAN / fund owner / lead persona — see
     // the note on Marcus above. Flipped 2026-06-11.
     role: "parent" as const,
-    profileImageUrl: "",
+    // Elena is the logged-in parent, so she gets a real profile photo (an
+    // ORIGINAL AI-generated headshot, no real-person likeness — keeps the
+    // Rivera-rename IP fix intact). The gifter roster stays initials avatars;
+    // one real face for the account holder among them reads lived-in, not off.
+    profileImageUrl: "/demo/elena.jpg",
   },
   { email: "robert@riverafamily.com",      firstName: "Robert",      lastName: "Rivera", preferredName: "Robert",      role: "gifter" as const, profileImageUrl: "" },
   { email: "sofia@riverafamily.com",   firstName: "Sofia",   lastName: "Rivera", preferredName: "Sofia",   role: "gifter" as const, profileImageUrl: "" },
@@ -146,7 +153,7 @@ const ACCOUNTS = [
   // upsertUser — she owns a live individual investing account now, not a
   // parent-custodial one. Logging in as her renders the REAL post-handoff adult
   // experience (the demo is the real app, not a mock view).
-  { email: "mia@riverafamily.com",    firstName: "Mia",    lastName: "Rivera",    preferredName: "Mia",    role: "graduate" as const, profileImageUrl: "" },
+  { email: "mia@riverafamily.com",    firstName: "Mia",    lastName: "Rivera",    preferredName: "Mia",    role: "graduate" as const, profileImageUrl: "/demo/mia.jpg" },
 ];
 
 // Three Rivera kids. Ages locked relative to today so the demo always
@@ -158,9 +165,13 @@ const ACCOUNTS = [
 // Per DUNPHY_DEMO_SPEC.md locked rule: Riveras are LA-based →
 // California UTMA majority age = 21. Set on each fund.
 function birthdateForAge(years: number, monthsBack = 0): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - years);
-  d.setMonth(d.getMonth() - monthsBack);
+  // Anchor to the one frozen SEED_NOW and build in UTC, so a birthday can't split
+  // a day across a reseed midnight (same fix as the recurring cadence).
+  const d = new Date(Date.UTC(
+    SEED_NOW.getUTCFullYear() - years,
+    SEED_NOW.getUTCMonth() - monthsBack,
+    SEED_NOW.getUTCDate(),
+  ));
   return d.toISOString().slice(0, 10);
 }
 
@@ -172,7 +183,7 @@ function birthdateForAge(years: number, monthsBack = 0): string {
 const KIDS = [
   {
     firstName: "Mia",
-    childPhotoUrl: "",
+    childPhotoUrl: "/demo/mia.jpg", // ORIGINAL AI-generated headshot (graduate, 22)
     lastName: "Rivera",
     pronoun: "she" as const,
     majorityAge: 21,
@@ -189,7 +200,7 @@ const KIDS = [
   },
   {
     firstName: "Nora",
-    childPhotoUrl: "",
+    childPhotoUrl: "/demo/nora.jpg", // ORIGINAL AI-generated headshot (near-handoff, 20)
     lastName: "Rivera",
     pronoun: "she" as const,
     majorityAge: 21,
@@ -209,7 +220,10 @@ const KIDS = [
   },
   {
     firstName: "Theo",
-    childPhotoUrl: "",
+    // ORIGINAL AI-generated child headshot (no real minor — so no COPPA / real
+    // child-likeness concern, and no EXIF/GPS since it's synthetic). Makes the
+    // demo fund feel like a real kid's, not a placeholder.
+    childPhotoUrl: "/demo/theo.jpg",
     lastName: "Rivera",
     pronoun: "he" as const,
     majorityAge: 21,
@@ -535,7 +549,11 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // The single Memory Book note stamped on the first recurring cycle (varies
   // per kid). The cycle gift rows themselves carry no message.
   const recurringChargeNote = recurringNoteFor(kid);
-  const recurringNextRun = (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d; })();
+  // Next charge = one full cadence after the most recent one, on the SAME
+  // day-of-month as the seeded cycles (isoYearsMonthsAgo keeps the seed day), so
+  // the schedule's "next charge" lands on its own rhythm instead of an arbitrary
+  // +14 days that drifts off the 18th-style cadence.
+  const recurringNextRun = new Date(Date.UTC(SEED_NOW.getUTCFullYear(), SEED_NOW.getUTCMonth() + 1, SEED_NOW.getUTCDate(), 12, 0, 0));
   const [recurringSchedule] = await db.insert(parentContributions).values({
     fundId: fund.id,
     userId: parentUserId,
@@ -735,6 +753,41 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     })
     .where(eq(parentContributions.id, recurringSchedule.id));
 
+  // A recent "charge missed" on Theo's active schedule — showcases the missed-
+  // recurring-charge recovery flow end to end: the honest "Charge missed" state,
+  // the reconcile detail ("Visa ····4242"), and the "Add it now" one-tap catch-up.
+  // Linked via parentContributionId so the row's primary action resolves and the
+  // dashboard card + Activity + detail all read the same state from the same row.
+  // Copy mirrors the worker's canonical output EXACTLY (recordRecurringFailure),
+  // so seeded and real rows are indistinguishable. This IS this month's scheduled
+  // charge (Theo's cycles are offset by one in the roster, so the current month is
+  // left open) — it lands on the SAME cadence day as the 84 successful cycles and
+  // the next-run, so the failed row, the history, and "next charge" all tell one
+  // coherent story instead of three unrelated dates. Recent enough to sit inside
+  // the 14-day hasRecentFailure window. Scoped to ONE active kid so the demo reads
+  // as "one graceful recovery", not systemic failure. Delete this block to remove
+  // the decline from the demo entirely.
+  if (kid.firstName === "Theo" && !recurringPaused) {
+    const missedAt = new Date(Date.UTC(SEED_NOW.getUTCFullYear(), SEED_NOW.getUTCMonth(), SEED_NOW.getUTCDate(), 12, 0, 0));
+    const nextChargeLabel = recurringNextRun.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    await db.insert(activities).values({
+      userId: parentUserId,
+      fundId: fund.id,
+      type: "parent_contribution_failed",
+      title: "Automatic charge didn't go through",
+      description: `Your Visa ····4242 was declined. Your plan is still on and charges again ${nextChargeLabel}. Add the missed one if you'd like.`,
+      amount: kid.recurring.amount.toFixed(2),
+      metadata: JSON.stringify({
+        parentContributionId: recurringSchedule.id,
+        reason: "card_declined",
+        paymentMethodBrand: "visa",
+        paymentMethodLast4: "4242",
+        nextRetryDate: recurringNextRun.toISOString(),
+      }),
+      createdAt: missedAt,
+    } as any);
+  }
+
   // Update contributor count from unique senders.
   await db.update(funds)
     .set({ contributorCount: sendersSeen.size })
@@ -758,7 +811,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   const THANK_VARIANTS: Array<(first: string, amt: string, kidName: string, willRead: string, age: number) => string> = [
     (first, amt, kidName, willRead, age) => `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kidName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kidName}'s future.\n\n${kidName} will read this when ${willRead} ${age}.\n\nWith love,\nMarcus`,
     (first, amt, kidName, willRead, age) => `${first}, just wanted to say thank you. Your $${amt} went straight into ${kidName}'s fund, and ${willRead} going to see it (and this note) at ${age}. We're so grateful you're part of ${kidName}'s story.\n\nMarcus`,
-    (first, amt, kidName) => `Thank you, ${first}! ${kidName}'s fund grew by $${amt} because of you. We can't wait to show ${kidName} who was there from the very start.\n\nWith love,\nMarcus and Elena`,
+    (first, amt, kidName) => `Thank you, ${first}! Your $${amt} is part of ${kidName}'s fund now, and we can't wait to show ${kidName} who was there from the very start.\n\nWith love,\nMarcus and Elena`,
     (first, amt, kidName, willRead, age) => `Dear ${first},\n\nWhat a generous gift, $${amt} toward ${kidName}'s future. Years from now ${willRead} going to understand exactly what this meant. Thank you for believing in ${kidName} this early.\n\nMarcus`,
     (first, amt, kidName) => `${first}, thank you so much. The $${amt} is invested and already part of something that will be ${kidName}'s one day. We're so glad you're in ${kidName}'s corner.\n\nWith love,\nMarcus`,
   ];
@@ -848,6 +901,11 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       authorRole: "parent",
       authorName: "Elena Rivera",
       visibility: "kid_now",
+      // A real photo of Elena + Theo, paired with Mom's note, so ONE entry in the
+      // Memory Book is a lived-in mother-and-son moment (not just text). Theo only,
+      // and only on this single note — never stamped on the recurring cycles (the
+      // "216 identical photos" anti-pattern). Founder-supplied 2026-07-09.
+      photoUrl: kid.firstName === "Theo" ? "/demo/theo-mom.jpg" : null,
       createdAt: claireNoteDate,
     } as any);
   }
@@ -1575,10 +1633,11 @@ export async function runRiveraSeed(options: { closePool?: boolean } = {}): Prom
       const kid = KIDS[i];
       const fundId = seededFundIds[i];
       if (!fundId) continue;
+      // Next birthday relative to the same frozen SEED_NOW, in UTC.
       const nextBirthday = new Date(kid.birthdate);
-      nextBirthday.setFullYear(new Date().getFullYear());
-      if (nextBirthday < new Date()) {
-        nextBirthday.setFullYear(nextBirthday.getFullYear() + 1);
+      nextBirthday.setUTCFullYear(SEED_NOW.getUTCFullYear());
+      if (nextBirthday < SEED_NOW) {
+        nextBirthday.setUTCFullYear(nextBirthday.getUTCFullYear() + 1);
       }
       await db.insert(recurringGifts).values({
         fundId,

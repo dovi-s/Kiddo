@@ -10,6 +10,7 @@ import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { haptic } from "@/lib/haptics";
 import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
+import { STRATEGY_ICONS } from "@/lib/strategy";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { StockLogo } from "@/components/ui/stock-logo";
@@ -33,7 +34,7 @@ import {
   CreditCard, Shield, Eye, EyeOff, Check,
   ChevronRight, ChevronDown, Lock, Crown, ArrowUpRight, Wallet, Plus, Minus, Loader2,
   Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus, Pencil, Share2, ExternalLink, Camera,
-  Calendar as CalendarIcon, Mail, Bell,
+  Calendar as CalendarIcon, Mail, Bell, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import { EMAIL_PREFERENCE_CATEGORIES } from "@shared/emailPreferences";
 import { investingLiveCopy } from "@shared/legal-copy";
@@ -1313,7 +1314,7 @@ const STRATEGIES = [
     key: "balanced",
     emoji: "⚖️",
     label: "Balanced Mix",
-    description: "Growth with stability · more bonds to soften ups and downs.",
+    description: "Growth with stability · more bonds, smoother.",
     bestFor: "Best when it'll be used in about 5–10 years.",
     minYearsTo18: 5,
     expectedMean: 0.06,
@@ -1726,13 +1727,15 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2 flex-wrap">
-                    {/* Canonical strategy emoji, matches the locked map
-                        (📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎛️
-                        Custom). Helps the eye distinguish options at a
-                        glance instead of having to read each label. */}
-                    {strategy.emoji && (
-                      <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>{strategy.emoji}</span>
-                    )}
+                    {/* Bespoke brand glyph (TrendingUp / Scale / Shield /
+                        SlidersHorizontal), the same STRATEGY_ICONS set the
+                        dashboard and the Activity strategy-change row use.
+                        Helps the eye distinguish options at a glance instead
+                        of having to read each label. */}
+                    {(() => {
+                      const Icon = (STRATEGY_ICONS as any)[strategy.key];
+                      return Icon ? <Icon size={15} strokeWidth={2.25} aria-hidden /> : null;
+                    })()}
                     {strategy.label}
                     {/* "Currently active" pill — only appears on the
                         strategy that's actually saved to the fund. Lets
@@ -1930,7 +1933,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 <p className="text-3xs text-muted-foreground/80 leading-relaxed">
                   {inLine
                     ? `${childPossessive} matches the target today.`
-                    : "We don't sell to rebalance. Every sale is a taxable event. Future ETF gifts are weighted toward the underweight side, nudging the mix toward target over time. Existing holdings stay put, so on gifts alone a large fund may not fully get there. (Chosen with Love stocks are separate and aren't rebalanced.)"}
+                    : "We don't sell to rebalance, since every sale is taxable. New gifts fill the underweight side, steering the mix toward target over time (a large fund may not fully get there on gifts alone)."}
                 </p>
               </div>
             );
@@ -1966,7 +1969,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                   </div>
                 </div>
                 <p className="text-3xs text-muted-foreground/70 leading-relaxed">
-                  Projections are hypothetical and based on historical market data. Past performance does not guarantee future results. Investing involves risk.
+                  Projections are hypothetical. Past performance does not guarantee future results. Investing involves risk.
                 </p>
               </div>
             );
@@ -2328,28 +2331,33 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 to change something"; the diff makes the change explicit. */}
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <span className="inline-flex items-center gap-1 rounded-full bg-background border border-border/70 px-2.5 py-0.5 text-muted-foreground">
-                <span aria-hidden>{prevStrategy?.emoji || "•"}</span>
+                {/* Brand glyph, matches STRATEGY_ICONS on the cards above +
+                    the Activity strategy-change row (not the old emoji). */}
+                {(() => {
+                  const PrevIcon = prevStrategy ? (STRATEGY_ICONS as any)[prevStrategy.key] : null;
+                  return PrevIcon ? <PrevIcon size={13} strokeWidth={2.25} aria-hidden /> : <span aria-hidden>•</span>;
+                })()}
                 <span className="font-semibold">{prevStrategy?.label || "Current"}</span>
               </span>
               <span className="text-muted-foreground/60" aria-hidden>→</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] border border-[hsl(var(--kiddo-gold)/0.35)] px-2.5 py-0.5 text-[hsl(var(--kiddo-gold-ink))]">
-                <span aria-hidden>{nextStrategy?.emoji || "•"}</span>
+                {(() => {
+                  const NextIcon = nextStrategy ? (STRATEGY_ICONS as any)[nextStrategy.key] : null;
+                  return NextIcon ? <NextIcon size={13} strokeWidth={2.25} aria-hidden /> : <span aria-hidden>•</span>;
+                })()}
                 <span className="font-bold">{newLabel}</span>
               </span>
             </div>
             <p className="text-xs leading-relaxed text-foreground">
-              {whoPossessive} existing {formattedInvested} stays invested as it is. New gifts and recurring investments will follow the {newLabel} from now on.
+              {whoPossessive} {formattedInvested} stays put. New gifts and recurring investments follow the {newLabel} from here on, so the fund shifts toward it over time.
             </p>
-            {/* Em-dash removed (feedback_no_emdash). Orphan-holding consequence
-                added: previously the copy implied existing positions stay
-                untouched, but a parent reading it could reasonably wonder
-                whether their VGT (say) keeps growing as new money arrives.
-                It doesn't — new money flows into the new mix only. The
-                orphan position holds steady at its current value, never
-                added to and never sold. Worth saying explicitly so the
-                parent isn't surprised three months later. */}
+            {/* Muted "why", said once (was five choppy sentences saying "we don't
+                touch existing holdings" three ways). Keeps the two facts a parent
+                actually needs: we don't rebalance by selling (a sale is taxable),
+                and an orphan position (one not in the new mix) just holds at its
+                value, never added to or sold. No em-dash (feedback_no_emdash). */}
             <p className="text-2xs leading-relaxed text-muted-foreground">
-              We don't sell holdings to switch. Every sale would be a taxable event for {whoObject}. Holdings that aren't in the new mix stay where they are. We won't add to them or sell them. The new mix drifts toward target as fresh gifts arrive.
+              We never sell to switch mixes. A sale would be a taxable event for {whoObject}, so anything already outside the new mix just holds, never added to or sold.
             </p>
           </div>
         );
@@ -2883,7 +2891,7 @@ const [editFundName, setEditFundName] = useState("");
   // renders the empty/upsell state. See Settings audit notes for why
   // this surface exists in Money tab even though the canonical
   // management UI lives on the Dashboard.
-  const { data: recurringContributions = [] } = useQuery<Array<{ id: string; amount: string; frequency: string; status: string; nextRunDate?: string | null }>>({
+  const { data: recurringContributions = [] } = useQuery<Array<{ id: string; amount: string; frequency: string; status: string; nextRunDate?: string | null; bankAccountId?: string | null }>>({
     queryKey: ["/api/funds", primaryFund?.id, "parent-contributions"],
     queryFn: async () => {
       if (!primaryFund?.id) return [];
@@ -3337,7 +3345,7 @@ const [editFundName, setEditFundName] = useState("");
     ? `Final thank-you note when control passes at ${notificationMajorityAge}. Add a birthdate first.`
     : notificationAgeTransition.stage === "adult"
       ? `Age-${notificationMajorityAge} handoff is ready now. Review transfer steps before sending this note.`
-      : `Final thank-you note when control passes at ${notificationMajorityAge}. Planning anchor: ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
+      : `Final thank-you note when control passes at ${notificationMajorityAge}, around ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
   // The active notification fund has already transferred to the owner → the
   // age-of-majority handoff note no longer applies (hide the row below).
   const notificationFundIsOwnerHeld =
@@ -3767,18 +3775,48 @@ const [editFundName, setEditFundName] = useState("");
     }
   };
 
-  const handleDeleteBankAccount = async (id: string) => {
+  // Removal is confirmed through a dialog (never one instant tap) because it's
+  // destructive and can silently break a recurring pull that draws from this
+  // bank. `bankPendingRemoval` holds the account the dialog is asking about.
+  const [bankPendingRemoval, setBankPendingRemoval] = useState<any | null>(null);
+  const [removingBank, setRemovingBank] = useState(false);
+
+  const confirmRemoveBank = async () => {
+    const account = bankPendingRemoval;
+    if (!account) return;
+    setRemovingBank(true);
     haptic("medium");
     try {
-      const res = await fetch(`/api/bank-accounts/${id}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`/api/bank-accounts/${account.id}`, { method: "DELETE", credentials: "include" });
+      // DELETE returns 204 (no body) on success; older/demo paths may return JSON.
       if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (demoBlocked(data, toast)) return;
+        const data = res.status === 204 ? null : await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) { setRemovingBank(false); setBankPendingRemoval(null); return; }
+        // The server does not reassign the default when the default bank is
+        // removed, which would leave the user with no default funding source.
+        // Promote the first remaining account so recurring pulls always have a
+        // default to fall back to.
+        if (account.isDefault) {
+          const remaining = (bankAccounts || []).filter((b: any) => b.id !== account.id);
+          if (remaining.length > 0) {
+            await fetch(`/api/bank-accounts/${remaining[0].id}`, {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isDefault: true }),
+            }).catch(() => {});
+          }
+        }
         queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
         toast({ title: "Bank account removed" });
+        setBankPendingRemoval(null);
+      } else {
+        toast({ title: "Could not remove account", variant: "destructive" });
       }
     } catch {
       toast({ title: "Could not remove account", variant: "destructive" });
+    } finally {
+      setRemovingBank(false);
     }
   };
 
@@ -4191,7 +4229,7 @@ const [editFundName, setEditFundName] = useState("");
             permanent divider line at rest. -mx-4 px-4 bleeds the bg to the
             screen edges. env() offset keeps it flush under the notch-extended
             header in standalone PWA. Added 2026-07. */}
-        <div className="sticky top-[calc(env(safe-area-inset-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px] space-y-2">
+        <div className="sticky top-[calc(var(--app-safe-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px] space-y-2">
           <div className={`kiddo-tab-row max-w-full overflow-x-auto${primaryFundIsPreviousOwner ? " hidden" : ""}`} data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
             {/* "Membership" tab removed from the in-app navigation
                 on 2026-05-14 per the WHO/HOW IA Phase 1c. Account is
@@ -4227,6 +4265,11 @@ const [editFundName, setEditFundName] = useState("");
                 data-active={settingsTab === tab.id ? "true" : "false"}
                 data-testid={`settings-tab-${tab.id}`}
                 onClick={() => {
+                  // Start a newly-selected tab at the TOP. Without this the previous
+                  // tab's scroll position carried over, dropping you mid-content in a
+                  // different tab (reads as broken). Only on an actual switch, and
+                  // instant (no smooth-scroll fighting the tab's fade-in). 2026-07-08.
+                  if (tab.id !== settingsTab) window.scrollTo({ top: 0 });
                   setSettingsTab(tab.id as typeof settingsTab);
                   haptic("selection");
                 }}
@@ -4348,7 +4391,7 @@ const [editFundName, setEditFundName] = useState("");
                     <span className="text-sm font-semibold text-foreground">Link only · Private</span>
                   </div>
                   <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">
-                    {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "This fund is never listed or publicly searchable." : "Funds for children are never listed or publicly searchable."} Anyone with its link can reach it, so share the link only with people you trust.
+                    Never listed or publicly searchable. Anyone with the link can reach it, so share it only with people you trust.
                   </p>
                 </div>
               </div>
@@ -4391,7 +4434,7 @@ const [editFundName, setEditFundName] = useState("");
                 <p className="text-2xs text-muted-foreground mb-4">Default: instant. Your gift link is unlisted (only people you share it with are likely to find it), and you can delete any entry anytime.</p>
                 <NotificationSwitchRow
                   title="Require my approval first"
-                  body={`When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Left off, they appear in real time as gifters add them.`}
+                  body={`If off, gifter notes and media appear right away.`}
                   checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
                   disabled={!primaryFund?.id || updateMemoryModeration.isPending}
                   onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
@@ -4945,7 +4988,7 @@ const [editFundName, setEditFundName] = useState("");
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Need help instead?</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  If a gift is missing, identity verification failed, or a link is acting strange, reach out directly and we will help you sort it out fast.
+                  If a gift is missing, identity verification failed, or a link is acting strange, reach out and we'll help you sort it out fast.
                 </p>
                 <Button variant="outline" className="mt-4 rounded-xl" onClick={() => window.location.assign("mailto:support@kiddofund.com")} data-testid="button-settings-contact-support-compact">
                   Contact support
@@ -4972,7 +5015,7 @@ const [editFundName, setEditFundName] = useState("");
               <div className="flex items-start gap-3 p-5">
                 <Check size={18} className={`mt-0.5 ${kycCompleted ? "text-green-600" : "text-amber-500"}`} />
                 <div>
-                  <p className="text-sm font-bold text-foreground">{kycCompleted ? investingLiveCopy("Investing is active", "Investing is ready") : "Activate investing"}</p>
+                  <p className="text-sm font-bold text-foreground">{kycCompleted ? investingLiveCopy("Investing is active", "Verified and ready") : "Activate investing"}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {kycCompleted
                       ? investingLiveCopy(
@@ -5095,34 +5138,75 @@ const [editFundName, setEditFundName] = useState("");
                 </p>
                 {bankAccounts.length > 0 && (
                   <div className="mt-4 space-y-2" data-testid="settings-money-bank-list">
-                    {bankAccounts.map((account: any) => (
-                      <div key={account.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4" data-testid={`settings-money-bank-${account.id}`}>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.08)] text-[hsl(var(--kiddo-evergreen))]">
+                    {bankAccounts.map((account: any) => {
+                      const isDefault = Boolean(account.isDefault);
+                      const connStatus = String(account.connectionStatus || account.status || "active").toLowerCase();
+                      const needsRefresh = connStatus !== "active";
+                      // Recurring pulls that draw from THIS bank (primary fund's
+                      // active schedules). Lets Remove name what it would break
+                      // and lets the row show its funding role at a glance.
+                      const pulls = (recurringContributions || []).filter(
+                        (c) => String(c.status || "").toLowerCase() === "active" && (c.bankAccountId || null) === account.id,
+                      );
+                      const pullMonthly = pulls.reduce((s, c) => s + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency), 0);
+                      return (
+                      <div key={account.id} className="flex items-start justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4" data-testid={`settings-money-bank-${account.id}`}>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${needsRefresh ? "bg-amber-50 text-amber-700" : "bg-[hsl(var(--kiddo-evergreen)/0.08)] text-[hsl(var(--kiddo-evergreen))]"}`}>
                             <Building2 size={17} />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-foreground">{account.bankName || account.institutionName || "Linked bank"}</p>
-                            <p className="text-xs text-muted-foreground">{account.accountType || "Account"} ending in {account.accountLast4 || account.lastFour || "----"}</p>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <p className="truncate text-sm font-bold text-foreground">{account.bankName || account.institutionName || "Linked bank"}</p>
+                              {isDefault && (
+                                <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]" data-testid={`badge-bank-default-${account.id}`}>
+                                  Default
+                                </span>
+                              )}
+                              {needsRefresh && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800" data-testid={`badge-bank-refresh-${account.id}`}>
+                                  <RefreshCw size={10} /> Needs refresh
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{account.accountType || "Account"} ending in {account.accountLast4 || account.lastFour || "----"}</p>
+                            {pulls.length > 0 && (
+                              <p className="mt-1 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                                Funds {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this fund's"} {formatUsd(pullMonthly)}/mo
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          className="rounded-xl px-3 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700"
-                          onClick={() => handleDeleteBankAccount(account.id)}
-                          data-testid={`button-remove-bank-${account.id}`}
-                        >
-                          Remove
-                        </button>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {!isDefault && !needsRefresh && (
+                            <button
+                              type="button"
+                              className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] kiddo-press"
+                              onClick={() => handleSetDefaultBankAccount(account.id)}
+                              data-testid={`button-make-default-bank-${account.id}`}
+                            >
+                              Make default
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700 kiddo-press"
+                            onClick={() => { setBankPendingRemoval(account); haptic("selection"); }}
+                            data-testid={`button-remove-bank-${account.id}`}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 <Button variant="outline" className="mt-4 rounded-xl" onClick={() => { setLinkBankOpen(true); haptic("selection"); }} data-testid="button-link-bank-compact">
                   {bankAccounts.length > 0 ? "Add another bank" : "Link bank account"}
                 </Button>
                 <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                  Cash from sold investments can move to your linked bank after settlement. Usually 1-3 business days. Kiddo does not charge withdrawal fees.
+                  Cash from sold investments can move to your linked bank after settlement. Usually 1 to 3 business days. Kiddo doesn't charge withdrawal fees.
                 </p>
               </div>
             </SectionCard>
@@ -5135,9 +5219,9 @@ const [editFundName, setEditFundName] = useState("");
                 <h2 className="text-base font-bold text-foreground">Taking money out</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? (
-                    <>Move cash from your fund to your bank. This is a deliberate action. The money is yours; selling investments to withdraw may have capital-gains tax implications.</>
+                    <>Move cash from your fund to your bank. The money is yours; selling investments to withdraw may have capital-gains tax implications.</>
                   ) : (
-                    <>Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank. This is a deliberate action. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"}, so withdrawals are distributions to them and may have tax implications.</>
+                    <>Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"}, so withdrawals are distributions to them and may have tax implications.</>
                   )}
                 </p>
                 <Button
@@ -5230,6 +5314,66 @@ const [editFundName, setEditFundName] = useState("");
         onClose={() => setLinkBankOpen(false)}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] })}
       />
+
+      {/* Remove-bank confirm. Mirrors the strategy-switch "what changes" rule:
+          a destructive money action shows its consequence before it commits.
+          Names the recurring pull it would break (when we can match one),
+          flags a default-account removal, and never claims safety when the
+          primary-fund-scoped query can't see every fund's pulls. */}
+      <Dialog open={!!bankPendingRemoval} onOpenChange={(o) => { if (!o && !removingBank) setBankPendingRemoval(null); }}>
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Remove bank account</DialogTitle>
+          {bankPendingRemoval && (() => {
+            const acct = bankPendingRemoval;
+            const last4 = acct.accountLast4 || acct.lastFour || "----";
+            const pulls = (recurringContributions || []).filter(
+              (c) => String(c.status || "").toLowerCase() === "active" && (c.bankAccountId || null) === acct.id,
+            );
+            const pullMonthly = pulls.reduce((s, c) => s + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency), 0);
+            const remaining = (bankAccounts || []).filter((b: any) => b.id !== acct.id);
+            const nextDefaultName = remaining[0]?.bankName || remaining[0]?.institutionName || "another linked bank";
+            return (
+              <div className="p-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="font-heading text-lg font-semibold text-foreground">Remove {acct.bankName || acct.institutionName || "this bank"}?</h2>
+                    <p className="text-sm text-muted-foreground">{acct.accountType || "Account"} ending in {last4}</p>
+                  </div>
+                </div>
+
+                {pulls.length > 0 ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-relaxed text-amber-900" data-testid="bank-remove-consequence-pull">
+                    This bank funds {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "an"} {formatUsd(pullMonthly)}/mo recurring investment. Removing it leaves that pull without a source until you relink or point it at another bank.
+                    {acct.isDefault && remaining.length > 0 ? ` We'll make ${nextDefaultName} your default.` : ""}
+                  </div>
+                ) : acct.isDefault ? (
+                  <div className="rounded-xl border border-[hsl(var(--kiddo-border))] bg-muted/30 p-3 text-sm leading-relaxed text-foreground" data-testid="bank-remove-consequence-default">
+                    This is your default account for recurring investments and withdrawals.
+                    {remaining.length > 0 ? ` We'll make ${nextDefaultName} your default.` : ` You'll have no bank linked for the age-${primaryFundMajorityAge} handoff until you add one.`}
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed text-muted-foreground" data-testid="bank-remove-consequence-neutral">
+                    Any recurring investment set to pull from this account will need a new source before its next run. You can relink anytime.
+                  </p>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <Button variant="outline" className="flex-1 rounded-xl" disabled={removingBank} onClick={() => setBankPendingRemoval(null)} data-testid="button-cancel-remove-bank">
+                    Keep it
+                  </Button>
+                  <Button variant="destructive" className="flex-1 rounded-xl" disabled={removingBank} onClick={confirmRemoveBank} data-testid="button-confirm-remove-bank">
+                    {removingBank && <Loader2 size={16} className="mr-2 animate-spin" />}
+                    Remove bank
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <CollaboratorInviteModal
         isOpen={collabModalOpen}
@@ -5331,7 +5475,7 @@ const [editFundName, setEditFundName] = useState("");
                         Gifts already paid but still settling (1–2 business days) still arrive in the fund. Closing doesn't claw them back.
                       </p>
                       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                        Want to withdraw cash first? Use Money → Take money out. It's a separate, deliberate action.
+                        Want to withdraw cash first? Use Money → Take money out. It's a separate action.
                       </p>
                     </div>
                   </>

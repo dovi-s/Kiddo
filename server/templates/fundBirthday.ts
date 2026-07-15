@@ -84,7 +84,7 @@ export function buildFundBirthdayEmail(input: FundBirthdayInput): EmailMessage {
     ``,
     memoryBookUrl
       ? `If you want to add a note from today, the Memory Book is where it goes. Future ${childFirstName} reads it on their 18th.`
-      : `What you started here is the kind of thing ${childFirstName} reads about later. It compounds quietly.`,
+      : `What you started here is the kind of thing ${childFirstName} reads about later. It grows quietly, every time someone shows up.`,
   ].join("\n");
 
   const { html } = renderKiddoEmail({

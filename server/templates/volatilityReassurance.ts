@@ -62,7 +62,7 @@ export function buildVolatilityReassuranceEmail(input: VolatilityReassuranceInpu
     ``,
     horizonLine,
     ``,
-    `Nothing's been sold. The shares you own are the same shares. The math of long-horizon compounding still works.`,
+    `Nothing's been sold, and nothing about the plan changes.`,
     ``,
     `Open the Dashboard: ${dashboardUrl}`,
     ``,

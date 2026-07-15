@@ -80,7 +80,7 @@ import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fu
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
 import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftAllocations, giftIntents, pendingGiftMedia, trustedDevices, passkeys, foundingMembers, partnerInquiries, insertPartnerInquirySchema } from "@shared/schema";
-import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
+import { toMonthlyEquivalent, sumMonthlyEquivalent, checkRecurringPlausibility } from "@shared/recurring-math";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { isAllowedStockPick } from "@shared/stock-picks";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
@@ -148,6 +148,51 @@ const DEFAULT_INVESTMENT_CONFIG: InvestmentConfig = {
     },
   },
 };
+
+// Recovery-aware "does this recurring plan have an UNRESOLVED recent failure?"
+// A charge failed in the last 14 days AND no successful charge for the SAME plan
+// has landed since. That clears the "Charge missed" state the moment the parent
+// recovers ("Add it now" writes a parent_contribution success row) or the next
+// cycle simply succeeds. Safe by construction: with no recovery row it falls back
+// to failure-only (the prior behavior) and can never hide a real unrecovered
+// failure. Keyed by parentContributionId (the plan id). Shared by /api/me/scheduled
+// and attachRecentFailures so the two computations never drift.
+const RECENT_FAILURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+async function computeRecentFailureMap(
+  fundIds: string[],
+): Promise<Map<string, { lastFailureAt: Date; hasRecentFailure: boolean }>> {
+  const out = new Map<string, { lastFailureAt: Date; hasRecentFailure: boolean }>();
+  if (fundIds.length === 0) return out;
+  const latestByPlan = async (types: string[]): Promise<Map<string, Date>> => {
+    const rows = await db
+      .select({ metadata: activities.metadata, createdAt: activities.createdAt })
+      .from(activities)
+      .where(and(inArray(activities.type, types), inArray(activities.fundId, fundIds)))
+      .orderBy(desc(activities.createdAt));
+    const m = new Map<string, Date>();
+    for (const r of rows) {
+      if (!r.metadata || !r.createdAt) continue;
+      try {
+        const cid = JSON.parse(String(r.metadata))?.parentContributionId;
+        if (typeof cid === 'string' && !m.has(cid)) m.set(cid, r.createdAt);
+      } catch { /* skip malformed metadata */ }
+    }
+    return m;
+  };
+  const failures = await latestByPlan(['parent_contribution_failed']);
+  if (failures.size === 0) return out;
+  // A worker cycle or a manual "Add it now" both land as parent_contribution /
+  // gift_invested rows stamped with the plan id — either one counts as recovery.
+  const successes = await latestByPlan(['parent_contribution', 'gift_invested']);
+  const now = Date.now();
+  failures.forEach((lastFailureAt, cid) => {
+    const recovery = successes.get(cid);
+    const recovered = !!recovery && recovery.getTime() > lastFailureAt.getTime();
+    const withinWindow = now - lastFailureAt.getTime() < RECENT_FAILURE_WINDOW_MS;
+    out.set(cid, { lastFailureAt, hasRecentFailure: withinWindow && !recovered });
+  });
+  return out;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -461,7 +506,7 @@ export async function registerRoutes(
 
     return {
       status: "approved" as const,
-      message: "Your identity is verified and your investing account is active.",
+      message: "Your identity is verified and your fund is active.",
       reason: "auto_approved",
     };
   };
@@ -2467,7 +2512,12 @@ export async function registerRoutes(
     const trimmed = value.trim();
     if (!trimmed) return null;
     if (trimmed.length > 2000) return null;
-    if (trimmed.startsWith("/uploads/")) {
+    // Trusted same-origin static paths: /uploads/ = user-uploaded media,
+    // /demo/ = committed demo assets (seeded Memory Book photos, avatars). Both
+    // are app-served files, not user-fetched remote URLs, so they pass through
+    // as-is instead of being parsed as absolute http(s) URLs (which would null a
+    // leading-slash path and silently drop a seeded demo photo).
+    if (trimmed.startsWith("/uploads/") || trimmed.startsWith("/demo/")) {
       return trimmed;
     }
     try {
@@ -2666,7 +2716,14 @@ export async function registerRoutes(
             SELECT SUM(CAST(g.net_amount AS numeric))
             FROM gifts g
             WHERE g.fund_id = f.id
-              AND g.status NOT IN ('pending', 'failed', 'refunded', 'canceled', 'host_hold')
+              -- 'pending' INCLUDED: a pending gift is always post-charge (money
+              -- received) — its two creators (checkout webhook + gift-intent
+              -- settlement) run only after payment succeeds; the recurring worker
+              -- uses 'processing' and the raw create-gift endpoint is 404'd in prod.
+              -- Its money is already in total_value via pendingBalance, so excluding
+              -- it here showed a stuck pending gift as phantom growth. host_hold stays
+              -- excluded (held, not in the fund / not in pendingBalance). Audit fix 2026-07.
+              AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold')
           ), 0) AS principal_basis
         FROM funds f
         WHERE f.id = ${fundId}
@@ -2692,7 +2749,11 @@ export async function registerRoutes(
               SELECT SUM(CAST(g.net_amount AS numeric))
               FROM gifts g
               WHERE g.fund_id = fs.fund_id
-                AND g.status NOT IN ('pending', 'failed', 'refunded', 'canceled', 'host_hold')
+                -- Mirror the capture query above: 'pending' INCLUDED (post-charge
+                -- money, already in total_value). The backfill self-corrects — it
+                -- recomputes basis from CURRENT statuses on every capture, so a
+                -- pending gift that later fails drops back out automatically.
+                AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold')
                 AND DATE(g.created_at) <= DATE(fs.snapshot_date)
             ), 0)
           )::text
@@ -3390,7 +3451,12 @@ export async function registerRoutes(
           eventGiftCodes: eventGiftCodeEntries,
           largeGiftHolds,
           recurringGifts: recurringGiftRows,
-          parentContributions: parentContributionRows,
+          // Enrich with `hasRecentFailure` so the dashboard recurring cards can
+          // show a "Retrying" state consistent with the Activity Scheduled tab.
+          // This summary payload SEEDS + overwrites the parent-contributions
+          // query cache client-side, so the flag must live here too (not only on
+          // the /parent-contributions endpoint).
+          parentContributions: await attachRecentFailures(parentContributionRows, [fund.id]),
           transactions: recentTransactionRows,
           giftAllocations: giftAllocationsForFund,
           // Drives the one-time at-18 welcome banner on the Dashboard. See
@@ -6488,7 +6554,7 @@ export async function registerRoutes(
               id: "birthday-soon",
               tone: "info",
               title: `${primaryFund.recipientFirstName || primaryFund.name}'s birthday is coming up`,
-              description: "This is the best moment to create a gifting page and give family a reason to act now.",
+              description: "A birthday page gives family an easy reason to gift.",
               ctaLabel: "Create a moment",
               ctaHref: "/event/create",
             });
@@ -6499,7 +6565,7 @@ export async function registerRoutes(
           items.push({
             id: "gift-pending",
             tone: "info",
-            title: "A gift is still moving through the system",
+            title: "A gift is still on its way",
             description: "One or more gifts are pending, processing, or waiting on a protection check before they settle.",
             ctaLabel: "Open activity",
             ctaHref: "/activity",
@@ -6511,7 +6577,7 @@ export async function registerRoutes(
             id: "first-gift",
             tone: "warning",
             title: `${primaryFund.recipientFirstName || primaryFund.name}'s first gift has not landed yet`,
-            description: "Share the fund once so the first gift can arrive and the story can finally begin.",
+            description: "Share the fund once so the first gift can land.",
             ctaLabel: "Share fund",
             ctaHref: buildFundSharePath(primaryFund),
           });
@@ -6520,7 +6586,7 @@ export async function registerRoutes(
             id: "first-memory",
             tone: "success",
             title: "The fund has gifts. Now write the first Memory Book note.",
-            description: "This is the page your child may read first someday. Give the story its opening line.",
+            description: "Write the first note your child may read here someday.",
             ctaLabel: "Open Memory Book",
             ctaHref: `/memory/${primaryFund.id}`,
           });
@@ -8468,13 +8534,13 @@ export async function registerRoutes(
             "",
             `${childName} just turned ${majorityAge} and now legally owns the Kiddo fund you shared access to. Under state UTMA law, control transfers to them at this age, and the fund has moved into their own account.`,
             "",
-            `Because the account is now ${childName}'s, shared access has ended — that's the normal, expected part of a handoff, not something you need to fix. Nothing was sold; the investments stay exactly where they are.`,
+            `Because the account is now ${childName}'s, shared access has ended. That's the normal, expected part of a handoff, not something you need to fix. Nothing was sold; the investments stay exactly where they are.`,
             "",
             `If ${childName} wants to share the fund with you again, they can invite you from their own account.`,
             "",
             "Thank you for showing up for them all these years.",
             "",
-            "— The Kiddo team",
+            "The Kiddo team",
           ].join("\n");
           const { html } = renderKiddoEmail({
             heading: `${childName} now owns their Kiddo fund`,
@@ -9160,7 +9226,7 @@ export async function registerRoutes(
           fundId: userFunds[0]?.id,
           type: 'kyc_approved',
           title: 'Identity verified',
-          description: 'Your identity has been verified. Your funds are now active and investing.',
+          description: 'Your identity has been verified. Your funds are now active.',
         });
       } else if (decision.status === 'pending') {
         await storage.createActivity({
@@ -9186,7 +9252,7 @@ export async function registerRoutes(
         userId,
         title:
           decision.status === "approved"
-            ? "Your investing account is active"
+            ? "Your fund is active"
             : decision.status === "pending"
               ? "Your identity check is in review"
               : "Your identity details need attention",
@@ -9215,7 +9281,7 @@ export async function registerRoutes(
       const kycStatus = user?.kycStatus || 'none';
       const statusMessage =
         kycStatus === 'approved'
-          ? 'Your investing account is active.'
+          ? 'Your fund is active.'
           : kycStatus === 'pending'
             ? 'We are reviewing your identity details now.'
             : kycStatus === 'failed'
@@ -15616,8 +15682,8 @@ export async function registerRoutes(
           // thank-you for every one of Dad's auto-invest cycles.
           if ((gift as any).parentContributionId || String((gift as any).source || '') === 'recurring_worker') continue;
           const giftAmt = parseFloat(gift.amount || '0');
-          const formattedAmt = giftAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          const message = `Thank you ${gift.senderName} for your generous gift of $${formattedAmt} to ${fund.name}!`;
+          const formattedAmt = giftAmt % 1 === 0 ? giftAmt.toLocaleString('en-US') : giftAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const message = `Thank you, ${gift.senderName}, for the $${formattedAmt} you put into ${fund.name}.`;
           await storage.createThankYou({
             fundId: fund.id,
             giftId: gift.id,
@@ -16625,26 +16691,41 @@ export async function registerRoutes(
       // the Scheduled tab can show "⚠ Last cycle failed" without making
       // the client reconcile activity rows itself.
       const contribIds = contribRows.map((r) => r.id);
-      const failureMap = new Map<string, Date>();
+      // Recovery-aware failure state (shared helper, twin of attachRecentFailures):
+      // a failure only reads as "recent" while it is still UNRESOLVED — it clears
+      // once the parent adds it back ("Add it now") or the next cycle succeeds.
+      const failureInfo = await computeRecentFailureMap(fundIds);
+
+      // Most recent successful charge's card per schedule, so a card-charged
+      // schedule shows "Visa •••• 4242" instead of the generic "card on file".
+      // Read from the stored reconcile metadata on the fired charge's activity
+      // row (gift_invested) — NO live Stripe call, staying inside the provider
+      // boundary. Only fills for schedules that have actually charged; a
+      // never-fired one keeps "card on file" until its first run (honest).
+      const cardMap = new Map<string, { last4: string; brand: string | null }>();
       if (contribIds.length > 0) {
-        const failureRows = await db
-          .select({
-            metadata: activities.metadata,
-            createdAt: activities.createdAt,
-          })
+        const chargeRows = await db
+          .select({ metadata: activities.metadata })
           .from(activities)
           .where(and(
-            eq(activities.type, 'parent_contribution_failed'),
+            // Include the FAILED attempt too: the schedule "Charges" the card that
+            // was tried, even when the try declined — so the card on the plan and
+            // the decline row read the SAME method (no "bank here / Visa there"
+            // mismatch). Newest row wins (ordered desc), so a later success still
+            // supersedes an older failure.
+            inArray(activities.type, ["gift_invested", "parent_contribution", "parent_contribution_failed"]),
             inArray(activities.fundId, fundIds),
           ))
           .orderBy(desc(activities.createdAt));
-        for (const r of failureRows) {
-          if (!r.metadata || !r.createdAt) continue;
+        for (const r of chargeRows) {
+          if (!r.metadata) continue;
           try {
             const meta = JSON.parse(String(r.metadata));
-            const cid = typeof meta?.parentContributionId === 'string' ? meta.parentContributionId : null;
-            if (!cid || failureMap.has(cid)) continue;
-            failureMap.set(cid, r.createdAt);
+            const cid = typeof meta?.parentContributionId === "string" ? meta.parentContributionId : null;
+            const last4 = typeof meta?.paymentMethodLast4 === "string" ? meta.paymentMethodLast4.trim() : "";
+            if (!cid || !last4 || cardMap.has(cid)) continue; // first row = most recent (ordered desc)
+            const brandRaw = typeof meta?.paymentMethodBrand === "string" ? meta.paymentMethodBrand.trim() : "";
+            cardMap.set(cid, { last4, brand: brandRaw || null });
           } catch { /* skip malformed metadata */ }
         }
       }
@@ -16652,28 +16733,70 @@ export async function registerRoutes(
       const contributions = contribRows.map((row) => {
         const fund = fundIndex.get(row.fundId);
         const bank = row.bankAccountId ? bankIndex.get(row.bankAccountId) : null;
-        const lastFailureAt = failureMap.get(row.id) ?? null;
-        // "Recent" = within last 14 days. Older failures probably already
-        // resolved (parent paid manually or pickled). Avoids surfacing
-        // ancient incidents as if they're current.
-        const recentFailure = lastFailureAt && (Date.now() - lastFailureAt.getTime()) < 14 * 24 * 60 * 60 * 1000;
+        const failInfo = failureInfo.get(row.id) ?? null;
+        const lastFailureAt = failInfo?.lastFailureAt ?? null;
+        const recentFailure = !!failInfo?.hasRecentFailure;
+        const card = bank ? null : cardMap.get(row.id);
         return {
           ...row,
           fundName: fund?.name ?? null,
           recipientFirstName: fund?.recipientFirstName ?? null,
+          // The client renders "{label} •••• {last4}" when last4 is present, so for a
+          // card the label is the brand (or "Card") — "Visa •••• 4242". No charge yet →
+          // no last4 → the honest "card on file".
           paymentSource: bank
             ? { kind: "bank" as const, last4: bank.last4, label: bank.bankName }
-            : { kind: "card" as const, last4: null, label: "card on file" },
+            : card
+              ? { kind: "card" as const, last4: card.last4, label: card.brand ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1) : "Card" }
+              // No bank on the schedule and no charged-card on record → honest
+              // "card on file" (last4 null, so the client hides the line rather than
+              // inventing a method). The demo's active plan now resolves to its real
+              // card via the failed-attempt row above, so it no longer lands here.
+              : { kind: "card" as const, last4: null, label: "card on file" },
           lastFailureAt: lastFailureAt ? lastFailureAt.toISOString() : null,
           hasRecentFailure: !!recentFailure,
         };
       });
+      // Lifetime total each gifter has given to the fund, so the Scheduled tab's
+      // gifter row can show "$X given · N gifts". The recurring_gifts row tracks no
+      // total (unlike parent_contributions), so we sum the gifter's actual gifts.
+      // Match by fund + lowercased email and exclude failed/refunded/canceled/
+      // host_hold — the SAME rules as the year-end recap worker, so the number can
+      // never mislead. Only reminders carrying an email get a total (we never guess
+      // by name, which could collide across gifters).
+      const reminderEmails = new Set(
+        reminderRows.map((r) => String(r.senderEmail || "").trim().toLowerCase()).filter(Boolean),
+      );
+      const gifterTotals = new Map<string, { total: number; count: number }>();
+      if (reminderEmails.size > 0) {
+        const giftAggRows = await db
+          .select({ fundId: gifts.fundId, senderEmail: gifts.senderEmail, amount: gifts.amount, status: gifts.status })
+          .from(gifts)
+          .where(inArray(gifts.fundId, fundIds));
+        const EXCLUDED = new Set(["failed", "refunded", "canceled", "cancelled", "host_hold"]);
+        for (const g of giftAggRows) {
+          const email = String(g.senderEmail || "").trim().toLowerCase();
+          if (!email || !reminderEmails.has(email)) continue;
+          if (EXCLUDED.has(String(g.status || "").toLowerCase())) continue;
+          const amt = parseFloat(String(g.amount || "0")) || 0;
+          if (amt <= 0) continue;
+          const key = `${g.fundId}|${email}`;
+          const cur = gifterTotals.get(key) || { total: 0, count: 0 };
+          cur.total += amt;
+          cur.count += 1;
+          gifterTotals.set(key, cur);
+        }
+      }
       const reminders = reminderRows.map((row) => {
         const fund = fundIndex.get(row.fundId);
+        const gifterEmail = String(row.senderEmail || "").trim().toLowerCase();
+        const agg = gifterEmail ? gifterTotals.get(`${row.fundId}|${gifterEmail}`) : null;
         return {
           ...row,
           fundName: fund?.name ?? null,
           recipientFirstName: fund?.recipientFirstName ?? null,
+          totalGiven: agg ? Math.round(agg.total * 100) / 100 : null,
+          giftCount: agg ? agg.count : null,
         };
       });
 
@@ -17697,6 +17820,31 @@ export async function registerRoutes(
 
   // ===== PARENT AUTO-INVEST (Kiddo+ / Family exclusive) =====
 
+  // Attach `hasRecentFailure` (a charge failed in the last 14 days) to parent
+  // contributions so surfaces beyond the Scheduled tab — the dashboard recurring
+  // cards — can show a "Retrying" state that stays CONSISTENT with Activity
+  // (which reads the same flag from /api/me/scheduled). Same computation as that
+  // endpoint: scan `parent_contribution_failed` activity rows and match them to a
+  // contribution via `metadata.parentContributionId`.
+  const attachRecentFailures = async <T extends { id: string }>(
+    contributions: T[],
+    fundIds: string[],
+  ): Promise<(T & { hasRecentFailure: boolean; lastFailureAt: string | null })[]> => {
+    if (contributions.length === 0) return [];
+    // Recovery-aware (see computeRecentFailureMap): a recent failure clears once a
+    // successful charge for the same plan lands after it, so the "Charge missed"
+    // state and "Add it now" prompt disappear the moment the parent recovers.
+    const failureInfo = await computeRecentFailureMap(fundIds);
+    return contributions.map((row) => {
+      const info = failureInfo.get(row.id) ?? null;
+      return {
+        ...row,
+        lastFailureAt: info ? info.lastFailureAt.toISOString() : null,
+        hasRecentFailure: !!info?.hasRecentFailure,
+      };
+    });
+  };
+
   app.get('/api/funds/:fundId/parent-contributions', isAuthenticated, async (req: any, res) => {
     try {
       const fund = await storage.getFund(req.params.fundId);
@@ -17713,7 +17861,7 @@ export async function registerRoutes(
       // df0112ae console-403 the report surfaced). Fixed 2026-05-29.
       if (await isDemoFund(req.params.fundId)) {
         const contributions = await storage.getParentContributionsByFund(req.params.fundId);
-        return res.json(contributions);
+        return res.json(await attachRecentFailures(contributions, [req.params.fundId]));
       }
 
       // Recurring is a paid fund-tier feature (pricing-v3). Gate on the
@@ -17738,7 +17886,7 @@ export async function registerRoutes(
       }
 
       const contributions = await storage.getParentContributionsByFund(req.params.fundId);
-      res.json(contributions);
+      res.json(await attachRecentFailures(contributions, [req.params.fundId]));
     } catch (error) {
       console.error('Error fetching parent contributions:', error);
       res.status(500).json({ error: 'Failed to fetch recurring investment plans' });
@@ -17751,6 +17899,23 @@ export async function registerRoutes(
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
+
+      // Sanity guard (mirrors the client check): reject a recurring amount whose
+      // monthly-equivalent is implausibly high — almost always a fat-finger, most
+      // often a DAILY amount typed as if it were monthly (daily x ~30.4). The
+      // client blocks this too, but a client guard is bypassable; the server is
+      // the real enforcement point, and it stops the projection from ever
+      // compounding a garbage input. Runs before the demo branch so the sandbox
+      // rejects it as well.
+      {
+        const amtNum = parseFloat(String(req.body?.amount ?? 0));
+        if (Number.isFinite(amtNum) && amtNum > 0) {
+          const plaus = checkRecurringPlausibility(amtNum, String(req.body?.frequency || "monthly"));
+          if (!plaus.ok) {
+            return res.status(400).json({ error: `That works out to about $${Math.round(plaus.monthlyEquivalent).toLocaleString()} a month, which looks like a typo. Lower the amount or change how often it runs.` });
+          }
+        }
+      }
 
       // Demo-fund sandbox. Return a synthetic ParentContribution row so the
       // client's success state fires (and the schedule shows up in the
@@ -17972,6 +18137,20 @@ export async function registerRoutes(
           updates.nextRunDate = nextRunDate;
         }
       }
+      // Sanity guard (mirrors POST + client): an edit that lands the monthly-
+      // equivalent implausibly high is almost always a fat-finger (esp. switching
+      // to daily). Check the EFFECTIVE amount + frequency (new if changed, else the
+      // stored value) so changing EITHER one is validated.
+      {
+        const effAmount = updates.amount != null ? parseFloat(String(updates.amount)) : parseFloat(String(record.amount ?? 0));
+        const effFreq = String(updates.frequency ?? record.frequency ?? "monthly");
+        if (Number.isFinite(effAmount) && effAmount > 0) {
+          const plaus = checkRecurringPlausibility(effAmount, effFreq);
+          if (!plaus.ok) {
+            return res.status(400).json({ error: `That works out to about $${Math.round(plaus.monthlyEquivalent).toLocaleString()} a month, which looks like a typo. Lower the amount or change how often it runs.` });
+          }
+        }
+      }
       if (executionModel && ['auto', 'pick', 'family'].includes(executionModel)) {
         // Same allowlist guard as create + the gift path: an edit must not be able to
         // point a "pick" schedule at an off-list / unsuitable ticker either.
@@ -18081,6 +18260,72 @@ export async function registerRoutes(
     }
   });
 
+  // Skip the NEXT scheduled charge without cancelling the plan. Advances
+  // next_run_date by exactly one cadence period so the worker fires the cycle
+  // after next. The gentle alternative to pausing (which stops everything):
+  // "tight month / already gave a big gift — skip just this one, keep going."
+  // Reduces churn (a skip beats a cancel). Moves no money, so it's a lifecycle
+  // event, not a contribution.
+  app.post('/api/parent-contributions/:id/skip-cycle', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      // Demo sandbox: never mutate the shared demo record. The client overlays
+      // the skip per-tab so it still visibly advances the next-charge date.
+      if (req.params.id.startsWith("demo_") || (await isDemoUser(userId))) {
+        return res.json({ ok: true, demo: true, saved: false });
+      }
+      const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
+      if (!record) return res.status(404).json({ error: 'Plan not found' });
+      if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      // Post-handoff lockout (see PATCH above).
+      const recordFund = await storage.getFund(record.fundId);
+      if (recordFund && recordFund.userId !== record.userId) {
+        return res.status(403).json({ error: 'fund_transferred', message: "This fund is the recipient's now. You can no longer change this recurring plan." });
+      }
+      if (String(record.status).toLowerCase() !== 'active') {
+        return res.status(400).json({ error: 'Only an active plan can skip a charge.' });
+      }
+      const freq = String(record.frequency || 'monthly').toLowerCase();
+      const base = record.nextRunDate ? new Date(record.nextRunDate as any) : new Date();
+      const skippedFrom = new Date(base);
+      const next = new Date(base);
+      if (freq === 'daily') next.setDate(base.getDate() + 1);
+      else if (freq === 'weekly') next.setDate(base.getDate() + 7);
+      else if (freq === 'yearly') next.setFullYear(base.getFullYear() + 1);
+      else next.setMonth(base.getMonth() + 1);
+      const updated = await storage.updateParentContribution(req.params.id, { nextRunDate: next });
+      // Ledger row — moved no money, so it's a lifecycle title (Activity treats
+      // it as a schedule change, not an invest event).
+      try {
+        const fund = recordFund || await storage.getFund(record.fundId);
+        const freqWord = freq === 'weekly' ? 'week' : freq === 'yearly' ? 'year' : freq === 'daily' ? 'day' : 'month';
+        const destination = record.executionModel === 'pick' && record.selectedTicker
+          ? String(record.selectedTicker).toUpperCase()
+          : fund?.recipientFirstName ? `${fund.recipientFirstName}'s fund` : 'the fund';
+        const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        await storage.createActivity({
+          userId,
+          fundId: record.fundId,
+          type: 'auto_invest',
+          title: 'Recurring charge skipped',
+          description: `Skipped the ${fmt(skippedFrom)} charge into ${destination}. Next charge ${fmt(next)}.`,
+          metadata: JSON.stringify({
+            amount: record.amount,
+            frequency: record.frequency,
+            executionModel: record.executionModel,
+            selectedTicker: record.selectedTicker || null,
+            skippedDate: skippedFrom.toISOString(),
+            nextRunDate: next.toISOString(),
+          }),
+        });
+      } catch (_) { /* non-fatal */ }
+      res.json(updated);
+    } catch (error) {
+      console.error('Error skipping recurring cycle:', error);
+      res.status(500).json({ error: 'Failed to skip charge' });
+    }
+  });
+
   // Trigger a manual one-time contribution (creates a Stripe checkout for the planned amount)
   app.post('/api/parent-contributions/:id/contribute-now', isAuthenticated, async (req: any, res) => {
     try {
@@ -18170,6 +18415,76 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error creating contribute-now session:', error);
       res.status(500).json({ error: 'Failed to start contribution checkout' });
+    }
+  });
+
+  // Update the card a recurring plan charges going forward. "Add it now" recovers a
+  // single missed charge; this fixes the ROOT when the card is permanently dead. The
+  // auto-charge worker pulls the customer's invoice_settings.default_payment_method
+  // (recurringContributionWorker ~L171) — the exact card the Stripe billing portal
+  // edits — so "update the card" is the portal, NOT a bespoke SetupIntent flow.
+  //
+  // Flag-gated (recurring_card_update, DEFAULT OFF). Two things must be true before
+  // flipping it on, both founder/Stripe-owned: (1) the billing-portal configuration in
+  // the Stripe dashboard exposes "Update payment method", and (2) a live `stripe listen`
+  // test confirms the update propagates to the default PM the worker charges. Until then
+  // the endpoint 404s and the client hides the surface.
+  app.post('/api/parent-contributions/:id/update-card', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { isFeatureEnabled } = await import("./featureFlags");
+      if (!(await isFeatureEnabled('recurring_card_update', false))) {
+        return res.status(404).json({ error: 'not_available' });
+      }
+
+      const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+
+      // Demo sandbox — seeded accounts have no real Stripe customer; land back on
+      // Activity with a flag the client treats like any other portal url.
+      if (req.params.id.startsWith("demo_") || (await isDemoUser(userId))) {
+        return res.json({ url: `${origin}/activity?portal=unavailable&demo=1`, isDemo: true });
+      }
+
+      const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
+      if (!record) return res.status(404).json({ error: 'Plan not found' });
+      if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      // Resolve the SAME customer the worker charges: any of the user's subscription
+      // rows with a non-null customer id, active preferred else most recent. Mirrors
+      // the worker's scalar subquery (recurringContributionWorker ~L642) so the portal
+      // edits the right card even for a churned/grandfathered parent (a canceled
+      // subscription row keeps its customer id; the worker still charges it).
+      const { rows } = await pool.query(
+        `SELECT stripe_customer_id FROM subscriptions
+           WHERE user_id = $1 AND stripe_customer_id IS NOT NULL
+           ORDER BY (status = 'active') DESC, created_at DESC
+           LIMIT 1`,
+        [userId],
+      );
+      const stripeCustomerId = rows?.[0]?.stripe_customer_id ? String(rows[0].stripe_customer_id) : null;
+      if (!stripeCustomerId) {
+        return res.status(404).json({ error: 'no_billing_account', message: "There's no card on file to update yet." });
+      }
+
+      const session = await stripeService.createCustomerPortalSession(stripeCustomerId, `${origin}/activity`);
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating card-update portal session:', error);
+      res.status(500).json({ error: 'Failed to open card update' });
+    }
+  });
+
+  // Client-readable feature flags (whitelist only). Lets the UI hide a flag-gated
+  // surface by default without a bespoke config channel per feature. Never expose a
+  // flag here that gates anything sensitive server-side — this is display-gating.
+  app.get('/api/feature-flags/public', isAuthenticated, async (_req: any, res) => {
+    try {
+      const { isFeatureEnabled } = await import("./featureFlags");
+      res.json({
+        recurring_card_update: await isFeatureEnabled('recurring_card_update', false),
+      });
+    } catch {
+      res.json({ recurring_card_update: false });
     }
   });
 

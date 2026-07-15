@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Activity } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { useAuth } from "@/hooks/use-auth";
-import { applyDemoBuysToActivities, applyDemoLiveGiftsToActivities, applyDemoSellsToActivities, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { applyDemoBuysToActivities, applyDemoLiveGiftsToActivities, applyDemoRecurringToActivities, applyDemoSellsToActivities, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 
 async function fetchActivities(limit = 50, fundId?: string | null): Promise<Activity[]> {
   const params = new URLSearchParams();
@@ -71,9 +71,13 @@ export function useActivities(limit = 50, enabled = true, fundId?: string | null
   // (sell) so they show in the Activity feed AND light the bell (this same query
   // backs NotificationsPanel). No-op off demo; never mutates cache.
   const data = useMemo(
-    () => applyDemoBuysToActivities(
-      applyDemoSellsToActivities(
-        applyDemoLiveGiftsToActivities(query.data ?? [], isDemoAccount, fundId),
+    () => applyDemoRecurringToActivities(
+      applyDemoBuysToActivities(
+        applyDemoSellsToActivities(
+          applyDemoLiveGiftsToActivities(query.data ?? [], isDemoAccount, fundId),
+          isDemoAccount,
+          fundId,
+        ),
         isDemoAccount,
         fundId,
       ),
@@ -97,9 +101,13 @@ export function useFundActivities(fundId: string | undefined, limit = 50) {
     staleTime: Infinity,
   });
   const data = useMemo(
-    () => applyDemoBuysToActivities(
-      applyDemoSellsToActivities(
-        applyDemoLiveGiftsToActivities(query.data ?? [], isDemoAccount, fundId),
+    () => applyDemoRecurringToActivities(
+      applyDemoBuysToActivities(
+        applyDemoSellsToActivities(
+          applyDemoLiveGiftsToActivities(query.data ?? [], isDemoAccount, fundId),
+          isDemoAccount,
+          fundId,
+        ),
         isDemoAccount,
         fundId,
       ),

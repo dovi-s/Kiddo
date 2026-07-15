@@ -49,18 +49,30 @@ async function recordRecurringFailure(
   nextRetry: Date | null,
 ): Promise<void> {
   try {
-    const reconcileTail = reconcile?.last4
-      ? ` Your ${reconcile.brand ? reconcile.brand.charAt(0).toUpperCase() + reconcile.brand.slice(1) : 'card'} ····${reconcile.last4} was declined.`
-      : '';
+    // Lead with the reason (declined card, or a generic couldn't-collect), then the
+    // retry date, then the one next step. The old copy opened with "Last automatic
+    // charge could not run." which just restated the title, and the "Failed" pill +
+    // eyebrow already mark status — four ways of saying failed on one row (founder
+    // catch 2026-07). One reason, one action.
+    const reconcileLead = reconcile?.last4
+      ? `Your ${reconcile.brand ? reconcile.brand.charAt(0).toUpperCase() + reconcile.brand.slice(1) : 'card'} ····${reconcile.last4} was declined.`
+      : "We couldn't collect it.";
+    // NOT "Next attempt" — the worker does NOT re-run the missed charge; it just
+    // advances to the next scheduled cycle. Calling it a retry made parents wait a
+    // month expecting the failed one to re-run. State the next CHARGE date plainly;
+    // the "Add it manually" step below is how they recover the missed contribution.
+    // The plan is NOT broken and the failed charge does NOT re-run — the schedule
+    // charges again next cycle. Say so plainly so a "Charge missed" state reads as
+    // "your plan is fine, add the missed one only if you want to", not an emergency.
     const retryTail = nextRetry
-      ? ` Next attempt ${nextRetry.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
+      ? ` Your plan is still on and charges again ${nextRetry.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
       : '';
     await storage.createActivity({
       userId: String(row.user_id),
       fundId: String(row.fund_id),
       type: 'parent_contribution_failed',
-      title: 'Recurring investment failed',
-      description: `Last automatic charge could not run.${reconcileTail}${retryTail} We sent you an email reminder so you can add it manually.`,
+      title: "Automatic charge didn't go through",
+      description: `${reconcileLead}${retryTail} Add the missed one if you'd like.`,
       amount: row.amount ? String(row.amount) : null,
       metadata: JSON.stringify({
         parentContributionId: String(row.id),
@@ -85,6 +97,19 @@ function getBaseUrl() {
     process.env.BASE_URL;
   return configured ? configured.replace(/\/+$/, '') : 'https://kiddofund.com';
 }
+
+// Dunning quick-retry — DEFAULT OFF. Today a failed charge just advances to the
+// next full cycle, so the missed contribution waits a whole month. When enabled,
+// the worker instead pulls the next charge in to DUNNING_RETRY_DAYS on the FIRST
+// failure; a repeat failure (one already recorded within the window) falls back to
+// the normal cycle, so it never hammers a declined card (bounded to ONE quick
+// retry). LEFT OFF because it changes WHEN a real card is charged and MUST be
+// validated against Stripe before enabling (ideally replaced by Stripe Smart
+// Retries, which handles card-network retry rules). Known first-pass limitation:
+// after a successful retry the monthly cadence shifts by the retry offset (no
+// re-alignment yet). Flip to true only after testing.
+const DUNNING_RETRY_ENABLED = false;
+const DUNNING_RETRY_DAYS = 3;
 
 function advanceDate(from: Date | string | null, frequency: string | null): Date {
   const base = from ? new Date(from) : new Date();
@@ -302,6 +327,32 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
     }
   }
 
+  // Dunning quick-retry (see DUNNING_RETRY_ENABLED above). On a FIRST failure,
+  // bring the next charge in to a few days out instead of the full-cycle date set
+  // earlier. Bounded to ONE retry: count recent parent_contribution_failed rows
+  // for this contribution (this cycle's row is already written by the charge-fail
+  // paths above); more than one means we already retried, so leave the full cycle.
+  if (DUNNING_RETRY_ENABLED && !charged) {
+    try {
+      const { rows: dunRows } = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM activities
+           WHERE type = 'parent_contribution_failed'
+             AND fund_id = $1
+             AND metadata LIKE $2
+             AND created_at > NOW() - INTERVAL '7 days'`,
+        [row.fund_id, `%"parentContributionId":"${String(row.id)}"%`],
+      );
+      const recentFailures = Number(dunRows?.[0]?.n ?? 0);
+      if (recentFailures <= 1) {
+        const retryDate = new Date(Date.now() + DUNNING_RETRY_DAYS * 24 * 60 * 60 * 1000);
+        await storage.updateParentContribution(row.id as string, { nextRunDate: retryDate });
+        log(`contribution ${row.id as string}: dunning quick-retry scheduled ${retryDate.toISOString()} (${recentFailures} recent failure(s))`, WORKER_SOURCE);
+      }
+    } catch (dunErr) {
+      log(`contribution ${row.id as string}: dunning retry check failed (non-fatal): ${String(dunErr)}`, WORKER_SOURCE);
+    }
+  }
+
   if (!charged && parentEmail) {
     // In-app failure signal for the "couldn't even attempt" cases. The charge-
     // attempt paths above write a parent_contribution_failed row on decline,
@@ -344,9 +395,9 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
       const introBody = [
         greeting,
         '',
-        `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
+        `The scheduled $${amount.toFixed(2)} for ${childName} didn't go through this time. Your plan is still on and charges again next cycle.`,
         '',
-        'Head to your dashboard to add it now.',
+        'Add the missed one now if you\'d like.',
       ].join('\n');
       const { html } = renderKiddoEmail({
         heading: `Time to add to ${childName}'s fund`,
@@ -359,9 +410,9 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
         text: [
           greeting,
           '',
-          `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
+          `The scheduled $${amount.toFixed(2)} for ${childName} didn't go through this time. Your plan is still on and charges again next cycle.`,
           '',
-          'Head to your dashboard to add it now:',
+          'Add the missed one now if you\'d like:',
           dashboardUrl,
           '',
           'The Kiddo team',
@@ -979,7 +1030,7 @@ async function processRecurringRequestFulfillment(log: LogFn): Promise<void> {
         `Hi ${firstName},`,
         '',
         `You asked to give to ${childName} on a schedule, and we promised to let you know.`,
-        `Good news: ${childName}'s family turned on recurring contributions. You can set yours up any time from the gift page — pick the amount and cadence, cancel whenever you like.`,
+        `Good news: ${childName}'s family turned on recurring contributions. You can set yours up any time from the gift page. Pick the amount and cadence, cancel whenever you like.`,
       ].join('\n');
       const { html } = renderKiddoEmail({
         heading: `You can set up your recurring gift to ${childName}`,
@@ -988,12 +1039,12 @@ async function processRecurringRequestFulfillment(log: LogFn): Promise<void> {
       });
       await sendEmail({
         to: gifterEmail,
-        subject: `Good news — you can now give to ${childName} monthly`,
+        subject: `Good news: you can now give to ${childName} monthly`,
         text: [
           `Hi ${firstName},`,
           '',
           `You asked to give to ${childName} on a schedule, and we promised to let you know.`,
-          `Good news: ${childName}'s family turned on recurring contributions. Set yours up any time — pick the amount and cadence, cancel whenever you like.`,
+          `Good news: ${childName}'s family turned on recurring contributions. Set yours up any time. Pick the amount and cadence, cancel whenever you like.`,
           '',
           `Set it up: ${giftUrl}`,
           '',

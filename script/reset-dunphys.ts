@@ -218,6 +218,15 @@ async function wipeDemoState(): Promise<void> {
         await db.delete(transactions).where(inArray(transactions.fundId, demoFundIds));
         await db.delete(fundSnapshots).where(inArray(fundSnapshots.fundId, demoFundIds));
         await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
+        // Events (Occasions) reference funds (events_fund_id_funds_id_fk, no cascade).
+        // The pre-loop clears them once (~L154), but if anything re-creates a demo
+        // event between that clear and this funds delete, the funds delete FK-fails
+        // and — because this retry block didn't re-clear events — every retry fails
+        // the same way and the whole reset aborts (observed 2026-07-09). Re-clear
+        // events (+ null the referral_events.event_id refs first) inside the loop,
+        // in FK-safe order, exactly like the other race-prone tables above.
+        await db.execute(drizzleSql`UPDATE referral_events SET event_id = NULL WHERE event_id IN (SELECT id FROM events WHERE fund_id IN (${idsList}))`);
+        await db.delete(events).where(inArray(events.fundId, demoFundIds));
         await db.delete(funds).where(inArray(funds.id, demoFundIds));
         deleted = true;
       } catch (raceErr) {

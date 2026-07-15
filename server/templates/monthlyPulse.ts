@@ -57,7 +57,7 @@ export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
   const greeting = parentFirstName?.trim() ? `Hi ${parentFirstName.trim()},` : "Hi there,";
   const names = humanizeNames(gifterNames ?? []);
   const giftLine = giftCount30d === 0
-    ? `No gifts last month. The fund quietly compounded what was already there.`
+    ? `No gifts last month. What's already set aside is still set aside for ${childFirstName}.`
     : names
       ? `${names} gave last month.`
       : `${giftCount30d} gift${giftCount30d === 1 ? "" : "s"} arrived last month${newGifterCount30d > 0 ? `, ${newGifterCount30d} from new gifter${newGifterCount30d === 1 ? "" : "s"}` : ""}.`;

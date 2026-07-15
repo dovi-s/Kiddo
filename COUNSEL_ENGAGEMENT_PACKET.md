@@ -750,3 +750,6 @@ Form ADV / sign DriveWealth amendment / rewrite TOS, per chosen option).
   Part 10 (full channel plan + arrangement ladder).
 - `TRUST_SAFETY_FINDINGS.md` + `KID_VIEW_SAFETY_GATE_SPEC.md` +
   `CONTENT_SCANNER_VENDOR_SPEC.md` — Part 11 (UGC-hosting / child-safety legal posture).
+- `SIPC_COPY_REVIEW.md` — Parts 6 & 9 (full inventory of every live SIPC / broker-dealer
+  line + the two open questions: the coverage-trigger to state ("investing is live" vs
+  "account open") and the custodian-specific boilerplate to bless at flip).

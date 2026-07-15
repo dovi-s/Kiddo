@@ -106,9 +106,6 @@ export default function AgeTransitionVerify() {
                 ? "You'd already confirmed this address. Nothing more to do. The claim link will reach you on your 18th birthday."
                 : "Thanks for confirming. The claim link for your Kiddo fund will reach you here automatically on your 18th birthday."}
             </p>
-            <p className="mx-auto max-w-md font-serif italic text-foreground/85">
-              That's the whole point. 🌱
-            </p>
           </motion.div>
         )}
 

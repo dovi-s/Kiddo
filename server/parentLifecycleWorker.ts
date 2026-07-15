@@ -472,7 +472,7 @@ function renderQueuedPush(entry: QueueEntry): RenderedPush | null {
     case "first_gift":
       return {
         title: `${childName} just received the first gift`,
-        body: "The fund is no longer just set up. The story has officially started.",
+        body: `The first gift just landed for ${childName}.`,
         deepLink,
       };
     case "milestone":
@@ -484,13 +484,13 @@ function renderQueuedPush(entry: QueueEntry): RenderedPush | null {
     case "birthday_reminder":
       return {
         title: `${childName}'s birthday is coming up`,
-        body: "This is the perfect moment to share the link again.",
+        body: "A birthday is a natural time to share the link again.",
         deepLink: "/events",
       };
     case "dormant_reengagement":
       return {
         title: `${childName}'s fund is ready for its next gift`,
-        body: "The story is waiting for the next moment. Bring family back in.",
+        body: "Sharing the link again is the easiest way to bring the next gift in.",
         deepLink,
       };
     default:

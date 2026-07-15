@@ -114,7 +114,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       "EarlyBird was acquired by Acorns and the standalone product retired. Kiddo is the natural replacement: same shareable gifting link, no account needed for gifters, full Memory Book media (note, photo, video, voice), and no monthly fee to start.",
     heroTitle: "EarlyBird was acquired by Acorns. Now what?",
     heroBody: [
-      "EarlyBird was bought by Acorns and rolled into Acorns Early. Your child's money is not gone, but the product families loved is.",
+      "EarlyBird was bought by Acorns in 2025 and the standalone app was shut down. Everyone's balance was liquidated back to their bank as cash. The money is still yours, sitting in your account now, and the gifting experience families actually loved is the part that went away.",
       "If what you want back is a simple gifting link, a personal family experience, and a Memory Book that holds every gift, every note, every voice, Kiddo is the closest fit.",
     ],
     ctaLabel: "Switch to Kiddo",
@@ -149,8 +149,8 @@ const comparisonPages: Record<string, ComparisonPage> = {
       {
         title: "What to do next",
         body: [
-          "Create your Kiddo account and set up your child's fund first. Then email transfers@kiddofund.com so support can help you understand the best transfer path from your current provider.",
-          "Brokerage transfer timing and in-kind eligibility depend on the current custodian and account details, so this is a support-assisted process rather than a fake one-click promise.",
+          "Because EarlyBird already returned your balance as cash to your bank, there is nothing to transfer. Create your Kiddo account, set up your child's fund, and fund it straight from your bank, where that money already landed.",
+          "If you have a separate custodial account somewhere else that you want to move in kind, email transfers@kiddofund.com and support helps with that path directly. No fake one-click promises, and for EarlyBird families, no transfer paperwork at all.",
         ],
       },
       {
@@ -164,7 +164,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     ],
     bottomTitle: "Start your move from EarlyBird",
     bottomBody:
-      "Start free, set up your child's new fund, and get your gifting flow back online. If you are moving an existing custodial account, Kiddo can help you understand the next step.",
+      "Start free, set up your child's new fund, and fund it from the cash EarlyBird already returned to your bank. If you also have another custodial account to move in kind, Kiddo helps with that next step.",
   },
   "acorns-early": {
     slug: "acorns-early",
@@ -720,8 +720,8 @@ function ComparisonDetail({ page }: { page: ComparisonPage }) {
     <>
       <section className="pt-24 pb-14 md:pt-32 md:pb-18">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Compare</p>
-          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-tight text-foreground">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Compare</p>
+          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-[-0.03em] text-foreground">
             {page.heroTitle}
           </h1>
           <div className="mx-auto mt-6 max-w-3xl space-y-4 text-lg leading-relaxed text-muted-foreground">
@@ -794,7 +794,7 @@ function ComparisonDetail({ page }: { page: ComparisonPage }) {
               <CheckCircle2 className="h-4 w-4" />
               Honest comparison, one clear next step
             </div>
-            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-[-0.03em] text-foreground">
               {page.bottomTitle}
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">{page.bottomBody}</p>
@@ -832,8 +832,8 @@ function ComparisonHub() {
     <>
       <section className="pt-24 pb-16 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Compare</p>
-          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-tight text-foreground">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Compare</p>
+          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-[-0.03em] text-foreground">
             Investment gifting, done right.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
@@ -1003,7 +1003,7 @@ function ComparisonHub() {
               <Scale className="h-4 w-4" />
               A new category
             </div>
-            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-[-0.03em] text-foreground">
               Gifts that grow into real money.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
@@ -1050,7 +1050,7 @@ export default function Compare() {
                   <ShieldAlert className="h-4 w-4" />
                   Comparison not found
                 </div>
-                <h1 className="mt-6 font-heading text-4xl font-bold tracking-tight text-foreground">
+                <h1 className="mt-6 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground">
                   We do not have that comparison page yet.
                 </h1>
                 <p className="mt-4 text-muted-foreground">

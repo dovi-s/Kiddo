@@ -145,7 +145,7 @@ function pickNudge(usage: PlanBenefitsUsage, plan: "starter" | "family", dismiss
     return {
       id: "nudge:custom-mix",
       title: "Pick your own stocks",
-      body: `${plan === "family" ? "Family" : "Plus"} lets you customize the fund mix.`,
+      body: "Swap the default mix for stocks you choose.",
     };
   }
   if (usage.coParentInvitedCount === 0 && !dismissed.has("nudge:co-parent")) {

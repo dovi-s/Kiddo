@@ -177,7 +177,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
               </>
             ) : (
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                Name someone to manage {childFirst}'s fund if anything happens to you before {childFirst} turns {primaryMajorityAge}.
+                Name someone to manage {childFirst}'s fund if anything happens to you before age {primaryMajorityAge}.
               </p>
             )}
           </div>
@@ -185,7 +185,7 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
             <button
               type="button"
               onClick={openEditor}
-              className="shrink-0 rounded-lg border border-[hsl(var(--kiddo-border))] px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/40"
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-border))] px-3 text-xs font-semibold text-foreground hover:bg-muted/40"
               data-testid="button-edit-successor"
             >
               {currentName ? "Edit" : "Add"}

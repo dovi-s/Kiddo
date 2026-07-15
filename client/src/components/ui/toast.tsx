@@ -18,7 +18,11 @@ const ToastViewport = React.forwardRef<
       // titles wrapped early and the description collided with the close ✕.
       // In range with the references: Material snackbars 344-672px, Sonner
       // (Vercel/Linear) 356px+, Apple banners wider still. 92vw on phones.
-      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[min(92vw,420px)] flex-col items-stretch gap-2",
+      // top offset includes --app-safe-top so toasts clear the iOS status bar /
+      // Dynamic Island in a standalone PWA (was a bare top-4 = 16px from the
+      // viewport top, which put them UNDER the clock/notch). Safari collapses
+      // --app-safe-top to 0 with the URL bar showing, so it stays ~16px there.
+      "fixed top-[calc(var(--app-safe-top)+16px)] left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[min(92vw,420px)] flex-col items-stretch gap-2",
       className
     )}
     {...props}
@@ -142,6 +146,46 @@ const ToastDescription = React.forwardRef<
 ))
 ToastDescription.displayName = ToastPrimitives.Description.displayName
 
+// Draining progress bar — a thin line at the toast's bottom edge that empties
+// over the toast's own auto-dismiss duration, so "this is temporary, and about
+// this long" reads at a glance (Sonner/Linear pattern). Only for the CARD toasts
+// (default / destructive / gift); the 2s "saved" pill is too quick to perceive
+// one, so the Toaster omits it there. Paused on hover/focus to mirror Radix's own
+// timer pause (so it never drains out from under someone mid-read), and HIDDEN
+// under reduced-motion (the toast still auto-dismisses on Radix's timer; we just
+// don't animate). Clipped to the rounded corners by the Root's overflow-hidden.
+const TOAST_PROGRESS_KEYFRAME =
+  "@keyframes kiddo-toast-progress{from{transform:scaleX(1)}to{transform:scaleX(0)}}"
+
+function ToastProgress({
+  durationMs,
+  variant = "default",
+}: {
+  durationMs: number
+  variant?: "default" | "destructive" | "gift"
+}) {
+  const color =
+    variant === "destructive"
+      ? "rgba(255,255,255,0.5)" // light on the red card
+      : variant === "gift"
+        ? "hsl(var(--kiddo-gold) / 0.55)" // echoes the gift card's gold glow
+        : "hsl(var(--kiddo-evergreen) / 0.35)" // calm on the white card
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: TOAST_PROGRESS_KEYFRAME }} />
+      <span
+        aria-hidden="true"
+        data-testid="toast-progress"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] origin-left group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused] motion-reduce:hidden"
+        style={{
+          background: color,
+          animation: `kiddo-toast-progress ${durationMs}ms linear forwards`,
+        }}
+      />
+    </>
+  )
+}
+
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
@@ -156,4 +200,5 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
+  ToastProgress,
 }

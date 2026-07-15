@@ -165,7 +165,7 @@ export function KidsViewCard({
                 type="button"
                 disabled={copyingKidLink}
                 onClick={handleCopyKidViewLink}
-                className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity px-3 py-1.5 rounded-lg border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
+                className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity px-3 py-1.5 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
               >
                 {copyingKidLink ? "Copying..." : "Copy link"}
               </button>
@@ -173,7 +173,7 @@ export function KidsViewCard({
                 <>
                   <a
                     href={`mailto:?subject=${encodeURIComponent(isOwnerMode ? "Your Kiddo fund" : `${capFirst(fund?.recipientFirstName) || "Your child"}'s Kiddo fund`)}&body=${encodeURIComponent(`Here's your fund link: ${kidViewSettings.shareLink}\n\nYou'll need the PIN to get in.`)}`}
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl border border-border"
                   >
                     Email
                   </a>
@@ -181,7 +181,7 @@ export function KidsViewCard({
                     href={kidViewSettings.shareLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl border border-border"
                   >
                     Open
                   </a>
@@ -190,7 +190,7 @@ export function KidsViewCard({
               <button
                 type="button"
                 onClick={() => { setShowPinManager((v) => !v); setNewPin(""); setNewPinHint(""); haptic("selection"); }}
-                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl border border-border"
               >
                 {showPinManager ? "Cancel" : "Edit PIN"}
               </button>

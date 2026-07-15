@@ -129,7 +129,7 @@ export function PreviousCustodianAccessCard({ fund }: { fund: any }) {
             disabled={liveBusy}
             onClick={() => { haptic("light"); void setLive(!liveOn); }}
             data-testid="toggle-previous-owner-live"
-            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${liveOn ? "bg-[hsl(var(--kiddo-evergreen))]" : "bg-muted"}`}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${liveOn ? "bg-[hsl(var(--kiddo-evergreen))]" : "bg-muted-foreground/30"}`}
           >
             <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${liveOn ? "left-[22px]" : "left-0.5"}`} />
           </button>

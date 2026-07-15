@@ -213,7 +213,7 @@ export default function HowItWorks() {
                   </p>
                   <p className="mt-4 leading-relaxed text-muted-foreground">
                     If the gift is smaller than the cost of a full share, Kiddo can still buy a fractional share when that gift is invested into a stock or ETF.
-                    Small gifts still become real ownership.
+                    Small gifts can still become real ownership.
                   </p>
                   <p className="mt-4 leading-relaxed text-muted-foreground">
                     The legal structure underneath is typically UTMA, which means the parent manages the fund until the child reaches the age of majority in

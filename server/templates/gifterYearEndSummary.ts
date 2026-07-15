@@ -101,7 +101,7 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
       ? `Largest single gift: ${fmtUsd(largestSingleGiftUsd)}.`
       : null,
     ``,
-    `Every gift went into a UTMA custodial account at our broker-dealer partner and started compounding the moment it settled.`,
+    `Every gift is recorded in the recipient's fund. Once investing is live, gifts go into a UTMA custodial account at our broker-dealer partner and follow the strategy the family set.`,
     ``,
     csvDownloadUrl
       ? `For your records: download a full CSV of every gift below, or from your dashboard any time.`
@@ -174,7 +174,7 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
     ...textRecipientLines,
     `----------------------------------------`,
     ``,
-    `Every gift went into a UTMA custodial account at our broker-dealer partner and started compounding the moment it settled.`,
+    `Every gift is recorded in the recipient's fund. Once investing is live, gifts go into a UTMA custodial account at our broker-dealer partner and follow the strategy the family set.`,
     ``,
     csvDownloadUrl ? `Download CSV: ${csvDownloadUrl}` : null,
     `Dashboard: ${dashboardUrl}`,
@@ -182,7 +182,7 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
     `Tax note: gifts to UTMAs create no tax liability for you. The recipient's parent receives any 1099 from our broker-dealer partner. If your total gifts to any one recipient this year exceeded the IRS annual gift-tax exclusion (${GIFT_TAX_EXCLUSION_LABEL} per recipient, adjusted yearly), Form 709 may apply. Your CPA can confirm.`,
     ``,
     `Kiddo, Inc. is a technology company, not a broker-dealer.`,
-    `Securities offered through our broker-dealer partner (Member FINRA/SIPC).`,
+    `When investing is live, securities are offered through our broker-dealer partner (Member FINRA/SIPC).`,
     ``,
     `The Kiddo team`,
   ]

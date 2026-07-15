@@ -8,8 +8,9 @@ import { motion } from "framer-motion";
 // usages were on "Is there a company you love?" kid-suggestion prompts;
 // replaced with Lightbulb (already imported), the canonical gentle-nudge
 // icon per feedback_gentle_nudge_pattern.md.
-import { BadgeCheck, BookOpen, Lightbulb, Lock, Target, TrendingUp } from "lucide-react";
+import { BadgeCheck, BookOpen, Lightbulb, Lock, Target, TrendingUp, Key, Sprout, PartyPopper, MailOpen, Mail, Mic, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoiceNotePlayer } from "@/components/ui/voice-note-player";
 import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { StockLogo } from "@/components/ui/stock-logo";
@@ -1123,7 +1124,7 @@ export default function KidView() {
             className="rounded-[24px] border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8 px-5 py-4 mb-4 flex items-start gap-3"
             data-testid="kid-view-sealed-unlocked"
           >
-            <div className="text-2xl shrink-0" aria-hidden>🕯️</div>
+            <MailOpen className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={24} strokeWidth={2} aria-hidden />
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">
                 {content.recentlyUnlockedSealedCount === 1
@@ -1157,7 +1158,12 @@ export default function KidView() {
           return (
             <section className="rounded-[28px] border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" data-testid="kid-view-adult-celebration">
               <div className="flex items-start gap-3">
-                <span className="text-3xl shrink-0" aria-hidden="true">{isToday ? "🎉" : "🌱"}</span>
+                {/* Warm gold-ink glyph (not gray) so the climax still celebrates
+                    while joining the app's Lucide icon system. PartyPopper on the
+                    day itself; Sprout (an approved brand mark) for the welcome. */}
+                {isToday
+                  ? <PartyPopper className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={30} strokeWidth={2} aria-hidden />
+                  : <Sprout className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={30} strokeWidth={2} aria-hidden />}
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">
                     {isToday ? "Today's the day" : "Welcome to your fund"}
@@ -1192,7 +1198,12 @@ export default function KidView() {
                 <p className={`mt-4 text-xs italic ${(content as any).parentLetter?.isSealedLetter ? "text-[rgb(140,30,30)]/85 font-semibold" : "text-[hsl(var(--kiddo-gold-ink))]/85"}`}>
                   {(content as any).parentLetter?.isSealedLetter
                     ? "A sealed letter from your parent unsealed today. Scroll to read it."
-                    : "🔑 Your parent left you a letter. Scroll to the bottom to read it."}
+                    : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Mail size={12} strokeWidth={2} aria-hidden className="shrink-0" />
+                        Your parent left you a letter. Scroll to the bottom to read it.
+                      </span>
+                    )}
                 </p>
               )}
               {(content.unlockedAtMajorityCount ?? 0) > 0 && (
@@ -1341,8 +1352,8 @@ export default function KidView() {
                                     Better than depersonalizing as "Auto-invest" — the
                                     relationship is the point, the cadence is metadata. */}
                                 {(gift as any).parentContributionId && (
-                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-4xs font-bold text-[hsl(var(--kiddo-evergreen))] shrink-0" title="Recurring">
-                                    ↻ Monthly
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-4xs font-bold text-[hsl(var(--kiddo-evergreen))] shrink-0" title="Recurring">
+                                    <Repeat size={9} strokeWidth={3} aria-hidden className="shrink-0" /> Monthly
                                   </span>
                                 )}
                               </div>
@@ -1438,8 +1449,8 @@ export default function KidView() {
                       {entry.photoUrl && <FadeImage src={entry.photoUrl} alt="Memory" loading="lazy" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
                       {(entry as any).audioUrl && (
                         <div className="mt-3 rounded-xl border border-border/40 bg-background px-3 py-2">
-                          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-1">🎙 Voice note</p>
-                          <audio src={(entry as any).audioUrl} controls className="w-full h-9" />
+                          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-1 inline-flex items-center gap-1"><Mic size={11} strokeWidth={2} aria-hidden className="shrink-0" /> Voice note</p>
+                          <VoiceNotePlayer src={(entry as any).audioUrl} />
                           {(entry as any).audioTranscript && (
                             <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
                               &ldquo;{(entry as any).audioTranscript}&rdquo;
@@ -1719,7 +1730,7 @@ export default function KidView() {
                       return (
                         <>
                           <div className="flex items-start gap-3">
-                            <span className="text-2xl shrink-0" aria-hidden="true">🔑</span>
+                            <Key className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={22} strokeWidth={2} aria-hidden />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/80 mb-1">Coming soon</p>
                               <h2 className="font-heading text-xl font-semibold text-foreground leading-tight">

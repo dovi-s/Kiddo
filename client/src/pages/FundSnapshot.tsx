@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Printer, ArrowLeft, Settings2 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
+import { isAnonGifterName } from "@/lib/gifter-name";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -220,7 +221,7 @@ export default function FundSnapshot() {
     for (const g of gifts) {
       totalGifts += 1;
       const name = String(g.senderName || "").trim();
-      const isAnon = !name || /^someone who loves/i.test(name) || name.toLowerCase() === "anonymous";
+      const isAnon = isAnonGifterName(name);
       if (isAnon) anonCount += 1;
       else namedContribs.add(name.toLowerCase());
     }

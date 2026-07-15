@@ -311,7 +311,7 @@ async function sendT30Email(row: DueRow, log: LogFn): Promise<void> {
     "",
     `When the day arrives, ${childName} gets an email with a private link to claim the fund into their own Kiddo account.`,
     "",
-    "— The Kiddo team",
+    "The Kiddo team",
   ].join("\n");
   const { html: t30Html } = renderKiddoEmail({
     heading: `${childName} turns ${majorityAge} in a month`,
@@ -347,7 +347,7 @@ async function sendT1Email(row: DueRow, log: LogFn): Promise<void> {
     "",
     "Nothing sells. The investments stay where they are. Only legal control changes.",
     "",
-    "— The Kiddo team",
+    "The Kiddo team",
   ].join("\n");
   const { html: t1Html } = renderKiddoEmail({
     heading: `${childName} turns ${majorityAge} tomorrow`,
@@ -407,7 +407,7 @@ async function sendKidInviteEmail(
       "",
       "Nothing has been sold. The investments stay exactly where they are. What changes is who decides, and from today, that's you.",
       "",
-      "— The Kiddo team",
+      "The Kiddo team",
     ].join("\n"),
     html: kidHtml,
     tags: ["age_transition", "invite", "auto"],

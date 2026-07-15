@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearch } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, BookOpen, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, TrendingUp, Video, Wallet, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, Sprout, TrendingUp, Video, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { IN_APP_CHECKOUT } from "@/lib/feature-flags";
 import { InAppGiftCheckoutModal } from "@/components/InAppGiftCheckoutModal";
@@ -20,6 +20,7 @@ import { usePageSeo } from "@/lib/seo";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
+import { gifterAvatarColor } from "@/lib/gifter-avatar";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
@@ -33,9 +34,46 @@ import { investingLiveCopy } from "@shared/legal-copy";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { ReminderAndAskParentsCard } from "@/components/ReminderAndAskParentsCard";
 import { SponsorPlusCard } from "@/components/SponsorPlusCard";
+import { AmountKeypad, formatAmountDisplay } from "@/components/AmountKeypad";
 
 const AMOUNTS = [25, 50, 100, 250];
 const PAGE_MAX = "kiddo-canvas px-4 sm:px-5";
+// Floating step CTA — same treatment as the parent money-sheet's STICKY_SHEET_NAV
+// (solid bar + top hairline, NO frosted blur — the blur let carded content bleed
+// through and read harsh/inconsistent against the contained cards). Solid cream
+// == the page bg, so it's seamless; bleeds to the canvas edges (cancels PAGE_MAX's
+// px); safe-area padding clears the home indicator.
+const STICKY_CTA_BAR = "sticky bottom-0 z-30 -mx-4 mt-3 space-y-2 border-t border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream))] px-4 pt-3.5 sm:-mx-5 sm:px-5";
+const STICKY_CTA_STYLE = { paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" };
+
+// Gift-page money moment: a dollar value that counts up on mount (rAF, no
+// per-frame React re-render), echoing the dashboard hero's roll. Respects
+// reduced-motion (snaps). Renders the final value as its fallback so it is
+// correct with JS off, then animates from 0.
+function CountUpMoney({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fmt = (n: number) => "$" + Math.round(n).toLocaleString();
+    let reduce = false;
+    try { reduce = !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches; } catch { /* ignore */ }
+    if (reduce) { el.textContent = fmt(value); return; }
+    const start = performance.now();
+    const dur = 1100;
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+    let raf = 0;
+    const step = (now: number) => {
+      const t = Math.min((now - start) / dur, 1);
+      el.textContent = fmt(value * ease(t));
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    el.textContent = fmt(0);
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <span ref={ref}>{"$" + Math.round(value).toLocaleString()}</span>;
+}
 // Two tiers added 2026-05-25 audit. The server-side ADMIN_ASSET_UNIVERSE
 // at server/marketQuotes.ts marks 17 stocks as source='stock_pick' (the
 // canonical approved gifter-picker list). The client picker had been
@@ -348,7 +386,7 @@ function GuestbookNoteCard({ fundId, childName, onAddGiftToo }: { fundId?: strin
         {/* PROTOTYPE (draw-on icon): the success check draws itself in as the
             note lands — a rare, meaningful peak, not everyday chrome. */}
         <DrawCheck size={48} className="mx-auto mb-2.5 text-[hsl(var(--kiddo-evergreen))]" />
-        <p className="text-sm font-semibold text-foreground">Your note is on its way to {childName}'s Memory Book 🌱</p>
+        <p className="text-sm font-semibold text-foreground">Your note is on its way to {childName}'s Memory Book</p>
         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
           The family takes a look first, then it joins the story.
         </p>
@@ -458,6 +496,28 @@ export default function GiftCheckout() {
   const { fund: fundSlug, event: eventSlug } = useParams<{ fund: string; event?: string }>();
   const searchString = useSearch();
   const [step, setStep] = useState<GiftStep>("landing");
+  // Chameleon header, matching the app-wide pattern in AppHeader.tsx: sticky
+  // always, evergreen while it sits over the full-bleed hero, cream once the hero
+  // scrolls past. Driven by an IntersectionObserver on the hero (fires exactly when
+  // the hero's bottom slides under the bar), NOT a hardcoded scroll position.
+  const [heroScrolled, setHeroScrolled] = useState(false);
+  useEffect(() => {
+    if (step !== "landing") { setHeroScrolled(false); return; }
+    let io: IntersectionObserver | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attach = () => {
+      const hero = document.querySelector('[data-testid="gift-hero"]');
+      if (!hero) { timer = setTimeout(attach, 150); return; }
+      io = new IntersectionObserver(
+        ([entry]) => setHeroScrolled(!entry.isIntersecting),
+        { rootMargin: "-56px 0px 0px 0px", threshold: 0 },
+      );
+      io.observe(hero);
+    };
+    attach();
+    return () => { if (io) io.disconnect(); if (timer) clearTimeout(timer); };
+  }, [step]);
+  const headerDark = step === "landing" && !heroScrolled;
   useScrollResetOnChange(step);
   // A child's gift page is private — keep it OUT of search indexes (it carries
   // the child's name). Shared via a private link, never crawled. Mirrors the
@@ -1379,12 +1439,11 @@ export default function GiftCheckout() {
     { key: "preview", label: "Preview" },
     { key: "payment", label: "Payment" },
   ];
-  // Occasion events skip the amount step: landing → preview → payment (2-step visible flow)
-  const occasionProgressSteps: Array<{ key: GiftStep; label: string }> = [
-    { key: "preview", label: "Your details" },
-    { key: "payment", label: "Payment" },
-  ];
-  const activeProgressSteps = isOccasionEvent ? occasionProgressSteps : progressSteps;
+  // ONE gift flow for every entry point (fund-anytime AND occasion): landing →
+  // amount → preview → payment. Occasion used to skip the amount step with a
+  // bespoke inline picker (a second, divergent flow); it now routes through the
+  // exact same steps as every other gift, so the whole surface is consistent.
+  const activeProgressSteps = progressSteps;
   const progressIndex = activeProgressSteps.findIndex((entry) => entry.key === step);
   const currentVisibleStepNumber = progressIndex >= 0 ? progressIndex + 1 : 0;
   const shareTitle = eventData.event.name && eventData.event.name !== "Gift anytime" ? eventData.event.name : recipientLooksLikeFund ? recipientName : `${recipientName}'s fund`;
@@ -1470,7 +1529,7 @@ export default function GiftCheckout() {
     // and can never render a childhood horizon, regardless of data plumbing.
     if (recipientIsOwner) {
       return {
-        headline: `${src} today → ~${fmt(g(10))} in 10 years. ~${fmt(g(20))} in 20 years. 🌱`,
+        headline: `${src} today → ~${fmt(g(10))} in 10 years. ~${fmt(g(20))} in 20 years.`,
         tagline: "This gift keeps compounding over time. Based on 7% historical returns, not guaranteed.",
       };
     }
@@ -1491,7 +1550,7 @@ export default function GiftCheckout() {
       const atMajority = fmt(g(yearsUntil18));
       const at40 = yTo40 >= 3 ? fmt(g(yTo40)) : null;
       return {
-        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}.${at40 ? ` And ~${at40} by 40 if ${fundPronouns.subject} keep${fundPronouns.singular ? "s" : ""} it growing. 🌱` : ""}`,
+        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}.${at40 ? ` And ~${at40} by 40 if ${fundPronouns.subject} keep${fundPronouns.singular ? "s" : ""} it growing.` : ""}`,
         tagline: "Based on 7% historical returns. Not guaranteed.",
       };
     }
@@ -1500,7 +1559,7 @@ export default function GiftCheckout() {
       const atMajority = fmt(g(yearsUntil18));
       const at25 = yTo25 >= 3 ? fmt(g(yTo25)) : null;
       return {
-        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}.${at25 ? ` And if ${fundPronouns.subject} let${fundPronouns.singular ? "s" : ""} it grow to 25? → ~${at25}. 🌱` : ""}`,
+        headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}.${at25 ? ` And if ${fundPronouns.subject} let${fundPronouns.singular ? "s" : ""} it grow to 25? → ~${at25}.` : ""}`,
         tagline: "Based on 7% historical returns. Not guaranteed.",
       };
     }
@@ -1510,7 +1569,7 @@ export default function GiftCheckout() {
       const at30 = yTo30 >= 3 ? fmt(g(yTo30)) : null;
       return {
         headline: `${src} today → ~${atMajority} when ${child} turns ${fundMajorityAge}. But at 30? ~${at30}.`,
-        tagline: `It keeps growing well past ${fundMajorityAge}. 🌱 Based on 7% historical returns. Not guaranteed.`,
+        tagline: `It keeps growing well past ${fundMajorityAge}. Based on 7% historical returns. Not guaranteed.`,
       };
     }
     // At/past majority (an owner-held fund, or an adult's personal account):
@@ -1521,7 +1580,7 @@ export default function GiftCheckout() {
     const in10 = fmt(g(10));
     const in20 = fmt(g(20));
     return {
-      headline: `${src} today → ~${in10} in 10 years. ~${in20} in 20 years. 🌱`,
+      headline: `${src} today → ~${in10} in 10 years. ~${in20} in 20 years.`,
       tagline: "This gift keeps compounding over time. Based on 7% historical returns. Not guaranteed.",
     };
   })();
@@ -1531,13 +1590,13 @@ export default function GiftCheckout() {
     const nm = recipientName;
     const n = String(eventData?.event?.name || "").toLowerCase();
     const cultural: [RegExp, OccasionMeta][] = [
-      [/mitzvah/i,                  { emoji: "✡️", headline: `Celebrate ${nm}'s B'nai Mitzvah!`, sub: `A once-in-a-lifetime milestone. These shares grow with ${nm} from today.`, notePlaceholder: `Mazel tov! Leave ${nm} a message...` }],
-      [/hanukkah|chanukah/i,        { emoji: "🕎", headline: `Happy Hanukkah, ${nm}!`, sub: `Eight nights of celebration, and a gift that grows for a lifetime.`, notePlaceholder: `Chag Sameach! Leave ${nm} a message...` }],
+      [/mitzvah/i,                  { emoji: "✡️", headline: `Celebrate ${nm}'s B'nai Mitzvah!`, sub: investingLiveCopy(`A once-in-a-lifetime milestone. These shares grow with ${nm} from today.`, `A once-in-a-lifetime milestone. Set aside in ${nm}'s name, invested once investing is live.`), notePlaceholder: `Mazel tov! Leave ${nm} a message...` }],
+      [/hanukkah|chanukah/i,        { emoji: "🕎", headline: `Happy Hanukkah, ${nm}!`, sub: investingLiveCopy(`Eight nights of celebration, and a gift that grows for a lifetime.`, `Eight nights of celebration, and a gift set aside for ${nm}, invested once investing is live.`), notePlaceholder: `Chag Sameach! Leave ${nm} a message...` }],
       [/quincea/i,                  { emoji: "🌺", headline: `Feliz Quinceañera, ${nm}!`, sub: `Turning 15 is a milestone worth celebrating.`, notePlaceholder: `Leave ${nm} a Quinceañera message...` }],
-      [/first communion|communion/i,{ emoji: "✝️", headline: `${nm}'s First Communion`, sub: `A meaningful milestone, marked with a gift that grows.`, notePlaceholder: `Leave ${nm} a blessing...` }],
-      [/confirmation/i,             { emoji: "✝️", headline: `${nm}'s Confirmation`, sub: `A step of faith, marked with a gift that keeps growing with them.`, notePlaceholder: `Leave ${nm} a message of faith...` }],
-      [/diwali|deepavali/i,         { emoji: "🪔", headline: `Happy Diwali, ${nm}!`, sub: `Light, prosperity, and a gift that compounds for years.`, notePlaceholder: `Happy Diwali! Leave ${nm} a message...` }],
-      [/eid/i,                      { emoji: "☪️", headline: `Eid Mubarak, ${nm}!`, sub: `A blessed celebration and a future full of growth.`, notePlaceholder: `Eid Mubarak! Leave ${nm} a message...` }],
+      [/first communion|communion/i,{ emoji: "✝️", headline: `${nm}'s First Communion`, sub: investingLiveCopy(`A meaningful milestone, marked with a gift that grows.`, `A meaningful milestone, marked with a gift set aside for their future.`), notePlaceholder: `Leave ${nm} a blessing...` }],
+      [/confirmation/i,             { emoji: "✝️", headline: `${nm}'s Confirmation`, sub: investingLiveCopy(`A step of faith, marked with a gift that keeps growing with them.`, `A step of faith, marked with a gift set aside for the years ahead.`), notePlaceholder: `Leave ${nm} a message of faith...` }],
+      [/diwali|deepavali/i,         { emoji: "🪔", headline: `Happy Diwali, ${nm}!`, sub: investingLiveCopy(`Light, prosperity, and a gift that compounds for years.`, `Light, prosperity, and a gift set aside for the years ahead.`), notePlaceholder: `Happy Diwali! Leave ${nm} a message...` }],
+      [/eid/i,                      { emoji: "☪️", headline: `Eid Mubarak, ${nm}!`, sub: investingLiveCopy(`A blessed celebration and a future full of growth.`, `A blessed celebration and a gift toward their future.`), notePlaceholder: `Eid Mubarak! Leave ${nm} a message...` }],
       [/lunar new year|chinese new year/i, { emoji: "🏮", headline: `Happy New Year, ${nm}!`, sub: `A new year, a new gift for ${nm}'s future.`, notePlaceholder: `Leave ${nm} a new year message...` }],
       [/kwanzaa/i,                  { emoji: "🕯️", headline: `Happy Kwanzaa, ${nm}!`, sub: `Celebrate the harvest. Give ${nm} something that lasts.`, notePlaceholder: `Leave ${nm} a Kwanzaa message...` }],
     ];
@@ -1564,16 +1623,18 @@ export default function GiftCheckout() {
           onClose={() => setEmbeddedGift(null)}
         />
       )}
-      <header className="sticky top-0 z-50 border-b border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-lg">
+      <header
+        style={{ paddingTop: "var(--app-safe-top)" }}
+        className={`sticky top-0 z-50 transition-colors duration-300 ${headerDark ? "bg-[hsl(var(--kiddo-evergreen))]" : "border-b border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-lg"}`}
+      >
         <div className={`${PAGE_MAX} h-14 flex items-center justify-between`}>
           <div className="flex items-center gap-3">
-            <Logo size="sm" className="text-[hsl(var(--kiddo-evergreen))]" />
+            <Logo size="sm" className={headerDark ? "text-white" : "text-[hsl(var(--kiddo-evergreen))]"} />
             {step !== "landing" && (
               <button
                 type="button"
                 className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => {
-                  if (isOccasionEvent && step === "preview") { setStep("landing"); return; }
                   setStep((allSteps[Math.max(0, allSteps.indexOf(step) - 1)] || "landing") as GiftStep);
                 }}
                 data-testid="button-step-back"
@@ -1583,9 +1644,9 @@ export default function GiftCheckout() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1.5 rounded-full border border-[hsl(var(--kiddo-border))] bg-white/70 px-2.5 py-1.5">
-            <Lock size={12} className="text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Secure checkout</span>
+          <div className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 ${headerDark ? "border-white/25 bg-white/10" : "border-[hsl(var(--kiddo-border))] bg-white/70"}`}>
+            <Lock size={12} className={headerDark ? "text-white/80" : "text-muted-foreground"} />
+            <span className={`text-xs font-medium ${headerDark ? "text-white/90" : "text-muted-foreground"}`}>Secure checkout</span>
           </div>
         </div>
       </header>
@@ -1625,7 +1686,7 @@ export default function GiftCheckout() {
                 feedback_no_marketing_teaser_quotes.md the adjacent rule). The line itself
                 still earns its place: it grounds the gift-into-bigger-pool framing. */}
             <p className="mt-3 text-[12.5px] text-white/85 leading-relaxed">
-              Your gift compounds with the rest. Every dollar helps {recipientName} get there. 🌱
+              Your gift compounds with the rest. Every dollar helps {recipientName} get there.
             </p>
             {/* Disclaimer is intentionally higher-contrast than typical UI fineprint
                 (white/75 not white/45) and bumped to 11px. Forward-axis projection rule
@@ -1717,12 +1778,15 @@ export default function GiftCheckout() {
                               />
                             );
                           })()}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+                          {/* Text-protection scrim — darker through the text zone so
+                              WHITE text stays legible on a BRIGHT cover too (founder
+                              catch); the container text-shadow below is the backstop. */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/10" />
                         </>
                       ) : (
                         <div className={`absolute inset-0 ${heroBg}`} />
                       )}
-                      <div className="relative z-10 flex flex-col p-6 text-white" style={{ minHeight: 220 }}>
+                      <div className="relative z-10 flex flex-col p-6 text-white" style={{ minHeight: 220, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
                         {childPhotoUrl && (
                           <FadeImage src={childPhotoUrl} alt={recipientName} className="h-14 w-14 rounded-full border-2 border-white/50 object-cover shadow-xl" />
                         )}
@@ -1790,7 +1854,8 @@ export default function GiftCheckout() {
                         : `about ${mos} month${mos === 1 ? "" : "s"} away`;
                       return (
                         <div className="kiddo-card p-4 flex items-center justify-center gap-3 text-center">
-                          <span className="text-xl shrink-0" aria-hidden="true">🌱</span>
+                          {/* Our sprout brand mark, pixel-consistent across devices (was 🌱 emoji). */}
+                          <Sprout size={20} strokeWidth={2} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" aria-hidden />
                           <div>
                             {dateLabel && <p className="font-heading text-lg font-bold text-foreground">{dateLabel}</p>}
                             <p className="mt-0.5 text-2xs font-medium text-muted-foreground">{countdownLabel}</p>
@@ -1830,7 +1895,7 @@ export default function GiftCheckout() {
                     const goalHit = !!(goalAmount && goalAmount > 0 && giftVolume >= goalAmount);
                     return (
                       <div className="kiddo-card p-4 flex items-start gap-3 bg-[hsl(var(--kiddo-cream)/0.6)] border-[hsl(var(--kiddo-gold)/0.30)]">
-                        <span className="text-xl shrink-0" aria-hidden="true">{goalHit ? "🌟" : "🌱"}</span>
+                        <TrendingUp className="shrink-0 text-[hsl(var(--kiddo-gold))]" size={18} aria-hidden="true" />
                         <div className="min-w-0 flex-1">
                           {goalHit ? (
                             <>
@@ -1870,72 +1935,21 @@ export default function GiftCheckout() {
                     </div>
                   )}
 
-                  {/* Amount + note + CTA */}
-                  <div className="kiddo-card p-5 space-y-4">
-                    <p className="font-semibold text-foreground">Gift {recipientName}</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {AMOUNTS.map((amt) => (
-                        <button
-                          key={amt}
-                          type="button"
-                          className={`tap-bounce rounded-xl border py-3 text-sm font-bold transition-colors ${!showCustom && selectedAmount === amt ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen))] text-white" : "border-border bg-muted/60 text-foreground hover:bg-muted"}`}
-                          onClick={() => { haptic("selection"); setSelectedAmount(amt); setShowCustom(false); setCustomAmount(""); }}
-                        >
-                          ${amt}
-                        </button>
-                      ))}
-                    </div>
-                    <button type="button" className={`w-full rounded-xl border px-4 py-2.5 text-sm text-left transition-colors ${showCustom ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]" : "border-border bg-background text-muted-foreground"}`} onClick={() => { haptic("selection"); setShowCustom(true); }}>
-                      {showCustom ? (
-                        <input inputMode="decimal" value={customAmount} onChange={(e) => setCustomAmount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Enter your own amount" className="w-full bg-transparent text-foreground outline-none" autoFocus />
-                      ) : "Other amount"}
-                    </button>
-
-                    {/* Feature parity 2026-05-25 audit: the occasion-event
-                        landing is a fast-path (amount + note + Give in one
-                        screen). The fund-anytime path goes through a
-                        separate amount step at line 1709 that shows the
-                        per-amount projection AND a large-gift reassurance
-                        for $500+ gifts; occasion-event gifters were
-                        bypassing both. Adding the two affordances inline
-                        here preserves the fast-path while closing the
-                        feature gap. Recurring is intentionally NOT added —
-                        a "recurring Hanukkah gift" is semantically odd
-                        (the occasion is the one-time moment); recurring
-                        belongs on the fund-anytime amount step where the
-                        gifter is committing to the relationship, not the
-                        moment. */}
-                    {amountProjection && (
-                      <div className="rounded-xl bg-[hsl(var(--kiddo-gold)/0.10)] border border-[hsl(var(--kiddo-gold)/0.30)] px-4 py-3">
-                        <p className="text-sm font-semibold text-foreground">{amountProjection.headline}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{amountProjection.tagline}</p>
-                      </div>
-                    )}
-                    {Number.isFinite(activeAmount) && activeAmount >= 500 && (
-                      <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3">
-                        <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts of $1,000 or more settle the same way as smaller gifts; some get a short verification hold, up to 24 hours. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
-                        </p>
-                      </div>
-                    )}
-
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder={currentOccasion.notePlaceholder}
-                      rows={2}
-                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base sm:text-sm resize-none outline-none focus:border-[hsl(var(--kiddo-evergreen))] placeholder:text-muted-foreground"
-                    />
-                    <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount} onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_occasion_start", { destination: "preview_step", amount: activeAmount }); setStep("preview"); }} data-testid="button-start-gift">
-                      {currentOccasion.emoji} Give ${isValidAmount ? (activeAmount % 1 === 0 ? activeAmount : activeAmount.toFixed(2)) : "…"} to {recipientName}
+                  {/* Occasion landing routes through the SHARED amount step — the
+                      exact same flow as the fund-anytime landing (its CTA at the
+                      button-start-gift below), not a bespoke inline picker. Amount,
+                      per-amount projection, large-gift reassurance, and the note now
+                      live on the shared amount + payment steps, identical to every
+                      other gift. One flow, not two. */}
+                  <div className="kiddo-card p-5 space-y-3">
+                    <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_occasion_start", { destination: "amount_step" }); setStep("amount"); }} data-testid="button-start-gift">
+                      Gift {amountStepChildLabel}
                       <ArrowRight size={16} className="ml-2" />
                     </Button>
                     <p className="text-center text-xs text-muted-foreground">No account needed. Takes seconds.</p>
-                    {isOccasionEvent && (
-                      <p className="text-center text-xs text-muted-foreground/70 leading-relaxed">
-                        Your gift goes directly into {recipientName}&apos;s fund. The {(eventData?.event?.name || "occasion").replace(/^\S+['’]s?\s+/, "").toLowerCase().trim() || "occasion"} is just how we&apos;re celebrating it. 🌱
-                      </p>
-                    )}
+                    <p className="text-center text-xs text-muted-foreground/70 leading-relaxed">
+                      Your gift goes directly into {recipientName}&apos;s fund. The {(eventData?.event?.name || "occasion").replace(/^\S+['’]s?\s+/, "").toLowerCase().trim() || "occasion"} is just how we&apos;re celebrating it.
+                    </p>
                   </div>
 
                   {/* Who's already given — each row shows the destination ticker when
@@ -1955,9 +1969,10 @@ export default function GiftCheckout() {
                           // in Nike · 3 gifts" replaces the prior
                           // bug where Uncle's three rows said $25 each.
                           const giftRepeatCount = gifter.count ?? 1;
-                          const amountLabel = gifter.amount > 0
-                            ? `$${gifter.amount % 1 === 0 ? gifter.amount.toFixed(0) : gifter.amount.toFixed(2)}`
-                            : null;
+                          // Exact per-gifter amounts are NOT shown on the PUBLIC link:
+                          // anyone with the URL could otherwise see who gave how much.
+                          // Destination + repeat count carry the social proof warmly
+                          // without exposing dollar figures. Amounts stay owner-only.
                           const destinationLabel = (() => {
                             if (gifter.ticker && gifter.tickerName) return gifter.tickerName;
                             if (gifter.ticker) return gifter.ticker;
@@ -1969,28 +1984,18 @@ export default function GiftCheckout() {
                             }
                             return null;
                           })();
+                          const face = gifterAvatarColor(gifter.name);
                           return (
                             <div key={i} className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
-                                <span className="text-xs font-bold text-[hsl(var(--kiddo-evergreen))]">{gifter.name[0]?.toUpperCase()}</span>
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: face.bg }}>
+                                <span className="text-xs font-bold" style={{ color: face.text }}>{gifter.name[0]?.toUpperCase()}</span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {gifter.name}
-                                  {amountLabel && (
-                                    <span className="font-semibold text-foreground"> · {amountLabel}</span>
-                                  )}
-                                  {destinationLabel && (
-                                    <span className="text-muted-foreground"> in {destinationLabel}</span>
-                                  )}
-                                  {giftRepeatCount > 1 && (
-                                    <span className="text-muted-foreground"> · {giftRepeatCount} gifts</span>
-                                  )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-foreground">{gifter.name}</p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {destinationLabel ? `Invested in ${destinationLabel}` : "Invested"}{giftRepeatCount > 1 ? ` · ${giftRepeatCount} gifts` : ""}
                                 </p>
                               </div>
-                              <span className="shrink-0 text-2xs font-semibold rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[hsl(var(--kiddo-evergreen))]">
-                                Invested
-                              </span>
                             </div>
                           );
                         })}
@@ -1998,9 +2003,11 @@ export default function GiftCheckout() {
                     </div>
                   )}
 
-                  {/* Trust badges */}
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    {[{ Icon: Shield, label: "Regulated broker" }, { Icon: Zap, label: "Seconds" }, { Icon: BookOpen, label: "Memory Book" }].map(({ Icon, label }) => (
+                  {/* Trust badges — two distinct pillars. Dropped the "Seconds"
+                      badge: it echoed the "No account needed. Takes seconds." line
+                      directly above, so it was reassurance repeated, not added. */}
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    {[{ Icon: Shield, label: "Regulated broker" }, { Icon: BookOpen, label: "Memory Book" }].map(({ Icon, label }) => (
                       <div key={label} className="rounded-2xl border border-border bg-card px-2 py-3">
                         <Icon size={18} strokeWidth={2} className="mx-auto text-[hsl(var(--kiddo-evergreen))]" />
                         <p className="mt-1 text-2xs font-semibold text-muted-foreground">{label}</p>
@@ -2023,15 +2030,13 @@ export default function GiftCheckout() {
                 </>
               ) : (
                 <>
-                  {/* Non-occasion: dark hero layout (permanent / gift anytime / savings goal) */}
-                  <p className="text-center text-sm text-muted-foreground">
-                    {recipientIsOwner
-                      ? <>{recipientLooksLikeFund ? "A private gift link to this fund" : `${recipientName} shared their fund with you`}. 🎁</>
-                      : <>Someone who loves {recipientLooksLikeFund ? "this child" : recipientName} shared this with you. 🎁</>}
-                  </p>
-
-                  <div className="kiddo-hero-card overflow-hidden">
-                    <div className="relative min-h-[320px] md:min-h-[420px]">
+                  {/* Full-bleed hero: breaks out of the page's side padding to own the
+                      full width like the dashboard hero, rather than a rounded card
+                      floating on padding. Radius + shadow dropped so it reads as a band,
+                      not a pill. The "shared with you" intro moves INSIDE the hero (as a
+                      quiet top line on the evergreen) so the hero owns the top of the page. */}
+                  <div data-testid="gift-hero" className="kiddo-hero-card overflow-hidden -mx-4 sm:-mx-5 -mt-6 md:-mt-8" style={{ borderRadius: 0, boxShadow: "none" }}>
+                    <div className="relative min-h-[340px] md:min-h-[440px]">
                       {eventData.event.imageUrl ? (
                         <>
                           {(() => {
@@ -2052,12 +2057,19 @@ export default function GiftCheckout() {
                               />
                             );
                           })()}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-black/15" />
+                          {/* Text-protection scrim — see the other cover branch: darker
+                              through the text zone + a container text-shadow so white
+                              text survives a bright cover. */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/10" />
                         </>
                       ) : (
                         <div className={`absolute inset-0 ${heroBg}`} />
                       )}
-                      <div className="relative z-10 flex min-h-[320px] md:min-h-[420px] flex-col p-6 md:p-8 text-white">
+                      <div className="relative z-10 flex min-h-[320px] md:min-h-[420px] flex-col p-6 md:p-8 text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+                        {/* Real photo only when the fund legitimately has one (rare on a
+                            public link — the child's photo is intentionally private for
+                            safety). No face cluster here: the "Who's already given" list
+                            below is the single face surface, so the hero never duplicates it. */}
                         {childPhotoUrl && (
                           <div className="flex justify-center sm:justify-start">
                             <FadeImage src={childPhotoUrl} alt={recipientName} className="h-20 w-20 rounded-full border-[3px] border-white/50 object-cover shadow-2xl" />
@@ -2068,15 +2080,19 @@ export default function GiftCheckout() {
                           {eventData.event.name && eventData.event.name !== "Gift anytime" ? (
                             <p className="font-heading text-base font-semibold text-white/90 tracking-tight">{eventData.event.name}</p>
                           ) : (
-                            <p className="kiddo-section-label text-white/70">Private gift link</p>
+                            <p className="text-sm font-medium text-white/75">
+                              {recipientIsOwner
+                                ? (recipientLooksLikeFund ? "A private gift link to this fund" : `${recipientName} shared their fund with you`)
+                                : <>Someone who loves {recipientLooksLikeFund ? "this child" : recipientName} shared this with you</>}
+                            </p>
                           )}
                           <h1 className="mt-3 font-heading text-4xl md:text-5xl font-bold leading-tight" data-testid="text-heading">{landingHeadline}</h1>
                           <p className="mt-3 max-w-2xl text-base font-semibold text-white/90">No account needed. Takes seconds.</p>
-                          <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white" data-testid="grid-gift-first-answers">
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><TrendingUp size={17} strokeWidth={2.25} className="mx-auto" /><p className="mt-1 font-semibold">Invested</p></div>
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><Lock size={17} strokeWidth={2.25} className="mx-auto" /><p className="mt-1 font-semibold">Secure</p></div>
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><Zap size={17} strokeWidth={2.25} className="mx-auto" /><p className="mt-1 font-semibold">Seconds</p></div>
-                          </div>
+                          {/* No projection in the landing hero. A single small gift's
+                              projection over a kid-horizon underwhelms ("$50 -> $97"),
+                              and the public page lacks the child's age so the horizon
+                              fell back to a generic "in 10 years." The projection belongs
+                              on the amount step, tied to the amount the gifter picks. */}
                           {eventData.event.name && eventData.event.name !== "Gift anytime" && !eventData.event.isPermanent && (
                             <div className="mt-3 hidden items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1.5 md:inline-flex">
                               <TrendingUp size={12} className="text-white/90" />
@@ -2091,37 +2107,15 @@ export default function GiftCheckout() {
                             <span className="hidden md:inline">|</span>
                             <span>{uniqueGifterCount > 0 ? `${uniqueGifterCount} ${uniqueGifterCount === 1 ? "person has" : "people have"} gifted so far` : "Be the one who starts it."}</span>
                           </div>
-                          <div className="mt-6">
+                          <motion.div className="mt-6" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
                             <Button size="lg" className="kiddo-gold-button h-16 w-full rounded-2xl px-6 text-lg font-bold" onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_page_start", { destination: "amount_step" }); setStep("amount"); }} data-testid="button-start-gift">
                               {isSavingsGoal ? "Gift to this goal" : `Gift ${amountStepChildLabel}`}
                               <ArrowRight size={18} className="ml-2" />
                             </Button>
-                          </div>
-                          {giftCount > 0 && (
-                            <div className="mt-4 flex items-center gap-2.5" data-testid="social-proof-gifters">
-                              <div className="flex -space-x-2">
-                                {Array.from({ length: Math.min(uniqueGifterCount, 5) }).map((_, i) => (
-                                  <div key={i} className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 5 - i }}>
-                                    {recentGifters[i] ? <span className="text-3xs font-bold text-white">{recentGifters[i].name[0].toUpperCase()}</span> : <span className="text-3xs text-white/80">♥</span>}
-                                  </div>
-                                ))}
-                                {uniqueGifterCount > 5 && <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 0 }}><span className="text-3xs font-bold text-white">+{uniqueGifterCount - 5}</span></div>}
-                              </div>
-                              {/* Caption deliberately omits the recipient's name. "X people
-                                  have gifted Emma." puts the kid as object-of-community-love
-                                  which edges toward the love-mark framing locked-refused in
-                                  project_seth_godin_kora_alignment.md (Acorns landmines list).
-                                  The fund hero above already names her; the count is purely
-                                  transactional social proof. Brings this line into consistency
-                                  with the sibling phrasings at lines 1199 + 1442.
-                                  Count source 2026-05-25: uniqueGifterCount (true unique
-                                  people), not giftCount (total gifts including duplicates
-                                  from the same person). */}
-                              <span className="text-xs font-medium text-white/75">
-                                {uniqueGifterCount === 1 ? "1 person has gifted" : `${uniqueGifterCount} people have gifted`}.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
-                              </span>
-                            </div>
-                          )}
+                          </motion.div>
+                          {/* Hero avatar row removed (subtraction pass): the richer
+                              "Who's already given" list below is now the single
+                              social-proof surface. One, not two. */}
                         </div>
                       </div>
                     </div>
@@ -2164,9 +2158,10 @@ export default function GiftCheckout() {
                           // in Nike · 3 gifts" replaces the prior
                           // bug where Uncle's three rows said $25 each.
                           const giftRepeatCount = gifter.count ?? 1;
-                          const amountLabel = gifter.amount > 0
-                            ? `$${gifter.amount % 1 === 0 ? gifter.amount.toFixed(0) : gifter.amount.toFixed(2)}`
-                            : null;
+                          // Exact per-gifter amounts are NOT shown on the PUBLIC link:
+                          // anyone with the URL could otherwise see who gave how much.
+                          // Destination + repeat count carry the social proof warmly
+                          // without exposing dollar figures. Amounts stay owner-only.
                           const destinationLabel = (() => {
                             if (gifter.ticker && gifter.tickerName) return gifter.tickerName;
                             if (gifter.ticker) return gifter.ticker;
@@ -2178,28 +2173,18 @@ export default function GiftCheckout() {
                             }
                             return null;
                           })();
+                          const face = gifterAvatarColor(gifter.name);
                           return (
                             <div key={i} className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
-                                <span className="text-xs font-bold text-[hsl(var(--kiddo-evergreen))]">{gifter.name[0]?.toUpperCase()}</span>
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: face.bg }}>
+                                <span className="text-xs font-bold" style={{ color: face.text }}>{gifter.name[0]?.toUpperCase()}</span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {gifter.name}
-                                  {amountLabel && (
-                                    <span className="font-semibold text-foreground"> · {amountLabel}</span>
-                                  )}
-                                  {destinationLabel && (
-                                    <span className="text-muted-foreground"> in {destinationLabel}</span>
-                                  )}
-                                  {giftRepeatCount > 1 && (
-                                    <span className="text-muted-foreground"> · {giftRepeatCount} gifts</span>
-                                  )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-foreground">{gifter.name}</p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {destinationLabel ? `Invested in ${destinationLabel}` : "Invested"}{giftRepeatCount > 1 ? ` · ${giftRepeatCount} gifts` : ""}
                                 </p>
                               </div>
-                              <span className="shrink-0 text-2xs font-semibold rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[hsl(var(--kiddo-evergreen))]">
-                                Invested
-                              </span>
                             </div>
                           );
                         })}
@@ -2207,13 +2192,9 @@ export default function GiftCheckout() {
                     </div>
                   )}
 
-                  {amountProjection && (
-                    <div className="kiddo-card p-4 bg-[hsl(var(--kiddo-gold)/0.10)] border-[hsl(var(--kiddo-gold)/0.30)]">
-                      <p className="text-sm font-semibold text-foreground">{amountProjection.headline}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{amountProjection.tagline}</p>
-                    </div>
-                  )}
-
+                  {/* The bottom projection card was removed: the hero money moment
+                      above now carries the "what a gift becomes" number, so a second
+                      gold card here just repeated it. One money moment, not two. */}
                   <p className="kiddo-card hidden px-4 py-3 text-xs leading-relaxed text-muted-foreground md:block">{checkoutTrustLineJsx}</p>
 
                   <footer className="pb-8 pt-2 text-center space-y-3">
@@ -2235,7 +2216,7 @@ export default function GiftCheckout() {
                   silent-charge). Only shows when there's a real prior gift to this fund. */}
               {showWelcomeBack && (
                 <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3 flex items-start gap-2.5" data-testid="gift-welcome-back">
-                  <span className="text-base leading-none mt-0.5" aria-hidden>🌱</span>
+                  <Sprout size={16} strokeWidth={2} className="shrink-0 mt-0.5 text-[hsl(var(--kiddo-evergreen))]" aria-hidden />
                   <p className="text-sm text-foreground leading-relaxed">
                     Welcome back — we filled in your last gift{recipientLooksLikeFund ? "" : ` to ${recipientName}`}. Change anything you like.
                   </p>
@@ -2244,90 +2225,42 @@ export default function GiftCheckout() {
               <div className="kiddo-card p-5 md:p-6">
                 <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">Most people give $50 or $100</p>
                 <h1 className="mt-2 font-heading text-2xl md:text-3xl font-semibold text-foreground">How much do you want to give {recipientLooksLikeFund ? "this child" : recipientName}?</h1>
-                {/* Per-tile consequence preview added 2026-05-25 per the
-                    first-principles audit. Pre-this-commit, each amount
-                    tile showed amount + tagline; the projection of "what
-                    this becomes at 18" only appeared AFTER the user
-                    clicked (via amountProjection card below the grid).
-                    Now each tile carries its own micro-projection so the
-                    user sees the consequence INSIDE the choice — every
-                    amount option visually anchors to "this is what your
-                    gift compounds to" before commitment. The conversion
-                    moment is the gifter's gift moment; making the
-                    consequence legible at choice-time is the highest-
-                    ROI polish on the gift flow.
-
-                    Routes through the same compoundGrowth helper as the
-                    main amountProjection card; same 7% rate, same
-                    yearsUntil18 horizon. Single source of truth.
-
-                    Only renders when yearsUntil18 > 0 (a kid past
-                    majority is shown the existing projection-less tile)
-                    and when the projected value would be meaningfully
-                    different from the input (gain > $1; for kids ~3
-                    months pre-majority the compound add is sub-dollar
-                    and the line would read as wallpaper). */}
-                <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+                {/* The amount IS the screen (Cash App / Venmo register), driven by the
+                    SHARED in-app AmountKeypad — the identical component + feel the parent
+                    one-time and recurring flows use, so every amount surface behaves the
+                    same and no OS keyboard slides up over the projection + Continue. */}
+                <div className="mt-6 flex items-end justify-center gap-1.5">
+                  <span className="pb-1 text-2xl font-semibold leading-none text-muted-foreground/55">$</span>
+                  <span aria-live="polite" aria-label={`Gift amount ${customAmount || selectedAmount} dollars`} className="text-center font-bold tabular-nums tracking-tight text-foreground" style={{ fontSize: "2.6rem", lineHeight: 1.05 }}>
+                    {formatAmountDisplay(customAmount) || String(selectedAmount)}
+                  </span>
+                </div>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {AMOUNTS.map((amt) => {
-                    const isActive = !showCustom && selectedAmount === amt;
-                    const projected = yearsUntil18 > 0 ? compoundGrowth(amt, 0.07, yearsUntil18) : null;
-                    const showProjection = projected !== null && projected - amt > 1;
+                    const isActive = (customAmount ? parseFloat(customAmount) : selectedAmount) === amt;
                     return (
                       <button
                         key={amt}
                         type="button"
-                        className={`tap-bounce rounded-2xl border px-4 py-4 text-left transition-colors ${isActive ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen))] text-white shadow-premium-sm" : "border-border bg-muted/70 text-foreground hover:bg-muted"}`}
-                        onClick={() => {
-                          haptic("selection");
-                          setSelectedAmount(amt);
-                          setShowCustom(false);
-                          setCustomAmount("");
-                          trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", {
-                            baselineEvent: "gift_amount_selected",
-                            amount: amt,
-                            amountSource: "preset",
-                          });
-                        }}
+                        onClick={() => { haptic("selection"); setSelectedAmount(amt); setCustomAmount(String(amt)); setShowCustom(true); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: amt, amountSource: "preset" }); }}
+                        className={`rounded-full border px-4 py-1.5 text-[13px] font-semibold transition-colors ${isActive ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
                         data-testid={`button-amount-${amt}`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-lg font-bold">${amt}</p>
-                          {amt === 50 && <span className={`rounded-full px-2 py-0.5 text-3xs font-semibold ${isActive ? "bg-white/20 text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"}`}>Most common</span>}
-                        </div>
-                        <p className={`mt-2 text-2xs ${isActive ? "text-white/85" : "text-muted-foreground"}`}>
-                          {amt === 25 ? "A small gift that gives them a real start" : amt === 50 ? "Grows more than a toy ever would" : amt === 100 ? "Grows into more than a card or cash ever could" : "A head start on their future"}
-                        </p>
-                        {showProjection && (
-                          <p className={`mt-1.5 text-3xs font-semibold tabular-nums ${isActive ? "text-white/90" : "text-[hsl(var(--kiddo-evergreen))]"}`} data-testid={`amount-projection-${amt}`}>
-                            → ~${Math.round(projected!).toLocaleString()} at {fundMajorityAge}
-                          </p>
-                        )}
+                        {amt === 50 ? "$50 · common" : `$${amt}`}
                       </button>
                     );
                   })}
                 </div>
-                <button type="button" className={`mt-3 w-full rounded-2xl border px-4 py-3 text-left transition-colors ${showCustom ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]" : "border-border bg-background"}`} onClick={() => { haptic("selection"); setShowCustom(true); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: null, amountSource: "custom_opened" }); }} data-testid="button-custom-amount">
-                  <span className="text-sm font-medium text-foreground">Enter your own amount</span>
-                </button>
-                {showCustom && (
-                  <div className="mt-3">
-                    <input inputMode="decimal" value={customAmount} onChange={(e) => setCustomAmount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="50" className="h-14 w-full rounded-2xl border border-border bg-background px-4 text-lg font-medium outline-none focus:border-[hsl(var(--kiddo-evergreen))]" data-testid="input-custom-amount" />
-                    <p className="mt-2 text-xs text-muted-foreground">Minimum gift is $5.</p>
-                    {/* Large-gift reassurance — locked 2026-05-19 per the
-                        Five Towns gifter persona audit. Conservative gifters
-                        (grandparents giving $1k-5k for bar mitzvah / sweet 16)
-                        sometimes self-cap below their intention assuming a
-                        hidden limit. There's no upper limit; gifts ≥$1000
-                        carry a brief processing window for fraud review
-                        but otherwise settle the same way. Threshold gated
-                        at $500 so common-gift flows don't see legal copy. */}
-                    {Number.isFinite(activeAmount) && activeAmount >= 500 && (
-                      <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3">
-                        <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts of $1,000 or more settle the same way as smaller gifts; some get a short verification hold, up to 24 hours. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
-                        </p>
-                      </div>
-                    )}
+                <p className="mt-3 text-center text-2xs text-muted-foreground">$5 minimum</p>
+                <AmountKeypad value={customAmount} onChange={(v) => { setCustomAmount(v); setShowCustom(true); }} ariaLabel="Gift amount keypad" className="mt-5" />
+                {/* Large-gift reassurance — conservative gifters (grandparents giving
+                    $1k-5k) sometimes self-cap assuming a hidden limit. Shows once the
+                    amount clears $500; no toggle/OS-keyboard needed now the keypad drives it. */}
+                {Number.isFinite(activeAmount) && activeAmount >= 500 && (
+                  <div className="mt-4 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3">
+                    <p className="text-[12px] leading-relaxed text-foreground">
+                      <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts of $1,000 or more settle the same way as smaller gifts; some get a short verification hold, up to 24 hours. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                    </p>
                   </div>
                 )}
               </div>
@@ -2520,10 +2453,12 @@ export default function GiftCheckout() {
               </div>
               )}
 
-                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount || (isRecurring && eventData?.fund?.magicLinkAuth !== true && recurringPassword.length < 8)} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed", isRecurring, recurringFrequency: isRecurring ? recurringFrequency : null }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
-                Continue
-                <ArrowRight size={16} className="ml-2" />
-              </Button>
+                <div className={STICKY_CTA_BAR} style={STICKY_CTA_STYLE}>
+                  <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount || (isRecurring && eventData?.fund?.magicLinkAuth !== true && recurringPassword.length < 8)} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed", isRecurring, recurringFrequency: isRecurring ? recurringFrequency : null }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
+                    Continue
+                    <ArrowRight size={16} className="ml-2" />
+                  </Button>
+                </div>
             </motion.section>
           )}
 
@@ -2751,11 +2686,13 @@ export default function GiftCheckout() {
                 </button>
               )}
 
-              <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!hasValidExecutionChoice} onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_preview_continue", { executionModel: effectiveExecutionModel, selectedStock: effectiveSelectedTicker }); setStep("payment"); }} data-testid="button-continue-to-payment">
-                Gift ${activeAmount % 1 === 0 ? activeAmount : activeAmount.toFixed(2)} to {amountStepChildLabel}
-                <ArrowRight size={16} className="ml-2" />
-              </Button>
               <p className="text-center text-2xs text-muted-foreground">Prices vary and investing involves risk, the same way a gift card loses value over time.</p>
+              <div className={STICKY_CTA_BAR} style={STICKY_CTA_STYLE}>
+                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!hasValidExecutionChoice} onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_preview_continue", { executionModel: effectiveExecutionModel, selectedStock: effectiveSelectedTicker }); setStep("payment"); }} data-testid="button-continue-to-payment">
+                  Continue
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+              </div>
             </motion.section>
           )}
 
@@ -3144,8 +3081,10 @@ export default function GiftCheckout() {
                       <span className="text-foreground font-medium">Kiddo fee</span>
                       {totalKoraFee > 0 ? <span className="shrink-0 text-foreground">${totalKoraFee.toFixed(2)}</span> : <span className="shrink-0 font-semibold text-green-600">No fee</span>}
                     </div>
-                    {platformBaseFee > 0 && <div className="flex justify-between gap-3"><span className="text-muted-foreground">Kiddo flat fee</span><span className="shrink-0 text-foreground">${platformBaseFee.toFixed(2)}</span></div>}
-                    {variableKoraFee > 0 && <div className="flex justify-between gap-3"><span className="text-muted-foreground">Kiddo gift fee</span><span className="shrink-0 text-foreground">${variableKoraFee.toFixed(2)}</span></div>}
+                    {/* One "Kiddo fee" line only (the total above). The flat + gift
+                        components read as three separate Kiddo fees when stacked as
+                        parallel rows; the itemized breakdown + plain-English
+                        explanation live in "View fee details" below. */}
                     {giftAddOnFee > 0 && (
                       <div className="flex justify-between gap-3" data-testid="line-premium-gift-upgrade"><span className="text-muted-foreground">Premium gift upgrade</span><span className="shrink-0 text-foreground">${giftAddOnFee.toFixed(2)}</span></div>
                     )}
@@ -3238,14 +3177,16 @@ export default function GiftCheckout() {
                 Once sent, gifts are invested for {amountStepChildLabel} and can't be reversed, which is part of what makes them meaningful.
               </p>
 
-              <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!canSubmit || isSubmitting} onClick={handlePay} data-testid="button-pay">
-                {isSubmitting ? <span className="flex items-center gap-2"><ThinkingOrb size={18} variant="processing" />Opening secure checkout...</span> : <>{paymentMethod === "apple_pay" ? <Smartphone size={16} className="mr-2" /> : paymentMethod === "bank" ? <Building2 size={16} className="mr-2" /> : paymentMethod === "cashapp" ? <DollarSign size={16} className="mr-2" /> : paymentMethod === "paypal" ? <Wallet size={16} className="mr-2" /> : <Lock size={16} className="mr-2" />}Send {recipientLooksLikeFund ? "this" : `${recipientName}'s`} gift</>}
-              </Button>
+              <div className={STICKY_CTA_BAR} style={STICKY_CTA_STYLE}>
+                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!canSubmit || isSubmitting} onClick={handlePay} data-testid="button-pay">
+                  {isSubmitting ? <span className="flex items-center gap-2"><ThinkingOrb size={18} variant="processing" />Securing your payment...</span> : <>{paymentMethod === "apple_pay" ? <Smartphone size={16} className="mr-2" /> : paymentMethod === "bank" ? <Building2 size={16} className="mr-2" /> : paymentMethod === "cashapp" ? <DollarSign size={16} className="mr-2" /> : paymentMethod === "paypal" ? <Wallet size={16} className="mr-2" /> : <Lock size={16} className="mr-2" />}Send {recipientLooksLikeFund ? "this" : `${recipientName}'s`} gift</>}
+                </Button>
 
-              {!isEmailValid && <p className="text-center text-xs text-red-500">Enter a valid email address or leave it blank.</p>}
-              {isRecurring && !hasRecurringEmail && <p className="text-center text-xs text-[hsl(var(--kiddo-evergreen))]" data-testid="text-recurring-email-required">Recurring gifts need an email so you can manage the schedule.</p>}
-              {executionModel === "pick" && !selectedStock && <p className="text-center text-xs text-muted-foreground">Choose a company to continue.</p>}
-              {payError && <p className="text-center text-sm text-red-500" data-testid="text-pay-error">{payError}</p>}
+                {!isEmailValid && <p className="text-center text-xs text-red-500">Enter a valid email address or leave it blank.</p>}
+                {isRecurring && !hasRecurringEmail && <p className="text-center text-xs text-[hsl(var(--kiddo-evergreen))]" data-testid="text-recurring-email-required">Recurring gifts need an email so you can manage the schedule.</p>}
+                {executionModel === "pick" && !selectedStock && <p className="text-center text-xs text-muted-foreground">Choose a company to continue.</p>}
+                {payError && <p className="text-center text-sm text-red-500" data-testid="text-pay-error">{payError}</p>}
+              </div>
 
               {/* Guestbook exit ramp — DATED occasion pages only (a real
                   event has guests who came to celebrate, not to transact;

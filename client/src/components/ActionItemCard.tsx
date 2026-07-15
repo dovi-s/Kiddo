@@ -120,7 +120,7 @@ export function ActionItemCard({ item, compact = false }: Props) {
               className={`inline-flex items-center gap-1.5 rounded-full font-semibold transition-all active:scale-[0.98] ${
                 isBlocking
                   ? "bg-[hsl(var(--kora-gold))] text-white"
-                  : "bg-foreground text-background"
+                  : "bg-[hsl(var(--kiddo-evergreen))] text-white"
               } ${compact ? "px-3 py-1.5 text-[12px]" : "px-4 py-2 text-[13px]"}`}
               data-testid={`action-item-fix-${item.type}`}
             >

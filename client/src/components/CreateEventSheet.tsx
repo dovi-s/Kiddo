@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, Loader2, ImagePlus, Trash2, Copy, Check, Share2, User, Lock,
-  Calendar as CalendarIcon, Sprout, Zap, Gift, X, type LucideIcon,
+  Calendar as CalendarIcon, Sprout, Zap, Gift, X, TrendingUp, type LucideIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { FadeImage } from "@/components/ui/fade-image";
+import { renderOccasionGlyph } from "@/components/ui/occasion-illustration";
 import { haptic } from "@/lib/haptics";
 import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
 import { toast } from "@/hooks/use-toast";
@@ -587,7 +588,16 @@ export function CreateEventSheet({
     if (step === "category") return { title: "New occasion", sub: (fundName && !isOwnerMode) ? `A moment for ${fundName} that people can gift around.` : "A moment people can gift around." };
     if (step === "type") return { title: "What's the occasion?", sub: (fundName && !isOwnerMode) ? `For ${fundName}` : "Pick one" };
     if (step === "goal-type") return { title: "Savings goal", sub: isOwnerMode ? "What are you saving for?" : fundName ? `What is ${fundName} saving for?` : "What are they saving for?" };
-    if (step === "details") return { title: isEditing && !isCreatingFromArchived ? "Edit occasion" : selectedGiftingType?.label ?? "Occasion", sub: isEditing && !isCreatingFromArchived ? "Update the details" : "Tell people what it's about" };
+    if (step === "details") {
+      // A custom occasion is named by the person, not by us — show their name once
+      // they've typed it (falling back to a neutral label), never the word "Custom".
+      const detailTitle = isEditing && !isCreatingFromArchived
+        ? "Edit occasion"
+        : selectedGiftingType?.id === "custom"
+          ? (name.trim() || "Custom occasion")
+          : (selectedGiftingType?.label ?? "Occasion");
+      return { title: detailTitle, sub: isEditing && !isCreatingFromArchived ? "Update the details" : "Tell people what it's about" };
+    }
     if (step === "goal-details") return { title: isEditing && !isCreatingFromArchived ? "Edit goal" : selectedGoalTypeDef?.label ?? "Savings goal", sub: "Set the details" };
     // No subtitle: the preview body already leads with a "What people see" label,
     // so "How people will see it" here just said the same thing twice.
@@ -750,10 +760,17 @@ export function CreateEventSheet({
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {step === "details" && selectedGiftingType && (
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{selectedGiftingType.emoji}</span>
+                  renderOccasionGlyph({ eventType: selectedGiftingType.id, size: 18 }) || (
+                    // "custom" has no glyph and no emoji — its name IS its identity.
+                    selectedGiftingType.id === "custom"
+                      ? null
+                      : <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{selectedGiftingType.emoji}</span>
+                  )
                 )}
                 {step === "goal-details" && selectedGoalTypeDef && (
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{selectedGoalTypeDef.emoji}</span>
+                  renderOccasionGlyph({ savingsGoalType: selectedGoalTypeDef.id, size: 18 }) || (
+                    <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{selectedGoalTypeDef.emoji}</span>
+                  )
                 )}
                 <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: G, lineHeight: 1.2 }}>{hdr.title}</p>
               </div>
@@ -819,7 +836,7 @@ export function CreateEventSheet({
                     onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
                     onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   >
-                    <span style={{ fontSize: 38, lineHeight: 1 }}>{type.emoji}</span>
+                    {renderOccasionGlyph({ eventType: type.id, size: 34 }) || <span style={{ fontSize: 38, lineHeight: 1 }}>{type.emoji}</span>}
                     <p style={{ fontSize: 13.5, fontWeight: 700, color: INK, lineHeight: 1.2 }}>{type.label}</p>
                   </button>
                 ))}
@@ -840,7 +857,7 @@ export function CreateEventSheet({
                     onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.985)")}
                     onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   >
-                    <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{type.emoji}</span>
+                    {renderOccasionGlyph({ savingsGoalType: type.id, size: 24 }) || <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{type.emoji}</span>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 700, color: INK, lineHeight: 1.2 }}>{type.label}</p>
                       <p style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{type.desc}</p>
@@ -860,10 +877,14 @@ export function CreateEventSheet({
               {isEditing && !isCreatingFromArchived && selectedGiftingType && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, padding: "10px 12px", borderRadius: 14, background: "hsl(var(--kiddo-ink) / 0.04)", border: `1px solid ${BORDER}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{selectedGiftingType.emoji}</span>
+                    {renderOccasionGlyph({ eventType: selectedGiftingType.id, size: 20 }) || (
+                      selectedGiftingType.id === "custom"
+                        ? null
+                        : <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{selectedGiftingType.emoji}</span>
+                    )}
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: 10.5, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.4)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1 }}>Type</p>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: INK, marginTop: 3, lineHeight: 1.1 }}>{selectedGiftingType.label}</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: INK, marginTop: 3, lineHeight: 1.1 }}>{selectedGiftingType.id === "custom" ? (name.trim() || "Custom occasion") : selectedGiftingType.label}</p>
                     </div>
                   </div>
                   <button type="button"
@@ -992,7 +1013,9 @@ export function CreateEventSheet({
               {isEditing && !isCreatingFromArchived && selectedGoalTypeDef && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, padding: "10px 12px", borderRadius: 14, background: "hsl(var(--kiddo-ink) / 0.04)", border: `1px solid ${BORDER}` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{selectedGoalTypeDef.emoji}</span>
+                    {renderOccasionGlyph({ savingsGoalType: selectedGoalTypeDef.id, size: 20 }) || (
+                      <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{selectedGoalTypeDef.emoji}</span>
+                    )}
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: 10.5, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.4)", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1 }}>Goal type</p>
                       <p style={{ fontSize: 13, fontWeight: 600, color: INK, marginTop: 3, lineHeight: 1.1 }}>{selectedGoalTypeDef.label}</p>
@@ -1080,19 +1103,33 @@ export function CreateEventSheet({
                   return (
                     <div style={{ position: "relative", minHeight: 200, background: previewCover ? undefined : `linear-gradient(135deg, ${G} 0%, rgb(43,88,64) 100%)`, overflow: "hidden" }}>
                       {previewCover && <FadeImage src={previewCover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.72) 0%, hsl(var(--kiddo-ink) / 0.2) 60%, transparent 100%)" }} />
+                      {/* Text-protection scrim. Tuned to keep WHITE text legible on a
+                          BRIGHT cover too (founder catch): darker through the whole
+                          bottom text zone, fading out only near the top so the photo
+                          still reads. Pairs with per-line text-shadows below. */}
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.86) 0%, hsl(var(--kiddo-ink) / 0.52) 40%, hsl(var(--kiddo-ink) / 0.12) 70%, transparent 100%)" }} />
                       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", padding: 16, minHeight: 200 }}>
                         <div style={{ flex: 1 }} />
                         <div>
                           {previewName && (
-                            <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: 4, letterSpacing: "0.02em" }}>
-                              {typeBadge ? `${typeBadge.emoji} ${typeBadge.label}` : previewName}
-                            </p>
+                            // For custom, the person's name already leads the headline
+                            // ("Gift Theo for aaa") — a "Custom" badge above it is noise.
+                            typeBadge
+                              ? (selectedGiftingType?.id === "custom" ? null : (
+                                  <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: 4, letterSpacing: "0.02em" }}>
+                                    {`${typeBadge.emoji} ${typeBadge.label}`}
+                                  </p>
+                                ))
+                              : (
+                                  <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: 4, letterSpacing: "0.02em" }}>
+                                    {previewName}
+                                  </p>
+                                )
                           )}
-                          <p style={{ fontSize: 19, fontWeight: 800, color: "white", lineHeight: 1.25, textShadow: "0 1px 6px rgba(0,0,0,0.35)" }}>
+                          <p style={{ fontSize: 19, fontWeight: 800, color: "white", lineHeight: 1.25, textShadow: "0 1px 3px rgba(0,0,0,0.6), 0 2px 14px rgba(0,0,0,0.4)" }}>
                             {heroHeadline}
                           </p>
-                          <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginTop: 4, textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>
                             No account needed. Takes seconds.
                           </p>
                           {/* Trust badges */}
@@ -1162,7 +1199,7 @@ export function CreateEventSheet({
               <div style={{ borderRadius: 14, border: `1px solid ${BORDER}`, background: "hsl(var(--kiddo-ink) / 0.03)", padding: "12px 14px", marginBottom: 16 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, color: "hsl(var(--kiddo-ink) / 0.38)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>For you only</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: category !== "savings_goal" && predictedSlug ? 10 : 0 }}>
-                  <span style={{ fontSize: 14 }}>📈</span>
+                  <TrendingUp size={15} strokeWidth={2} style={{ color: "hsl(var(--kiddo-ink) / 0.5)", flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 11, color: MUTED, marginBottom: 1 }}>Gifts invested as</p>
                     <p style={{ fontSize: 13, fontWeight: 600, color: INK }}>{investLabel}</p>

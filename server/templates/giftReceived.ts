@@ -64,7 +64,7 @@ export function buildGiftReceivedEmail(input: GiftReceivedInput): EmailMessage {
     ``,
     noteLine,
     ``,
-    `This is the part that compounds: not just the money, but the people showing up for ${kidFirst} over the years. Take a look.`,
+    `The money matters. So do the people who keep showing up for ${kidFirst}. Take a look.`,
   ].join("\n");
 
   const { html } = renderKiddoEmail({

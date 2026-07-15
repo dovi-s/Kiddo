@@ -4,6 +4,7 @@ import {
   Toast,
   ToastClose,
   ToastDescription,
+  ToastProgress,
   ToastProvider,
   ToastTitle,
   ToastViewport,
@@ -48,6 +49,7 @@ export function Toaster() {
                 )}
               </div>
               {action}
+              <ToastProgress durationMs={9000} variant="gift" />
             </Toast>
           )
         }
@@ -55,12 +57,13 @@ export function Toaster() {
         // description, no action) — it's clutter; the toast leaves on its own.
         // Keep it where dismissal is useful: errors and actionable toasts.
         const showClose = props.variant === "destructive" || Boolean(description) || Boolean(action)
+        const durationMs = props.variant === "destructive" ? 6000 : 4500
         return (
           // pr-11 only when the close ✕ actually renders, so closeless cards
           // keep symmetric px-5. gap-1 (was gap-0.5 = 2px) puts honest air
           // between title and description — the 2px stack was the single
           // biggest contributor to the crammed read.
-          <Toast key={id} duration={props.variant === "destructive" ? 6000 : 4500} className={showClose ? "pr-11" : undefined} {...props}>
+          <Toast key={id} duration={durationMs} className={showClose ? "pr-11" : undefined} {...props}>
             <div className="grid min-w-0 gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
@@ -69,6 +72,7 @@ export function Toaster() {
             </div>
             {action}
             {showClose && <ToastClose />}
+            <ToastProgress durationMs={durationMs} variant={props.variant === "destructive" ? "destructive" : "default"} />
           </Toast>
         )
       })}

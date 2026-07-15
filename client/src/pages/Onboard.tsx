@@ -81,7 +81,7 @@ export default function Onboard() {
               the OS-level reduced-motion preference set, the icon stays
               still rather than rotating indefinitely — a WCAG 2.3.3 fix
               caught in the audit 2026-05-25. The icon is decorative
-              (aria-hidden) since the surrounding 'Setting up your
+              (aria-hidden) since the surrounding 'Taking you to your
               dashboard...' copy carries the status meaning. */}
           <motion.div
             animate={prefersReducedMotion ? undefined : { rotate: 360 }}
@@ -92,13 +92,10 @@ export default function Onboard() {
             <Loader2 size={24} className="text-primary" />
           </motion.div>
 
-          <div className="mt-10 p-5 rounded-2xl bg-card border border-border/50 shadow-premium-sm text-left">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">Next step:</span> Activate investing to start receiving gifts that become real investments.
-            </p>
-          </div>
-
-          <div className="mt-4 text-left">
+          {/* The standalone "Next step: Activate investing" card was removed — it
+              restated the SetupProgressNudge subtitle directly below it (which also
+              carries the actual CTA). One next-step message, not two stacked. */}
+          <div className="mt-10 text-left">
             {/* CTA wiring added 2026-05-25 audit — the SetupProgressNudge
                 rendered with no ctaLabel/onCta meant the nudge was
                 informational only with no path to /activate. Combined
