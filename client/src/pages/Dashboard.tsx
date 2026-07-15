@@ -50,6 +50,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { capFirst } from "@/lib/format-name";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
 // (Removed 2026-05-15: GrowthStory import. The component was never
@@ -71,13 +72,14 @@ import { EventGateModal } from "@/components/EventGateModal";
 // further down). The orphaned component file remains in repo as a
 // potential future surface.
 import { InvestCashModal, type CashContext } from "@/components/InvestCashModal";
+import { ProjectionTrajectoryChart } from "@/components/ProjectionTrajectoryChart";
 import { GiftReceivedToast } from "@/components/ui/plg-loops";
 import { isGiftToastDismissed, markGiftToastDismissed } from "@/lib/gift-toast-dismissed";
 import {
   TrendingUp,
   ArrowUp,
   ArrowDown,
-  Banknote,
+  Coins,
   Gift,
   Share2,
   Hash,
@@ -132,10 +134,10 @@ import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-lin
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
-import { useCountUp } from "@/hooks/use-count-up";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { CollaboratorInvite, CollaboratorInviteModal } from "@/components/ui/plg-loops";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -155,15 +157,17 @@ import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
-import { gifterShortName } from "@/lib/gifter-name";
+import { SinceLastVisitDigest } from "@/components/dashboard/SinceLastVisitDigest";
+import { gifterShortName, gifterIdentityKey, isAnonGifterName } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
 import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
+import { STRATEGY_LABEL, STRATEGY_EMOJI } from "@/lib/strategy";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
-import { projectFundValue } from "@shared/projection";
+import { projectFundValue, PROJECTION_DEFAULT_ANNUAL_RATE, PROJECTION_AUM_FEE_RATE } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
 import {
   calculateKoraContributionFee,
@@ -179,8 +183,13 @@ import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
-import { getCulturalSuggestions, TRADITION_LABELS, TRADITION_ICONS, type CulturalBackground, type CulturalTradition } from "@/lib/cultural-calendar";
+// Cultural-traditions UI + suggestion interleaving fully removed from the
+// production dashboard 2026-06-04 (founder). The engine module
+// (lib/cultural-calendar.ts) is preserved for a proper post-launch home inside
+// the occasion-create flow; the dashboard no longer imports it.
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
+import { applyDemoBuysToHoldings, applyDemoLiveGiftsToHoldings, applyDemoRecurringToContributions, applyDemoSellsToHoldings, readDemoCashDelta, recordDemoRecurring, recordDemoSell, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { publishFundLiveValue } from "@/lib/fund-live-value";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 // Dead-import audit 2026-05-25: QRCodeSVG was previously imported here
 // but never referenced. The ShareModal child renders its own QR via
@@ -191,6 +200,7 @@ import { friendlyHoldingName } from "@/lib/ticker-names";
 const DashboardTrendChart = lazy(() => import("@/components/DashboardTrendChart"));
 import type { DashboardTrendPoint } from "@/components/DashboardTrendChart";
 import { trendYDomain } from "@/lib/trend-domain";
+import { TrendChartSkeleton } from "@/components/TrendChartSkeleton";
 const HoldingDetailSheet = lazy(() =>
   import("@/components/HoldingDetailSheet").then((module) => ({ default: module.HoldingDetailSheet })),
 );
@@ -245,9 +255,8 @@ const MANAGED_STRATEGY_ALLOCATIONS: Record<string, Array<{ ticker: string; name:
   // defensible self-directed posture. The bet's old weight is redistributed into
   // the broad-market sleeves at the same US:International ratio.
   growth: [
-    { ticker: "VTI",  name: "US Total Market", weight: 62 },
-    { ticker: "VXUS", name: "International",    weight: 28 },
-    { ticker: "BND",  name: "Bonds",            weight: 10 },
+    { ticker: "VTI",  name: "US Total Market", weight: 70 },
+    { ticker: "VXUS", name: "International",    weight: 30 },
   ],
   balanced: [
     { ticker: "VTI",  name: "US Total Market", weight: 50 },
@@ -322,6 +331,16 @@ const STATIC_TICKER_META: Record<string, { name: string; emoji: string }> = {
   ADBE:  { name: "Adobe",      emoji: "🎨" },
   TSLA:  { name: "Tesla",      emoji: "🚗" },
   Z:     { name: "Zillow",     emoji: "🏠" },
+  // Roster 2026-06-09 additions + MSFT/MCD (which were offered but absent here,
+  // so their warm emoji only resolved once a live quote loaded).
+  MSFT:  { name: "Microsoft",  emoji: "🧱" },
+  MCD:   { name: "McDonald's", emoji: "🍟" },
+  MAT:   { name: "Mattel",     emoji: "🧸" },
+  HAS:   { name: "Hasbro",     emoji: "🎲" },
+  NVDA:  { name: "Nvidia",     emoji: "🤖" },
+  KO:    { name: "Coca-Cola",  emoji: "🥤" },
+  HSY:   { name: "Hershey",    emoji: "🍫" },
+  CROX:  { name: "Crocs",      emoji: "🐊" },
 };
 
 function lookupPickMeta(ticker: string | null | undefined, quotedStocks: AutoInvestStock[]):
@@ -345,11 +364,11 @@ function lookupPickMeta(ticker: string | null | undefined, quotedStocks: AutoInv
 // emoji or it dilutes the category. Adding a new strategy? Add it to this map.
 // "cash" is intentionally lowercase + no emoji — it's a holding state, not a strategy.
 const STRATEGY_META: Record<string, { name: string; emoji: string }> = {
-  growth:       { name: "Growth Mix",       emoji: "📈" },
-  balanced:     { name: "Steady & Balanced", emoji: "🌿" },
-  conservative: { name: "Conservative Mix", emoji: "⚖️" },
-  custom:       { name: "Custom ETF Mix",   emoji: "🎯" },
-  cash:         { name: "cash",             emoji: "" },
+  growth:       { name: STRATEGY_LABEL.growth,       emoji: STRATEGY_EMOJI.growth },
+  balanced:     { name: STRATEGY_LABEL.balanced,     emoji: STRATEGY_EMOJI.balanced },
+  conservative: { name: STRATEGY_LABEL.conservative, emoji: STRATEGY_EMOJI.conservative },
+  custom:       { name: STRATEGY_LABEL.custom,       emoji: STRATEGY_EMOJI.custom },
+  cash:         { name: "cash",                      emoji: "" },
 };
 
 // Friendly label for a fund's investment strategy. Used to label managed/auto recurring
@@ -461,10 +480,10 @@ function mixIdentityFor(childFirstName?: string | null, ownerMode = false): stri
 const EVENT_TYPE_EMOJI: Record<string, string> = {
   birthday:         "🎂",
   graduation:       "🎓",
-  holiday:          "🎄",
+  holiday:          "🎉",
   christmas:        "🎄",
   hanukkah:         "🕎",
-  religious_holiday: "✡️",
+  religious_holiday: "🙏",
   baby:             "🍼",
   baby_shower:      "🍼",
   wedding:          "💍",
@@ -476,7 +495,7 @@ const EVENT_TYPE_EMOJI: Record<string, string> = {
   trip:             "✈️",
   business:         "💼",
   emergency:        "🛡️",
-  custom:           "✨",
+  custom:           "🎁",
   just_because:     "💚",
 };
 function eventEmoji(eventType: string | null | undefined): string {
@@ -769,7 +788,7 @@ function SsnCollectionNudge({
       toast({
         title: `${childFirst}'s SSN saved`,
         description: hasMultipleFunds
-          ? `Locked in for ${childFirst}'s UTMA account. Each child's account stays separate, and the IRS issues 1099s per account.`
+          ? `Locked in for ${childFirst}'s UTMA. Each child's account and 1099 stay separate.`
           : `Locked in for tax reporting. We don't store the full digits at rest.`,
       });
       setSsn("");
@@ -789,11 +808,11 @@ function SsnCollectionNudge({
           <p className="text-[13px] font-semibold text-foreground">
             Add {childFirst}'s SSN to enable investing
           </p>
-          <p className="mt-1 text-[11.5px] text-muted-foreground leading-relaxed">
+          <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
             Required by the IRS for 1099-DIV / 1099-B forms tied to {childFirst}'s UTMA account. One-time. Encrypted in transit. Last 4 digits stored, not the full number.
           </p>
           {hasMultipleFunds && (
-            <p className="mt-1.5 text-[10.5px] text-muted-foreground/80 leading-relaxed">
+            <p className="mt-1.5 text-3xs text-muted-foreground/80 leading-relaxed">
               Each child's account is its own UTMA. Set once for {childFirst}, separately from your other kids.
             </p>
           )}
@@ -821,7 +840,7 @@ function SsnCollectionNudge({
                   // path with no-op data (no fund mutation, just rerender).
                   window.dispatchEvent(new CustomEvent("kiddo:ssn-snoozed", { detail: { fundId } }));
                 }}
-                className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+                className="text-2xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
                 data-testid="button-snooze-ssn"
               >
                 Remind me tomorrow
@@ -845,7 +864,7 @@ function SsnCollectionNudge({
                 data-testid="input-recipient-ssn"
               />
               {serverError && (
-                <p className="text-[11px] text-destructive">{serverError}</p>
+                <p className="text-2xs text-destructive">{serverError}</p>
               )}
               <div className="flex gap-2">
                 <button
@@ -866,7 +885,7 @@ function SsnCollectionNudge({
                   Not now
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+              <p className="text-3xs text-muted-foreground/70 leading-relaxed">
                 Encrypted submission. Used only for IRS-required tax forms tied to {childFirst}'s custodial account.
               </p>
             </div>
@@ -884,22 +903,6 @@ function formatCurrency(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
-}
-
-// Presentational-only hero roll for the Dunphy demo's "gift just landed" beat.
-// DemoGiftMoment's gift is a no-op toast (the $ is already baked into the seeded
-// balance), so the normal hero count-up has nothing to animate. This rolls the
-// hero from (balance − giftAmount) up to the real seeded balance, synced to the
-// toast, so the prospect FEELS the money land — and it ends exactly on the real
-// number, so there's zero data drift. Mounted fresh per beat (keyed) so
-// useCountUp's initial display starts at `fromValue` and eases up to `toValue`.
-function DemoHeroRoll({ fromValue, toValue, durationMs = 1400, onDone }: { fromValue: number; toValue: number; durationMs?: number; onDone: () => void }) {
-  const { value } = useCountUp({ from: fromValue, to: toValue, duration: durationMs });
-  useEffect(() => {
-    const t = window.setTimeout(onDone, durationMs + 300);
-    return () => window.clearTimeout(t);
-  }, [onDone, durationMs]);
-  return <>{formatCurrency(value)}</>;
 }
 
 // Friendlier money formatter for action labels and warm-context UI: drops the
@@ -976,12 +979,9 @@ function getGiftExecutionLabel(executionModel?: string | null, selectedTicker?: 
 // explicit booleans, not inferred from string patterns. The string
 // fallback exists only for backward compat with older gift rows.
 function displayGifterName(name?: string | null, isAnonymous?: boolean): string {
-  if (isAnonymous === true) return "Anonymous";
-  const normalized = String(name || "").trim();
-  if (!normalized || /^someone who loves/i.test(normalized) || normalized.toLowerCase() === "anonymous") {
-    return "Anonymous";
-  }
-  return normalized;
+  // Anon rule is single-source in shared/gifter-anon.ts (via @/lib/gifter-name).
+  if (isAnonymous === true || isAnonGifterName(name)) return "Anonymous";
+  return String(name || "").trim();
 }
 
 function stripStockSuffix(name?: string | null): string {
@@ -990,8 +990,23 @@ function stripStockSuffix(name?: string | null): string {
 
 // gifterShortName + WEAK_NAME_LEADERS now live in @/lib/gifter-name (imported
 // above) so the Memory Book shares the exact same rule — it previously used a
-// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Phil's"
+// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Marcus's"
 // the Dashboard never showed.
+
+// Humanize a future countdown. A graduation 4 years out reading "1459 days away"
+// is clinical for an emotional product; switch to days only for the near term,
+// then weeks / months / years. Returns "" for past dates (caller filters it out).
+function humanizeDaysAway(days: number | null | undefined): string {
+  if (days == null || days < 0) return "";
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days < 14) return `${days} days away`;
+  if (days < 60) return `${Math.round(days / 7)} weeks away`;
+  if (days < 365) return `about ${Math.round(days / 30)} months away`;
+  const years = Math.round((days / 365) * 2) / 2; // nearest half-year
+  const yearStr = years % 1 === 0 ? String(years) : years.toFixed(1);
+  return `about ${yearStr} years away`;
+}
 
 type GifterProfile = {
   name: string;
@@ -1093,13 +1108,39 @@ function getGiftDisplayAmountForTransaction(transaction: DashboardTransaction, g
   return Number.isFinite(netAmount) ? netAmount : parseFloat(transaction.amount || "0");
 }
 
+// Smart-nudge session guard — MODULE scope on purpose (2026-06-07). The
+// nudge's dedup used to lean entirely on a localStorage key; when storage
+// silently no-ops (private mode, blocked storage, or a demo that resets it),
+// the claim never lands and EVERY pending timer toasts — the "3 at once" bug.
+// A module-level flag is claimed synchronously by the first timer to fire and
+// is immune to storage failures AND to multiple Dashboard mounts in one tab
+// (a useRef would reset per-mount; this survives the whole session). It's the
+// in-memory FIRST line of dedup; the 30-day localStorage key remains the
+// cross-session backstop. Resets only on a full page reload, which is the
+// correct "once per session" contract.
+let smartNudgeShownThisSession = false;
+
+// Default a parent into their first OWNED, non-transferred fund — never a
+// handed-off / previous_owner fund. A parent shouldn't open straight into the
+// kid's graduated account, and in the seeded demo the graduated fund (Mia) is
+// created FIRST, so a naive funds[0] lands there. Falls back to funds[0] only
+// when every fund is shared/transferred (e.g. a fully-graduated household).
+function pickDefaultFundId(funds: any[]): string {
+  const list = funds || [];
+  const owned = list.find((f) => f?.accessRole !== "previous_owner" && !f?.transferredAt);
+  return (owned ?? list[0])?.id ?? "";
+}
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
-  const { data: subscription } = useSubscription();
+  // Demo sandbox: re-derive the holdings overlay when a gift is recorded
+  // in-place so the hero rolls + "What X owns" updates immediately.
+  const demoOverlayVersion = useDemoOverlayVersion();
+  const { data: subscription, isFetched: subscriptionFetched } = useSubscription();
   const queryClient = useQueryClient();
 
   // Closed-tab fallback for the at-handoff welcome walkthrough. If the
@@ -1313,6 +1354,10 @@ export default function Dashboard() {
   // — so the user never wonders whether anything happened during the network round-trip.
   const [nudgeSwitchLoading, setNudgeSwitchLoading] = useState<string | null>(null);
   const [nudgeOptimisticallyDismissed, setNudgeOptimisticallyDismissed] = useState<Set<string>>(new Set());
+  // Per-occasion "show all gifts" expansion in the occasion detail view — the
+  // "+N more" row expands the list in place instead of being a dead end. Keyed
+  // by event id so switching occasions doesn't carry a stale expanded state.
+  const [expandedOccasionGiftLists, setExpandedOccasionGiftLists] = useState<Set<string>>(new Set());
   const [showArchivedTilesV2, setShowArchivedTilesV2] = useState(false);
   const [eventShareTarget, setEventShareTarget] = useState<SharePage[] | null>(null);
   const [investCashOpen, setInvestCashOpen] = useState(false);
@@ -1422,9 +1467,7 @@ export default function Dashboard() {
   const [recentGiftForToast, setRecentGiftForToast] = useState<GiftType | null>(null);
   const [showCoverageUpgradeModal, setShowCoverageUpgradeModal] = useState(false);
   const [startingCoverageCheckout, setStartingCoverageCheckout] = useState(false);
-  const [culturalBgPickerOpen, setCulturalBgPickerOpen] = useState(false);
-  const [culturalBgSelections, setCulturalBgSelections] = useState<string[]>([]);
-  const [savingCulturalBg, setSavingCulturalBg] = useState(false);
+  // Cultural-traditions picker state removed 2026-06-04 with its tile + dialog.
   const [kidViewConfigOpen, setKidViewConfigOpen] = useState(false);
   const [kidViewConfigStep, setKidViewConfigStep] = useState<"settings" | "done">("settings");
   const [kidViewEnabled, setKidViewEnabled] = useState(false);
@@ -1432,7 +1475,12 @@ export default function Dashboard() {
   const [kidViewPinHint, setKidViewPinHint] = useState("");
   const [savingKidView, setSavingKidView] = useState(false);
   const [disclosureOpen, setDisclosureOpen] = useState<"growth" | "projection" | null>(null);
-  const [chartRange, setChartRange] = useState<ChartRange>("1M");
+  // Default to ALL, not 1M (2026-06-04, founder): Kiddo's value IS the
+  // long-term compounding arc — the chart should open on the whole journey
+  // (started small → weathered the dips → grew), not a near-flat last-month
+  // slice. It also matches the "Growth · All-time" stat shown beside it. A
+  // parent who wants recent detail taps 1W/1M; the default is the story.
+  const [chartRange, setChartRange] = useState<ChartRange>("ALL");
   const [previewFundId, setPreviewFundId] = useState<string>("");
   const [autoInvestModalOpen, setAutoInvestModalOpen] = useState(false);
   const [autoInvestUpgradeOpen, setAutoInvestUpgradeOpen] = useState(false);
@@ -1539,7 +1587,14 @@ export default function Dashboard() {
   const [addFromScheduleSheet, setAddFromScheduleSheet] = useState<{ planId: string; amount: string } | null>(null);
   const [addFromScheduleNote, setAddFromScheduleNote] = useState("");
   const [addFromScheduleMedia, setAddFromScheduleMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
-  const [smartNudge, setSmartNudge] = useState<{
+  // Smart-nudge payload. Was a blocking modal (Dialog); now fired as a calm,
+  // non-blocking TOAST that routes to the recurring editor (2026-06-04). The
+  // modal kept covering the hero "value roll" the parent came to see (founder
+  // flagged it twice) AND showed a static $X/$2X projection that the recurring
+  // editor already does LIVE as you change the amount — so the modal was a
+  // redundant, interruptive layer. The toast just hooks attention and hands off
+  // to the editor where the real interactive projection lives.
+  type SmartNudgePayload = {
     scenario: "outperforming" | "consistent" | "milestone";
     returnPct?: number;
     streakMonths?: number;
@@ -1548,14 +1603,10 @@ export default function Dashboard() {
     currentProjection?: number;
     doubledProjection?: number;
     milestoneAmt?: number;
-    // The NEXT milestone above the one just crossed. Used in the
-    // "at your current pace, the next $X arrives in N months" copy
-    // so the number we promise matches the threshold we're projecting
-    // toward, not the one we just hit. Added 2026-05-15 timing audit.
     nextMilestoneAmt?: number;
     monthsAtCurrentRate?: number;
     monthsDoubled?: number;
-  } | null>(null);
+  };
   const [oneTimeModalOpen, setOneTimeModalOpen] = useState(false);
   const [oneTimeStep, setOneTimeStep] = useState<"amount" | "target" | "confirm">("amount");
   const [oneTimeAmount, setOneTimeAmount] = useState("50");
@@ -1703,7 +1754,7 @@ export default function Dashboard() {
     if (!selectedFundId) return;
     if (funds.length === 0) return;
     if (funds.some((f) => f.id === selectedFundId)) return;
-    const fallback = funds[0]?.id ?? "";
+    const fallback = pickDefaultFundId(funds);
     setSelectedFundId(fallback);
     setActiveFundId(fallback);
     const params = new URLSearchParams(window.location.search);
@@ -1931,7 +1982,7 @@ export default function Dashboard() {
   // loading-state regression for the common case.
   const selectedOwnedByUser =
     funds.length > 0 && Boolean(selectedFundId) && funds.some((f) => f.id === selectedFundId);
-  const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
+  const activeFundId = (selectedOwnedByUser ? selectedFundId : pickDefaultFundId(funds)) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
 
   // Idle-time prefetch of next-likely pages — relocated here from
@@ -1948,7 +1999,11 @@ export default function Dashboard() {
     if (!activeFundId) return;
     const cancel = onIdle(() => {
       prefetchMemoryBook(queryClient, activeFundId);
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, activeFundId);
+      // Warm the lazy Recharts chunk during idle so the trend chart paints from
+      // cache the instant its data is ready — instead of arriving last (the
+      // "blank box, then it rolls in" the chunk download otherwise causes).
+      void import("@/components/DashboardTrendChart");
     });
     return cancel;
   }, [activeFundId, queryClient]);
@@ -2016,6 +2071,23 @@ export default function Dashboard() {
   // viewer case is the existing collaborator role.
   const isReadOnlyFund = isViewerOnly || isPreviousOwner;
   const isSharedFund = activeFundAccessRole !== 'owner';
+  // Post-handoff KEEPSAKE for the previous owner — see DashboardLab for the full
+  // rationale. After handoff the fund is the now-adult's private account; the
+  // parent's view shows the frozen value-at-handoff ("what you handed them on
+  // {date}"), not her live balance. NULL valueAtTransfer = legacy transfer →
+  // fall back to a clearly-labeled live value, not a misleading "Today".
+  const handoffKeepsakeValue = (activeFund as any)?.valueAtTransfer != null
+    ? parseFloat(String((activeFund as any).valueAtTransfer))
+    : null;
+  // ...unless the now-adult opted to share it live (Phase 2) — then the previous
+  // owner sees the live fund again.
+  const showHandoffKeepsake = isPreviousOwner
+    && handoffKeepsakeValue != null
+    && Number.isFinite(handoffKeepsakeValue)
+    && !(activeFund as any)?.previousOwnerLiveAccessGrantedAt;
+  const handoffDateLabel = (activeFund as any)?.transferredAt
+    ? new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    : null;
   const cachedHeroFundValue = useMemo(
     () => (activeFundId ? readCachedFundValue(activeFundId) : null),
     [activeFundId],
@@ -2120,7 +2192,9 @@ export default function Dashboard() {
     if (activeFundId) setActiveFundId(activeFundId);
   }, [activeFundId]);
 
-  const cashBalance = parseFloat((activeFund as any)?.cashBalance || "0");
+  // Demo-only: sell proceeds land in cash (invested↓ + cash↑ = same hero total).
+  // Recomputed each render; the Dashboard re-renders on demoOverlayVersion change.
+  const cashBalance = parseFloat((activeFund as any)?.cashBalance || "0") + readDemoCashDelta(activeFundId, isDemoAccount);
   // Hero balance derives from sum(holdings.currentValue) + cash + pending —
   // NOT from f.balance + cash + pending. Earlier this read f.balance, but
   // f.balance is only incremented manually on gift settlement (cost-basis
@@ -2131,7 +2205,22 @@ export default function Dashboard() {
   // a few rows down. Both numbers were sourced legitimately, but they
   // don't get to disagree. Falls back to f.balance when holdings haven't
   // loaded yet (initial cached render, or dashboard summary errored).
-  const summaryHoldings = (dashboardSummary as any)?.holdings as { currentValue?: string }[] | undefined;
+  // Demo-only: land session gifts inside the holdings so the hero (sum of
+  // holdings.currentValue) AND "What X owns" (same source) both reflect them and
+  // stay reconciled. No-op off demo / no gifts → returns the raw holdings.
+  const overlaidHoldings = useMemo(
+    () => applyDemoSellsToHoldings(
+      applyDemoBuysToHoldings(
+        applyDemoLiveGiftsToHoldings((dashboardSummary?.holdings ?? []) as any[], isDemoAccount, activeFundId),
+        isDemoAccount,
+        activeFundId,
+      ),
+      isDemoAccount,
+      activeFundId,
+    ),
+    [dashboardSummary?.holdings, isDemoAccount, activeFundId, demoOverlayVersion],
+  );
+  const summaryHoldings = overlaidHoldings as { currentValue?: string }[] | undefined;
   const investedMarketValue = Array.isArray(summaryHoldings) && summaryHoldings.length > 0
     ? summaryHoldings.reduce((s, h) => s + parseFloat(String(h?.currentValue || "0")), 0)
     : parseFloat(activeFund?.balance || "0");
@@ -2160,28 +2249,10 @@ export default function Dashboard() {
     duration: 1200,
   });
 
-  // Demo "gift just landed" hero roll. DemoGiftMoment (the toast) dispatches a
-  // presentational signal when its beat fires; we roll the hero from
-  // (balance − amount) up to the real seeded balance so the gift is FELT on the
-  // hero, not just announced in a toast. No data mutation — purely visual, ends
-  // on the real number. Only fires for the fund currently being viewed.
-  const [demoBeat, setDemoBeat] = useState<{ id: number; amount: number } | null>(null);
-  useEffect(() => {
-    if (!activeFundId) return;
-    // This file has a local `Event` type (the occasion model) that shadows the
-    // DOM Event, and globalThis.Event didn't resolve cleanly here. Since this is
-    // a demo-only visual signal, type the handler param as `any` and drop the
-    // casts — `(e: any) => void` is assignable to addEventListener's listener.
-    const handler = (e: any) => {
-      const detail = (e && e.detail) || {};
-      if (String(detail.fundId) !== String(activeFundId)) return;
-      const amount = Number(detail.amount);
-      if (!Number.isFinite(amount) || amount <= 0) return;
-      setDemoBeat({ id: Date.now(), amount });
-    };
-    window.addEventListener("kiddo:demo-gift-landed", handler);
-    return () => window.removeEventListener("kiddo:demo-gift-landed", handler);
-  }, [activeFundId]);
+  // (The old presentational "demo gift landed" hero-roll signal was retired in
+  // the demo-sandbox work: a recorded demo gift now lands in a holding, so the
+  // hero rolls off the REAL number via the count-up. No `kiddo:demo-gift-landed`
+  // listener / DemoHeroRoll hack needed.)
 
   // Chart-scrub state (Revolut-style tactile chart). When the parent
   // hovers or finger-drags across the trend chart, this holds the
@@ -2204,10 +2275,31 @@ export default function Dashboard() {
     prevValueRef.current = rawTotalValue;
   }, [rawTotalValue]);
   // Persist the live balance per-fund so the next session seeds the count-up from the last known value.
+  // GUARDED on dashboardSummary being resolved (2026-06-04 perfection pass):
+  // in the window where the fund row has loaded but the summary (holdings)
+  // hasn't, rawTotalValue = 0 invested + pending + cash — a low-but-positive
+  // PARTIAL total. Writing that would poison the seed, and the next session
+  // would "roll up" from a number the fund was never actually at — a fake
+  // gain, the one dishonesty this animation must never produce. The window
+  // only exists on cold caches (first visit, post-demo-login clear), which
+  // is precisely when the seed is being established.
   useEffect(() => {
-    if (!activeFundId || !rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
-    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, rawTotalValue);
-  }, [activeFundId, rawTotalValue]);
+    if (!activeFundId || !dashboardSummary) return;
+    if (!rawTotalValue || !Number.isFinite(rawTotalValue) || rawTotalValue <= 0) return;
+    // DEMO accounts persist a seed ~0.6% BELOW live (founder call
+    // 2026-06-04: "should the demo have a lower cached amount always so
+    // [you] can always do the roll-in thing?"). The roll's premise is
+    // "you've been away; here's what changed" — a real returning parent
+    // always has a yesterday-number, and the demo's fiction is stepping
+    // into Marcus's life mid-stream, so a synthetic last-visit number is
+    // set dressing, not a lie: the START is bent, the END is always the
+    // true balance, up-only holds by construction. Every fund-tab open
+    // in the demo now plays the returning-parent moment; the ambient
+    // DemoGiftMoment beat separately demos live ARRIVAL. Real accounts:
+    // exact live value, untouched.
+    const seedToStore = isDemoAccount ? rawTotalValue * 0.994 : rawTotalValue;
+    writeLocalCache(`${FUND_BALANCE_CACHE_PREFIX}${activeFundId}`, seedToStore);
+  }, [activeFundId, rawTotalValue, dashboardSummary, isDemoAccount]);
 
   // Per-fund cached seed for the hero's "$X at 65" projection peek. Same
   // Acorns-style pattern as the balance: paint the last known projection
@@ -2241,41 +2333,35 @@ export default function Dashboard() {
   // a paid fund. Re-synced 2026-05-29.
   const hasAutoInvestAccess = Boolean(dashboardSummary?.recurringEnabled);
   void isFamily; void isStarter; void activeFundHasStarter;
-  const { data: parentLetter } = useQuery<{ id: string; content: string; type: string; authorName?: string } | null>({
-    queryKey: ["memory", activeFundId, "parent_letter"],
+  // ONE fetch of the fund's memory entries, derived two ways below
+  // (2026-06-04 perf). Previously the parent-letter and the parent-authored-
+  // count were two separate useQuery's hitting the SAME /memory endpoint with
+  // different keys — two identical full-array downloads per dashboard mount.
+  // Now: one query, two useMemo derivations.
+  const { data: memoryEntriesForFund } = useQuery<any[]>({
+    queryKey: ["memory", activeFundId],
     queryFn: async () => {
-      if (!activeFundId) return null;
+      if (!activeFundId) return [];
       const res = await fetch(`/api/funds/${activeFundId}/memory`, { credentials: "include" });
-      if (!res.ok) return null;
-      const entries: any[] = await res.json();
-      return entries.find((e) => e.type === "parent_letter") ?? null;
+      if (!res.ok) return [];
+      return res.json();
     },
     enabled: !!activeFundId,
     staleTime: 1000 * 60 * 5,
   });
-
-  // Parent-authored memory entry count for the proactive Plus prompt
-  // trigger ("third-entry" — fires when a Free parent has written 3+
-  // entries themselves, signaling they're building the Memory Book
-  // even without the media-authoring feature Plus would unlock).
-  // Separate query from parentLetter above to avoid restructuring the
-  // existing parentLetter consumer; same endpoint, response is HTTP-
-  // cacheable so the cost is minimal. Per the locked pre-launch
-  // strategic frame upgrade-conversion plan.
-  const { data: parentAuthoredEntryCount = 0 } = useQuery<number>({
-    queryKey: ["memory-entry-count", activeFundId, user?.id],
-    queryFn: async () => {
-      if (!activeFundId || !user?.id) return 0;
-      const res = await fetch(`/api/funds/${activeFundId}/memory`, { credentials: "include" });
-      if (!res.ok) return 0;
-      const entries: any[] = await res.json();
-      return entries.filter((e) =>
-        e.authorUserId === user.id && e.type !== "parent_letter" && e.type !== "sealed_letter"
-      ).length;
-    },
-    enabled: !!activeFundId && !!user?.id,
-    staleTime: 1000 * 60 * 5,
-  });
+  const parentLetter = useMemo<{ id: string; content: string; type: string; authorName?: string } | null>(
+    () => (memoryEntriesForFund || []).find((e: any) => e.type === "parent_letter") ?? null,
+    [memoryEntriesForFund],
+  );
+  // Parent-authored entry count for the proactive Plus prompt ("third-entry" —
+  // a Free parent who's written 3+ entries themselves is building the Memory
+  // Book even without the media-authoring Plus unlocks).
+  const parentAuthoredEntryCount = useMemo(
+    () => (memoryEntriesForFund || []).filter((e: any) =>
+      e.authorUserId === user?.id && e.type !== "parent_letter" && e.type !== "sealed_letter"
+    ).length,
+    [memoryEntriesForFund, user?.id],
+  );
 
   const { data: giftCodeData } = useQuery<{ code: string; lookupUrl: string }>({
     queryKey: ["/api/funds", activeFundId, "gift-code"],
@@ -2292,10 +2378,19 @@ export default function Dashboard() {
     queryKey: ["/api/funds", activeFundId, "kid-view-settings"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${activeFundId}/kid-view-settings`, { credentials: "include" });
-      if (!res.ok) throw new Error("Could not load kid view settings");
+      // Return null (not throw) on a non-OK response so a denied fetch doesn't
+      // surface as an errored query. The endpoint is owner/co-admin-gated.
+      if (!res.ok) return null;
       return res.json();
     },
-    enabled: !!activeFundId && activeFund?.accountType === "UTMA",
+    // Kid View is a custodian→child feature — it does NOT apply once a fund has
+    // been HANDED OFF to the now-adult (transferredAt set) or when the viewer is
+    // only the PREVIOUS owner. Firing it there 403'd (the parent no longer owns
+    // the transferred fund) and threw a console error. Gate it out. 2026-06-04.
+    enabled: !!activeFundId
+      && activeFund?.accountType === "UTMA"
+      && activeFundAccessRole !== "previous_owner"
+      && !(activeFund as any)?.transferredAt,
   });
   const { data: investPrefs, refetch: refetchInvestPrefs } = useQuery<any>({
     queryKey: ["/api/funds", activeFundId, "investment-preferences"],
@@ -2337,6 +2432,30 @@ export default function Dashboard() {
     activeCoverageState === "covered_starter" ||
     activeCoverageState === "covered_family" ||
     activeCoverageState === "trial_active";
+  // CONFIDENT-uncovered gate for the Plus upsell MODAL (2026-06-04). The
+  // server always includes a coverage key for every fund the user can see,
+  // so an ABSENT key means "subscription not loaded yet / stale localStorage
+  // cache" — NOT "free fund." `|| "uncovered"` conflates the two, so a Family
+  // parent (or co-admin) whose cached /api/subscription predates a coverage
+  // fix saw the 900ms upsell timer fire before the fresh covered_family data
+  // landed. Only treat a fund as upsell-worthy when the subscription has
+  // actually been fetched this mount AND the fund's key is present AND
+  // uncovered. (isFundCovered itself is left as-is — it's used widely and
+  // defaulting unknown→uncovered is the safe direction for read-only gates.)
+  const activeCoverageConfirmedUncovered =
+    subscriptionFetched &&
+    Object.prototype.hasOwnProperty.call(coverageByFund, String(activeFundId)) &&
+    !isFundCovered;
+  // FUND-keyed plan view for fund-scoped gates (2026-06-04). A co-admin on a
+  // covered fund has effectivePlan "free" (her OWN plan) while the FUND is
+  // paid for — occasion gates and Plus-upsell nudges must read the fund's
+  // coverage, never the viewer's plan, or we upsell a household that already
+  // pays (same bug class as 5390ae1/0fb4f3c). Falls back to the viewer's
+  // plan when the fund is uncovered (then the viewer IS the upsell target).
+  const fundKeyedPlan =
+    activeCoverageState === "covered_family" ? "family"
+      : activeCoverageState === "covered_starter" || activeCoverageState === "trial_active" ? "starter"
+        : effectivePlan;
 
   useEffect(() => {
     if (activeFundId) setPreviewFundId(activeFundId);
@@ -2358,7 +2477,10 @@ export default function Dashboard() {
   });
   // Derive directly from dashboardSummary so fund switches always show correct holdings immediately.
   // Fall back to the independently-fetched data only when the summary failed to load.
-  const holdings: Holding[] = dashboardSummary?.holdings ?? holdingsFetched;
+  // overlaidHoldings === dashboardSummary.holdings when off-demo / no gifts, so
+  // this preserves the original fallback (independently-fetched holdings only
+  // when the summary failed to load) while the demo sees the gift land here too.
+  const holdings: Holding[] = overlaidHoldings.length ? (overlaidHoldings as Holding[]) : (dashboardSummary?.holdings ?? holdingsFetched);
   const holdingsLoading = holdingsQueryLoading || (!!activeFundId && dashboardSummaryLoading && !dashboardSummary);
 
   const { data: giftsFetched = [], isLoading: giftsQueryLoading } = useQuery<GiftType[]>({
@@ -2370,7 +2492,19 @@ export default function Dashboard() {
     },
     enabled: !!activeFundId && dashboardSummaryError,
   });
-  const gifts: GiftType[] = dashboardSummary?.gifts ?? giftsFetched;
+  const giftsRaw: GiftType[] = dashboardSummary?.gifts ?? giftsFetched;
+  // Keepsake (mirror of DashboardLab): the previous owner sees gifts only up to
+  // the handoff — no post-handoff gift activity or private notes to the now-adult.
+  // No-op for everyone else.
+  const gifts: GiftType[] = useMemo(() => {
+    if (!showHandoffKeepsake || !(activeFund as any)?.transferredAt) return giftsRaw;
+    const cutoff = new Date((activeFund as any).transferredAt).getTime();
+    if (!Number.isFinite(cutoff)) return giftsRaw;
+    return giftsRaw.filter((g) => {
+      const ts = g.createdAt ? new Date(g.createdAt).getTime() : 0;
+      return !Number.isFinite(ts) || ts === 0 || ts <= cutoff;
+    });
+  }, [giftsRaw, showHandoffKeepsake, activeFund]);
   const giftsLoading = giftsQueryLoading || (!!activeFundId && dashboardSummaryLoading && !dashboardSummary);
   const giftAllocations: GiftAllocationLite[] = dashboardSummary?.giftAllocations ?? [];
 
@@ -2860,7 +2994,7 @@ export default function Dashboard() {
     return map;
   }, [dashboardThankYous]);
 
-  const { data: parentContributions = [], refetch: refetchParentContributions } = useQuery<ParentContribution[]>({
+  const { data: rawParentContributions = [], refetch: refetchParentContributions } = useQuery<ParentContribution[]>({
     queryKey: ["/api/funds", activeFundId, "parent-contributions"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${activeFundId}/parent-contributions`, { credentials: "include" });
@@ -2871,6 +3005,12 @@ export default function Dashboard() {
     staleTime: Infinity, // data is fed by dashboardSummary effect; only fetches on explicit refetch/invalidation
     initialData: () => dashboardSummary?.parentContributions,
   });
+  // Demo-only: append a session-recorded recurring set-up so it shows as active
+  // (the sandbox mocks the POST, so the refetch alone never includes it).
+  const parentContributions = useMemo<ParentContribution[]>(
+    () => applyDemoRecurringToContributions(rawParentContributions, isDemoAccount, activeFundId),
+    [rawParentContributions, isDemoAccount, activeFundId, demoOverlayVersion],
+  );
   const activeAutoInvest = parentContributions.find((c) => c.status === "active");
   const pausedAutoInvest = parentContributions.find((c) => c.status === "paused");
 
@@ -2974,6 +3114,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (giftToastDismissed || !gifts.length) return;
+    // In the DEMO, DemoGiftMoment is the single, curated gift-arrival beat
+    // (top-center). This bottom-right GiftReceivedToast is the real-product
+    // PLG nudge — firing BOTH meant two different gifts announced at once in
+    // two places ("Leo added $50" top-center + "Marcus just gifted $100"
+    // bottom-right). The earlier fix only excluded `demo-` OVERLAY gifts, but
+    // every demo fund also has SEEDED gifts dated today (Marcus's monthly
+    // auto-invest), which are real ids and slipped through. Suppress this
+    // toast entirely for demo accounts so the demo shows ONE arrival beat.
+    // (Founder catch 2026-06-04, follow-up.) Real accounts keep the card.
+    if (isDemoAccount) return;
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     // Iterate every recent gift (not just the first) and pick the
     // newest that hasn't already been dismissed. Previously `.find()`
@@ -2983,6 +3133,7 @@ export default function Dashboard() {
     const recent = gifts.find((g) => {
       const createdAt = g.createdAt ? new Date(g.createdAt).getTime() : 0;
       if (createdAt <= oneDayAgo) return false;
+      if (String(g.id || "").startsWith("demo-")) return false;
       return !isGiftToastDismissed(String(g.id || ""));
     });
     if (recent) {
@@ -3012,7 +3163,7 @@ export default function Dashboard() {
       // canonical surfacing.
       markGiftToastDismissed(String(recent.id || ""));
     }
-  }, [gifts, giftToastDismissed]);
+  }, [gifts, giftToastDismissed, isDemoAccount]);
 
   // (Removed: the effect that surfaced `pendingGiftNotice`. See note on
   // the deleted state above — the banner pattern was the wrong shape for
@@ -3021,7 +3172,10 @@ export default function Dashboard() {
   // without screaming.)
 
   useEffect(() => {
-    if (!activeFundId || !recentGiftForToast || isFundCovered) return;
+    // Only when we've CONFIRMED the fund is uncovered (see
+    // activeCoverageConfirmedUncovered) — never on a still-loading / stale
+    // subscription, which used to flash the Plus modal at covered families.
+    if (!activeFundId || !recentGiftForToast || !activeCoverageConfirmedUncovered) return;
     const giftId = String(recentGiftForToast.id || "");
     if (!giftId) return;
     const storageKey = `kora:coverage-prompt:${giftId}`;
@@ -3031,7 +3185,7 @@ export default function Dashboard() {
       safeLocalSet(storageKey, "shown");
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [activeFundId, recentGiftForToast, isFundCovered]);
+  }, [activeFundId, recentGiftForToast, activeCoverageConfirmedUncovered]);
 
   const recentGifts30Days = useMemo(() => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -3099,11 +3253,20 @@ export default function Dashboard() {
 
   const gifterRoster = useMemo<GifterProfile[]>(() => {
     const map = new Map<string, GifterProfile>();
+    // Most-recent gift timestamp per identity, so a collapsed (email-keyed)
+    // gifter displays their LATEST self-identification rather than whichever
+    // name happened to be processed first. 2026-06-08.
+    const nameMsByKey = new Map<string, number>();
     for (const g of gifts) {
       const status = String(g.status || "").toLowerCase();
       if (status === "failed" || status === "refunded") continue;
       const rawName = displayGifterName(g.senderName, (g as any).isAnonymous);
-      const key = rawName.toLowerCase();
+      // Group by stable IDENTITY (email-when-present), not raw name — so the
+      // same person signing "Sofia Rivera" then "Grandma" is ONE row, and
+      // two different people who share a name stay separate. Anonymous + no-email
+      // groupings are unchanged. See gifterIdentityKey. (founder catch 2026-06-08)
+      const key = gifterIdentityKey(g.senderName, (g as any).senderEmail, (g as any).isAnonymous);
+      const giftMs = g.createdAt ? new Date(String(g.createdAt)).getTime() : 0;
       const net = parseFloat(String(g.netAmount || g.amount || "0"));
       const giftPreferredName = ((g as any).gifterPreferredName && String((g as any).gifterPreferredName).trim()) || null;
       const giftAvatarUrl = (g as any).gifterAvatarUrl || null;
@@ -3117,20 +3280,19 @@ export default function Dashboard() {
             existing.lastGiftDate = String(g.createdAt);
           }
         }
+        // Most-recent gift's name wins as the display name for this identity.
+        if (giftMs >= (nameMsByKey.get(key) ?? 0)) { existing.name = rawName; nameMsByKey.set(key, giftMs); }
         // Fill enrichment from whichever gift carries it (older gifts may pre-date
         // the gifter creating an account / setting a preferred name or photo).
         if (!existing.preferredName && giftPreferredName) existing.preferredName = giftPreferredName;
         if (!existing.avatarUrl && giftAvatarUrl) existing.avatarUrl = giftAvatarUrl;
         existing.gifts.push(g);
       } else {
-        const parts = rawName.trim().split(/\s+/);
-        const initials = parts.length >= 2
-          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-          : rawName.slice(0, 2).toUpperCase();
+        nameMsByKey.set(key, giftMs);
         map.set(key, {
           name: rawName,
-          initials,
-          colorIdx: gifterColorIdx(rawName),
+          initials: "", // resolved post-loop from the final (most-recent) name
+          colorIdx: 0,
           giftCount: 1,
           totalNetAmount: Number.isFinite(net) ? net : 0,
           lastGiftDate: g.createdAt ? String(g.createdAt) : null,
@@ -3139,6 +3301,16 @@ export default function Dashboard() {
           avatarUrl: giftAvatarUrl,
         });
       }
+    }
+    // Initials + base color from the RESOLVED display name (after most-recent
+    // wins), so a collapsed gifter's avatar matches the name shown. Single-name
+    // gifters are unchanged (most-recent == only name).
+    for (const p of Array.from(map.values())) {
+      const parts = p.name.trim().split(/\s+/);
+      p.initials = parts.length >= 2
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : p.name.slice(0, 2).toUpperCase();
+      p.colorIdx = gifterColorIdx(p.name);
     }
     // Sort by RECENCY (most recent gift first), not total amount. Sorting
     // by amount made the most generous gifter appear first — leaderboard
@@ -3181,6 +3353,125 @@ export default function Dashboard() {
       })
       .sort((a, b) => new Date(String(b.createdAt || 0)).getTime() - new Date(String(a.createdAt || 0)).getTime());
   }, [gifts]);
+
+  // ── "On this day" gift anniversary (founder-locked 2026-06-04) ──
+  // The relationship version of fintech's "feel time": when a gift was given
+  // on TODAY's date in a previous year, one card in the hero cycler becomes
+  // "Sofia gave $50 three years ago today" with the REAL current value of
+  // that exact gift (its actual shares at the live price — same honest math
+  // as the Memory Book's now-worth lines). Composes entirely from data we
+  // already load; nothing is projected, nothing is promised. Memory-machine
+  // beat: the product remembering the family's own history back to them.
+  const onThisDayCard = useMemo(() => {
+    const now = new Date();
+    // The beat is OTHER PEOPLE showing up, so the viewer's own money is
+    // excluded: recurring auto-invest cycles + their one-time adds would
+    // otherwise hijack the card with "you gave yourself $100 a year ago"
+    // (and seeded/real monthly cycles share a day-of-month, so they'd
+    // dominate the match almost every month).
+    const viewerEmail = String((user as any)?.email || "").trim().toLowerCase();
+    const isOwnMoney = (g: any) =>
+      Boolean(g.parentContributionId) ||
+      String(g.source || "") === "recurring_worker" ||
+      (!!viewerEmail && String(g.senderEmail || "").trim().toLowerCase() === viewerEmail);
+    const baseEligible = (g: any) => {
+      const status = String(g.status || "").toLowerCase();
+      if (!["invested", "settled", "completed"].includes(status)) return false;
+      if (isOwnMoney(g)) return false;
+      const dt = new Date(String(g.createdAt || 0));
+      if (isNaN(dt.getTime())) return false;
+      const years = now.getUTCFullYear() - dt.getUTCFullYear();
+      return years >= 1 && (parseFloat(String(g.amount || "0")) || 0) > 0;
+    };
+    const matchesDay = (g: any, ref: Date) => {
+      const dt = new Date(String(g.createdAt || 0));
+      return dt.getUTCMonth() === ref.getUTCMonth() && dt.getUTCDate() === ref.getUTCDate();
+    };
+    let candidates = (gifts as any[]).filter((g) => baseEligible(g) && matchesDay(g, now));
+    let daysOff = 0;
+    // DEMO grace window: seeded gift dates are frozen at seed-run time, so
+    // an exact-day match almost never lands for a prospect browsing days
+    // later — the marquee memory-machine beat would be invisible in the
+    // demo (the one place it most needs to be seen). Demo accounts look
+    // back up to 6 days and the copy honestly switches "ago today" →
+    // "ago this week". Real accounts keep the pure exact-day anniversary.
+    if (candidates.length === 0 && isDemoAccount) {
+      for (let back = 1; back <= 6 && candidates.length === 0; back++) {
+        const ref = new Date(now.getTime() - back * 24 * 60 * 60 * 1000);
+        candidates = (gifts as any[]).filter((g) => baseEligible(g) && matchesDay(g, ref));
+        if (candidates.length > 0) daysOff = back;
+      }
+    }
+    if (candidates.length === 0) return null;
+    // Pick the most story-worthy: named external gifter beats anonymous,
+    // then older beats newer (deeper time = stronger beat), then larger.
+    candidates.sort((a, b) => {
+      const aNamed = a.senderName && !a.isAnonymous ? 1 : 0;
+      const bNamed = b.senderName && !b.isAnonymous ? 1 : 0;
+      if (aNamed !== bNamed) return bNamed - aNamed;
+      const aT = new Date(String(a.createdAt)).getTime();
+      const bT = new Date(String(b.createdAt)).getTime();
+      if (aT !== bT) return aT - bT;
+      return (parseFloat(String(b.amount || "0")) || 0) - (parseFloat(String(a.amount || "0")) || 0);
+    });
+    const g = candidates[0];
+    const years = now.getUTCFullYear() - new Date(String(g.createdAt)).getUTCFullYear();
+    // Real now-worth, single-ticker gifts only (the only case where "this
+    // exact gift's value" is honest without allocation math): the gift's
+    // recorded shares at the holding's live per-share price.
+    let nowWorth: number | null = null;
+    const ticker = String(g.selectedTicker || "").toUpperCase();
+    const sharesAcquired = parseFloat(String(g.sharesAcquired || "0")) || 0;
+    if (ticker && sharesAcquired > 0) {
+      const h = holdings.find((x) => String(x.ticker || "").toUpperCase() === ticker);
+      const hShares = h ? parseFloat(String(h.shares || "0")) || 0 : 0;
+      const hValue = h ? parseFloat(String(h.currentValue || "0")) || 0 : 0;
+      if (hShares > 0 && hValue > 0) nowWorth = sharesAcquired * (hValue / hShares);
+    }
+    return { gift: g, years, nowWorth, daysOff };
+  }, [gifts, holdings, isDemoAccount, user]);
+
+  // Hero cycler cards = recent gifts + (when one exists) the anniversary
+  // card at index 1, so index 0 stays the newest gift (the new-gift flash
+  // logic watches recentGiftsFeed[0] and must keep doing so). The flagged
+  // copy of the gift row keeps its REAL id, so the existing tap-through
+  // deep link (/memory/:fundId?gift=ID) works unchanged.
+  const heroCards = useMemo(() => {
+    // The display strip is a PARADE of the distinct people who showed up, not a
+    // raw newest-first dump. Dedup by sender (each person's most-recent gift
+    // only), cap 5 — otherwise a parent's repeating recurring deposit, or any
+    // one prolific gifter, fills all 5 cards with the same "X added $Y" line and
+    // the strip reads as an echo. General, NOT demo-specific. Index 0 stays the
+    // genuine latest gift, so the arrival cue + "Latest gift" eyebrow (keyed off
+    // recentGiftsFeed[0]) are unaffected. Kept in sync with DashboardLab.
+    const seen = new Set<string>();
+    const deduped: typeof recentGiftsFeed = [];
+    for (const g of recentGiftsFeed) {
+      const key = String((g as any).senderEmail || g.senderName || g.id).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(g);
+      if (deduped.length >= 5) break;
+    }
+    if (!onThisDayCard) return deduped;
+    const flagged = {
+      ...onThisDayCard.gift,
+      __onThisDay: true,
+      __yearsAgo: onThisDayCard.years,
+      __nowWorth: onThisDayCard.nowWorth,
+      __daysOff: onThisDayCard.daysOff,
+    };
+    // Dormant-fund edge (code-review catch 2026-06-04): when the anniversary
+    // gift IS the newest gift (no gifts in over a year), relocating it to
+    // index 1 would crown the SECOND-newest gift with the "Latest gift"
+    // eyebrow. Flag it in place at index 0 instead — it's both the latest
+    // and the anniversary, and the "On this day" telling wins.
+    if (deduped[0]?.id === onThisDayCard.gift.id) {
+      return [flagged, ...deduped.slice(1)] as typeof recentGiftsFeed;
+    }
+    const rest = deduped.filter((g) => g.id !== onThisDayCard.gift.id);
+    return [rest[0], flagged, ...rest.slice(1)].filter(Boolean) as typeof recentGiftsFeed;
+  }, [recentGiftsFeed, onThisDayCard]);
 
   // Reset hero gift index when switching funds
   useEffect(() => { setHeroGiftIdx(0); }, [activeFundId]);
@@ -3331,13 +3622,13 @@ export default function Dashboard() {
   // cycle could rotate the new gift off before they looked back at
   // the hero.
   useEffect(() => {
-    if (recentGiftsFeed.length <= 1) return;
+    if (heroCards.length <= 1) return;
     if (newGiftFlash) return;
     const timer = setInterval(() => {
-      setHeroGiftIdx(i => (i + 1) % Math.min(recentGiftsFeed.length, 5));
+      setHeroGiftIdx(i => (i + 1) % Math.min(heroCards.length, 5));
     }, 4500);
     return () => clearInterval(timer);
-  }, [recentGiftsFeed.length, newGiftFlash]);
+  }, [heroCards.length, newGiftFlash]);
 
   const uncoveredFeesThisMonth = useMemo(() => {
     if (isFundCovered) return 0;
@@ -3347,7 +3638,7 @@ export default function Dashboard() {
     }, 0);
   }, [isFundCovered, recentGifts30Days]);
   const shouldShowCumulativeCoveragePrompt =
-    !isFundCovered &&
+    activeCoverageConfirmedUncovered &&
     recentGifts30Days.length >= 3 &&
     uncoveredFeesThisMonth >= KORA_STARTER_MONTHLY;
 
@@ -3387,13 +3678,33 @@ export default function Dashboard() {
   // totals (f.balance is the manually-incremented cost-basis-style field;
   // sum of holdings.currentValue reflects current market). Falls back to
   // f.balance when holdings array is empty (brand new fund or pre-fetch).
-  const investedCurrentValue = holdings.reduce((sum, h) => sum + parseFloat(h.currentValue || "0"), 0);
-  const investedCostBasis = holdings.reduce((sum, h) => sum + parseFloat(h.costBasis || "0"), 0);
+  // Memoized on `holdings` (2026-06-04 perf): these reduces ran on EVERY
+  // render — including the ~70 frames of each balance count-up animation and
+  // every 30s poll — even though they only change when holdings change.
+  const investedCurrentValue = useMemo(() => holdings.reduce((sum, h) => sum + parseFloat(h.currentValue || "0"), 0), [holdings]);
+  const investedCostBasis = useMemo(() => holdings.reduce((sum, h) => sum + parseFloat(h.costBasis || "0"), 0), [holdings]);
   const invested = holdings.length > 0 ? investedCurrentValue : balance;
   const cash = cashBalance;
   const settling = pendingBalance;
   const uninvestedCash = cash + settling;
   const totalValue = invested + pendingBalance + cashBalance;
+  // Post-handoff keepsake freeze (mirror of DashboardLab). For the previous
+  // owner: growthCurrentValue replaces the live total in growth stats, and
+  // keepsakeHistoryCutoffMs caps the chart/scrub at handoff — so the parent
+  // never sees the now-adult's post-handoff trajectory. No-op for everyone else.
+  const growthCurrentValue = showHandoffKeepsake && handoffKeepsakeValue != null ? handoffKeepsakeValue : totalValue;
+  const keepsakeHistoryCutoffMs = showHandoffKeepsake && (activeFund as any)?.transferredAt
+    ? new Date((activeFund as any).transferredAt).getTime()
+    : null;
+  // Publish the hero's computed live total so the sidebar quotes the SAME
+  // number (it has no holdings query; server fund.balance is
+  // settlement-synced, not price-synced — see lib/fund-live-value.ts).
+  // Mirrors DashboardLab. Gated on the summary being loaded so a half-loaded
+  // zero is never published over a real value.
+  useEffect(() => {
+    if (!activeFundId || !dashboardSummary) return;
+    publishFundLiveValue(queryClient, activeFundId, totalValue);
+  }, [queryClient, activeFundId, dashboardSummary, totalValue]);
   // Compute gain from holdings data (more reliable than server-side totalGain which may be stale)
   const computedInvestedGain = investedCurrentValue - investedCostBasis;
   const computedInvestedGainPct = investedCostBasis > 0 ? (computedInvestedGain / investedCostBasis) * 100 : 0;
@@ -3416,7 +3727,7 @@ export default function Dashboard() {
   // (Age18Plan, Projection page, smart nudges) — one number, one
   // disclaimer line everywhere.
   const heroProjectedAt65 = useMemo(() => {
-    // `daysUntil18` is days-to-MAJORITY (21 in CA), so derive current age
+    // `daysUntil18` is days-to-MAJORITY (21 in most states, 18 in some), so derive current age
     // from the fund's actual majorityAge — never a hardcoded 18, which
     // would mis-age every 21-state kid by 3 years and inflate the horizon.
     const yearsToMajority = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
@@ -3446,18 +3757,33 @@ export default function Dashboard() {
     seedValue: cachedHeroProjectionAt65,
     liveValue: heroProjectedAt65,
     // 1200ms matches the hero balance — both numbers belong to the same
-    // focal hero moment and should ride the same duration ladder rung
+    // focal hero moment and ride the same duration ladder rung
     // (per project_count_up_animation_consistency.md).
     duration: 1200,
+    // STAGGER (2026-06-04, founder UX catch): the balance and the projection
+    // used to roll AT THE SAME TIME, so the eye didn't know where to anchor.
+    // The projection now holds at its value until the hero balance has settled
+    // (1200ms) plus a beat, then rolls — focal number lands first, then the
+    // projection follows. Sequential and intentional. Beat widened 150ms -> 250ms
+    // (1350 -> 1450) on a founder pass: at 150ms the projection trod on the
+    // balance's heels; 250ms lets it read as a deliberate SECOND reveal without
+    // any dead time. Perceptual + tunable — nudge up if it should breathe more.
+    startDelay: 1450,
   });
 
   // Persist the live projection per-fund so the next session seeds the
   // count-up from the last known projection. Same pattern as the balance
-  // cache write above.
+  // cache write above — including the dashboardSummary guard, because the
+  // projection derives from totalValue and inherits the same partial-load
+  // poison window (see the balance write's comment).
   useEffect(() => {
-    if (!activeFundId || !heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
-    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, heroProjectedAt65);
-  }, [activeFundId, heroProjectedAt65]);
+    if (!activeFundId || !dashboardSummary) return;
+    if (!heroProjectedAt65 || !Number.isFinite(heroProjectedAt65) || heroProjectedAt65 <= 0) return;
+    // Demo under-seed matches the balance write above so the hero and the
+    // at-65 peek roll together — one number rolling while its sibling sits
+    // still would read as a glitch, not a moment.
+    writeLocalCache(`${FUND_PROJECTION_AT_65_CACHE_PREFIX}${activeFundId}`, isDemoAccount ? heroProjectedAt65 * 0.994 : heroProjectedAt65);
+  }, [activeFundId, heroProjectedAt65, dashboardSummary, isDemoAccount]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
   // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.
@@ -3466,12 +3792,82 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeFundId || !hasAutoInvestAccess || !activeAutoInvest || fundHistory.length < 2) return;
     if (isReadOnlyFund) return;
-    const NUDGE_KEY = `kiddo.smartNudge.lastShown.${activeFundId}`;
+    // Never on the demo (2026-06-07). The nudge's CTA is "adjust YOUR
+    // recurring" — a real-parent control a Rivera-demo visitor can't
+    // meaningfully perform, and a self-promoting popup is noise on the
+    // conversion surface even when it fires exactly once. (Also the demo is
+    // where the storage-dedup was failing and producing the 3-at-once.)
+    if (isDemoAccount) return;
+    // In-memory dedup: once shown this session, never schedule again. This is
+    // the storage-independent guard; see smartNudgeShownThisSession above.
+    if (smartNudgeShownThisSession) return;
+    // GLOBAL monthly key, not per-fund (founder catch 2026-06-04: "I keep
+    // getting it, 3 times on the same page"). The old per-fund key meant a
+    // Family parent tabbing Theo → Nora → Mia got THREE modals back to
+    // back — same pitch, three funds, one browsing session. One smart nudge
+    // per month per PERSON is the contract; which fund earns it is just
+    // whichever qualified first. (Also makes demo reseeds irrelevant — new
+    // fund ids no longer mint fresh keys.)
+    const NUDGE_KEY = "kiddo.smartNudge.lastShown";
     const lastShown = localStorage.getItem(NUDGE_KEY);
     const now = Date.now();
     if (lastShown && now - parseInt(lastShown, 10) < 30 * 24 * 60 * 60 * 1000) return;
     const fundCreated = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : now;
     if (now - fundCreated < 30 * 24 * 60 * 60 * 1000) return;
+
+    // Fired as a NON-BLOCKING TOAST (2026-06-04), not a modal. Still waits 8s
+    // of settled dashboard so the hero's value-roll + arrival beats own the
+    // open uncontested — but because a toast doesn't cover the screen, it can
+    // never eat the roll the way the old modal did (founder flagged that twice).
+    // The toast hooks attention with the encouraging headline and hands off to
+    // the recurring editor via its action, where the LIVE projection updates as
+    // the parent changes the amount. No redundant static $X/$2X math here.
+    let nudgeTimer: ReturnType<typeof setTimeout> | null = null;
+    const cancelNudgeTimer = () => { if (nudgeTimer) clearTimeout(nudgeTimer); };
+    const fireNudge = (payload: SmartNudgePayload) => {
+      nudgeTimer = setTimeout(() => {
+        // Claim-before-show dedup. The IN-MEMORY flag is the primary guard
+        // (2026-06-07, "3 at once"): claimed synchronously before the toast, so
+        // if multiple timers are pending (storage no-op'd the localStorage
+        // claim, or multiple mounts), the first to fire shows it and the rest
+        // bail — regardless of whether storage works. JS is single-threaded, so
+        // the first callback fully claims the slot before the next runs. The
+        // localStorage key stays as the 30-day cross-session backstop.
+        if (smartNudgeShownThisSession) return;
+        const prevShown = localStorage.getItem(NUDGE_KEY);
+        if (prevShown && Date.now() - parseInt(prevShown, 10) < 30 * 24 * 60 * 60 * 1000) return;
+        smartNudgeShownThisSession = true;
+        safeLocalSet(NUDGE_KEY, String(Date.now()));
+        const nudgeChild = recipientFirstNameDisplay || "their fund";
+        const title =
+          payload.scenario === "outperforming"
+            ? `${nudgeChild}'s fund is up ${payload.returnPct}% since it started 🌱`
+            : payload.scenario === "consistent"
+              ? `${payload.streakMonths} months, every cycle 🌱`
+              : payload.milestoneAmt
+                ? `${nudgeChild} just crossed ${formatCurrency(payload.milestoneAmt)} 🌱`
+                : `${nudgeChild}'s fund is growing 🌱`;
+        toast({
+          title,
+          description: "A little more each month compounds for years.",
+          duration: 10000, // a soft nudge needs time to read + tap; not the 4.5s default
+          action: (
+            <ToastAction
+              altText="Adjust recurring investment"
+              onClick={() => {
+                haptic("medium");
+                if (payload.doubledAmt) setAutoInvestAmount(String(payload.doubledAmt));
+                setEditingContribId(null);
+                setAutoInvestStep("amount");
+                setAutoInvestModalOpen(true);
+              }}
+            >
+              Adjust recurring
+            </ToastAction>
+          ),
+        });
+      }, 8000);
+    };
 
     const monthlyAmt = parseFloat(activeAutoInvest.amount || "0");
     const daysUntil18 = age18Transition?.daysUntil18 ?? null;
@@ -3513,18 +3909,16 @@ export default function Dashboard() {
     // exactly that mislabel — fixed in commit d874e48, locked by this rename.
     const cumulativeGainPct = displayGainPct;
     if (cumulativeGainPct >= 9 && currentProjection && doubledProjection && monthlyAmt > 0) {
-      setSmartNudge({ scenario: "outperforming", returnPct: Math.round(cumulativeGainPct * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
-      safeLocalSet(NUDGE_KEY, String(now));
-      return;
+      fireNudge({ scenario: "outperforming", returnPct: Math.round(cumulativeGainPct * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
+      return cancelNudgeTimer;
     }
 
     // Scenario 2: consistent streak (3+ months)
     const createdAt = activeAutoInvest.createdAt ? new Date(activeAutoInvest.createdAt).getTime() : null;
     const monthsRunning = createdAt ? Math.floor((now - createdAt) / (30 * 24 * 60 * 60 * 1000)) : 0;
     if (monthsRunning >= 3 && currentProjection && doubledProjection && monthlyAmt > 0 && cumulativeGainPct >= 0) {
-      setSmartNudge({ scenario: "consistent", streakMonths: monthsRunning, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
-      safeLocalSet(NUDGE_KEY, String(now));
-      return;
+      fireNudge({ scenario: "consistent", streakMonths: monthsRunning, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
+      return cancelNudgeTimer;
     }
 
     // Scenario 3: milestone hit — never show when fund is down.
@@ -3576,7 +3970,11 @@ export default function Dashboard() {
       // uses via shared/projection.ts.
       const monthsToReach = (target: number, monthly: number): number | null => {
         if (!target || target <= totalValue) return 0;
-        const monthlyRate = Math.pow(1 + (0.07 - 0.001), 1 / 12) - 1; // 7% net 0.10% AUM fee, effective monthly
+        // Rate from the SHARED constants (not literals) so this month-by-month
+        // milestone simulator can't drift from projectFundValue's convention.
+        // (projectFundValue itself can't answer "months until target" — it
+        // returns FV at a horizon — so the loop stays, the literals go.)
+        const monthlyRate = Math.pow(1 + (PROJECTION_DEFAULT_ANNUAL_RATE - PROJECTION_AUM_FEE_RATE), 1 / 12) - 1;
         let balance = totalValue;
         for (let m = 1; m <= 120; m += 1) {
           balance = balance * (1 + monthlyRate) + monthly;
@@ -3595,7 +3993,7 @@ export default function Dashboard() {
       if (!nextMilestone || !monthsAtCurrent || monthsAtCurrent <= 0) {
         return;
       }
-      setSmartNudge({
+      fireNudge({
         scenario: "milestone",
         milestoneAmt: hitMilestone,
         nextMilestoneAmt: nextMilestone,
@@ -3609,9 +4007,9 @@ export default function Dashboard() {
         // the "At $X/mo, in N months" trailing copy.
         monthsDoubled: monthsDoubled && monthsDoubled > 0 ? monthsDoubled : undefined,
       });
-      safeLocalSet(NUDGE_KEY, String(now));
+      return cancelNudgeTimer;
     }
-  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
+  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund, isDemoAccount]);
 
   const cashContext: CashContext = (() => {
     if (activeFund?.status !== "active") return "kyc_pending";
@@ -3619,28 +4017,34 @@ export default function Dashboard() {
     return "gifts_settled";
   })();
 
-  const activeEvents = events.filter((e) => e.status === "active" && !e.isPermanent);
-  const archivedEvents = events.filter((e) => (e.status === "archived" || e.status === "closed") && !e.isPermanent);
+  // The block below (event splits, recent-gift/txn sorts, contributor/month
+  // counts, money math, today's buy/sell totals) is all PURE derivation of
+  // stable query data — but it used to run on EVERY render, including the ~70
+  // frames of each balance count-up animation, chart scrubs, and every poll
+  // tick. Memoizing each on its real inputs removes that O(gifts+txns+holdings)
+  // work from the hot render path. 2026-06-04 perf.
+  const activeEvents = useMemo(() => events.filter((e) => e.status === "active" && !e.isPermanent), [events]);
+  const archivedEvents = useMemo(() => events.filter((e) => (e.status === "archived" || e.status === "closed") && !e.isPermanent), [events]);
 
-  const recentGifts = [...gifts]
+  const recentGifts = useMemo(() => [...gifts]
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-    .slice(0, 5);
-  const recentFundTransactions = [...fundTransactions]
+    .slice(0, 5), [gifts]);
+  const recentFundTransactions = useMemo(() => [...fundTransactions]
     .sort((a, b) => getTransactionTimestamp(b) - getTransactionTimestamp(a))
-    .slice(0, 6);
+    .slice(0, 6), [fundTransactions]);
   // Contributor count: each named gifter = 1, each anonymous gift = 1 contributor.
   // Anonymous gifts are treated as distinct people since we can't link them.
-  const contributorCount = (() => {
+  const contributorCount = useMemo(() => {
     const named = gifterRoster.filter(g => g.name !== "Anonymous").length;
     const anonGifts = gifterRoster.find(g => g.name === "Anonymous")?.giftCount ?? 0;
     return named + anonGifts;
-  })();
-  const giftsThisMonth = gifts.filter((gift) => {
+  }, [gifterRoster]);
+  const giftsThisMonth = useMemo(() => gifts.filter((gift) => {
     const createdAt = gift.createdAt ? new Date(gift.createdAt) : null;
     if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
     const now = new Date();
     return createdAt.getFullYear() === now.getFullYear() && createdAt.getMonth() === now.getMonth();
-  }).length;
+  }).length, [gifts]);
   const heroMomentumLine =
     contributorCount >= 2
       ? `${contributorCount} people have gifted`
@@ -3649,14 +4053,14 @@ export default function Dashboard() {
         : gifts.length === 1
           ? "The first gift has landed"
           : null;
-  const dashboardMoneyMath = calculateDashboardMoneyMath({
+  const dashboardMoneyMath = useMemo(() => calculateDashboardMoneyMath({
     invested,
     cash,
     settling,
     investedCostBasis,
     gifts,
     parentContributions,
-  });
+  }), [invested, cash, settling, investedCostBasis, gifts, parentContributions]);
   const investedPrincipal = dashboardMoneyMath.investedPrincipal;
   const currentFundBasis = dashboardMoneyMath.currentFundBasis;
   const displayContributionValue = dashboardMoneyMath.displayContributionValue;
@@ -3666,20 +4070,20 @@ export default function Dashboard() {
     date.setHours(0, 0, 0, 0);
     return date.getTime();
   }, []);
-  const todaysSellTotal = fundTransactions.reduce((sum, transaction) => {
+  const todaysSellTotal = useMemo(() => fundTransactions.reduce((sum, transaction) => {
     if (String(transaction.type || "").toLowerCase() !== "sell") return sum;
     const timestamp = getTransactionTimestamp(transaction);
     if (timestamp < startOfToday) return sum;
     const amount = parseFloat(transaction.amount || "0");
     return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
-  const todaysBuyTotal = fundTransactions.reduce((sum, transaction) => {
+  }, 0), [fundTransactions, startOfToday]);
+  const todaysBuyTotal = useMemo(() => fundTransactions.reduce((sum, transaction) => {
     if (String(transaction.type || "").toLowerCase() !== "buy") return sum;
     const timestamp = getTransactionTimestamp(transaction);
     if (timestamp < startOfToday) return sum;
     const amount = parseFloat(transaction.amount || "0");
     return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
+  }, 0), [fundTransactions, startOfToday]);
   const cashMovementLine = todaysSellTotal > 0
     ? `${formatCurrency(todaysSellTotal)} moved to cash today`
     : todaysBuyTotal > 0
@@ -3697,13 +4101,21 @@ export default function Dashboard() {
   const lifetimeContribPrincipal = dashboardMoneyMath.lifetimeContributionPrincipal;
   const totalReturnPctVsContributions = lifetimeContribPrincipal > 0 ? (totalReturnVsContributions / lifetimeContribPrincipal) * 100 : 0;
   const usableFundHistory = useMemo(() => {
-    if (totalValue <= 0) return fundHistory;
+    // Keepsake cap: previous owner's chart + history-derived stats stop at the
+    // handoff date (mirror of DashboardLab). No-op (null cutoff) for everyone else.
+    const capped = keepsakeHistoryCutoffMs != null
+      ? fundHistory.filter((point) => {
+          const ts = new Date(point.snapshotDate || 0).getTime();
+          return !Number.isFinite(ts) || ts <= keepsakeHistoryCutoffMs;
+        })
+      : fundHistory;
+    if (totalValue <= 0) return capped;
     const maxReasonablePriorValue = Math.max(totalValue * 4, totalValue + 5000);
-    return fundHistory.filter((point) => {
+    return capped.filter((point) => {
       const value = parseFloat(point.totalValue || "0");
       return !Number.isFinite(value) || value <= maxReasonablePriorValue;
     });
-  }, [fundHistory, totalValue]);
+  }, [fundHistory, totalValue, keepsakeHistoryCutoffMs]);
 
   // Today's change: compare current value to the most recent prior-day snapshot
   const todayChange = useMemo(() => {
@@ -3716,7 +4128,7 @@ export default function Dashboard() {
       .sort((a, b) => b.ts - a.ts);
     const priorSnapshot = sorted.find((p) => p.ts < todayStart.getTime());
     if (!priorSnapshot || priorSnapshot.value === 0) return null;
-    const rawDelta = totalValue - priorSnapshot.value;
+    const rawDelta = growthCurrentValue - priorSnapshot.value;
     if (todaysSellTotal > 0 && Math.abs(rawDelta - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) {
       return null;
     }
@@ -3738,7 +4150,7 @@ export default function Dashboard() {
     const inRange = cutoff ? sorted.filter((p) => p.ts >= cutoff) : sorted;
     const startSnapshot = inRange[0];
     if (!startSnapshot || startSnapshot.value === 0) return null;
-    const rawDelta = totalValue - startSnapshot.value;
+    const rawDelta = growthCurrentValue - startSnapshot.value;
     if (todaysSellTotal > 0 && Math.abs(rawDelta - todaysSellTotal) <= Math.max(1, todaysSellTotal * 0.03)) {
       return null;
     }
@@ -3768,10 +4180,17 @@ export default function Dashboard() {
     };
     const addZeroBaseline = (rows: Array<{ ts: number; label: string; principal: number; value: number }>) => {
       if (rows.length === 0) return rows;
+      // A $0 anchor row is only HONEST where the fund actually held $0: at
+      // creation. ALL always anchors there; range views (1W/1M/YTD/1Y) anchor
+      // there ONLY when the fund was born inside the window. The old
+      // anchor-at-range-cutoff prepended "$0 thirty days ago" onto a
+      // years-old $22k fund — a false cliff at the left edge that exaggerated
+      // the period's growth. Funds older than the window now start at their
+      // real range-start value. (Mirrors the same fix in DashboardLab.tsx.)
       const baselineTs =
         chartRange === "ALL"
           ? (Number.isFinite(createdTs) ? createdTs : NaN)
-          : (Number.isFinite(cutoff || NaN) ? (cutoff as number) : NaN);
+          : (Number.isFinite(createdTs) && cutoff != null && createdTs >= cutoff ? createdTs : NaN);
       if (!Number.isFinite(baselineTs)) return rows;
       if (baselineTs >= rows[0].ts) return rows;
       return [
@@ -3797,7 +4216,25 @@ export default function Dashboard() {
       .filter((p) => Number.isFinite(p.ts) && p.ts > 0)
       .sort((a, b) => a.ts - b.ts);
 
-    const filtered = cutoff ? points.filter((p) => p.ts >= cutoff) : points;
+    const prefiltered = cutoff ? points.filter((p) => p.ts >= cutoff) : points;
+    // UNIFORM TIME RESOLUTION (mirrors DashboardLab, founder catch
+    // 2026-06-05). Snapshots are stored at mixed resolution — monthly deep
+    // history, weekly last year, daily last month — and the chart spaces
+    // points by INDEX (recharts category axis), so the dense recent points
+    // hogged ~45% of the ALL chart's width: a 17-year fund looked like its
+    // story began ~2024. Resample to one point per period, sized by the SPAN
+    // (not the range button, so a young fund's ALL view keeps its dailies):
+    // >2.5y → monthly, >200d → weekly, else untouched. Keeps the LAST point
+    // of each period (today's hard anchor survives as the final point).
+    const spanMs = prefiltered.length >= 2 ? prefiltered[prefiltered.length - 1].ts - prefiltered[0].ts : 0;
+    const bucketOf = spanMs > 2.5 * 365.25 * 86400000
+      ? (ts: number) => { const d = new Date(ts); return `${d.getUTCFullYear()}-${d.getUTCMonth()}`; }
+      : spanMs > 200 * 86400000
+        ? (ts: number) => String(Math.floor(ts / (7 * 86400000)))
+        : null;
+    const filtered = bucketOf
+      ? prefiltered.filter((p, i) => i === prefiltered.length - 1 || bucketOf(p.ts) !== bucketOf(prefiltered[i + 1].ts))
+      : prefiltered;
 
     if (filtered.length >= 2) {
       const earliestGift = [...gifts].sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
@@ -4045,11 +4482,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handler = () => {
-      if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
+      if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
     };
     window.addEventListener("kiddo:create-event", handler);
     return () => window.removeEventListener("kiddo:create-event", handler);
-  }, [isFamily, isStarter]);
+  }, [isFundCovered, isOwnerMode]);
 
   useEffect(() => {
     // Mirror the pill row's behavior — when kid view is already enabled,
@@ -4228,39 +4665,9 @@ export default function Dashboard() {
     }
   };
 
-  const handleSaveCulturalBg = async () => {
-    if (!activeFundId) return;
-    setSavingCulturalBg(true);
-    try {
-      const newBg = culturalBgSelections.length > 0 ? { traditions: culturalBgSelections } : null;
-      const res = await fetch(`/api/funds/${activeFundId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ culturalBackground: newBg }),
-      });
-      if (!res.ok) throw new Error("Could not save.");
-      const updatedFund = await res.json().catch(() => null);
-      // Optimistically update the funds cache so UI reflects the change immediately
-      queryClient.setQueryData(["/api/funds"], (old: Fund[] | undefined) => {
-        if (!old) return old;
-        return old.map(f => f.id === activeFundId ? { ...f, ...(updatedFund || { culturalBackground: newBg }) } : f);
-      });
-      // Also kick a background refetch to make sure we're fully in sync
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-      setCulturalBgPickerOpen(false);
-      if (culturalBgSelections.length > 0) {
-        const labels = culturalBgSelections.slice(0, 2).map(t => TRADITION_LABELS[t as CulturalTradition]).join(" and ");
-        toast({ title: "Traditions saved", description: `${labels} suggestions are ready.` });
-      } else {
-        toast({ title: "Traditions cleared" });
-      }
-    } catch {
-      toast({ title: "Could not save", variant: "destructive" });
-    } finally {
-      setSavingCulturalBg(false);
-    }
-  };
+  // handleSaveCulturalBg removed 2026-06-04 with the cultural-traditions tile +
+  // picker (founder: config-in-a-content-row). The suggestion engine stays in
+  // lib/cultural-calendar; revive it inside the occasion-create flow if wanted.
 
   const handleSaveKidView = async () => {
     if (!activeFundId) return;
@@ -4400,6 +4807,22 @@ export default function Dashboard() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save recurring investment.");
       haptic("success");
+      // Demo: record the set-up into the overlay so it shows as an ACTIVE
+      // schedule (bumps the recurring chip count + monthly total + adds a row) —
+      // the sandbox mocks the POST, so the refetch alone would drop it. Then fire
+      // DemoActionMoment (the "start your own fund" conversion toast) — a demo
+      // visitor at peak intent. New plans only; editing isn't a fresh signal.
+      if (!isEditing && isDemoAccount) {
+        recordDemoRecurring({
+          fundId: activeFundId,
+          userId: String((user as any)?.id || ""),
+          amount: String(amt),
+          frequency: autoInvestFrequency,
+          executionModel: autoInvestExecutionModel,
+          selectedTicker: autoInvestExecutionModel === "pick" ? autoInvestTicker : null,
+        });
+        try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "recurring", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
+      }
       // Capture the saved plan id so the next step ("note") can PATCH the note
       // column onto THIS schedule. Edits already have editingContribId; creates
       // get the id from the POST response.
@@ -4696,7 +5119,9 @@ export default function Dashboard() {
         });
       }
       haptic("success");
-      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId, "parent_letter"] });
+      // The parent-letter + authored-count both derive from the single
+      // ["memory", activeFundId] query now (2026-06-04 dedup) — invalidate it.
+      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
       setLetterInlineOpen(false);
     } catch {
       haptic("error");
@@ -4717,7 +5142,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error("delete failed");
       haptic("success");
       toast({ title: "Letter cleared", description: "You can write a new one anytime." });
-      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId, "parent_letter"] });
+      void queryClient.invalidateQueries({ queryKey: ["memory", activeFundId] });
       setLetterDraft("");
       setLetterDeleteConfirm(false);
       setLetterDiscardConfirm(false);
@@ -4768,7 +5193,24 @@ export default function Dashboard() {
       if (res.ok) {
         haptic("success");
         setSellSuccess(true);
-        toast({ title: "Moved to cash", description: `${formatCurrency(parseFloat(data.saleValue || "0"))} will settle inside the fund.` });
+        // Demo: record the sell so it reflects — the holding shrinks, the
+        // proceeds land in cash (invested↓ + cash↑ = same hero total), and a
+        // "Moved to cash" row shows in Activity + bell. The sandbox mocks the
+        // POST, so the refetch alone would drop it.
+        const demoProceeds = (() => {
+          const totalSh = parseFloat(sellingHolding.shares || "0") || 0;
+          const curVal = parseFloat(sellingHolding.currentValue || "0") || 0;
+          return totalSh > 0 ? (shares * curVal) / totalSh : 0;
+        })();
+        if (isDemoAccount) {
+          recordDemoSell({
+            fundId: String(activeFundId),
+            ticker: String(sellingHolding.ticker || ""),
+            shares: String(shares),
+            proceeds: demoProceeds.toFixed(2),
+          });
+        }
+        toast({ title: "Moved to cash", description: `${formatCurrency(parseFloat(data.saleValue || "0") || demoProceeds)} will settle inside the fund.` });
         invalidateActiveFundFreshness();
         setSellTaxExplainer(null);
         setTimeout(() => {
@@ -4803,6 +5245,9 @@ export default function Dashboard() {
       <AppHeader />
 
       <main className="kiddo-canvas px-4 py-6 space-y-6" id="dashboard-main-content">
+        <h1 className="sr-only">
+          {isOwnerMode ? "Your fund" : `${recipientFirstNameDisplay || "Your child"}'s fund`}
+        </h1>
         {/* Fund switcher tabs — fast-switch between child funds for
             multi-fund parents (Family-tier). Renders nothing for
             single-fund parents (the AppHeader dropdown is still the
@@ -4832,7 +5277,7 @@ export default function Dashboard() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
+                <p className="text-3xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
                   Handoff in {age18Transition.daysUntil18 === 1 ? "1 day" : `${age18Transition.daysUntil18} days`}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
@@ -5023,7 +5468,7 @@ export default function Dashboard() {
                     🌱
                   </motion.span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85">
+                    <p className="text-3xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85">
                       The first gift just landed
                     </p>
                     <h2 className="mt-1 font-heading text-xl md:text-2xl font-semibold text-foreground leading-tight">
@@ -5096,7 +5541,7 @@ export default function Dashboard() {
           );
         })()}
 
-        {/* SetupProgressNudge hidden for demo accounts — the Dunphy
+        {/* SetupProgressNudge hidden for demo accounts — the Rivera
             demo is showcase mode, not new-customer onboarding mode.
             Setup tasks (link bank / activate investing / complete
             profile) are seeded as already-done conceptually; the
@@ -5161,6 +5606,30 @@ export default function Dashboard() {
             === 'owner'), which does NOT bleed — so it's the reliable guard.
             The banner is inherently owner-only ("this is YOUR fund"), so this
             is correct-by-construction, not just defensive. */}
+        {/* "While you were away" returning-user digest — quantifies + attributes
+            the gap since the last visit (gifts + growth). Owner/co-parent funds
+            only (not a read-only previous-owner / viewer surface). 2026-06-05. */}
+        {/* Banner coordination (mirrors DashboardLab): the "while you were away"
+            digest is the highest-frequency top banner (every return visit), so it
+            DEFERS to a live event-driven banner — a co-parent acceptance or the
+            at-18 welcome — instead of stacking on top of it. Without this the
+            digest and "Elena accepted co-parent" rendered together. Plus-media is
+            intentionally NOT included (no recency window → would over-suppress; it's
+            rare enough to coexist). 2026-06-07. */}
+        {!isReadOnlyFund
+          && !(activeFundAccessRole === 'owner' && !!(dashboardSummary as any)?.coparentAcceptance)
+          && !(isOwnerMode && !!(dashboardSummary as any)?.kidClaimedAt)
+          && (
+          <SinceLastVisitDigest
+            fundId={activeFundId}
+            currentValue={rawTotalValue}
+            gifts={gifts as any}
+            isDemoAccount={isDemoAccount}
+            ready={Boolean(dashboardSummary)}
+            subject={isOwnerMode ? "Your fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "The fund")}
+          />
+        )}
+
         <KidAt18WelcomeBanner
           kidClaimedAt={isOwnerMode ? ((dashboardSummary as any)?.kidClaimedAt as string | null | undefined) : null}
           fundId={activeFundId}
@@ -5221,7 +5690,7 @@ export default function Dashboard() {
           <RecurringRequestsNudge
             fundId={activeFundId}
             childName={recipientFirstNameDisplay}
-            effectivePlan={effectivePlan}
+            effectivePlan={fundKeyedPlan}
             className="mb-4"
           />
         )}
@@ -5244,7 +5713,7 @@ export default function Dashboard() {
             g?.status === "settled" || g?.status === "processing"
           ).length;
           const promptKind = pickDashboardPlusPrompt({
-            effectivePlan,
+            effectivePlan: fundKeyedPlan,
             fundId: activeFundId,
             parentAuthoredEntryCount,
             settledGiftCount,
@@ -5281,6 +5750,11 @@ export default function Dashboard() {
           currentValue={rawTotalValue}
           previousValue={prevValueRef.current}
           recipientName={recipientFirstNameDisplay}
+          giftCount={gifts.filter((g) => {
+            const s = String(g.status || "").toLowerCase();
+            return s !== "failed" && s !== "refunded";
+          }).length}
+          peopleCount={contributorCount}
         />
 
         {/* Closed-fund banner — calm, action-bearing. Renders when the
@@ -5422,7 +5896,7 @@ export default function Dashboard() {
                                   here). See feedback_image_load_hints
                                   _pattern.md for the canonical
                                   treatment of focal-point images. */}
-                              <img
+                              <FadeImage
                                 src={childPhotoUrl}
                                 alt=""
                                 loading="eager"
@@ -5457,24 +5931,11 @@ export default function Dashboard() {
                         {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
                       </div>
                     </div>
-                    {(() => {
-                      const validCount = gifts.filter(g => {
-                        const s = String(g.status || "").toLowerCase();
-                        return s !== "failed" && s !== "refunded";
-                      }).length;
-                      return validCount > 0 ? (
-                        <span className="rounded-full" style={{
-                          background: "hsl(var(--kiddo-gold) / 0.25)", color: "hsl(var(--kiddo-gold-light))",
-                          padding: "2px 9px",
-                          fontSize: 10, fontWeight: 700, letterSpacing: "0.02em", flexShrink: 0, marginLeft: 8,
-                        }}>
-                          {validCount} {validCount === 1 ? "gift" : "gifts"}
-                          {contributorCount > 0 && (
-                            <> · from {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
-                          )}
-                        </span>
-                      ) : null;
-                    })()}
+                    {/* Gift-count pill MOVED to the balance's caption below, to
+                        mirror DashboardLab: the peopled stat (Kiddo's structural
+                        edge over "me + my money" apps) belongs paired with the
+                        number, not as a chip in the identity row. Kept in sync
+                        for the pending lab->main port. */}
                   </div>
 
                   {/* Fund-switch skeleton: when dashboard-summary is loading AND
@@ -5483,8 +5944,20 @@ export default function Dashboard() {
                       previous fund or a wrong "Ready for the first gift" empty
                       state. Brand-new funds (balance==0) skip this and
                       land directly on the empty hero — that's the correct state
-                      for them and the optimistic create flow. */}
-                  {dashboardSummaryLoading && !dashboardSummary && getFundTotalValue(activeFund) > 0 ? (
+                      for them and the optimistic create flow.
+
+                      DEMO EXCEPTION (2026-06-04, founder: "the main value rolls
+                      in ~6-7s, should come right after the chart"): the skeleton
+                      held the hero blank for the FULL dashboard-summary load —
+                      ~6s on the dev/demo remote DB — because it waits for the
+                      precise holdings-sum. But for demo funds `f.balance`
+                      already EQUALS the holdings market-value sum (verified), so
+                      `invested` falls back to it and the hero can paint the
+                      correct value the moment /api/funds lands (~1s), then roll
+                      to the (identical) fresh value. The skeleton only protects
+                      REAL funds, whose f.balance is a cost-basis-style field
+                      that would flash low then jump — so it stays for them. */}
+                  {dashboardSummaryLoading && !dashboardSummary && !isDemoAccount && getFundTotalValue(activeFund) > 0 ? (
                     <>
                       <div style={{ marginBottom: 10 }} data-testid="hero-loading-skeleton">
                         <div className="animate-pulse rounded-lg" style={{ width: 180, height: 44, background: "rgba(255,255,255,0.10)", marginBottom: 10 }} />
@@ -5591,7 +6064,13 @@ export default function Dashboard() {
                         }}
                         data-testid="text-hero-balance-today-kicker"
                       >
-                        {isScrubbing ? scrubbedTrendPoint!.label : "Today"}
+                        {isScrubbing
+                          ? scrubbedTrendPoint!.label
+                          : showHandoffKeepsake
+                            ? `Handed off · ${handoffDateLabel}`
+                            : isPreviousOwner
+                              ? `${recipientFirstNameDisplay || "Their"}'s balance now`
+                              : "Today"}
                       </div>
                       {/* Shared-fund badge. Appears only when the active fund
                           is one the parent was invited to (not their own).
@@ -5690,22 +6169,49 @@ export default function Dashboard() {
                           // blink-and-miss. Count-up duration bumped to 1200ms
                           // 2026-05-12 (was 900ms default) — hero balance is the
                           // focal element on the duration ladder.
-                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash || !!demoBeat) ? "hsl(var(--kiddo-gold-light))" : "white",
+                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
                           letterSpacing: "-1.5px",
                           lineHeight: 1,
                           marginBottom: 4,
-                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash || !!demoBeat) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
+                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
                           transition: "color 0.55s ease, filter 0.55s ease",
                         }}
                         data-testid="text-total-balance"
-                        aria-live={isScrubbing || balanceAnimating || !!demoBeat ? "off" : "polite"}
+                        aria-live={isScrubbing || balanceAnimating ? "off" : "polite"}
                       >
                         {isScrubbing
                           ? formatCurrency(scrubbedTrendPoint!.value)
-                          : demoBeat
-                            ? <DemoHeroRoll key={demoBeat.id} fromValue={Math.max(0, rawTotalValue - demoBeat.amount)} toValue={rawTotalValue} onDone={() => setDemoBeat(null)} />
+                          : showHandoffKeepsake
+                            ? formatCurrency(handoffKeepsakeValue)
                             : formatCurrency(displayHeroBalance)}
                       </motion.div>
+
+                      {/* Social-proof caption — the balance's attribution. Pairs
+                          the number with WHO built it (Kiddo's structural edge
+                          over every "me + my money" app: the value is PEOPLED).
+                          Promoted from a gold chip in the identity row so anchor
+                          #1 reads "$X, built by real people," not a figure with a
+                          footnote. Mirrors DashboardLab; kept in sync for the
+                          pending port. Same copy pattern; weight + position
+                          upgraded. Hidden while scrubbing and on empty funds. */}
+                      {!isScrubbing && (() => {
+                        const validCount = gifts.filter(g => {
+                          const s = String(g.status || "").toLowerCase();
+                          return s !== "failed" && s !== "refunded";
+                        }).length;
+                        if (validCount <= 0) return null;
+                        return (
+                          <p
+                            style={{ fontSize: 13.5, fontWeight: 700, color: "hsl(var(--kiddo-gold-light))", letterSpacing: "0.01em", marginTop: 2, marginBottom: 16 }}
+                            data-testid="text-hero-social-proof"
+                          >
+                            {validCount} {validCount === 1 ? "gift" : "gifts"}
+                            {contributorCount > 0 && (
+                              <> · {contributorCount} {contributorCount === 1 ? "person" : "people"}</>
+                            )}
+                          </p>
+                        );
+                      })()}
 
                       {/* Hero gain pill removed — the +$X all-time gain (and its
                           percent) was duplicating what the lifetime stats row's
@@ -5733,30 +6239,10 @@ export default function Dashboard() {
                             Growing for {recipientFirstNameDisplay || "them"}
                           </span>
                         )}
-                        {cash > 0 && (
-                          isReadOnlyFund ? (
-                            // View-only collaborators AND previous owners
-                            // (post-handoff parents) see the cash figure but
-                            // not a clickable invest button — the action would
-                            // 403 server-side anyway, and rendering a dead CTA
-                            // is worse UX than rendering an informational stat.
-                            <span
-                              style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", fontWeight: 600, marginLeft: 4 }}
-                              data-testid="text-hero-cash-stat-readonly"
-                            >
-                              {formatCurrency(cash)} cash
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => { setInvestCashInitialTicker(""); setInvestCashOpen(true); haptic("light"); }}
-                              style={{ fontSize: 11.5, color: "hsl(var(--kiddo-gold-light) / 0.85)", fontWeight: 600, background: "none", border: "none", padding: 0, cursor: "pointer", marginLeft: 4 }}
-                              data-testid="button-hero-cash-stat"
-                            >
-                              {formatCurrency(cash)} cash
-                            </button>
-                          )
-                        )}
+                        {/* Hero "$X cash" stat removed 2026-06-17 (founder
+                            catch). Metrics-shaped number in the emotional hero +
+                            redundant with the balance total and the dedicated
+                            "Cash is waiting" card below. */}
                       </div>
 
                       {/* Settling row - shown whenever there's pending cash */}
@@ -5779,7 +6265,7 @@ export default function Dashboard() {
                       )}
 
                       {/* Cycling gift strip */}
-                      {recentGiftsFeed.length > 0 && (() => {
+                      {heroCards.length > 0 && (() => {
                         // Key the card by gift id (with index as fallback) so a
                         // brand-new gift arriving at index 0 while the user was
                         // already parked on index 0 still drives an
@@ -5790,10 +6276,13 @@ export default function Dashboard() {
                         // at index 0 (the latest gift); if they manually
                         // dotted away to an older gift mid-flash, we don't
                         // mis-paint that older gift as "just arrived."
-                        const cardKey = recentGiftsFeed[heroGiftIdx]?.id ?? `idx-${heroGiftIdx}`;
+                        const cardKey = heroCards[heroGiftIdx]?.id ?? `idx-${heroGiftIdx}`;
                         const cardIsFlashing = newGiftFlash && heroGiftIdx === 0;
                         return (
-                        <div style={{ marginBottom: 20 }}>
+                        // marginTop gives the now-borderless gift line a clear beat of
+                        // air above so it reads as its own quiet moment between the two
+                        // anchors (rhythm), not a row stacked tight under the balance.
+                        <div style={{ marginTop: 10, marginBottom: 20 }}>
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={cardKey}
@@ -5809,7 +6298,7 @@ export default function Dashboard() {
                               role="button"
                               tabIndex={0}
                               onClick={() => {
-                                const heroGift = recentGiftsFeed[heroGiftIdx];
+                                const heroGift = heroCards[heroGiftIdx];
                                 if (!heroGift?.id || !activeFundId) return;
                                 haptic("selection");
                                 setLocation(`/memory/${activeFundId}?gift=${heroGift.id}`);
@@ -5817,19 +6306,35 @@ export default function Dashboard() {
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
-                                  const heroGift = recentGiftsFeed[heroGiftIdx];
+                                  const heroGift = heroCards[heroGiftIdx];
                                   if (!heroGift?.id || !activeFundId) return;
                                   haptic("selection");
                                   setLocation(`/memory/${activeFundId}?gift=${heroGift.id}`);
                                 }
                               }}
                               style={{
-                                background: cardIsFlashing ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                                // Gift-as-LINE (2026-06-07): at rest the recent gift is a
+                                // flush whisper between the two hero anchors (Today's $X
+                                // above, "$X at 65" below) — no fill, no border, no box. The
+                                // hero used to read as THREE competing blocks because this
+                                // was the ONLY filled+bordered container in the green field;
+                                // dropping the box lets the two money anchors be the stars
+                                // and this be the quiet story between them. On a NEW gift
+                                // (cardIsFlashing) the founder-tuned moment is preserved: it
+                                // blooms into the gold-edged card + glow for the ~3.8s flash
+                                // window, then settles back to a line. Padding is constant
+                                // and the -10 horizontal bleed cancels it, so the text stays
+                                // flush-left with the balance and NOTHING shifts when it
+                                // blooms/settles — only bg / border / shadow cross-fade.
+                                // Kept in sync with DashboardLab.tsx (port pending).
+                                background: cardIsFlashing ? "rgba(255,255,255,0.12)" : "transparent",
                                 borderRadius: 16,
-                                padding: "11px 14px",
+                                padding: "8px 10px",
+                                marginLeft: -10,
+                                marginRight: -10,
                                 border: cardIsFlashing
                                   ? "1px solid hsl(var(--kiddo-gold-light) / 0.55)"
-                                  : "1px solid rgba(255,255,255,0.1)",
+                                  : "1px solid transparent",
                                 boxShadow: cardIsFlashing
                                   ? "0 0 22px hsl(var(--kiddo-gold) / 0.30)"
                                   : "none",
@@ -5839,7 +6344,7 @@ export default function Dashboard() {
                               data-testid="card-hero-recent-gift"
                             >
                               {(() => {
-                                const g = recentGiftsFeed[heroGiftIdx];
+                                const g = heroCards[heroGiftIdx];
                                 const ticker = (g as any)?.selectedTicker as string | null | undefined;
                                 const holdingName = ticker
                                   ? friendlyHoldingName(ticker, holdings.find(h => h.ticker === ticker)?.name)
@@ -5876,13 +6381,27 @@ export default function Dashboard() {
                                   ? (giftExec === "cash" ? "cash" : `${childPossessive} mix`)
                                   : null;
                                 const destinationPrefix = destinationName === "cash" ? "Held as " : "Went into ";
+                                // "On this day" anniversary card — the memory-machine
+                                // beat in the cycler rotation. Same card chrome, same
+                                // tap-through to the Memory Book entry; only the story
+                                // changes: when it was given, and what that exact gift
+                                // is worth now (real shares at the live price).
+                                const onThisDay = Boolean((g as any)?.__onThisDay);
+                                const yearsAgo = Number((g as any)?.__yearsAgo || 0);
+                                const otdNowWorth = (g as any)?.__nowWorth as number | null | undefined;
                                 return (
                                   <>
                                     <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 3 }}>
-                                      {heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
+                                      {/* Exact-day match = "On this day"; the demo's
+                                          grace-window match (±week) gets the honest
+                                          eyebrow "From the Memory Book" — which is also
+                                          literally where tapping the card lands. */}
+                                      {onThisDay ? (Number((g as any)?.__daysOff || 0) > 0 ? "From the Memory Book" : "On this day") : heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
                                     </p>
                                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
-                                      {displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added {formatCurrency(amt)} to {isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.
+                                      {onThisDay
+                                        ? `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} gave ${formatCurrency(amt)} ${yearsAgo === 1 ? "one year" : `${yearsAgo} years`} ago ${Number((g as any)?.__daysOff || 0) > 0 ? "this week" : "today"}.`
+                                        : `${displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added ${formatCurrency(amt)} to ${isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.`}
                                     </p>
                                     {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /
                                         🌱 Settling / No thanks yet) intentionally dropped from the
@@ -5899,23 +6418,36 @@ export default function Dashboard() {
                                         holding / event / message doesn't shrink the card vs gifts
                                         that have all three. Same render priority as before. */}
                                     <div style={{ minHeight: 16, marginTop: 8 }}>
-                                      {destinationName ? (
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
-                                          {/* Dollar amount intentionally dropped here — the gift
-                                              narrative line above (e.g. "Dovi added $100 to Emma's
-                                              future") already shows the amount. Repeating it within
-                                              30px is the duplication that makes this section read
-                                              "crammed." This line carries the destination only. */}
-                                          {destinationPrefix}{destinationName}
-                                          {giftEventName ? ` · ${giftEventName}` : ""}
+                                      {onThisDay && typeof otdNowWorth === "number" && otdNowWorth > 0 ? (
+                                        // The payoff line: this exact gift's value today.
+                                        // Real shares at the live price; "~" because prices
+                                        // move. Only renders when honestly computable
+                                        // (single-ticker gifts with recorded shares).
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.3 }}>
+                                          Now worth ~{formatCurrency(otdNowWorth)}
+                                          {holdingName ? ` · ${holdingName}` : ""}
+                                        </p>
+                                      ) : g?.message ? (
+                                        // The WORDS first. A gift's actual message is the
+                                        // human, per-gift-VARIED content — promoted ABOVE the
+                                        // destination so the strip reads as people who showed
+                                        // up, not the same "Went into the mix" on every card.
+                                        // One line, truncated. Kept in sync with DashboardLab.
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontStyle: "italic", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                                          "{g.message}"
                                         </p>
                                       ) : giftEventName ? (
+                                        // Then the occasion — still specific to this gift.
                                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
                                           {giftEventName}
                                         </p>
-                                      ) : g?.message ? (
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                                          "{g.message}"
+                                      ) : destinationName ? (
+                                        // LAST resort: the destination. True of nearly every
+                                        // gift, so only shown when there's no message and no
+                                        // occasion to say instead. Dollar amount intentionally
+                                        // dropped (the narrative line above already shows it).
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>
+                                          {destinationPrefix}{destinationName}
                                         </p>
                                       ) : null}
                                     </div>
@@ -5924,9 +6456,9 @@ export default function Dashboard() {
                               })()}
                             </motion.div>
                           </AnimatePresence>
-                          {recentGiftsFeed.length > 1 && (
+                          {heroCards.length > 1 && (
                             <div style={{ display: "flex", gap: 5, marginTop: 8, justifyContent: "center" }}>
-                              {recentGiftsFeed.slice(0, 5).map((_, dotIdx) => (
+                              {heroCards.slice(0, 5).map((_, dotIdx) => (
                                 <button
                                   key={`dot-${dotIdx}`}
                                   type="button"
@@ -6032,7 +6564,7 @@ export default function Dashboard() {
                 side of the generational loop: the person who just finished one
                 handoff is the most likely to start the next. Persistent + dignified,
                 no action required, never naggy. Renders for any post-handoff parent
-                (real, or in the demo Phil viewing Haley's transferred fund). */}
+                (real, or in the demo Marcus viewing Mia's transferred fund). */}
             {isPreviousOwner && (
               <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="card-parent-handoff-moment">
                 <div className="flex items-start gap-3">
@@ -6103,13 +6635,26 @@ export default function Dashboard() {
               let toneClass: string;
               let onClick: () => void;
               if (active.length > 0) {
-                const monthly = sumMonthlyEquivalent(active as any[]);
                 const nextTs = active
                   .map((c: any) => (c?.nextRunDate ? new Date(c.nextRunDate).getTime() : 0))
                   .filter((t: number) => t > 0)
                   .sort((a: number, b: number) => a - b)[0];
                 const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
-                label = `${formatMoneyFriendly(monthly)}/mo recurring${active.length > 1 ? ` · ${active.length} active` : ""}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                const per = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
+                const cadences = new Set(active.map((c: any) => c.frequency || "monthly"));
+                if (active.length === 1 || cadences.size === 1) {
+                  // One schedule, or several sharing a cadence: show the real amount
+                  // in that cadence ("$25/day", or summed "$75/month"). NOT a monthly-
+                  // equivalent, which for a daily schedule gave a random-looking
+                  // "$760.94/mo" that matched nothing else on screen.
+                  const total = active.reduce((s: number, c: any) => s + parseFloat(String(c?.amount || "0")), 0);
+                  label = `${formatMoneyFriendly(total)}/${per((active[0] as any)?.frequency)} recurring${active.length > 1 ? ` · ${active.length} active` : ""}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                } else {
+                  // Mixed cadences ($25/day + $10/year): no honest single amount, so
+                  // a combined monthly-equivalent reads as a random number. Show the
+                  // count; the per-schedule rows below carry the real amounts.
+                  label = `${active.length} active recurring${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                }
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)]";
                 onClick = () => summaryScrollTo("recurring");
               } else if (paused.length > 0) {
@@ -6238,12 +6783,29 @@ export default function Dashboard() {
                 return s + (Number.isFinite(n) && n > 0 ? n : 0);
               }, 0);
               const giftsFromOthersTotal = sumAmt(fromOthersRows);
-              // Parent-mode rows ("Your recurring / Your one-time"): the account
-              // holder IS the viewer.
-              const yourAutoInvestTotal = sumAmt(recurringRows);
+              // Parent-mode rows ("Your recurring / Your one-time") are VIEWER-KEYED:
+              // only money THIS viewer actually sent. Previously "Your recurring"
+              // summed ALL custodian recurring — correct only while the viewer WAS
+              // the (sole) custodian. A co-admin (Elena) saw Marcus's $100/mo labeled
+              // "Your recurring investments" (founder catch 2026-06-04), and the
+              // OTHER account-holder's one-time money landed in NO row at all (Marcus
+              // never saw Mom's additions; Elena never saw Dad's) — a silent
+              // reconciliation hole for any two-contributor family. The other
+              // holder's money now gets its own named row below.
+              const yourAutoInvestTotal = sumAmt(recurringRows.filter((g) => senderOf(g) === ownerEmail));
               const yourOneTimeTotal = sumAmt(oneTimeAccountHolderRows.filter((g) => senderOf(g) === ownerEmail));
+              const otherHolderRows = [...recurringRows, ...oneTimeAccountHolderRows].filter((g) => senderOf(g) !== ownerEmail);
+              const otherHolderTotal = sumAmt(otherHolderRows);
+              // Name the other contributor the way the family does ("Dad"/"Mom" via
+              // the server-enriched preferredName), falling back to first name.
+              const otherHolderNames = Array.from(new Set(
+                otherHolderRows
+                  .map((g) => (String((g as any).gifterPreferredName || "").trim()) || String((g as any).senderName || "").trim().split(/\s+/)[0])
+                  .filter(Boolean),
+              ));
+              const otherHolderLabel = otherHolderNames.length === 1 ? otherHolderNames[0] : "Family";
               // Owner-mode (post-handoff) split: what the custodian parent(s) put
-              // in BEFORE handoff vs. what the owner (e.g. Haley) adds herself.
+              // in BEFORE handoff vs. what the owner (e.g. Mia) adds herself.
               // Reserves "Your additions" for the owner's own money and credits
               // the rest to the parent. (Owner-set recurring isn't built yet, so
               // yourAdditionsTotal is 0 today, but the wiring is ready for it.)
@@ -6285,7 +6847,7 @@ export default function Dashboard() {
               // Owner mode (post-handoff): prefer the previous custodian's
               // "what your kids call you" label (server-supplied from their
               // Account-settings preferredName) so it reads "Invested by Dad"
-              // not "Invested by Phil". Falls back to the derived first name
+              // not "Invested by Marcus". Falls back to the derived first name
               // when the custodian never set one — no hardcoding.
               const ownerCustodianLabel = isOwnerMode ? String((activeFund as any)?.previousOwnerCallMe || "").trim() : "";
               const custodianLabel = ownerCustodianLabel
@@ -6315,8 +6877,8 @@ export default function Dashboard() {
               // every other surface in the app.
               const periodContributionFlows = giftsFromOthersTotal + accountHolderContribTotal;
               const marketGrowth30 = (valueThen != null && Number.isFinite(valueThen))
-                ? (totalValue - valueThen) - periodContributionFlows
-                : (totalValue - periodContributionFlows);
+                ? (growthCurrentValue - valueThen) - periodContributionFlows
+                : (growthCurrentValue - periodContributionFlows);
 
               // Lifetime withdrawals — sums withdrawal transactions since
               // the period start. Only surfaced as a row when nonzero.
@@ -6334,9 +6896,17 @@ export default function Dashboard() {
 
               const total30 = giftsFromOthersTotal + accountHolderContribTotal + marketGrowth30 - periodWithdrawals;
 
-              // Next scheduled run — soonest active parent_contribution.
+              // Next scheduled run — soonest active parent_contribution OWNED BY
+              // THE VIEWER. Viewer-keyed for the same reason as the rows above:
+              // this date renders under "YOUR recurring investments", and the
+              // fund-scoped list contains every account-holder's schedules — a
+              // $0-recurring co-admin (Elena) would otherwise read the
+              // custodian's next charge date as her own ("Your recurring ·
+              // starts Jun 18"). Same-family follow-up to the 2026-06-04
+              // viewer-keying fix.
               const nextScheduled = (parentContributions || [])
                 .filter((c: any) => c.status === "active" && c.nextRunDate)
+                .filter((c: any) => !c.userId || String(c.userId) === String((user as any)?.id || ""))
                 .map((c: any) => ({ ...c, nextTs: new Date(String(c.nextRunDate)).getTime() }))
                 .filter((c: any) => Number.isFinite(c.nextTs) && c.nextTs > Date.now())
                 .sort((a: any, b: any) => a.nextTs - b.nextTs)[0];
@@ -6386,10 +6956,10 @@ export default function Dashboard() {
                     <div className="flex items-baseline justify-between mb-4">
                       {/* Always "fund so far" — lifetime view permanently
                           (was "last 30 days" once fund crossed 30 days). */}
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
                         {isOwnerMode ? "Your" : childPossess} fund so far <span aria-hidden>🌱</span>
                       </p>
-                      <p className="text-[10px] text-muted-foreground/60">
+                      <p className="text-3xs text-muted-foreground/60">
                         {/* Year ALWAYS shown 2026-05-23 — was conditionally
                             hidden when fund age < 365d on the theory that
                             the year was redundant for recent funds. In
@@ -6443,8 +7013,8 @@ export default function Dashboard() {
                           erase how much they specifically did. This sub-line keeps the
                           gratitude — once, where the fold happens. */}
                       {isOwnerMode && investedByParentsTotal > 0 && parentContribYears >= 1 && (
-                        <p className="px-2 -mt-0.5 mb-0.5 text-[11px] text-muted-foreground/70" data-testid="text-parent-recognition">
-                          including {fmtRow(investedByParentsTotal)} from {custodianLabel} over {parentContribYears} years 💚
+                        <p className="px-2 -mt-0.5 mb-0.5 text-2xs text-muted-foreground/70" data-testid="text-parent-recognition">
+                          including {fmtRow(investedByParentsTotal)} from {custodianLabel} over {parentContribYears} years
                         </p>
                       )}
                       {/* Your recurring + your one-time. Both viewers see the same
@@ -6463,13 +7033,13 @@ export default function Dashboard() {
                           Your recurring investments
                           {/* Parent, no money yet but a schedule queued → "starts {date}". */}
                           {yourRecurringRowTotal === 0 && !isOwnerMode && nextScheduled && (
-                            <span className="text-[11px] text-muted-foreground/70">
+                            <span className="text-2xs text-muted-foreground/70">
                               {" · starts "}{fmtNextDate(nextScheduled.nextTs)}
                             </span>
                           )}
                           {/* Graduated owner, hasn't started their own yet → invitation. */}
                           {yourRecurringRowTotal === 0 && isOwnerMode && (
-                            <span className="text-[11px] font-medium text-[hsl(var(--kiddo-evergreen))]">
+                            <span className="text-2xs font-medium text-[hsl(var(--kiddo-evergreen))]">
                               {" · start your own →"}
                             </span>
                           )}
@@ -6495,6 +7065,27 @@ export default function Dashboard() {
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </button>
+                      {/* The OTHER account-holder's money — the co-parent's view of
+                          the custodian's recurring ("Dad's contributions"), or the
+                          custodian's view of the co-parent's additions ("Mom's
+                          contributions"). Display-only (no drill-down: the schedule
+                          lists below are viewer-keyed). Owner mode has its own fold
+                          ("Invested by Dad" recognition line), so this row is
+                          parent/co-parent mode only. */}
+                      {!isOwnerMode && otherHolderTotal > 0 && (
+                        <div
+                          className="w-full flex items-baseline justify-between py-1.5 px-2 -mx-2 text-left"
+                          data-testid="last30-row-other-holder"
+                        >
+                          <span className="text-sm text-muted-foreground">{otherHolderLabel}'s contributions</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-foreground tabular-nums">
+                              {fmtRow(otherHolderTotal)}
+                            </span>
+                            <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                          </span>
+                        </div>
+                      )}
                       {marketGrowth30 != null && (
                         <button
                           type="button"
@@ -6607,7 +7198,7 @@ export default function Dashboard() {
                         <button
                           type="button"
                           onClick={() => summaryScrollTo("cash")}
-                          className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+                          className="mt-2 inline-flex items-center gap-1 text-2xs text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
                           {/* Settling-state copy enhancement 2026-05-14
@@ -6642,7 +7233,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => { haptic("selection"); setLocation("/activity"); }}
-                        className="mt-3 w-full text-center text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        className="mt-3 w-full text-center text-2xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         data-testid="lifetime-link-recent"
                       >
                         Last 30 days ↗
@@ -6658,6 +7249,9 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: 0.010 }}
+                // Clear top gap so this action card reads as its OWN block, not a
+                // continuation of the "fund so far" section directly above it.
+                style={{ marginTop: 26 }}
               >
                 <button
                   type="button"
@@ -6670,25 +7264,22 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="relative shrink-0">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--kiddo-gold)/0.25)] bg-[hsl(var(--kiddo-gold)/0.12)]">
-                          {/* Banknote, not TrendingUp. Icons identify
-                              the noun ("this card is about cash"),
-                              not the verb ("...that could grow").
-                              Also matches the InvestCashModal that
-                              opens on tap — Banknote is used there
-                              for the cash row, so the card→modal
-                              transition reads as one surface. */}
-                          <Banknote size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
+                          {/* Coins (the NOUN: "this card is about cash"),
+                              not TrendingUp (the verb). 20px fills the 40px
+                              chip with proper weight; a flat Banknote at 17px
+                              read undersized + generic. */}
+                          <Coins size={20} className="text-[hsl(var(--kiddo-evergreen))]" />
                         </div>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+                        <p className="text-2xs font-semibold uppercase text-muted-foreground">
                           {cashContext === "kyc_pending" ? "Verification complete" : cashContext === "held_as_cash" ? "Cash is waiting" : "Cash is waiting"}
                         </p>
                         <p className="text-xl font-bold text-foreground font-heading">{formatCurrency(uninvestedCash)}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
                           {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
-                          {cashContext === "gifts_settled" && `${isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} cash is ready. You choose the amount.`}
+                          {cashContext === "gifts_settled" && "Choose how much to invest."}
                         </p>
                       </div>
                     </div>
@@ -6739,7 +7330,15 @@ export default function Dashboard() {
                     ? (occasionDays === 0 ? "Today" : occasionDays === 1 ? "Tomorrow" : `in ${occasionDays}d`)
                     : (() => {
                         const raw = String(activeOccasion.name || "Occasion").trim();
-                        return raw.length > 10 ? `${raw.slice(0, 9)}…` : raw;
+                        // Drop the redundant "{child}'s " prefix — this tile already
+                        // lives on that child's dashboard, so "Theo's Birthday" both
+                        // repeated the name AND got hard-sliced mid-word to "Theo's
+                        // Bi…". Stripping it leaves the actual occasion ("Birthday"),
+                        // which fits clean; only genuinely long custom names still
+                        // truncate, at a roomier threshold. 2026-06-08.
+                        const prefix = `${childFirst}'s `;
+                        const name = raw.toLowerCase().startsWith(prefix.toLowerCase()) ? raw.slice(prefix.length) : raw;
+                        return name.length > 14 ? `${name.slice(0, 13)}…` : name;
                       })())
                 : "New occasion";
               const occasionIsImminent = activeOccasion && occasionDays !== null && occasionDays <= 30;
@@ -6760,8 +7359,8 @@ export default function Dashboard() {
               const btn = "flex flex-1 min-w-0 flex-col items-center gap-[5px] md:gap-2 py-1 md:py-2 select-none cursor-pointer transition-all active:opacity-50 active:scale-95 bg-transparent border-0";
               const tile = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-cream))] text-[hsl(var(--kiddo-evergreen))]";
               const tileGold = "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center bg-[hsl(var(--kiddo-gold)/0.14)] text-[hsl(var(--kiddo-ink))]";
-              const lbl = "text-[9.5px] md:text-xs font-medium text-muted-foreground leading-tight text-center";
-              const lblGold = "text-[9.5px] md:text-xs font-semibold text-[hsl(var(--kiddo-ink))] leading-tight text-center";
+              const lbl = "text-4xs md:text-xs font-medium text-muted-foreground leading-tight text-center";
+              const lblGold = "text-4xs md:text-xs font-semibold text-[hsl(var(--kiddo-ink))] leading-tight text-center";
               return (
                 <motion.section
                   initial={{ opacity: 0, y: 6 }}
@@ -6903,7 +7502,7 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </div>
-                <Suspense fallback={<div className="h-[180px] w-full bg-[linear-gradient(180deg,hsl(var(--kiddo-evergreen)/0.06),transparent)]" aria-hidden="true" />}>
+                <Suspense fallback={<TrendChartSkeleton />}>
                   <div className="relative">
                     <DashboardTrendChart data={trendData} onScrub={setScrubbedTrendPoint} />
                     {totalValue > 0 && trendData.length > 0 && (() => {
@@ -6967,7 +7566,7 @@ export default function Dashboard() {
                         same baseline. */}
                     <div className="flex items-start gap-6">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Total gifts</p>
+                      <p className="text-3xs font-semibold uppercase tracking-[0.07em] text-muted-foreground">Total gifts</p>
                       <p className="font-heading text-base font-bold text-foreground">
                         {formatCurrency(gifterRoster.reduce((s, g) => s + g.totalNetAmount, 0))}
                       </p>
@@ -7077,7 +7676,7 @@ export default function Dashboard() {
                       if (!isScrubbing && Math.abs(growthDollars) < 0.01) return null;
                       return (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">{growthLabel}</p>
+                        <p className="text-3xs font-semibold uppercase tracking-[0.07em] text-muted-foreground">{growthLabel}</p>
                         <p
                           className={`font-heading text-base font-bold ${growthDollars >= 0 ? "text-green-600" : "text-red-500"}`}
                           aria-live={isScrubbing ? "off" : "polite"}
@@ -7090,7 +7689,7 @@ export default function Dashboard() {
                             metrics home rather than living on the emotional
                             anchor surface. Same number, different surface. */}
                         {Math.abs(growthPercent) >= 0.01 && (
-                          <p className={`text-[10.5px] font-semibold ${growthPercent >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
+                          <p className={`text-3xs font-semibold ${growthPercent >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
                             {growthPercent >= 0 ? "+" : ""}{growthPercent.toFixed(2)}%
                           </p>
                         )}
@@ -7099,7 +7698,7 @@ export default function Dashboard() {
                     })()}
                     {contributorCount > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Have gifted</p>
+                        <p className="text-3xs font-semibold uppercase tracking-[0.07em] text-muted-foreground">Have gifted</p>
                         <p className="font-heading text-base font-bold text-foreground">{contributorCount} {contributorCount === 1 ? "person" : "people"}</p>
                       </div>
                     )}
@@ -7258,7 +7857,7 @@ export default function Dashboard() {
                       target (new gifts + recurring follow it), existing holdings
                       are untouched, and it's reversible. Stating that removes the
                       "what did I just do?" moment. */}
-                  <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+                  <p className="mt-2 text-2xs text-muted-foreground/80 leading-relaxed">
                     This changes where new gifts and recurring investments go. {childFirst}'s current holdings aren't sold, and you can switch back anytime in Settings.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -7300,6 +7899,11 @@ export default function Dashboard() {
               );
             })()}
 
+            {/* Hidden on the post-handoff keepsake (mirror of DashboardLab): a
+                previous owner's frozen view must not expose the now-adult's live
+                holdings + current values; there's no honest "as of handoff"
+                holdings view, so the keepsake omits it. */}
+            {!showHandoffKeepsake && (
             <motion.section
               ref={holdingsSectionRef}
               initial={{ opacity: 0, y: 8 }}
@@ -7531,7 +8135,11 @@ export default function Dashboard() {
                           // self-directed account. No "Plus" chip / upsell for the owner; the
                           // upgrade signal stays for parents. Server mirror: resolveAllowedFund-
                           // Strategy. Per LIFECYCLE_MONETIZATION.md.
-                          const canCustomize = effectivePlan === "starter" || effectivePlan === "family" || isOwnerMode;
+                          // Fund-keyed (2026-06-04): an owner's per-fund starter on a
+                          // DIFFERENT fund shouldn't unlock THIS fund's mix (the server's
+                          // resolveAllowedFundStrategy is per-fund). The chip itself is
+                          // already owner-only (2026-06-01 sweep).
+                          const canCustomize = isFundCovered || isOwnerMode;
 
                           // Renders one holding row. `isChosen` enables the contextual `+`
                           // button — only meaningful for picks (a parent can intentionally
@@ -7600,12 +8208,12 @@ export default function Dashboard() {
                                         {pctLbl && !sharesLbl && <span>{pctLbl}</span>}
                                       </p>
                                       {overlapSide === "chosen" && (
-                                        <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/70">
+                                        <p className="mt-0.5 text-3xs font-medium text-muted-foreground/70">
                                           gifter-chosen · personal
                                         </p>
                                       )}
                                       {overlapSide === "managed" && (
-                                        <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/70">
+                                        <p className="mt-0.5 text-3xs font-medium text-muted-foreground/70">
                                           algorithm-allocated · automatic
                                         </p>
                                       )}
@@ -7675,10 +8283,24 @@ export default function Dashboard() {
                                 <div className="space-y-2">
                                   {hasBothSections && (
                                     <div className="flex items-center justify-between px-1 pb-0.5">
-                                      <div className="flex items-center gap-1.5">
-                                        <p className="text-[12px] font-semibold text-muted-foreground/85">Chosen with love</p>
-                                        <span className="text-[11px]">💚</span>
-                                      </div>
+                                      {/* No decorative 💚 — "Picked just for {name}" already IS
+                                          the warmth; a heart on top is sentiment stacked on
+                                          sentiment (the greeting-card register the emoji
+                                          discipline bans — only 🌱 is reserved). Same restraint
+                                          pass that removed the hearts from the contribution
+                                          headers (see the one-time subsection comment).
+                                          Functional 💚s (the "Just Because" occasion icon set,
+                                          the Returning-gifter badge) are NOT decoration — keep
+                                          those. 2026-06-04. */}
+                                      {/* Owner mode says "Hand-picked", not "Picked just for
+                                          you": a graduated owner's OWN buys land in this same
+                                          bucket, and "picked just for you" reads off when she
+                                          did the picking herself. "Hand-picked" covers both
+                                          the gifter-picked history (Sofia's DIS) and her own
+                                          picks without losing warmth. Parent view keeps the
+                                          stronger "Picked just for {child}" — there the pickers
+                                          are always OTHER people, so it's precisely true. */}
+                                      <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Hand-picked" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
                                       {!isReadOnlyFund && (
                                         <div className="relative flex items-center gap-1.5">
                                           <AnimatePresence>
@@ -7694,14 +8316,14 @@ export default function Dashboard() {
                                                 <button
                                                   type="button"
                                                   onClick={() => { haptic("selection"); setInvestPickerOpen(false); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("pick"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
-                                                  className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
+                                                  className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
                                                 >
                                                   One time
                                                 </button>
                                                 <button
                                                   type="button"
                                                   onClick={() => { haptic("selection"); setInvestPickerOpen(false); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
-                                                  className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
+                                                  className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
                                                 >
                                                   Recurring
                                                 </button>
@@ -7711,7 +8333,7 @@ export default function Dashboard() {
                                           <button
                                             type="button"
                                             onClick={() => { haptic("light"); setInvestPickerOpen(v => !v); }}
-                                            className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors ${investPickerOpen ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]"}`}
+                                            className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-3xs font-bold transition-colors ${investPickerOpen ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]"}`}
                                             aria-label="Add investment"
                                           >
                                             Add an investment
@@ -7735,7 +8357,7 @@ export default function Dashboard() {
                                       lens applies. See feedback_no_ai_slop.md
                                       and feedback_no_greenwashing_losses.md. */}
                                   {hasBothSections && investedTotal > 0 && (
-                                    <p className="px-1 pt-1 text-[11px] font-medium text-muted-foreground/70 tabular-nums">
+                                    <p className="px-1 pt-1 text-2xs font-medium text-muted-foreground/70 tabular-nums">
                                       Total: {formatCurrency(chosenVal)} · {Math.round((chosenVal / investedTotal) * 100)}% of invested
                                     </p>
                                   )}
@@ -7751,13 +8373,13 @@ export default function Dashboard() {
                               )}
 
                               {/* Managed-bucket section. Header reads
-                                  "Emma's mix (⚖️ Conservative)" — uses the
+                                  "Emma's mix (🛡️ Conservative)" — uses the
                                   canonical `mixIdentityFor` so the bucket
                                   name matches every other surface (the
                                   recurring schedule list, per-row chips,
                                   etc.), and the current preset rides as
                                   a parenthetical with the locked strategy
-                                  emoji (⚖️ Conservative · 🌿 Balanced ·
+                                  emoji (🛡️ Conservative · ⚖️ Balanced ·
                                   📈 Growth · 🎯 Custom). The structural
                                   cue (this bucket is platform-managed vs
                                   the gifter-picked "Chosen with love"
@@ -7820,11 +8442,11 @@ export default function Dashboard() {
                                     <button
                                       type="button"
                                       onClick={handleCustomize}
-                                      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]`}
+                                      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-3xs font-bold transition-colors bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]`}
                                     >
                                       <Pencil size={9} />
                                       {canCustomize ? (isOwnerMode ? "Customize your mix" : `Customize ${childFirst}'s mix`) : "Customize"}
-                                      {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
+                                      {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
                                     </button>
                                     )}
                                   </div>
@@ -7834,7 +8456,7 @@ export default function Dashboard() {
                                       rationale on why per-section performance
                                       is intentionally absent. */}
                                   {hasBothSections && investedTotal > 0 && (
-                                    <p className="px-1 pt-1 text-[11px] font-medium text-muted-foreground/70 tabular-nums">
+                                    <p className="px-1 pt-1 text-2xs font-medium text-muted-foreground/70 tabular-nums">
                                       Total: {formatCurrency(managedVal)} · {Math.round((managedVal / investedTotal) * 100)}% of invested
                                     </p>
                                   )}
@@ -7865,6 +8487,7 @@ export default function Dashboard() {
                 );
               })()}
             </motion.section>
+            )}
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
@@ -8046,7 +8669,7 @@ export default function Dashboard() {
                             ? `${formatCurrency(gifter.totalNetAmount)} total`
                             : null,
                           isFirstGifter ? "the first to give" : null,
-                          isRecurring ? "recurring giver" : null,
+                          isRecurring ? "recurring gifter" : null,
                         ].filter(Boolean) as string[];
                         const tooltipText = tooltipParts.join(" · ");
                         return (
@@ -8079,7 +8702,7 @@ export default function Dashboard() {
                                   // face beats generic initials. Works for any
                                   // gifter (Dad's photo on the kid's roster), not
                                   // just the viewer's own "this is me" tile.
-                                  <img
+                                  <FadeImage
                                     src={avatarSrc}
                                     alt=""
                                     className="w-full h-full object-cover"
@@ -8109,14 +8732,20 @@ export default function Dashboard() {
                                   ⭐
                                 </div>
                               )}
-                              {/* Owner+recurring resolution — when the parent
-                                  has their own recurring schedule, the gold
-                                  ring is masked by the evergreen owner ring.
-                                  Surface a small ↻ badge top-right so both
-                                  signals coexist. */}
-                              {isOwner && isRecurring && (
+                              {/* Recurring badge (↻), shown for ANYONE on a
+                                  recurring schedule — the parent AND recurring
+                                  gifters. For the owner, their gold recurring
+                                  ring is masked by the evergreen owner ring, so
+                                  the badge is the only recurring cue. For a
+                                  recurring gifter the avatar already carries a
+                                  gold ring, but a ring COLOUR isn't self-evidently
+                                  "recurring" — the ↻ glyph makes it legible at a
+                                  glance, and surfaces the recurring gift that the
+                                  at-majority projection counts (so the headline
+                                  number reconciles with what's on the roster). */}
+                              {isRecurring && (
                                 <div
-                                  title="Recurring schedule"
+                                  title={isOwner ? "Recurring schedule" : "Recurring gifter"}
                                   style={{
                                     position: "absolute", top: -2, right: -2,
                                     width: 18, height: 18, borderRadius: 9999,
@@ -8340,11 +8969,16 @@ export default function Dashboard() {
                         const anonCount = anonEntry?.giftCount ?? 0;
                         const peopleCount = namedCount + anonCount;
                         if (peopleCount === 0) return null;
+                        // "have given to" not "love": quantifying love overclaims
+                        // (a $20 anonymous office gift isn't love), and the warm
+                        // "Who loves" header above already carries the sentiment —
+                        // so the count stays factual. Also aligns with the gift
+                        // page's deliberately transactional "X people have gifted".
                         const peopleLabel = isOwnerMode
-                          ? (peopleCount === 1 ? "1 person loves you" : `${peopleCount} people love you`)
+                          ? (peopleCount === 1 ? "1 person has given to your fund" : `${peopleCount} people have given to your fund`)
                           : peopleCount === 1
-                            ? `1 person loves ${childName || "them"}`
-                            : `${peopleCount} people love ${childName || "them"}`;
+                            ? `1 person has given to ${childName || "them"}`
+                            : `${peopleCount} people have given to ${childName || "them"}`;
                         const breakdown = (() => {
                           if (namedCount > 0 && anonCount > 0) {
                             return `${namedCount} named, ${anonCount} anonymous`;
@@ -8522,7 +9156,7 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => { haptic("selection"); highlightDuplicateSchedules(ticker); }}
-                                className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                                className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
                                 data-testid={`gentle-nudge-action-${nudgeKey}`}
                               >
                                 See both schedules →
@@ -8530,7 +9164,7 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => { haptic("light"); dismissNudge(nudgeKey); }}
-                                className="text-[11px] text-muted-foreground/70 hover:text-foreground"
+                                className="text-2xs text-muted-foreground/70 hover:text-foreground"
                                 data-testid={`gentle-nudge-dismiss-${nudgeKey}`}
                               >
                                 Dismiss
@@ -8653,7 +9287,7 @@ export default function Dashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           {!hasAutoInvestAccess && (
-                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))]">Kiddo+</span>
+                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))]">Kiddo+</span>
                           )}
                           <p className="text-sm text-foreground">
                             {hasAutoInvestAccess
@@ -8755,28 +9389,43 @@ export default function Dashboard() {
                         if (status !== "active") return sum;
                         return sum + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency);
                       }, 0);
-                      const monthlyLabel = activeMonthly > 0
-                        ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(activeMonthly))
+                      const activeContribs = shownContribs.filter((c) => (optimisticContribStatus[String(c.id)] ?? c.status) === "active");
+                      const perCadence = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
+                      // Combined amount only when the active schedules share a cadence
+                      // ("$75/month"). Mixed cadences ($25/day + $10/year) have no honest
+                      // single amount, so the summary shows just the count and the
+                      // per-schedule rows below carry the real amounts.
+                      const activeAmtLabel = activeMonthly > 0 && new Set(activeContribs.map((c) => c.frequency || "monthly")).size === 1
+                        ? `${formatMoneyFriendly(activeContribs.reduce((s, c) => s + parseFloat(String(c.amount || "0")), 0))}/${perCadence(activeContribs[0].frequency)}`
                         : null;
                       // Empty active/paused set: only the OWNER (whose plan ended at handoff) sees the
                       // "Ended when you took ownership" line; anyone else with no recurring just sees
-                      // "No recurring yet" — never the handoff copy.
+                      // "No recurring yet"; never the handoff copy.
                       const summaryText = shownContribs.length === 0
                         ? (isOwnerMode ? "Ended when you took ownership" : "No recurring yet")
                         : allPaused
                         ? `${pausedCount} paused`
                         : pausedCount === 0
-                          ? monthlyLabel
-                            ? `${activeCount} active · ${monthlyLabel}/month`
+                          ? activeAmtLabel
+                            ? `${activeCount} active · ${activeAmtLabel}`
                             : `${activeCount} active`
-                          : monthlyLabel
-                            ? `${activeCount} active · ${monthlyLabel}/month · ${pausedCount} paused`
+                          : activeAmtLabel
+                            ? `${activeCount} active · ${activeAmtLabel} · ${pausedCount} paused`
                             : `${activeCount} active · ${pausedCount} paused`;
+                      // The summary line earns its place when it adds something
+                      // the rows don't: a combined total across 2+ schedules, a
+                      // paused count + Resume-all, or the empty-state copy. With
+                      // exactly ONE active schedule it just re-prints the single
+                      // hero row right below ("1 active · $100/month" over a row
+                      // that already says "$100/month · Active"), so drop it and
+                      // let the header + hero row carry it crisply.
+                      const showSummaryLine = shownContribs.length !== 1 || pausedCount > 0;
                       return (
                         <div className="px-4 pt-3.5 pb-3 border-b border-border/40">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-1">
+                          <p className={`text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 ${showSummaryLine ? "mb-1" : ""}`}>
                             Recurring investments
                           </p>
+                          {showSummaryLine && (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                             <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", fontWeight: 500, flex: 1, minWidth: 0 }}>{summaryText}</p>
                             {allPaused && ownPaused.length > 0 && (
@@ -8789,6 +9438,7 @@ export default function Dashboard() {
                               </button>
                             )}
                           </div>
+                          )}
                         </div>
                       );
                     })()}
@@ -8920,13 +9570,13 @@ export default function Dashboard() {
                                       {isLegacyTicker(contrib.selectedTicker) && (
                                         <span
                                           title="This stock is no longer available to pick. Existing schedules still run. Cancel here to clean up."
-                                          className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-amber-700 border border-amber-200"
+                                          className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.06em] text-amber-700 border border-amber-200"
                                         >
                                           Legacy
                                         </span>
                                       )}
                                     </div>
-                                    <p className={`${isSoloHero ? "text-xs mt-0.5" : "text-[11px]"} text-muted-foreground truncate tabular-nums`}>
+                                    <p className={`${isSoloHero ? "text-xs mt-0.5" : "text-2xs"} text-muted-foreground truncate tabular-nums`}>
                                       <span className={isSoloHero ? "font-semibold text-foreground/85" : ""}>
                                         {formatMoneyFriendly(parseFloat(contrib.amount))}/{freqLabel(contrib.frequency)}
                                       </span>
@@ -8937,7 +9587,7 @@ export default function Dashboard() {
                                     </p>
                                   </div>
                                   <span
-                                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    className={`shrink-0 rounded-full px-2 py-0.5 text-3xs font-bold ${
                                       isReadOnly ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
                                     }`}
                                   >
@@ -9028,7 +9678,7 @@ export default function Dashboard() {
                   investments" on the one-time card next to this. */}
               {isReadOnlyFund && (
                 <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
+                  <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                     Recurring investments
                   </p>
                   <div className="flex items-start gap-3">
@@ -9082,7 +9732,7 @@ export default function Dashboard() {
               <div className="md:flex-1 flex flex-col">
               {/* ── One-time investment card ── */}
               <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "onetime")} data-testid="card-one-time-contribution-v2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
+                <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                   One-time investment
                 </p>
                 <div className="min-w-0">
@@ -9111,7 +9761,7 @@ export default function Dashboard() {
                         : null;
                       return (
                         <div className="rounded-xl bg-[hsl(var(--kiddo-cream)/0.7)] border border-[hsl(var(--kiddo-border)/0.4)] p-3 space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/60">
+                          <p className="text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground/60">
                             Last investment
                           </p>
                           {/* Real brand logo for picks (Robinhood / Apple Stocks
@@ -9174,7 +9824,7 @@ export default function Dashboard() {
                     // handed-off fund. Everything else is hidden.
                     <button
                       type="button"
-                      className="w-full text-center text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors py-1"
+                      className="w-full text-center text-2xs text-muted-foreground/70 hover:text-foreground transition-colors py-1"
                       onClick={() => { openDetailScope({ kind: "contributions" }); }}
                       data-testid="button-one-time-view-all-readonly"
                     >
@@ -9254,7 +9904,7 @@ export default function Dashboard() {
                           inline — Acorns-style. */}
                       <button
                         type="button"
-                        className="w-full text-center text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors py-1"
+                        className="w-full text-center text-2xs text-muted-foreground/70 hover:text-foreground transition-colors py-1"
                         onClick={() => { openDetailScope({ kind: "contributions" }); }}
                         data-testid="button-one-time-view-all-v2"
                       >
@@ -9307,7 +9957,7 @@ export default function Dashboard() {
               </div>
             </motion.section>
 
-            {/* ===== Occasions and Goals ===== */}
+            {/* ===== Occasions ===== */}
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -9317,17 +9967,17 @@ export default function Dashboard() {
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
                 <span className="kiddo-section-label">
                   {isOwnerMode
-                    ? "Your Occasions and Goals"
+                    ? "Your Occasions"
                     : recipientFirstNameDisplay
-                      ? `${recipientFirstNameDisplay}'s Occasions and Goals`
-                      : "Occasions and Goals"}
+                      ? `${recipientFirstNameDisplay}'s Occasions`
+                      : "Occasions"}
                 </span>
                 {!isReadOnlyFund && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                     className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
-                    aria-label="New occasion or goal"
+                    aria-label="New occasion"
                   >
                     <Plus size={13} />
                   </button>
@@ -9457,42 +10107,17 @@ export default function Dashboard() {
                   // kid). Captures the more concrete "let's build the fund
                   // through year one" framing that parents of newborns
                   // actually have in mind. No date — it's a goal.
-                  if (isNewborn && !activeEvents.some(e =>
-                    String(e.name || "").toLowerCase().includes("first year") ||
-                    String(e.name || "").toLowerCase().includes("year one"))) {
-                    suggestions.push({
-                      key: "sug-first-year", emoji: "🌱",
-                      name: `${childFirstSug}'s First Year`,
-                      sub: "Savings goal", countdown: "no date needed",
-                      sortMs: Number.POSITIVE_INFINITY,
-                      prefill: { name: `${childFirstSug}'s First Year`, eventType: "just_because", goalAmount: "2500", eventCategory: "savings_goal" },
-                    });
-                  }
+                  // "First Year" savings-goal suggestion removed — same reasoning
+                  // as the First Car / College Fund goals below: fund-level dollar
+                  // goals don't compose and imply an earmark a UTMA can't keep.
+                  // For a newborn, the 1st-birthday occasion (above) is the rally.
                 }
 
-                // Cultural traditions - read early so we can interleave
-                const culturalBg = (activeFund as any)?.culturalBackground as CulturalBackground | null | undefined;
-                const traditions = culturalBg?.traditions ?? [];
-
-                // Cultural suggestions feed in. Each cultural suggestion gets a
-                // sortMs derived from its event date (or +Infinity for goals).
-                if (traditions.length > 0) {
-                  const culturalSugs = getCulturalSuggestions({
-                    traditions,
-                    childFirstName: childFirstSug,
-                    childBirthdate: childBirthdate,
-                    childAgeNow,
-                    activeEventNames: activeEvents.map(e => e.name),
-                    nowMs,
-                  });
-                  for (const cs of culturalSugs) {
-                    if (!suggestions.some(s => s.key === cs.key)) {
-                      const csDateStr = cs.prefill?.eventDate;
-                      const csMs = csDateStr ? new Date(csDateStr).getTime() : Number.POSITIVE_INFINITY;
-                      suggestions.push({ ...(cs as SugTile), sortMs: Number.isFinite(csMs) ? csMs : Number.POSITIVE_INFINITY });
-                    }
-                  }
-                }
+                // Cultural-tradition suggestion interleaving removed 2026-06-04
+                // with its tile + picker (founder). The engine lives on in
+                // lib/cultural-calendar.ts for a proper post-launch home INSIDE
+                // the occasion-create flow; it was dead here (no way to set
+                // traditions) so it's no longer wired into the dashboard builder.
 
                 // Driver's License (universal, age 14 to 16). Massive gifting
                 // moment for many families; previously absent. The 13+ block
@@ -9523,18 +10148,23 @@ export default function Dashboard() {
                   });
                 }
 
-                // Age-gated (13+) - graduation, first car, college fund. Skipped
-                // once the fund is transferred: an adult owner (or the previous
-                // owner viewing the handed-off fund) shouldn't be pitched their
-                // "first car / college / graduation" — those are a minor's
-                // milestones and read as stale on a grown, handed-off account.
-                if (childAgeNow !== null && childAgeNow >= 13 && !Boolean((activeFund as any)?.transferredAt)) {
+                // Graduation suggestion. Skipped once the fund is transferred:
+                // an adult owner (or the previous owner viewing the handed-off
+                // fund) shouldn't be pitched a minor's milestones — they read
+                // as stale on a grown, handed-off account.
+                if (childAgeNow !== null && !Boolean((activeFund as any)?.transferredAt)) {
                   const gradYear = childBirthdate ? childBirthdate.getFullYear() + 18 : new Date().getFullYear() + 4;
                   const yearsUntilGrad = gradYear - new Date().getFullYear();
-                  // Never suggest a graduation that already happened (a 20-year-old
-                  // not-yet-transferred fund would otherwise get "Class of 2023 ·
-                  // This year").
-                  if (yearsUntilGrad >= 0 && !activeEvents.some(e => e.eventType === "graduation")) {
+                  // RELEVANCE WINDOW (founder call 2026-06-04): suggest only
+                  // within ~2 years of graduation — junior/senior year, when
+                  // creating a gifting page is something a parent would
+                  // actually do. The old 13+ gate surfaced "Class of 2030 ·
+                  // 4 yrs away" for a 13-year-old: defensible, but nobody
+                  // creates a gifting page five years early and it confused
+                  // more than it invited (mirrors the Driver's License tile's
+                  // tight 14-16 window). Lower bound 0 still guards against
+                  // suggesting a graduation that already happened.
+                  if (yearsUntilGrad >= 0 && yearsUntilGrad <= 2 && !activeEvents.some(e => e.eventType === "graduation")) {
                     const yearsUntil = yearsUntilGrad;
                     const gradDateMs = new Date(gradYear, 5, 1).getTime();
                     suggestions.push({
@@ -9546,28 +10176,20 @@ export default function Dashboard() {
                       prefill: { name: `${childFirstSug}'s Graduation`, eventType: "graduation", eventDate: `${gradYear}-06-01`, eventCategory: "gifting_occasion" },
                     });
                   }
-                  if (!activeEvents.some(e => String((e as any).name || "").toLowerCase().includes("car"))) {
-                    suggestions.push({
-                      key: "sug-car", emoji: "🚗",
-                      name: `${childFirstSug}'s First Car`,
-                      sub: "Savings goal", countdown: "no date needed",
-                      sortMs: Number.POSITIVE_INFINITY,
-                      prefill: { name: `${childFirstSug}'s First Car`, eventType: "just_because", goalAmount: "5000", eventCategory: "savings_goal" },
-                    });
-                  }
-                  if (!activeEvents.some(e => String((e as any).name || "").toLowerCase().includes("college"))) {
-                    suggestions.push({
-                      key: "sug-college", emoji: "📚",
-                      name: `${childFirstSug}'s College Fund`,
-                      sub: "Savings goal", countdown: "no date needed",
-                      sortMs: Number.POSITIVE_INFINITY,
-                      prefill: { name: `${childFirstSug}'s College Fund`, eventType: "just_because", goalAmount: "50000", eventCategory: "savings_goal" },
-                    });
-                  }
+                  // Fund-level dollar-goal suggestions (First Car / College Fund)
+                  // intentionally REMOVED. A goal tracks the WHOLE fund toward a
+                  // number, so multiple goals don't compose — a "$5,000 First Car"
+                  // suggestion next to a $22k fund is already 4x "met" (absurd) —
+                  // and "save $X for college" implies an earmark a UTMA can't keep
+                  // (529 territory we deliberately don't compete on). The parent's
+                  // "what's the target / on track?" need is answered honestly by
+                  // the at-majority projection; the rally/progress mechanic, if
+                  // wanted, belongs at the OCCASION level (composes, honest). The
+                  // savings_goal rendering path stays dormant for that future use.
                 }
 
-                // Holiday - Oct through Dec (only when no cultural traditions set)
-                if (new Date().getMonth() >= 9 && traditions.length === 0 && !activeEvents.some(e => e.eventType === "holiday")) {
+                // Holiday - Oct through Dec.
+                if (new Date().getMonth() >= 9 && !activeEvents.some(e => e.eventType === "holiday")) {
                   const yr = new Date().getFullYear();
                   const xmas = new Date(yr, 11, 25);
                   const xmasDays = Math.ceil((xmas.getTime() - nowMs) / 86400000);
@@ -9596,36 +10218,32 @@ export default function Dashboard() {
                 // Type-aware empty-state copy. Tiles are 140px wide, so each line stays terse;
                 // the warm aspiration ("share the link and watch it grow") shows up via the
                 // emoji + verb pair rather than a paragraph the tile can't fit.
-                // Empty-state copy per occasion type. The word "fund"
-                // is intentionally avoided here — the footer says
-                // "All occasions and goals go into the same fund"
-                // (one fund per kid, money is fungible), so a tile
-                // labeled "Cake fund" / "Cap & gown fund" /
-                // "Welcome fund" inside that section directly
-                // contradicts the footer (reads as if the kid has
-                // a separate cake fund AND a main fund). Each tile
-                // is an OCCASION the parent is saving toward,
-                // pointing at the kid's single fund. Audit-flagged
-                // 2026-05-26. Locked: no "X fund" wording on tile
-                // empty states.
+                // Empty-state copy for an occasion with no gifts yet. Framing
+                // rule (LOCKED): an occasion is a MOMENT people gift around, NOT
+                // a savings target — so we avoid "Toward [thing]" (earmark/goal
+                // language), which contradicted this section's own promise that
+                // "every occasion goes into the same one fund, nothing is set
+                // aside." "Open for gifts" frames the empty tile as a gifting
+                // moment awaiting its first gift. (Also: no "X fund" wording —
+                // it reads as if the kid had a separate fund per occasion.)
                 const emptyStateByType: Record<string, string> = {
-                  car: "🚗 Toward first wheels",
-                  graduation: "🎓 Toward cap & gown",
-                  birthday: "🎂 Toward their cake day",
-                  holiday: "🎄 Toward holiday glow",
+                  car: "🚗 Open for gifts",
+                  graduation: "🎓 Open for gifts",
+                  birthday: "🎂 Open for gifts",
+                  holiday: "🎉 Open for gifts",
                   baby_shower: "🍼 Welcome to the world",
-                  religious_holiday: "✡️ Toward family traditions",
+                  religious_holiday: "🙏 Open for gifts",
                   just_because: "💛 Start the story",
                 };
                 const emptyStateByName = (eventName: string): string | null => {
                   const n = eventName.toLowerCase();
-                  if (n.includes("car")) return "🚗 Toward first wheels";
-                  if (n.includes("college") || n.includes("school")) return "📚 Toward college";
-                  if (n.includes("graduation")) return "🎓 Toward cap & gown";
-                  if (n.includes("hanukkah")) return "🕎 Toward the festival";
-                  if (n.includes("christmas") || n.includes("holiday")) return "🎄 Toward holiday glow";
-                  if (n.includes("birthday")) return "🎂 Toward their cake day";
-                  if (n.includes("trip") || n.includes("travel")) return "🌍 Toward the adventure";
+                  if (n.includes("car")) return "🚗 Open for gifts";
+                  if (n.includes("college") || n.includes("school")) return "📚 Open for gifts";
+                  if (n.includes("graduation")) return "🎓 Open for gifts";
+                  if (n.includes("hanukkah")) return "🕎 Open for gifts";
+                  if (n.includes("christmas") || n.includes("holiday")) return "🎉 Open for gifts";
+                  if (n.includes("birthday")) return "🎂 Open for gifts";
+                  if (n.includes("trip") || n.includes("travel")) return "🌍 Open for gifts";
                   return null;
                 };
 
@@ -9738,7 +10356,7 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {imgUrl ? (
                           <>
-                            <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: imgPosition, display: "block" }} />
+                            <FadeImage src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: imgPosition, display: "block" }} />
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 35%, white 100%)" }} />
                           </>
                         ) : (
@@ -9809,9 +10427,21 @@ export default function Dashboard() {
 
                 const visibleArchived = showArchivedTilesV2 ? archivedEvents : [];
                 const childFirst = recipientFirstNameDisplay || "your child";
-                const openCreate = () => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
+                const openCreate = () => { haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
 
                 if (activeEvents.length === 0 && archivedEvents.length === 0) {
+                  // Read-only roles (viewer, previous_owner): every affordance in
+                  // this empty state WRITES (suggestion tiles + traditions +
+                  // "New" all open create/save flows the server 403s for these
+                  // roles). Don't render an invitation they can't accept — a
+                  // quiet empty line instead.
+                  if (isReadOnlyFund) {
+                    return (
+                      <p style={{ fontSize: 13, color: "rgba(26,23,16,0.45)", lineHeight: 1.55, margin: 0 }}>
+                        No occasions yet.
+                      </p>
+                    );
+                  }
                   return (
                     <div>
                       {/* Warm copy */}
@@ -9855,21 +10485,13 @@ export default function Dashboard() {
                             </button>
                           );
                         })}
-                        {childFirstSug && (
-                          <button type="button" onClick={() => { haptic("light"); setCulturalBgSelections(traditions); setCulturalBgPickerOpen(true); }} style={{ width: 140, minWidth: 140, height: 148, flexShrink: 0, borderRadius: 18, border: traditions.length > 0 ? "1.5px solid rgba(26,61,43,0.25)" : "1.5px dashed rgba(26,61,43,0.25)", overflow: "hidden", cursor: "pointer", background: "white", display: "flex", flexDirection: "column", textAlign: "left" }}>
-                            <div style={{ flex: 1, background: "hsl(143,28%,97%)", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap", padding: "6px 8px" }}>
-                              {traditions.length > 0
-                                ? traditions.slice(0, 4).map(t => <span key={t} style={{ fontSize: 22, lineHeight: 1 }}>{TRADITION_ICONS[t]}</span>)
-                                : <span style={{ fontSize: 30 }}>🌍</span>
-                              }
-                            </div>
-                            <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                              <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>{traditions.length > 0 ? "Your traditions" : "Add your traditions"}</p>
-                              <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>{traditions.length > 0 ? `${traditions.length} selected` : "Unlock milestone suggestions"}</p>
-                              <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600 }}>{traditions.length > 0 ? "Edit →" : "Personalize →"}</p>
-                            </div>
-                          </button>
-                        )}
+                        {/* Cultural "Add your traditions" tile removed 2026-06-04
+                            (founder): it was configuration (set your family's
+                            background) masquerading as content in a row of
+                            occasions-to-gift-to, with vague "Unlocks milestone
+                            ideas" copy. The cultural-suggestion engine stays in
+                            code (dormant); if revived, it belongs INSIDE the
+                            occasion-create flow, not as a peer tile here. */}
                         <button type="button" onClick={openCreate} style={{ width: 72, minWidth: 72, height: 148, flexShrink: 0, borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)", background: "rgba(26,23,16,0.025)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(26,23,16,0.4)" }}>
                           <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                           <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
@@ -9951,43 +10573,8 @@ export default function Dashboard() {
                         );
                       })}
 
-                      {/* Traditions tile - always visible; shows selected icons when set */}
-                      {childFirstSug && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            haptic("light");
-                            setCulturalBgSelections(traditions);
-                            setCulturalBgPickerOpen(true);
-                          }}
-                          style={{
-                            width: 140, minWidth: 140, height: 148, flexShrink: 0,
-                            borderRadius: 18,
-                            border: traditions.length > 0 ? "1.5px solid rgba(26,61,43,0.25)" : "1.5px dashed rgba(26,61,43,0.25)",
-                            overflow: "hidden", cursor: "pointer", background: "white",
-                            display: "flex", flexDirection: "column",
-                            textAlign: "left",
-                          }}
-                        >
-                          <div style={{ flex: 1, background: "hsl(143,28%,97%)", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap", padding: "6px 8px" }}>
-                            {traditions.length > 0
-                              ? traditions.slice(0, 4).map(t => <span key={t} style={{ fontSize: 22, lineHeight: 1 }}>{TRADITION_ICONS[t]}</span>)
-                              : <span style={{ fontSize: 30, lineHeight: 1 }}>🌍</span>
-                            }
-                          </div>
-                          <div style={{ padding: "7px 10px 8px", background: "white", flexShrink: 0 }}>
-                            <p style={{ fontSize: 10.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 3 }}>
-                              {traditions.length > 0 ? "Your traditions" : "Add your traditions"}
-                            </p>
-                            <p style={{ fontSize: 9, color: "rgba(26,23,16,0.38)", lineHeight: 1.3, marginBottom: 2 }}>
-                              {traditions.length > 0 ? `${traditions.length} selected` : "Unlock milestone suggestions"}
-                            </p>
-                            <p style={{ fontSize: 9, color: "rgba(26,61,43,0.6)", fontWeight: 600, lineHeight: 1 }}>
-                              {traditions.length > 0 ? "Edit →" : "Personalize →"}
-                            </p>
-                          </div>
-                        </button>
-                      )}
+                      {/* Cultural "traditions" tile removed 2026-06-04 (founder):
+                          config-in-a-content-row. See the empty-state twin above. */}
 
                       {/* Show/hide archived toggle tile */}
                       {archivedEvents.length > 0 && (
@@ -10015,7 +10602,7 @@ export default function Dashboard() {
                       {!isReadOnlyFund && (
                         <button
                           type="button"
-                          onClick={() => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                          onClick={() => { haptic("selection"); if (isFundCovered || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                           style={{
                             width: 72, minWidth: 72, height: 148, flexShrink: 0,
                             borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)",
@@ -10033,7 +10620,7 @@ export default function Dashboard() {
                     {/* ── "All in the same fund" clarity note ── */}
                     {activeEvents.length > 0 && (
                       <p style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
-                        Every occasion and goal is the same one fund. Nothing is set aside. 🌱
+                        Every occasion goes into the same one fund. Nothing is set aside. 🌱
                       </p>
                     )}
 
@@ -10076,6 +10663,8 @@ export default function Dashboard() {
                           .filter(g => g.eventId === ev.id && g.status !== "failed" && g.status !== "refunded")
                           .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
                         const emoji = eventEmoji(ev.eventType);
+                        const evGiftsExpanded = expandedOccasionGiftLists.has(String(ev.id));
+                        const evGiftsVisible = evGiftsExpanded ? evGifts.length : 5;
 
                         return (
                           <motion.div
@@ -10134,7 +10723,7 @@ export default function Dashboard() {
                                       const evFxPct = Number.isFinite(evFx) ? Math.max(0, Math.min(100, evFx * 100)) : 50;
                                       const evFyPct = Number.isFinite(evFy) ? Math.max(0, Math.min(100, evFy * 100)) : 50;
                                       return (
-                                        <img
+                                        <FadeImage
                                           src={imgUrl}
                                           alt={ev.name}
                                           style={{
@@ -10170,7 +10759,7 @@ export default function Dashboard() {
                                       <p style={{ fontSize: 16, fontWeight: 800, color: "rgb(26,23,16)", lineHeight: 1.2, margin: 0 }}>{ev.name}</p>
                                       {(dateStr || isArch) && (
                                         <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.5)", marginTop: 3, margin: "3px 0 0" }}>
-                                          {[dateStr, daysLeft !== null && daysLeft > 0 ? `${daysLeft} days away` : daysLeft === 0 ? "Today" : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
+                                          {[dateStr, daysLeft !== null && daysLeft >= 0 ? humanizeDaysAway(daysLeft) : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
                                         </p>
                                       )}
                                     </div>
@@ -10191,7 +10780,7 @@ export default function Dashboard() {
                                       <p style={{ fontSize: 15, fontWeight: 800, color: "rgb(26,23,16)", lineHeight: 1.2 }}>{ev.name}</p>
                                       {(dateStr || isArch) && (
                                         <p style={{ fontSize: 11, color: "rgba(26,23,16,0.45)", marginTop: 2 }}>
-                                          {[dateStr, daysLeft !== null && daysLeft > 0 ? `${daysLeft} days away` : daysLeft === 0 ? "Today" : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
+                                          {[dateStr, daysLeft !== null && daysLeft >= 0 ? humanizeDaysAway(daysLeft) : null, isArch ? "Archived" : null].filter(Boolean).join(" · ")}
                                         </p>
                                       )}
                                     </div>
@@ -10257,10 +10846,11 @@ export default function Dashboard() {
                                   // so trusting them inflates "today's pace" projections by money
                                   // that never arrives. Parent contributions don't have this
                                   // problem since they fire via the off-session worker.
-                                  const M = sumMonthlyEquivalent([
+                                  const activeRecurring = [
                                     ...parentContributions.filter((c) => String(c.status || "").toLowerCase() === "active"),
                                     ...recurringGifts.filter((rg) => String(rg.status || "").toLowerCase() === "active" && !!rg.stripeSubscriptionId),
-                                  ]);
+                                  ];
+                                  const M = sumMonthlyEquivalent(activeRecurring);
 
                                   const r_m = Math.pow(1 + (0.07 - KIDDO_AUM_FEE_RATE), 1 / 12) - 1; // net fee, effective monthly
                                   let monthsToGoal: number | null = null;
@@ -10312,7 +10902,17 @@ export default function Dashboard() {
                                   })();
                                   const arrivalLabel = goalDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
                                   const childFirst = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the";
-                                  const monthlyDisplay = M > 0 ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(M)) : null;
+                                  // Mirror the hero/card: one schedule, or several sharing a
+                                  // cadence, show the real amount ("$25/day", "$75/month").
+                                  // Mixed cadences ($25/day + $10/year) have no honest single
+                                  // amount, so the projection omits it. M (the monthly rate)
+                                  // still drives the months-to-goal math above.
+                                  const rPer = (f: any) => f === "daily" ? "day" : f === "weekly" ? "week" : f === "yearly" ? "year" : "month";
+                                  const rateLabel = activeRecurring.length === 0
+                                    ? null
+                                    : (activeRecurring.length === 1 || new Set(activeRecurring.map((c: any) => c.frequency || "monthly")).size === 1)
+                                      ? `${formatMoneyFriendly(activeRecurring.reduce((s: number, c: any) => s + parseFloat(String(c?.amount || "0")), 0))}/${rPer((activeRecurring[0] as any)?.frequency)}`
+                                      : null;
                                   return (
                                     <div style={{ borderRadius: 10, background: "rgba(26,67,50,0.05)", border: "1px solid rgba(26,67,50,0.15)", padding: "10px 12px" }}>
                                       <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(26,67,50)", lineHeight: 1.5 }}>
@@ -10329,7 +10929,7 @@ export default function Dashboard() {
                                         {childFirst} fund is on pace for {fmtC(G)} in {horizonText} ({arrivalLabel}).
                                       </p>
                                       <p style={{ fontSize: 10.5, color: "rgba(26,67,50,0.7)", lineHeight: 1.5, marginTop: 3 }}>
-                                        {monthlyDisplay ? `${monthlyDisplay}/mo recurring · ` : ""}7% growth assumed.
+                                        {rateLabel ? `${rateLabel} recurring · ` : ""}7% growth assumed.
                                       </p>
                                     </div>
                                   );
@@ -10352,11 +10952,15 @@ export default function Dashboard() {
                                   <div>
                                     <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this occasion page</p>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                                      {evGifts.slice(0, 5).map((g, gi) => {
+                                      {evGifts.slice(0, evGiftsVisible).map((g, gi) => {
                                         const gName = displayGifterName(g.senderName, (g as any).isAnonymous);
                                         const gAmt = parseFloat(String(g.netAmount || g.amount || "0"));
-                                        const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : null;
-                                        const isLast = gi === Math.min(evGifts.length, 5) - 1;
+                                        // Year included: annual gifters (e.g. a grandparent who
+                                        // gives every birthday) otherwise render as identical-looking
+                                        // rows ("Chris Bennett · Nov 20 · $75" twice) that read as a
+                                        // duplicate bug. The year is what distinguishes them.
+                                        const gDate = g.createdAt ? new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : null;
+                                        const isLast = gi === Math.min(evGifts.length, evGiftsVisible) - 1;
                                         // Same thank-you state rules as elsewhere: owner self / anonymous / sent / draft / missing.
                                         const evGiftEmail = String((g as any)?.senderEmail || "").trim().toLowerCase();
                                         const evOwnerEmail = String(user?.email || "").trim().toLowerCase();
@@ -10394,9 +10998,38 @@ export default function Dashboard() {
                                         );
                                       })}
                                       {evGifts.length > 5 && (
-                                        <p style={{ fontSize: 11, color: "rgba(26,23,16,0.4)", textAlign: "center", paddingTop: 6 }}>+{evGifts.length - 5} more</p>
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedOccasionGiftLists(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(String(ev.id))) next.delete(String(ev.id));
+                                            else next.add(String(ev.id));
+                                            return next;
+                                          })}
+                                          data-testid="occasion-gifts-toggle"
+                                          style={{ background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "center", paddingTop: 8, paddingBottom: 2, fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-evergreen))" }}
+                                        >
+                                          {evGiftsExpanded ? "Show less" : `+${evGifts.length - 5} more`}
+                                        </button>
                                       )}
                                     </div>
+                                  </div>
+                                )}
+
+                                {/* No-gifts empty state. The gifts section above
+                                    hid itself when empty BECAUSE of goals — an
+                                    empty "Gifts" list next to a "$X of $Y" goal
+                                    bar read as a contradiction. Fund-level goals
+                                    are retired, so that reason is gone: show a
+                                    warm prompt that confirms this is where
+                                    supporters appear AND nudges a share (loop
+                                    fuel) instead of a blank. */}
+                                {evGifts.length === 0 && !isArch && goal <= 0 && (
+                                  <div>
+                                    <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 6 }}>Gifts via this occasion page</p>
+                                    <p style={{ fontSize: 12, color: "rgba(26,23,16,0.5)", lineHeight: 1.5, margin: 0 }}>
+                                      No gifts here yet. Share the link and the first person to give shows up right here.
+                                    </p>
                                   </div>
                                 )}
 
@@ -10645,7 +11278,7 @@ export default function Dashboard() {
                 letter editor, "what happens at majority"). All future-tense and
                 parent-facing, and moot once the handoff has happened. Hide it for
                 ANY viewer of an already-transferred fund — not just the owner: a
-                previous owner (Phil viewing Haley's handed-off fund) or a co-parent
+                previous owner (Marcus viewing Mia's handed-off fund) or a co-parent
                 would otherwise see a future "turns 21 / the day it becomes theirs"
                 countdown to an event that already happened. Gate on the fund's
                 transferredAt (the canonical "handed off" signal), which also covers
@@ -10735,6 +11368,21 @@ export default function Dashboard() {
                         // years are pure compound.
                         const projectedLongHorizon = projectAt(yearsToMajority + 12, yearsToMajority);
                         const showLongHorizon = age18Transition.daysUntil18 > 0 && projectedLongHorizon > projectedAtMajority * 1.5;
+                        // Near-majority emphasis flip. When less than ~10% of growth is
+                        // left before the handoff (e.g. a kid turning 21 in weeks projects
+                        // to ~today's balance), leading with the at-majority number both
+                        // undersells AND quietly reinforces the cliff framing we reject
+                        // (the handoff is the prize, not the finish line; the card title
+                        // above already states "turns {majority} on {date}"). So once the
+                        // at-majority number goes flat, the KEEP-GROWING horizon becomes the
+                        // hero and the at-majority number steps back to a grounded second
+                        // line. Far from majority it stays the hero (real growth, the
+                        // milestone everyone knows). Self-calibrating on the actual number,
+                        // not a year cutoff, so a fund whose heavy recurring contributions
+                        // still grow it meaningfully by majority correctly keeps the lead.
+                        // Mirrors the Projection page, which never anchors a near-grown kid
+                        // to majority (MIN_DEFAULT_HORIZON_YEARS).
+                        const nearMajority = age18Transition.daysUntil18 > 0 && projectedAtMajority < totalValue * 1.1;
                         // Subject for the "turns N" / "lets it keep growing" lines.
                         // Names always take singular verb agreement regardless of
                         // pronoun (Em turns 18, not Em turn 18). Pronoun fallback
@@ -10747,7 +11395,11 @@ export default function Dashboard() {
                           <>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
                               <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.55)", fontStyle: "italic" }}>
-                                On track for {fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱
+                                {nearMajority ? (
+                                  <>On track for ~{fmtUSD0(Math.round(projectedLongHorizon))} if {childSubject} keep{childIsSingular ? "s" : ""} it growing to {beyondAge} 🌱</>
+                                ) : (
+                                  <>On track for {fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} turn{childIsSingular ? "s" : ""} {age18Transition.majorityAge} 🌱</>
+                                )}
                               </p>
                               <button
                                 type="button"
@@ -10758,11 +11410,15 @@ export default function Dashboard() {
                                 <Info size={11} />
                               </button>
                             </div>
-                            {showLongHorizon && (
+                            {nearMajority ? (
+                              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", marginTop: 4, fontStyle: "italic" }}>
+                                ~{fmtUSD0(Math.round(projectedAtMajority))} when {childSubject} take{childIsSingular ? "s" : ""} ownership at {age18Transition.majorityAge}, then it keeps compounding.
+                              </p>
+                            ) : (showLongHorizon && (
                               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", marginTop: 4, fontStyle: "italic" }}>
                                 If {childSubject} let{childIsSingular ? "s" : ""} it keep growing to {beyondAge} → ~{fmtUSD0(Math.round(projectedLongHorizon))}.
                               </p>
-                            )}
+                            ))}
                           </>
                         );
                       })()}
@@ -10774,6 +11430,56 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Handoff TRAJECTORY curve, doorway to the Projection slider.
+                    The handoff is a WAYPOINT on an accelerating line, not the
+                    finish: the back-loaded magic of compounding is SHOWN, not
+                    preached (no caption; the curve is the argument). Card stops at
+                    majority+12 on purpose; the full horizon (to 65) is one tap away
+                    on the Projection page, explorable and user-chosen, never a
+                    fixed retirement headline. Age-robust: near majority the
+                    "Turns N" waypoint is dropped (it would sit on "today"); past
+                    majority the card is gated out (daysUntil18 > 0). Ported from
+                    DashboardLab 2026-06-11. */}
+                {totalValue > 0 && age18Transition && age18Transition.daysUntil18 > 0 && (() => {
+                  const yearsToMajority = age18Transition.daysUntil18 / 365.25;
+                  const majAge = age18Transition.majorityAge;
+                  const currentAge = Math.max(0, majAge - yearsToMajority);
+                  const beyondAge = majAge + 12;
+                  const activeMonthly = sumMonthlyEquivalent([
+                    ...parentContributions.filter((c: any) => String(c?.status || "").toLowerCase() === "active"),
+                    ...recurringGifts.filter((rg: any) => String(rg?.status || "").toLowerCase() === "active" && !!rg?.stripeSubscriptionId),
+                  ]);
+                  const projectAtCurve = (years: number, contribStop: number = years) =>
+                    projectFundValue({ startingValue: totalValue, monthlyContribution: activeMonthly, yearsAhead: years, contributionYears: contribStop });
+                  const pts: { age: number; value: number }[] = [{ age: currentAge, value: totalValue }];
+                  for (let age = Math.ceil(currentAge); age <= beyondAge; age++) {
+                    pts.push({ age, value: projectAtCurve(age - currentAge, yearsToMajority) });
+                  }
+                  if (pts.length < 3) return null;
+                  const showMilestone = yearsToMajority > 1.5;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => { haptic("selection"); if (activeFund?.id) setLocation(`/projection/${activeFund.id}`); }}
+                      aria-label="Explore the full growth horizon"
+                      style={{ display: "block", width: "100%", textAlign: "left", background: "white", border: "none", borderTop: "1px solid rgba(26,23,16,0.06)", padding: "10px 12px 12px", cursor: "pointer" }}
+                    >
+                      <ProjectionTrajectoryChart
+                        points={pts}
+                        targetAge={beyondAge}
+                        currentValue={totalValue}
+                        currentAge={Math.round(currentAge)}
+                        milestoneAge={showMilestone ? majAge : undefined}
+                        milestoneLabel={showMilestone ? `Turns ${majAge}` : undefined}
+                        heightPx={142}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4, marginTop: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "hsl(var(--kiddo-evergreen))" }}>Explore the full horizon →</span>
+                      </div>
+                    </button>
+                  );
+                })()}
 
                 {/* Letter - inline */}
                 <AnimatePresence initial={false}>
@@ -11002,6 +11708,75 @@ export default function Dashboard() {
                 per-fund + HOW preferences), the right path is the
                 Settings nav entry. Removing this card finishes that
                 IA work rather than regressing it. */}
+
+            {/* ── Pass it along (parent→parent, founder-locked 2026-06-04) ──
+                A DIFFERENT SPECIES from "Share {kid}'s link": Share brings
+                money INTO this kid's fund (the gifter loop — owns the top
+                bar, hero, roster nudge); this hands a FRIEND'S family the
+                product. Deliberately end-of-page: the parent has just read
+                the whole arc (gifts, growth, who loves them, the handoff
+                promise) — the one moment "I want this for people I love"
+                occurs naturally and the ask isn't growth-hacking. Quiet
+                text-first row, no button chrome, verb is "pass along"
+                (never "share" — that word belongs to the gifter loop).
+                NO bounty, ever: paying for the loop is the EarlyBird trap
+                (locked discipline; mercenaries, not believers). Measured
+                via referral_events → the Admin k-factor panel
+                (parentReferral.shares/visits) so the channel is judged by
+                funded-k like everything else. Hidden for read-only roles
+                and post-handoff owners (they have their own doorway:
+                "Start one for someone you love"). Sibling pattern: this is
+                that owner-mode doorway pointed outward from the parent
+                seat.
+
+                HELD IN RESERVE (founder-noted 2026-06-04): if post-launch
+                data shows desktop taps with poor completion (shares
+                recorded but few referred visits), the fix is NOT an
+                Acorns-style channel-icon grid (referral-program anatomy —
+                rejected by name; the no-bounty identity framing dies the
+                moment WhatsApp/X logos appear). The right addition is ONE
+                quiet secondary: "or send it by email →" (mailto: with the
+                warm message + ref link prefilled) — email is the only
+                desktop-native channel that's brandless and on-register.
+                Measure first via parentReferral.shares vs .visits on the
+                Admin k-factor panel; ship only if the gap is real. */}
+            {!isReadOnlyFund && !isOwnerMode && (
+              <button
+                type="button"
+                onClick={async () => {
+                  haptic("selection");
+                  const refCode = `pf-${String(activeFundId || "").slice(0, 12)}`;
+                  const url = `${window.location.origin}/?ref=${encodeURIComponent(refCode)}`;
+                  // Fire-and-forget analytics; the share must never wait on it.
+                  try {
+                    void fetch("/api/referral-events", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ refCode, fundId: activeFundId, action: "parent_referral_share", channel: "web" }),
+                    });
+                  } catch { /* analytics only */ }
+                  const shareText = "We started an investment fund for our kid that family and friends gift into. Thought your family might want this too.";
+                  if (navigator.share) {
+                    try { await navigator.share({ title: "Kiddo", text: shareText, url }); } catch { /* user dismissed */ }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText(`${shareText} ${url}`);
+                      toast({ title: "Link copied", description: "Paste it to a parent who'd want this." });
+                    } catch { /* clipboard blocked */ }
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "14px 16px", marginBottom: 14,
+                  background: "transparent", border: "1px dashed rgba(26,23,16,0.14)",
+                  borderRadius: 14, cursor: "pointer", textAlign: "center",
+                }}
+                data-testid="button-pass-it-along"
+              >
+                <span style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)" }}>
+                  Know a family who'd want this? <span style={{ fontWeight: 600, color: "rgba(26,23,16,0.75)" }}>Pass it along →</span>
+                </span>
+              </button>
+            )}
             <TrustMicroStrip />
           </>
         )}
@@ -11055,7 +11830,7 @@ export default function Dashboard() {
                   ))}
                 </ul>
               </div>
-              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+              <p className="text-2xs text-muted-foreground/60 leading-relaxed">
                 Past performance does not guarantee future results. Not investment advice.
               </p>
               <button
@@ -11100,7 +11875,17 @@ export default function Dashboard() {
                   const items = [
                     "Current invested balance",
                     ...(monthlyLabel ? [monthlyLabel] : []),
-                    "7% historical average annual return, compounded monthly",
+                    // Rate line matches what projectFundValue actually computes:
+                    // 7% historical average LESS the 0.10% AUM fee (netAumFee
+                    // defaults true), i.e. 6.9% net, compounded monthly. The
+                    // "after inflation" is load-bearing honesty: ~7% is the long-
+                    // run REAL (inflation-adjusted) total return of a diversified
+                    // equity portfolio (nominal historical is ~10%), so the figure
+                    // lands in TODAY'S dollars, not inflated future ones. That's
+                    // the framing the skeptical Boglehead-adjacent parent already
+                    // holds and rewards; the today's-dollars line below states the
+                    // takeaway plainly. 2026-06-11.
+                    "7% historical average annual return, after inflation, net our 0.10% fee, compounded monthly",
                     ...(majorityDateLabel ? [majorityDateLabel] : []),
                   ];
                   return items.map((item) => (
@@ -11110,6 +11895,9 @@ export default function Dashboard() {
                   ));
                 })()}
               </div>
+              <p className="text-[13px] text-muted-foreground/85 leading-relaxed">
+                Because that 7% is already after inflation, the number is in today's dollars: what it could buy now, not an inflated future figure.
+              </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 This is hypothetical. Not guaranteed. Markets go up and down. But gifts that last? Those are guaranteed. 🌱
               </p>
@@ -11190,8 +11978,8 @@ export default function Dashboard() {
           </div>
 
           <div className="px-6 pt-5 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
-              <span className="text-[10px]">{isOwnerMode ? "🌱" : "💛"}</span> {isOwnerMode ? "Add to your fund" : "Add a gift"}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
+              <span className="text-3xs">{isOwnerMode ? "🌱" : "💛"}</span> {isOwnerMode ? "Add to your fund" : "Add a gift"}
             </span>
           </div>
 
@@ -11213,7 +12001,7 @@ export default function Dashboard() {
                     <p className="text-xs font-semibold text-amber-800">
                       {formatCurrency(uninvestedCash)} already in the fund
                     </p>
-                    <p className="text-[11px] text-amber-700 mt-0.5">
+                    <p className="text-2xs text-amber-700 mt-0.5">
                       There's uninvested cash in {recipientFirstNameDisplay || "the fund"}. This gift is in addition to that.
                     </p>
                   </div>
@@ -11241,7 +12029,7 @@ export default function Dashboard() {
                           key={amt}
                           type="button"
                           onClick={() => setOneTimeAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                             oneTimeAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -11251,7 +12039,7 @@ export default function Dashboard() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum. Estimated processing updates live once you choose a payment method.</p>
+                    <p className="mt-1.5 text-2xs text-muted-foreground">$5 minimum. Estimated processing updates live once you choose a payment method.</p>
                   </div>
                 </div>
 
@@ -11292,21 +12080,21 @@ export default function Dashboard() {
                     <div className="rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] border border-[hsl(var(--kiddo-evergreen)/0.20)] p-3.5 space-y-2.5">
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
-                        <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+                        <p className="text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
                           {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
+                          <p className="text-3xs uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
                           <p className="text-sm font-semibold text-foreground/70 tabular-nums">{formatCurrency(beforeValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
+                          <p className="text-2xs text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
                         </div>
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                          <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
                           <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">
+                          <p className="text-2xs text-muted-foreground tabular-nums">
                             {fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%
                             {Math.abs(pctDelta) >= 0.1 && (
                               <span className={`ml-1 font-medium ${pctDelta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-amber-700"}`}>
@@ -11392,8 +12180,8 @@ export default function Dashboard() {
                           <StockLogo ticker={defaultTicker} size={28} className="shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">{stockMeta?.name ?? defaultTicker}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
-                            {amt > 0 && <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1">{formatCurrency(amt)} invested</p>}
+                            <p className="text-2xs text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
+                            {amt > 0 && <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1">{formatCurrency(amt)} invested</p>}
                           </div>
                         </div>
                       );
@@ -11405,7 +12193,7 @@ export default function Dashboard() {
                           <div className="text-2xl shrink-0">💵</div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Held as cash</p>
-                            <p className="text-[11px] text-muted-foreground">Sits in the fund until you manually invest it</p>
+                            <p className="text-2xs text-muted-foreground">Sits in the fund until you manually invest it</p>
                           </div>
                         </div>
                       );
@@ -11432,7 +12220,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <span className="text-base">{STRATEGY_META[strategy]?.emoji ?? STRATEGY_META.growth.emoji}</span>
                           <p className="text-sm font-semibold text-foreground">
-                            {isCustom ? "Custom mix" : isBalanced ? "Steady & Balanced" : isConservative ? "Conservative Mix" : "Growth Mix"}
+                            {isCustom ? "Custom mix" : isBalanced ? "Balanced Mix" : isConservative ? "Conservative Mix" : "Growth Mix"}
                           </p>
                         </div>
                         {allocations.length > 0 ? (
@@ -11441,14 +12229,14 @@ export default function Dashboard() {
                               <div key={a.ticker} className="flex items-center gap-2 rounded-lg bg-background/70 border border-border/50 px-2.5 py-1.5">
                                 <StockLogo ticker={a.ticker} size={20} />
                                 <div className="min-w-0">
-                                  <p className="text-[10px] font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
-                                  <p className="text-[9px] text-muted-foreground leading-tight truncate">{a.name}</p>
+                                  <p className="text-3xs font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
+                                  <p className="text-4xs text-muted-foreground leading-tight truncate">{a.name}</p>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : isCustom ? (
-                          <p className="text-[11px] text-muted-foreground">Loading your custom mix...</p>
+                          <p className="text-2xs text-muted-foreground">Loading your custom mix...</p>
                         ) : null}
                       </div>
                     );
@@ -11519,7 +12307,7 @@ export default function Dashboard() {
                       no-greenwashing rule, omitting this would be the
                       Acorns-style "money sitting uninvested" failure. */}
                   {oneTimeExecutionModel === "cash" && (
-                    <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+                    <p className="px-1 text-2xs leading-relaxed text-muted-foreground">
                       Cash sits in the fund earning nothing until you invest it. Use this when you want to time the buy yourself, or accumulate before a single bigger investment.
                     </p>
                   )}
@@ -11544,9 +12332,9 @@ export default function Dashboard() {
                         >
                           <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
                           <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                          <p className="text-2xs text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
                           {amt > 0 && (
-                            <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
+                            <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
                               {formatCurrency(amt)} invested
                             </p>
                           )}
@@ -11617,21 +12405,21 @@ export default function Dashboard() {
                     <div className="rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] border border-[hsl(var(--kiddo-evergreen)/0.20)] p-3.5 space-y-2.5">
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
-                        <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+                        <p className="text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
                           {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
+                          <p className="text-3xs uppercase tracking-wide text-muted-foreground/70 mb-0.5">Before</p>
                           <p className="text-sm font-semibold text-foreground/70 tabular-nums">{formatCurrency(beforeValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
+                          <p className="text-2xs text-muted-foreground tabular-nums">{fmtShares(beforeShares)} sh · {beforePct.toFixed(1)}%</p>
                         </div>
                         <span className="text-[hsl(var(--kiddo-evergreen))] text-base font-bold" aria-hidden="true">→</span>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                          <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
                           <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(afterValue)}</p>
-                          <p className="text-[11px] text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
+                          <p className="text-2xs text-muted-foreground tabular-nums">{fmtShares(afterShares)} sh · {afterPct.toFixed(1)}%</p>
                         </div>
                       </div>
                     </div>
@@ -11724,14 +12512,14 @@ export default function Dashboard() {
                           <span className="block text-xs text-muted-foreground">{description}</span>
                         </span>
                         <span className="shrink-0 text-right">
-                          <span className={`block text-[11px] font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}>
+                          <span className={`block text-2xs font-semibold ${method === "bank" ? "text-green-700" : "text-muted-foreground"}`}>
                             {fee}
                           </span>
-                          <span className="block text-[10px] text-foreground/80" data-testid={`text-one-time-total-${method}`}>
+                          <span className="block text-3xs text-foreground/80" data-testid={`text-one-time-total-${method}`}>
                             {formatCurrency(estimate.totalCharge)} total
                           </span>
                           {savings > 0 && (
-                            <span className="block text-[10px] text-green-700">
+                            <span className="block text-3xs text-green-700">
                               Save about {formatCurrency(savings)}
                             </span>
                           )}
@@ -11739,11 +12527,11 @@ export default function Dashboard() {
                       </button>
                     )})}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     Estimated charge = gift amount plus payment processing. The full gift amount goes into the fund.
                   </p>
                   {oneTimeAchSavings > 0 && (
-                    <p className="text-[11px] text-green-700">
+                    <p className="text-2xs text-green-700">
                       Bank transfer saves about {formatCurrency(oneTimeAchSavings)} compared with card pricing.
                     </p>
                   )}
@@ -11773,7 +12561,7 @@ export default function Dashboard() {
                         rows={3}
                         className="w-full rounded-xl border border-amber-200/40 bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-amber-700/40 focus:outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <p className="text-[10px] text-muted-foreground text-right">{oneTimeMemoryNote.length}/240</p>
+                      <p className="text-3xs text-muted-foreground text-right">{oneTimeMemoryNote.length}/240</p>
                       {/* Media trio (photo / video / voice). Voice is the moat
                           — Emma at 18 hearing the parent's voice from when she
                           was 3. Collapsible by default so the speed of the
@@ -11846,7 +12634,7 @@ export default function Dashboard() {
             // per row instead of a name. Anonymity doesn't preclude
             // detail: dates, amounts, tickers, messages, and "now worth"
             // deltas all still tell the story without identifying the
-            // giver. Per the design lens (Emma at 18 looking back),
+            // gifter. Per the design lens (Emma at 18 looking back),
             // these gifts ARE part of her story — flattening them to a
             // count is the opposite of what we should do.
             const anonSorted = [...selectedGifter.gifts].sort(
@@ -12223,7 +13011,7 @@ export default function Dashboard() {
                           // The gifter's real profile photo in the detail modal
                           // hero — same swap as the small roster avatar so the
                           // face reads consistently (Dad's photo, not initials).
-                          <img
+                          <FadeImage
                             src={(selectedGifter.avatarUrl || user?.profileImageUrl) as string}
                             alt=""
                             className="w-full h-full object-cover"
@@ -12787,7 +13575,7 @@ export default function Dashboard() {
         open={!!addFromScheduleSheet}
         onOpenChange={(v) => { if (!v && !contributingNow) setAddFromScheduleSheet(null); }}
       >
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 max-h-[90dvh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Add to fund</DialogTitle>
           <div className="p-6 space-y-5">
             <div className="space-y-1">
@@ -12819,7 +13607,7 @@ export default function Dashboard() {
                 className="w-full rounded-xl border border-amber-200/40 bg-white/80 px-3 py-2.5 text-sm resize-none placeholder:text-amber-700/40 focus:outline-none focus:ring-1 focus:ring-primary"
                 data-testid="textarea-add-from-schedule-note"
               />
-              <p className="text-[10px] text-muted-foreground text-right">{addFromScheduleNote.length}/240</p>
+              <p className="text-3xs text-muted-foreground text-right">{addFromScheduleNote.length}/240</p>
               {/* Photo / video / voice trio for the contribute-now flow.
                   Same composer as the one-time and recurring flows so the
                   parent learns the pattern once. */}
@@ -12973,6 +13761,7 @@ export default function Dashboard() {
         fundName={recipientFirstNameDisplay || activeFund?.name}
         fundSlug={(activeFund as any)?.slug}
         childPhotoUrl={(activeFund as any)?.childPhotoUrl || undefined}
+        childBirthdate={(activeFund as any)?.recipientBirthdate || undefined}
         investPrefs={dashboardSummary?.investmentPreferences || undefined}
         editEvent={editEventTarget}
         isOwnerMode={isOwnerMode}
@@ -13069,7 +13858,7 @@ export default function Dashboard() {
                   ? `It'll show up in ${recipientFirstNameDisplay}'s fund any moment now.`
                   : "It'll show up in the fund any moment now."}
               </p>
-              <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
+              <p className="text-2xs text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
                 Powered by Kiddo · gifts that actually last 🌱
               </p>
             </div>
@@ -13113,7 +13902,7 @@ export default function Dashboard() {
           7% = $Y at 18) so the parent sees what Plus actually unlocks for
           their fund, not generic feature copy. */}
       <Dialog open={autoInvestUpgradeOpen} onOpenChange={(open) => { if (!open) setAutoInvestUpgradeOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
             const child = recipientFirstNameDisplay || "your child";
@@ -13157,7 +13946,7 @@ export default function Dashboard() {
                       <span>+ added by $25/mo recurring</span>
                       <span className="font-semibold text-foreground tabular-nums">+{fmt(delta)}</span>
                     </div>
-                    <p className="pt-1 text-[10px] leading-snug text-muted-foreground/70">
+                    <p className="pt-1 text-3xs leading-snug text-muted-foreground/70">
                       Starting from {fmt(totalValue)}, {yearsLabel} of compounding at 7% yearly average. Markets vary. Time is what compounds.
                     </p>
                   </div>
@@ -13175,14 +13964,14 @@ export default function Dashboard() {
                     <li>· Add your own photos, videos, and voice to Memory Book entries</li>
                     <li>· Custom fund mix (pick your own stocks and weights)</li>
                     <li>· Co-parent access for a partner or guardian</li>
-                    <li>· 3 active occasions at a time, priority support</li>
+                    <li>· Unlimited occasions, priority support</li>
                   </ul>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Kiddo+</p>
-                    <p className="text-[11px] text-muted-foreground">$3.99/month or $29/year. Cancel any time.</p>
+                    <p className="text-2xs text-muted-foreground">$3.99/month or $29/year. Cancel any time.</p>
                   </div>
                 </div>
 
@@ -13263,8 +14052,8 @@ export default function Dashboard() {
           )}
 
           <div className="px-6 pt-4 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-              <span className="text-[10px]">🔁</span> Recurring investment
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+              <span className="text-3xs">🔁</span> Recurring investment
             </span>
           </div>
 
@@ -13323,7 +14112,7 @@ export default function Dashboard() {
                           key={amt}
                           type="button"
                           onClick={() => setAutoInvestAmount(String(amt))}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                          className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                             autoInvestAmount === String(amt)
                               ? "border-primary text-primary bg-primary/10"
                               : "border-border text-muted-foreground hover:text-foreground"
@@ -13354,7 +14143,7 @@ export default function Dashboard() {
                         </button>
                       ))}
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">$5 minimum per gift</p>
+                    <p className="mt-1.5 text-2xs text-muted-foreground">$5 minimum per gift</p>
                   </div>
                 </div>
 
@@ -13383,7 +14172,7 @@ export default function Dashboard() {
                       className="mt-3 rounded-2xl bg-[hsl(var(--kiddo-gold)/0.10)] border border-[hsl(var(--kiddo-gold)/0.30)] px-4 py-3 text-center"
                       data-testid="auto-invest-daily-equivalent"
                     >
-                      <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-muted-foreground/80">
+                      <p className="text-3xs uppercase tracking-[0.14em] font-bold text-muted-foreground/80">
                         That's about
                       </p>
                       <p className="mt-0.5 text-2xl font-bold text-foreground tabular-nums leading-tight">
@@ -13430,10 +14219,10 @@ export default function Dashboard() {
                           <div className="grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 text-[12px] items-baseline">
                             <span className="text-green-800/55">Was</span>
                             <span className="text-green-800/75 tabular-nums">{formatCurrency(prevAmount)}/{freqWord(prevFreq)}</span>
-                            <span className="text-green-800/55 text-[11px]">· {formatCurrency(prevAnnualized)}/yr</span>
+                            <span className="text-green-800/55 text-2xs">· {formatCurrency(prevAnnualized)}/yr</span>
                             <span className="text-green-800/55">Now</span>
                             <span className="text-green-800 font-semibold tabular-nums">{formatCurrency(amt)}/{freqWord(autoInvestFrequency)}</span>
-                            <span className="text-green-800/70 text-[11px]">
+                            <span className="text-green-800/70 text-2xs">
                               · {formatCurrency(amt * periodsPerYear)}/yr
                               {annualDelta !== 0 && (
                                 <span className={`ml-1 font-medium ${annualDelta > 0 ? "text-green-700" : "text-amber-700"}`}>
@@ -13470,8 +14259,8 @@ export default function Dashboard() {
                         </>
                       )}
                       {showProjection && (
-                        <p className="text-[10px] text-green-800/45 leading-snug pt-0.5">
-                          *Assuming a 7% yearly average. Markets vary. Time is what compounds.
+                        <p className="text-3xs text-green-800/45 leading-snug pt-0.5">
+                          *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
                         </p>
                       )}
                     </div>
@@ -13547,7 +14336,7 @@ export default function Dashboard() {
                           <StockLogo ticker={defaultTicker} size={28} className="shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">{stockMeta?.name ?? defaultTicker}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
+                            <p className="text-2xs text-muted-foreground mt-0.5">{stockMeta?.tagline ?? "Your chosen default stock"}</p>
                           </div>
                         </div>
                       );
@@ -13559,7 +14348,7 @@ export default function Dashboard() {
                           <div className="text-2xl shrink-0">💵</div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Held as cash</p>
-                            <p className="text-[11px] text-muted-foreground">Money sits as cash until you manually invest it</p>
+                            <p className="text-2xs text-muted-foreground">Money sits as cash until you manually invest it</p>
                           </div>
                         </div>
                       );
@@ -13586,7 +14375,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <span className="text-base">{STRATEGY_META[strategy]?.emoji ?? STRATEGY_META.growth.emoji}</span>
                           <p className="text-sm font-semibold text-foreground">
-                            {isCustom ? "Custom mix" : isBalanced ? "Steady & Balanced" : isConservative ? "Conservative Mix" : "Growth Mix"}
+                            {isCustom ? "Custom mix" : isBalanced ? "Balanced Mix" : isConservative ? "Conservative Mix" : "Growth Mix"}
                           </p>
                         </div>
                         {allocations.length > 0 ? (
@@ -13595,14 +14384,14 @@ export default function Dashboard() {
                               <div key={a.ticker} className="flex items-center gap-2 rounded-lg bg-background/70 border border-border/50 px-2.5 py-1.5">
                                 <StockLogo ticker={a.ticker} size={20} />
                                 <div className="min-w-0">
-                                  <p className="text-[10px] font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
-                                  <p className="text-[9px] text-muted-foreground leading-tight truncate">{a.name}</p>
+                                  <p className="text-3xs font-bold text-foreground">{a.ticker} <span className="text-[hsl(var(--kiddo-evergreen))]">{a.weight}%</span></p>
+                                  <p className="text-4xs text-muted-foreground leading-tight truncate">{a.name}</p>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : isCustom ? (
-                          <p className="text-[11px] text-muted-foreground">Loading your custom mix...</p>
+                          <p className="text-2xs text-muted-foreground">Loading your custom mix...</p>
                         ) : null}
                       </div>
                     );
@@ -13657,9 +14446,9 @@ export default function Dashboard() {
                           >
                             <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
                             <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                            <p className="text-2xs text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
                             {amt > 0 && (
-                              <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
+                              <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
                                 {formatCurrency(amt)} invested
                               </p>
                             )}
@@ -13863,7 +14652,7 @@ export default function Dashboard() {
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3.5 text-sm leading-relaxed resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:border-[hsl(var(--kiddo-evergreen)/0.4)] focus:ring-1 focus:ring-[hsl(var(--kiddo-evergreen)/0.2)]"
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground">{autoInvestMemoryNote.length}/400</span>
+                  <span className="text-3xs text-muted-foreground">{autoInvestMemoryNote.length}/400</span>
                 </div>
                 {/* Photo / video / voice trio. Note: per the "recurring stamps
                     once" rule, only the kickoff entry carries media. Future
@@ -13926,7 +14715,7 @@ export default function Dashboard() {
                       ? ` into ${quotedAutoInvestStocks.find(s => s.symbol === autoInvestTicker)?.name ?? autoInvestTicker}`
                       : ""}. Change or cancel anytime.
                   </p>
-                  <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
+                  <p className="text-2xs text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
                     Powered by Kiddo · gifts that actually last 🌱
                   </p>
                 </div>
@@ -13951,7 +14740,7 @@ export default function Dashboard() {
       </Dialog>
 
       <Dialog open={kidViewConfigOpen} onOpenChange={(o) => { if (!o) { setKidViewConfigOpen(false); setKidViewConfigStep("settings"); } }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Kid View settings</DialogTitle>
 
           {kidViewConfigStep === "settings" ? (
@@ -14014,17 +14803,17 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-foreground">Teen stock suggestions</p>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {pendingCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">
+                          <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]">
                             {pendingCount} pending
                           </span>
                         )}
                         {approvedCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-3xs font-bold text-green-700">
                             {approvedCount} approved
                           </span>
                         )}
                         {declinedCount > 0 && (
-                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-bold text-amber-800">
                             {declinedCount} declined
                           </span>
                         )}
@@ -14032,8 +14821,9 @@ export default function Dashboard() {
                     </div>
                     {/* Show ALL suggestions, not just the first 3 — a teen
                         flooding her parent with picks deserves visibility,
-                        not silent truncation. Long lists scroll naturally
-                        inside the modal. */}
+                        not silent truncation. The DialogContent now scrolls
+                        (max-h-[90dvh] overflow-y-auto), so long lists stay
+                        reachable inside the modal. */}
                     {enriched.map((suggestion: any) => {
                       const status = suggestion.effectiveStatus;
                       const statusPill = status === "approved"
@@ -14049,10 +14839,10 @@ export default function Dashboard() {
                               <p className="font-medium text-foreground">{suggestion.ticker}</p>
                               {suggestion.reason && <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>}
                               {suggestion.submittedAt && (
-                                <p className="mt-1 text-[10px] text-muted-foreground/60">Submitted {new Date(suggestion.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                                <p className="mt-1 text-3xs text-muted-foreground/60">Submitted {new Date(suggestion.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                               )}
                             </div>
-                            <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${statusPill}`}>
+                            <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-bold ${statusPill}`}>
                               {suggestion.isPending ? "Saving…" : statusLabel}
                             </span>
                           </div>
@@ -14132,54 +14922,7 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={culturalBgPickerOpen} onOpenChange={open => { if (!open) setCulturalBgPickerOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Your family's traditions</DialogTitle>
-          <div className="p-6 space-y-5">
-            <div>
-              <p className="text-sm font-medium text-primary">Occasions and Goals</p>
-              <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">What does your family celebrate?</h2>
-              <p className="mt-2 text-sm text-muted-foreground">We'll suggest the right milestones at the right time. Pick as many as apply.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(TRADITION_LABELS) as CulturalTradition[]).map(t => {
-                const selected = culturalBgSelections.includes(t);
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      haptic("selection");
-                      setCulturalBgSelections(prev =>
-                        prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]
-                      );
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all ${
-                      selected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-muted-foreground/40"
-                    }`}
-                  >
-                    <span className="text-xl leading-none">{TRADITION_ICONS[t]}</span>
-                    <span className="text-sm font-medium text-foreground leading-tight">{TRADITION_LABELS[t]}</span>
-                    {selected && (
-                      <div className="ml-auto w-4 h-4 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                        <Plus size={10} className="text-primary-foreground rotate-45" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setCulturalBgPickerOpen(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={handleSaveCulturalBg} disabled={savingCulturalBg}>
-                {savingCulturalBg ? "Saving..." : "Save traditions"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Cultural-traditions picker dialog removed 2026-06-04 (founder) — see the tile-removal note in the occasions strip. */}
 
       {/* Managed-mix sell warning. Shown before the regular sell sheet when the
           holding is part of the active managed strategy. Nudges toward "Customize mix". */}
@@ -14302,16 +15045,16 @@ export default function Dashboard() {
               {/* Summary row */}
               <div className="flex gap-3 mb-4">
                 <div className="flex-1 rounded-xl bg-muted/40 border border-border/30 px-3 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Current value</p>
+                  <p className="text-3xs font-semibold uppercase tracking-wide text-muted-foreground">Current value</p>
                   <p className="text-sm font-bold text-foreground mt-0.5">{formatCurrency(maxValue)}</p>
                 </div>
                 <div className="flex-1 rounded-xl bg-muted/40 border border-border/30 px-3 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total shares</p>
+                  <p className="text-3xs font-semibold uppercase tracking-wide text-muted-foreground">Total shares</p>
                   <p className="text-sm font-bold text-foreground mt-0.5">{maxShares.toFixed(4)}</p>
                 </div>
                 {pricePerShare > 0 && (
                   <div className="flex-1 rounded-xl bg-muted/40 border border-border/30 px-3 py-2.5 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Per share</p>
+                    <p className="text-3xs font-semibold uppercase tracking-wide text-muted-foreground">Per share</p>
                     <p className="text-sm font-bold text-foreground mt-0.5">{formatCurrency(pricePerShare)}</p>
                   </div>
                 )}
@@ -14373,7 +15116,7 @@ export default function Dashboard() {
                         key={`${option.label}-${option.amount}`}
                         type="button"
                         onClick={() => setSellShares(option.amount.toFixed(2))}
-                        className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                        className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                           sellShares === option.amount.toFixed(2)
                             ? "border-primary text-primary bg-primary/10"
                             : "border-border text-muted-foreground hover:text-foreground"
@@ -14386,7 +15129,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => setSellShares(maxShares.toFixed(4))}
-                        className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                        className={`text-2xs px-2.5 py-1 rounded-md border transition-colors ${
                           sellShares === maxShares.toFixed(4)
                             ? "border-primary text-primary bg-primary/10"
                             : "border-border text-muted-foreground hover:text-foreground"
@@ -14537,212 +15280,9 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* Smart nudge modal */}
-      <Dialog open={smartNudge !== null} onOpenChange={(open) => { if (!open) setSmartNudge(null); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Smart nudge</DialogTitle>
-          {smartNudge && (() => {
-            const child = recipientFirstNameDisplay || "The fund";
-            // `her` pronoun + `delta` / `monthIncrease` were used by the
-            // previous comparison-table-shaped variants. Removed 2026-05-13
-            // with the rewrite — the new prose variants don't reference
-            // them. If pronouns become relevant again, grab them from
-            // `childPronouns` inline at the use site.
-            const fmt = (n?: number) => n != null ? `~$${(Math.round(n / 100) * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
-            const fmtAmt = (n?: number) => n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
-            // Per-scenario hero anchor. Without this the modal was a
-            // wall of text with no visual signal of WHICH moment the
-            // nudge celebrates. Eyebrow + headline alone made the
-            // surface read like a conversion-funnel popup instead of
-            // a contextual milestone. Locked palette: evergreen tile
-            // (Apple-Settings-warm rather than gold celebration).
-            // Trophy for milestone, TrendingUp for outperforming,
-            // Heart for consistent-streak (the "showing up" anchor).
-            const HeroIcon = smartNudge.scenario === "milestone"
-              ? Trophy
-              : smartNudge.scenario === "outperforming"
-                ? TrendingUp
-                : Heart;
-            // Current balance line — a reinforcement number the
-            // parent can anchor to. The milestone modal previously
-            // said "Emma just crossed $100" with no other number on
-            // screen; now we also show the actual balance so the
-            // moment connects to reality. Computed at render time
-            // from the live totalValue (not the stale fundHistory
-            // value used to detect the crossing).
-            const balanceLine = totalValue > 0
-              ? `Now at ${fmtAmt(totalValue)}.`
-              : null;
-            return (
-              <div className="p-6 space-y-5">
-                {/* Hero icon anchor. Small evergreen-tinted tile gives
-                    the modal a visual moment without crossing into
-                    "celebration emoji" territory (locked memory: only
-                    🌱 is reserved). Per-scenario icon makes the
-                    surface scannable at a glance — Trophy for a
-                    crossed milestone, TrendingUp for outperforming,
-                    Heart for the consistent-streak anchor. */}
-                <div className="flex items-center justify-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]">
-                    <HeroIcon size={26} strokeWidth={1.8} />
-                  </div>
-                </div>
-                {/* Three scenarios — outperforming / consistent / milestone.
-                    Rewritten 2026-05-13 from the previous comparison-table
-                    register (math panel + 'Double to \$X' CTA + 🌟 emoji
-                    + platitudinal greeting-card lines) toward calm Kiddo
-                    prose. The information is identical; the surface is
-                    no longer fintech-conversion-funnel anatomy.
-                    Key changes:
-                      - No emoji (🌟 violated brand; only 🌱 is reserved)
-                      - No 'The first \$X is the hardest' platitude (also
-                        slightly inaccurate — next \$X comes at the same
-                        contribution pace; compounding adds ~7%/yr only)
-                      - No math-comparison panel (Acorns/Robinhood pattern)
-                      - No 'Double to \$X' aggressive CTA. 'Adjust recurring'
-                        honestly describes what happens (opens the editor)
-                        without pushing a specific increment. */}
-
-                {/* Scenario 1: Outperforming */}
-                {smartNudge.scenario === "outperforming" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {child}'s fund so far
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      Up {smartNudge.returnPct}%.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Past growth isn't a promise, so we project ahead at the 7% long-run average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} is projected to have {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
-                        <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {/* Scenario 2: Consistent streak */}
-                {smartNudge.scenario === "consistent" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Steady
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      {smartNudge.streakMonths} months without a missed cycle.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} projects to {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
-                        <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {/* Scenario 3: Milestone */}
-                {smartNudge.scenario === "milestone" && (
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Milestone
-                    </p>
-                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                      {child} just crossed {fmtAmt(smartNudge.milestoneAmt)}.
-                    </h2>
-                    {balanceLine && (
-                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {balanceLine}
-                      </p>
-                    )}
-                    {/* Honest projection. Rewritten 2026-05-15:
-                        OLD copy said "the next $500 arrives in N months"
-                        with math = milestoneAmt / monthlyAmt — wrong on
-                        three counts: (1) ignored the current balance,
-                        (2) ignored 7% growth, (3) "the next $500" meant
-                        "another chunk" not "the next milestone."
-                        NEW: nextMilestoneAmt is the literal next
-                        threshold (e.g., $1K after $500), and the months
-                        come from a month-by-month simulation that
-                        starts at current balance, applies 7% net-of-fee
-                        growth, and adds monthly contributions until
-                        the next threshold is reached. nextMilestoneAmt
-                        is undefined if the fund is at the highest
-                        threshold ($100K), in which case we skip the
-                        projection line entirely. */}
-                    {/* Classic React gotcha: {x && <element>} renders
-                        the literal "0" in the DOM if x === 0 (number),
-                        because && returns its left operand when falsy
-                        and React happily renders numbers as text.
-                        Explicit `> 0` guards instead. Reported with a
-                        screenshot 2026-05-15 — Emma's $1,917 fund
-                        showed a stray "0" in the milestone modal
-                        because monthsAtCurrentRate was 0 (fund already
-                        past the next milestone, projection didn't
-                        apply). The trigger-side gate now suppresses
-                        this scenario entirely, but the defensive
-                        boolean checks below remove the footgun. */}
-                    {(smartNudge.nextMilestoneAmt ?? 0) > 0 && (smartNudge.monthsAtCurrentRate ?? 0) > 0 && (
-                      <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                        At your current pace ({fmtAmt(smartNudge.currentMonthlyAmt || 0)}/mo plus 7% historical-average growth), you'd cross {fmtAmt(smartNudge.nextMilestoneAmt)} in about {smartNudge.monthsAtCurrentRate} {smartNudge.monthsAtCurrentRate === 1 ? "month" : "months"}.
-                        {(smartNudge.doubledAmt ?? 0) > 0 && (smartNudge.monthsDoubled ?? 0) > 0 && (
-                          <>
-                            {" "}At {fmtAmt(smartNudge.doubledAmt)}/mo, in about {smartNudge.monthsDoubled} {smartNudge.monthsDoubled === 1 ? "month" : "months"}.
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* CTAs. 'Adjust recurring' replaces 'Double to \$X/month'
-                    — the previous label proposed a 100% increase as the
-                    default ask, which is aggressive even when the math
-                    supports it. The button now honestly describes what
-                    happens (opens the recurring-investment editor with
-                    the doubled amount pre-filled as a suggestion, which
-                    the parent can change). */}
-                <div className="space-y-2">
-                  <Button
-                    className="w-full rounded-xl h-11"
-                    onClick={() => {
-                      haptic("medium");
-                      setSmartNudge(null);
-                      if (smartNudge.doubledAmt) setAutoInvestAmount(String(smartNudge.doubledAmt));
-                      setEditingContribId(null);
-                      setAutoInvestStep("amount");
-                      setAutoInvestModalOpen(true);
-                    }}
-                  >
-                    Adjust recurring
-                  </Button>
-                  <button
-                    type="button"
-                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
-                    onClick={() => { haptic("selection"); setSmartNudge(null); }}
-                  >
-                    Not now
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* Smart nudge is now a non-blocking toast (see fireNudge above), not a
+          modal — it no longer covers the hero value-roll, and the live
+          projection lives in the recurring editor it routes to. 2026-06-04. */}
 
       {/* Recurring list-view action sheet — Edit / Pause-or-Resume / Cancel for the
           tapped row. Cancel uses a two-step within the same dialog (menu → confirm)
@@ -14806,10 +15346,10 @@ export default function Dashboard() {
                       <div className="grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 text-[12px] items-baseline">
                         <span className="text-amber-900/55">Was</span>
                         <span className="text-amber-900/80 tabular-nums">{formatCurrency(cancelAnnualized)}/yr</span>
-                        <span className="text-amber-900/55 text-[11px]">added on autopilot</span>
+                        <span className="text-amber-900/55 text-2xs">added on autopilot</span>
                         <span className="text-amber-900/55">After</span>
                         <span className="text-amber-900 font-semibold tabular-nums">$0/yr</span>
-                        <span className="text-amber-900/55 text-[11px]">unless you set up a new one</span>
+                        <span className="text-amber-900/55 text-2xs">unless you set up a new one</span>
                       </div>
                       <div className="pt-1.5 border-t border-amber-200/60 space-y-1">
                         <p className="text-[12px] text-amber-900/85 leading-relaxed">
@@ -14821,8 +15361,8 @@ export default function Dashboard() {
                           −{cancelFmt0(cancelFv)} less for {cancelChildFirst} at {majorityAge}<span className="text-amber-900/55 font-normal">*</span>
                         </p>
                       </div>
-                      <p className="text-[10px] text-amber-900/55 leading-snug pt-0.5">
-                        *Assuming a 7% yearly average. Markets vary. Time is what compounds.
+                      <p className="text-3xs text-amber-900/55 leading-snug pt-0.5">
+                        *Assuming a 7% yearly average, net of Kiddo's annual fee. Markets vary; returns aren't guaranteed. Time is what compounds.
                       </p>
                     </div>
                   )}

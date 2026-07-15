@@ -1,7 +1,8 @@
 import type { events, funds } from "@shared/schema";
+import { effectiveOccasionDateMs } from "@shared/occasions";
 
 type FundLike = Pick<typeof funds.$inferSelect, "status">;
-type EventLike = Pick<typeof events.$inferSelect, "status" | "isPermanent" | "eventDate" | "goalAmount" | "giftVolume">;
+type EventLike = Pick<typeof events.$inferSelect, "status" | "isPermanent" | "eventType" | "eventDate" | "goalAmount" | "giftVolume">;
 
 type KycStatus = "none" | "pending" | "approved" | "rejected" | string | null | undefined;
 
@@ -80,7 +81,9 @@ export function getPublicEventGiftingAvailability(
 ): PublicEventGiftingAvailability {
   const status = normalizeStatus(event?.status) || "active";
   const now = Date.now();
-  const eventDateTs = event?.eventDate ? new Date(event.eventDate as any).getTime() : Number.NaN;
+  // Effective date rolls a birthday forward to its next occurrence, so a
+  // recurring birthday never reads as "passed" (see @shared/occasions).
+  const eventDateTs = event?.isPermanent ? Number.NaN : effectiveOccasionDateMs(event);
   const eventDatePassed = Boolean(!event?.isPermanent && Number.isFinite(eventDateTs) && eventDateTs < now);
   const goalAmount = parseMoney(event?.goalAmount);
   const giftVolume = parseMoney(event?.giftVolume);

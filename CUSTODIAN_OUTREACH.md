@@ -1,8 +1,13 @@
 # Custodian / Brokerage-Partner Outreach Kit
 
 Ready-to-send materials for exploratory calls with custody/brokerage-as-a-service
-providers. Targets (in priority order): **DriveWealth**, **Apex (Apex Fintech /
-Ascend)**, then **Alpaca** and **Atomic Invest** to compare.
+providers. **Priority order updated 2026-06-10 → evaluate ALPACA FIRST** (developer-
+first Broker API, self-serve sandbox, materially more bootstrap-friendly — full
+rationale + the "sandbox keys this week" sequence in `OUTREACH_KIT.md` §1, which
+supersedes the old DriveWealth-led order). Because Alpaca's sign-up is **self-serve,
+it needs no cold email** — you just get sandbox keys and wire one custodial account.
+**This doc's email is therefore for the sales-conversation custodians you compare
+against Alpaca: DriveWealth, Apex (Apex Fintech / Ascend), and Atomic Invest.**
 
 Goal of these calls = **discovery, not commitment**: requirements, pricing,
 timeline, and fit. The provider's answers (esp. "are *you* the BD of record")

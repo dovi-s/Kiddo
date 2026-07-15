@@ -149,6 +149,9 @@ async function notifyForEntry(
       html,
       tags: ["sealed_letter_delivered"],
       metadata: { fundId: entry.fundId, entryId: entry.id },
+      // fundId → bereavement freeze suppresses at the chokepoint. A sealed letter
+      // written for a child who is gone must not auto-deliver. See BEREAVEMENT_POSTURE.md.
+      fundId: entry.fundId,
     });
     await stampDeliveredActivity(entry, fund.userId, "parent_email_sent");
     log(`delivered sealed letter ${entry.id} for fund ${entry.fundId}`, WORKER_SOURCE);

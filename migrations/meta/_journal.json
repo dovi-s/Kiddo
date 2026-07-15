@@ -288,6 +288,76 @@
       "when": 1779300000000,
       "tag": "0040_gift_intents_capture_at_intent",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0042_fund_previous_owner_access_revoked",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779500000000,
+      "tag": "0043_drop_lesson_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779600000000,
+      "tag": "0044_stock_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779700000000,
+      "tag": "0045_fund_value_at_transfer",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1779800000000,
+      "tag": "0046_pending_gift_media",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1779900000000,
+      "tag": "0047_fund_memorialized_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1780000000000,
+      "tag": "0048_recurring_precharge_notice",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1780100000000,
+      "tag": "0049_activities_composite_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1780200000000,
+      "tag": "0050_push_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1780300000000,
+      "tag": "0051_partner_inquiries",
+      "breakpoints": true
     }
   ]
 }

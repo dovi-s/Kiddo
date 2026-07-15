@@ -109,7 +109,7 @@ export function SetupProgressNudge({
                     )}
                     <span className={`min-w-0 flex-1 ${item.done ? "text-muted-foreground" : "font-semibold text-foreground"}`}>{item.label}</span>
                     {!item.done && (
-                      <span className="shrink-0 rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+                      <span className="shrink-0 rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
                         Action needed
                       </span>
                     )}
@@ -130,26 +130,62 @@ export function SetupProgressNudge({
   );
 }
 
-export function TrustMicroStrip() {
+export function TrustMicroStrip({ flush = false }: { flush?: boolean } = {}) {
+  // Single source for the three claims so the mobile (stacked) and desktop
+  // (one inline row) layouts can't drift. Wording is locked custody-honesty /
+  // brand copy: kept verbatim in BOTH layouts, never trimmed to fit.
+  // HONESTY: investing is NOT live yet (INVESTING_LIVE=false, custodian stub),
+  // so the SIPC line MUST stay conditioned ("once investing is live"). A bare
+  // "SIPC up to $500,000" reads as present-tense protection that isn't true
+  // today. FLIP CHECKLIST: drop the "once investing is live" qualifier when
+  // INVESTING_LIVE flips true.
+  const sipc = "SIPC up to $500,000 once investing is live";
+  const brokerDealer = "Our broker-dealer partner · Member FINRA/SIPC";
+  const noFees = "No hidden charges";
   return (
     <section
-      className="kiddo-card px-4 py-3"
+      // `flush` = recessive FOOTER treatment (hairline top-divider, no floating
+      // card) for the de-carded dashboards, where a white card over-weights fine
+      // print and is the last card-soup remnant. Default keeps the contained card
+      // for marketing / flow pages where it reads as an intentional trust block.
+      className={flush
+        ? "border-t border-[hsl(var(--kiddo-border)/0.7)] px-1 pt-5 pb-1"
+        : "kiddo-card px-4 py-3"}
       data-testid="card-trust-micro-strip"
     >
-      <div className="flex flex-wrap items-center justify-center gap-3 text-center text-xs text-muted-foreground">
+      {/* Desktop (>=640px): the original single inline row with dot separators. */}
+      <div className="hidden flex-wrap items-center justify-center gap-3 text-center text-xs text-muted-foreground sm:flex">
         <span className="inline-flex items-center gap-1.5">
           <Shield size={13} className="text-[hsl(var(--kiddo-evergreen))]" />
-          SIPC up to $500,000
+          {sipc}
         </span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-        <span>Our broker-dealer partner · Member FINRA/SIPC</span>
+        <span>{brokerDealer}</span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-        <span>No hidden charges. Ever.</span>
+        <span>{noFees}</span>
       </div>
-      <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/55">
-        Kiddo's only ongoing fee is $1/year per $1,000 invested, charged on invested assets only. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses.{" "}
+
+      {/* Mobile (<640px): the inline row used to wrap into THREE ragged lines
+          with orphan dots floating at row edges. Now two deliberate centered
+          rows and NO dots to orphan: the two short reassurances share the top
+          row (and degrade to two clean centered lines on a 320px SE without
+          ever breaking), and the long broker-dealer line gets its own row.
+          All copy kept verbatim; only the layout changed. */}
+      <div className="flex flex-col items-center gap-1 text-center text-2xs leading-snug text-muted-foreground sm:hidden">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
+          <span className="inline-flex items-center gap-1.5">
+            <Shield size={12} className="text-[hsl(var(--kiddo-evergreen))]" />
+            {sipc}
+          </span>
+          <span>{noFees}</span>
+        </div>
+        <span>{brokerDealer}</span>
+      </div>
+
+      <p className="mt-2 text-center text-3xs leading-relaxed text-muted-foreground/55">
+        Kiddo's only ongoing investment fee is $1/year per $1,000 invested, charged on invested assets only. When investing is live, eligible securities are then protected up to $500,000 against broker-dealer failure. Not a protection against market losses.{" "}
         <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-muted-foreground">sipc.org</a>
-        {" · "}Investing involves risk. But so does a gift card.
+        {" · "}Investing involves risk.
       </p>
     </section>
   );

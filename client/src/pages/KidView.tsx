@@ -2,15 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
 import { motion } from "framer-motion";
 // Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md. Both
 // usages were on "Is there a company you love?" kid-suggestion prompts;
 // replaced with Lightbulb (already imported), the canonical gentle-nudge
 // icon per feedback_gentle_nudge_pattern.md.
-import { BadgeCheck, BookOpen, Copy, Lightbulb, Lock, Share2, Target, TrendingUp, Users } from "lucide-react";
+import { BadgeCheck, BookOpen, Lightbulb, Lock, Target, TrendingUp, Key, Sprout, PartyPopper, MailOpen, Mail, Mic, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoiceNotePlayer } from "@/components/ui/voice-note-player";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
-import { Mascot } from "@/components/ui/mascot";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
@@ -19,6 +21,7 @@ import { friendlyHoldingName } from "@/lib/ticker-names";
 import { useCountUp } from "@/hooks/use-count-up";
 import { ReportContentButton } from "@/components/ReportContentButton";
 import { projectFundValue, utmaContributionYearsRemaining } from "@shared/projection";
+import { INVESTING_LIVE } from "@shared/legal-copy";
 
 type KidViewMeta = {
   childName: string;
@@ -55,7 +58,17 @@ type KidViewContent = {
   phase: "child" | "teen" | "adult" | "unknown";
   age: number | null;
   gifts: Array<{ id: string; senderName: string; amount: string; message?: string; createdAt?: string; status?: string }>;
-  memories: Array<{ id: string; authorName?: string; content?: string; photoUrl?: string | null; videoUrl?: string | null; visibility?: string }>;
+  /** Lifetime aggregate counts over ALL gifts, not just the capped `gifts`
+      window above (which is the recent slice for display). Drives the hero
+      stats so "gifts received / people gave" reflect the whole fund. Without
+      this the counts came from the 12-row display window and badly undercounted
+      (e.g. 134 gifts from 12 people rendering as "12 gifts / 4 people"). */
+  giftStats?: { total: number; gifters: number; noNote: number };
+  memories: Array<{ id: string; type?: string; authorName?: string; content?: string; photoUrl?: string | null; videoUrl?: string | null; visibility?: string }>;
+  /** Count of human notes (gift messages + parent notes) across the WHOLE
+      Memory Book — drives the "N notes from people who love you" line. The
+      `memories` array is the full book (human notes first), paginated client-side. */
+  memoryNoteCount?: number;
   holdings: Array<{ id: string; ticker: string; name: string; currentValue: string; gain: string }>;
   suggestions: Array<{ id: string; ticker: string; reason: string; reviewedStatus: string }>;
   allowTeenSuggestions: boolean;
@@ -201,6 +214,12 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
     whatTheyDo: "Target is one of the largest US retail chains: groceries, clothes, home goods, and more.",
     whyItMatters: "When more people shop at Target stores or online, Target earns more.",
   },
+  MCD: {
+    emoji: "🍟",
+    youngOwner: "You own a tiny piece of McDonald's. Every Happy Meal, every order of fries, in almost every country.",
+    whatTheyDo: "McDonald's runs one of the biggest fast-food chains in the world, with restaurants nearly everywhere.",
+    whyItMatters: "When more people eat at McDonald's around the world, the company earns more.",
+  },
   CMCSA: {
     emoji: "📺",
     youngOwner: "You own a tiny piece of Comcast. Every Xfinity internet bill, every NBC show, every Universal Studios ride. Pieces of all of it are yours.",
@@ -249,12 +268,91 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
     whatTheyDo: "Zillow runs the most-visited home and real estate platform in the US.",
     whyItMatters: "When more people search for homes through Zillow, the company can earn from agents and ads.",
   },
+  // Roster 2026-06-09 stock-pick additions + Microsoft (offered since 2026-06-01
+  // but it never had a kid explainer, so it fell back to the generic glyph).
+  MSFT: {
+    emoji: "🧱",
+    youngOwner: "You own a tiny piece of Microsoft. Every Minecraft world, every Xbox game, every computer running Windows. Pieces of all of them are yours.",
+    whatTheyDo: "Microsoft makes Windows computers, Xbox, Minecraft, and software that businesses use every day.",
+    whyItMatters: "When people buy Xbox games, play Minecraft, or pay for Microsoft software, the company earns more.",
+  },
+  MAT: {
+    emoji: "🧸",
+    youngOwner: "You own a tiny piece of Mattel. Every Barbie, every Hot Wheels car, every UNO game. Pieces of all of them are yours.",
+    whatTheyDo: "Mattel makes some of the most famous toys in the world: Barbie, Hot Wheels, Fisher-Price, and UNO.",
+    whyItMatters: "When families buy these toys, and watch the Barbie movies, Mattel earns more.",
+  },
+  HAS: {
+    emoji: "🎲",
+    youngOwner: "You own a tiny piece of Hasbro. Every Nerf blaster, every Monopoly board, every can of Play-Doh, every Transformer. Pieces of all of them are yours.",
+    whatTheyDo: "Hasbro makes Nerf, Monopoly, Play-Doh, Transformers, and many other toys and games.",
+    whyItMatters: "When people buy these toys and games, Hasbro earns more.",
+  },
+  NVDA: {
+    emoji: "🤖",
+    youngOwner: "You own a tiny piece of Nvidia. The chips inside the computers that run video games, and the AI everyone is talking about, are made by them. A piece of that is yours.",
+    whatTheyDo: "Nvidia makes the powerful computer chips that run video games and artificial intelligence.",
+    whyItMatters: "As more of the world uses AI and big computers, more companies buy Nvidia's chips.",
+  },
+  KO: {
+    emoji: "🥤",
+    youngOwner: "You own a tiny piece of Coca-Cola. Every bottle of Coke, every Sprite, every Fanta, sold almost everywhere on Earth. A piece of that is yours.",
+    whatTheyDo: "Coca-Cola makes Coke, Sprite, Fanta, and hundreds of other drinks sold in nearly every country.",
+    whyItMatters: "People buy these drinks every single day all over the world, which keeps the business steady.",
+  },
+  HSY: {
+    emoji: "🍫",
+    youngOwner: "You own a tiny piece of Hershey. Every chocolate bar, every Kiss, every Reese's cup. Pieces of all of them are yours.",
+    whatTheyDo: "Hershey makes chocolate and candy: Hershey bars, Kisses, Reese's, and more.",
+    whyItMatters: "When people buy candy, especially around the holidays, Hershey earns more.",
+  },
+  CROX: {
+    emoji: "🐊",
+    youngOwner: "You own a tiny piece of Crocs. Every comfy clog, and every pair decorated with little Jibbitz charms. A piece of that is yours.",
+    whatTheyDo: "Crocs makes the comfy foam clogs, and the little charms that snap into them, that people wear everywhere.",
+    whyItMatters: "When more people buy Crocs and their charms, the company grows.",
+  },
+  // Roster 2026-06-17 stock-pick additions.
+  PEP: {
+    emoji: "🥨",
+    youngOwner: "You own a tiny piece of PepsiCo. Every bag of Doritos, every Gatorade, every can of Pepsi. Pieces of all of them are yours.",
+    whatTheyDo: "PepsiCo makes Pepsi, Gatorade, Doritos, Cheetos, Lay's, and dozens of other snacks and drinks.",
+    whyItMatters: "People grab these snacks and drinks every day all over the world, which keeps the business busy.",
+  },
+  ELF: {
+    emoji: "💄",
+    youngOwner: "You own a tiny piece of e.l.f. Every lip gloss, every little makeup bag packed for school. A piece of that is yours.",
+    whatTheyDo: "e.l.f. makes affordable makeup and skincare that a lot of people use every day.",
+    whyItMatters: "When more people buy e.l.f. at the store or online, the company earns more.",
+  },
+  BBW: {
+    emoji: "🐻",
+    youngOwner: "You own a tiny piece of Build-A-Bear. Every stuffed animal someone picked out, stuffed, and named themselves. A piece of that is yours.",
+    whatTheyDo: "Build-A-Bear runs the stores where you make your own stuffed animal from start to finish.",
+    whyItMatters: "When more families build a bear, in stores or online, the company earns more.",
+  },
+  CMG: {
+    emoji: "🌯",
+    youngOwner: "You own a tiny piece of Chipotle. Every burrito, every bowl, every usual order. A piece of that is yours.",
+    whatTheyDo: "Chipotle runs the restaurants that make burritos, bowls, and tacos to order.",
+    whyItMatters: "When more people grab lunch or dinner at Chipotle, the company earns more.",
+  },
+  SONY: {
+    emoji: "🕹️",
+    youngOwner: "You own a tiny piece of Sony. Every PlayStation game, every Spider-Man movie, every song from their artists. Pieces of all of them are yours.",
+    whatTheyDo: "Sony makes the PlayStation, movies and music, and the cameras and chips inside lots of devices.",
+    whyItMatters: "When people buy PlayStations and games, or watch Sony movies, the company earns more.",
+  },
 };
 
 function getCompanyExplainer(ticker: string, name: string) {
   return (
     COMPANY_EXPLAINERS[ticker] || {
-      emoji: "✨",
+      // Neutral company glyph, not the ✨ sparkle (swept as an AI-tell
+      // everywhere else). Demo funds shouldn't hit this — every seeded
+      // holding now has a real entry above — but a real fund could pick any
+      // ticker, so the fallback stays honest and calm. 2026-06-04.
+      emoji: "🏢",
       youngOwner: `You own a tiny piece of ${name}.`,
       whatTheyDo: `${name} is one of the companies or funds in your account.`,
       whyItMatters: "When the business grows or investors get more confident, the value can rise. When confidence drops, it can fall too.",
@@ -297,6 +395,7 @@ function projectFutureValue(
 
 export default function KidView() {
   const { fundId: token } = useParams<{ fundId: string }>();
+  const KID_PIN_LENGTH = 4;
   const [pin, setPin] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(() => {
     if (!token || typeof window === "undefined") return null;
@@ -306,7 +405,6 @@ export default function KidView() {
   const [suggestionReason, setSuggestionReason] = useState("");
   const [savingSuggestion, setSavingSuggestion] = useState(false);
   const [annualGiftEstimate, setAnnualGiftEstimate] = useState(500);
-  const [languageMode, setLanguageMode] = useState<KidLanguageMode>("younger");
 
   const { data: meta, isLoading: metaLoading, isError: metaError } = useQuery<KidViewMeta>({
     queryKey: ["kid-view-meta", token],
@@ -318,7 +416,7 @@ export default function KidView() {
     enabled: !!token,
   });
 
-  const { data: content, isLoading: contentLoading, refetch } = useQuery<KidViewContent>({
+  const { data: rawContent, isLoading: contentLoading, refetch } = useQuery<KidViewContent>({
     queryKey: ["kid-view-content", token, accessToken],
     queryFn: async () => {
       const res = await fetch(`/api/kid-view/${token}/content?accessToken=${encodeURIComponent(accessToken || "")}`);
@@ -328,13 +426,119 @@ export default function KidView() {
     enabled: !!token && !!accessToken,
     retry: false,
   });
+  // Demo consistency: KidView reads server content that can't see a session-only
+  // demo gift, so "Theo's view" was stale. Overlay it here — the gifts list, the
+  // "gifts received / people gave" stats, and the holding balance. Safe for real
+  // kid-views: demo gifts live only in the demo's sessionStorage, so this is a
+  // no-op unless there are demo gifts for this exact fund (same-tab).
+  const content = useMemo<KidViewContent | undefined>(() => {
+    if (!rawContent) return rawContent;
+    const fundId = (rawContent.fund as any)?.id;
+    const live = fundId ? readDemoLiveGiftsForFund(fundId, true) : [];
+    if (!live.length) return rawContent;
+    const demoGifts = live.map((g) => ({
+      id: `demo-${g.createdAt}`,
+      senderName: g.senderName,
+      amount: g.amount,
+      message: g.message,
+      createdAt: g.createdAt,
+      status: "invested",
+    }));
+    const existing = new Set((rawContent.gifts || []).map((g) => String(g.senderName || "").toLowerCase()));
+    let newGifters = 0;
+    for (const g of live) { const k = String(g.senderName || "").toLowerCase(); if (!existing.has(k)) { existing.add(k); newGifters++; } }
+    const giftStats = rawContent.giftStats
+      ? { ...rawContent.giftStats, total: rawContent.giftStats.total + live.length, gifters: rawContent.giftStats.gifters + newGifters }
+      : rawContent.giftStats;
+    const holdings = [...(rawContent.holdings || [])];
+    for (const g of live) {
+      const t = String(g.ticker || "").toUpperCase();
+      const amt = parseFloat(g.amount) || 0;
+      if (!t || String(g.executionModel || "").toLowerCase() === "cash" || amt <= 0) continue;
+      const idx = holdings.findIndex((h) => String(h.ticker || "").toUpperCase() === t);
+      if (idx >= 0) {
+        const cur = parseFloat(String(holdings[idx].currentValue || "0")) || 0;
+        holdings[idx] = { ...holdings[idx], currentValue: String(cur + amt) };
+      } else {
+        holdings.unshift({ id: `demo-h-${t}`, ticker: t, name: t, currentValue: String(amt), gain: "0.00" });
+      }
+    }
+    return { ...rawContent, gifts: [...demoGifts, ...(rawContent.gifts || [])], giftStats, holdings };
+  }, [rawContent]);
+
+  // PIN unlock — extracted so BOTH the on-screen numpad and a hardware
+  // keyboard reach the same submit path. Previously a digit only registered
+  // via onClick, so a kid on a Chromebook/iPad-with-keyboard or on assistive
+  // tech could never enter the PIN at all (WCAG 2.1.1). Keep submitPin pure;
+  // the haptic-light + 120ms delay (so the 4th dot paints before the request)
+  // lives in handlePinKey to preserve the original feel.
+  const submitPin = useCallback(async (nextPin: string) => {
+    try {
+      const res = await fetch(`/api/kid-view/${token}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: nextPin }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "That PIN did not work.");
+      haptic("success");
+      setAccessToken(data.accessToken);
+      window.sessionStorage.setItem(`kid-view-access:${token}`, data.accessToken);
+    } catch (error) {
+      haptic("error");
+      const msg = error instanceof Error ? error.message : "Try again.";
+      const isWrongPin = msg.toLowerCase().includes("match") || msg.toLowerCase().includes("pin");
+      toast({
+        title: isWrongPin ? "Wrong PIN" : "Could not unlock",
+        description: msg,
+        variant: "destructive",
+      });
+      setPin("");
+    }
+  }, [token, toast]);
+
+  const handlePinKey = useCallback((key: string) => {
+    if (key === "backspace") {
+      setPin((p) => p.slice(0, -1));
+      return;
+    }
+    if (!/^[0-9]$/.test(key)) return;
+    setPin((p) => {
+      if (p.length >= KID_PIN_LENGTH) return p;
+      const next = p + key;
+      if (next.length === KID_PIN_LENGTH) {
+        haptic("light");
+        window.setTimeout(() => submitPin(next), 120);
+      }
+      return next;
+    });
+  }, [submitPin]);
+
+  // The PIN gate is shown whenever there is no access token / content (and the
+  // meta query resolved). While it is up, let a hardware keyboard drive it.
+  const pinGateActive = !metaLoading && !metaError && (!accessToken || !content);
+  useEffect(() => {
+    if (!pinGateActive) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        handlePinKey(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        handlePinKey("backspace");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pinGateActive, handlePinKey]);
 
   const growthSummary = useMemo(() => {
     const balance = Number(content?.fund?.balance || 0);
     const contributed = Number(content?.fund?.totalContributed || 0);
     const gain = balance - contributed;
     const pct = contributed > 0 ? (gain / contributed) * 100 : 0;
-    return { gain, pct };
+    return { gain, pct, contributed };
   }, [content]);
 
   const futureProjection = useMemo(() => {
@@ -347,14 +551,25 @@ export default function KidView() {
     // etc. UTMA fund (majority 21) correctly shows a 3-extra-year
     // contribution window vs the default-18 fund.
     const majorityAge = Number(content?.fund?.majorityAge) || 18;
-    const yearsToMajority = Math.max(majorityAge - age, 0);
+    // PRECISE (fractional) years to majority, not integer age. `majorityAge - age`
+    // rounded a kid who is 20-and-11-months up to a FULL year, projecting a whole
+    // year of growth + gifts when majority is one month away — Alex's "By age 21"
+    // read ~$3k high ($42,077 vs the true ~$39k at 1 month out). The content
+    // endpoint already provides precise months-to-majority (`monthsUntil18`, named
+    // for the legacy 18 but majority-age-aware); use it, fall back to integer only
+    // if absent. Fixed 2026-06-10.
+    const monthsToMajority = (content as any)?.monthsUntil18;
+    const yearsToMajority = (typeof monthsToMajority === "number" && monthsToMajority >= 0)
+      ? monthsToMajority / 12
+      : Math.max(majorityAge - age, 0);
+    const yearsTo25 = Math.max(yearsToMajority + (25 - majorityAge), 0);
     const contributionYears = utmaContributionYearsRemaining(age, majorityAge);
     return {
       majorityAge,
       toMajority: projectFutureValue(balance, annualGiftEstimate, yearsToMajority, contributionYears),
-      to25: projectFutureValue(balance, annualGiftEstimate, Math.max(25 - age, 0), contributionYears),
+      to25: projectFutureValue(balance, annualGiftEstimate, yearsTo25, contributionYears),
     };
-  }, [annualGiftEstimate, content?.age, content?.fund?.balance, content?.fund?.majorityAge]);
+  }, [annualGiftEstimate, content?.age, content?.fund?.balance, content?.fund?.majorityAge, (content as any)?.monthsUntil18]);
 
   // Test-data hygiene: surgical client-side filter so gifts and memories
   // containing obvious test markers ("test", "tstgin", "asdf", "qqqqq",
@@ -403,14 +618,20 @@ export default function KidView() {
     );
   }, [content?.memories, isLikelyTestData]);
 
-  useEffect(() => {
-    if (!content) return;
-    if (content.phase === "teen") {
-      setLanguageMode("older");
-      return;
-    }
-    setLanguageMode((content.age || 0) >= 9 ? "older" : "younger");
-  }, [content]);
+  // The Memory Book is the kid's whole book now (server sends it all, human notes
+  // first). Show a generous default so it reads abundant at a glance, with a
+  // "see all" to open the rest — nothing is locked away from the kid.
+  const MEMORY_PREVIEW = 12;
+  const [showAllMemories, setShowAllMemories] = useState(false);
+  const visibleMemories = showAllMemories ? cleanedMemories : cleanedMemories.slice(0, MEMORY_PREVIEW);
+
+  // Language mode is purely derived from the loaded fund: teens and kids
+  // 9+ get the "older" framing, younger kids get the warmer one. Derived
+  // during render (not via state + effect) so an older/teen fund never
+  // flashes a frame of younger-mode copy on first paint while an effect
+  // catches up. There is no manual toggle, so no state is needed.
+  const languageMode: KidLanguageMode =
+    content?.phase === "teen" || (content?.age || 0) >= 9 ? "older" : "younger";
 
   const shareUrl = useMemo(() => {
     if (!content?.fund?.slug || typeof window === "undefined") return "";
@@ -436,29 +657,21 @@ export default function KidView() {
     const possessive = `${realName}${realName.endsWith("s") ? "'" : "'s"}`;
     document.title = `${possessive} View | Kiddo`;
   }, [meta?.childName, content?.fund?.recipientFirstName]);
-  const introCopy = content?.phase === "teen"
-    ? "This is your fund. What you own, who helped build it, and what it could grow into."
-    : content?.fund && Number(content.fund.balance) > 0
-      ? `Your fund is worth ${fmtMoney(content.fund.balance)} right now. That is real money in real companies.`
-      : "Your family started this for you. Every gift that comes in goes here and starts growing.";
   const growthCopy = growthSummary.gain > 0
     ? isYoungerMode
       ? `Your fund has grown by ${fmtMoney(growthSummary.gain)} so far. The gifts people gave you are making more money on their own.`
-      : `Your fund is up ${fmtMoney(growthSummary.gain)}. Your money is making more money. Without you doing anything. That's called investing.`
+      : `Your fund is up ${fmtMoney(growthSummary.gain)}. Your money is making more money on its own. That's called investing.`
     : isYoungerMode
       ? "Your story is just getting started. The first gift is what brings this to life."
-      : "Markets move up and down. Long-term growth comes from giving investments time, not from rushing.";
+      : "Markets move up and down. Long-term growth comes from giving investments plenty of time to grow.";
   const growthCardCopy = isYoungerMode
     ? "Every gift becomes part of a real account in your name. Your parent takes care of it for now while your story keeps building."
     : "Every gift becomes part of a real account in your name. Your parent stays in charge for now, and you can watch how it builds over time.";
   const projectionCopy = isYoungerMode
     ? "If gifts keep coming in each year and investments grow over time, your fund can become something much bigger later."
     : "If gifts keep coming in each year and the investments keep compounding, this fund can look very different by the time you are older.";
-  const companiesHeading = content?.phase === "teen" || !isYoungerMode ? "What these companies do" : "Companies you partly own";
+  const companiesHeading = content?.phase === "teen" || !isYoungerMode ? "What these companies do" : (INVESTING_LIVE ? "Companies you partly own" : "Companies your fund is set up to own");
   const giftsHeading = isYoungerMode ? "Gifts from people who love you" : "Who helped build your fund";
-  const giftsSubcopy = isYoungerMode
-    ? "Every single one of them chose to give you something that grows."
-    : "Every gift here is part of the story of how your fund got started.";
 
   const handleShareFund = async () => {
     if (!shareUrl) {
@@ -686,7 +899,6 @@ export default function KidView() {
   }
 
   if (!accessToken || !content) {
-    const PIN_LENGTH = 4;
     const pinDigits = pin.split("");
     const numpadKeys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
     return (
@@ -702,11 +914,13 @@ export default function KidView() {
               : "Enter your PIN to open your fund."}
           </p>
 
-          {/* PIN dots */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+          {/* PIN dots — aria-live so assistive tech confirms each digit landed */}
+          <div className="flex items-center justify-center gap-4 mb-8" role="status" aria-live="polite">
+            <span className="sr-only">{pinDigits.length} of {KID_PIN_LENGTH} digits entered</span>
+            {Array.from({ length: KID_PIN_LENGTH }).map((_, i) => (
               <div
                 key={i}
+                aria-hidden="true"
                 className={`w-4 h-4 rounded-full border-2 transition-all duration-150 ${
                   i < pinDigits.length
                     ? "bg-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen))] scale-110"
@@ -716,58 +930,24 @@ export default function KidView() {
             ))}
           </div>
 
-          {/* Numpad */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Numpad — also driven by a hardware keyboard (see handlePinKey effect) */}
+          <div className="grid grid-cols-3 gap-3" role="group" aria-label="PIN keypad">
             {numpadKeys.map((key, idx) => {
               if (key === "") return <div key={idx} />;
+              const isBackspace = key === "⌫";
               return (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => {
-                    if (key === "⌫") {
-                      setPin((p) => p.slice(0, -1));
-                    } else if (pin.length < PIN_LENGTH) {
-                      const next = pin + key;
-                      setPin(next);
-                      if (next.length === PIN_LENGTH) {
-                        haptic("light");
-                        setTimeout(() => {
-                          (async () => {
-                            try {
-                              const res = await fetch(`/api/kid-view/${token}/unlock`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ pin: next }),
-                              });
-                              const data = await res.json().catch(() => ({}));
-                              if (!res.ok) throw new Error(data?.error || "That PIN did not work.");
-                              haptic("success");
-                              setAccessToken(data.accessToken);
-                              window.sessionStorage.setItem(`kid-view-access:${token}`, data.accessToken);
-                            } catch (error) {
-                              haptic("error");
-                              const msg = error instanceof Error ? error.message : "Try again.";
-                              const isWrongPin = msg.toLowerCase().includes("match") || msg.toLowerCase().includes("pin");
-                              toast({
-                                title: isWrongPin ? "Wrong PIN" : "Could not unlock",
-                                description: msg,
-                                variant: "destructive",
-                              });
-                              setPin("");
-                            }
-                          })();
-                        }, 120);
-                      }
-                    }
-                  }}
+                  aria-label={isBackspace ? "Delete last digit" : `Enter ${key}`}
+                  onClick={() => handlePinKey(isBackspace ? "backspace" : key)}
                   className={`h-16 rounded-2xl text-xl font-semibold transition-all active:scale-95 ${
-                    key === "⌫"
+                    isBackspace
                       ? "text-muted-foreground bg-muted/40 hover:bg-muted/60"
                       : "bg-white border border-border shadow-sm text-foreground hover:bg-muted/20"
                   }`}
                 >
-                  {key}
+                  <span aria-hidden="true">{key}</span>
                 </button>
               );
             })}
@@ -850,8 +1030,8 @@ export default function KidView() {
           </h1>
           <p className="text-sm opacity-70 mb-5">
             {content.phase === "teen"
-              ? `Real investments. In your name. Yours when you turn ${futureProjection.majorityAge}.`
-              : `Real stocks. Invested in your name. Yours fully when you turn ${futureProjection.majorityAge}.`}
+              ? `Real investments in your name, and they become yours when you turn ${futureProjection.majorityAge}.`
+              : `Real stocks invested in your name. They become fully yours when you turn ${futureProjection.majorityAge}.`}
           </p>
           {/* Balance count-ups over 1.4s on mount. Tabular-nums prevents
               digit jitter as the number climbs. aria-live flips "off" during
@@ -899,9 +1079,16 @@ export default function KidView() {
               hero → balance → stats in a natural reading order. */}
           <div className="grid grid-cols-3 gap-2">
             {[
-              { value: cleanedGifts.length, label: "gifts\nreceived" },
-              { value: uniqueGifters, label: "people\ngave" },
-              { value: timeUntil18Display, label: "until you\ndecide" },
+              // Lifetime totals from the server (giftStats), NOT the capped
+              // display window — see the giftStats field note. Fallback to the
+              // visible counts only if an older endpoint omits giftStats.
+              { value: content?.giftStats?.total ?? cleanedGifts.length, label: "gifts\nreceived" },
+              { value: content?.giftStats?.gifters ?? uniqueGifters, label: "people\ngave" },
+              // "until it's yours", not "until you decide" — ownership
+              // framing (terminology locked 2026-06-04): the fact is the
+              // fund TRANSFERS at majority; "you decide" overstated a
+              // minor's autonomy on a custodial asset.
+              { value: timeUntil18Display, label: "until it's\nyours" },
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -911,7 +1098,7 @@ export default function KidView() {
                 className="rounded-2xl bg-white/10 px-3 py-3 text-center"
               >
                 <p className="text-xl font-bold">{stat.value}</p>
-                <p className="text-[10px] opacity-65 leading-tight mt-0.5" style={{ whiteSpace: "pre-line" }}>
+                <p className="text-3xs opacity-65 leading-tight mt-0.5" style={{ whiteSpace: "pre-line" }}>
                   {stat.label}
                 </p>
               </motion.div>
@@ -937,7 +1124,7 @@ export default function KidView() {
             className="rounded-[24px] border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8 px-5 py-4 mb-4 flex items-start gap-3"
             data-testid="kid-view-sealed-unlocked"
           >
-            <div className="text-2xl shrink-0" aria-hidden>🕯️</div>
+            <MailOpen className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={24} strokeWidth={2} aria-hidden />
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">
                 {content.recentlyUnlockedSealedCount === 1
@@ -971,7 +1158,12 @@ export default function KidView() {
           return (
             <section className="rounded-[28px] border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" data-testid="kid-view-adult-celebration">
               <div className="flex items-start gap-3">
-                <span className="text-3xl shrink-0" aria-hidden="true">{isToday ? "🎉" : "🌱"}</span>
+                {/* Warm gold-ink glyph (not gray) so the climax still celebrates
+                    while joining the app's Lucide icon system. PartyPopper on the
+                    day itself; Sprout (an approved brand mark) for the welcome. */}
+                {isToday
+                  ? <PartyPopper className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={30} strokeWidth={2} aria-hidden />
+                  : <Sprout className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={30} strokeWidth={2} aria-hidden />}
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">
                     {isToday ? "Today's the day" : "Welcome to your fund"}
@@ -983,9 +1175,7 @@ export default function KidView() {
               </div>
               <div className="mt-4 space-y-2 text-sm text-muted-foreground leading-relaxed">
                 <p>Full legal control transferred to you{eighteenthLabel ? ` on ${eighteenthLabel}` : ""}.</p>
-                <p>Nothing got sold. The investments stay exactly where they are.</p>
-                <p>You decide what happens next.</p>
-                <p className="font-serif italic text-foreground/90 pt-1">That's the whole point.</p>
+                <p>Nothing got sold, and the investments stay exactly where they are. You decide what happens next.</p>
               </div>
               {/* Reveal hint — gentle pointer that there are entries the
                   parent reserved for THIS day, now visible in the Memory
@@ -1008,12 +1198,17 @@ export default function KidView() {
                 <p className={`mt-4 text-xs italic ${(content as any).parentLetter?.isSealedLetter ? "text-[rgb(140,30,30)]/85 font-semibold" : "text-[hsl(var(--kiddo-gold-ink))]/85"}`}>
                   {(content as any).parentLetter?.isSealedLetter
                     ? "A sealed letter from your parent unsealed today. Scroll to read it."
-                    : "🔑 Your parent left you a letter. Scroll to the bottom to read it."}
+                    : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Mail size={12} strokeWidth={2} aria-hidden className="shrink-0" />
+                        Your parent left you a letter. Scroll to the bottom to read it.
+                      </span>
+                    )}
                 </p>
               )}
               {(content.unlockedAtMajorityCount ?? 0) > 0 && (
                 <p className="mt-2 text-xs italic text-[hsl(var(--kiddo-gold-ink))]/85">
-                  ✨ {content.unlockedAtMajorityCount} {content.unlockedAtMajorityCount === 1 ? "memory was saved" : "memories were saved"} specifically for today. Look for the gold marker as you scroll.
+                  {content.unlockedAtMajorityCount} {content.unlockedAtMajorityCount === 1 ? "memory was saved" : "memories were saved"} specifically for today. Look for the gold marker as you scroll.
                 </p>
               )}
               {/* Claim-account scaffold. Currently visits a placeholder
@@ -1070,7 +1265,10 @@ export default function KidView() {
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.42 }}
             className="rounded-[24px] border border-border/60 bg-white p-5 mb-4"
           >
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">What you own right now</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">{INVESTING_LIVE ? "What you own right now" : "What your fund is set up to own"}</p>
+            {!INVESTING_LIVE && (
+              <p className="text-[13px] leading-relaxed text-muted-foreground/80 mb-3">Once your fund starts investing, these become real pieces you own.</p>
+            )}
             <div className="space-y-2.5">
               {content.holdings.map((holding, idx) => {
                 const explainer = getCompanyExplainer(holding.ticker, holding.name);
@@ -1092,7 +1290,7 @@ export default function KidView() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-semibold text-foreground">{fmtMoney(holding.currentValue)}</p>
-                      {gain > 0 && <p className="text-[11px] text-green-600">+{fmtMoney(gain)} growth</p>}
+                      {gain > 0 && <p className="text-2xs text-green-600">+{fmtMoney(gain)} growth</p>}
                     </div>
                   </motion.div>
                 );
@@ -1117,35 +1315,26 @@ export default function KidView() {
               // notes that DO exist breathe and feel personal.
               const noteCount = cleanedGifts.filter((g) => g.message && g.message.trim()).length;
               const noNoteCount = cleanedGifts.length - noteCount;
+              // "The gift was the message" is the right beat ONLY when notes are
+              // genuinely rare. It was firing off the recent (recurring-heavy, mostly
+              // silent) gift slice, so it claimed "the gift was the message" even on
+              // funds whose Memory Book is full of notes — directly contradicting the
+              // "{N} notes from people who love you" line below. Gate it on the fund's
+              // ACTUAL note count: suppress when notes are plentiful (let them breathe);
+              // fire only for genuinely sparse-note funds. Fixed 2026-06-10.
+              const fundIsNotesRich = (Number((content as any).memoryNoteCount) || 0) > 2;
               return (
                 <>
-                  {noNoteCount >= 3 && (
+                  {noNoteCount >= 3 && !fundIsNotesRich && (
                     <p className="text-[12px] italic text-muted-foreground/75 mb-3 leading-relaxed">
                       {noNoteCount === cleanedGifts.length
-                        ? `${noNoteCount} ${noNoteCount === 1 ? "person gave" : "people gave"} without leaving a note. They still believed in you.`
-                        : `${noNoteCount} of ${cleanedGifts.length} gave without a note. They still believed in you.`}
+                        ? `${noNoteCount} ${noNoteCount === 1 ? "person gave" : "people gave"} without leaving a note. The gift was the message.`
+                        : `${noNoteCount} of ${cleanedGifts.length} gave without a note. The gift was the message.`}
                     </p>
                   )}
                   <div className="space-y-3">
                     {cleanedGifts.map((gift) => {
-                      const giftAmount = parseFloat(gift.amount || "0");
                       const giftDate = gift.createdAt ? new Date(gift.createdAt) : null;
-                      const yearsInvested = giftDate ? (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000) : 0;
-                      // "What that gift would be worth today" — routes
-                      // through the canonical projectFundValue helper so the
-                      // kid sees the same fee-netted, effective-rate-
-                      // compounded numbers as every other surface. Migrated
-                      // from raw Math.pow(1.07, yearsInvested) on 2026-05-21
-                      // as part of the projection-helper consolidation
-                      // sweep. KidView already imported projectFundValue
-                      // for the at-18 projection; this single-gift loop
-                      // now uses it too.
-                      const estimatedNow = projectFundValue({
-                        startingValue: giftAmount,
-                        monthlyContribution: 0,
-                        yearsAhead: Math.max(0, yearsInvested),
-                      });
-                      const estimatedGain = estimatedNow - giftAmount;
                       const initials = (gift.senderName || "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
                       const hasNote = !!(gift.message && gift.message.trim());
                       return (
@@ -1163,8 +1352,8 @@ export default function KidView() {
                                     Better than depersonalizing as "Auto-invest" — the
                                     relationship is the point, the cadence is metadata. */}
                                 {(gift as any).parentContributionId && (
-                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-[9px] font-bold text-[hsl(var(--kiddo-evergreen))] shrink-0" title="Recurring">
-                                    ↻ Monthly
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-4xs font-bold text-[hsl(var(--kiddo-evergreen))] shrink-0" title="Recurring">
+                                    <Repeat size={9} strokeWidth={3} aria-hidden className="shrink-0" /> Monthly
                                   </span>
                                 )}
                               </div>
@@ -1174,15 +1363,12 @@ export default function KidView() {
                               <p className="text-[12px] text-muted-foreground mt-0.5 italic">"{gift.message}"</p>
                             )}
                             {/* When a row has no note, only the aggregate line at the
-                                top carries the "still believed in you" framing. The
+                                top carries the "the gift was the message" framing. The
                                 row itself stays quiet — date + invested status only. */}
-                            <p className="text-[10px] text-muted-foreground/50 mt-1">
+                            <p className="text-3xs text-muted-foreground/50 mt-1">
                               {giftDate ? giftDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : ""}
                               {gift.status === "settled" || gift.status === "processing" ? " · Invested" : ""}
                             </p>
-                            {!isYoungerMode && estimatedGain > 0.01 && (
-                              <p className="text-[11px] text-green-600 mt-0.5">+{fmtMoney(Math.max(0, estimatedGain))} growth so far</p>
-                            )}
                             {/* Subtle report affordance. Lives on every
                                 gift card so a kid (or anyone in this
                                 view) can flag a concerning note / sender
@@ -1214,15 +1400,23 @@ export default function KidView() {
                 <BookOpen className="h-4 w-4 text-primary" />
                 <h2 className="font-heading text-2xl font-semibold text-foreground">Memory Book</h2>
               </div>
+              {/* The abundance line: one number conveys the moat better than the
+                  list. Counts human notes (server's memoryNoteCount), so an auto
+                  milestone never inflates "people who love you". */}
+              {(content.memoryNoteCount ?? 0) >= 3 && (
+                <p className="mt-1.5 text-sm font-semibold text-primary" data-testid="memory-note-count">
+                  {content.memoryNoteCount} notes from people who love you.
+                </p>
+              )}
               {content.phase === "teen" ? (
                 <div className="mt-4 space-y-3">
-                  {cleanedMemories.map((entry) => {
+                  {visibleMemories.map((entry) => {
                     // Mark entries that the parent specifically reserved for
                     // today (visibility='kid_at_18' on the entry, became
                     // visible only at majority age). Soft kiddo-gold border
                     // + small "Saved for today" pill so the kid can spot
-                    // these as they scroll the feed — pairs with the
-                    // celebration card's "✨ N memories were saved
+                    // these as they scroll the feed, pairing with the
+                    // celebration card's "N memories were saved
                     // specifically for today" copy above.
                     const isUnlockedAt18 = entry.visibility === "kid_at_18";
                     return (
@@ -1236,8 +1430,8 @@ export default function KidView() {
                         data-testid={isUnlockedAt18 ? "memory-saved-for-today" : undefined}
                       >
                         {isUnlockedAt18 && (
-                          <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
-                            ✨ Saved for today
+                          <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-2.5 py-0.5 text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
+                            Saved for today
                           </p>
                         )}
                       {/* Memory Book inversion in Kid View: when there's a real
@@ -1252,11 +1446,11 @@ export default function KidView() {
                       ) : (
                         <p className="text-xs text-muted-foreground">A memory from {entry.authorName || "someone"}.</p>
                       )}
-                      {entry.photoUrl && <img src={entry.photoUrl} alt="Memory" loading="lazy" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
+                      {entry.photoUrl && <FadeImage src={entry.photoUrl} alt="Memory" loading="lazy" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
                       {(entry as any).audioUrl && (
                         <div className="mt-3 rounded-xl border border-border/40 bg-background px-3 py-2">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">🎙 Voice note</p>
-                          <audio src={(entry as any).audioUrl} controls className="w-full h-9" />
+                          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-1 inline-flex items-center gap-1"><Mic size={11} strokeWidth={2} aria-hidden className="shrink-0" /> Voice note</p>
+                          <VoiceNotePlayer src={(entry as any).audioUrl} />
                           {(entry as any).audioTranscript && (
                             <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
                               &ldquo;{(entry as any).audioTranscript}&rdquo;
@@ -1264,9 +1458,31 @@ export default function KidView() {
                           )}
                         </div>
                       )}
+                      {/* Report affordance on the memory card too. The gift cards
+                          have one; without it the highest-risk surface (an
+                          unscanned stranger photo/voice note) was a reporting
+                          dead-end. Same /api/reports -> T&S queue; a memory_entry
+                          report is auto-flagged. Trust-safety audit C3. */}
+                      <div className="mt-1">
+                        <ReportContentButton
+                          targetType="memory_entry"
+                          targetId={entry.id}
+                          context={{ surface: "kid-view", fundId: content.fund.id }}
+                        />
+                      </div>
                     </div>
                     );
                   })}
+                  {cleanedMemories.length > MEMORY_PREVIEW && !showAllMemories && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMemories(true)}
+                      data-testid="memory-see-all"
+                      className="w-full rounded-2xl border border-border/60 bg-muted/20 py-3 text-sm font-semibold text-primary transition-colors hover:bg-muted/40"
+                    >
+                      See all {cleanedMemories.length} memories
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl bg-muted/30 p-5 text-center">
@@ -1301,7 +1517,7 @@ export default function KidView() {
                           {isYoungerMode ? (
                             <p className="text-[12px] text-muted-foreground mt-0.5">
                               {saved > 0
-                                ? `${fmtMoney(saved)} is already saved for this. That is real.`
+                                ? `${fmtMoney(saved)} is already saved toward this, in real money.`
                                 : "This is something your family is saving for."}
                             </p>
                           ) : (
@@ -1344,6 +1560,33 @@ export default function KidView() {
               <div className="mt-4 rounded-3xl bg-primary/5 p-4 text-sm text-foreground">
                 {growthCardCopy}
               </div>
+              {/* Two-bucket split (KIDDO_VOICE.md): what people put in vs what
+                  the market added, side by side. The contrast of the two real
+                  numbers IS the discovery — no scripted question, no reveal
+                  (the label already says where it came from; a quiz on top of
+                  it just restated the same fact and read as weird). Only when
+                  there is real positive growth to point at: a down or flat fund
+                  keeps the honest growthCopy above and shows nothing here
+                  (silence is part of the voice). */}
+              {growthSummary.gain > 0 && (
+                <div className="mt-4 rounded-3xl border border-border/60 p-4">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {isYoungerMode ? "People put in" : "You and your family put in"}
+                      </p>
+                      <p className="mt-1 font-heading text-xl text-foreground">{fmtMoney(growthSummary.contributed)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">The market added</p>
+                      <p className="mt-1 font-heading text-xl text-foreground">+{fmtMoney(growthSummary.gain)}</p>
+                    </div>
+                  </div>
+                  {!INVESTING_LIVE && (
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground/70">A preview at today's prices, until your fund starts investing.</p>
+                  )}
+                </div>
+              )}
             </section>
 
             <section className="rounded-[28px] border border-border/60 bg-card p-6">
@@ -1354,6 +1597,16 @@ export default function KidView() {
               <p className="mt-3 text-sm text-muted-foreground">
                 {projectionCopy}
               </p>
+              {/* The doubling device at the HONEST cadence (~10 yrs at 7% net,
+                  never "every 7 years" — that imports 10%; see
+                  COMPOUNDING_NARRATIVE_NOTE.md guardrail #6). The single most
+                  intuitive way to feel compounding. Hypothetical; the card's
+                  disclaimer below covers "not guaranteed." */}
+              {content.age !== null && content.age !== undefined && content.age <= 17 && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Left invested, money tends to roughly double about every ten years. A gift today could double before you turn {content.age + 10}, and again by {content.age + 20}.
+                </p>
+              )}
               <div className="mt-4 space-y-3">
                 <label className="block text-sm text-muted-foreground">
                   Estimate gifts each year
@@ -1389,6 +1642,12 @@ export default function KidView() {
                   {companiesHeading}
                 </h2>
               </div>
+              {/* Frames the per-company "You own a tiny piece of X" explainers below
+                  as the plan, not a claim, while investing is gated — matching the
+                  other two "What you own" sections. */}
+              {!INVESTING_LIVE && isYoungerMode && (
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground/80">Once your fund starts investing, these become real pieces you own.</p>
+              )}
               <div className="mt-4 space-y-3">
                 {/* Show ALL owned holdings with explainers, not just the first 3.
                     A kid owning 10 things and seeing only 3 explained is more
@@ -1450,8 +1709,8 @@ export default function KidView() {
                       const eighteenthLabel = eighteenthDateRaw
                         ? new Date(eighteenthDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
                         : null;
-                      // State-specific UTMA majority age (18 default, 21 in CA/KY/IN,
-                      // 19 in AL/NE, 20 in MS). The countdown math + transfer copy
+                      // State-specific UTMA majority age (21 in most states; 18 in some,
+                      // e.g. CA/KY; 19 in AL/NE). The countdown math + transfer copy
                       // both need to use this — was hardcoded "18" in both places,
                       // factually wrong for non-18 states. See
                       // project_state_majority_age_sweep.md.
@@ -1471,7 +1730,7 @@ export default function KidView() {
                       return (
                         <>
                           <div className="flex items-start gap-3">
-                            <span className="text-2xl shrink-0" aria-hidden="true">🔑</span>
+                            <Key className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={22} strokeWidth={2} aria-hidden />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/80 mb-1">Coming soon</p>
                               <h2 className="font-heading text-xl font-semibold text-foreground leading-tight">
@@ -1483,11 +1742,9 @@ export default function KidView() {
                           </div>
                           <div className="mt-4 space-y-2 text-sm text-muted-foreground leading-relaxed">
                             <p>Full legal control transfers to you at {majorityAge}.</p>
-                            <p>Nothing gets sold. The investments stay where they are.</p>
-                            <p>You decide what happens next.</p>
-                            <p className="font-serif italic text-foreground/90 pt-1">That&rsquo;s the whole point.</p>
+                            <p>Nothing gets sold, and the investments stay where they are. You decide what happens next.</p>
                           </div>
-                          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))]/70">
+                          <p className="mt-4 text-2xs font-semibold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))]/70">
                             {countdownLabel}
                           </p>
                         </>
@@ -1499,8 +1756,11 @@ export default function KidView() {
                 <section className="rounded-[28px] border border-border/60 bg-card p-6">
                   <div className="flex items-center gap-2">
                     <BadgeCheck className="h-4 w-4 text-primary" />
-                    <h2 className="font-heading text-2xl font-semibold text-foreground">What you own</h2>
+                    <h2 className="font-heading text-2xl font-semibold text-foreground">{INVESTING_LIVE ? "What you own" : "What your fund is set up to own"}</h2>
                   </div>
+                  {!INVESTING_LIVE && (
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Once investing is live, these become real shares you own.</p>
+                  )}
                   <div className="mt-4 space-y-3">
                     {content.holdings.map((holding) => {
                       // Suppress "Gain $0.00" — when there's no gain (test data
@@ -1568,7 +1828,10 @@ export default function KidView() {
                         placeholder="Why does this company matter to you?"
                         className="min-h-[110px] w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
                       />
-                      <Button className="w-full" onClick={handleSuggestStock} disabled={savingSuggestion}>
+                      {/* Disabled-on-empty parity with the younger form's
+                          button — previously a teen could tap Send with a
+                          blank ticker and eat a server 400. */}
+                      <Button className="w-full" onClick={handleSuggestStock} disabled={savingSuggestion || !suggestionTicker.trim()}>
                         {savingSuggestion ? "Saving..." : "Send suggestion"}
                       </Button>
                     </div>
@@ -1609,7 +1872,7 @@ export default function KidView() {
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
                                     <p
-                                      className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                      className={`text-3xs font-bold uppercase tracking-[0.14em] ${
                                         isApproved ? "text-green-700" : "text-amber-800"
                                       }`}
                                     >
@@ -1644,7 +1907,7 @@ export default function KidView() {
                     })()}
                     {content.suggestions.length > 0 && (
                       <div className="mt-5 space-y-2">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-muted-foreground/70">What you've suggested</p>
+                        <p className="text-2xs font-bold uppercase tracking-[0.10em] text-muted-foreground/70">What you've suggested</p>
                         {content.suggestions.map((suggestion) => {
                           // Status drives layout: pending shows a withdraw link
                           // (your parent hasn't acted yet, take it back if you
@@ -1668,7 +1931,7 @@ export default function KidView() {
                                   <p className="font-medium text-foreground">{suggestion.ticker}</p>
                                   {suggestion.reason && <p className="mt-1 text-muted-foreground">{suggestion.reason}</p>}
                                 </div>
-                                <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${pillClass}`}>
+                                <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-bold ${pillClass}`}>
                                   {pillLabel}
                                 </span>
                               </div>
@@ -1677,7 +1940,7 @@ export default function KidView() {
                                   <button
                                     type="button"
                                     onClick={() => void handleWithdrawSuggestion(suggestion.id)}
-                                    className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                                    className="text-2xs text-muted-foreground hover:text-destructive transition-colors"
                                     data-testid={`button-withdraw-suggestion-${suggestion.id}`}
                                   >
                                     Take it back
@@ -1685,12 +1948,12 @@ export default function KidView() {
                                 </div>
                               )}
                               {isApproved && (
-                                <p className="mt-2 text-[11px] italic text-green-700/80">
+                                <p className="mt-2 text-2xs italic text-green-700/80">
                                   Your parent's looking at adding {suggestion.ticker} to your fund.
                                 </p>
                               )}
                               {isDeclined && (
-                                <p className="mt-2 text-[11px] italic text-amber-800/80">
+                                <p className="mt-2 text-2xs italic text-amber-800/80">
                                   Your parent saw it but went a different way this time. You can suggest another anytime.
                                 </p>
                               )}

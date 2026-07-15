@@ -33,7 +33,7 @@ faithful current-state map AND the spec for the highest-value future milestone.
 | Trade execution | **Simulated** — no buy order ever placed |
 | 1099 tax forms | **None** — page says "once investing is live" everywhere |
 | 0.10% AUM fee | **Display-only estimator** (`estimateAnnualAumFee`); nothing charged |
-| Demo (Dunphy) holdings + multi-year history | **Seed-fabricated** (see below) |
+| Demo (Rivera) holdings + multi-year history | **Seed-fabricated** (see below) |
 
 ## How the demo works (so it's not mistaken for live)
 The demo *is* the real app with seeded data — same code paths. The differences:

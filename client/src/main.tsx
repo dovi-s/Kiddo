@@ -1,6 +1,15 @@
 import { createRoot } from "react-dom/client";
 import React from "react";
 import App from "./App";
+// Self-hosted fonts (was Google Fonts <link> in index.html). Hotlinking
+// fonts.googleapis.com shipped every visitor's IP — a COPPA "persistent
+// identifier" — to Google on child-viewed pages (Kid View). Self-hosting
+// removes that third-party egress. The `opsz` variants preserve the optical-
+// sizing axis the previous Google variable-font link loaded. See
+// COPPA_APPLICABILITY_MEMO.md.
+import "@fontsource-variable/dm-sans/opsz.css";
+import "@fontsource-variable/dm-sans/opsz-italic.css";
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
 import "./index.css";
 
 const DEV_USER_ID_KEY = "kora:dev-user-id";
@@ -210,3 +219,24 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </AppErrorBoundary>,
 );
+
+// PWA service worker — offline shell + push for the installed ("Add to Home
+// Screen") app. Registered in PRODUCTION, and also when the app is served over
+// HTTPS from a non-localhost host — e.g. the Tailscale `*.ts.net` tunnel used to
+// test the installable PWA on a phone straight from the dev server. Service
+// workers are per-origin, so this NEVER registers on your localhost dev (http)
+// and can't touch Vite HMR. The SW is network-first (client/public/sw.js), so it
+// never serves stale content while online.
+const isHttpsTunnel =
+  typeof window !== "undefined" &&
+  window.location.protocol === "https:" &&
+  !/^(localhost|127\.|0\.0\.0\.0$)/.test(window.location.hostname);
+if (
+  (import.meta.env.PROD || isHttpsTunnel) &&
+  typeof navigator !== "undefined" &&
+  "serviceWorker" in navigator
+) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

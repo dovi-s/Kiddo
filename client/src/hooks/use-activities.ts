@@ -1,6 +1,9 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Activity } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { useAuth } from "@/hooks/use-auth";
+import { applyDemoBuysToActivities, applyDemoLiveGiftsToActivities, applyDemoRecurringToActivities, applyDemoSellsToActivities, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
 
 async function fetchActivities(limit = 50, fundId?: string | null): Promise<Activity[]> {
   const params = new URLSearchParams();
@@ -20,7 +23,10 @@ async function fetchFundActivities(fundId: string, limit = 50): Promise<Activity
 }
 
 export function useActivities(limit = 50, enabled = true, fundId?: string | null) {
-  return useQuery<Activity[]>({
+  const { user } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  const overlayVersion = useDemoOverlayVersion();
+  const query = useQuery<Activity[]>({
     // fundId is part of the cache key — switching funds gets a fresh query
     // rather than serving the previous fund's cached rows.
     queryKey: ["/api/activities", limit, fundId || "all"],
@@ -61,14 +67,54 @@ export function useActivities(limit = 50, enabled = true, fundId?: string | null
     refetchInterval: 120_000,
     refetchIntervalInBackground: false,
   });
+  // Demo-only: prepend the prospect's session gifts (gift_received) + sells
+  // (sell) so they show in the Activity feed AND light the bell (this same query
+  // backs NotificationsPanel). No-op off demo; never mutates cache.
+  const data = useMemo(
+    () => applyDemoRecurringToActivities(
+      applyDemoBuysToActivities(
+        applyDemoSellsToActivities(
+          applyDemoLiveGiftsToActivities(query.data ?? [], isDemoAccount, fundId),
+          isDemoAccount,
+          fundId,
+        ),
+        isDemoAccount,
+        fundId,
+      ),
+      isDemoAccount,
+      fundId,
+    ),
+    [query.data, isDemoAccount, fundId, overlayVersion],
+  );
+  return { ...query, data };
 }
 
 export function useFundActivities(fundId: string | undefined, limit = 50) {
-  return useQuery<Activity[]>({
+  const { user } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  const overlayVersion = useDemoOverlayVersion();
+  const query = useQuery<Activity[]>({
     queryKey: ["/api/funds", fundId, "activities", limit],
     queryFn: () => fundId ? fetchFundActivities(fundId, limit) : Promise.resolve([]),
     enabled: !!fundId,
     retry: false,
     staleTime: Infinity,
   });
+  const data = useMemo(
+    () => applyDemoRecurringToActivities(
+      applyDemoBuysToActivities(
+        applyDemoSellsToActivities(
+          applyDemoLiveGiftsToActivities(query.data ?? [], isDemoAccount, fundId),
+          isDemoAccount,
+          fundId,
+        ),
+        isDemoAccount,
+        fundId,
+      ),
+      isDemoAccount,
+      fundId,
+    ),
+    [query.data, isDemoAccount, fundId, overlayVersion],
+  );
+  return { ...query, data };
 }

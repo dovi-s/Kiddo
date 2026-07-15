@@ -21,7 +21,11 @@ function persistDevUserId(user: SafeUserWithFlags | null) {
   if (user?.id) {
     safeLocalSet(DEV_USER_ID_KEY, String(user.id));
   } else {
-    window.localStorage.removeItem(DEV_USER_ID_KEY);
+    try {
+      window.localStorage.removeItem(DEV_USER_ID_KEY);
+    } catch {
+      /* storage blocked (private mode) — best-effort, never throw on the auth path */
+    }
   }
 }
 
@@ -235,7 +239,7 @@ export function useAuth() {
       // keeps the PREVIOUS user's cached value on screen until the refetch
       // resolves — fine for a same-user refresh, but across an account
       // switch it briefly renders the prior account's data. That's exactly
-      // the "I signed into my own account and it flashed the Dunphy demo"
+      // the "I signed into my own account and it flashed the Rivera demo"
       // bug: the demo's funds lingered in the in-memory cache after login.
       // removeQueries drops the stale data so currently-mounted components
       // fall to loading, then fill with the real account. Safe to drop now
@@ -262,7 +266,7 @@ export function useAuth() {
       removeLocalCachePrefix("kiddo.fund-balance.");
       clearPerUserDismissals();
       // removeQueries (not invalidate) so a prior cached account's data —
-      // notably a lingering Dunphy demo session — can't flash on screen
+      // notably a lingering Rivera demo session — can't flash on screen
       // before the real account's refetch resolves. See loginMutation above.
       queryClient.removeQueries({ queryKey: ["/api/funds"] });
       queryClient.removeQueries({ queryKey: ["/api/subscription"] });
@@ -282,7 +286,7 @@ export function useAuth() {
       removeLocalCachePrefix("kiddo.fund-balance.");
       clearPerUserDismissals();
       // removeQueries (not invalidate) so a prior cached account's data —
-      // notably a lingering Dunphy demo session — can't flash on screen
+      // notably a lingering Rivera demo session — can't flash on screen
       // before the real account's refetch resolves. See loginMutation above.
       queryClient.removeQueries({ queryKey: ["/api/funds"] });
       queryClient.removeQueries({ queryKey: ["/api/subscription"] });

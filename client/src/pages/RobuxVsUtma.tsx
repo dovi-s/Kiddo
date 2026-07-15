@@ -92,7 +92,7 @@ export default function RobuxVsUtma() {
               How much could your kid's Robux spend become at <GradientText>18</GradientText>?
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Roblox isn't going anywhere and that's fine. But the same dollars, on the same cadence, in a custodial investment account, become something else by the time your kid turns 18. Here's the math.
+              Roblox is real fun. The same dollars, on the same cadence, in a custodial investment account, become something your kid can hold by the time they turn 18.
             </p>
           </div>
 
@@ -175,7 +175,7 @@ export default function RobuxVsUtma() {
                 {formatMoney(totalRobuxOverYears)}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Total ${monthlyRobux} × 12 × {yearsUntil18} years of Robux spend. Gone the moment it's spent. Real fun while it lasts; zero left at 18.
+                Total ${monthlyRobux} × 12 × {yearsUntil18} year{yearsUntil18 === 1 ? "" : "s"} of Robux spend. Real fun while it lasts, and gone the moment it's spent. Zero left at 18.
               </p>
             </div>
 
@@ -209,7 +209,7 @@ export default function RobuxVsUtma() {
                 +{formatMoney(growthDelta)}
               </p>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                That's compounding. The same dollar in a UTMA grows; the same dollar in Robux disappears.
+                That's compounding. A dollar in Robux is spent the moment it lands; the same dollar in a UTMA keeps growing until 18.
               </p>
             </section>
           )}
@@ -217,13 +217,13 @@ export default function RobuxVsUtma() {
           {/* Honest framing — not preachy */}
           <section className="mx-auto mt-10 max-w-2xl space-y-4 text-sm leading-relaxed text-muted-foreground">
             <p>
-              <span className="font-semibold text-foreground">This isn't an argument against Roblox.</span> Roblox is real fun and real social. The point isn't to stop; the point is that <span className="text-foreground">a fraction of the same dollars, on the same cadence, in a real investment account</span>, becomes something your kid can actually hold at 18.
+              <span className="font-semibold text-foreground">Keep playing Roblox.</span> It's real fun and real social. And <span className="text-foreground">a fraction of the same dollars, on the same cadence, in a real investment account</span>, becomes something your kid can actually hold at 18.
             </p>
             <p>
               You don't have to redirect all of it. Even half of your monthly Robux spend in a UTMA still becomes meaningful by 18. The compound math doesn't care about the amount; it cares that the dollars keep coming.
             </p>
             <p>
-              <span className="font-semibold text-foreground">A UTMA isn't a gimmick.</span> It's a custodial brokerage account in your kid's name, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (18 in most states, 21 in CA), the kid gets full ownership.
+              <span className="font-semibold text-foreground">A UTMA is a custodial brokerage account in your kid's name</span>, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (21 in most states, 18 in some; 19 in Alabama and Nebraska), the kid gets full ownership.
             </p>
             <p className="text-xs text-muted-foreground/70">
               Math assumes 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly. Real returns vary; markets are unpredictable. This is illustrative, not a guarantee.
@@ -236,7 +236,7 @@ export default function RobuxVsUtma() {
               Start a real fund in 2 minutes.
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Free to start. Anyone in your family can send lasting gifts in under a minute. No card required.
+              Free to start. Anyone in your family can send lasting gifts in a few seconds. No card required.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link href="/get-started">
@@ -262,7 +262,7 @@ export default function RobuxVsUtma() {
             </h3>
             <div>
               <p className="font-semibold text-foreground">Is Robux a waste of money?</p>
-              <p className="mt-1">No, but it isn't an investment. A $25 Robux purchase is a $25 entertainment buy. The same $25 in a UTMA gets ~$72 by the time the kid takes ownership at majority (18 in most states, 19 to 21 in a few; about 10 years at 7%). That's not Roblox's fault; it's the difference between consumption and compounding.</p>
+              <p className="mt-1">A $25 Robux purchase is a $25 entertainment buy. The same $25 in a UTMA gets ~$72 by the time the kid takes ownership at majority (21 in most states, 18 in some; about 10 years at 7%). That's the difference between consumption and compounding.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Can I do both?</p>

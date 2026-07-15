@@ -45,6 +45,20 @@ function injectSeo(template: string, seo: PageSeo, canonical: string): string {
   return html;
 }
 
+// Absolutize the social-share image per request. The shell ships a RELATIVE
+// og:image (client/index.html), and social scrapers (Facebook, iMessage,
+// Twitter/X, LinkedIn) reject relative image URLs → no preview card on ANY
+// shared link, including the gift links the whole product depends on. Rewriting
+// it here with the real request host makes it correct at runtime regardless of
+// the build-time env. Applies to every served route, not just the SEO ones.
+// 2026-06-15.
+function injectOgImage(template: string, base: string): string {
+  const ogImage = `${base}/kiddo-og-image.png`;
+  let html = setMetaContent(template, "property", "og:image", ogImage);
+  html = setMetaContent(html, "name", "twitter:image", ogImage);
+  return html;
+}
+
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
   if (!fs.existsSync(distPath)) {
@@ -68,13 +82,19 @@ export function serveStatic(app: Express) {
   // private, dynamic gift pages, 404s) falls through to the unchanged shell.
   app.use("*", (req, res) => {
     const pathname = (req.originalUrl || "/").split("?")[0].split("#")[0];
-    const seo = indexTemplate ? getSeoForPath(pathname) : null;
-    if (!seo) {
+    // No template loaded → fall back to the raw file (unchanged behavior).
+    if (!indexTemplate) {
       return res.sendFile(indexHtmlPath);
     }
     const base = getPublicBaseUrl(req);
-    const normalized = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-    const html = injectSeo(indexTemplate, seo, `${base}${normalized}`);
+    // EVERY route gets an absolute social image (so shared gift links preview),
+    // then known public/satellite routes additionally get their per-route head.
+    let html = injectOgImage(indexTemplate, base);
+    const seo = getSeoForPath(pathname);
+    if (seo) {
+      const normalized = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+      html = injectSeo(html, seo, `${base}${normalized}`);
+    }
     res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).send(html);
   });
 }

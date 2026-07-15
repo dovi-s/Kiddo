@@ -75,6 +75,34 @@ the number is red and the framing acknowledges it. No "you're down but
 the long-term trend is up" cope. Numbers tell the truth; the surrounding
 copy can give context without softening the number.
 
+### 6. No manufactured antithesis ("It's not X. It's Y.")
+**Locked 2026-06-11 (founder):** `feedback_no_manufactured_antithesis.md`. The
+strongest AI tell after em dashes. The model sets up a wrong answer nobody asked
+for, then reveals the right one, to fake earned insight. A human just says the
+thing. Delete the setup.
+
+Bad: "It is not a savings bond your grandparents would recognize. It is a real
+investment in companies a kid actually knows."
+Good: "It is real stocks in companies the kid already knows."
+
+The whole family is banned, not just that one phrasing:
+- Manufactured antithesis: "not X, it's Y", "the opposite of", "isn't another".
+- Anaphora lists: three-plus sentences opening the same way ("It compounds. It
+  is personal. It models something.").
+- Rule-of-three escalation for flourish: "A louder one. A bigger one."
+- False-binary setup then pivot: "every list says X... there is a better answer."
+- Aphoristic closers: "nowhere to go but up", "is still there."
+- Signpost throat-clearing: "Here is the honest answer.", "Here is the math, plainly."
+
+This is not lint-catchable (it is structure, not a token), so it is an editorial
+rule, caught by reading. **Founder call 2026-06-11: scorched earth.** Kill the
+structure EVERYWHERE, including "good" brand lines and honest objection-rebuttals
+("a story, not just a statement", "It is not a ledger. It is a story.", "A UTMA
+isn't a gimmick. It's..."). Rewrite every instance as a plain declarative. The
+structure itself is the tell; do not preserve it even when the contrast is true.
+Test: delete the setup. If the sentence still lands, the setup was the tell, and
+the setup goes.
+
 ---
 
 ## Required distinctions

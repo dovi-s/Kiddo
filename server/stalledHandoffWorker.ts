@@ -133,6 +133,7 @@ async function getStalledRows(log: LogFn): Promise<StalledRow[]> {
       JOIN funds f ON f.id = at.fund_id
       JOIN users u ON u.id = f.user_id
       WHERE at.invited_at IS NOT NULL
+        AND f.memorialized_at IS NULL -- bereavement freeze (BEREAVEMENT_POSTURE.md)
         AND at.child_claimed_at IS NULL
         AND at.ownership_transferred_at IS NULL
         AND at.invited_at <= NOW() - INTERVAL '7 days'
@@ -198,7 +199,7 @@ async function emailKid(
       "",
       `If you have any questions or the link doesn't work, just reply to this email.`,
       "",
-      `— The Kiddo team`,
+      `The Kiddo team`,
     ].join("\n"),
     html: branded,
     tags: [`stalled_handoff_kid_${step}`],
@@ -253,7 +254,7 @@ async function emailParent(
       "",
       `If their email address is wrong or has changed, you can update it from the Age-18 Plan page on Kiddo.`,
       "",
-      `— The Kiddo team`,
+      `The Kiddo team`,
     ].join("\n"),
     html: parentBranded,
     tags: [`stalled_handoff_parent_${step}`],

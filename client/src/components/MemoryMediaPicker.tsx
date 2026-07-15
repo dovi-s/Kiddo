@@ -20,11 +20,14 @@
 // the parent flows.
 
 import { useRef, useState, useEffect } from "react";
-import { Camera, Lock } from "lucide-react";
+import { Camera, Lock, Mic, Video, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
+import { VoiceNotePlayer } from "@/components/ui/voice-note-player";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
 import { getPronouns } from "@/lib/pronouns";
+import { isDemoNoop } from "@/lib/demo-block";
 
 type MediaKind = "photo" | "video" | "voice" | null;
 
@@ -159,6 +162,13 @@ export function MemoryMediaPicker({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Upload failed");
+      // Demo funds no-op every /memory POST (blockDemoMutations returns
+      // 200 { demo, saved:false } with no url). Surface the honest "not saved
+      // in the demo" message instead of the confusing "No URL returned".
+      if (isDemoNoop(data)) {
+        setError(data?.message || "Media isn't saved in the demo, but it will be in your own fund.");
+        return;
+      }
       const url = data?.url || data?.photoUrl || data?.videoUrl || data?.audioUrl;
       if (!url) throw new Error("No URL returned");
       if (kind === "photo") onChange({ ...value, photoUrl: String(url) });
@@ -227,10 +237,13 @@ export function MemoryMediaPicker({
     };
   }, []);
 
-  const triggers: { kind: Exclude<MediaKind, null>; label: string; emoji: string; has: boolean }[] = [
-    { kind: "photo", label: "Photo", emoji: "📷", has: hasPhoto },
-    { kind: "video", label: "Video", emoji: "🎬", has: hasVideo },
-    { kind: "voice", label: "Voice", emoji: "🎙", has: hasAudio },
+  // Action-tab icons are lucide (Camera / Video / Mic) — matching the rest of this
+  // component (it already uses lucide Camera) and the app's icon system. Not OS
+  // emoji, which render differently on every device and read as borrowed chrome.
+  const triggers: { kind: Exclude<MediaKind, null>; label: string; Icon: LucideIcon; has: boolean }[] = [
+    { kind: "photo", label: "Photo", Icon: Camera, has: hasPhoto },
+    { kind: "video", label: "Video", Icon: Video, has: hasVideo },
+    { kind: "voice", label: "Voice", Icon: Mic, has: hasAudio },
   ];
 
   // Plus-gate UI. When the parent's fund is on Free AND this picker is
@@ -274,7 +287,7 @@ export function MemoryMediaPicker({
               explicitly asked to learn more. */}
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <Camera size={16} className="text-primary" strokeWidth={1.8} />
+              <Camera size={16} className="text-primary" strokeWidth={2} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -294,7 +307,7 @@ export function MemoryMediaPicker({
                   daily-framing addition here is the single most leveraged
                   upgrade-conversion improvement per the locked pre-launch
                   strategic frame upgrade-conversion plan. */}
-              <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+              <p className="mt-1.5 text-2xs text-muted-foreground/85">
                 <span className="font-semibold text-foreground">$3.99/month</span>
                 <span className="text-muted-foreground/70">, about 13¢ a day.</span>
               </p>
@@ -351,12 +364,12 @@ export function MemoryMediaPicker({
               }`}
               data-testid={`media-trigger-${t.kind}`}
             >
-              <span aria-hidden="true" className="text-sm leading-none">{t.emoji}</span>
+              <t.Icon size={15} strokeWidth={2} aria-hidden />
               <span>{t.label}</span>
               {t.has && (
                 <span
                   aria-hidden="true"
-                  className="ml-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]"
+                  className="ml-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]"
                 >
                   ✓
                 </span>
@@ -421,7 +434,7 @@ export function MemoryMediaPicker({
             data-testid="media-photo-url"
           />
           {hasPhoto && (
-            <img src={value.photoUrl} alt="" className="mt-1 max-h-32 rounded-lg object-cover" />
+            <FadeImage src={value.photoUrl} alt="" className="mt-1 max-h-32 rounded-lg object-cover" />
           )}
         </div>
       )}
@@ -483,7 +496,7 @@ export function MemoryMediaPicker({
         <div className="mt-3 space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3">
           {hasAudio ? (
             <div className="space-y-2">
-              <audio src={value.audioUrl} controls className="w-full h-9" data-testid="media-audio-preview" />
+              <VoiceNotePlayer src={value.audioUrl} label="Your recording" testId="media-audio-preview" />
               {value.audioTranscript && (
                 <p className="text-[12px] italic text-muted-foreground">&ldquo;{value.audioTranscript}&rdquo;</p>
               )}
@@ -528,7 +541,7 @@ export function MemoryMediaPicker({
                 disabled={audioUploading}
                 data-testid="media-audio-record"
               >
-                🎙 Record
+                <Mic size={14} strokeWidth={2} aria-hidden className="mr-1.5" />Record
               </Button>
               <Button
                 type="button"
@@ -555,7 +568,7 @@ export function MemoryMediaPicker({
             </div>
           )}
           {!hasAudio && !recording && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               {/* Pronoun + majority-age aware. "Emma will hear" / "They'll
                   hear" with "her/his/their" + ordinal birthday — drops the
                   awkward "Emma'll" template that was the earlier pattern. */}
@@ -566,7 +579,7 @@ export function MemoryMediaPicker({
       )}
 
       {error && (
-        <p className="mt-2 text-[11px] font-semibold text-destructive">{error}</p>
+        <p className="mt-2 text-2xs font-semibold text-destructive">{error}</p>
       )}
     </div>
   );

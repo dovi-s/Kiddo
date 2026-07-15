@@ -101,6 +101,11 @@ export function RecurringRequestsNudge({
       if (!a?.metadata) continue;
       try {
         const meta = JSON.parse(a.metadata as string);
+        // Fulfilled requests (the worker emailed the gifter after a prior
+        // upgrade stamped resolvedAt) don't count toward the nudge — guards
+        // the downgrade case, where old already-answered asks would
+        // otherwise resurrect the "2 gifters want monthly" card.
+        if (meta?.resolvedAt) continue;
         const email = String(meta?.gifterEmail || "").trim().toLowerCase();
         const name = String(meta?.gifterName || "").trim() || "Someone";
         if (!email || byEmail.has(email)) continue;
@@ -142,7 +147,7 @@ export function RecurringRequestsNudge({
       >
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <BellRing size={16} strokeWidth={1.8} />
+            <BellRing size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground" data-testid="recurring-requests-headline">
@@ -153,9 +158,14 @@ export function RecurringRequestsNudge({
                 ? `Enabling Kiddo+ on ${displayChild}'s fund lets ${firstName} set up monthly contributions. The fund's existing one-time gifts and Memory Book stay either way.`
                 : `Enabling Kiddo+ on ${displayChild}'s fund lets all of them set up monthly contributions. The fund's existing one-time gifts and Memory Book stay either way.`}
             </p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+            <p className="mt-1.5 text-2xs text-muted-foreground/85">
               <span className="font-semibold text-foreground">$3.99/month</span>
               <span className="text-muted-foreground/70">, about 13¢ a day.</span>
+            </p>
+            {/* Cancel transparency, consistent with PlusUpgradePromptCard. The
+                nothing-lost half is already covered in the body above. */}
+            <p className="mt-1 text-2xs leading-relaxed text-muted-foreground/70">
+              Cancel anytime in Settings.
             </p>
             <div className="mt-3 flex gap-2">
               <Button
@@ -186,7 +196,7 @@ export function RecurringRequestsNudge({
         featureId="recurring_requests_aggregated"
         requiredTier="plus"
         title={`Enable monthly contributions on ${displayChild}'s fund.`}
-        body={`${count === 1 ? firstName : `${count} gifters`} ${count === 1 ? "has" : "have"} asked to set up monthly contributions to ${displayChild}'s fund. Kiddo+ on the fund unlocks recurring for them (and for any future gifter), plus your own monthly contributions, custom fund mix, parent-authored photo and voice memos in the Memory Book, co-parent access, and an annual tax summary. The fund's existing gifts and Memory Book entries stay either way.`}
+        body={`${count === 1 ? firstName : `${count} gifters`} ${count === 1 ? "has" : "have"} asked to set up monthly contributions to ${displayChild}'s fund. Kiddo+ on the fund unlocks recurring for them (and for any future gifter), plus your own monthly contributions, custom fund mix, parent-authored photo and voice memos in the Memory Book, co-parent access, and unlimited occasions. The fund's existing gifts and Memory Book entries stay either way.`}
         upgradePath={`/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`}
       />
     </div>

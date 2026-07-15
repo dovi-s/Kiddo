@@ -9,6 +9,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildYearEndWrappedEmail } from "./templates/yearEndWrapped";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "wrapped-worker";
@@ -110,8 +111,10 @@ async function tick(log: LogFn): Promise<void> {
     } catch { /* leave 0 */ }
     const endBalance = parseFloat(row.balance || "0") + parseFloat(row.cash_balance || "0");
     try {
-      await sendEmail(buildYearEndWrappedEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildYearEndWrappedEmail({
         to: row.parent_email,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "wrapped"),
         parentFirstName: row.parent_first_name,
         childFirstName: row.child_first_name,
         year,
@@ -125,7 +128,7 @@ async function tick(log: LogFn): Promise<void> {
         largestSingleGiftUsd: parseFloat(agg.largest_single),
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
         memoryBookUrl: `${baseUrl}/memory?fund=${encodeURIComponent(row.fund_id)}`,
-      }));
+      }), fundId: String(row.fund_id) });
       state.sentByFundYear[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

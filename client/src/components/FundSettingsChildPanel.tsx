@@ -26,6 +26,7 @@ import { ChildIdentityCard } from "@/components/ChildIdentityCard";
 import { KidsViewCard } from "@/components/KidsViewCard";
 import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
 import { CoParentAccessCard } from "@/components/CoParentAccessCard";
+import { PreviousCustodianAccessCard } from "@/components/PreviousCustodianAccessCard";
 import { FundDetailsCard } from "@/components/FundDetailsCard";
 import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
 import { LegalDocumentsCard } from "@/components/LegalDocumentsCard";
@@ -85,21 +86,37 @@ export function FundSettingsChildPanel({
   // See project_adult_account_is_parent_2_0_onramp.
   const fundIsOwnerHeld =
     (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
-  // Co-parent (co-admin): inviting OTHER co-parents and closing the fund are
-  // owner-only structural actions (the server 403s a co-admin), so hide those
-  // cards instead of showing controls that fail. The co-parent still manages the
-  // day-to-day. Mirrors the owner-only Settings gating (CO_PARENT_PERMISSIONS_NOTE).
-  const fundIsCoAdmin = (fund as any)?.accessRole === "co-admin";
+  // Once a fund is TRANSFERRED it belongs to the now-adult, so Kid View (a
+  // parent-configures-a-minor surface) is meaningless on it. Gate Kid View on
+  // this, NOT fundIsOwnerHeld: keying on "owner-held" alone leaked editable
+  // "Turn on Kid View / Set a PIN" controls to the view-only PREVIOUS custodian
+  // on a handed-off fund (Phil on Haley's fund). 2026-06-10 fix.
+  const fundIsTransferred = Boolean((fund as any)?.transferredAt);
+  // Collaborators (co-admin AND viewer): managing access, closing the fund,
+  // and naming a successor custodian are owner-only structural actions (the
+  // server 403s them), so hide those cards instead of showing controls that
+  // fail. The co-admin still manages the day-to-day. NOTE 2026-06-04: this
+  // previously checked only === "co-admin", and /api/funds used to tag
+  // collaborator funds with a generic accessRole="collaborator" — so the
+  // demo's Claire (co-admin) saw the owner-only co-parent card complete with
+  // "Primary custodian · Full control" and a Kiddo+ invite upsell on a fund
+  // already covered by Phil's Family plan. The list route now stamps real
+  // roles ('co-admin' | 'viewer'); this gate covers both.
+  const fundAccessRole = String((fund as any)?.accessRole || "");
+  const fundIsCoAdmin = fundAccessRole === "co-admin";
+  const fundIsCollaborator = fundIsCoAdmin || fundAccessRole === "viewer";
   return (
     <div className="space-y-4" data-testid="settings-child-panel">
       <ChildIdentityCard fund={fund} onEditChild={onEditFund} />
-      {/* Kid View is the CHILD's login surface — meaningless for an adult owner
-          who logs in as themselves with full access. Per the locked Kid View
-          policy, hide it for the owner (it returns naturally on a child fund
-          they later create). See project_adult_account_is_parent_2_0_onramp. */}
-      {!fundIsOwnerHeld && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
+      {/* Kid View is the CHILD's login surface, meaningless once the fund is
+          handed off (the now-adult logs in as themselves with full access). Hide
+          it on ANY transferred fund, for the adult owner AND the view-only
+          previous custodian alike (gating on owner-held alone leaked editable
+          controls to the previous owner). It returns naturally on a new child
+          fund. See project_adult_account_is_parent_2_0_onramp. */}
+      {!fundIsTransferred && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
       <InvitationsToYouCard />
-      {!fundIsOwnerHeld && !fundIsCoAdmin && (
+      {!fundIsOwnerHeld && !fundIsCollaborator && (
         <CoParentAccessCard
           fund={fund}
           user={user}
@@ -107,10 +124,47 @@ export function FundSettingsChildPanel({
           onOpenInviteModal={onOpenInviteModal}
         />
       )}
-      <FundDetailsCard fund={fund} onEditFund={onEditFund} />
-      {!fundIsOwnerHeld && <SuccessorCustodianCard fund={fund} />}
+      {/* Post-handoff owner's access control — the adult-owner analog of the
+          co-parent card above. The former custodian keeps a view-only window
+          by default; this is where the owner can close it (2026-06-07,
+          migration 0042 — see PreviousCustodianAccessCard for the safety
+          rationale). Renders only while the window is open. */}
+      {fundIsOwnerHeld && <PreviousCustodianAccessCard fund={fund} />}
+      {/* Collaborator's own access note — the warm read-only answer to "what
+          am I here?" The full CoParentAccessCard is owner-machinery (invite
+          button, access list, revoke, plan upsell — every piece 403s or
+          mis-describes for a collaborator), so collaborators get this small
+          truthful card instead of either the owner card or nothing.
+          2026-06-04, follow-up to the accessRole tag fix. */}
+      {!fundIsOwnerHeld && fundIsCollaborator && (
+        <section className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card" data-testid="collaborator-access-note">
+          <div className="p-5">
+            <h2 className="text-base font-bold text-foreground">Your access</h2>
+            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  {fundIsCoAdmin ? "Co-Admin" : "Viewer"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                  {fundIsCoAdmin
+                    ? `You can see everything and manage the day-to-day: occasions, Memory Book entries, thank-yous, and child details.`
+                    : `You can see the fund's growth, activity, and Memory Book. Making changes stays with the custodian.`}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2.5 py-1 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]">
+                {fundIsCoAdmin ? "Co-Admin" : "Viewer"}
+              </span>
+            </div>
+            <p className="mt-3 text-2xs text-muted-foreground/80 leading-relaxed">
+              {(fund as any)?.recipientFirstName ? `${(fund as any).recipientFirstName}'s` : "The"} primary custodian manages who has access and the money settings. You are not on the legal UTMA account.
+            </p>
+          </div>
+        </section>
+      )}
+      <FundDetailsCard fund={fund} />
+      {!fundIsOwnerHeld && !fundIsCollaborator && <SuccessorCustodianCard fund={fund} />}
       <LegalDocumentsCard />
-      {!fundIsCoAdmin && <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />}
+      {!fundIsCollaborator && <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />}
     </div>
   );
 }

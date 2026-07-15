@@ -4,6 +4,7 @@
 // compiles and runs today on RN core alone.
 
 import { Platform, Vibration } from "react-native";
+import * as Haptics from "expo-haptics";
 import { typography, haptics as HAPTIC_PATTERNS } from "@kora/tokens";
 
 // ── Fonts ──────────────────────────────────────────────────────────────
@@ -75,14 +76,9 @@ export function elevate(opts: {
 // ── Haptics ────────────────────────────────────────────────────────────
 export type HapticIntent = keyof typeof HAPTIC_PATTERNS;
 
-// Interim implementation via RN's Vibration API. Android honors the millisecond
-// pattern arrays from the tokens; iOS ignores patterns, so we only fire a single
-// buzz for MEANINGFUL events (success/gift/milestone/error/warning) and stay
-// silent for light taps to avoid an annoying constant rumble. When expo-haptics
-// is installed, replace this with the proper mapping:
-//   selection → Haptics.selectionAsync()
-//   success/gift/milestone → notificationAsync(...) ; light/medium/heavy → impactAsync(...)
-// Never throws.
+// iOS ignores Vibration pattern arrays, so the fallback only fires a single buzz
+// for MEANINGFUL events and stays silent for light taps to avoid a constant
+// rumble. (Only used when expo-haptics is unavailable, e.g. web preview.)
 const IOS_MEANINGFUL: ReadonlySet<HapticIntent> = new Set<HapticIntent>([
   "success",
   "gift",
@@ -91,7 +87,7 @@ const IOS_MEANINGFUL: ReadonlySet<HapticIntent> = new Set<HapticIntent>([
   "warning",
 ]);
 
-export function haptic(intent: HapticIntent = "light"): void {
+function vibrateFallback(intent: HapticIntent): void {
   try {
     const pattern = [...HAPTIC_PATTERNS[intent]];
     if (Platform.OS === "android") {
@@ -102,4 +98,56 @@ export function haptic(intent: HapticIntent = "light"): void {
   } catch {
     // Vibration unavailable (web preview, permissions) — silently ignore.
   }
+}
+
+// Primary path: expo-haptics, mapped by INTENT (not the raw ms arrays) onto the
+// platform's native Taptic / vibration engine — the real "premium feel" per
+// CRAFT_BAR.md §3. gift + milestone are short sequences meant to be fired in
+// sync with the visual celebration beat at the call site. The token ms-arrays
+// stay as the cross-platform fallback (web). Fire-and-forget; never throws.
+export function haptic(intent: HapticIntent = "light"): void {
+  if (Platform.OS === "web") {
+    vibrateFallback(intent);
+    return;
+  }
+  const run = async () => {
+    switch (intent) {
+      case "selection":
+        return Haptics.selectionAsync();
+      case "light":
+        return Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      case "medium":
+        return Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      case "heavy":
+        return Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      case "success":
+        return Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      case "warning":
+        return Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      case "error":
+        return Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      case "gift": {
+        // "A gift landed" — soft, pause, firmer. (token gift [15,80,25])
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setTimeout(() => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        }, 90);
+        return;
+      }
+      case "milestone": {
+        // Crescendo for crossing a milestone. (token milestone [80,60,120])
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setTimeout(() => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+        }, 70);
+        setTimeout(() => {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        }, 200);
+        return;
+      }
+      default:
+        return Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+  run().catch(() => vibrateFallback(intent));
 }

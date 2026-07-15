@@ -1,6 +1,6 @@
 // One-time dev-tool: fetch real historical monthly prices for the demo seed.
 //
-// The Dunphy demo (script/seed-dunphys.ts) buys REAL shares at the REAL
+// The Rivera demo (script/seed-dunphys.ts) buys REAL shares at the REAL
 // historical price on each gift's date, so balances are emergent from honest
 // market math rather than hand-picked constants. To stay deterministic AND
 // offline-reproducible, we fetch once here and COMMIT the result to
@@ -21,12 +21,12 @@ import path from "node:path";
 
 // Tickers the demo uses: single-stock picks + the diversified-mix sleeves.
 //   Family signatures (same stock to every grandkid):
-//     AAPL (Mitchell), GOOGL (Jay), DIS (Gloria/Cam), RBLX (Manny)
+//     AAPL (David), GOOGL (Robert), DIS (Sofia/Cam), RBLX (Leo)
 //   Per-kid personality picks (giftsForKid in lib/demo-roster.ts):
-//     Luke  → NTDOY, MCD        (the gamer)
-//     Alex  → AMZN, NFLX, DUOL  (ambitious; DUOL IPO'd Jul 2021)
-//     Haley → NKE, SBUX, SPOT   (graduated; SPOT IPO'd Apr 2018)
-//   VTI/VXUS/BND: the auto-invest managed mix (Phil recurring, Claire, etc.)
+//     Theo  → NTDOY, MCD        (the gamer)
+//     Nora  → AMZN, NFLX, DUOL  (ambitious; DUOL IPO'd Jul 2021)
+//     Mia → NKE, SBUX, SPOT   (graduated; SPOT IPO'd Apr 2018)
+//   VTI/VXUS/BND: the auto-invest managed mix (Marcus recurring, Elena, etc.)
 // IPO-constrained tickers have shorter history; the seed dates those gifts
 // recent so a real price always exists (allocateGift throws otherwise).
 const TICKERS = ["AAPL", "GOOGL", "DIS", "RBLX", "NTDOY", "MCD", "AMZN", "NFLX", "NKE", "SBUX", "DUOL", "SPOT", "VTI", "VXUS", "BND"] as const;

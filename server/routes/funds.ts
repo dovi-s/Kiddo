@@ -61,26 +61,38 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
     try {
       const userId = (req.user as any).id;
       const userEmail = String((req.user as any).email || "").trim().toLowerCase();
-      let funds = await storage.getFundsByUser(userId);
-      // Merge in transferred funds (where the user is the previous
-      // custodian and the kid has claimed). Per FUND_STATES_SPEC.md
-      // item 4: post-handoff, the fund stays in the parent's list
-      // but renders read-only with a "Transferred" pill. Without this
-      // merge the fund disappears entirely from the parent's view
-      // once fund.userId flips to the kid. The append is at the END
-      // of the active list (after the dedupe-on-email merge below)
-      // so active funds stay top-of-list and transferred ones sit
-      // beneath them.
-      const previouslyOwned = await storage.getPreviouslyOwnedFundsByUser(userId);
+      // The four independent preamble reads ran SERIALLY (~5 remote-DB round
+      // trips before the per-fund loop even started — a big chunk of this
+      // endpoint's latency, which every demo login hits first). Fetch them
+      // CONCURRENTLY. 2026-06-04 perf:
+      //   - own funds
+      //   - transferred ("previously owned") funds — kept in the parent's list
+      //     read-only post-handoff per FUND_STATES_SPEC.md item 4
+      //   - accepted collaborator rows (co-parent access; merged below)
+      //   - dup-email candidate user rows (canonical merge below)
+      const [ownFunds, previouslyOwned, collaboratorRows, emailCandidates] = await Promise.all([
+        storage.getFundsByUser(userId),
+        storage.getPreviouslyOwnedFundsByUser(userId),
+        db.select({ fundId: fundCollaborators.fundId, role: fundCollaborators.role })
+          .from(fundCollaborators)
+          .where(and(eq(fundCollaborators.userId, userId), eq(fundCollaborators.status, "accepted")))
+          .catch((err) => { console.warn("[funds] collaborator rows fetch skipped:", (err as any)?.message || err); return [] as Array<{ fundId: string | null; role: string | null }>; }),
+        userEmail
+          ? db.select({ id: users.id, createdAt: users.createdAt }).from(users).where(sql`LOWER(${users.email}) = ${userEmail}`)
+              .catch((err) => { console.warn("[funds] canonical candidates skipped:", (err as any)?.message || err); return [] as Array<{ id: string; createdAt: Date | null }>; })
+          : Promise.resolve([] as Array<{ id: string; createdAt: Date | null }>),
+      ]);
+      let funds = ownFunds;
 
-      if (userEmail) {
+      // Canonical-email merge ONLY runs when there are DUPLICATE user rows
+      // sharing this email (rare — real dup-account artifacts). For the common
+      // single-row case (every demo persona, almost every real user), ownFunds
+      // is already correct, so skip the redundant per-candidate re-fetch of the
+      // SAME user's funds. 2026-06-04 perf.
+      if (userEmail && emailCandidates.some((c) => String(c.id) !== String(userId))) {
         try {
-          const candidates = await db
-            .select({ id: users.id, createdAt: users.createdAt })
-            .from(users)
-            .where(sql`LOWER(${users.email}) = ${userEmail}`);
-
-          if (candidates.length >= 1) {
+          const candidates = emailCandidates;
+          {
             const allFunds = await Promise.all(
               candidates.map(async (candidate) => {
                 const candidateFunds = await storage.getFundsByUser(candidate.id);
@@ -128,15 +140,12 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // an empty list and gets redirected to /get-started — even
       // though every per-fund endpoint (gated by requireOwnedFundParam)
       // would happily grant them access. Locked 2026-05-21 after the
-      // Dunphy demo's Claire account exposed this gap end-to-end.
+      // Rivera demo's Elena account exposed this gap end-to-end.
       try {
-        const collaboratorRows = await db
-          .select({ fundId: fundCollaborators.fundId })
-          .from(fundCollaborators)
-          .where(and(
-            eq(fundCollaborators.userId, userId),
-            eq(fundCollaborators.status, "accepted"),
-          ));
+        // collaboratorRows is fetched in the batched Promise.all above.
+        const roleByFundId = new Map(
+          collaboratorRows.map((row) => [String(row.fundId || ""), String(row.role || "")]),
+        );
         const collaboratorFundIds = collaboratorRows
           .map((row) => String(row.fundId || ""))
           .filter(Boolean);
@@ -147,10 +156,19 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
             .select()
             .from(fundsTable)
             .where(inArray(fundsTable.id, missingFundIds));
-          // Tag with accessRole='collaborator' so client surfaces can
-          // identify them without re-querying fund_collaborators.
+          // Tag with the collaborator's REAL role ('co-admin' | 'viewer'),
+          // matching what requireOwnedFundParam derives per-request. The old
+          // generic accessRole='collaborator' tag broke role gating in BOTH
+          // directions (found 2026-06-04 via the demo's Elena): client
+          // checks for === 'co-admin' failed, so a co-admin was shown the
+          // owner-only co-parent invite card + Kiddo+ upsell ("Primary
+          // custodian · Full control" on someone else's fund), while
+          // MemoryBook's canModerateMemory denied them their actual co-admin
+          // powers. Unknown/legacy role values degrade to 'viewer' — the
+          // same conservative mapping the per-request middleware uses.
           for (const fund of collabFunds) {
-            funds.push({ ...(fund as any), accessRole: "collaborator" as const });
+            const role = roleByFundId.get(String((fund as any)?.id || ""));
+            funds.push({ ...(fund as any), accessRole: role === "co-admin" ? ("co-admin" as const) : ("viewer" as const) });
           }
         }
       } catch (collabErr) {
@@ -169,17 +187,45 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       const activeIds = new Set(funds.map((f: any) => String(f?.id || "")));
       const transferredOnly = previouslyOwned.filter((f: any) => !activeIds.has(String(f?.id || "")));
 
-      const ensuredFunds: any[] = [];
-      for (const fund of funds) {
+      // captureFundSnapshot is the HEAVY part of the per-fund loop (~5 round
+      // trips: balance-heal UPDATE + all-snapshot backfill UPDATE + existence
+      // SELECT + upsert), but it only needs to run ONCE per fund per day. One
+      // batch query tells us which funds already have today's snapshot, so a
+      // same-day repeat load — and EVERY demo persona, whose seed writes
+      // snapshots through today — skips it entirely. It stays the daily trigger
+      // for view-only funds that don't yet have today's snapshot. 2026-06-04 perf.
+      const fundIdsForSnapshot = funds.map((f: any) => String(f?.id || "")).filter(Boolean);
+      const fundsWithTodaySnapshot = new Set<string>();
+      if (fundIdsForSnapshot.length > 0) {
         try {
-          const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
-          await captureFundSnapshot(ensured.id);
-          ensuredFunds.push(ensured);
+          const idsSql = sql.join(fundIdsForSnapshot.map((id) => sql`${id}`), sql`, `);
+          const snapRows: any = await db.execute(sql`
+            SELECT DISTINCT fund_id FROM fund_snapshots
+            WHERE fund_id IN (${idsSql}) AND snapshot_date::date = CURRENT_DATE
+          `);
+          for (const r of (snapRows.rows as any[]) || []) fundsWithTodaySnapshot.add(String(r.fund_id));
         } catch (err) {
-          console.error("Failed to ensure fund setup:", fund.id, err);
-          ensuredFunds.push(fund);
+          console.warn("[funds] today-snapshot check skipped:", (err as any)?.message || err);
         }
       }
+
+      // Per-fund setup runs CONCURRENTLY (2026-06-04 perf). Each fund's
+      // slug-ensure + permanent-event + snapshot touches only that fund's own
+      // rows, so there's no cross-fund contention. Order is preserved by map.
+      const ensuredFunds: any[] = await Promise.all(
+        funds.map(async (fund: any) => {
+          try {
+            const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
+            if (!fundsWithTodaySnapshot.has(String(ensured.id))) {
+              await captureFundSnapshot(ensured.id);
+            }
+            return ensured;
+          } catch (err) {
+            console.error("Failed to ensure fund setup:", fund.id, err);
+            return fund;
+          }
+        }),
+      );
       // Tag transferred-only funds so client surfaces can identify
       // them without re-checking previous_owner_id every render. The
       // accessRole='previous_owner' tag mirrors the per-fund auth
@@ -279,12 +325,14 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       // preserve any role already stamped above. The transferred-only push
       // (line ~173) tags handed-off funds 'previous_owner'; a blanket 'owner'
       // map clobbered that tag, so a parent viewing a fund they handed off
-      // (Phil → Haley's transferred fund) resolved to accessRole='owner' +
+      // (Marcus → Mia's transferred fund) resolved to accessRole='owner' +
       // transferredAt = isOwnerMode, and saw the now-adult's second-person
       // self-view ("your future / who loves you / Start one for someone you
       // love") instead of the read-only previous-owner view. Only entries with
       // no prior tag are ones the viewer owns directly → default those to owner.
-      const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: (f.accessRole as 'owner' | 'previous_owner' | 'collaborator' | undefined) || 'owner' }));
+      // (accessRole union: 'collaborator' removed 2026-06-04 — nothing emits
+      // the generic tag anymore; the collaborator merge above stamps real roles.)
+      const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: (f.accessRole as 'owner' | 'previous_owner' | 'co-admin' | 'viewer' | undefined) || 'owner' }));
 
       // Union with funds this user has been accepted into as a collaborator.
       // The shape is identical to owned funds plus an accessRole tag the
@@ -433,7 +481,18 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       if (!fund) {
         return res.status(404).json({ error: "Fund not found" });
       }
-      if (fund.userId !== (req.user as any).id) {
+      // Owner OR an accepted collaborator (co-admin / viewer) may READ the feed —
+      // mirrors requireOwnedFundParam. Previously owner-only, which left an accepted
+      // co-parent's /activity page EMPTY: a fund's activity rows all live under the
+      // OWNER's userId, so the user-scoped /api/activities returns nothing for a
+      // collaborator, and this fund-scoped fallback then 403'd them. (2026-07-07)
+      const viewerId = (req.user as any).id;
+      let allowed = fund.userId === viewerId;
+      if (!allowed) {
+        const collab = await storage.getCollaboratorForFundAndUser(req.params.fundId, viewerId);
+        allowed = !!collab;
+      }
+      if (!allowed) {
         return res.status(403).json({ error: "Forbidden" });
       }
       const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 200);

@@ -52,9 +52,17 @@ interface FundTabsProps {
   // truth). Override is useful for Dashboard which already has
   // selectedFundId state derived through its own validation logic.
   activeFundId?: string;
+  // Optional canonical switch handler. When provided (Dashboard passes its
+  // `selectFund`), a tab click routes through it so the switch is COMPLETE:
+  // state + localStorage + ACTIVE_FUND_CHANGE_EVENT + the URL ?fund=. Without
+  // this, the tab updated localStorage + the event but NOT the URL, so the
+  // sidebar/header's URL-sync re-asserted the stale ?fund and stayed pinned to
+  // the previous fund ("stuck on Luke after switching", founder-reported
+  // 2026-06-12). When omitted, the uncontrolled fallback drives the hook directly.
+  onSelect?: (fundId: string) => void;
 }
 
-export function FundTabs({ funds, activeFundId: activeFundIdProp }: FundTabsProps) {
+export function FundTabs({ funds, activeFundId: activeFundIdProp, onSelect }: FundTabsProps) {
   // Mirror the AppHeader pattern: read from the hook, re-sync on
   // ACTIVE_FUND_CHANGE_EVENT so a switch from anywhere (dropdown,
   // sidebar, tab) keeps the highlighted tab in sync.
@@ -76,12 +84,19 @@ export function FundTabs({ funds, activeFundId: activeFundIdProp }: FundTabsProp
   const handleSelect = useCallback((fundId: string) => {
     if (fundId === activeFundIdState) return;
     haptic("selection");
+    setActiveFundIdState(fundId); // optimistic pill highlight
+    if (onSelect) {
+      // Controlled parent (Dashboard) owns the canonical full switch — state +
+      // localStorage + ACTIVE_FUND_CHANGE_EVENT + the URL ?fund=. Routing through
+      // it is what keeps the sidebar/header from being pinned to a stale ?fund.
+      onSelect(fundId);
+      return;
+    }
+    // Uncontrolled fallback: drive the shared hook directly. setActiveFundId
+    // already dispatches ACTIVE_FUND_CHANGE_EVENT (with the id in detail), so
+    // listeners (sidebar, page-scope hooks, prefetch) wake up.
     setActiveFundId(fundId);
-    setActiveFundIdState(fundId);
-    // Dispatch the same event the AppHeader dispatches so any other
-    // listener (sidebar, page-scope hooks, prefetch) wakes up.
-    window.dispatchEvent(new CustomEvent(ACTIVE_FUND_CHANGE_EVENT));
-  }, [activeFundIdState]);
+  }, [activeFundIdState, onSelect]);
 
   // Single-fund parents see no strip. The Dashboard hero is the
   // canonical anchor; with one fund there's nothing to switch.

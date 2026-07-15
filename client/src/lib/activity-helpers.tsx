@@ -5,7 +5,10 @@
 // contributions detail modal landed and started rendering the same row shape.
 
 import type { Activity as ActivityType } from "@shared/schema";
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, CreditCard, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle } from "lucide-react";
+import { useState, useId, type ReactNode } from "react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, CreditCard, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, Info } from "lucide-react";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { canonicalLabel } from "@shared/activity-semantics";
 
 export type FeedActivity = ActivityType & {
   fundName?: string | null;
@@ -52,6 +55,9 @@ export function parseMetadata(raw: unknown): Record<string, unknown> {
 
 export function extractTicker(meta: Record<string, unknown>, title?: string | null): string | null {
   if (meta.ticker && typeof meta.ticker === "string") return meta.ticker.toUpperCase();
+  // Recurring (auto_invest) rows stamp the pick under `selectedTicker`, not
+  // `ticker` — read it too so those rows get the brand logo like gifts do.
+  if (meta.selectedTicker && typeof meta.selectedTicker === "string") return meta.selectedTicker.toUpperCase();
   const text = title || "";
   const m = text.match(/^([A-Z]{1,5})\s+gift/i) || text.match(/into\s+([A-Z]{1,5})\b/i);
   return m ? m[1].toUpperCase() : null;
@@ -67,15 +73,58 @@ export function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
+// Drops the robotic ".00" on whole-dollar amounts ($25 not $25.00) while keeping
+// real cents. Shared so the activity subsystem (DetailHistoryModal, the feed,
+// the contribution detail) reads like the rest of the app instead of a ledger.
+// Mirrors the per-page copies in Dashboard/MemoryBook.
+export function formatMoneyFriendly(value: number): string {
+  const rounded = Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(rounded);
+}
+
 export function parseAmount(value: unknown): number | null {
   if (value == null) return null;
   const n = typeof value === "number" ? value : Number.parseFloat(String(value));
   return Number.isFinite(n) ? n : null;
 }
 
-// Configures the row's icon tile (background, color, icon, label) for a given
-// activity type. Source of truth for the visual taxonomy of the History feed.
-export function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
+// Display-time cleanup of legacy/seed activity descriptions. Copy of the feed's
+// canonical rewriteLegacyDescription (Activity.tsx) so the DetailHistoryModal +
+// Dashboard render the SAME cleaned copy the feed does — without it, this surface
+// showed raw seed text ("Last automatic charge could not run. Next attempt Aug 3.
+// We sent you an email reminder…") while the feed showed the honest short version.
+// Keep in sync with Activity.tsx (it's the reference; this converges up to it).
+export function rewriteLegacyDescription(d: string | null | undefined): string | null {
+  if (!d) return d ?? null;
+  const t = d.trim();
+  if (t === "No note." || /^\$[\d,]+(\.\d{2})? gift received$/i.test(t)) return null;
+  let out = d;
+  out = out.replace(/\bacross 1 positions\b/g, "across 1 position");
+  out = out.replace(/(\d+)\.(\d{1,4})\s+shares?\b/g, (_m, whole: string, frac: string) => {
+    const trimmed = frac.replace(/0+$/, "");
+    if (trimmed === "") return whole === "1" ? `${whole} share` : `${whole} shares`;
+    return `${whole}.${trimmed} shares`;
+  });
+  out = out.replace(/\b1-2 business days\b/g, "1 to 2 business days");
+  out = out.replace(/\b1\s*-\s*2 business days\b/g, "1 to 2 business days");
+  out = out.replace(/\bthe full mix\b/g, "the diversified mix");
+  out = out.replace(/^Last automatic charge could not run\.\s*/, "");
+  out = out.replace(/Next attempt (\w+\.? \d+)\.?/i, "Your plan is still on and charges again $1.");
+  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add the missed one if you'd like.");
+  return out;
+}
+
+// Configures the row's icon tile (background, color, icon) for a given
+// activity type. The LABEL returned here is a legacy fallback only — the
+// exported getTypeConfig wrapper below overrides it with the shared canonical
+// label so this surface (DetailHistoryModal + Dashboard) names every event
+// identically to the Activity feed and the deep-link detail page.
+function resolveTypeVisual(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
   const t = normalizeActivityType(type);
   if (t === "refund")
     return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <ArrowUp size={16} style={{ transform: "rotate(180deg)" }} />, label: "Refund" };
@@ -85,6 +134,15 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: "Gift released" };
   if (t === "gift_received_cash")
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: "Gift held as cash" };
+  // Gifter recurring-schedule lifecycle — checked before the GIFT_TYPES group
+  // (these are members of GIFT_TYPES) so they get the pause/resume/cancel tile,
+  // not the generic gift tile. Mirrors Activity.tsx resolveTypeVisual.
+  if (t === "gifter_recurring_paused")
+    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Pause size={16} />, label: "Gifter paused recurring" };
+  if (t === "gifter_recurring_resumed")
+    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Play size={16} />, label: "Gifter resumed recurring" };
+  if (t === "gifter_recurring_cancelled")
+    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Gifter cancelled recurring" };
   if (GIFT_TYPES.includes(t))
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: t === "gift_invested" ? "Gift invested" : "Gift received" };
   if (t === "recurring_paused")
@@ -96,7 +154,15 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
   if (t === "parent_contribution")
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Contribution" };
   if (t === "parent_contribution_failed")
-    return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
+    // A recurring auto-invest charge that couldn't run is a RECOVERABLE hiccup —
+    // the schedule lives (the NEXT charge proceeds) but the missed one needs the
+    // parent to add it manually (the worker does NOT re-run it) — so it wears the
+    // calm amber "Charge missed" frame (matching the dashboard card + Activity
+    // Scheduled tab), NOT an alarming red "Failed". "Charge missed" (not "Retrying",
+    // which would be a lie — nothing auto-retries) pairs with the "Add it now"
+    // action. Label here = category ("Recurring investment"); the StatusPill below
+    // carries the "Charge missed" status.
+    return { bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={16} />, label: "Recurring investment" };
   if (t === "memory_milestone_added")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
   if (t === "memory_entry_edited")
@@ -130,10 +196,55 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
   return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <Calendar size={16} />, label: "Update" };
 }
 
+// Public accessor — visual from resolveTypeVisual, LABEL from the shared
+// canonical source so DetailHistoryModal + Dashboard rows match the Activity
+// feed and the detail page word-for-word. See shared/activity-semantics.ts.
+export function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
+  const v = resolveTypeVisual(type);
+  return { ...v, label: canonicalLabel(type) ?? v.label };
+}
+
+// Shared display-time normalizers so EVERY surface (the main feed AND the
+// /activity/:id detail page) reads the same honest copy for legacy/seeded rows,
+// instead of only the feed getting cleaned. Kept minimal + focused on the
+// failed-charge state (the stored copy that predated the honest rewrite). The
+// main feed still has its own richer rewrite; this is the shared subset.
+export function normalizeActivityTitle(title?: string | null): string | null {
+  if (!title) return title ?? null;
+  // "Recurring investment failed" tripled the eyebrow + the status pill.
+  if (title.trim() === "Recurring investment failed") return "Automatic charge didn't go through";
+  return title;
+}
+
+export function normalizeActivityDescription(desc?: string | null): string | null {
+  if (!desc) return desc ?? null;
+  let out = desc;
+  // Stale failed-charge body: restated the title, promised a false "Next attempt"
+  // (nothing re-runs), and trailed a wordy email line. Make it honest + calm.
+  out = out.replace(/^Last automatic charge could not run\.\s*/, "");
+  out = out.replace(/Next attempt (\w+\.? \d+)\.?/i, "Your plan is still on and charges again $1.");
+  out = out.replace(/We sent you an email reminder so you can add it manually\./, "Add the missed one if you'd like.");
+  return out;
+}
+
+// StatusPill is a plain status MARKER, not an explainer. Every surface it renders
+// on (the Activity feed, the detail modal, the detail page) already shows the row
+// DESCRIPTION, which carries the specific "why + what to do" (e.g. "Your Visa
+// ····4242 was declined. Your plan is still on and charges again Aug 8."). A
+// tap/hover popup on the pill would just repeat that visible copy — payment info
+// belongs on the page, not hidden behind a tap. The compact SCHEDULE row (no
+// description) still uses HintPill for its "Charge missed" pill, where the popup IS
+// the only explanation.
 export function StatusPill({ status, type }: { status?: string | null; type?: string | null }) {
   let resolved = status || null;
   if (!resolved && type) {
-    if (type === "parent_contribution_failed" || type === "payment_failed") resolved = "failed";
+    // A recurring auto-invest decline is NOT retried and does NOT break the plan
+    // (it charges again next cycle); the parent can optionally add the missed one.
+    // So the honest state is "Charge missed" -> calm amber, not "Retrying" (a lie:
+    // nothing re-runs) and not "Needs you" (overstated: the plan self-continues).
+    // A subscription payment failure is more serious (plan lapses) -> red "Failed".
+    if (type === "parent_contribution_failed") resolved = "retrying";
+    else if (type === "payment_failed") resolved = "failed";
   }
   if (!resolved) return null;
   const map: Record<string, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
@@ -142,6 +253,7 @@ export function StatusPill({ status, type }: { status?: string | null; type?: st
     invested:   { label: "Invested",   bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <ArrowUp size={9} /> },
     settled:    { label: "Settled",    bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <Check size={9} /> },
     failed:     { label: "Failed",     bg: "rgb(254,228,228)", color: "rgb(170,38,38)",  icon: <AlertCircle size={9} /> },
+    retrying:   { label: "Charge missed", bg: "rgb(255,247,230)", color: "rgb(161,88,0)", icon: <AlertCircle size={9} /> },
     refunded:   { label: "Refunded",   bg: "rgb(245,245,245)", color: "rgb(100,92,86)",  icon: <Clock size={9} /> },
     host_hold:  { label: "On hold",    bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Clock size={9} /> },
   };
@@ -156,6 +268,74 @@ export function StatusPill({ status, type }: { status?: string | null; type?: st
     }}>
       {m.icon}{m.label}
     </span>
+  );
+}
+
+// A status pill that reveals a one-line explanation on BOTH hover (mouse) and
+// tap (touch). Its predecessor was a native hover-only `title` (invisible on a
+// phone); a first fix used absolute positioning that got clipped and pushed
+// off-screen inside the feed's narrow containers on mobile. This renders the
+// bubble through the Radix Popover, which PORTALS out of any clipping ancestor
+// and keeps itself on-screen (collision padding + auto-flip), so it can never be
+// cut off. Hover shows it on a mouse; tap pins it on touch; tapping elsewhere or
+// Escape closes it. With no `hint` it renders a plain static badge. The trigger
+// stops click propagation so tapping it never also fires the row's tap-to-expand.
+export function HintPill({
+  label, bg, color, icon, hint,
+}: { label: ReactNode; bg: string; color: string; icon?: ReactNode; hint?: string }) {
+  const [pinned, setPinned] = useState(false);
+  const [hover, setHover] = useState(false);
+  const hintId = useId();
+  const open = !!hint && (pinned || hover);
+
+  const pillStyle = {
+    display: "inline-flex", alignItems: "center", gap: 3,
+    fontSize: 9.5, fontWeight: 700, background: bg, color,
+    borderRadius: 999, padding: "2px 7px", lineHeight: 1.2,
+  } as const;
+
+  if (!hint) {
+    return <span style={pillStyle}>{icon}{label}</span>;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { if (!o) { setPinned(false); setHover(false); } }}>
+      <PopoverAnchor asChild>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-describedby={open ? hintId : undefined}
+          onClick={(e) => { e.stopPropagation(); setPinned((p) => !p); setHover(false); }}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          style={{ ...pillStyle, border: "none", cursor: "pointer", fontFamily: "inherit", WebkitTapHighlightColor: "transparent" }}
+        >
+          {icon}{label}
+          <Info size={9} aria-hidden style={{ opacity: 0.6, marginLeft: 1 }} />
+        </button>
+      </PopoverAnchor>
+      <PopoverContent
+        side="bottom"
+        align="end"
+        sideOffset={6}
+        collisionPadding={10}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-auto max-w-[240px] border-0 bg-transparent p-0 shadow-none"
+      >
+        <div
+          id={hintId}
+          role="tooltip"
+          style={{
+            background: "rgb(38,34,26)", color: "rgb(245,241,232)",
+            fontSize: 11, fontWeight: 500, lineHeight: 1.45,
+            padding: "8px 10px", borderRadius: 10, textAlign: "left",
+            boxShadow: "0 8px 26px rgba(26,23,16,0.22)",
+          }}
+        >
+          {hint}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -178,12 +358,17 @@ export function isParentPaidType(type?: string | null): boolean {
 
 // Whether a row qualifies for the "Report an issue" pre-filled support flow.
 // Money-flow rows where a dispute could realistically apply.
+// Rows where "is this right / did this really happen?" genuinely applies: gifts
+// from OTHERS, failed charges, money movements, billing, refunds. Deliberately NOT
+// your OWN routine successes ("You contributed $100") or status/config rows
+// (recurring started, plan activated) — a per-row dispute link there was just
+// noise. Kept in sync with the feed's local list (Activity.tsx). Used by the
+// detail modal so both surfaces scope report-issue identically.
 export const REPORTABLE_TYPES = new Set([
   "gift_received", "gift_invested", "gift_received_cash",
-  "parent_contribution", "parent_contribution_failed",
-  "auto_invest", "cash_invested", "withdrawal",
+  "parent_contribution_failed",
+  "cash_invested", "withdrawal",
   "subscription_renewal", "subscription_started", "payment_failed",
-  "starter_plan_activated", "family_plan_activated",
   "refund",
 ]);
 

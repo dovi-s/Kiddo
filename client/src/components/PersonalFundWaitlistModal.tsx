@@ -69,7 +69,7 @@ export function PersonalFundWaitlistModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 overflow-hidden" aria-describedby={undefined}>
         <div className="p-6 md:p-7">
           {submitted ? (
             <div className="space-y-4 text-center">

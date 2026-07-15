@@ -17,15 +17,12 @@ export const ETF_ALLOWLIST = [
   "QQQ",   // Nasdaq 100
 ] as const;
 
-// Individual stocks — gifter-pick options only. Never allowed in the managed mix.
-// Z (Zillow) intentionally removed: not warm enough for a child-facing curated list.
-// Existing recurring schedules and holdings to Z are grandfathered via LEGACY_PICK_META
-// in client Dashboard.tsx so parents see the friendly name + emoji on display, but
-// no new investments can target Z. Don't re-add without product sign-off.
-export const STOCK_ALLOWLIST = [
-  "DIS", "AAPL", "NKE", "NFLX", "RBLX", "SBUX", "AMZN", "GOOGL", "SPOT",
-  "TGT", "CMCSA", "DUOL", "ABNB", "NTDOY", "DPZ", "CHWY", "ADBE",
-] as const;
+// Individual stocks (gifter-pick options) are NOT configured here. The canonical
+// pick universe AND the server's enforcement live in shared/stock-picks.ts
+// (STOCK_PICKS + isAllowedStockPick, used in routes.ts). The old STOCK_ALLOWLIST
+// const that sat here was dead code — defined, imported nowhere — and had drifted
+// stale (missing MSFT/TSLA/NVDA/toys, still listing CMCSA/ADBE). Removed 2026-06-11
+// so there is one source of truth and the lists can't silently diverge again.
 
 // Custom managed-mix allocations are restricted to ETFs.
 export const CUSTOM_STRATEGY_ALLOWED_TICKERS = ETF_ALLOWLIST;
@@ -50,17 +47,16 @@ const LEGACY_FUND_STRATEGY_OVERRIDES_PATH = path.join(
   "fund-strategy-overrides.json",
 );
 
-// Default custom-mix starter. Dropped VGT 2026-05-31 to match the managed
-// presets, which removed the tech-sector sleeve in the 2026-05-28 self-directed
-// pivot (a sector tilt is the most advice-like allocation — see the RIA question
-// in COUNSEL_ENGAGEMENT_PACKET.md Part 1). Now mirrors the client-side prefill
-// (Settings.tsx DEFAULT_CUSTOM_ALLOCATION_ROWS: VTI 62 / VXUS 28 / BND 10) so the
-// server fallback and the user-facing starter agree. VGT remains SELECTABLE in a
-// custom mix (it's still in ETF_ALLOWLIST); it's just no longer the default.
+// Default custom-mix starter. Dropped VGT 2026-05-31 (sector tilt = the most
+// advice-like allocation; see the RIA question in COUNSEL_ENGAGEMENT_PACKET.md
+// Part 1). Went all-equity 2026-06-11 (VTI 70 / VXUS 30, no bonds) to match the
+// all-equity Growth preset — the default experience should be max long-horizon
+// growth, with bonds a deliberate Balanced/Conservative choice, not a starter
+// default. Mirrors the client prefill (Settings.tsx DEFAULT_CUSTOM_ALLOCATION_ROWS).
+// VGT/BND remain SELECTABLE in a custom mix (still in ETF_ALLOWLIST); just not the default.
 export const DEFAULT_CUSTOM_ALLOCATIONS: CustomAllocations = {
-  VTI: 0.62,
-  VXUS: 0.28,
-  BND: 0.1,
+  VTI: 0.70,
+  VXUS: 0.30,
 };
 
 type NormalizeResult =
@@ -153,8 +149,8 @@ async function readLegacyFile(fundId: string): Promise<CustomAllocations | null>
  *
  * Returns null when the fund has no saved custom mix. Callers
  * generally fall back to DEFAULT_CUSTOM_ALLOCATIONS in that case
- * (DEFAULT_CUSTOM_ALLOCATIONS is the {VTI 62, VXUS 28, BND 10}
- * starter mix exported above — VGT-free since 2026-05-31).
+ * (DEFAULT_CUSTOM_ALLOCATIONS is the {VTI 70, VXUS 30} all-equity
+ * starter mix exported above — VGT-free since 2026-05-31, bond-free since 2026-06-11).
  */
 export async function getFundCustomAllocations(fundId: string): Promise<CustomAllocations | null> {
   if (!fundId) return null;

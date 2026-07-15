@@ -1,17 +1,17 @@
-# Demo audio assets — Gloria Pritchett voice memos
+# Demo audio assets — Sofia Rivera voice memos
 
-Files expected here for the Dunphy demo to render Gloria's voice-memo
+Files expected here for the Rivera demo to render Sofia's voice-memo
 gifts. Set the `DEMO_AUDIO_ENABLED=1` env var when running the seed
 (or the nightly reset) to wire these URLs onto the seeded memory
-entries; without the flag, Gloria's entries stay text-only.
+entries; without the flag, Sofia's entries stay text-only.
 
 ## Required files
 
 | File | Used by | Approximate spoken script |
 |---|---|---|
-| `gloria-haley.mp3` | Gloria → Haley gifts | "Mi amor Haley, never forget your familia. Te amo, mi nieta." |
-| `gloria-alex.mp3` | Gloria → Alex gifts | "Para ti, Alex. Con todo mi amor. Read the prospectus, mi vida." |
-| `gloria-luke.mp3` | Gloria → Luke gifts | "Mi Luke. Be brave, be smart, be Pritchett." |
+| `gloria-haley.mp3` | Sofia → Mia gifts | "Mi amor Mia, never forget your familia. Te amo, mi nieta." |
+| `gloria-alex.mp3` | Sofia → Nora gifts | "Para ti, Nora. Con todo mi amor. Read the prospectus, mi vida." |
+| `gloria-luke.mp3` | Sofia → Theo gifts | "Mi Theo. Be brave, be smart, be Rivera." |
 
 The exact script can vary — these are guidelines, not requirements.
 The Spanish-language inflection matters more than the literal words.
@@ -57,8 +57,7 @@ the assets to serve.
 
 ## Legal note
 
-Per `DUNPHY_DEMO_SPEC.md`: voice actors recording Modern Family
-characters by name should NOT impersonate Sofía Vergara directly.
-The character "Gloria Pritchett" is fictional; the voice should be a
-distinct delivery, not a Vergara impression. Keeps the demo on the
-right side of the publicity-rights line.
+The Rivera family is an original, fictional cast. Any voice memos
+recorded for the demo (e.g. "Sofia Rivera") should be an original
+delivery, not an impression of any real performer. Keeps the demo on
+the right side of the publicity-rights line.

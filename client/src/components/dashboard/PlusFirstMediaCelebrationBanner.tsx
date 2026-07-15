@@ -18,10 +18,10 @@
 //
 // Ships Tier-2 deferred item #2 (locked 2026-05-23).
 
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { Camera } from "lucide-react";
-import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
+import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const DISMISS_KEY = "kora:dismissed:plus-first-media-celebration";
 
@@ -34,6 +34,8 @@ export function PlusFirstMediaCelebrationBanner({
   plusFirstMediaAt,
   fundId,
 }: PlusFirstMediaCelebrationBannerProps) {
+  const [open, setOpen] = useState(true);
+
   if (!plusFirstMediaAt) return null;
 
   if (typeof window !== "undefined") {
@@ -45,27 +47,23 @@ export function PlusFirstMediaCelebrationBanner({
     }
   }
 
-  const dismissBanner = () => {
+  // Persisted AFTER the collapse exit completes — so the banner always
+  // animates out smoothly and never reappears. (fundId is unused now; the
+  // old active-fund event nudge is no longer needed — internal state drives it.)
+  void fundId;
+  const persistDismiss = () => {
     try {
       safeLocalSet(DISMISS_KEY, new Date().toISOString());
     } catch {
       // best-effort
     }
-    // Nudge the active-fund subscribers to re-evaluate render state so
-    // the banner unmounts immediately on click without waiting for the
-    // next dashboard-summary refetch.
-    if (fundId) {
-      window.dispatchEvent(
-        new CustomEvent(ACTIVE_FUND_CHANGE_EVENT, { detail: { id: fundId } }),
-      );
-    }
   };
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+    <CollapseDismissSection
+      open={open}
+      onExitComplete={persistDismiss}
+      onRequestDismiss={() => setOpen(false)}
       className="mb-4 rounded-3xl border p-6 shadow-premium-sm md:p-7"
       style={{
         // Warm gold treatment — distinct from co-parent banner (evergreen)
@@ -83,7 +81,7 @@ export function PlusFirstMediaCelebrationBanner({
           <div className="flex items-center gap-2 mb-1.5">
             <Camera size={14} className="text-[hsl(var(--kiddo-gold))]" />
             <p
-              className="text-[10px] font-bold uppercase"
+              className="text-3xs font-bold uppercase"
               style={{
                 color: "hsl(var(--kiddo-gold))",
                 letterSpacing: "0.14em",
@@ -96,12 +94,12 @@ export function PlusFirstMediaCelebrationBanner({
             Your first photo is on the timeline.
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Every photo, voice memo, and video you add lives here for the long run. The kid who eventually opens this Memory Book sees what you saw, in the moment you saw it.
+            Every photo and video you add stays for the kid who opens this one day, exactly as you saw it.
           </p>
         </div>
         <button
           type="button"
-          onClick={dismissBanner}
+          onClick={() => setOpen(false)}
           className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
           data-testid="plus-first-media-celebration-dismiss"
           aria-label="Dismiss first-photo celebration banner"
@@ -109,6 +107,6 @@ export function PlusFirstMediaCelebrationBanner({
           Dismiss
         </button>
       </div>
-    </motion.section>
+    </CollapseDismissSection>
   );
 }

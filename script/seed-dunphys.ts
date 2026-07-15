@@ -1,17 +1,17 @@
-// Seed the Dunphy family demo accounts + funds + gifts + holdings.
+// Seed the Rivera family demo accounts + funds + gifts + holdings.
 //
 // One-time idempotent seed for the public-facing demo at /login (creds
 // in DUNPHY_DEMO_SPEC.md). Run with: `npm run seed:dunphys`.
 //
-// Creates seven user accounts (Phil + Claire + 5 gifters), three child
-// funds (Haley / Alex / Luke), realistic gift history, holdings, memory
+// Creates seven user accounts (Marcus + Elena + 5 gifters), three child
+// funds (Mia / Nora / Theo), realistic gift history, holdings, memory
 // entries. All flagged isDemoAccount=true so future workers (gifter-
 // notification, recurring-contribution, etc.) can skip them and the
 // authenticated app can render the demo banner.
 //
 // IDEMPOTENT: Running this script multiple times is safe. It uses
 // upsert-by-email semantics on the user accounts; for the fund + gift
-// data, it bails early if Phil's account already has funds (assumes
+// data, it bails early if Marcus's account already has funds (assumes
 // the demo is already seeded and exits cleanly).
 //
 // PAPER-TRADING ONLY: This script writes seeded data to the local DB.
@@ -44,7 +44,7 @@ import {
   type InsertGift,
   type InsertMemoryEntry,
 } from "../shared/schema";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray, like } from "drizzle-orm";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -60,12 +60,16 @@ import {
 } from "./lib/demo-portfolio";
 import {
   giftsForKid,
+  SEED_NOW,
   rebalancesForKid,
   recurringNoteFor,
   momNoteFor,
   sealedLetterFor,
   type KidStory,
 } from "./lib/demo-roster";
+// Single source for the growth-passed milestone's constants + copy: the seed
+// must write byte-identical rows to the engine (see GROWTH_PASSED_GIFTS).
+import { GROWTH_PASSED_GIFTS } from "../server/milestones";
 
 // Real historical prices (committed fixture); every gift buys real shares at
 // the actual adjusted close on its month. Loaded once.
@@ -105,102 +109,130 @@ function ordinal(n: number): string {
 // fit) was deleted. The chart's drawdowns (2008, 2020, 2022, ...) are now the
 // fund's actual market value over time, not a stylized representation.
 
-const DEMO_PASSWORD = "dunphyfamily";
+const DEMO_PASSWORD = "riverafamily";
 
 // Account roster. All accounts share the same password since the demo
 // is meant to be shared publicly. The password meets Kora's current
 // auth.ts ≥8-char minimum (12 chars, no complexity required).
 const ACCOUNTS = [
   {
-    email: "phil@dunphyfamily.com",
-    firstName: "Phil",
-    lastName: "Dunphy",
+    email: "marcus@riverafamily.com",
+    firstName: "Marcus",
+    lastName: "Rivera",
     preferredName: "Dad",
-    role: "parent" as const,
+    // Marcus (Dad) is the CO-PARENT. Elena (Mom) is the primary custodian / lead
+    // persona — moms are the day-to-day primary user (kin-keeping, the Memory
+    // Book, managing the kids' accounts), so the demo leads as Mom. Marcus still
+    // engages (his sealed at-18 letter, co-parent access). Flipped 2026-06-11.
+    role: "co-parent" as const,
+    // Co-parent gets a real photo too (ORIGINAL AI-generated headshot, no real
+    // likeness). Both parents = faces; the gifter roster stays initials avatars.
+    profileImageUrl: "/demo/marcus.jpg",
   },
   {
-    email: "claire@dunphyfamily.com",
-    firstName: "Claire",
-    lastName: "Dunphy",
+    email: "elena@riverafamily.com",
+    firstName: "Elena",
+    lastName: "Rivera",
     preferredName: "Mom",
-    role: "co-parent" as const,
+    // Elena (Mom) is the PRIMARY CUSTODIAN / fund owner / lead persona — see
+    // the note on Marcus above. Flipped 2026-06-11.
+    role: "parent" as const,
+    // Elena is the logged-in parent, so she gets a real profile photo (an
+    // ORIGINAL AI-generated headshot, no real-person likeness — keeps the
+    // Rivera-rename IP fix intact). The gifter roster stays initials avatars;
+    // one real face for the account holder among them reads lived-in, not off.
+    profileImageUrl: "/demo/elena.jpg",
   },
-  { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const },
-  { email: "gloria@dunphyfamily.com",   firstName: "Gloria",   lastName: "Pritchett", preferredName: "Gloria",   role: "gifter" as const },
-  { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const },
-  { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const },
-  { email: "manny@dunphyfamily.com",    firstName: "Manny",    lastName: "Delgado",   preferredName: "Manny",    role: "gifter" as const },
-  // Haley is the graduated adult: past CA majority (21), her fund is transferred
+  { email: "robert@riverafamily.com",      firstName: "Robert",      lastName: "Rivera", preferredName: "Robert",      role: "gifter" as const, profileImageUrl: "" },
+  { email: "sofia@riverafamily.com",   firstName: "Sofia",   lastName: "Rivera", preferredName: "Sofia",   role: "gifter" as const, profileImageUrl: "" },
+  { email: "david@riverafamily.com", firstName: "David", lastName: "Rivera", preferredName: "David", role: "gifter" as const, profileImageUrl: "" },
+  { email: "chris@riverafamily.com",  firstName: "Chris",  lastName: "Bennett",    preferredName: "Chris",      role: "gifter" as const, profileImageUrl: "" },
+  { email: "leo@riverafamily.com",    firstName: "Leo",    lastName: "Rivera",   preferredName: "Leo",    role: "gifter" as const, profileImageUrl: "" },
+  // Mia is the graduated adult: past CA majority (21), her fund is transferred
   // to her below (step 3b). The "graduate" role gives her approved KYC in
   // upsertUser — she owns a live individual investing account now, not a
   // parent-custodial one. Logging in as her renders the REAL post-handoff adult
   // experience (the demo is the real app, not a mock view).
-  { email: "haley@dunphyfamily.com",    firstName: "Haley",    lastName: "Dunphy",    preferredName: "Haley",    role: "graduate" as const },
+  { email: "mia@riverafamily.com",    firstName: "Mia",    lastName: "Rivera",    preferredName: "Mia",    role: "graduate" as const, profileImageUrl: "/demo/mia.jpg" },
 ];
 
-// Three Dunphy kids. Ages locked relative to today so the demo always
-// reads "Haley is 22 (a year past CA majority age 21 — the graduated
-// adult-account demo), Alex is ~30 days from 21 (the approaching-handoff
-// demo), Luke is 13" regardless of when the seed is run. Haley sits a
-// clear year above Alex so the siblings don't read as same-age twins.
+// Three Rivera kids. Ages locked relative to today so the demo always
+// reads "Mia is 22 (a year past CA majority age 21 — the graduated
+// adult-account demo), Nora is ~30 days from 21 (the approaching-handoff
+// demo), Theo is 13" regardless of when the seed is run. Mia sits a
+// clear year above Nora so the siblings don't read as same-age twins.
 // Birthdates derived as `today - years - months_offset`.
-// Per DUNPHY_DEMO_SPEC.md locked rule: Dunphys are LA-based →
+// Per DUNPHY_DEMO_SPEC.md locked rule: Riveras are LA-based →
 // California UTMA majority age = 21. Set on each fund.
 function birthdateForAge(years: number, monthsBack = 0): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - years);
-  d.setMonth(d.getMonth() - monthsBack);
+  // Anchor to the one frozen SEED_NOW and build in UTC, so a birthday can't split
+  // a day across a reseed midnight (same fix as the recurring cadence).
+  const d = new Date(Date.UTC(
+    SEED_NOW.getUTCFullYear() - years,
+    SEED_NOW.getUTCMonth() - monthsBack,
+    SEED_NOW.getUTCDate(),
+  ));
   return d.toISOString().slice(0, 10);
 }
 
 // Holdings/balances are no longer hardcoded here — they're computed from the
 // real gift history × real historical prices (see seedKidFund + demo-roster +
 // demo-portfolio). Recurring amounts are tuned so the emergent balances land
-// at the aspirational targets (Luke ~$22k, Alex ~$52k, Haley ~$79k) via the
+// at the aspirational targets (Theo ~$22k, Nora ~$52k, Mia ~$79k) via the
 // offline report (`npm run report:demo-portfolio`).
 const KIDS = [
   {
-    firstName: "Haley",
-    lastName: "Dunphy",
+    firstName: "Mia",
+    childPhotoUrl: "/demo/mia.jpg", // ORIGINAL AI-generated headshot (graduate, 22)
+    lastName: "Rivera",
     pronoun: "she" as const,
     majorityAge: 21,
-    ageYears: 22, // a year PAST CA majority (21) — graduated adult-account demo; sits clearly above Alex so they don't read as twins
+    ageYears: 22, // a year PAST CA majority (21) — graduated adult-account demo; sits clearly above Nora so they don't read as twins
     birthdate: birthdateForAge(22, 4), // ~22y4m, a year past the handoff
     state: "CA",
-    slug: "haley-dunphy",
+    slug: "mia-rivera",
     strategy: "conservative" as const,
-    description: "Haley is 22, a year past majority. The fund is hers now — this is what graduating looks like.",
+    description: "Mia is 22, a year past majority. The fund is hers now — this is what graduating looks like.",
     // Recurring ended at the handoff: the parent's auto-invest stops once
     // ownership transfers. The fund still carries its full realized history
-    // (see giftsForKid / seedKidFund); Haley controls it from here.
+    // (see giftsForKid / seedKidFund); Mia controls it from here.
     recurring: { amount: 85, status: "paused" },
   },
   {
-    firstName: "Alex",
-    lastName: "Dunphy",
+    firstName: "Nora",
+    childPhotoUrl: "/demo/nora.jpg", // ORIGINAL AI-generated headshot (near-handoff, 20)
+    lastName: "Rivera",
     pronoun: "she" as const,
     majorityAge: 21,
     ageYears: 20, // ~30 days from CA majority (21) — the approaching-handoff demo
     birthdate: birthdateForAge(20, 11), // ~30 days from age 21 (handoff demo)
     state: "CA",
-    slug: "alex-dunphy",
+    slug: "nora-rivera",
     strategy: "balanced" as const,
-    description: "Alex is weeks from 21. This is where the handoff begins.",
-    // Recurring winds down as the handoff nears (the worker auto-pauses near
-    // majority); the fund still carries years of realized history.
-    recurring: { amount: 50, status: "paused" },
+    description: "Nora is weeks from 21. This is where the handoff begins.",
+    // Recurring stays ACTIVE right up to the handoff — the parent keeps
+    // contributing until the fund actually transfers at 21. The worker
+    // auto-pauses AT majority, NOT before (only Mia, already graduated, is
+    // handoff-paused). Fixed 2026-06-04: was seeded "paused", which implied
+    // recurring stops as the handoff nears (it doesn't) and surfaced a
+    // confusing "Recurring paused · resume" prompt on a fund still funding.
+    recurring: { amount: 50, status: "active" },
   },
   {
-    firstName: "Luke",
-    lastName: "Dunphy",
+    firstName: "Theo",
+    // ORIGINAL AI-generated child headshot (no real minor — so no COPPA / real
+    // child-likeness concern, and no EXIF/GPS since it's synthetic). Makes the
+    // demo fund feel like a real kid's, not a placeholder.
+    childPhotoUrl: "/demo/theo.jpg",
+    lastName: "Rivera",
     pronoun: "he" as const,
     majorityAge: 21,
     ageYears: 13,
     birthdate: birthdateForAge(13, 7),
     state: "CA",
-    slug: "luke-dunphy",
+    slug: "theo-rivera",
     strategy: "growth" as const,
-    description: "Luke's fund has the longest runway. Growth mix all the way.",
+    description: "Theo's fund has the longest runway. Growth mix all the way.",
     recurring: { amount: 100, status: "active" },
   },
 ];
@@ -210,7 +242,7 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
-  // Parents (Phil, Claire) land KYC-approved so the demo dashboard
+  // Parents (Marcus, Elena) land KYC-approved so the demo dashboard
   // doesn't surface "Activate investing / Until we verify your
   // identity" prompts. Gifters don't need KYC — they go through the
   // gift checkout flow. Locked 2026-05-21 with the demo polish pass.
@@ -224,6 +256,7 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
       firstName: account.firstName,
       lastName: account.lastName,
       preferredName: account.preferredName,
+      profileImageUrl: (account as any).profileImageUrl ?? null,
       kycStatus,
     }).where(eq(users.id, existing.id));
     return existing.id;
@@ -234,6 +267,7 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
     firstName: account.firstName,
     lastName: account.lastName,
     preferredName: account.preferredName,
+    profileImageUrl: (account as any).profileImageUrl ?? null,
     passwordHash,
     isDemoAccount: true,
     kycStatus,
@@ -246,15 +280,15 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
 // .local/gifter-notifications.json (subscribersByFund[fundId][email]) — NOT the
 // DB — so the DB reseed alone leaves it empty ("0 gifters following"). Seed a
 // believable subset of opted-in gifters so the surface is lived-in. The engaged
-// grandparents + uncle opt in; Mitchell (set-and-forget), Manny (young), and
-// Claire (co-parent, sees everything) intentionally don't, so it reads as a
+// grandparents + uncle opt in; David (set-and-forget), Leo (young), and
+// Elena (co-parent, sees everything) intentionally don't, so it reads as a
 // real subset, not "everyone". Merges into the file (preserves other funds'
 // entries); per-fund stats are computed from the gifts just inserted. Orphaned
 // entries for prior reseeds' fund IDs are harmless (queried only by live id).
 const OPT_IN_GIFTER_EMAILS = new Set([
-  "gloria@dunphyfamily.com",
-  "cameron@dunphyfamily.com",
-  "jay@dunphyfamily.com",
+  "sofia@riverafamily.com",
+  "chris@riverafamily.com",
+  "robert@riverafamily.com",
 ]);
 const GIFTER_NOTIF_PATH = path.join(process.cwd(), ".local", "gifter-notifications.json");
 
@@ -321,8 +355,46 @@ async function seedGifterNotifications(
   return byEmail.size;
 }
 
+// Memory entries to mark isFeatured (the Memory Book "Pinned" lens) — chosen
+// per-kid inside seedKidFund, written once at the end of the run. The store is
+// the same .local/memory-entry-meta.json the server's patchMemoryMeta writes.
+// Merge discipline: keys for entry ids that no longer EXIST in the DB are
+// pruned (each reseed mints new entry ids, so prior demo pins become orphans —
+// without pruning the file grows every reseed and a raced run leaves junk),
+// while keys for live non-demo entries are preserved untouched. NOTE: the
+// running dev server caches this file in-process (loadMemoryMeta) — restart it
+// after seeding for pins to show.
+const PINNED_MEMORY_ENTRY_IDS: string[] = [];
+async function writeDemoMemoryEntryMeta(): Promise<void> {
+  if (PINNED_MEMORY_ENTRY_IDS.length === 0) return;
+  const metaPath = path.join(process.cwd(), ".local", "memory-entry-meta.json");
+  let store: Record<string, { visibility?: string; isFeatured?: boolean }> = {};
+  try {
+    store = JSON.parse((await fsp.readFile(metaPath, "utf8")) || "{}") || {};
+  } catch {
+    store = {};
+  }
+  // Prune orphans: any key whose entry id is gone from the DB.
+  const existingKeys = Object.keys(store);
+  if (existingKeys.length > 0) {
+    const liveRows = await db
+      .select({ id: memoryEntries.id })
+      .from(memoryEntries)
+      .where(inArray(memoryEntries.id, existingKeys));
+    const live = new Set(liveRows.map((r) => r.id));
+    for (const key of existingKeys) {
+      if (!live.has(key)) delete store[key];
+    }
+  }
+  for (const id of PINNED_MEMORY_ENTRY_IDS) {
+    store[id] = { visibility: "public", isFeatured: true };
+  }
+  await fsp.mkdir(path.dirname(metaPath), { recursive: true });
+  await fsp.writeFile(metaPath, JSON.stringify(store, null, 2), "utf8");
+}
+
 async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], parentDisplayName: string): Promise<string> {
-  // Idempotent: if Phil already owns a fund with this slug, return its id.
+  // Idempotent: if Marcus already owns a fund with this slug, return its id.
   const [existing] = await db.select().from(funds).where(
     and(eq(funds.userId, parentUserId), eq(funds.slug, kid.slug)),
   ).limit(1);
@@ -382,6 +454,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     createdAt: fundCreatedAt,
     recipientFirstName: kid.firstName,
     recipientLastName: kid.lastName,
+    childPhotoUrl: (kid as any).childPhotoUrl ?? null,
     // recipientBirthdate is a timestamp column in shared/schema.ts —
     // Drizzle's PgTimestamp.mapToDriverValue calls .toISOString() on
     // the value, so a raw "YYYY-MM-DD" string crashes the insert.
@@ -415,7 +488,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     // `strategy` key matched NO column, so Drizzle silently dropped it and
     // every demo fund fell back to the "auto_invest" default — which the
     // dashboard renders as "{Kid}'s mix (Growth)" with an EMPTY emoji for
-    // all three kids (so Alex/balanced + Haley/conservative both mislabeled
+    // all three kids (so Nora/balanced + Mia/conservative both mislabeled
     // as Growth, and the missing emoji left a stray "( Growth)" gap).
     investmentStrategy: kid.strategy,
     balance: investedValue.toFixed(2),
@@ -446,10 +519,10 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     } as any);
   }
 
-  // Audio URL for Gloria's gifts. Only set when the demo audio assets
+  // Audio URL for Sofia's gifts. Only set when the demo audio assets
   // are present in production (gated by DEMO_AUDIO_ENABLED env var). See
   // client/public/demo-audio/README.md for the file spec. Without the
-  // flag, Gloria's voice memos stay text-only — better than a broken
+  // flag, Sofia's voice memos stay text-only — better than a broken
   // play button pointing at 404'd audio.
   const audioEnabled = process.env.DEMO_AUDIO_ENABLED === "1";
   const gloriaAudioUrl = audioEnabled
@@ -462,7 +535,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // seed mirrors that pattern. (giftList computed above with the portfolio.)
   const sendersSeen = new Set<string>();
 
-  // Phil's recurring schedule (parent_contribution). Created BEFORE the
+  // Elena's recurring schedule (parent_contribution). Created BEFORE the
   // gift loop so each monthly cycle can link back to it — exactly the
   // shape the production worker leaves behind. totalContributed +
   // lastRunDate are backfilled from the cycles after they're inserted.
@@ -476,8 +549,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // The single Memory Book note stamped on the first recurring cycle (varies
   // per kid). The cycle gift rows themselves carry no message.
   const recurringChargeNote = recurringNoteFor(kid);
-  const recurringNextRun = (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d; })();
-  const [philContribution] = await db.insert(parentContributions).values({
+  // Next charge = one full cadence after the most recent one, on the SAME
+  // day-of-month as the seeded cycles (isoYearsMonthsAgo keeps the seed day), so
+  // the schedule's "next charge" lands on its own rhythm instead of an arbitrary
+  // +14 days that drifts off the 18th-style cadence.
+  const recurringNextRun = new Date(Date.UTC(SEED_NOW.getUTCFullYear(), SEED_NOW.getUTCMonth() + 1, SEED_NOW.getUTCDate(), 12, 0, 0));
+  const [recurringSchedule] = await db.insert(parentContributions).values({
     fundId: fund.id,
     userId: parentUserId,
     amount: kid.recurring.amount.toFixed(2),
@@ -494,12 +571,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   let recurringMemoryStamped = false;
   // Collect external gifts so a realistic subset can be seeded as ALREADY-SENT
   // thank-yous after the loop (so the demo shows the "Thanked" state, not only
-  // the auto-backfilled "awaiting" drafts). Phil's recurring cycles are excluded
+  // the auto-backfilled "awaiting" drafts). Elena's recurring cycles are excluded
   // — the Memory Book renders those as "from you", never thankable.
-  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date; occasion?: string }> = [];
+  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date; occasion?: string; memoryEntryId?: string; hasAudio?: boolean }> = [];
   for (const g of giftList) {
     const isRecurring = g.kind === "recurring";
-    // A parent ONE-TIME top-up (Phil's own money, not an external gift): counts
+    // A parent ONE-TIME top-up (Marcus's own money, not an external gift): counts
     // as "Your one-time additions", shows on the dashboard's one-time card, and
     // never gets a self-thank-you / gifter follow-along.
     const isParentOneTime = g.kind === "parent_one_time";
@@ -524,11 +601,11 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       // Explicit anonymous flag (privacy choice — never inferred from name).
       isAnonymous: g.isAnonymous ?? false,
       audioUrl: giftAudioUrl,
-      // Recurring cycles link to Phil's schedule + carry the worker's
+      // Recurring cycles link to Marcus's schedule + carry the worker's
       // source tag, exactly as recurringContributionWorker stamps them.
       // parentContributionId is what moves them into the dashboard's
       // "Your recurring investments" breakdown row (instead of "one-time").
-      parentContributionId: isRecurring ? philContribution.id : null,
+      parentContributionId: isRecurring ? recurringSchedule.id : null,
       source: isRecurring ? "recurring_worker" : null,
       createdAt: new Date(g.createdAt),
     } as any;
@@ -551,7 +628,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
 
     // Activity-ledger row, mirroring the "arrival" activity production
     // writes in completeGiftPostPayment (webhookHandlers.ts:241):
-    // gift_received for gifters, parent_contribution for Phil's recurring
+    // gift_received for gifters, parent_contribution for Elena's recurring
     // cycles. Backdated to the gift date so the Activity tab reads as a
     // real multi-year ledger instead of just "Fund created." The
     // parentContributionId in metadata also lets the recurring schedule's
@@ -586,7 +663,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         contributorName: isParentContrib ? parentDisplayName : null,
         isParentContribution: isParentContrib,
         // Only recurring cycles link to the schedule; one-time additions don't.
-        parentContributionId: isRecurring ? philContribution.id : null,
+        parentContributionId: isRecurring ? recurringSchedule.id : null,
       }),
       createdAt: new Date(g.createdAt),
     } as any);
@@ -614,7 +691,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       // mirroring the worker's "stamp once on first cycle, never again"
       // rule (recurringContributionWorker.ts:235). Every later cycle is
       // money-only, so 36 months of auto-investing never buries the
-      // timeline. giftList pushes Phil's cycles oldest-first, so the first
+      // timeline. giftList pushes Marcus's cycles oldest-first, so the first
       // one we hit IS the first cycle.
       recurringTotal += g.amount;
       const chargeDate = new Date(g.createdAt);
@@ -638,7 +715,8 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
 
     // Ordinary gifts: one gift_message memory entry each, mirroring the
     // public-gift webhook (with the same audio/transcript fields).
-    await db.insert(memoryEntries).values({
+    // .returning() so the entry id can be pinned below (Pinned lens wear).
+    const [giftMemoryEntry] = await db.insert(memoryEntries).values({
       fundId: fund.id,
       giftId: insertedGift.id,
       type: "gift_message",
@@ -655,8 +733,8 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
             : null)
         : null,
       createdAt: new Date(g.createdAt),
-    } as any);
-    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt), occasion: g.occasion });
+    } as any).returning();
+    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt), occasion: g.occasion, memoryEntryId: giftMemoryEntry?.id, hasAudio: !!g.hasAudio });
   }
 
   // Backfill the schedule's realized totals from the cycles just written —
@@ -673,7 +751,42 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       // 36 cycles span ~3 years (an impossible "Started today + 36 cycles").
       ...(recurringFirstDate ? { createdAt: recurringFirstDate } : {}),
     })
-    .where(eq(parentContributions.id, philContribution.id));
+    .where(eq(parentContributions.id, recurringSchedule.id));
+
+  // A recent "charge missed" on Theo's active schedule — showcases the missed-
+  // recurring-charge recovery flow end to end: the honest "Charge missed" state,
+  // the reconcile detail ("Visa ····4242"), and the "Add it now" one-tap catch-up.
+  // Linked via parentContributionId so the row's primary action resolves and the
+  // dashboard card + Activity + detail all read the same state from the same row.
+  // Copy mirrors the worker's canonical output EXACTLY (recordRecurringFailure),
+  // so seeded and real rows are indistinguishable. This IS this month's scheduled
+  // charge (Theo's cycles are offset by one in the roster, so the current month is
+  // left open) — it lands on the SAME cadence day as the 84 successful cycles and
+  // the next-run, so the failed row, the history, and "next charge" all tell one
+  // coherent story instead of three unrelated dates. Recent enough to sit inside
+  // the 14-day hasRecentFailure window. Scoped to ONE active kid so the demo reads
+  // as "one graceful recovery", not systemic failure. Delete this block to remove
+  // the decline from the demo entirely.
+  if (kid.firstName === "Theo" && !recurringPaused) {
+    const missedAt = new Date(Date.UTC(SEED_NOW.getUTCFullYear(), SEED_NOW.getUTCMonth(), SEED_NOW.getUTCDate(), 12, 0, 0));
+    const nextChargeLabel = recurringNextRun.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    await db.insert(activities).values({
+      userId: parentUserId,
+      fundId: fund.id,
+      type: "parent_contribution_failed",
+      title: "Automatic charge didn't go through",
+      description: `Your Visa ····4242 was declined. Your plan is still on and charges again ${nextChargeLabel}. Add the missed one if you'd like.`,
+      amount: kid.recurring.amount.toFixed(2),
+      metadata: JSON.stringify({
+        parentContributionId: recurringSchedule.id,
+        reason: "card_declined",
+        paymentMethodBrand: "visa",
+        paymentMethodLast4: "4242",
+        nextRetryDate: recurringNextRun.toISOString(),
+      }),
+      createdAt: missedAt,
+    } as any);
+  }
 
   // Update contributor count from unique senders.
   await db.update(funds)
@@ -686,11 +799,22 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // i.e., an engaged parent who's caught up except the most recent couple
   // months. The freshest gifts (incl. the just-arrived one) stay awaiting, so
   // the actionable "thank now" prompt + composer also show at the top of the
-  // book. Self-gifts (Phil's recurring) were never collected, so they're
+  // book. Self-gifts (Elena's recurring) were never collected, so they're
   // untouched and render as "from you". Pronoun-correct; mirrors the Memory
   // Book's own warm template.
   const nowMs = Date.now();
   const thankMinAgeMs = 60 * 24 * 60 * 60 * 1000;
+  // A few warm, parent-voiced variants so tapping different "Thanked" entries
+  // in the demo reveals real-feeling notes, not one identical template. Picked
+  // deterministically by gifter name (reproducible). Em-dash-free per the
+  // locked voice rule.
+  const THANK_VARIANTS: Array<(first: string, amt: string, kidName: string, willRead: string, age: number) => string> = [
+    (first, amt, kidName, willRead, age) => `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kidName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kidName}'s future.\n\n${kidName} will read this when ${willRead} ${age}.\n\nWith love,\nMarcus`,
+    (first, amt, kidName, willRead, age) => `${first}, just wanted to say thank you. Your $${amt} went straight into ${kidName}'s fund, and ${willRead} going to see it (and this note) at ${age}. We're so grateful you're part of ${kidName}'s story.\n\nMarcus`,
+    (first, amt, kidName) => `Thank you, ${first}! Your $${amt} is part of ${kidName}'s fund now, and we can't wait to show ${kidName} who was there from the very start.\n\nWith love,\nMarcus and Elena`,
+    (first, amt, kidName, willRead, age) => `Dear ${first},\n\nWhat a generous gift, $${amt} toward ${kidName}'s future. Years from now ${willRead} going to understand exactly what this meant. Thank you for believing in ${kidName} this early.\n\nMarcus`,
+    (first, amt, kidName) => `${first}, thank you so much. The $${amt} is invested and already part of something that will be ${kidName}'s one day. We're so glad you're in ${kidName}'s corner.\n\nWith love,\nMarcus`,
+  ];
   for (const eg of externalGifts) {
     const age = nowMs - eg.createdAt.getTime();
     if (age < thankMinAgeMs) continue; // recent gifts stay awaiting (actionable)
@@ -706,27 +830,51 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       giftId: eg.giftId,
       senderName: eg.senderName,
       senderEmail: eg.senderEmail || null,
-      message: `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kid.firstName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kid.firstName}'s future.\n\n${kid.firstName} will read this when ${willRead} ${kid.majorityAge}.\n\nWith love,\nPhil`,
+      message: THANK_VARIANTS[
+        Math.abs(eg.senderName.split("").reduce((s, c) => s + c.charCodeAt(0), 0)) % THANK_VARIANTS.length
+      ](first, amt, kid.firstName, willRead, kid.majorityAge),
       status: "sent",
       sentAt: new Date(eg.createdAt.getTime() + 3 * 24 * 60 * 60 * 1000),
     } as any);
   }
 
+  // Pin the precious entries so the Memory Book's "Pinned" lens reads worn,
+  // not guaranteed-empty. A real parent pins a few favorites over the years;
+  // an 80k/266-gift book with zero pins is a tell. Two tasteful pins per kid:
+  // the very FIRST external gift (the "it all started here" entry) and any
+  // voice-note gift (Sofia's audio — the marquee Memory Book artifact).
+  // isFeatured lives in the file-based meta store (.local/memory-entry-meta.json,
+  // see routes.ts patchMemoryMeta), NOT the DB — collected here, written once
+  // at the end of the run by writeDemoMemoryEntryMeta.
+  const oldestExternal = [...externalGifts].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+  if (oldestExternal?.memoryEntryId) PINNED_MEMORY_ENTRY_IDS.push(oldestExternal.memoryEntryId);
+  // ONE voice note, not all of them — Sofia's audio birthday gift is ANNUAL,
+  // so pinning every audio entry pinned a-gift-per-year (~50/book on the
+  // first live run; caught by verify-demo-state) and made the Pinned lens
+  // meaningless. A parent pins the precious few; the most RECENT voice note
+  // is the one they'd keep at the top.
+  const newestAudio = [...externalGifts]
+    .filter((eg) => eg.hasAudio && eg.memoryEntryId && eg.memoryEntryId !== oldestExternal?.memoryEntryId)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  if (newestAudio?.memoryEntryId) PINNED_MEMORY_ENTRY_IDS.push(newestAudio.memoryEntryId);
+
   // Gifter milestone-update opt-ins for the "who's following along" surface
   // (file-based store; see seedGifterNotifications above).
   await seedGifterNotifications(fund.id, externalGifts);
 
-  // Phil's sealed "for when this becomes yours" letter — seeded for the two
-  // older kids: Alex (approaching majority, so it shows SEALED in the handoff
-  // demo) and Haley (past majority, so it shows UNLOCKED in her adult-account
-  // view). Luke is too young to need one yet.
-  if (kid.firstName === "Haley" || kid.firstName === "Alex") {
+  // Marcus's (Dad, the co-parent) sealed "for when this becomes yours" letter —
+  // both parents engage: Elena (Mom) owns + leaves a note, Marcus leaves the deep
+  // at-18 letter (Dad's voice). Seeded for the two
+  // older kids: Nora (approaching majority, so it shows SEALED in the handoff
+  // demo) and Mia (past majority, so it shows UNLOCKED in her adult-account
+  // view). Theo is too young to need one yet.
+  if (kid.firstName === "Mia" || kid.firstName === "Nora") {
     await db.insert(memoryEntries).values({
       fundId: fund.id,
       content: sealedLetterFor(kid),
       type: "parent_letter",
       authorRole: "parent",
-      authorName: "Phil Dunphy",
+      authorName: "Marcus Rivera",
       visibility: "kid_at_18",
     } as any);
     // (Balance-crossing milestones are now seeded data-driven from the
@@ -734,22 +882,30 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     // after the history generation below — rather than hardcoded here.)
   }
 
-  // Claire (co-parent) authored note. Phil owns the fund, but Claire is an
-  // accepted co-parent collaborator (wired in main()) — so the demo should show
-  // BOTH parents engaging, not just Phil. A parent_note authored by Claire puts
-  // a "from Mom" entry in the timeline next to Phil's, making the co-parent
-  // relationship lived-in (active author, not just a name on the access list).
+  // Elena (Mom) authored note. Elena OWNS the fund (primary custodian); Marcus
+  // (Dad) is the accepted co-parent collaborator (wired in main()) — so the demo
+  // shows BOTH parents engaging. A parent_note authored by Elena (Mom) puts a
+  // "from Mom" entry in the timeline next to Marcus's sealed letter, making both
+  // parents lived-in (active authors, not just names on the access list).
   // Dated ~4 months back so it sits naturally in the recent timeline.
   {
+    // Mia's note reads as a handoff-moment note ("this is yours now baby
+    // girl... i saved everything") — date it near the transfer (~1y ago),
+    // not 4 months ago, or the timeline says she wrote "now" 8 months late.
     const claireNoteDate = new Date();
-    claireNoteDate.setDate(claireNoteDate.getDate() - 120);
+    claireNoteDate.setDate(claireNoteDate.getDate() - (kid.ageYears >= kid.majorityAge ? 355 : 120));
     await db.insert(memoryEntries).values({
       fundId: fund.id,
       type: "parent_note",
       content: momNoteFor(kid),
       authorRole: "parent",
-      authorName: "Claire Dunphy",
+      authorName: "Elena Rivera",
       visibility: "kid_now",
+      // A real photo of Elena + Theo, paired with Mom's note, so ONE entry in the
+      // Memory Book is a lived-in mother-and-son moment (not just text). Theo only,
+      // and only on this single note — never stamped on the recurring cycles (the
+      // "216 identical photos" anti-pattern). Founder-supplied 2026-07-09.
+      photoUrl: kid.firstName === "Theo" ? "/demo/theo-mom.jpg" : null,
       createdAt: claireNoteDate,
     } as any);
   }
@@ -767,15 +923,51 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     createdAt: fundCreatedAt,
   } as any);
 
-  // ── Lived-in lifecycle: glide-path de-risking + real occasions ──
-  // The product AUTOMATICALLY shifts the managed index sleeve toward a steadier
-  // mix as the child nears majority (protection, not trading). These activity
-  // rows narrate that on the timeline; the matching SHARE moves were executed by
-  // buildPortfolio (rebalancesForKid) at the same dates against real prices —
-  // so the story and the numbers agree. kid.strategy is the CURRENT/latest mix.
+  // Account-setup + recurring-lifecycle activities so the demo feed shows the
+  // real lead-in a parent sees (bank linked, identity verified, recurring set
+  // up) — not just gifts. The product logs these in prod; the demo must seed
+  // them too or the feed under-represents a real account. One-time + dated at
+  // setup so they sit quietly at the fund's origin, never flooding the feed.
+  // Seed gap closed 2026-06-07.
+  const setupAt = new Date(fundCreatedAt.getTime() + 12 * 60 * 60 * 1000);
+  await db.insert(activities).values({
+    userId: parentUserId, fundId: fund.id, type: "bank_linked", title: "Bank linked",
+    description: "Linked a bank account to fund this account.", createdAt: setupAt,
+  } as any);
+  await db.insert(activities).values({
+    userId: parentUserId, fundId: fund.id, type: "kyc_approved", title: "Identity verified",
+    description: "Identity verification approved.", createdAt: setupAt,
+  } as any);
+  if (kid.recurring?.amount) {
+    await db.insert(activities).values({
+      userId: parentUserId, fundId: fund.id, type: "auto_invest", title: "Recurring investment",
+      description: `Set up automatic monthly investing of $${kid.recurring.amount}.`, createdAt: setupAt,
+    } as any);
+    if (kid.recurring.status === "paused") {
+      await db.insert(activities).values({
+        userId: parentUserId, fundId: fund.id, type: "recurring_paused", title: "Recurring paused",
+        description: "Monthly investing paused as the fund nears the age-18 handoff.",
+        createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+      } as any);
+    }
+  }
+
+  // ── Lived-in lifecycle: PARENT-CHOSEN de-risking + real occasions ──
+  // SELF-DIRECTED POSTURE (2026-06-03, founder catch): the product does NOT
+  // auto-shift allocations — the old auto glide-path + age-band nudges were
+  // removed in the self-directed pivot (ACCOUNT_MODEL.md §2b) to avoid the
+  // adviser posture. So the seeded history must read as PHIL'S OWN choices,
+  // never "automatically moved" (a demo narrating discretionary rebalancing
+  // would misrepresent the product to prospects, press, and counsel). The
+  // share moves were executed by buildPortfolio (rebalancesForKid) at the
+  // same dates against real prices — so the story and the numbers agree;
+  // rebalancesForKid is just the demo's stand-in for "Marcus chose this at
+  // these ages." kid.strategy is the CURRENT/latest mix.
   const bday = new Date(kid.birthdate);
   const atAge = (years: number) => { const d = new Date(bday); d.setFullYear(d.getFullYear() + years); return d; };
-  const STRATEGY_LABEL: Record<string, string> = { growth: "Growth Mix", balanced: "Steady & Balanced", conservative: "Conservative Mix" };
+  // Mirror the canonical labels in lib/strategy.ts — "Steady & Balanced" is the
+  // retired name; everywhere else (Dashboard, holdings) renders "Balanced Mix".
+  const STRATEGY_LABEL: Record<string, string> = { growth: "Growth Mix", balanced: "Balanced Mix", conservative: "Conservative Mix" };
   const STRATEGY_ORDER: Record<string, number> = { growth: 0, balanced: 1, conservative: 2 };
   const currentOrder = STRATEGY_ORDER[kid.strategy] ?? 0;
   for (const s of [{ at: 13, from: "growth", to: "balanced" }, { at: 16, from: "balanced", to: "conservative" }]) {
@@ -787,10 +979,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         userId: parentUserId,
         fundId: fund.id,
         type: "fund_strategy_changed",
-        title: `Automatically moved to a steadier mix as ${kid.firstName} turned ${s.at}`,
-        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · protecting the fund as ${kid.pronoun} nears 18`,
+        // Viewer-neutral phrasing + explicit attribution: Marcus's view and
+        // Mia's post-handoff view share these rows, so no bare "you".
+        title: `Mix changed to ${STRATEGY_LABEL[s.to]}`,
+        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · ${parentDisplayName}'s choice as ${kid.firstName} turned ${s.at}`,
         createdAt: atAge(s.at),
-        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "age_band", automatic: true }),
+        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "parent_choice", automatic: false, contributorName: parentDisplayName }),
       } as any);
     }
   }
@@ -806,22 +1000,42 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     return d;
   })();
   const nextBirthdayAge = nextBirthday.getUTCFullYear() - bday.getUTCFullYear();
-  // Post-handoff (graduated) kids own a self-directed account now, so a
-  // "College Fund" general page reads as stale (and Kiddo isn't college-
-  // restricted regardless). Name their general page "{name}'s Fund"; pre-
-  // majority kids keep the familiar "College Fund" framing gifters relate to.
-  const isGraduated = kid.ageYears >= kid.majorityAge;
-  const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null }> = [
+  // Fund-level dollar GOALS are retired (they don't compose on a fungible pot
+  // and imply an earmark a UTMA can't keep — 529 turf we don't compete on). The
+  // old "College Fund" / "{name}'s Fund" general event existed ONLY to carry a
+  // dashboard goal: it was giftVolume 0, never a gift bucket ("pure dashboard
+  // GOAL"), so it's removed. The catch-all "Gift anytime" permanent event stays
+  // the main page; real per-occasion gift tracking (how much + who gave) lives
+  // on actual OCCASIONS like Birthday, which is exactly what a parent wants.
+  // Next Dec 25 for the Holiday occasion's countdown.
+  const holidayBaseYear = new Date().getUTCFullYear();
+  const dec25 = new Date(Date.UTC(holidayBaseYear, 11, 25, 12, 0, 0));
+  const nextHoliday = dec25.getTime() > Date.now() ? dec25 : new Date(Date.UTC(holidayBaseYear + 1, 11, 25, 12, 0, 0));
+
+  const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null; occasionTag: "birthday" | "holiday" }> = [
     // Generic "Birthday" (not "14th Birthday") so the Memory Book can group ALL
     // years of birthday gifts under it without the ordinal reading wrong on an
     // old gift. The dashboard still uses eventDate for the next-birthday countdown.
-    { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
-    { name: isGraduated ? `${kid.firstName}'s Fund` : `${kid.firstName}'s College Fund`, slug: isGraduated ? `${kid.slug}-fund` : `${kid.slug}-college`, eventType: "general", eventDate: null, goalAmount: kid.ageYears >= 18 ? 30000 : 40000 },
+    { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null, occasionTag: "birthday" },
   ];
-  if (kid.ageYears < 18) {
-    occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });
+  // Holiday occasion — added ONLY when genuinely populated (Grandpa's Christmas +
+  // December one-offs: The Johnsons, Marcus's office, Uncle Joe, the book club), so
+  // it never reads as the stark-empty tile that killed the old Graduation occasion
+  // (see the note above). The realistic "main vs occasion" second beat: birthdays
+  // are the big annual wave, the holidays a smaller real cluster; everything else
+  // lands in the main fund. Models the founder's "when do they send to main vs an
+  // occasion" question with TWO populated occasions instead of one.
+  if (externalGifts.filter((g) => g.occasion === "holiday").length >= 2) {
+    occasions.push({ name: `${kid.firstName}'s Holidays`, slug: `${kid.slug}-holiday-${nextHoliday.getUTCFullYear()}`, eventType: "holiday", eventDate: nextHoliday, goalAmount: null, occasionTag: "holiday" });
   }
-  // Attribute the annual BIRTHDAY gifts (Gloria/Cam/Mitchell) to the Birthday
+  // NOTE: a forward-looking "Graduation" occasion was seeded here, but it landed
+  // with ZERO gifts (no historical gift carried occasion:"graduation"), so it
+  // rendered as a stark-empty tile next to the populated Birthday — and its
+  // goal-era "Toward cap & gown" empty-state read as an earmark we no longer do.
+  // Dropped: the demo now shows ONE strong, fully-populated occasion (Birthday)
+  // plus the "Gift anytime" catch-all, which also keeps the Dashboard and the
+  // Memory Book occasion strips consistent (both only show gift-bearing groups).
+  // Attribute the annual BIRTHDAY gifts (Sofia/Cam/David) to the Birthday
   // occasion so the Memory Book's occasions strip shows a real, NATURAL group
   // ("{kid}'s Birthday · N gifts · $X raised") next to the catch-all "Gift
   // anytime". Birthday is a true gifting occasion with NO dollar goal on the
@@ -831,10 +1045,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // College Fund / Graduation stay pure dashboard GOALS, not gift buckets. The
   // events table stores giftCount/giftVolume as counters (not a JOIN), so we set
   // them on the event row AND stamp eventId on the gifts.
-  const birthdayGifts = externalGifts.filter((g) => g.occasion === "birthday");
-  const birthdayGiftVolume = birthdayGifts.reduce((s, g) => s + g.amount, 0);
   for (const o of occasions) {
-    const isBirthdayOccasion = o.eventType === "birthday";
+    const occGifts = externalGifts.filter((g) => g.occasion === o.occasionTag);
+    const occVolume = occGifts.reduce((s, g) => s + g.amount, 0);
     const [insertedEvent] = await db.insert(events).values({
       fundId: fund.id,
       userId: parentUserId,
@@ -844,13 +1057,20 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       eventDate: o.eventDate,
       goalAmount: o.goalAmount != null ? o.goalAmount.toFixed(2) : null,
       status: "active",
-      giftCount: isBirthdayOccasion ? birthdayGifts.length : 0,
-      giftVolume: isBirthdayOccasion ? birthdayGiftVolume.toFixed(2) : "0.00",
+      giftCount: occGifts.length,
+      giftVolume: occVolume.toFixed(2),
     } as any).returning();
-    if (isBirthdayOccasion && birthdayGifts.length > 0) {
+    // Paired activity for the occasion (seeded as a domain row but never an
+    // activity, so the feed never showed "Occasion"). 2026-06-07.
+    await db.insert(activities).values({
+      userId: parentUserId, fundId: fund.id, type: "event_created", title: "Occasion",
+      description: `Set up ${o.name}.`,
+      createdAt: new Date(fundCreatedAt.getTime() + 36 * 60 * 60 * 1000),
+    } as any);
+    if (occGifts.length > 0) {
       await db.update(gifts)
         .set({ eventId: insertedEvent.id })
-        .where(inArray(gifts.id, birthdayGifts.map((g) => g.giftId)));
+        .where(inArray(gifts.id, occGifts.map((g) => g.giftId)));
     }
   }
 
@@ -866,6 +1086,19 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
 
   // Balance-crossing milestones, data-driven from the curve just generated.
   await seedMilestonesFromSnapshots(fund.id, kid.firstName);
+
+  // "Growth passed the gifts" — the earned-truth milestone the REAL engine
+  // fires at gift-settle (milestone_growth_passed_gifts, 2026-06-04). Demo
+  // funds never run the webhook, so a worn fund that genuinely earned this
+  // (value >= 2x contributed) would be missing its most meaningful page.
+  // Data-driven from the same snapshot curve: the crossing date is the first
+  // month where the real value reached double the money put in by then.
+  await seedGrowthPassedMilestoneFromSnapshots(
+    fund.id,
+    parentUserId,
+    kid.firstName,
+    giftList.map((g) => ({ amount: g.amount, createdAt: new Date(g.createdAt) })),
+  );
 
   // Pre-set Kid View so the parent surface shows a configured "{Kid}'s View ·
   // Active · PIN protected" instead of "Not set up yet". Skip graduated kids:
@@ -943,6 +1176,66 @@ async function seedMilestonesFromSnapshots(fundId: string, childFirst: string): 
       createdAt: new Date(crossing.snapshotDate as any),
     } as any);
   }
+}
+
+// "Growth passed the gifts" milestone, data-driven from the snapshot curve.
+// Mirrors server/milestones.ts fireGrowthPassedGiftsMilestone exactly (same
+// activity type, copy, metadata key, $250 floor, value >= 2x contributed)
+// so the demo's worn history matches what the real engine would have
+// written. The crossing date = the first snapshot month where the fund's
+// REAL value reached double the cumulative gifts received by that date.
+async function seedGrowthPassedMilestoneFromSnapshots(
+  fundId: string,
+  userId: string,
+  childFirst: string,
+  giftTimeline: Array<{ amount: number; createdAt: Date }>,
+): Promise<void> {
+  const snaps = await db
+    .select()
+    .from(fundSnapshots)
+    .where(eq(fundSnapshots.fundId, fundId))
+    .orderBy(asc(fundSnapshots.snapshotDate));
+  if (snaps.length === 0 || giftTimeline.length === 0) return;
+  const sortedGifts = [...giftTimeline].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  let gi = 0;
+  let contributed = 0;
+  let crossing: { date: Date } | null = null;
+  for (const s of snaps) {
+    const snapDate = new Date(s.snapshotDate as any);
+    while (gi < sortedGifts.length && sortedGifts[gi].createdAt.getTime() <= snapDate.getTime()) {
+      contributed += sortedGifts[gi].amount;
+      gi += 1;
+    }
+    const value = parseFloat(String(s.totalValue || "0"));
+    if (contributed >= GROWTH_PASSED_GIFTS.contributedFloor && value >= contributed * GROWTH_PASSED_GIFTS.multiple) {
+      crossing = { date: snapDate };
+      break;
+    }
+  }
+  if (!crossing) return;
+  // Constants + copy imported from the engine (server/milestones.ts
+  // GROWTH_PASSED_GIFTS) so the seeded rows are byte-identical to what the
+  // real engine writes — duplicated literals drifting apart was the failure
+  // mode (code-review 2026-06-04).
+  const title = GROWTH_PASSED_GIFTS.title;
+  const description = GROWTH_PASSED_GIFTS.description(childFirst);
+  await db.insert(activities).values({
+    userId,
+    fundId,
+    type: GROWTH_PASSED_GIFTS.activityType,
+    title,
+    description,
+    metadata: JSON.stringify({ milestone: "growth_passed_gifts", contributed: Math.round(contributed), key: GROWTH_PASSED_GIFTS.dedupeKey }),
+    createdAt: crossing.date,
+  } as any);
+  await db.insert(memoryEntries).values({
+    fundId,
+    content: title,
+    type: "milestone",
+    authorName: null,
+    visibility: "kid_now",
+    createdAt: crossing.date,
+  } as any);
 }
 
 // Generate fund_snapshots from the REAL portfolio value month-by-month: replays
@@ -1058,8 +1351,8 @@ async function generateHistoricalSnapshots(
   }
 }
 
-async function ensurePhilFamilySubscription(philId: string): Promise<void> {
-  // The demo needs Phil on Family plan so the Family-tier features
+async function ensureMarcusFamilySubscription(philId: string): Promise<void> {
+  // The demo needs Marcus on Family plan so the Family-tier features
   // (unlimited kids, multi-fund household view, etc.) render properly.
   // Real users get this via Stripe webhook; for the demo we write the
   // subscription row directly. Idempotent: upsert by userId.
@@ -1095,9 +1388,9 @@ async function ensurePhilFamilySubscription(philId: string): Promise<void> {
 // the seed without spawning a subprocess. closePool=true matches the
 // standalone-script default; reset-dunphys passes false because it manages
 // the pool lifecycle itself across wipe + reseed.
-export async function runDunphySeed(options: { closePool?: boolean } = {}): Promise<void> {
+export async function runRiveraSeed(options: { closePool?: boolean } = {}): Promise<void> {
   const closePool = options.closePool !== false;
-  console.log("Seeding Dunphy family demo accounts...");
+  console.log("Seeding Rivera family demo accounts...");
 
   // 1. Upsert all seven user accounts.
   const userIdByEmail = new Map<string, string>();
@@ -1107,55 +1400,92 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     console.log(`  user: ${account.email} (${account.firstName} ${account.lastName}) → ${id}`);
   }
 
-  const philId = userIdByEmail.get("phil@dunphyfamily.com")!;
+  const coParentId = userIdByEmail.get("marcus@riverafamily.com")!;   // Marcus (Dad) — co-parent
+  const ownerId = userIdByEmail.get("elena@riverafamily.com")!;    // Elena (Mom) — primary custodian / lead persona
 
-  // 1b. Seed Phil's Family-plan subscription (idempotent).
-  await ensurePhilFamilySubscription(philId);
-  console.log(`  subscription: phil@dunphyfamily.com → Family · active`);
+  // 1b. Seed the primary custodian's (Elena's) Family-plan subscription (idempotent).
+  await ensureMarcusFamilySubscription(ownerId);
+  console.log(`  subscription: elena@riverafamily.com → Family · active`);
 
-  // 2. Check if Phil already has funds. If yes, assume the seed has
-  //    already run before and exit early to keep the script idempotent.
-  const existingFunds = await db.select().from(funds).where(eq(funds.userId, philId));
+  // 1c. GUARDRAIL: detect STALE demo funds owned by the co-parent (Marcus). The
+  //     plain seed is idempotent BY OWNER, so after an ownership change (e.g. the
+  //     2026-06-11 mom flip: Marcus→Elena) it can't see the OLD owner's funds and
+  //     would silently layer Elena's new funds on top — leaving the dashboard
+  //     showing DUPLICATES (each kid once as owner, once as the stale co-parent
+  //     collaborator row). The co-parent never OWNS a fund, so any -dunphy fund
+  //     owned by them is stale. Refuse and point to the clean path. (Mia's
+  //     graduated fund is owned by Mia, not the co-parent, so it never trips this.)
+  const staleCoParentFunds = await db
+    .select({ id: funds.id })
+    .from(funds)
+    .where(and(eq(funds.userId, coParentId), like(funds.slug, "%-dunphy%")));
+  if (staleCoParentFunds.length > 0) {
+    console.log(`\n⚠️  ${staleCoParentFunds.length} stale Rivera fund(s) are still owned by the co-parent (likely a previous seed before the owner changed).`);
+    console.log("A plain seed would layer new funds on top → the demo would show DUPLICATES.");
+    console.log("Run `npm run reset:dunphys` instead — it wipes ALL Rivera data + reseeds clean.");
+    if (closePool) await pool.end();
+    return;
+  }
+
+  // 2. Check if Elena (the primary custodian) already has funds. If yes,
+  //    assume the seed has already run before and exit early (idempotent).
+  const existingFunds = await db.select().from(funds).where(eq(funds.userId, ownerId));
   if (existingFunds.length > 0) {
-    console.log(`\nPhil already has ${existingFunds.length} fund(s). Skipping fund seed to stay idempotent.`);
+    console.log(`\nElena already has ${existingFunds.length} fund(s). Skipping fund seed to stay idempotent.`);
     console.log("To re-seed funds from scratch: run `npm run reset:dunphys` instead.");
     if (closePool) await pool.end();
     return;
   }
 
-  // 3. Seed all three Dunphy kid funds.
-  // Custodian's preferred display name ("Dad") — stamped onto each recurring
-  // contribution's activity so the post-handoff owner view can credit "Dad
+  // 3. Seed all three Rivera kid funds.
+  // Custodian's preferred display name ("Mom") — stamped onto each recurring
+  // contribution's activity so the post-handoff owner view can credit "Mom
   // added $X" instead of the custodial-era "You contributed".
-  const philDisplayName = ACCOUNTS.find((a) => a.role === "parent")?.preferredName || "Dad";
+  const ownerDisplayName = ACCOUNTS.find((a) => a.role === "parent")?.preferredName || "Mom";
   const seededFundIds: string[] = [];
   for (const kid of KIDS) {
-    const fundId = await seedKidFund(philId, kid, philDisplayName);
+    const fundId = await seedKidFund(ownerId, kid, ownerDisplayName);
     seededFundIds.push(fundId);
     console.log(`  fund: ${kid.firstName}'s Fund (${kid.slug}) → ${fundId}`);
   }
 
-  // 3b. Hand Haley's fund off to Haley — the graduated adult-account demo.
+  // 3a. Mark the per-kid precious entries as Pinned (file-based meta store).
+  await writeDemoMemoryEntryMeta();
+  console.log(`  pinned: ${PINNED_MEMORY_ENTRY_IDS.length} Memory Book entries (restart the dev server to pick up .local meta)`);
+
+  // 3b. Hand Mia's fund off to Mia — the graduated adult-account demo.
   //
   // The demo IS the real app, so there is no mock "adult view": we seed the
   // ACTUAL post-handoff state. The real claim/transfer flow flips fund.userId,
   // stamps transferredAt + previousOwnerId, and the Age18Welcome walkthrough
   // sets kidWelcomeCompletedAt; we replicate exactly that. Result: logging in
-  // as Haley renders the real adult/individual experience, and Phil sees the
+  // as Mia renders the real adult/individual experience, and Marcus sees the
   // real previous-owner "your part of the story" view of her fund.
-  const haleyFundId = seededFundIds[0]; // KIDS[0] is Haley (age 21, past CA majority)
-  const haleyUserId = userIdByEmail.get("haley@dunphyfamily.com");
+  const haleyFundId = seededFundIds[0]; // KIDS[0] is Mia (age 21, past CA majority)
+  const haleyUserId = userIdByEmail.get("mia@riverafamily.com");
   if (haleyUserId && haleyFundId) {
+    // Mia graduated ~1 year ago ("22, a year past majority"), so stamp the
+    // handoff a year back — not at seed-time — and freeze valueAtTransfer to
+    // roughly her value THEN (~91% of today's). This makes Marcus's previous-owner
+    // KEEPSAKE honest AND demonstrable: "handed off at $X a year ago", distinct
+    // from her live balance now. A same-day handoff would make keepsake == live
+    // and the freeze invisible.
+    const [haleyBalRow] = await db.select({ balance: funds.balance }).from(funds).where(eq(funds.id, haleyFundId));
+    const haleyBalNum = parseFloat(haleyBalRow?.balance || "0");
+    const haleyHandoffValue = haleyBalNum > 0 ? (haleyBalNum * 0.91).toFixed(2) : null;
     const transferredAt = new Date();
+    transferredAt.setFullYear(transferredAt.getFullYear() - 1);
     await db.update(funds).set({
       userId: haleyUserId,
-      previousOwnerId: philId,
+      previousOwnerId: ownerId,
+      // Frozen handoff keepsake value for the previous-owner view (see column).
+      valueAtTransfer: haleyHandoffValue,
       // Mirror the real /complete handoff (routes.ts ~7503): a UTMA terminates
       // at majority and becomes the owner's own individual account. Without
       // these the demo fund stayed accountType "utma" + recipientRelation null,
       // which (a) showed "UTMA" on the tax / fund-details surfaces and (b) made
       // postHandoffEngagementWorker (gated on LOWER(accountType)='personal')
-      // SKIP Haley — so the graduated owner never got the post-handoff
+      // SKIP Mia — so the graduated owner never got the post-handoff
       // engagement loop. Set them here so the seed matches a real handoff.
       accountType: "Personal",
       recipientRelation: "self",
@@ -1168,7 +1498,7 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
       childClaimedAt: transferredAt,
       ownershipTransferredAt: transferredAt,
       ownershipTransferredByUserId: haleyUserId,
-      formerCustodianUserId: philId,
+      formerCustodianUserId: ownerId,
       invitedAt: transferredAt,
       inviteViewedAt: transferredAt,
       childEmailVerifiedAt: transferredAt,
@@ -1177,9 +1507,9 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     // The real handoff flow (routes.ts ~7586) emits an "age18_handoff_completed_child"
     // activity so the transfer lands as the most recent milestone in the owner's feed
     // ("Fund handed off" / Sprout). The direct seed-transfer skips routes.ts, so emit it
-    // here too — otherwise Haley's Activity is missing the single most important event in
+    // here too — otherwise Mia's Activity is missing the single most important event in
     // her timeline: the day it became hers. createdAt = transferredAt keeps it at the top.
-    // Mirror the parent-side row too, so Phil's previous-owner view shows the handoff.
+    // Mirror the parent-side row too, so Elena's previous-owner view shows the handoff.
     await db.insert(activities).values({
       userId: haleyUserId,
       fundId: haleyFundId,
@@ -1189,95 +1519,130 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
       createdAt: transferredAt,
     } as any);
     await db.insert(activities).values({
-      userId: philId,
+      userId: ownerId,
       fundId: haleyFundId,
       type: "age18_handoff_completed_parent",
       title: "Age-18 handoff completed",
-      description: "Haley now owns this fund in Kiddo.",
+      description: "Mia now owns this fund in Kiddo.",
       createdAt: transferredAt,
     } as any);
-    console.log(`  handoff: Haley's fund → haley@dunphyfamily.com (graduated adult account; Phil is previous owner)`);
+    console.log(`  handoff: Mia's fund → mia@riverafamily.com (graduated adult account; Elena is previous owner)`);
   }
 
   // 3c. Seed a connected bank for the recurring-setup demo. Recurring pulls
-  //     from a linked bank for EVERYONE (parent + owner), and the setup modal
-  //     disables "Continue" with no bank. Without this, "Set up recurring" /
-  //     "+ Add another" dead-ends at the bank step in the demo — for Phil
-  //     (parent) AND Haley (graduated owner). Demo money is mocked, so this is
-  //     an illustrative connected account, not a real ACH source.
-  for (const [label, uid] of [["phil", philId], ["haley", haleyUserId]] as const) {
+  //     from a linked bank for EVERYONE (parent + owner + co-parent), and the
+  //     setup modal disables "Continue" with no bank. Without this, "Set up
+  //     recurring" / "+ Add another" dead-ends at the bank step in the demo —
+  //     for Elena (primary custodian), Mia (graduated owner), AND Marcus
+  //     (co-parent, who has write access on Nora+Theo and can set up recurring
+  //     too). Demo money is mocked, so this is an illustrative connected
+  //     account, not real ACH.
+  for (const [label, uid] of [["claire", ownerId], ["haley", haleyUserId], ["phil", coParentId]] as const) {
     if (!uid) continue;
     const existingBank = await db.select().from(bankAccounts).where(eq(bankAccounts.userId, uid)).limit(1);
     if (existingBank.length > 0) continue;
     await db.insert(bankAccounts).values({
       userId: uid,
-      bankName: "Dunphy Checking",
+      bankName: "Rivera Checking",
       accountLast4: "4291",
       provider: "manual",
       connectionStatus: "active",
       status: "active",
       isDefault: true,
     } as any);
-    console.log(`  bank: ${label} → Dunphy Checking ····4291 (demo, for recurring setup)`);
+    console.log(`  bank: ${label} → Rivera Checking ····4291 (demo, for recurring setup)`);
   }
 
-  // 4. Wire Claire as co-parent on the pre-handoff funds (Alex + Luke).
-  //    Haley's fund transferred to her at majority, so co-parent access there
+  // 4. Wire Marcus as co-parent on the pre-handoff funds (Nora + Theo).
+  //    Mia's fund transferred to her at majority, so co-parent access there
   //    ended with the handoff — a graduated adult owns it solo. Without this,
-  //    logging in as Claire via /demo shows an empty fund list and
+  //    logging in as Marcus via /demo shows an empty fund list and
   //    Dashboard redirects to /get-started — defeating the
   //    "co-parent view of the same three funds" spec promise.
   //    status='accepted' is the canonical value the auth middleware
   //    (requireOwnedFundParam) and the new /api/funds collaborator
   //    merge both look for. acceptedAt populated so the row passes
   //    any timestamp-based filters.
-  const claireId = userIdByEmail.get("claire@dunphyfamily.com");
-  if (claireId && seededFundIds.length > 0) {
+  if (seededFundIds.length > 0) {
+    // The co-parent "just accepted" CELEBRATION banner is gated to acceptances
+    // within ~30 days. With acceptedAt = now on every pre-handoff fund, it fired
+    // on BOTH Theo and Nora — the same one-time beat shown twice as you switch
+    // funds. Make exactly ONE acceptance recent (the banner fires once, teaching
+    // the feature) and date the rest back: Marcus still co-parents every fund
+    // (access is the collaborator row, not the timestamp), the banner just
+    // doesn't re-fire there. 2026-06-07.
+    let recentAssigned = false;
+    const OLD_ACCEPT = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000);
     for (const fundId of seededFundIds) {
-      if (fundId === haleyFundId) continue; // transferred to Haley at majority; co-parent access ended
+      if (fundId === haleyFundId) continue; // transferred to Mia at majority; co-parent access ended
+      const isRecent = !recentAssigned;
+      recentAssigned = true;
+      const acceptedAt = isRecent ? new Date() : OLD_ACCEPT;
       await db.insert(fundCollaborators).values({
         fundId,
-        userId: claireId,
-        email: "claire@dunphyfamily.com",
-        role: "co-parent",
+        userId: coParentId,
+        email: "marcus@riverafamily.com",
+        // "co-admin" is the canonical editor role across the app (auth
+        // middleware, /api/funds access merge, plan-benefits-usage all check
+        // it). The display label for co-admin is literally "Co-parent (can
+        // edit)". The old "co-parent" value matched NO code path, so the co-parent
+        // was silently downgraded to a read-only viewer AND uncounted as a co-parent.
+        role: "co-admin",
         status: "accepted",
-        acceptedAt: new Date(),
-        invitedAt: new Date(),
+        acceptedAt,
+        invitedAt: acceptedAt,
+      } as any);
+      // Seed the matching ACTIVITY rows so Marcus's invite + acceptance show in
+      // the fund's Activity feed. The product logs these as of 2026-06-07; the
+      // demo must seed them too or the feed under-represents a real account.
+      const [fundRow] = await db.select({ name: funds.recipientFirstName }).from(funds).where(eq(funds.id, fundId)).limit(1);
+      const childPoss = fundRow?.name?.trim() ? `${fundRow.name.trim()}'s` : "the";
+      const invitedAt = new Date(acceptedAt.getTime() - 2 * 24 * 60 * 60 * 1000);
+      await db.insert(activities).values({
+        userId: ownerId, fundId, type: "collaborator_invited", title: "Co-parent invited",
+        description: `Invited marcus@riverafamily.com to help manage ${childPoss} fund.`,
+        createdAt: invitedAt,
+      } as any);
+      await db.insert(activities).values({
+        userId: ownerId, fundId, type: "collaborator_accepted", title: "Co-parent joined",
+        description: `Marcus joined as a co-parent on ${childPoss} fund.`,
+        createdAt: acceptedAt,
       } as any);
     }
-    console.log(`  collaborator: claire@dunphyfamily.com → co-parent on ${seededFundIds.filter((id) => id !== haleyFundId).length} fund(s) (Haley's transferred out)`);
+    console.log(`  collaborator: marcus@riverafamily.com → co-parent on ${seededFundIds.filter((id) => id !== haleyFundId).length} fund(s) (Mia's transferred out)`);
   }
 
-  // 5. Phil's recurring parent_contributions are now seeded PER FUND
+  // 5. Elena's recurring parent_contributions are now seeded PER FUND
   //    inside seedKidFund — each schedule is created with its realized
   //    monthly-cycle history (linked gifts, totalContributed, lastRunDate)
   //    so the recurring detail and the dashboard breakdown read real
   //    paper-trading numbers instead of "$0 · never charged." Config
   //    (amount + active/paused) lives on each KIDS entry's `recurring`.
-  //    Haley's is paused (winding down ~30 days from majority); Alex + Luke
+  //    Mia's is paused (winding down ~30 days from majority); Nora + Theo
   //    active monthly. Moved out of this step 2026-05-27 with the
   //    recurring-realism pass.
 
-  // 6. Seed Mitchell's recurring_gifts (annual birthday AAPL gift).
-  //    Mitchell is the locked "recurring uncle" persona per the spec.
+  // 6. Seed David's recurring_gifts (annual birthday AAPL gift).
+  //    David is the locked "recurring uncle" persona per the spec.
   //    The one-time gifts already in the seed cover his history;
   //    these rows cover the SCHEDULE that the gifter dashboard's
   //    "your gifts" list reads from.
-  const mitchellId = userIdByEmail.get("mitchell@dunphyfamily.com");
+  const mitchellId = userIdByEmail.get("david@riverafamily.com");
   if (mitchellId) {
     for (let i = 0; i < KIDS.length; i++) {
       const kid = KIDS[i];
       const fundId = seededFundIds[i];
       if (!fundId) continue;
+      // Next birthday relative to the same frozen SEED_NOW, in UTC.
       const nextBirthday = new Date(kid.birthdate);
-      nextBirthday.setFullYear(new Date().getFullYear());
-      if (nextBirthday < new Date()) {
-        nextBirthday.setFullYear(nextBirthday.getFullYear() + 1);
+      nextBirthday.setUTCFullYear(SEED_NOW.getUTCFullYear());
+      if (nextBirthday < SEED_NOW) {
+        nextBirthday.setUTCFullYear(nextBirthday.getUTCFullYear() + 1);
       }
       await db.insert(recurringGifts).values({
         fundId,
-        senderName: "Mitchell Pritchett",
-        senderEmail: "mitchell@dunphyfamily.com",
+        senderName: "David Rivera",
+        senderEmail: "david@riverafamily.com",
         amount: "100.00",
         // Canonical cadence value is "yearly" (maps to Stripe interval
         // "year"); "annual" is non-canonical and breaks the gifter-
@@ -1287,26 +1652,44 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         paymentSetupStatus: "active",
         status: "active",
         nextChargeDate: nextBirthday,
+        // Demo-fake subscription id (founder catch 2026-06-04): the Riveras
+        // are on the FAMILY plan, so the product would have offered David
+        // the real auto-charging recurring — a reminder-only row here demoed
+        // the free-fund fallback on a paid fund and undersold the marquee
+        // feature. The demo_ prefix makes every consumer behave right: the
+        // Scheduled tab renders the auto-charge treatment, the gifter
+        // dashboard labels "Next charge", the reminder worker skips it
+        // (sub-id rows are excluded), and the status-change endpoints skip
+        // the Stripe call for demo_ ids.
+        stripeSubscriptionId: `demo_sub_mitchell_${kid.slug}`,
+      } as any);
+      // Mark David's recurring SETUP in the feed (the yearly fires arrive as
+      // gifts; this is the "set up a recurring gift" moment that previously
+      // logged nowhere). 2026-06-07.
+      await db.insert(activities).values({
+        userId: ownerId, fundId, type: "gifter_recurring_started", title: "Gifter set up recurring",
+        description: "David Rivera set up a yearly recurring gift of $100.",
+        createdAt: new Date(Date.now() - 4 * 365 * 24 * 60 * 60 * 1000),
       } as any);
     }
-    console.log(`  recurring (Mitchell): annual birthday on ${KIDS.length} fund(s)`);
+    console.log(`  recurring (David): annual birthday on ${KIDS.length} fund(s)`);
   }
 
   console.log("\nDone. Demo accounts ready.");
   console.log("Login: any of the seven emails, password: " + DEMO_PASSWORD);
-  console.log("  phil@dunphyfamily.com    — parent dashboard with 3 kids");
-  console.log("  claire@dunphyfamily.com  — co-parent view");
-  console.log("  jay@dunphyfamily.com     — gifter dashboard");
-  console.log("  gloria@dunphyfamily.com  — gifter (voice-memo persona)");
-  console.log("  mitchell@dunphyfamily.com — gifter (recurring persona)");
-  console.log("  cameron@dunphyfamily.com — gifter (Disney love-mark)");
-  console.log("  manny@dunphyfamily.com   — gifter (young-gifter)");
+  console.log("  elena@riverafamily.com  — parent dashboard with 3 kids (primary custodian)");
+  console.log("  marcus@riverafamily.com    — co-parent view");
+  console.log("  robert@riverafamily.com     — gifter dashboard");
+  console.log("  sofia@riverafamily.com  — gifter (voice-memo persona)");
+  console.log("  david@riverafamily.com — gifter (recurring persona)");
+  console.log("  chris@riverafamily.com — gifter (Disney love-mark)");
+  console.log("  leo@riverafamily.com   — gifter (young-gifter)");
 
   if (closePool) await pool.end();
 }
 
 // When invoked directly (npm run seed:dunphys), run the standalone path.
-// When imported, callers use runDunphySeed() and we don't touch the pool.
+// When imported, callers use runRiveraSeed() and we don't touch the pool.
 // Robust detection across Windows + macOS + Linux paths: compare normalized
 // script path against process.argv[1]. require.main isn't available under
 // tsx ESM. The fallback below also handles the case where this module is
@@ -1321,7 +1704,7 @@ const isDirectInvocation = (() => {
 })();
 
 if (isDirectInvocation) {
-  runDunphySeed().catch((err) => {
+  runRiveraSeed().catch((err) => {
     console.error("Seed failed:", err);
     process.exit(1);
   });

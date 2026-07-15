@@ -45,7 +45,7 @@ Open `http://localhost:5000`. Demo credentials are printed by `setup:local`.
 - **Mobile:** Expo 54 + React Native 0.81 in `apps/mobile/`
 - **Payments:** Stripe (live), DriveWealth UTMA brokerage (scaffolded — see [`ARCHITECTURE.md`](./ARCHITECTURE.md) §5)
 - **Email:** Resend / SES via `server/emailDelivery.ts`
-- **Hosting target:** Replit / Render / similar (Docker compose for local Postgres)
+- **Hosting (decided 2026-06-12):** **Render** single web service (site + web app + API + workers; `render.yaml` blueprint committed) + **Supabase** (Postgres + Storage) + **Cloudflare** (DNS/CDN). Native (Expo) ships via **EAS** to the app stores and calls the same API. Start on Render's **free** tier for demo/sandbox; flip `render.yaml` `plan: free` -> `starter` ($7/mo, always-on) at real launch. Docker compose is local Postgres only.
 
 ---
 

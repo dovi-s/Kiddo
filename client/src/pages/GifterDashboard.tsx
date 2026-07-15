@@ -1,21 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Plus, Pause, Play, Pencil, Receipt, ChevronDown } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Plus, Pause, Play, Pencil, Receipt, ChevronDown, Camera, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { haptic } from "@/lib/haptics";
 import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
-import { GifterFundSparkline } from "@/components/GifterFundSparkline";
+import { StockLogo } from "@/components/ui/stock-logo";
+import { STOCK_PICKS } from "@shared/stock-picks";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
-import { projectFundValue, yearsBetween } from "@shared/projection";
+
+// Ticker → company name for the gift rows (founder catch 2026-06-04: a gifter
+// wants to SEE what their money bought — the company + its logo — not a bare
+// "GOOGL"). Covers the featured picks; falls back to the ticker for ETFs /
+// anything not in the list so the label is never empty.
+const TICKER_TO_NAME: Record<string, string> = Object.fromEntries(
+  STOCK_PICKS.map((p) => [p.ticker.toUpperCase(), p.name]),
+);
+function companyNameForTicker(ticker?: string | null): string {
+  const t = String(ticker || "").trim().toUpperCase();
+  if (!t) return "";
+  return TICKER_TO_NAME[t] || t;
+}
+import { projectFundValue } from "@shared/projection";
 import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 
 // Per-user gifter dashboard cache. Same caching trio pattern (initialData
@@ -30,7 +47,7 @@ import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 //
 // 2026-05-31 FIX: this key + the query key were a single CONSTANT, NOT
 // per-user despite the comment above claiming "per-user". So switching
-// accounts (e.g. flipping demo personas Jay → Cameron → Manny) showed the
+// accounts (e.g. flipping demo personas Robert → Chris → Leo) showed the
 // PREVIOUS user's saved-fund cards — identical "$3,250 from you" cards
 // under every persona — until the network refetch landed (and the
 // localStorage initialData re-seeded the stale blob on the next mount).
@@ -43,6 +60,11 @@ const GIFTER_DASHBOARD_CACHE_BASE = "kiddo.gifter-dashboard.v1";
 type GifterFundRow = {
   fundId: string;
   childName: string;
+  // The family's last name — ONLY present when the gifter has gifted to 2+ kids
+  // who share it (server nulls it for singletons, so a one-off gifter never
+  // sees a last name). Drives the "The {familyName} family" grouping header so
+  // a cross-family gifter can tell whose kids are whose. 2026-06-04.
+  familyName: string | null;
   fundName: string;
   sharePath: string;
   totalGifted: number;
@@ -54,12 +76,16 @@ type GifterFundRow = {
   // already exposes nextBirthdayLabel + currentFundValue; these two
   // add the missing pieces (date + majority-age) so the client can
   // compute "your gifts could be worth ~$X when {child} turns N".
-  recipientBirthdate: string | null;
+  // Raw recipientBirthdate is intentionally NOT sent to gifters (T&S
+  // minimization 2026-06-04) — only the precomputed years-to-majority the
+  // projection needs.
+  yearsUntilMajority: number | null;
   majorityAge: number;
   childPhase: string;
   fundStatus: string;
-  currentFundValue: number;
-  holdingsCount: number;
+  // currentFundValue + holdingsCount + valueHistory30d intentionally NOT in
+  // the gifter payload (T&S minimization 2026-06-04): a gifter sees no
+  // child net-worth, portfolio size, or value trajectory.
   activeEventCount: number;
   nextMilestoneTarget: number | null;
   nextMilestoneProgress: number;
@@ -73,12 +99,26 @@ type GifterFundRow = {
   // sponsor pill on the fund card. Added 2026-05-25 to replace the
   // previously-removed (false-claim) Sponsor-Plus 'discovery card.'
   eligibleForSponsorship?: boolean;
-  // 30-day fund-value history for the inline sparkline. Server-
-  // populated; sparse weeks are fine — the sparkline interpolates
-  // linearly between snapshots. Empty array when no snapshots
-  // exist (brand-new fund). Locked 2026-05-19 per the gifter
-  // read-only fund tracking enrichment.
-  valueHistory30d?: Array<{ at: string; totalValue: number }>;
+  // Per-gift detail for the "Your gifts" expandable (2026-06-04):
+  // every gift this gifter sent to this fund, newest first. No live
+  // "now worth" (T&S minimization 2026-06-04) — it can be falsified by a
+  // parent's sale and leaks fund performance. The parent's thank-you note
+  // rides along when one was sent.
+  yourGifts?: Array<{
+    id: string;
+    amount: number;
+    createdAt: string | null;
+    ticker: string | null;
+    message: string | null;
+    // No single ticker → the money went into the diversified managed mix
+    // (index-fund basket), not cash. Drives the row's "Managed mix" label.
+    managedMix?: boolean;
+    // A recurring auto-invest cycle (parent auto-invest or a gifter schedule);
+    // drives the "↻ Monthly" marker so a long run of identical rows reads as
+    // one habit, not N anonymous gifts.
+    recurring?: boolean;
+    thankYou: { message: string; sentAt: string | null } | null;
+  }>;
 };
 
 type SponsoredSubRow = {
@@ -105,7 +145,6 @@ type GifterDashboardData = {
     savedFundCount: number;
     totalGifted: number;
     totalGifts: number;
-    trackedFundValue: number;
     followingUpdatesCount: number;
   };
   funds: GifterFundRow[];
@@ -115,6 +154,27 @@ type GifterDashboardData = {
 
 function fmtMoney(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
+}
+
+// Whole-dollar money, for summary lines where cents are noise (e.g. a family
+// rollup "$3,550 given" reads cleaner than "$3,550.00").
+function fmtMoney0(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0);
+}
+
+// Parse a gifter-safe "Month Day" birthday label (the only birthday signal the
+// server sends — no year, by T&S design) into the ms of its NEXT occurrence, so
+// the family header can surface "who's birthday is next". Returns null if the
+// label is missing or unparseable.
+function nextBirthdayMs(label: string | null): number | null {
+  if (!label) return null;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  for (const yr of [now.getFullYear(), now.getFullYear() + 1]) {
+    const t = new Date(`${label}, ${yr}`).getTime();
+    if (!Number.isNaN(t) && t >= startOfToday) return t;
+  }
+  return null;
 }
 
 function fmtDate(value: string | null) {
@@ -135,7 +195,7 @@ function statusLabel(value: string) {
 
 // Card eyebrow label from the server's age phase. Previously this was an
 // inline `childPhase === "teen" ? "Teen fund" : "Child fund"` ternary,
-// which mislabeled a graduated ADULT (server phase "adult", e.g. Haley at
+// which mislabeled a graduated ADULT (server phase "adult", e.g. Mia at
 // 22 past CA majority 21) as a "Child fund" — the oldest recipient reading
 // as a child while the younger two read "Teen". The server already
 // distinguishes "adult" (age >= majority = handed off); honor it here so a
@@ -144,7 +204,11 @@ function statusLabel(value: string) {
 function phaseLabel(phase: string): string {
   switch (String(phase || "").toLowerCase()) {
     case "adult":
-      return "Adult account";
+      // "Personal account", never "adult account", in user-facing copy —
+      // terminology locked 2026-06-04 (matches the fund badge "PERSONAL ·
+      // Active"; "adult" age-frames an ownership moment + wrong echo for a
+      // family brand). The server phase string stays "adult" internally.
+      return "Personal account";
     case "teen":
       return "Teen fund";
     case "child":
@@ -159,18 +223,19 @@ function phaseLabel(phase: string): string {
 // the kid's UTMA majority. Returns null when there's no birthdate to
 // anchor against, no gifts yet, or the kid is already past majority
 // (no projection horizon). Treatment 3 of the five DUNPHY_DEMO_SPEC.md
-// projection treatments — the "Gloria, you sent $X and it'll be worth
-// ~$Y when Haley turns 21" moment.
+// projection treatments — the "Sofia, you sent $X and it'll be worth
+// ~$Y when Mia turns 21" moment.
 function computeGifterAttribution(fund: GifterFundRow): {
   projected: number;
   yearsAhead: number;
   majorityAge: number;
 } | null {
-  if (!fund.recipientBirthdate) return null;
+  // yearsUntilMajority is now precomputed server-side so the gifter payload
+  // no longer carries the child's raw birthdate / birth year (T&S
+  // minimization 2026-06-04).
+  if (fund.yearsUntilMajority == null) return null;
   if (fund.totalGifted <= 0) return null;
-  const majorityDate = new Date(fund.recipientBirthdate);
-  majorityDate.setFullYear(majorityDate.getFullYear() + fund.majorityAge);
-  const yearsAhead = yearsBetween(new Date(), majorityDate);
+  const yearsAhead = fund.yearsUntilMajority;
   if (yearsAhead < 0.5) return null;
   const projected = projectFundValue({
     startingValue: fund.totalGifted,
@@ -179,6 +244,150 @@ function computeGifterAttribution(fund: GifterFundRow): {
     contributionYears: 0,
   });
   return { projected, yearsAhead, majorityAge: fund.majorityAge };
+}
+
+// Max accepted profile photo upload — matches Profile.tsx + the server's
+// data-url validation on PATCH /api/user/profile.
+const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+// The gifter's own profile photo, editable in place on the hero — the gifter
+// dashboard doubles as the gifter's profile (founder, 2026-06-05), mirroring
+// how the child's photo anchors the fund page top-left. The photo set here is
+// the SAME users.profileImageUrl the family's surfaces render: the Dashboard
+// gifter roster, the Memory Book byline, and the printed fund snapshot all
+// enrich gift rows from it. So the motivating frame in the copy is presence
+// ("families see this beside your gifts"), not vanity. Add = tap to pick;
+// edit/remove = tap opens a small menu. Removal PATCHes profileImageUrl: ""
+// (the server's explicit-clear contract).
+function GifterHeroAvatar({ user }: { user: any }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const photoUrl: string | null = user?.profileImageUrl || null;
+  // firstName FIRST (2026-07): the greeting says "Welcome back, {firstName}" (Elena),
+  // so the avatar must match. preferredName led — but that's the KID-nickname ("Mom"),
+  // meaningless in the gifter context (other families see Elena, not Mom) — so the
+  // avatar read "M" while the greeting read "Elena". preferredName kept as a fallback.
+  const initial = String(user?.firstName || user?.preferredName || user?.email || "?")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+  const patchPhoto = async (profileImageUrl: string) => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileImageUrl }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (demoBlocked(payload, toast)) return;
+        queryClient.setQueryData(["/api/auth/user"], payload);
+        haptic("success");
+        toast(
+          profileImageUrl === ""
+            ? { title: "Photo removed" }
+            : { title: "Photo updated", description: "Families will see this beside your gifts." },
+        );
+      } else {
+        toast({
+          title: "Couldn't update photo",
+          description: payload?.error || "Please try a smaller image.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Couldn't update photo",
+        description: "Check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "That's not an image", description: "Please choose a photo file.", variant: "destructive" });
+      return;
+    }
+    if (file.size > PROFILE_IMAGE_MAX_BYTES) {
+      toast({ title: "Photo too large", description: "Please choose an image under 5MB.", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => patchPhoto(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="relative flex-shrink-0">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          haptic("light");
+          if (photoUrl) setMenuOpen((v) => !v);
+          else fileInputRef.current?.click();
+        }}
+        className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-2 ring-white/25 sm:h-16 sm:w-16"
+        aria-label={photoUrl ? "Change or remove your profile photo" : "Add a profile photo"}
+        data-testid="button-gifter-avatar"
+      >
+        {photoUrl ? (
+          <FadeImage src={photoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="font-heading text-xl font-semibold text-white sm:text-2xl">{initial}</span>
+        )}
+        {busy && (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+          </span>
+        )}
+      </button>
+      {/* Camera badge — the quiet "this is editable" affordance. */}
+      <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold))] text-[hsl(153,48%,11%)] ring-2 ring-[hsl(153,48%,11%)]/40">
+        <Camera className="h-3 w-3" />
+      </span>
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+          <div className="absolute left-0 top-full z-50 mt-2 w-60 rounded-2xl border border-black/5 bg-white p-2 text-foreground shadow-xl">
+            <p className="px-3 pb-1.5 pt-1 text-2xs leading-snug text-muted-foreground">
+              Families see this photo beside your gifts.
+            </p>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-black/5 kiddo-press"
+              onClick={() => { setMenuOpen(false); fileInputRef.current?.click(); }}
+              data-testid="button-gifter-avatar-change"
+            >
+              <Camera className="h-4 w-4 text-muted-foreground" /> Change photo
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 kiddo-press"
+              onClick={() => patchPhoto("")}
+              data-testid="button-gifter-avatar-remove"
+            >
+              <Trash2 className="h-4 w-4" /> Remove photo
+            </button>
+          </div>
+        </>
+      )}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
 }
 
 export default function GifterDashboard() {
@@ -223,6 +432,66 @@ export default function GifterDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Group the gifter's funds by FAMILY (server-provided `familyName`, present
+  // only when this gifter has gifted to 2+ kids who share a last name). This
+  // is for the cross-family super-gifter — the loop's actual engine — who
+  // otherwise faces a flat wall of first-name cards where "just Theo" tells
+  // them nothing. Funds in a family cluster under a "The Rivera family" header;
+  // singletons render headerless (and never expose a last name). Group order
+  // follows the server's recency sort — the first fund seen claims the slot, so
+  // a family stays anchored to its most recent gift.
+  type FundGroup = {
+    key: string;
+    familyName: string | null;
+    funds: GifterFundRow[];
+    total: number; // total this gifter has given across the family
+    count: number;
+    nextBirthday: { childName: string; label: string; ms: number } | null; // soonest upcoming birthday in the family
+  };
+  const fundGroups = useMemo<FundGroup[]>(() => {
+    const rows = data?.funds ?? [];
+    const groups: FundGroup[] = [];
+    const indexByKey = new Map<string, number>();
+    for (const f of rows) {
+      const fam = f.familyName ? f.familyName.trim() : "";
+      const key = fam ? `fam:${fam.toLowerCase()}` : `solo:${f.fundId}`;
+      const existing = indexByKey.get(key);
+      if (existing != null) {
+        groups[existing].funds.push(f);
+      } else {
+        indexByKey.set(key, groups.length);
+        groups.push({ key, familyName: fam || null, funds: [f], total: 0, count: 0, nextBirthday: null });
+      }
+    }
+    // Per-family rollups — the summary the super-gifter scans: how much they've
+    // put into this family, how many kids, and who's birthday is next (the
+    // actionable "show up for them next" cue).
+    for (const g of groups) {
+      g.total = g.funds.reduce((sum, f) => sum + (f.totalGifted || 0), 0);
+      g.count = g.funds.length;
+      let soonest: { childName: string; label: string; ms: number } | null = null;
+      for (const f of g.funds) {
+        const ms = nextBirthdayMs(f.nextBirthdayLabel);
+        if (ms != null && (soonest == null || ms < soonest.ms)) {
+          soonest = { childName: f.childName, label: f.nextBirthdayLabel || "", ms };
+        }
+      }
+      g.nextBirthday = soonest;
+    }
+    return groups;
+  }, [data?.funds]);
+
+  // Sort control for the cross-family super-gifter (only surfaces at scale — see
+  // the >= 4 gate in the render — so Robert's 3-kid view stays clean). Reorders the
+  // FAMILY groups; "recent" keeps the server's recency order.
+  const [groupSort, setGroupSort] = useState<"recent" | "given" | "birthday">("recent");
+  const sortedGroups = useMemo<FundGroup[]>(() => {
+    const gs = [...fundGroups];
+    if (groupSort === "given") gs.sort((a, b) => b.total - a.total);
+    else if (groupSort === "birthday") gs.sort((a, b) => (a.nextBirthday?.ms ?? Infinity) - (b.nextBirthday?.ms ?? Infinity));
+    return gs;
+  }, [fundGroups, groupSort]);
+
   // Active + paused recurring schedules belonging to this gifter.
   // Powers the "Your recurring gifts" section per locked Decision A
   // (project_gifter_recurring_restoration.md).
@@ -265,8 +534,10 @@ export default function GifterDashboard() {
     recurringSchedules.some((s) => s.status === "active") ||
     sponsoredSubs.some((s) => s.status === "active" && new Date(s.expiresAt).getTime() > Date.now());
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  // Which schedule is pending a cancel confirm (drives the branded ConfirmDialog,
+  // replacing the OS-native window.confirm that looked off-brand on mobile).
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
   const handleCancelRecurring = async (scheduleId: string) => {
-    if (!window.confirm("Cancel this recurring gift? Future charges stop; charges already made aren't affected.")) return;
     setCancellingId(scheduleId);
     try {
       const res = await fetch(`/api/gifter-account/recurring/${scheduleId}/cancel`, {
@@ -274,6 +545,8 @@ export default function GifterDashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Cancel failed");
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({ title: "Recurring cancelled", description: "No further charges will fire." });
       queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/recurring"] });
@@ -292,6 +565,10 @@ export default function GifterDashboard() {
   // refetch on resolve so the server is the source of truth. Failure
   // path: rollback + toast.
   const [updatingFollowId, setUpdatingFollowId] = useState<string | null>(null);
+  // "Your gifts" expandable per fund card + tap-to-read thank-you notes
+  // (2026-06-04). One open fund at a time keeps the two-column grid stable.
+  const [openGiftsFundId, setOpenGiftsFundId] = useState<string | null>(null);
+  const [openThankGiftId, setOpenThankGiftId] = useState<string | null>(null);
   const handleToggleFollow = async (fundId: string, currentlyFollowing: boolean) => {
     if (updatingFollowId) return;
     setUpdatingFollowId(fundId);
@@ -302,6 +579,8 @@ export default function GifterDashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({
         title: currentlyFollowing ? "Updates off" : "Following updates",
@@ -351,6 +630,8 @@ export default function GifterDashboard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) return;
       haptic("success");
       toast({
         title: pause ? "Recurring paused" : "Recurring resumed",
@@ -394,8 +675,9 @@ export default function GifterDashboard() {
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
+      if (demoBlocked(payload, toast)) return;
       haptic("success");
-      toast({ title: "Recurring updated", description: `Now ${fmtMoney(amountNum)} ${editFrequency} to ${sch.fundName}. New terms apply next cycle.` });
+      toast({ title: "Recurring updated", description: `Now ${fmtMoney(amountNum)} ${editFrequency} to ${sch.fundName}, starting next cycle.` });
       setEditingId(null);
       refreshRecurring();
     } catch (err) {
@@ -471,6 +753,7 @@ export default function GifterDashboard() {
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(payload?.error || "Could not save this fund.");
         if (!cancelled) {
+          if (demoBlocked(payload, toast)) return;
           haptic("success");
           toast({ title: "Fund saved", description: `${payload?.childName || "This fund"} is now in your gifter dashboard.` });
           queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/dashboard"] });
@@ -544,7 +827,7 @@ export default function GifterDashboard() {
           <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
               <p className="text-sm font-medium text-primary">Gifter account</p>
-              <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">Save the children you gift to often.</h1>
+              <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">Keep the kids you gift to in one place.</h1>
               <p className="mt-3 text-muted-foreground">
                 Keep favorite fund links in one place, see your gifting history, and come back in one tap for the next birthday or holiday.
               </p>
@@ -580,20 +863,20 @@ export default function GifterDashboard() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                 />
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                 />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                 />
               </div>
               <div className="mt-4 grid gap-3">
@@ -634,7 +917,11 @@ export default function GifterDashboard() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-              className="relative overflow-hidden rounded-[28px] p-6 text-white sm:p-8"
+              // Full-bleed on mobile (edge-to-edge immersive header, matching the
+              // dashboard + GiftCheckout hero), contained rounded card on sm+ where
+              // this max-w-5xl page reads as a desktop surface. -mx-4 cancels the
+              // container's mobile px-4; -mt-2 tightens the gap under the logo bar.
+              className="relative overflow-hidden -mx-4 -mt-2 rounded-none p-6 text-white sm:mx-0 sm:mt-0 sm:rounded-[28px] sm:p-8"
               style={{ background: "linear-gradient(145deg, hsl(var(--kiddo-evergreen)) 0%, hsl(153 48% 11%) 100%)" }}
               data-testid="gifter-hero"
             >
@@ -642,42 +929,75 @@ export default function GifterDashboard() {
                   the dark hero from reading as a bank statement. */}
               <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[hsl(var(--kiddo-gold)/0.20)] blur-3xl" />
               <div className="relative">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
-                <h1 className="mt-2 font-heading text-3xl font-semibold sm:text-4xl">
-                  Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
-                </h1>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
-                  {savedFundCount > 0
-                    ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}, and what you gave keeps growing for them.`
-                    : "The funds you've gifted to, in one place."}
-                </p>
-
-                <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
-                    <p
-                      className="mt-0.5 font-heading text-3xl font-bold tabular-nums sm:text-4xl"
-                      aria-live={totalGiftedAnimating ? "off" : "polite"}
-                      aria-label={fmtMoney(totalGifted)}
-                    >{fmtMoney(animatedTotalGifted)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
-                    <p
-                      className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
-                      aria-live={savedFundCountAnimating ? "off" : "polite"}
-                      aria-label={String(savedFundCount)}
-                    >{Math.round(animatedSavedFundCount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
-                    <p
-                      className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
-                      aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
-                      aria-label={String(followingUpdatesCount)}
-                    >{Math.round(animatedFollowingUpdatesCount)}</p>
+                {/* Avatar + greeting row — the gifter's own face anchors the
+                    hero the same way the child's photo anchors the fund page.
+                    The avatar is the add/edit/remove entry point (see
+                    GifterHeroAvatar above). */}
+                <div className="flex items-start gap-4">
+                  {isAuthenticated && <GifterHeroAvatar user={user} />}
+                  <div className="min-w-0">
+                    <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
+                    <h1 className="mt-2 font-heading text-3xl font-semibold sm:text-4xl">
+                      Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
+                    </h1>
+                    <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
+                      {savedFundCount > 0
+                        ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}. Everything you've given is here.`
+                        : "The funds you've gifted to, in one place."}
+                    </p>
                   </div>
                 </div>
+
+                {/* First-paint honesty: with no localStorage cache (new
+                    device / fresh context) the query is in flight and these
+                    lifetime stats would briefly render "$0.00 / 0 / 0" — a
+                    returning gifter reads that as "my gifts are gone."
+                    While loading with no data, hold quiet pulse blocks
+                    instead; the count-ups take over the moment data lands.
+                    (Caught in the 2026-06-05 avatar verification run.) */}
+                {isLoading && !data ? (
+                  <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4" aria-hidden="true">
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                      <span className="mt-1.5 block h-9 w-28 animate-pulse rounded-lg bg-white/15 sm:h-10" />
+                    </div>
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Children</p>
+                      <span className="mt-1.5 block h-7 w-8 animate-pulse rounded-lg bg-white/15" />
+                    </div>
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Following</p>
+                      <span className="mt-1.5 block h-7 w-8 animate-pulse rounded-lg bg-white/15" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                      <p
+                        className="mt-0.5 font-heading text-3xl font-bold tabular-nums sm:text-4xl"
+                        aria-live={totalGiftedAnimating ? "off" : "polite"}
+                        aria-label={fmtMoney0(totalGifted)}
+                      >{fmtMoney0(animatedTotalGifted)}</p>
+                    </div>
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
+                      <p
+                        className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
+                        aria-live={savedFundCountAnimating ? "off" : "polite"}
+                        aria-label={String(savedFundCount)}
+                      >{Math.round(animatedSavedFundCount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-white/60">Following</p>
+                      <p
+                        className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
+                        aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
+                        aria-label={String(followingUpdatesCount)}
+                      >{Math.round(animatedFollowingUpdatesCount)}</p>
+                    </div>
+                  </div>
+                )}
 
                 {sessionId && mode === "save" && (
                   <div className="mt-5 inline-flex rounded-2xl bg-white/10 px-4 py-2.5 text-sm text-white backdrop-blur-sm">
@@ -711,7 +1031,7 @@ export default function GifterDashboard() {
             >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen))] text-white">
-                  <Repeat size={18} strokeWidth={1.8} />
+                  <Repeat size={18} strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="font-heading text-xl font-semibold text-foreground">
@@ -763,7 +1083,7 @@ export default function GifterDashboard() {
                             type="button"
                             onClick={() => handlePauseResume(sch, true)}
                             disabled={busy}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
                             data-testid={`hero-pause-recurring-${sch.id}`}
                           >
                             <Pause className="h-3.5 w-3.5" />
@@ -772,7 +1092,7 @@ export default function GifterDashboard() {
                           <button
                             type="button"
                             onClick={() => (isEditing ? setEditingId(null) : openEditor(sch))}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isEditing ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium transition-colors ${isEditing ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             data-testid={`hero-edit-recurring-${sch.id}`}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -781,7 +1101,7 @@ export default function GifterDashboard() {
                           <button
                             type="button"
                             onClick={() => handleToggleHistory(sch)}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isHistoryOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium transition-colors ${isHistoryOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                             data-testid={`hero-history-recurring-${sch.id}`}
                           >
                             <Receipt className="h-3.5 w-3.5" />
@@ -790,9 +1110,9 @@ export default function GifterDashboard() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleCancelRecurring(sch.id)}
+                            onClick={() => setCancelConfirmId(sch.id)}
                             disabled={cancellingId === sch.id}
-                            className="ml-auto inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                            className="ml-auto inline-flex items-center rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                             aria-label={`Cancel recurring gift of ${fmtMoney(sch.amount)} ${sch.frequency} to ${sch.fundName}`}
                             data-testid={`hero-cancel-recurring-${sch.id}`}
                           >
@@ -805,7 +1125,7 @@ export default function GifterDashboard() {
                           <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3" data-testid={`hero-editor-recurring-${sch.id}`}>
                             <div className="flex flex-wrap items-end gap-3">
                               <label className="flex-1 min-w-[120px]">
-                                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Amount</span>
+                                <span className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">Amount</span>
                                 <div className="mt-1 flex items-center rounded-lg border border-border bg-background px-3">
                                   <span className="text-sm text-muted-foreground">$</span>
                                   <input
@@ -815,13 +1135,13 @@ export default function GifterDashboard() {
                                     inputMode="decimal"
                                     value={editAmount}
                                     onChange={(e) => setEditAmount(e.target.value)}
-                                    className="h-10 w-full bg-transparent px-1 text-sm tabular-nums outline-none"
+                                    className="h-10 w-full bg-transparent px-1 text-base sm:text-sm tabular-nums outline-none"
                                     data-testid={`hero-edit-amount-${sch.id}`}
                                   />
                                 </div>
                               </label>
                               <label className="flex-1 min-w-[120px]">
-                                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Cadence</span>
+                                <span className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">Cadence</span>
                                 <select
                                   value={editFrequency}
                                   onChange={(e) => setEditFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
@@ -842,7 +1162,7 @@ export default function GifterDashboard() {
                                 Cancel
                               </Button>
                             </div>
-                            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                            <p className="mt-2 text-2xs leading-snug text-muted-foreground">
                               New amount and cadence take effect next cycle. You won't be charged anything extra today.
                             </p>
                           </div>
@@ -946,7 +1266,7 @@ export default function GifterDashboard() {
                             {fmtMoney(sch.amount)} {sch.frequency} to {sch.fundName}
                           </p>
                           {sch.status === "paused" && (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-amber-800">
                               Paused
                             </span>
                           )}
@@ -983,9 +1303,9 @@ export default function GifterDashboard() {
                         )}
                         <button
                           type="button"
-                          onClick={() => handleCancelRecurring(sch.id)}
+                          onClick={() => setCancelConfirmId(sch.id)}
                           disabled={cancellingId === sch.id}
-                          className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                          className="inline-flex items-center rounded-lg px-2.5 py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                           data-testid={`cancel-recurring-${sch.id}`}
                         >
                           {cancellingId === sch.id ? "Cancelling…" : "Cancel"}
@@ -1008,7 +1328,7 @@ export default function GifterDashboard() {
               <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-sponsorships">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                    <Crown size={18} strokeWidth={1.8} />
+                    <Crown size={18} strokeWidth={2} />
                   </div>
                   <div>
                     <h2 className="font-heading text-2xl font-semibold text-foreground">Sponsorships you've given</h2>
@@ -1036,17 +1356,17 @@ export default function GifterDashboard() {
                               {tierLabel} on {sub.childName}'s fund
                             </p>
                             {isActive && (
-                              <span className="rounded-full bg-[hsl(var(--kiddo-evergreen))]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                              <span className="rounded-full bg-[hsl(var(--kiddo-evergreen))]/10 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                                 Active
                               </span>
                             )}
                             {isExpired && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Expired
                               </span>
                             )}
                             {sub.status === "refunded" && (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-amber-800">
                                 Refunded
                               </span>
                             )}
@@ -1079,7 +1399,7 @@ export default function GifterDashboard() {
               <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-founder-gifts">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                    <Crown size={18} strokeWidth={1.8} />
+                    <Crown size={18} strokeWidth={2} />
                   </div>
                   <div>
                     <h2 className="font-heading text-2xl font-semibold text-foreground">Founder slots you've gifted</h2>
@@ -1128,7 +1448,7 @@ export default function GifterDashboard() {
                       again, follow updates, sponsor a year).  */}
                   <h2 className="font-heading text-2xl font-semibold text-foreground">Funds you've gifted to</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Each card shows fund value, milestone progress, and your follow-updates toggle.
+                    Each card shows every gift you've sent and thank-yous from the family.
                   </p>
                 </div>
                 <Link href={startFundHref}>
@@ -1141,8 +1461,54 @@ export default function GifterDashboard() {
               {isLoading ? (
                 <p className="mt-4 text-sm text-muted-foreground">Loading your saved funds...</p>
               ) : data?.funds?.length ? (
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {data.funds.map((fund, fundIdx) => {
+                <div className="mt-5 space-y-8">
+                  {/* Sort control — surfaces ONLY at scale (4+ families/cards),
+                      so the common 1-3 fund view stays clean. For the prolific
+                      cross-family gifter, reorders families by recency, total
+                      given, or whose birthday is next. */}
+                  {fundGroups.length >= 4 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs" data-testid="gifter-sort">
+                      <span className="mr-0.5 text-muted-foreground">Sort</span>
+                      {([["recent", "Recent"], ["given", "Most given"], ["birthday", "Soonest birthday"]] as const).map(([k, label]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setGroupSort(k)}
+                          className={`rounded-full px-2.5 py-1 font-medium transition-colors ${groupSort === k ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {sortedGroups.map((group) => (
+                    <div key={group.key}>
+                      {/* Family header — only for a real family cluster (2+ kids
+                          sharing a last name). Gives the cross-family gifter the
+                          context a flat first-name list can't: whose kids, how
+                          much they've put in, and whose birthday is next. */}
+                      {group.familyName && (
+                        <div className="mb-3">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <h3 className="font-heading text-lg font-semibold text-foreground">The {group.familyName} family</h3>
+                            <span className="text-xs text-muted-foreground">
+                              {group.count} {group.count === 1 ? "kid" : "kids"}
+                              {/* The per-family total is a meaningful BREAKDOWN only
+                                  when there are 2+ families; with one family it just
+                                  duplicates the hero's "Total gifted". So show it
+                                  only across families, rounded (cents are noise). */}
+                              {fundGroups.length >= 2 ? ` · ${fmtMoney0(group.total)} given` : ""}
+                            </span>
+                          </div>
+                          {group.nextBirthday && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Next up: {group.nextBirthday.childName}'s birthday · {group.nextBirthday.label}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      <div className="grid gap-4 md:grid-cols-2">
+                  {group.funds.map((fund, fundIdx) => {
                     const attribution = computeGifterAttribution(fund);
                     return (
                     <motion.div
@@ -1150,14 +1516,14 @@ export default function GifterDashboard() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: Math.min(fundIdx * 0.05, 0.3) }}
-                      className="rounded-3xl border border-border/60 bg-background p-5 shadow-[0_1px_3px_rgba(26,23,16,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(26,23,16,0.10)]"
+                      className="rounded-3xl border border-border/60 bg-background p-5 shadow-[0_1px_3px_hsl(var(--kiddo-ink) / 0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_hsl(var(--kiddo-ink) / 0.10)]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{phaseLabel(fund.childPhase)}</p>
                           <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">{fund.childName}</h3>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {fund.giftCount > 0 ? `${fund.giftCount} gifts sent • ${fmtMoney(fund.totalGifted)} from you` : "Saved for the next event"}
+                            {fund.giftCount > 0 ? `${fund.giftCount} gifts sent • ${fmtMoney0(fund.totalGifted)} from you` : "Saved for the next event"}
                           </p>
                         </div>
                         <Heart className="h-5 w-5 text-primary" />
@@ -1171,29 +1537,34 @@ export default function GifterDashboard() {
                           surface a different cell ('Status: Paused' etc).
                           When active, the slot now goes to 'Your total
                           gifts' which is gifter-owned context. */}
+                      {/* CHILD-MONEY MINIMIZATION (founder call 2026-06-04):
+                          the gifter no longer sees the fund's TOTAL VALUE or its
+                          30-day value sparkline — that's the child's accumulated
+                          net worth + the parent's investment performance, none
+                          of a gifter's business. The gifter's card shows only
+                          gifter-owned context: what THEY gave. (The "watch it
+                          grow" story is the forward, hypothetical projection
+                          below — safe because it's "if invested" and can't be
+                          falsified by a parent's later sale, unlike a live
+                          current-value figure.) */}
                       <div className="mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl bg-muted/40 p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-xs text-muted-foreground">Fund value now</p>
-                              <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.currentFundValue)}</p>
-                            </div>
-                            {(fund.valueHistory30d ?? []).length >= 2 && (
-                              <GifterFundSparkline points={fund.valueHistory30d ?? []} className="mt-0.5 shrink-0" />
-                            )}
-                          </div>
+                          <p className="text-xs text-muted-foreground">Your total gifts</p>
+                          <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.totalGifted)}</p>
                         </div>
-                        {String(fund.fundStatus || "").toLowerCase() === "active" ? (
-                          <div className="rounded-2xl bg-muted/40 p-3">
-                            <p className="text-xs text-muted-foreground">Your total gifts</p>
-                            <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.totalGifted)}</p>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl bg-muted/40 p-3">
-                            <p className="text-xs text-muted-foreground">Status</p>
-                            <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
-                          </div>
-                        )}
+                        <div className="rounded-2xl bg-muted/40 p-3">
+                          {String(fund.fundStatus || "").toLowerCase() === "active" ? (
+                            <>
+                              <p className="text-xs text-muted-foreground">Gifts you've sent</p>
+                              <p className="mt-1 font-medium text-foreground tabular-nums">{fund.giftCount ?? (fund.yourGifts?.length ?? 0)}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-xs text-muted-foreground">Status</p>
+                              <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       {/* Detail rows 2026-05-25 audit: 'Birthday anchor'
@@ -1204,8 +1575,178 @@ export default function GifterDashboard() {
                       <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                         <p>Last gift: {fmtDate(fund.lastGiftAt)}</p>
                         <p>Next birthday: {fund.nextBirthdayLabel || "Not added yet"}</p>
-                        <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
+                        {/* holdings COUNT dropped (2026-06-04): portfolio size
+                            is fund-state with zero gifter utility. Active
+                            events stay — they're occasions to gift to. */}
+                        {fund.activeEventCount > 0 && (
+                          <p>{fund.activeEventCount} {fund.activeEventCount === 1 ? "occasion" : "occasions"} to gift to</p>
+                        )}
                       </div>
+
+                      {/* "What your gifts bought" — a logo strip visible WITHOUT
+                          expanding the list (founder catch 2026-06-04: "what did
+                          he invest in for each"). Distinct tickers across this
+                          gifter's gifts to this fund, newest first. Answers the
+                          gifter's first question at a glance; the expandable
+                          below carries the per-gift detail. */}
+                      {(() => {
+                        const tickers = Array.from(new Set(
+                          (fund.yourGifts || [])
+                            .map((g) => String(g.ticker || "").trim().toUpperCase())
+                            .filter(Boolean),
+                        )).slice(0, 6);
+                        // Most contributions (recurring auto-invest) go into the
+                        // diversified managed mix, which has no single ticker — so
+                        // without this the strip implied the money bought ONLY the
+                        // few single stocks. Surface "Managed mix" when any did.
+                        const hasManagedMix = (fund.yourGifts || []).some((g) => g.managedMix || !g.ticker);
+                        if (tickers.length === 0 && !hasManagedMix) return null;
+                        return (
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5" data-testid={`gift-tickers-${fund.fundId}`}>
+                            <span className="text-xs text-muted-foreground">Your gifts bought</span>
+                            {hasManagedMix && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
+                                <TrendingUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <span className="text-2xs font-medium text-foreground/80">Managed mix</span>
+                              </span>
+                            )}
+                            {tickers.map((t) => (
+                              <span key={t} className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5">
+                                <StockLogo ticker={t} size={14} fallbackText={false} className="shrink-0" />
+                                <span className="text-2xs font-medium text-foreground/80">{companyNameForTicker(t)}</span>
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
+                      {/* "Your gifts" expandable (2026-06-04) — the per-gift
+                          receipt the card's "7 gifts sent" number was hiding:
+                          each gift's date, ticker, amount, and what it's worth
+                          NOW, plus the parent's thank-you note when one was
+                          sent (tap the heart line to read it). This is the
+                          loop's emotional engine — "your $200 in 2019 is $560
+                          today" — shown to the person who spreads it. */}
+                      {(fund.yourGifts?.length ?? 0) > 0 && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              haptic("light");
+                              setOpenThankGiftId(null);
+                              setOpenGiftsFundId(openGiftsFundId === fund.fundId ? null : fund.fundId);
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/40"
+                            data-testid={`button-your-gifts-${fund.fundId}`}
+                            aria-expanded={openGiftsFundId === fund.fundId}
+                          >
+                            <ChevronDown
+                              className={`h-3.5 w-3.5 transition-transform ${openGiftsFundId === fund.fundId ? "rotate-180" : ""}`}
+                            />
+                            {openGiftsFundId === fund.fundId
+                              ? "Hide your gifts"
+                              : `See your ${fund.yourGifts!.length === 1 ? "gift" : `${fund.yourGifts!.length} gifts`}`}
+                          </button>
+                          {openGiftsFundId === fund.fundId && (
+                            <ul className="mt-2 max-h-72 divide-y divide-border/50 overflow-y-auto rounded-2xl border border-border/60 bg-card px-3" data-testid={`your-gifts-list-${fund.fundId}`}>
+                              {fund.yourGifts!.map((g) => {
+                                const companyName = companyNameForTicker(g.ticker);
+                                return (
+                                  <li key={g.id} className="py-2.5">
+                                    <div className="flex items-center justify-between gap-2 text-sm">
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        {/* Logo + company name answer "what did my
+                                            gift buy" at a glance; the date drops to
+                                            a sub-line so the row leads with the
+                                            company, not the calendar. ETFs/unknown
+                                            tickers fall back to the symbol. */}
+                                        {g.ticker ? <StockLogo ticker={g.ticker} size={22} className="shrink-0" /> : null}
+                                        <span className="flex min-w-0 flex-col">
+                                          {/* Lead with WHAT the money bought, not a bare
+                                              "Gift". A single-stock pick shows the company;
+                                              everything else went into the diversified
+                                              managed mix (a basket of index funds) — never
+                                              cash — so say so. A recurring auto-invest cycle
+                                              gets a "↻ Monthly" tag so a long run of
+                                              identical rows reads as one habit. */}
+                                          <span className="flex items-center gap-1.5 truncate font-medium text-foreground">
+                                            {companyName || "Managed mix"}
+                                            {g.recurring && (
+                                              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-3xs font-semibold text-muted-foreground">
+                                                <Repeat className="h-2.5 w-2.5" />
+                                                Monthly
+                                              </span>
+                                            )}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">{fmtDate(g.createdAt)}</span>
+                                        </span>
+                                      </span>
+                                      {/* The gift AMOUNT only — no live "now worth"
+                                          (founder call 2026-06-04). A current value
+                                          can become a LIE the moment the parent
+                                          sells those shares (the gift row keeps the
+                                          recorded shares; the holding is gone), it
+                                          implies a donor claim on a gift that's the
+                                          child's now, and it leaks fund performance.
+                                          The honest growth story is the forward
+                                          "if invested" projection below. */}
+                                      <span className="shrink-0 tabular-nums text-foreground">
+                                        {fmtMoney(g.amount)}
+                                      </span>
+                                    </div>
+                                    {g.message && (
+                                      <p className="mt-1 truncate text-xs italic text-muted-foreground">"{g.message}"</p>
+                                    )}
+                                    {g.thankYou && (
+                                      <div className="mt-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            haptic("light");
+                                            setOpenThankGiftId(openThankGiftId === g.id ? null : g.id);
+                                          }}
+                                          className="inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                                          data-testid={`button-thank-you-${g.id}`}
+                                        >
+                                          <Heart className="h-3 w-3" />
+                                          {openThankGiftId === g.id ? "Hide their thank-you" : "They sent a thank-you"}
+                                        </button>
+                                        {openThankGiftId === g.id && (
+                                          <div className="mt-1.5">
+                                            <blockquote className="whitespace-pre-line rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-xs leading-relaxed text-foreground">
+                                              {g.thankYou.message}
+                                              {g.thankYou.sentAt && (
+                                                <span className="mt-1 block text-3xs text-muted-foreground">{fmtDate(g.thankYou.sentAt)}</span>
+                                              )}
+                                            </blockquote>
+                                            {/* The loop closing twice: a just-read thank-you is the
+                                                warmest moment to invite the next gift. Occasion-aware
+                                                when the next birthday is known; src-tagged so the
+                                                k-factor panel can attribute regifts to this nudge. */}
+                                            <Link href={`${fund.sharePath}${fund.sharePath.includes("?") ? "&" : "?"}src=thank_you_regift`}>
+                                              <button
+                                                type="button"
+                                                onClick={() => haptic("light")}
+                                                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                                                data-testid={`button-regift-${g.id}`}
+                                              >
+                                                {fund.nextBirthdayLabel
+                                                  ? `Send another for ${fund.childName}'s birthday (${fund.nextBirthdayLabel})`
+                                                  : `Send ${fund.childName} another gift`}
+                                                <ArrowRight className="h-3 w-3" />
+                                              </button>
+                                            </Link>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      )}
 
                       {/* Follow-updates toggle (replaced passive 2026-05-25).
                           Was a flat sentence with a BellRing icon and no
@@ -1262,7 +1803,7 @@ export default function GifterDashboard() {
                           <p className="mt-1 text-sm text-muted-foreground leading-snug">
                             Your {fmtMoney(fund.totalGifted)} to {fund.childName} could be worth this when {fund.childName} turns {attribution.majorityAge}, if it stays invested.
                           </p>
-                          <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">
+                          <p className="mt-2 text-3xs text-muted-foreground/60 leading-snug">
                             {PROJECTION_DISCLAIMER}
                           </p>
                         </div>
@@ -1271,7 +1812,11 @@ export default function GifterDashboard() {
                       {fund.nextMilestoneTarget && (
                         <div className="mt-4 rounded-2xl bg-muted/30 p-4">
                           <div className="flex items-center justify-between gap-3 text-sm">
-                            <p className="font-medium text-foreground">Next family milestone</p>
+                            {/* Server computes this off the GIFTER's own lifetime total
+                                ([100,500,1000,2500] vs stats.totalGifted) — the old
+                                "Next family milestone" label claimed it was fund-wide,
+                                which read absurd on an $80k fund ("next: $2,500"). */}
+                            <p className="font-medium text-foreground">Your next giving milestone</p>
                             <p className="text-muted-foreground">{fmtMoney(fund.nextMilestoneTarget)}</p>
                           </div>
                           <div className="mt-3 h-2 rounded-full bg-muted">
@@ -1319,7 +1864,7 @@ export default function GifterDashboard() {
                             transferred to the now-grown owner, they manage
                             their own subscription, so the sponsor pill is
                             nonsensical there. This was the "why is Plus only
-                            over Haley?" confusion — her graduated account was
+                            over Mia?" confusion — her graduated account was
                             the lone Free-coverage fund, so it was the only one
                             still showing the pill. 2026-05-31. */}
                         {fund.eligibleForSponsorship && fund.childPhase !== "adult" && (
@@ -1338,12 +1883,15 @@ export default function GifterDashboard() {
                     </motion.div>
                     );
                   })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/20 p-8 text-center">
                   <Mail className="mx-auto h-5 w-5 text-primary" />
                   <p className="mt-3 font-medium text-foreground">No saved funds yet</p>
-                  <p className="mt-2 text-sm text-muted-foreground">The next time you finish a gift, use "Save this fund" and it will show up here with fund value, milestones, and memory updates.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">The next time you finish a gift, use "Save this fund" and it will show up here with your gifts, milestones, and memory updates.</p>
                 </div>
               )}
             </div>
@@ -1412,6 +1960,18 @@ export default function GifterDashboard() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        request={cancelConfirmId ? {
+          title: "Cancel this recurring gift?",
+          body: "Future charges stop. Charges already made aren't affected.",
+          confirmLabel: "Cancel it",
+          cancelLabel: "Keep it",
+          destructive: true,
+          onConfirm: () => handleCancelRecurring(cancelConfirmId),
+        } : null}
+        onClose={() => setCancelConfirmId(null)}
+      />
     </div>
   );
 }

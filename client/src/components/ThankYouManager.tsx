@@ -5,6 +5,7 @@ import { Heart, Check, CheckCheck, Edit3, Send, RefreshCw, X } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import type { ThankYou } from "@shared/schema";
 
 interface ThankYouManagerProps {
@@ -38,6 +39,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
       return res.json();
     },
     onSuccess: (data) => {
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
       haptic("success");
       toast({ title: "Thank-yous generated", description: `${data.generated} new draft${data.generated !== 1 ? "s" : ""} created` });
@@ -58,7 +60,8 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
       if (!res.ok) throw new Error("Failed to update");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
     },
     onError: () => {
@@ -76,6 +79,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
       return res.json();
     },
     onSuccess: async (data) => {
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
       if (data.deliveryMethod === "email" && data.deliveryUrl) {
         window.location.href = data.deliveryUrl;
@@ -148,7 +152,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
               <h3 className="font-heading text-base font-semibold" data-testid="text-thank-yous-title">Thank Yous</h3>
               {drafts.length > 0 && (
                 <span
-                  className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-primary text-primary-foreground"
+                  className="inline-flex items-center justify-center w-5 h-5 text-3xs font-bold rounded-full bg-primary text-primary-foreground"
                   data-testid="badge-unsent-count"
                 >
                   {drafts.length}
@@ -222,7 +226,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
                         {ty.senderName}
                       </p>
                       {ty.status === "sent" && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-3xs font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
                           <Check size={10} />
                           Sent
                         </span>

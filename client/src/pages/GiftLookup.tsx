@@ -241,7 +241,7 @@ export default function GiftLookup() {
                   value={parentContact}
                   onChange={(e) => setParentContact(e.target.value)}
                   placeholder="Parent email or phone"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                   data-testid="input-parent-contact"
                 />
                 <label htmlFor="lookup-child-name" className="sr-only">Child's first name (optional)</label>
@@ -251,7 +251,7 @@ export default function GiftLookup() {
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
                   placeholder="Child's first name (optional)"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                   data-testid="input-child-name"
                 />
                 <label htmlFor="lookup-requester-name" className="sr-only">Your name (optional)</label>
@@ -261,7 +261,7 @@ export default function GiftLookup() {
                   value={requesterName}
                   onChange={(e) => setRequesterName(e.target.value)}
                   placeholder="Your name (optional)"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base sm:text-sm"
                   data-testid="input-requester-name"
                 />
                 <Button type="submit" variant="outline" size="lg" className="h-12 w-full" disabled={isRequestingInvite} data-testid="button-request-parent-invite">

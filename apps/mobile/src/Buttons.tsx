@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, radius, spacing } from "@kora/tokens";
+import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 
 type PrimaryButtonProps = {
   label: string;
@@ -41,8 +41,8 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: "#DED6CA",
-    backgroundColor: "#FFFFFF",
+    borderColor: colors.border,
+    backgroundColor: semanticColors.surface.card,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,

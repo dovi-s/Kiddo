@@ -6,16 +6,21 @@ import { useQuery } from "@tanstack/react-query"
 import { Check, Copy, Share2, Heart, Gift, Mail, Bookmark, Smartphone } from "lucide-react"
 import { WhatsAppIcon, MessageIcon } from "@/components/ui/share-modal"
 import { projectFundValue } from "@shared/projection"
+import { investingLiveCopy } from "@shared/legal-copy"
 import { Button } from "@/components/ui/button"
+import { FadeImage } from "@/components/ui/fade-image"
+import { renderOccasionGlyph } from "@/components/ui/occasion-illustration"
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
 import { StockLogo } from "@/components/ui/stock-logo"
 import { RecurringGiftNudge, RecurringSetupModal } from "@/components/ui/plg-loops"
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker"
+import { GiftStatusTimeline } from "@/components/GiftStatusTimeline"
 import { toast } from "@/hooks/use-toast"
 import { buildTrackedGetStartedHref, trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition"
 import { useAuth } from "@/hooks/use-auth"
 import { recordDemoLiveGift } from "@/lib/demo-live-gifts"
+import { GIFT_DRAFT_PREFIX } from "@/lib/giftDraft"
 
 // Ticker → human-readable company name. Used to render "Nike" instead
 // of "NKE" alongside the brand mark from <StockLogo /> on the gift
@@ -54,29 +59,9 @@ const COMPANY_INFO: Record<string, { name: string }> = {
   CMCSA: { name: "Comcast" },
 }
 
-// Mirrors the canonical EVENT_TYPE_EMOJI map used on Dashboard. Inline here
-// so GiftSuccess (a public/anonymous page) doesn't pull from a parent-only
-// module. Keep in sync when new event types are added.
-const EVENT_TYPE_EMOJI: Record<string, string> = {
-  birthday: "🎂",
-  graduation: "🎓",
-  holiday: "🎄",
-  christmas: "🎄",
-  hanukkah: "🕎",
-  baby: "🍼",
-  baby_shower: "🍼",
-  wedding: "💍",
-  car: "🚗",
-  first_car: "🚗",
-  college: "🎓",
-  home: "🏡",
-  travel: "✈️",
-  trip: "✈️",
-  business: "💼",
-  emergency: "🛡️",
-  custom: "✨",
-  just_because: "💚",
-}
+// Occasion icons come from the branded glyph system (renderOccasionGlyph), with a
+// Lucide Gift as the fallback — the old inline EVENT_TYPE_EMOJI map was removed so
+// this public page never renders a raw emoji.
 
 export default function GiftSuccess() {
   const searchString = useSearch()
@@ -150,6 +135,10 @@ export default function GiftSuccess() {
   // Resolved fast from the public-funds call below, with gift-summary
   // as a backstop. Empty string = no photo on file → sprout fallback.
   const [childPhotoUrl, setChildPhotoUrl] = useState("")
+  // Public/gifter media uploads gated OFF at launch (server flag
+  // PUBLIC_MEDIA_UPLOADS_ENABLED). When false, hide the "add media" picker so
+  // the gifter never hits a dead button; the note path stays. See publicMediaFlag.ts.
+  const [gifterMediaEnabled, setGifterMediaEnabled] = useState(false)
   const [hasMessage, setHasMessage] = useState(false)
   const [hasPhoto, setHasPhoto] = useState(false)
   const [hasVideo, setHasVideo] = useState(false)
@@ -232,10 +221,17 @@ export default function GiftSuccess() {
     } catch { /* sessionStorage blocked — loop just won't fire, no harm */ }
     recordDemoLiveGift({
       fundId,
+      eventId: params.get("eventId") || undefined,
       senderName: senderNameParam,
       amount: amountParam,
       ticker: tickerParam || undefined,
+      // "cash" (a one-time add-cash) lands in cash, not a holding.
+      executionModel: params.get("execModel") || undefined,
       message: params.get("message") || undefined,
+      // Carry the attached media so it lands in the "just now" Memory Book entry.
+      photoUrl: params.get("photoUrl") || undefined,
+      videoUrl: params.get("videoUrl") || undefined,
+      audioUrl: params.get("audioUrl") || undefined,
     })
   }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup, params])
 
@@ -303,6 +299,21 @@ export default function GiftSuccess() {
 
   useEffect(() => {
     trackGiftEvent("visit")
+  }, [])
+
+  // The payment completed — drop any composed-gift drafts GiftCheckout
+  // persisted to sessionStorage (refresh / Stripe-cancel recovery), so the
+  // next gift on this tab starts clean instead of resurrecting this one's
+  // message. Prefix scan: a tab holds at most a handful of keys.
+  useEffect(() => {
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i)
+        if (key && key.startsWith(GIFT_DRAFT_PREFIX)) sessionStorage.removeItem(key)
+      }
+    } catch {
+      // Storage blocked — nothing to clean.
+    }
   }, [])
 
   useEffect(() => {
@@ -411,6 +422,7 @@ export default function GiftSuccess() {
         if (data?.fund?.slug) { setFundSlug(data.fund.slug); setShareReady(true) }
         else if (!fundSlugParam) setShareReady(false)
         if (data?.fund?.childPhotoUrl) setChildPhotoUrl(String(data.fund.childPhotoUrl))
+        setGifterMediaEnabled(Boolean(data?.fund?.gifterMediaEnabled))
         if (!fundNameParam && data?.fund?.recipientFirstName) setFundNameState(String(data.fund.recipientFirstName))
       })
       .catch(() => { if (!fundSlugParam) setShareReady(false) })
@@ -606,7 +618,7 @@ export default function GiftSuccess() {
       })
       if (res.ok) {
         haptic("success")
-        toast({ title: "Reminder saved", description: `We'll email ${reminderEmail} when it's time to gift ${fundName} again.` })
+        toast({ title: "Reminder saved", description: `We'll remind you when it's time to gift ${fundName} again.` })
         trackGiftEvent("cta_click", { target: "gift_reminder_confirmed", amount: recurringAmount, frequency }, "gift_success_reminder")
         try { safeLocalSet("kora:dismissed:reminder-nudge", "1"); } catch {}
         setRecurringModalOpen(false)
@@ -796,7 +808,7 @@ export default function GiftSuccess() {
       // Popup blocker. The clipboard fallback is now the user's only path.
       toast({
         title: `${fundName}'s link copied`,
-        description: "Paste it into your browser to bookmark or save to home screen.",
+        description: "Paste it in your browser to bookmark it.",
       })
       return
     }
@@ -804,7 +816,7 @@ export default function GiftSuccess() {
     if (isMobileDevice) {
       toast({
         title: `${fundName}'s link is open`,
-        description: "Tap your browser's share button → Add to Home Screen on the new tab.",
+        description: "Tap Share, then Add to Home Screen.",
       })
     } else {
       const isMac = typeof navigator !== "undefined" && (navigator.platform?.toLowerCase().includes("mac") || navigator.userAgent.toLowerCase().includes("mac"))
@@ -847,7 +859,7 @@ export default function GiftSuccess() {
               Demo gift. No card was charged.
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--kiddo-evergreen))]/85">
-              You're in the Dunphy demo. Everything below is illustrative; no real money moved and balances reset periodically.{" "}
+              Everything below is illustrative and resets periodically.{" "}
               <Link href="/get-started" className="font-semibold underline underline-offset-2">
                 Create a real fund →
               </Link>
@@ -882,7 +894,6 @@ export default function GiftSuccess() {
           className="mb-10 text-center"
         >
           <Logo size="lg" className="justify-center" linkTo={null} />
-          <div className="mt-1 text-xs font-medium text-muted-foreground">Gifts that last.</div>
         </motion.div>
 
         {/* Hero — the kid's face is the emotional anchor of the success
@@ -899,7 +910,7 @@ export default function GiftSuccess() {
         >
           {childPhotoUrl ? (
             <div className="relative">
-              <img
+              <FadeImage
                 src={childPhotoUrl}
                 alt={childFirstName || "Their fund"}
                 className="h-24 w-24 rounded-full border-[3px] border-white object-cover shadow-xl"
@@ -907,12 +918,14 @@ export default function GiftSuccess() {
                 data-testid="img-success-child-photo"
               />
               <span
-                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[hsl(var(--kiddo-evergreen)/0.12)] text-lg shadow-sm select-none"
+                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[hsl(var(--kiddo-evergreen))] shadow-sm"
                 aria-hidden="true"
-              >🌱</span>
+              ><Check size={16} strokeWidth={2.5} className="text-white" /></span>
             </div>
           ) : (
-            <span className="text-6xl select-none" aria-hidden="true" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>🌱</span>
+            <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]" aria-hidden="true" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>
+              <Gift size={44} strokeWidth={1.75} className="text-[hsl(var(--kiddo-evergreen))]" />
+            </span>
           )}
         </motion.div>
 
@@ -931,7 +944,7 @@ export default function GiftSuccess() {
         >
           {isRecurringSetup
             ? `Your ${recurringCadenceLabel} is set up.`
-            : "Your gift is growing."}
+            : "Your gift is in."}
         </motion.h1>
 
         {/* Gift amount — the visual anchor the page was missing. The
@@ -970,7 +983,10 @@ export default function GiftSuccess() {
         >
           {isRecurringSetup
             ? `to ${childFirstName ? `${childFirstName}'s` : "their"} fund, starting today.`
-            : `now invested in ${childFirstName ? `${childFirstName}'s` : "their"} future.`}
+            : investingLiveCopy(
+                `now invested in ${childFirstName ? `${childFirstName}'s` : "their"} future.`,
+                `in ${childFirstName ? `${childFirstName}'s` : "their"} fund, invested once investing is live.`,
+              )}
         </motion.p>
 
         {/* Settling-window note. Tells the gifter the gift takes 1 to 2
@@ -981,17 +997,24 @@ export default function GiftSuccess() {
             audit (2026-05-14), this is the lowest-leverage / highest-
             confusion gap to close. Calm muted register; not a love
             mark. */}
-        <motion.p
-          className="mx-auto max-w-md text-center text-xs text-muted-foreground/80 mb-6"
+        <motion.div
+          className="mx-auto w-full max-w-xs mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.62 }}
           data-testid="text-success-settling-note"
         >
-          {isRecurringSetup
-            ? `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days. Manage or cancel any time from your gifter dashboard.`
-            : `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
-        </motion.p>
+          {/* Money-in-motion beat (per the fintech-UX canon: visualize the
+              in-flight state so the gifter feels the gift is safe and on its
+              way, not vanished). HONEST: the steps mirror the approved settling
+              copy below; no new claim, no faked instant settlement. */}
+          <GiftStatusTimeline
+            current="settling"
+            caption={isRecurringSetup
+              ? `Settling into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days. Manage or cancel any time from your gifter dashboard.`
+              : `Settling into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
+          />
+        </motion.div>
 
         {/* Occasion chip — names WHAT this gift was for (birthday,
             graduation, etc.). Only renders for goalless occasions: goal
@@ -1001,9 +1024,6 @@ export default function GiftSuccess() {
             this. Fills the gap where a plain birthday occasion left the
             "what was this for?" question unanswered on the success page. */}
         {eventInfo && eventInfo.name && (eventInfo.goalAmount === null || eventInfo.goalAmount <= 0) && (() => {
-          const occasionEmoji = eventInfo.eventType
-            ? EVENT_TYPE_EMOJI[String(eventInfo.eventType).toLowerCase()] || "🎁"
-            : "🎁"
           return (
             <motion.div
               className="mb-6 flex justify-center"
@@ -1013,7 +1033,10 @@ export default function GiftSuccess() {
               data-testid="chip-success-occasion"
             >
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-1.5 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                <span className="text-base leading-none" aria-hidden="true">{occasionEmoji}</span>
+                {/* Branded occasion glyph; a Gift glyph as the fallback, never a raw emoji. */}
+                {renderOccasionGlyph({ eventType: eventInfo.eventType, size: 15 }) || (
+                  <Gift size={15} strokeWidth={2} aria-hidden="true" />
+                )}
                 {eventInfo.name}
               </span>
             </motion.div>
@@ -1044,29 +1067,11 @@ export default function GiftSuccess() {
           </motion.div>
         )}
 
-        {/* One-time gifters: "send another" CTA. The team-audit conversion
-            specialist flagged that one-time gifters land on success with
-            NO follow-up CTA (only recurring gifters get the dashboard
-            link). A gifter who just sent $50 and felt good is in the
-            highest-intent moment to send again or save the fund for
-            next year. The CTA routes back to the gift page (using
-            fundSlug when resolved, fundId as fallback) so the gifter
-            can immediately start another gift. Audit 2026-05-25. */}
-        {!isRecurringSetup && (fundSlug || fundId) && (
-          <motion.div
-            className="flex justify-center mb-6"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.66, duration: 0.4 }}
-            data-testid="cta-success-send-another"
-          >
-            <Link href={`/${fundSlug || fundId}`}>
-              <Button variant="outline" size="sm" className="rounded-full" data-testid="button-send-another">
-                {childFirstName ? `Send ${childFirstName} another` : "Send another gift"} →
-              </Button>
-            </Link>
-          </motion.div>
-        )}
+        {/* NOTE: the prominent "Send {child} another" button that used to sit
+            here (right after the confirmation) was removed — it duplicated the
+            quiet restrained "send another" link lower on the page (near the share
+            block), and asking "send another" the instant after "your gift is in"
+            undercut the moment. One send-again path, placed after the beat. */}
 
         {/* Affirmative anonymous confirmation. Replaces what would
             otherwise read as "Someone added $50..." (placeholder name)
@@ -1085,7 +1090,7 @@ export default function GiftSuccess() {
             <div className="inline-flex flex-col items-center rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-5 py-3 max-w-md">
               <p className="text-sm font-semibold text-foreground">Sent anonymously.</p>
               <p className="mt-1 text-xs text-muted-foreground text-center leading-relaxed">
-                {childFirstName ? `${childFirstName}'s` : "The"} family knows the gift came in but won&apos;t see your name. You won&apos;t appear in the public &quot;who&apos;s already given&quot; list either.
+                {childFirstName ? `${childFirstName}'s` : "The"} family sees the gift, not your name. You'll show as &quot;Anonymous&quot; everywhere.
               </p>
             </div>
           </motion.div>
@@ -1111,25 +1116,25 @@ export default function GiftSuccess() {
             {hadPriorPosition && afterShares !== null && beforeShares !== null && stakeGrowthPct !== null && beforeValue !== null && afterValue !== null ? (
               // BEFORE / AFTER: prior position existed, this gift grew it
               <>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
                   <span>{childFirstName ? `${childFirstName}'s` : "The"}</span>
                   <StockLogo ticker={ticker} size={14} className="inline-block" />
                   <span>{companyName} position</span>
                 </p>
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   <div className="text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80 mb-0.5">Before</p>
+                    <p className="text-3xs uppercase tracking-wide text-muted-foreground/80 mb-0.5">Before</p>
                     <p className="font-heading text-base font-bold text-foreground/70 tabular-nums">
-                      {formatShares(beforeShares)} <span className="text-[11px] font-normal text-muted-foreground/70">shares</span>
+                      {formatShares(beforeShares)} <span className="text-2xs font-normal text-muted-foreground/70">shares</span>
                     </p>
-                    <p className="text-[11px] text-muted-foreground tabular-nums">{formatMoneyShort(beforeValue)}</p>
+                    <p className="text-2xs text-muted-foreground tabular-nums">{formatMoneyShort(beforeValue)}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After 🌱</p>
+                    <p className="text-3xs uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] font-bold mb-0.5">After</p>
                     <p className="font-heading text-base font-bold text-foreground tabular-nums">
-                      {formatShares(afterShares)} <span className="text-[11px] font-normal text-muted-foreground">shares</span>
+                      {formatShares(afterShares)} <span className="text-2xs font-normal text-muted-foreground">shares</span>
                     </p>
-                    <p className="text-[11px] text-foreground tabular-nums font-semibold">{formatMoneyShort(afterValue)}</p>
+                    <p className="text-2xs text-foreground tabular-nums font-semibold">{formatMoneyShort(afterValue)}</p>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-[hsl(var(--kiddo-evergreen)/0.15)] text-center">
@@ -1142,7 +1147,7 @@ export default function GiftSuccess() {
             ) : afterShares !== null ? (
               // FRESH POSITION: this gift started the position
               <>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-2 text-center inline-flex items-center justify-center gap-1.5 w-full">
                   <span>{childFirstName ? `${childFirstName}'s first` : "First"}</span>
                   <StockLogo ticker={ticker} size={14} className="inline-block" />
                   <span>{companyName} shares</span>
@@ -1170,8 +1175,8 @@ export default function GiftSuccess() {
                 </p>
               </>
             )}
-            <p className="mt-2.5 text-[10px] text-muted-foreground/60 text-center">
-              Final shares and value confirmed after market execution.
+            <p className="mt-2.5 text-3xs text-muted-foreground/60 text-center">
+              {investingLiveCopy("Final shares and value confirmed after market execution.", "Once investing is live, final shares and value are confirmed after market execution.")}
             </p>
           </motion.div>
         )}
@@ -1181,9 +1186,6 @@ export default function GiftSuccess() {
             (default) and goal-reached (🌟 celebration). Hidden for anytime
             gifts and goalless occasions; their warmth lives elsewhere. */}
         {eventInfo && eventInfo.goalAmount !== null && eventInfo.goalAmount > 0 && (() => {
-          const eventEmoji = eventInfo.eventType
-            ? EVENT_TYPE_EMOJI[String(eventInfo.eventType).toLowerCase()] || "🎁"
-            : "🎁"
           const total = eventInfo.giftVolume
           const goal = eventInfo.goalAmount
           const pct = Math.max(0, Math.min(100, (total / goal) * 100))
@@ -1200,8 +1202,10 @@ export default function GiftSuccess() {
               data-testid="card-event-goal-progress"
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl leading-none">{eventEmoji}</span>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                {renderOccasionGlyph({ eventType: eventInfo.eventType, size: 19 }) || (
+                  <Gift size={19} strokeWidth={2} aria-hidden="true" className="text-[hsl(var(--kiddo-evergreen))]" />
+                )}
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                   {reached
                     ? `Goal reached for ${eventInfo.name}`
                     : `New total toward ${eventInfo.name}`}
@@ -1221,7 +1225,7 @@ export default function GiftSuccess() {
                   transition={{ delay: 0.78, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 />
               </div>
-              <p className="mt-2.5 text-[11.5px] text-muted-foreground leading-relaxed">
+              <p className="mt-2.5 text-2xs text-muted-foreground leading-relaxed">
                 {reached
                   ? `${childName} hit the goal. Every dollar from here just keeps growing.`
                   : `${fmtMoney(Math.max(0, goal - total))} to go. Every gift gets ${childName} closer.`}
@@ -1240,7 +1244,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed. But gifts that last? Those are.
+            At 7% historical average returns net of Kiddo's annual fee, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. Not guaranteed.
           </motion.p>
         ) : projectedAmount ? (
           <motion.p
@@ -1250,7 +1254,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.68 }}
             data-testid="text-success-projection"
           >
-            At 7% historical average returns, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed. But gifts that last? Those are.
+            At 7% historical average returns net of Kiddo's annual fee, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed.
           </motion.p>
         ) : null}
 
@@ -1262,7 +1266,7 @@ export default function GiftSuccess() {
           transition={{ delay: 0.76 }}
           data-testid="text-gift-provenance"
         >
-          This gift was invested with Kiddo. Gifts that actually last.
+          {investingLiveCopy("This gift was invested with Kiddo.", "This gift is safe with Kiddo, invested once investing is live.")}
         </motion.p>
 
         {/* Quiet "send another" affordance. NOT a card, NOT a primary
@@ -1320,7 +1324,7 @@ export default function GiftSuccess() {
           >
             <Button className="flex-1 gap-2" onClick={handleFundShare} data-testid="button-share-gift-early">
               <Share2 className="w-4 h-4" />
-              Share this gift 🎁
+              Share this gift
             </Button>
             <Button variant="outline" className="gap-2 px-3" onClick={handleCopyLink} data-testid="button-copy-link-early">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -1341,7 +1345,7 @@ export default function GiftSuccess() {
               <Gift className="w-5 h-5 text-[hsl(var(--kiddo-evergreen))]" />
             </div>
             <h2 className="font-heading text-lg font-semibold" data-testid="text-gift-amount">
-              You sent ${amount} to {fundName}
+              You sent ${amountDisplay} to {fundName}
             </h2>
           </div>
 
@@ -1411,7 +1415,7 @@ export default function GiftSuccess() {
                     className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))] resize-none"
                     data-testid="input-note-text"
                   />
-                  {fundId && !isAnonymous ? (
+                  {fundId && !isAnonymous && gifterMediaEnabled ? (
                     // MemoryMediaPicker uses the public upload endpoints
                     // (no auth required) when uploadEndpointPrefix is
                     // overridden — gifters aren't signed in. Voice is
@@ -1483,7 +1487,7 @@ export default function GiftSuccess() {
             Birthday reminders, parent-shared Memory Book updates, and one final note when they turn {majorityAge}. Parent-controlled, opt-in only, and never performance claims or spam. One-click unsubscribe in every email.
           </p>
           {senderName && !senderLooksGeneric && (
-            <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+            <p className="mt-2 text-2xs text-muted-foreground/80 leading-relaxed">
               Heads up: your first name now appears in {childFirstName ? `${childFirstName}'s` : "the"} family Memory Book and on the gift page as a "who's already given" name. Full name stays private.
             </p>
           )}
@@ -1711,8 +1715,11 @@ export default function GiftSuccess() {
               dollar amount needs to repeat exactly here. Also surfaces
               the brokerage-failure-vs-market-loss distinction explicitly
               (was implicit in "Investing can go up or down" — too soft). */}
-          <p className="text-[10px] text-muted-foreground/60 text-center px-4">
-            These are real shares, held in a brokerage account. When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
+          <p className="text-3xs text-muted-foreground/60 text-center px-4">
+            {investingLiveCopy(
+              "These are real shares, held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.",
+              "When investing is live, your gift buys real shares held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.",
+            )}
           </p>
         </motion.div>
 

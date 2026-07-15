@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFramerSheetDrag } from "@/lib/use-framer-sheet-drag";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "./MemoryMediaPicker";
 import { getPronouns, type Pronouns } from "@/lib/pronouns";
 import { capFirst } from "@/lib/format-name";
+import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 // Prompts factory — parameterized on fund pronouns so "What you hope she
 // does with it" becomes "What you hope they do with it" for they/them
@@ -168,8 +171,9 @@ export function NoteEditorSheet({
     setSaving(true);
     haptic("medium");
     try {
+      let res: Response;
       if (existingEntry?.id) {
-        await fetch(`/api/memory/${existingEntry.id}`, {
+        res = await fetch(`/api/memory/${existingEntry.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -182,7 +186,7 @@ export function NoteEditorSheet({
           }),
         });
       } else {
-        await fetch(`/api/funds/${fundId}/memory`, {
+        res = await fetch(`/api/funds/${fundId}/memory`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -203,6 +207,8 @@ export function NoteEditorSheet({
           }),
         });
       }
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setSaving(false); return; }
       haptic("success");
       onSaved?.();
       // First-time save fires the sealed celebration; edits just
@@ -221,6 +227,9 @@ export function NoteEditorSheet({
       setSaving(false);
     }
   }
+
+  // Swipe-down-to-dismiss (mobile) — grab the handle at the top of the sheet.
+  const { dragProps, handle } = useFramerSheetDrag(onClose);
 
   return (
     <AnimatePresence>
@@ -241,10 +250,12 @@ export function NoteEditorSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 300 }}
+            {...dragProps}
             className="fixed bottom-0 left-0 right-0 z-[71] bg-background rounded-t-[28px] flex flex-col overflow-hidden"
             style={{ maxHeight: "92dvh" }}
             onClick={(e) => e.stopPropagation()}
           >
+            {handle}
             {showSealedCelebration ? (
               <>
                 {/* Post-save sealed-letter celebration. Renders ONLY
@@ -321,7 +332,7 @@ export function NoteEditorSheet({
                 <div className="flex items-start justify-between px-5 pt-5 pb-4 shrink-0">
                   <div className="flex-1 pr-4">
                     <p className="text-base font-bold text-foreground leading-snug">
-                      Write something for {name}. ✉️
+                      Write something for {name}.
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       {capFirst(fundPronouns.subject)}{fundPronouns.singular ? "'ll" : "'ll"} {reads} this on <span className="whitespace-nowrap">{fundPronouns.possAdj} {majorityOrdinal} birthday.</span>
@@ -376,7 +387,7 @@ export function NoteEditorSheet({
                       <p className="text-xs font-semibold text-foreground mb-1">
                         Or leave a voice memory.
                       </p>
-                      <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+                      <p className="text-2xs text-muted-foreground mb-2.5 leading-relaxed">
                         {name} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}.
                       </p>
                       <MemoryMediaPicker
@@ -440,7 +451,7 @@ export function NoteEditorSheet({
                             ))}
                           </ul>
                           <p className="text-xs text-muted-foreground/50 italic mt-3">
-                            These are just prompts. Write whatever feels right. She'll treasure it forever.
+                            These are just prompts. Write whatever feels right. {capFirst(fundPronouns.subject)}'ll treasure it forever.
                           </p>
                         </div>
                       </motion.div>
@@ -489,7 +500,7 @@ export function NoteEditorSheet({
                     className="rounded-2xl px-6 py-8"
                     style={{ background: "rgb(254,252,243)" }}
                   >
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">
+                    <p className="text-3xs font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">
                       From {parentName || "your family"}.
                     </p>
                     <p className="text-xs text-muted-foreground mb-5">Written for you.</p>
@@ -502,7 +513,7 @@ export function NoteEditorSheet({
                     </p>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground/50 text-center mt-5 italic">
+                  <p className="text-2xs text-muted-foreground/50 text-center mt-5 italic">
                     {capFirst(fundPronouns.subject)}'ll {reads} it on {fundPronouns.possAdj} {majorityOrdinal} birthday.
                   </p>
                 </div>

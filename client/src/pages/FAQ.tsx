@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
+import { JsonLd } from "@/components/JsonLd";
 import { ChevronDown, Lock, Search, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KIDDIE_TAX_NOTE } from "@shared/legal-copy";
@@ -29,7 +30,7 @@ const faqItems = [
       <>
         Fidelity and Schwab are great places to hold investments for a child. What they do not give you is
         the gifting ritual. With Kiddo, family and friends can open one link, choose an amount, and give
-        in under a minute. Every gift can be invested, every note can be saved, and birthdays or baby
+        in seconds. Every gift can be invested, every note can be saved, and birthdays or baby
         showers can have a real occasion page instead of another round of checks and Venmos. If you want a
         more occasion-based walkthrough, start with{" "}
         <Link href="/blog/best-way-to-invest-birthday-money-for-kids" className="text-primary hover:underline">
@@ -116,6 +117,12 @@ const faqItems = [
     answer: "Most child funds use a UTMA legal structure. That means you manage the fund until your child reaches adulthood, usually 18 or 21 depending on your state. Then it becomes fully theirs. Kiddo keeps that legal complexity underneath the gifting experience.",
   },
   {
+    id: "what-if-they-spend-it",
+    category: "Account Basics",
+    question: "What if my child just spends it all at 18?",
+    answer: "It is the fear every parent has, and it is the reason we built Kiddo the way we did. By law, a custodial account becomes your child's at the age of majority. No app can change that, and we would not want one that could. What we can do is spend the years before it making the account something they understand and care about, instead of a surprise check. A child who watched it grow, chose some of what is inside, and read a note from their grandfather about it is a very different eighteen-year-old than one handed a number. We cannot promise what they will do. We can promise we spent eighteen years preparing them to do it well.",
+  },
+  {
     id: "utma-vs-529",
     category: "Account Basics",
     question: "How is this different from a 529?",
@@ -135,7 +142,7 @@ const faqItems = [
     question: "Will my child's Kiddo fund affect their college financial aid?",
     answer: (
       <>
-        Maybe, depending on whether you use the fund for college and how much is in it. UTMA accounts count as the child's asset on the FAFSA and are assessed at roughly 20% of value when calculating expected family contribution. A parent-owned 529 plan is assessed at a maximum of 5.64%, and a grandparent-owned 529 is currently assessed at 0% if used for the child's education. So if your only goal for this fund is paying for college, a 529 will usually have less impact on need-based financial aid than a UTMA will. Most Kiddo families use both: a 529 for college specifically, and a Kiddo fund for everything else (first car, gap year, business, down payment, whatever your child decides at 18). Kiddo's whole positioning is that this fund isn't a worse 529. It's a different tool for the cases where 'this is just for college' is the wrong frame. If your fund is large enough that the FAFSA difference is material to your aid eligibility, talk to a financial aid advisor before submitting the form. To see what consistent investing for your specific situation could grow into, try the{" "}
+        Maybe, depending on whether you use the fund for college and how much is in it. UTMA accounts count as the child's asset on the FAFSA and are assessed at roughly 20% of value when calculating expected family contribution. A parent-owned 529 plan is assessed at a maximum of 5.64%, and a grandparent-owned 529 is currently assessed at 0% if used for the child's education. So if your only goal for this fund is paying for college, a 529 will usually have less impact on need-based financial aid than a UTMA will. Most Kiddo families use both: a 529 for college specifically, and a Kiddo fund for everything else (first car, gap year, business, down payment, whatever your child decides at 18). Kiddo's whole positioning is that this fund is a different tool, for the cases where 'this is just for college' is the wrong frame. If your fund is large enough that the FAFSA difference is material to your aid eligibility, talk to a financial aid advisor before submitting the form. To see what consistent investing for your specific situation could grow into, try the{" "}
         <Link href="/tools/at-18-calculator" className="text-primary hover:underline">
           at-18 calculator
         </Link>
@@ -165,7 +172,7 @@ const faqItems = [
     id: "fees",
     category: "Pricing & Fees",
     question: "How much does Kiddo cost?",
-    answer: "Kiddo is free to start. Free includes one child fund and a gift link. Parents and gifters can make one-time contributions. Gifters can always attach photos, videos, and voice memos. Free also includes text Memory Book entries, a reminder system for gifters to give again, and Kid View so your child can see what they own. Kiddo+ is $3.99 per month or $29 per year for one child. Plus unlocks recurring contributions on the fund (for you and for any gifter to the fund), custom fund mix, strategy switching, photo and video and voice authoring in your own Memory Book entries, co-parent access, 3 active occasions, and an annual contribution summary for tax records. Kiddo Family is $6.99 per month or $59 per year for every child fund you manage. Across every plan, Kiddo's annual fee is $1 per $1,000 invested. Cash and pending gifts are not charged. Payment processing on gifts is separate and shown before checkout.",
+    answer: "Kiddo is free to start. Free includes one child fund and a gift link. Parents and gifters can make one-time contributions. Gifters can always attach photos, videos, and voice memos. Free parents see every gift, photo, video, and voice memo from gifters in the Memory Book, and can write their own text entries. Free also includes a reminder system for gifters to give again, Kid View so your child can see what they own, and an annual contribution summary for tax records. Kiddo+ is $3.99 per month or $29 per year for one child. Plus unlocks recurring contributions on the fund (for you and for any gifter to the fund), custom fund mix, strategy switching, photo and video and voice authoring in your own Memory Book entries, co-parent access, and unlimited active occasions. Kiddo Family is $6.99 per month or $59 per year for every child fund you manage. Across every plan, Kiddo's annual fee is $1 per $1,000 invested, the only fee on the invested assets themselves (the subscription is separate, for product features). Cash and pending gifts are not charged. Payment processing on gifts is separate and shown before checkout.",
   },
   {
     id: "contribution-fees",
@@ -183,7 +190,7 @@ const faqItems = [
     id: "auto-invest",
     category: "Investing",
     question: "What happens after a gift comes in?",
-    answer: "Every fund has one family default. Most families use a managed recurring-investment style like Growth Mix or Steady & Balanced. Some choose a specific default stock. Others prefer to hold gifts as cash until they invest later. Gifts follow that family default unless the parent has explicitly allowed a stock override or a cash option in fund settings.",
+    answer: "Every fund has one family default. Most families use a managed recurring-investment style like Growth Mix or Balanced Mix. Some choose a specific default stock. Others prefer to hold gifts as cash until they invest later. Gifts follow that family default unless the parent has explicitly allowed a stock override or a cash option in fund settings.",
   },
   {
     id: "rebalancing",
@@ -242,7 +249,7 @@ const faqItems = [
         <br />
         <br />
         Gifts through Kiddo are invested automatically once investing is live, with notes saved permanently. Parents can run occasion
-        pages for specific moments and share a fund link anyone can gift through in under a minute.{" "}
+        pages for specific moments and share a fund link anyone can gift through in seconds.{" "}
         <Link href="/compare/earlybird" className="text-primary hover:underline">
           See the full Kiddo vs EarlyBird comparison &rarr;
         </Link>
@@ -255,16 +262,17 @@ const faqItems = [
     question: "Can I create a fund for myself, not a child?",
     answer: (
       <>
-        Yes. Kiddo supports personal funds for adults. Your personal fund still gives you a
-        shareable link, simple gifting for friends and family, and a real investment account behind it.
+        Personal funds for adults are coming soon. Today Kiddo is built for children&apos;s funds. A
+        personal fund would give you the same shareable link, simple gifting from friends and family, and
+        a real investment account behind it, held in your own personal brokerage account rather than a
+        child-fund structure.
         <br />
         <br />
-        The difference is the account type. A child fund uses a legal child-fund structure. A personal
-        fund uses your own personal brokerage account. Start at{" "}
+        You can see the idea and join the waitlist at{" "}
         <Link href="/get-started" className="text-primary hover:underline">
           get started
         </Link>{" "}
-        and choose <span className="font-medium text-foreground">For myself</span>.
+        under <span className="font-medium text-foreground">For myself</span>.
       </>
     ),
   },
@@ -292,12 +300,6 @@ const faqItems = [
     category: "Taxes",
     question: "Do I get tax documents?",
     answer: "Yes. If the account generates taxable activity, the brokerage side of the experience provides the relevant tax documents. Parents should expect standard year-end reporting when it applies.",
-  },
-  {
-    id: "financial-aid",
-    category: "Taxes",
-    question: "Could this affect financial aid?",
-    answer: "It can, because child-fund assets are generally treated differently from 529 assets in aid calculations. For many families, the balances start small enough that the practical impact is limited, but it is still worth understanding before the fund gets large.",
   },
   {
     id: "turns-18",
@@ -340,7 +342,7 @@ const faqItems = [
     category: "Kid View & Education",
     question: "What is the Kid View?",
     answer:
-      "The Kid View is how your child grows up understanding ownership, seeing which people invested in them, and learning to have real money conversations. Not a brokerage dashboard. Age-appropriate language, real company logos, and the names of the people who showed up for them.",
+      "The Kid View is how your child grows up understanding ownership, seeing which people invested in them, and learning to have real money conversations. Age-appropriate language, real company logos, and the names of the people who showed up for them.",
   },
   {
     id: "child-view-ages",
@@ -381,7 +383,7 @@ function AccordionItem({
         data-testid={`faq-toggle-${item.id}`}
       >
         <div className="pr-4">
-          <span className="mb-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+          <span className="mb-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-2xs text-primary">
             {item.category}
           </span>
           <p className="font-heading text-base font-medium text-foreground transition-colors group-hover:text-primary md:text-lg">
@@ -449,8 +451,27 @@ export default function FAQ() {
     );
   });
 
+  // FAQPage structured data — every Q&A as machine-readable text so Google can
+  // surface FAQ rich results. Answers are run through the same plain-text
+  // extractor the search uses, so JSX answers contribute too.
+  const faqJsonLd = useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems
+        .map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: extractAnswerText(item.answer).replace(/\s+/g, " ").trim() },
+        }))
+        .filter((q) => q.acceptedAnswer.text.length > 0),
+    }),
+    [],
+  );
+
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd data={faqJsonLd} id="faq-jsonld" />
       <Nav />
 
       <section className="pb-16 pt-24 md:pb-24 md:pt-32">
@@ -463,7 +484,7 @@ export default function FAQ() {
               className="mb-10 text-center"
             >
               <h1
-                className="mb-4 font-heading text-3xl font-semibold tracking-tight text-foreground md:text-5xl"
+                className="mb-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl"
                 data-testid="text-page-title"
               >
                 Questions? Good. Here are the answers.
@@ -479,10 +500,11 @@ export default function FAQ() {
               transition={{ delay: 0.080, duration: 0.5 }}
               className="relative mb-8"
             >
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
               <input
                 type="text"
                 placeholder="Search questions..."
+                aria-label="Search questions"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-2xl border border-border bg-card py-3.5 pl-12 pr-4 text-foreground placeholder:text-muted-foreground transition-all focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"

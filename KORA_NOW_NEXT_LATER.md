@@ -1,6 +1,6 @@
 # Kora Now / Next / Later
 
-Updated: 2026-04-12
+Updated: 2026-06-23
 
 Purpose:
 - give Kora one operating plan instead of scattered ideas
@@ -118,6 +118,13 @@ Why next:
 Success looks like:
 - one school champion can drive parent signups and first gifts in a measurable way
 
+Variant worth testing first: **homeschool / values-driven family communities** (co-ops,
+microschools, faith and values networks). Same trust-dense, kid-future-focused,
+high-referral profile as a school — but often tighter-knit, more gift-native, and reachable
+through co-op orgs as a `partnerSource`. A strong candidate for the *first* pilot format.
+(Origin: an earlier "de-isolate homeschooling" idea — the instinct was the network of people
+around a child, which Kiddo already expresses with focus; mine the *audience*, not the product.)
+
 ### 7. Prepare employer packaging, not broad employer sales
 
 Focus:
@@ -174,6 +181,69 @@ Why later:
 
 Success looks like:
 - new surfaces extend the core engine instead of diluting it
+
+### 11. Giveback layer — equity loop + activation seed (design now, ship post-launch)
+
+Two distinct mechanics — keep them separate, do not conflate one for the other.
+
+Focus:
+- **Equity loop — the solidarity pool (pay-it-forward).** Our model structurally favors
+  kids with generous, affluent networks; a kid without one gets nothing (the Matthew
+  effect) — a real values gap AND a real "only helps rich kids" PR vulnerability, and the
+  answer the model can't otherwise dodge. The mechanic: a **self-funding pool that catches
+  the left-behind kids automatically.**
+  - *Funding:* gifter opt-in at checkout ("add $1 to fund a kid who doesn't have a Kiddo
+    yet" — they're already in a generous moment) + a Kiddo baseline match so it never dries.
+  - *Distribution:* the **languishing proxy, NOT means-testing** — "fund has had zero gifts
+    in N days → seed it from the pool." Clean, non-invasive, and it IS the need signal (no
+    network = no gifts). Verified "need" is invasive + gameable; don't go there.
+  - *Lock:* the seed lands in the kid's UTMA, only theirs at 18 — kills fraud automatically
+    (can't farm money you can't touch for 18 years).
+  - *Plus the at-18 hand-back:* a kid taking over their fund can seed another's first fund
+    (recipient becomes giver — the loop extends itself).
+  - ⚠️ *Structure:* pooling + redistributing to chosen beneficiaries is regulated
+    (charitable-solicitation / 501c3 / money-transmission). Likely needs a separate **Kiddo
+    Foundation (501c3)** that runs the pool and grants into funds — keeps the charity
+    activity OUT of the for-profit perimeter. Counsel question, not a flag flip (in the packet).
+  - *Scale ceiling (year 3–5, VISION not roadmap):* the pool's natural ceiling is
+    **institutional capital** — this is the existing children's-savings-account / "baby bonds"
+    field (CalKIDS funded millions of CA newborns; Booker's federal baby-bonds; many
+    state/city/foundation CSA programs). Foundations, corporate ESG, UHNWI / family-office
+    philanthropy (tax-deductible via the 501c3), DAFs, and even **government CSA programs**
+    could deploy capital INTO Kiddo accounts — Kiddo as the *rails* for child-funding capital
+    that already exists. Powerful (equity at scale; mass funded accounts → graph + ledger +
+    lifetime funnel at ~$0 CAC, mission-funded). BUT it is a *much heavier, different business*
+    — a real foundation (governance, compliance, donor relations, beneficiary selection at
+    scale, investment management of pooled charitable money). **Guardrail:** only if the capital
+    flows INTO Kiddo accounts and feeds the core — never a parallel grant-making bureaucracy;
+    optics stay kid-first (philanthropy-washing kills trust). Gated on the foundation + a proven
+    consumer wedge + scale. **Do not let this move up the stack** — it's the ceiling, not the next step.
+- **Activation seed (match, do NOT spray).** An empty $0 fund feels dead, and the moat
+  needs populated funds. But do not seed $5 at every fund *creation* — that is flat CAC,
+  pays for dead/abandoned funds, and is fraud-farmable. Instead **match the first real
+  gift** with a small seed, **locked in the UTMA** (only the kid gets it at 18). The lock
+  kills fraud automatically (can't farm money you can't touch for 18 years) and makes it a
+  real gift, not a withdrawable bonus. Spend only on funds that actually ignite the loop.
+
+Why later:
+- the **activation seed** moves small money → custody live + a quick Kiddo-as-contributor
+  gift-tax / custody note
+- the **solidarity pool** is bigger → likely a **separate 501c3 foundation entity** +
+  charitable-solicitation clearance (in the counsel packet) — a structural build, not a flag flip
+- both are features; the Now wedge comes first
+- BUT design the data NOW so it's not a retrofit: a `languishing` signal, a `pool_seeded`
+  source/flag, and an opt-in pool-contribution field at checkout
+
+Hard rules (or they backfire):
+- REAL, never marketing theater — a token "1% to charity" gimmick violates the honesty
+  moat; the money and the impact must be true and visible
+- frame the seed as a symbol ("a head start"), never a financial claim ("watch it grow to $X")
+- model the seed as CAC, tied to activation (first gift), not to signups
+
+Success looks like:
+- the equity loop visibly closes the "rich-kids-only" gap; the at-18 hand-back becomes a
+  viral re-entry into the loop (recipient → giver)
+- the activation seed lifts first-gift → active-fund conversion at a CAC that beats paid
 
 ## What We Are Not Doing Right Now
 

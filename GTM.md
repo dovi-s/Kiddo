@@ -106,37 +106,40 @@ obvious choice at launch. Presence now → conversion at launch.
   cross-post the identical thing everywhere — Reddit flags it as spam.
 - Be a real, present person for weeks, not a drive-by.
 
-### Post copy (founder-disclosed, value-first)
-> **Title:** EarlyBird shut down — I'm building the dedicated alternative. Here's
-> what we're doing differently.
+### Post copy (founder-disclosed, value-first). Fact-checked 2026-07-14, no em-dashes.
+> **Title:** For families who lost EarlyBird when Acorns shut it down
 >
-> When EarlyBird got absorbed into Acorns, a lot of families lost the one app
-> that did this well: a real investment fund for your kid that family could gift
-> into with a link, plus the memory/video time-capsule. The forced
-> liquidate-and-re-signup migration was rough, and a lot of people just left.
+> When Acorns bought EarlyBird last year, the standalone app closed on June 23 and
+> everyone's fund got liquidated back to their bank. You couldn't move the account
+> over, you had to withdraw and open a new Acorns account from scratch. Free year
+> of Acorns Gold, but the part a lot of families actually cared about (a dedicated
+> gifting fund for your kid, the link relatives could use, the memory time-capsule)
+> got folded into a bigger app.
 >
-> I'm building **Kiddo** — the same idea, but *dedicated* to it instead of a
-> feature bolted onto a bigger app: a custodial UGMA/UTMA fund, a gift link family
-> can use in 60 seconds with no account, and a Memory Book where the notes,
-> photos, and voice messages from everyone who gave actually last until the kid
-> turns 18.
+> I'm building **Kiddo**, which is that dedicated thing: a custodial fund for a
+> child, one gift link family can use in about a minute with no account of their
+> own, and a Memory Book where the notes, photos, and voice messages from everyone
+> who gave stay put until the kid turns 18.
 >
-> We're pre-launch and I'd rather build it with people who already get why this
-> matters. If you were an EarlyBird user — or just wish this existed — I'd love
-> your input, and you can grab a founding spot here: [link]. Happy to answer
-> anything. (I'm the founder.)
+> Full disclosure, I'm the founder, and we're pre-launch, so I'd rather build this
+> with people who already know why it matters. If you were an EarlyBird family, or
+> just wish this existed, I'd genuinely want your input, and there are founding
+> spots here: [link]. Happy to answer anything, including the honest stuff about
+> what isn't built yet.
 
 ### Comment template (for existing "EarlyBird alternative?" threads)
-> Looking for a dedicated EarlyBird replacement (not Acorns' bundle)? I'm building
-> one — **Kiddo**: custodial gifting fund + family gift link + a Memory Book that
-> lasts to 18. Pre-launch, founding spots open: [link]. Full disclosure, I'm the
-> founder — happy to answer real questions.
+> If what you miss from EarlyBird is the dedicated gifting fund + the shareable
+> link + the memory keepsake (not just the brokerage part), I'm building exactly
+> that: **Kiddo**. Full disclosure, I'm the founder, it's pre-launch, founding
+> spots here if you want in: [link]. Happy to answer real questions, including what
+> isn't built yet.
 
-### SEO landing page
-Ship `/earlybird-alternative` (a satellite page per your satellite-apps
-strategy): *"EarlyBird shut down. Here's the dedicated home its families
-wanted."* Honest comparison, the founding-member CTA, and a calm explanation of
-what you do differently. Catches the orphan search intent on autopilot.
+### SEO landing page (already built)
+The orphan search intent is caught by two live pages: **`/compare/earlybird`** (the
+honest side-by-side + what-to-do-next) and the **`/blog/earlybird-alternative`**
+migration guide. Both were fact-corrected 2026-07-14: EarlyBird liquidated accounts
+to cash, so there is NO transfer, families just fund a new Kiddo account from the
+bank where that cash landed. No new page to ship.
 
 ---
 

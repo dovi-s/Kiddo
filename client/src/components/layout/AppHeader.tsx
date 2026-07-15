@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, ChevronDown, Plus, RefreshCw, Share2, User } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Plus, Share2, User } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT } from "@/hooks/use-active-fund";
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav, isFundSubPage } from "@/lib/page-scope";
@@ -10,9 +10,10 @@ import { rememberAppLocation, readLastAppLocation, formatBackLabel, backTargetHr
 import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
-import { NotificationsPanel, useBellUnreadCount } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { FadeImage } from "@/components/ui/fade-image";
 import { ShareModal, type SharePage } from "@/components/ui/share-modal";
+import { readFundLiveValue } from "@/lib/fund-live-value";
 import { MOTION_DURATION } from "@/lib/motion";
 import type { Fund } from "@shared/schema";
 
@@ -24,7 +25,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/account": "Account",
   "/profile": "Profile",
   "/activate": "Activate",
-  "/age-18-plan": "Age 18",
   "/tax-documents": "Taxes",
   // Household-glance surface. "Funds" reads as the section name
   // (parallel to "Activity", "Settings"); the dropdown trigger right
@@ -33,11 +33,22 @@ const PAGE_TITLES: Record<string, string> = {
   "/funds": "Funds",
 };
 
-function getPageTitle(location: string): string {
+function getPageTitle(location: string, majorityAge?: number): string {
   if (location.startsWith("/memory")) return "Memory Book";
-  if (location.startsWith("/event/create")) return "New Event";
   if (location.startsWith("/events")) return "Occasions";
   if (location.startsWith("/dashboard")) return "Home";
+  // The route is named /age-18-plan but the handoff age is the fund's STATE
+  // majority (18 or 21). Reflect the REAL age so a 21-majority fund (e.g. CA)
+  // never reads "Age 18" over a page whose every line says 21. Falls back to 18
+  // when there's no active fund in context.
+  if (location === "/age-18-plan" || location.startsWith("/age-18-plan/") || location.startsWith("/age-18-plan?")) {
+    return `Age ${majorityAge ?? 18}`;
+  }
+  // /design-lab is the dashboard redesign sandbox — same AppHeader, same
+  // "Home" title, so the lab's chrome matches the real dashboard while it's
+  // being evaluated (2026-06-07, founder noticed the blank title). Harmless
+  // after the port: the route becomes /dashboard, which already maps above.
+  if (location.startsWith("/design-lab")) return "Home";
   if (location.startsWith("/projection")) return "Potential";
   for (const [path, title] of Object.entries(PAGE_TITLES)) {
     if (location === path || location.startsWith(path + "/") || location.startsWith(path + "?")) return title;
@@ -62,18 +73,15 @@ function formatCurrency(value: number): string {
 export function AppHeader() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, user } = useAuth();
-  const [notifOpen, setNotifOpen] = useState(false);
-  // Listen for the global open-notifications event. The ActionItemList
-  // overflow row ("3 more items in your inbox →") dispatches this when
-  // a parent taps the overflow link on a capped Action Items section
-  // (Activity, Dashboard). Wiring the listener here means the bell
-  // panel opens regardless of which page the overflow was on. Locked
-  // 2026-05-19 per the action-items pruning pass.
-  useEffect(() => {
-    const handler = () => setNotifOpen(true);
-    window.addEventListener("kiddo:open-notifications", handler);
-    return () => window.removeEventListener("kiddo:open-notifications", handler);
-  }, []);
+  // Notifications bell REMOVED 2026-06-13 (founder call). Its content was
+  // redundant or re-homed: the recent-activity peek duplicated the Activity
+  // ledger, and action items already render in-page (Dashboard + Activity, the
+  // latter now uncapped). The only thing unique to the bell was a global unread
+  // dot — the exact pull-to-check compulsion the brand rejects (the dashboard is
+  // deliberately dot-free). So: Activity = the history, in-page action cards =
+  // "needs you", the Activity/Memory tab dots = the gentle "new here" signal. A
+  // real message center (company→user inbox) gets built when we actually send
+  // statements/announcements — not before.
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   // Local share modal — opens for non-Dashboard pages where the in-page
   // (richer) Dashboard modal isn't mounted to listen for the event. Without
@@ -81,32 +89,14 @@ export function AppHeader() {
   // fires the event into the void and nothing happens.
   const [headerShareOpen, setHeaderShareOpen] = useState(false);
   const fundPickerRef = useRef<HTMLDivElement>(null);
-  // Bell badge uses the noise-filtered count so it agrees with the
-  // notifications panel's own header count and with what the panel
-  // actually shows when tapped. Routine flows (auto-invest fires,
-  // subscription renewals, parent's own admin actions) live in the
-  // Activity tab — see useBellUnreadCount comment for the canonical
-  // "bell vs tab dot" split.
-  // Scope-aware bell badge. On non-fund-scoped pages (/funds, /account)
-  // the badge counts across ALL funds — fund context doesn't apply, so
-  // limiting the count to the implicit active fund would silently hide
-  // notifications from other kids' funds. On fund-scoped pages, keep
-  // the default per-fund scope so the badge matches the page context.
-  // location is already declared at the top of the component (line 63).
-  // See project_chrome_scope_tiers.md.
-  const unreadCount = useBellUnreadCount(shouldSuppressFundChrome(location) ? "all" : "active");
-
-  // Manual refresh affordance. Browser-native pull-to-refresh + SSE +
-  // 30s polling + window-focus refetch already cover most freshness
-  // cases; this is the explicit-control affordance for users who want
-  // to force a sync. Especially useful on installed PWAs where browser
-  // PTR doesn't fire, and on desktop where there's no pull gesture at
-  // all. Invalidates the three queries that matter (funds list,
-  // dashboard-summary for the active fund, activities feed) and shows
-  // a brief 700ms spinner state so the click reads as a real action
-  // even when the network is fast.
+  // queryClient drives the live fund-value read below (and previously a manual
+  // header refresh button, removed 2026-06-07). Freshness is handled without a
+  // manual control — SSE + 30s polling + window-focus refetch — and a manual
+  // "refresh to see if it changed" button cut against the long-horizon, no-
+  // daily-checking design lens (the same reason the balance was pulled from the
+  // header). Mobile browsers keep native pull-to-refresh as a warm-reload escape
+  // hatch; the branded version belongs in the native app's RefreshControl.
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
   // Page scope drives every chrome adjustment below. /funds is
   // household-scoped (Tier 2), /account is user-scoped (Tier 3) —
   // both suppress fund-specific chrome but differ in how the
@@ -126,23 +116,237 @@ export function AppHeader() {
   // doc-block in page-scope.ts. Locked 2026-05-18.
   const isSubPage = isFundSubPage(location);
   const showBackArrow = hideNav || isSubPage;
-  const handleRefresh = useCallback(() => {
-    haptic("selection");
-    setRefreshing(true);
-    const active = getActiveFundId();
-    void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-    if (active) {
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds", active, "dashboard-summary"] });
+  // The dashboard (live /dashboard + the /staging rebuild) carries its OWN hero
+  // "Share … link" button, so the header Share is a redundant 2nd copy there. Hide
+  // it on the dashboard, keep it on the other fund pages (Memory Book, Activity,
+  // Settings) where there is no hero Share. See DASHBOARD_CHROME_PORT_SPEC.md.
+  const isOnDashboard = location.startsWith("/dashboard") || location.startsWith("/staging");
+
+  // Chameleon header: evergreen while the bar sits over the hero, cream once the
+  // hero scrolls past (matches the section beneath it). Driven by an
+  // IntersectionObserver on the hero element — robust against ANY scroll
+  // container (the dashboard scrolls inside a div, not the window) and fires only
+  // on threshold crossings, so no per-frame jitter. Defaults to evergreen until
+  // the observer attaches (the hero mounts after the cold-load).
+  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  useEffect(() => {
+    if (!isOnDashboard) { setScrolledPastHero(false); return; }
+    let io: IntersectionObserver | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attach = () => {
+      const hero = document.querySelector('[data-testid="hero-card"]');
+      if (!hero) { timer = setTimeout(attach, 200); return; }
+      io = new IntersectionObserver(
+        ([entry]) => setScrolledPastHero(!entry.isIntersecting),
+        // -58px top inset = the sticky header's height: the hero stops
+        // "intersecting" exactly when its bottom slides under the bar.
+        { rootMargin: "-58px 0px 0px 0px", threshold: 0 },
+      );
+      io.observe(hero);
+    };
+    attach();
+    return () => { if (io) io.disconnect(); if (timer) clearTimeout(timer); };
+  }, [isOnDashboard, location]);
+  // Evergreen hero chrome only while at the top over the hero; cream into content.
+  const heroChrome = isOnDashboard && !scrolledPastHero;
+
+  // STAGING seam fix (2026-06-23). The staging hero is a FULL-BLEED vertical
+  // gradient (light bottle-green at the top -> evergreen-deep at the floor). The
+  // chameleon header is a single FLAT green = the hero's TOP tone, so at rest the
+  // bar reads as one surface with the hero. But as the hero scrolls UP under the
+  // bar, the hero just below the 58px seam keeps darkening while the flat header
+  // stays light -> a visible lighter band opens up right before the cream flip
+  // (a flat color can't blend with a moving gradient). Fix: while over the
+  // staging hero, drive the header background to the hero's OWN gradient color at
+  // the seam line, so the bar darkens in lock-step and the seam never appears.
+  // Scoped to /staging only — the live dashboard hero is a different (diagonal,
+  // carded) gradient and keeps the existing flat treatment untouched.
+  const isStagingHero = location.startsWith("/staging");
+  // Hex (== hsl(158 45% 19%)) so the status-bar `theme-color` can track this exact
+  // value — theme-color is most reliable as hex across iOS.
+  const [heroSeamBg, setHeroSeamBg] = useState("#1b4636");
+  // The color ONE header-height above the seam (extrapolated up the sky gradient),
+  // so the staging landscape header can render as a 2-stop slice of the sky (top ->
+  // seam) instead of a flat cap — reads as the actual top of the sky.
+  const [heroSeamTop, setHeroSeamTop] = useState("#1b4636");
+  // STAGING landscape-hero tone (2026-07-06). The landscape hero broadcasts its
+  // current sky-top color + whether it wants light text (dark sky) so the header
+  // matches its background AND flips its text light/dark per time-of-day —
+  // otherwise the green chrome + always-light text clash with a pale day sky.
+  const [stagingTone, setStagingTone] = useState<{ seam: string; light: boolean } | null>(null);
+  useEffect(() => {
+    if (!isStagingHero) { setStagingTone(null); return; }
+    const on = (e: Event) => setStagingTone((e as CustomEvent).detail || null);
+    window.addEventListener("kiddo:staging-hero-tone", on);
+    return () => window.removeEventListener("kiddo:staging-hero-tone", on);
+  }, [isStagingHero]);
+  // (Seam bg is driven by the scroll tracker below, which reads the scene's
+  // live data-sky*/data-atmos* attrs and blends the color-grade — it also fires
+  // on the tone event, so no separate flat-seam setter is needed here. A flat
+  // setter using the raw, un-graded sky color would race and clobber it.)
+  // Header text/icons over the hero: light on a dark sky, dark on a pale sky.
+  // Non-landscape dashboards keep the always-light-over-green behavior.
+  const chromeTextLight = heroChrome && (stagingTone ? stagingTone.light : true);
+  useEffect(() => {
+    if (!isStagingHero) return;
+    // Staging hero gradient stops: [pct, H, S, L]. Keep in sync with the
+    // hero-card background in DashboardStaging.tsx.
+    const STOPS: number[][] = [
+      [0, 158, 45, 19],
+      [46, 158, 49, 15],
+      [100, 157, 49, 8],
+    ];
+    // hsl → hex (theme-color tracks this exact value; hex is the safe format on iOS).
+    const hslToHex = (h: number, s: number, l: number) => {
+      s /= 100; l /= 100;
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = (x: number) => Math.round(255 * x).toString(16).padStart(2, "0");
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    };
+    const colorAt = (frac: number) => {
+      const p = Math.min(100, Math.max(0, frac * 100));
+      let a = STOPS[0];
+      let b = STOPS[STOPS.length - 1];
+      for (let i = 0; i < STOPS.length - 1; i++) {
+        if (p >= STOPS[i][0] && p <= STOPS[i + 1][0]) { a = STOPS[i]; b = STOPS[i + 1]; break; }
+      }
+      const t = b[0] === a[0] ? 0 : (p - a[0]) / (b[0] - a[0]);
+      const h = a[1] + (b[1] - a[1]) * t;
+      const s = a[2] + (b[2] - a[2]) * t;
+      const l = a[3] + (b[3] - a[3]) * t;
+      return hslToHex(h, s, l);
+    };
+    // Landscape hero: interpolate its OWN sky gradient (data-sky0/1/2 hex, at
+    // offsets 0 / .55 / 1 — matching the SVG <linearGradient>) at the seam line,
+    // so the header tracks the scrolling sky in lock-step and updates per
+    // time-of-day. Read from the element's data-attrs (always fresh) so there's
+    // no stale-closure on the current tod.
+    const hexToRgb = (h: string) => { const x = h.replace("#", ""); return [parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16), parseInt(x.slice(4, 6), 16)]; };
+    const rgbToHex = (r: number, g: number, b: number) => { const t = (v: number) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0"); return `#${t(r)}${t(g)}${t(b)}`; };
+    const skyRgbAt = (frac: number, s0: string, s1: string, s2: string) => {
+      // Allow mild extrapolation ABOVE the horizon (negative frac) so the header,
+      // which sits above the sky-top, can continue the gradient instead of flat-capping.
+      const p = Math.max(-0.35, Math.min(1.1, frac));
+      const [a, b, t] = p <= 0.55 ? [hexToRgb(s0), hexToRgb(s1), p / 0.55] : [hexToRgb(s1), hexToRgb(s2), (p - 0.55) / 0.45];
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    };
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const hero = document.querySelector('[data-testid="hero-card"]');
+      if (!hero) return;
+      const r = hero.getBoundingClientRect();
+      if (r.height <= 0) return;
+      // Fraction of the hero/scene sitting at the header's bottom edge (58px).
+      const frac = (58 - r.top) / r.height;
+      if (hero.getAttribute("data-landscape")) {
+        const s0 = hero.getAttribute("data-sky0"), s1 = hero.getAttribute("data-sky1"), s2 = hero.getAttribute("data-sky2");
+        if (s0 && s1 && s2) {
+          // The scene's `atmos` color-grade rect tints the visible sky; blend it
+          // over the raw gradient so the header matches what's on screen.
+          const ao = parseFloat(hero.getAttribute("data-atmosop") || "0");
+          const atmos = hexToRgb(hero.getAttribute("data-atmos") || "#000000");
+          const skyHex = (f: number) => {
+            let [cr, cg, cb] = skyRgbAt(f, s0, s1, s2);
+            if (ao > 0) { cr = cr * (1 - ao) + atmos[0] * ao; cg = cg * (1 - ao) + atmos[1] * ao; cb = cb * (1 - ao) + atmos[2] * ao; }
+            return rgbToHex(cr, cg, cb);
+          };
+          // The header is a 58px-tall SLICE of the sky: bottom = the seam, top = one
+          // header-height further up the (extrapolated) gradient — so it reads as the
+          // actual top of the sky, not a flat cap. Both track together on scroll.
+          setHeroSeamBg(skyHex(frac));
+          setHeroSeamTop(skyHex(frac - 58 / r.height));
+        }
+        return;
+      }
+      setHeroSeamBg(colorAt(frac));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    // Capture phase catches scrolls from the dashboard's inner scroll container
+    // (it scrolls inside a div, not the window — same reason the chameleon above
+    // uses an IntersectionObserver rather than a window scroll position).
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    // The landscape re-broadcasts its tone on every time-of-day change; re-read
+    // the (freshly rendered) data-sky attrs so a toggle updates the header even
+    // without a scroll.
+    window.addEventListener("kiddo:staging-hero-tone", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("kiddo:staging-hero-tone", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [isStagingHero, location]);
+
+  // Smooth the green<->cream FLIP in BOTH directions. The tracking above runs
+  // with NO bg transition so it follows scroll EXACTLY (a 0.2s ease would lag a
+  // fast flick and re-open the seam) — but that alone would make the cream->green
+  // RE-ENTRY (scrolling back up into the hero) snap hard. So for one beat after
+  // the chameleon flips, re-enable the 0.2s bg ease, then drop back to instant
+  // tracking. Net: seam-free instant tracking over the hero + a soft fade on both
+  // the exit-to-cream and the return-to-green.
+  const [bgFlipping, setBgFlipping] = useState(false);
+  useEffect(() => {
+    if (!isStagingHero) return;
+    setBgFlipping(true);
+    const t = window.setTimeout(() => setBgFlipping(false), 240);
+    return () => window.clearTimeout(t);
+  }, [heroChrome, isStagingHero]);
+
+  // Extend the green to the EDGES of the device when over the hero (founder:
+  // "if you pull from the hero it should extend green, not white"). Two surfaces
+  // the chameleon header alone didn't cover:
+  //   • the iOS status-bar tint (`theme-color`) — matched to the header so the
+  //     notch area is green over the hero, cream once scrolled into content;
+  //   • the document (html) background — what the native rubber-band reveals when
+  //     you overscroll at the top. Setting it to the hero's top tone means a pull
+  //     from the dashboard STRETCHES green, seamless with the green header + hero,
+  //     instead of a cream/white gap. It only ever shows on a top-overscroll (the
+  //     cream body covers the rest), so normal scrolling is untouched, and every
+  //     non-dashboard page keeps the cream top. (Standalone PWA locks overscroll,
+  //     so there's no stretch there — the JS pull spinner handles refresh.)
+  useEffect(() => {
+    const HERO_TOP = "#1b4636"; // === hsl(158 45% 19%), the Gilt-Ledger bottle-green header/hero top tone
+    const CREAM = "#f9f7f3";    // === the default theme-color in index.html
+    // The status-bar tint (`theme-color`) MUST equal the header's CURRENT background
+    // — including the continuous darkening while the bar tracks the staging hero
+    // gradient — so the clock/wifi/battery strip never reads lighter than the bar
+    // under it (founder 2026-06-25). Mirrors the header's own backgroundColor
+    // expression exactly (see the <motion.header> style below).
+    const headerColor = !heroChrome ? CREAM : (isStagingHero ? heroSeamBg : HERO_TOP);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute("content", headerColor);
+    document.documentElement.style.backgroundColor = isOnDashboard ? (isStagingHero ? heroSeamBg : HERO_TOP) : "";
+    // Native (Capacitor) shell: also drive the REAL OS status bar (clock / wifi /
+    // battery glyphs) so they flip light over the green hero and dark on cream —
+    // the per-route control a pure Safari PWA can't do, but the wrapped store app
+    // can. We read the runtime-injected `window.Capacitor` global + call the
+    // StatusBar plugin through its bridge — NO `@capacitor/*` import, so nothing
+    // Capacitor ever enters the web bundle (an eager `import @capacitor/core`
+    // white-screened the web app). In a browser/PWA `window.Capacitor` is
+    // undefined → this whole block is a no-op. ("DARK" = light glyphs for the
+    // dark green; "LIGHT" = dark glyphs for cream — Capacitor's Style enum values.)
+    const cap = typeof window !== "undefined" ? (window as any).Capacitor : null;
+    if (cap?.isNativePlatform?.()) {
+      const sb = cap.Plugins?.StatusBar;
+      if (sb) {
+        try {
+          sb.setStyle?.({ style: heroChrome ? "DARK" : "LIGHT" });
+          if (cap.getPlatform?.() === "android") {
+            sb.setBackgroundColor?.({ color: headerColor });
+          }
+        } catch { /* native bridge unavailable — ignore */ }
+      }
     }
-    // On the all-funds overview surface, the household aggregate is
-    // the load-bearing query — invalidate that too so refresh is the
-    // single source of truth for the visible page state.
-    if (isFundsOverview) {
-      void queryClient.invalidateQueries({ queryKey: ["/api/funds-overview"] });
-    }
-    void queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
-    window.setTimeout(() => setRefreshing(false), 700);
-  }, [queryClient, isFundsOverview]);
+    return () => {
+      meta?.setAttribute("content", CREAM);
+      document.documentElement.style.backgroundColor = "";
+    };
+  }, [heroChrome, isOnDashboard, isStagingHero, heroSeamBg]);
 
   const { data: funds = [] } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
@@ -251,8 +455,26 @@ export function AppHeader() {
     return () => document.removeEventListener("pointerdown", handler);
   }, [fundPickerOpen]);
 
-  const pageTitle = getPageTitle(location);
+  const pageTitle = getPageTitle(location, Number((activeFund as any)?.majorityAge) || undefined);
   const withFund = showsFundContext(location) && activeFund;
+
+  // On mobile the bottom nav already labels AND highlights the four primary
+  // destinations (Home / Memory / Activity / Settings), so repeating the title
+  // in the header is pure duplication — and it crowds the cramped mobile header,
+  // squeezing the genuinely useful fund switcher. Hide it VISUALLY on mobile
+  // (kept for screen readers via sr-only, so the page still has its h1) but only
+  // when the fund switcher will fill the left in its place — never leave the left
+  // empty. Sub-pages (Occasions, Potential, Tax Docs, New Event, the age-18 flow)
+  // are NOT bottom-nav tabs, so their title stays: it's the only "where am I"
+  // there, and they carry a Back arrow. Desktop always shows the title — the
+  // sidebar is the nav there, and the header title orients.
+  const isPrimaryTabRoot =
+    location.startsWith("/dashboard") ||
+    location.startsWith("/design-lab") ||
+    location.startsWith("/memory") ||
+    location.startsWith("/activity") ||
+    location.startsWith("/settings");
+  const hideTitleOnMobile = isPrimaryTabRoot && !!withFund && !isUserScoped;
 
   // Track last non-/account location so the /account Back button
   // can return there (instead of always defaulting to the fund's
@@ -291,6 +513,23 @@ export function AppHeader() {
   // owner's OWN UI reads "your"; only the gift PAGE a recipient lands on stays "{kid}'s"
   // (the people she shares with really do give TO her).
   const isOwnerMode = Boolean(activeFund && (activeFund as any).transferredAt && (activeFund as any).accessRole === "owner");
+  // 2026-07-05 (founder): the child photo lives in this header fund switcher — a
+  // small avatar left of "{Kid}'s Fund", mirroring the account avatar on the
+  // right so the header reads as an identity lockup (whose fund | you). It was
+  // MOVED here out of the dashboard hero (see DashboardStaging/Lab hero), so the
+  // hero stays about the money/future. Shows on EVERY fund-scoped page (Home,
+  // Memory, Activity, Settings, and the fund sub-pages) — the same reach as the
+  // account avatar on the right, so the lockup is consistent app-wide. No
+  // duplication risk off the dashboard: those pages have no hero photo, and the
+  // dashboard hero's copy was removed. The avatar sits INSIDE the fund-name
+  // trigger, which only renders under `withFund && !isUserScoped`, so it's
+  // already absent on /account and never shows a stray face. Photo-or-nothing is
+  // preserved: no photo → no avatar, the fund name carries identity. Not shown
+  // for the household overview ("Your funds") or owner mode ("Your Fund"), which
+  // aren't a single child.
+  const headerKidPhoto = activeFund && !isFundsOverview && !isOwnerMode
+    ? String((activeFund as any).childPhotoUrl || "").trim()
+    : "";
   const statusLabel = activeFund ? ((activeFund as any).status === "active" ? "Active" : "Draft") : "";
   // Badge suppressed on any non-fund-scoped page (household /funds
   // and user-scoped /account both). The "UTMA · Active" label is a
@@ -300,7 +539,11 @@ export function AppHeader() {
   // outright, so "UTMA" is stale for them — show "Personal" (the platform's adult-account
   // type) instead.
   const displayAccountType = isOwnerMode && accountType ? "Personal" : accountType;
-  const badgeText = suppressFundChrome
+  // Account-type/status badge ("UTMA · Active") also suppressed on the dashboard: the
+  // hero owns status there (and the staging hero deliberately drops the account type for
+  // active funds), so the header badge was a chrome echo. Kept on the other fund pages
+  // (Memory Book / Activity / Settings) where there's no hero. See DASHBOARD_CHROME_PORT_SPEC.md.
+  const badgeText = suppressFundChrome || isOnDashboard
     ? ""
     : displayAccountType && statusLabel
       ? `${displayAccountType} · ${statusLabel}`
@@ -311,11 +554,42 @@ export function AppHeader() {
       <motion.header
         className="sticky top-0 z-50"
         style={{
-          background: "hsl(var(--kiddo-cream) / 0.94)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(26, 23, 16, 0.10)",
-          height: 58,
+          // Chameleon: evergreen + no border while over the hero (matches the
+          // hero's top gradient tone EXACTLY, no blur so it reads identical),
+          // cream + blur + hairline once scrolled into the content. Transitions
+          // smoothly between the two as you scroll. Other pages: always cream.
+          // backgroundColor (not the `background` shorthand) so the green↔cream
+          // change actually ANIMATES — browsers snap shorthand transitions but
+          // smoothly interpolate background-color.
+          backgroundColor: heroChrome
+            ? (isStagingHero ? heroSeamBg : "hsl(158 45% 19%)")
+            : "hsl(var(--kiddo-cream) / 0.94)",
+          // STAGING landscape only: overlay a 2-stop gradient (top-of-sky -> seam)
+          // so the header reads as the actual top slice of the sky, not a flat cap.
+          // backgroundImage layers over backgroundColor (which stays the animatable
+          // base for the cream flip); non-landscape / scrolled-past = no image.
+          backgroundImage: heroChrome && isStagingHero && stagingTone
+            ? `linear-gradient(180deg, ${heroSeamTop} 0%, ${heroSeamBg} 100%)`
+            : "none",
+          backdropFilter: heroChrome ? "none" : "blur(20px)",
+          WebkitBackdropFilter: heroChrome ? "none" : "blur(20px)",
+          borderBottom: heroChrome ? "1px solid transparent" : "1px solid hsl(var(--kiddo-ink) / 0.10)",
+          // While tracking the staging hero gradient, the bg must follow scroll
+          // INSTANTLY (a 0.2s ease would lag the scroll and re-open the seam on a
+          // fast flick). The cream flip + every other page still animate over 0.2s.
+          transition: (isStagingHero && heroChrome && !bgFlipping)
+            ? "border-color 0.2s ease-out"
+            : "background-color 0.2s ease-out, border-color 0.2s ease-out",
+          // black-translucent status bar (index.html): the header now extends UNDER
+          // the iOS notch so its background fills the status-bar strip and tracks the
+          // hero color on scroll (founder: "the iphone part should match the header").
+          // padTop reserves the notch height — 0 in a browser tab, so no visual change
+          // there; the content row stays a clean 58px below the clock in standalone.
+          // --app-safe-top is env(safe-area-inset-top) with a floor in installed-PWA
+          // mode (see index.css) so the header can't jam under the Dynamic Island when
+          // iOS reports a 0 inset in standalone.
+          paddingTop: "var(--app-safe-top)",
+          height: "calc(58px + var(--app-safe-top))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -352,11 +626,11 @@ export function AppHeader() {
               data-testid="header-back-to-home"
               aria-label={backLabel}
             >
-              <ArrowLeft size={17} strokeWidth={2.2} />
+              <ArrowLeft size={17} strokeWidth={2} />
             </button>
           )}
           <h1
-            className="font-heading shrink-0 text-[15px] font-bold text-foreground"
+            className={`font-heading shrink-0 text-[15px] font-bold transition-colors ${chromeTextLight ? "text-[hsl(var(--kiddo-cream))]" : "text-foreground"}${hideTitleOnMobile ? " sr-only md:not-sr-only" : ""}`}
             data-testid="header-page-title"
           >
             {pageTitle}
@@ -372,7 +646,7 @@ export function AppHeader() {
                   (/account) — the fund-switcher trigger doesn't render
                   there, so there's nothing to separate from anyway. */}
               {pageTitle && (
-                <span className="shrink-0 text-[18px] leading-none text-foreground/15">·</span>
+                <span className={`shrink-0 text-[18px] leading-none transition-colors ${chromeTextLight ? "text-[hsl(var(--kiddo-cream)/0.3)]" : "text-foreground/15"}${hideTitleOnMobile ? " hidden md:inline" : ""}`}>·</span>
               )}
 
               {/* Fund name — always tappable. Even with one fund, the
@@ -391,9 +665,20 @@ export function AppHeader() {
                   setFundPickerOpen((v) => !v);
                   haptic("light");
                 }}
-                className="flex min-w-0 items-center gap-1 truncate text-[13px] text-muted-foreground cursor-pointer hover:text-foreground"
+                className={`flex min-w-0 items-center gap-1 truncate text-[13px] cursor-pointer transition-colors ${chromeTextLight ? "text-[hsl(var(--kiddo-cream)/0.85)] hover:text-[hsl(var(--kiddo-cream))]" : "text-muted-foreground hover:text-foreground"}`}
                 data-testid="header-fund-name"
               >
+                {/* Kid avatar — leftmost, part of the switcher tap target, so the
+                    face IS the fund control (mirrors the account avatar on the
+                    right). mr-1.5 widens only the avatar↔name gap, leaving the
+                    name↔chevron spacing untouched. Bare (no ring), matching the
+                    account avatar's frameless treatment; a photo reads on both the
+                    green-over-hero and cream-scrolled header states. */}
+                {headerKidPhoto && (
+                  <span className="mr-1.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] md:hidden" aria-hidden>
+                    <FadeImage src={headerKidPhoto} alt="" className="h-full w-full object-cover" />
+                  </span>
+                )}
                 <span className="truncate">
                   {isFundsOverview
                     ? "Your funds"
@@ -403,12 +688,17 @@ export function AppHeader() {
                         ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
                         : activeFund.name || "Fund"}
                 </span>
-                <ChevronDown size={12} className={`shrink-0 transition-transform text-muted-foreground ${fundPickerOpen ? "rotate-180" : ""}`} />
+                {/* Color keys off heroChrome (NOT isOnDashboard): the bar flips
+                    to cream once scrolled past the hero, so a fixed cream chevron
+                    went cream-on-cream and vanished. Now it matches the fund-name
+                    text beside it — cream over the green hero, muted-ink over cream
+                    — and eases instead of snapping (transition-[color,transform]). */}
+                <ChevronDown size={12} className={`shrink-0 transition-[color,transform] duration-200 ease-out ${chromeTextLight ? "text-[hsl(var(--kiddo-cream)/0.7)]" : "text-muted-foreground"} ${fundPickerOpen ? "rotate-180" : ""}`} />
               </button>
 
               {badgeText && (
                 <span
-                  className="hidden shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold tracking-[0.02em] sm:inline-block"
+                  className="hidden shrink-0 rounded-full px-2 py-0.5 text-4xs font-bold tracking-[0.02em] sm:inline-block"
                   style={{ background: "hsl(var(--kiddo-evergreen) / 0.10)", color: "hsl(var(--kiddo-evergreen))" }}
                 >
                   {badgeText}
@@ -420,7 +710,7 @@ export function AppHeader() {
           {/* Fund picker dropdown */}
           {fundPickerOpen && (
             <div
-              className="absolute left-0 top-[calc(100%+10px)] z-50 min-w-[220px] overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_rgba(26,23,16,0.18)]"
+              className="absolute left-0 top-[calc(100%+10px)] z-50 min-w-[220px] overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_hsl(var(--kiddo-ink) / 0.18)]"
               role="listbox"
             >
               {/* Family-plan overview entry. Appears ONLY when the user
@@ -453,7 +743,7 @@ export function AppHeader() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate font-semibold text-foreground">Your funds</p>
-                    <p className="text-[11px] text-muted-foreground">All {funds.length} together</p>
+                    <p className="text-2xs text-muted-foreground">All {funds.length} together</p>
                   </div>
                   {isFundsOverview && <Check size={14} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
                 </button>
@@ -467,9 +757,14 @@ export function AppHeader() {
                 // rows are "selected" — the household entry up top owns
                 // the check. Otherwise the active per-fund row gets it.
                 const isActive = !isFundsOverview && fund.id === activeFund?.id;
-                const val = parseFloat(String(fund.balance || "0")) +
+                // Quote the Dashboard hero's published live total when this
+                // fund's dashboard has computed one (fund.balance is
+                // settlement-synced, not price-synced — see
+                // lib/fund-live-value.ts); else the funds-list math.
+                const val = readFundLiveValue(queryClient, fund.id) ?? (
+                  parseFloat(String(fund.balance || "0")) +
                   parseFloat(String((fund as any).pendingBalance || "0")) +
-                  parseFloat(String((fund as any).cashBalance || "0"));
+                  parseFloat(String((fund as any).cashBalance || "0")));
                 return (
                   <button
                     key={fund.id}
@@ -481,7 +776,7 @@ export function AppHeader() {
                   >
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-xs font-bold text-white overflow-hidden">
                       {fund.childPhotoUrl
-                        ? <img src={fund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
+                        ? <FadeImage src={fund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
                         : (fund.recipientFirstName || fund.name || "F").slice(0, 1).toUpperCase()
                       }
                     </div>
@@ -489,7 +784,7 @@ export function AppHeader() {
                       <p className="truncate font-semibold text-foreground">
                         {fund.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s Fund` : fund.name || "Fund"}
                       </p>
-                      <p className="text-[11px] text-muted-foreground tabular-nums">{formatCurrency(val)}</p>
+                      <p className="text-2xs text-muted-foreground tabular-nums">{formatCurrency(val)}</p>
                     </div>
                     {isActive && <Check size={14} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
                   </button>
@@ -523,67 +818,9 @@ export function AppHeader() {
             on a long-horizon product, contrary to the locked design lens
             and feedback_no_ai_slop's anti-streak-gamification rule. */}
         <div className="flex shrink-0 items-center gap-2">
-          {/* Refresh — leftmost in the right-cluster. Explicit user
-              control to force a sync; the SSE + polling + focus-refetch
-              combo means manual refresh is rarely needed, but discovery
-              of "I can force this" matters more on installed PWAs
-              (where browser pull-to-refresh doesn't fire) and on
-              desktop (where there's no pull gesture at all). Disabled
-              briefly while the spinner is showing so a double-tap
-              doesn't queue two invalidations. */}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            // Base + hover both via className. Inline `background` had
-            // been killing the hover affordance per the chrome audit.
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[rgb(237,244,238)] border-[rgb(224,237,227)] transition-colors disabled:opacity-60 hover:bg-[rgb(224,237,227)] focus-visible:bg-[rgb(224,237,227)] focus-visible:outline-none"
-            data-testid="header-refresh"
-            aria-label="Refresh"
-          >
-            <RefreshCw
-              size={15}
-              strokeWidth={1.8}
-              color="#1A3D2B"
-              className={refreshing ? "animate-spin" : ""}
-            />
-          </button>
-
-          {/* Bell — second in the mobile right-cluster (situational
-              alert, scanned occasionally). Convention: rightmost slot in
-              a mobile header is for the durable identity / profile entry
-              point (Gmail, LinkedIn, Notion, iOS Settings, Apple HIG).
-              Bell sits inside that, profile sits at the far edge below. */}
-          <button
-            type="button"
-            onClick={() => { haptic("selection"); setNotifOpen((v) => !v); }}
-            // Base + hover both via className so the :hover pseudo-class can
-            // override the base — inline `style` props had higher specificity
-            // and were silently killing the hover affordance. Hover darkens
-            // the muted-evergreen tint a notch so the bell reads as
-            // interactive on cursor approach. focus-visible mirror for kbd.
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[rgb(237,244,238)] border-[rgb(224,237,227)] transition-colors hover:bg-[rgb(224,237,227)] focus-visible:bg-[rgb(224,237,227)] focus-visible:outline-none"
-            data-testid="header-bell"
-            aria-label="Notifications"
-          >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2a6 6 0 00-6 6v3l-1.5 2.5h15L16 11V8a6 6 0 00-6-6z" stroke="#1A3D2B" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-              <path d="M8 16a2 2 0 004 0" stroke="#1A3D2B" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            {unreadCount > 0 && (
-              <div
-                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white px-0.5 text-[9px] font-black text-white"
-                style={{ background: "rgb(26,61,43)" }}
-              >
-                {/* Cap as "9+" to match DesktopSidebar's nav badge
-                    convention. Previously displayed bare "9" for any
-                    count >9 which read as "exactly 9" rather than
-                    "9 or more." min-w-4 lets the badge widen by ~2px
-                    to accommodate the plus glyph. */}
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </div>
-            )}
-          </button>
+          {/* Bell removed 2026-06-13 — see the note at the top of the component.
+              The right cluster is now just the profile entry (and Share lives in
+              the page chrome / bottom nav). */}
 
           {/* Profile — rightmost on mobile. Routes to /account (identity
               surface, distinct from /settings which is fund control panel).
@@ -607,12 +844,17 @@ export function AppHeader() {
                 // Hover darkens the tint slightly. Empty-photo and
                 // has-photo cases share the same chrome (border + base bg
                 // ring around the avatar).
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-[rgb(237,244,238)] border-[rgb(224,237,227)] transition-colors md:hidden overflow-hidden p-0 hover:bg-[rgb(224,237,227)] focus-visible:bg-[rgb(224,237,227)] focus-visible:outline-none"
+                // VARIANT 3 (2026-06-23): no frame at all — bare glyph, no ring,
+                // no fill. The person glyph sits directly in the hero. A profile
+                // PHOTO still renders circular (the <img> below is rounded-full on
+                // its own), just without a ring around it — a standard bare-avatar
+                // look, not a broken one. Faint hover fill kept for tap feedback.
+                className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors md:hidden overflow-hidden p-0 focus-visible:outline-none ${heroChrome ? "hover:bg-[hsl(var(--kiddo-cream)/0.14)]" : "hover:bg-[rgb(237,244,238)] focus-visible:bg-[rgb(237,244,238)]"}`}
                 data-testid="header-profile"
                 aria-label="Account"
               >
                 {photoUrl ? (
-                  <img
+                  <FadeImage
                     src={photoUrl}
                     alt=""
                     // 32×32 inside a 36×36 button (h-8 w-8 vs h-9 w-9 button) —
@@ -636,7 +878,7 @@ export function AppHeader() {
                   size={16}
                   strokeWidth={1.6}
                   style={{
-                    color: "rgb(26,61,43)",
+                    color: chromeTextLight ? "hsl(var(--kiddo-cream))" : "rgb(26,61,43)",
                     display: photoUrl ? "none" : "block",
                   }}
                 />
@@ -657,8 +899,13 @@ export function AppHeader() {
               would be a stealth-context-switch foot-gun. Same reasoning
               on /account: user-scoped page → the active fund is
               irrelevant → an active Share button there would silently
-              share Emma's link if tapped, same foot-gun. */}
-          {withFund && !suppressFundChrome && (
+              share Emma's link if tapped, same foot-gun.
+              Dashboard exception (2026-07): the hero owns Share while it is in
+              view; once the hero scrolls out (scrolledPastHero — only ever true
+              on the dashboard), the header Share eases back in so a desktop user
+              scrolled down the long dashboard still has one-click share. Mobile
+              is covered by the bottom-nav Share pill (this button is md:flex). */}
+          {withFund && !suppressFundChrome && (!isOnDashboard || scrolledPastHero) && (
             <button
               type="button"
               onClick={handleShare}
@@ -668,7 +915,7 @@ export function AppHeader() {
               // utility — chrome audit fix. Gold is the brand-primary action
               // color (kiddo-gold), so the hover stays in the same hue family,
               // just slightly darker. active:scale stays for tap feedback.
-              className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-bold text-white bg-[rgb(184,121,26)] transition-all hover:bg-[rgb(155,99,17)] focus-visible:bg-[rgb(155,99,17)] focus-visible:outline-none active:scale-[0.97]"
+              className={`hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-bold text-white bg-[rgb(184,121,26)] transition-all hover:bg-[rgb(155,99,17)] focus-visible:bg-[rgb(155,99,17)] focus-visible:outline-none active:scale-[0.97]${isOnDashboard ? " animate-in fade-in slide-in-from-top-1 duration-300" : ""}`}
               style={{ letterSpacing: "-0.01em" }}
               data-testid="header-share-link"
             >
@@ -693,7 +940,6 @@ export function AppHeader() {
         </div>
       </motion.header>
 
-      <NotificationsPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
       {headerSharePages.length > 0 && (
         <ShareModal
           open={headerShareOpen}

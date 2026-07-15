@@ -63,7 +63,16 @@ export function filterMemoryEntries<T extends MemoryEntryLike>(
         && !entry.audioUrl) {
       return false;
     }
-    if (filter !== "all" && entry.type !== filter) return false;
+    // "photo" is a MEDIA-HAS filter ("Photos & video"), not an entry-type match:
+    // surface ANY entry carrying visual media — a parent photo memory, OR a gift /
+    // note with an attached photo or video clip — so nothing visual hides behind an
+    // entry-type mismatch. (Voice is deliberately excluded; it earns its own chip
+    // once books routinely hold more than one.)
+    if (filter === "photo") {
+      if (!entry.photoUrl && !entry.videoUrl && !entry.gift?.photoUrl) return false;
+    } else if (filter !== "all" && entry.type !== filter) {
+      return false;
+    }
     if (!trimmed) return true;
     const haystack = [
       entry.content || "",

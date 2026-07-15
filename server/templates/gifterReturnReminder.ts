@@ -26,12 +26,12 @@ export function buildGifterReturnReminderEmail(input: GifterReturnReminderInput)
     ``,
     timeAgoLine,
     ``,
-    `${childFirstName} is a year older. The fund kept compounding what you put in. If you'd like to add to it again, the same link still works.`,
+    `${childFirstName} is a year older, and everything you put in is still there for them. If you'd like to add to it again, the same link still works.`,
     ``,
     `Not the right time? Ignore this email; we won't send another reminder until next year.`,
   ].join("\n");
   const { html } = renderKiddoEmail({
-    heading: `${childFirstName} is still here`,
+    heading: `It's been a while since you gave to ${childFirstName}`,
     intro,
     cta: { text: `Gift to ${childFirstName}`, url: giftUrl },
     unsubscribeUrl: unsubscribeUrl ?? undefined,
@@ -50,7 +50,7 @@ export function buildGifterReturnReminderEmail(input: GifterReturnReminderInput)
   ].join("\n");
   return {
     to,
-    subject: `${childFirstName} is still here`,
+    subject: `It's been a while since you gave to ${childFirstName}`,
     text,
     html,
     tags: ["gifter-return-reminder"],

@@ -49,6 +49,7 @@ import { registerPostmarkWebhook } from "./postmarkWebhook";
 import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { auditLogs } from "@shared/schema";
 import { verifyTotp, findBackupCodeMatch } from "./totp";
+import { checkRateLimit } from "./rateLimiter";
 import { sendEmail } from "./emailDelivery";
 import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { buildVerificationEmail } from "./templates/emailVerification";
@@ -400,6 +401,32 @@ async function getUser(id: string): Promise<User | undefined> {
   return user;
 }
 
+// CSRF origin decision, factored out as a pure function so it can be unit-
+// tested without booting the server (the middleware that uses it is production-
+// gated). Given the request's Origin-or-Referer URL, the request Host, and the
+// set of extra trusted hosts:
+//   - "allow"     → same-origin (or a trusted host), or no browser origin
+//                   signal at all (non-browser client / stripped referrer).
+//   - "block"     → a present origin whose host doesn't match (the real CSRF
+//                   signature — the browser sets Origin on unsafe methods).
+//   - "malformed" → an origin header we can't parse.
+export function evaluateRequestOrigin(
+  sourceUrl: string | undefined,
+  requestHost: string,
+  trustedHosts: Set<string>,
+): "allow" | "block" | "malformed" {
+  if (!sourceUrl) return "allow";
+  let sourceHost = "";
+  try {
+    sourceHost = new URL(String(sourceUrl)).host.toLowerCase();
+  } catch {
+    return "malformed";
+  }
+  const reqHost = String(requestHost || "").toLowerCase();
+  if (sourceHost && (sourceHost === reqHost || trustedHosts.has(sourceHost))) return "allow";
+  return "block";
+}
+
 function getDevHeaderUserId(req: Request): string | null {
   if (process.env.KORA_ENABLE_DEV_AUTH_OVERRIDE !== "1") return null;
   const host = String(req.headers.host || "").toLowerCase();
@@ -416,17 +443,15 @@ function getDevHeaderUserId(req: Request): string | null {
 
 async function resolveRequestUser(req: Request): Promise<(User & { isSuperAdmin?: boolean }) | null> {
   if ((req as any).isAuthenticated?.() && (req as any).user) {
+    // req.user is ALREADY canonicalized by passport.deserializeUser, which runs
+    // on every request and does getUser(id) + getUserByEmail(email) +
+    // getEffectiveAdminFlags before populating the session user. Re-fetching the
+    // canonical user here was a redundant remote-DB round trip (~97ms) on EVERY
+    // authenticated request — the single biggest fixed per-request tax, paid
+    // app-wide. Trust the deserialized user and re-apply admin flags (pure, no
+    // DB) so the flags reflect the current super-admin list. 2026-06-04 perf.
     const sessionUser = (req as any).user as User & { isSuperAdmin?: boolean };
-    let canonical: User | undefined;
-    try {
-      canonical = sessionUser?.email ? await getUserByEmail(sessionUser.email) : undefined;
-    } catch (err) {
-      // Transient DB error. Fall back to the session user so a connection blip
-      // doesn't log out an authenticated user or accidentally deny admin access.
-      console.warn("[resolveRequestUser] DB lookup failed, using session user:", (err as Error).message);
-    }
-    const resolved = canonical || sessionUser;
-    return { ...resolved, ...getEffectiveAdminFlags(resolved, getSuperAdminEmails()) };
+    return { ...sessionUser, ...getEffectiveAdminFlags(sessionUser, getSuperAdminEmails()) };
   }
 
   // Mobile bearer token. Only checked when there's no passport session — the web
@@ -845,6 +870,59 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // --- CSRF defense (origin-based, defense-in-depth over sameSite:"lax") ------
+  // Lax cookies block the classic cross-site form POST, but are not a complete
+  // CSRF defense. Layer an explicit same-origin check on every state-changing
+  // request that rides a COOKIE session. Scope is deliberately narrow so nothing
+  // legitimate breaks:
+  //   - Unsafe methods only (POST/PUT/PATCH/DELETE).
+  //   - Only when req.isAuthenticated() is true HERE — i.e. a passport COOKIE
+  //     session. Mobile (Authorization: Bearer) resolves later in the
+  //     isAuthenticated middleware, so it reads false here and is skipped: a
+  //     bearer request can't be CSRF'd (a cross-site page can't set that
+  //     header). Webhooks (Stripe, Postmark) and public unauthenticated POSTs
+  //     carry no session cookie, so they're skipped too — no ambient authority
+  //     to abuse.
+  //   - Production only. In dev the curated CORS allowlist (server/index.ts) and
+  //     same-origin Vite proxy already govern browser origins, and enforcing
+  //     here would fight the Expo/LAN dev origins.
+  // Enforcement: a PRESENT Origin/Referer whose host doesn't match the request
+  // host (or a configured trusted host) is rejected — that's the actual attack
+  // signature, since the browser sets Origin on unsafe-method requests and a
+  // page cannot forge it. A MISSING Origin and Referer is allowed (non-browser
+  // clients, stripped-referrer privacy modes); browsers send Origin on these
+  // methods, so the real vectors stay covered. Extra trusted hosts (apex/www, a
+  // split API domain) go in CSRF_TRUSTED_ORIGINS (comma-separated).
+  if (process.env.NODE_ENV === "production") {
+    const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+    const trustedHosts = new Set(
+      String(process.env.CSRF_TRUSTED_ORIGINS || "")
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+        .map((entry) => {
+          try {
+            return new URL(/^https?:\/\//i.test(entry) ? entry : `https://${entry}`).host.toLowerCase();
+          } catch {
+            return entry;
+          }
+        }),
+    );
+    app.use((req: any, res, next) => {
+      if (!UNSAFE_METHODS.has(req.method)) return next();
+      if (!req.isAuthenticated?.()) return next();
+      const requestHost = String(req.headers.host || "");
+      const sourceUrl = req.headers.origin || req.headers.referer;
+      const verdict = evaluateRequestOrigin(sourceUrl, requestHost, trustedHosts);
+      if (verdict === "allow") return next();
+      if (verdict === "malformed") {
+        return res.status(403).json({ message: "Request blocked: malformed origin." });
+      }
+      console.warn(`[csrf] blocked ${req.method} ${req.originalUrl} — origin '${sourceUrl}' != request host '${requestHost}'`);
+      return res.status(403).json({ message: "Request blocked: cross-site request not allowed." });
+    });
+  }
+
   passport.use(
     new LocalStrategy(
       { usernameField: "email", passwordField: "password" },
@@ -1116,6 +1194,11 @@ export function setupAuth(app: Express) {
           previousOwnerId,
           transferredAt: transferTime,
           updatedAt: transferTime,
+          // Freeze the handoff value as the previous owner's keepsake number —
+          // mirrors the age-transition door (routes.ts). After handoff the
+          // parent's view shows this frozen value, not the now-adult's live
+          // balance. The two doors must stay in sync (handoff-doors rule).
+          valueAtTransfer: (fund as any).balance ?? "0",
         })
         .where(eq(fundsTable.id, fund.id));
 
@@ -1378,6 +1461,18 @@ export function setupAuth(app: Express) {
       const remember2fa = (req.session as any)?.pending2faRemember !== false;
       if (!pendingId || Date.now() - pendingAt > 5 * 60 * 1000) {
         return res.status(401).json({ message: "Your sign-in step expired. Enter your email and password again." });
+      }
+      // Brute-force guard for the SECOND factor. The password step is lockout-
+      // protected (getLoginAttemptState); without a matching throttle here, an
+      // attacker who already has the password gets a 5-minute window to hammer
+      // TOTP/backup codes. Durable + cross-instance (Postgres-backed, fail-open
+      // on DB trouble), keyed by the pending user + client IP. ~10 attempts /
+      // 10 min is generous for a human mistyping a 6-digit code and nowhere near
+      // enough to brute-force the 10^6 code space.
+      const verifyIp = String(req.ip || req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+      const verifyAllowed = await checkRateLimit(`2fa-login-verify:${pendingId}:${verifyIp}`, 10, 10 * 60 * 1000);
+      if (!verifyAllowed) {
+        return res.status(429).json({ message: "Too many code attempts. Wait a few minutes, then sign in again." });
       }
       const code = String(req.body?.code || "");
       const [user] = await db.select().from(users).where(eq(users.id, pendingId)).limit(1);
@@ -1744,7 +1839,7 @@ export function setupAuth(app: Express) {
               ``,
               `Questions? Reply to this email or write to ${supportEmail}.`,
               ``,
-              `— The Kiddo team`,
+              `The Kiddo team`,
             ].join("\n"),
             tags: ["account_deleted"],
             metadata: { userId },
@@ -1882,6 +1977,16 @@ export function setupAuth(app: Express) {
       return res.status(200).json({ message: "If that email exists, a reset link is on its way." });
     }
     const { email } = parsed.data;
+    // Anti-bombing rate limit (security audit 2026-06-15). Cap per IP AND per
+    // target email so an attacker can't flood an inbox with reset emails or
+    // hammer from one IP. Counted BEFORE the existence check, so a 429 reveals
+    // nothing about whether the email is real (anti-enumeration preserved).
+    const fpIp = req.ip || "unknown";
+    const fpIpOk = await checkRateLimit(`forgot-pw-ip:${fpIp}`, 5, 15 * 60 * 1000);
+    const fpEmailOk = await checkRateLimit(`forgot-pw-email:${email.toLowerCase()}`, 3, 60 * 60 * 1000);
+    if (!fpIpOk || !fpEmailOk) {
+      return res.status(429).json({ message: "Too many requests. Please try again in a little while." });
+    }
     try {
       const userRow = await db
         .select({ id: users.id, deletedAt: users.deletedAt })
@@ -2967,13 +3072,13 @@ async function performAccountDeletion(
                 ``,
                 `The previous primary custodian deleted their Kiddo account. Because you were the accepted co-parent (Co-Admin role) on ${childLabel} fund, you've been promoted to primary custodian.`,
                 ``,
-                `Nothing on the fund itself changes — the Memory Book, the holdings, and the kid's gift link all stay. You now own the settings and the responsibility.`,
+                `Nothing on the fund itself changes. The Memory Book, the holdings, and the kid's gift link all stay. You now own the settings and the responsibility.`,
                 ``,
                 `Next time you log in you'll see ${childLabel} fund with full primary controls.`,
                 ``,
                 `Questions? Reply to this email or write to support@kiddofund.com.`,
                 ``,
-                `— The Kiddo team`,
+                `The Kiddo team`,
               ].join("\n"),
               tags: ["fund_inherited"],
               metadata: { fundId: f.id, previousUserId: userId, newOwnerId },

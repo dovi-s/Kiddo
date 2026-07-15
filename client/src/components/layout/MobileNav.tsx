@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Home, BookOpen, Settings as SettingsIcon, Share2, CalendarDays } from "lucide-react";
+import { Home, BookOpen, Settings as SettingsIcon, Share2, History } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity } from "@/lib/prefetch";
@@ -27,7 +27,7 @@ export function MobileNav() {
   const handleNavTouch = (href: string, fundId?: string) => {
     if (href === "/dashboard") prefetchDashboard(queryClient, fundId);
     else if (href.startsWith("/memory") && fundId) prefetchMemoryBook(queryClient, fundId);
-    else if (href === "/activity") prefetchActivity(queryClient, 50);
+    else if (href === "/activity") prefetchActivity(queryClient, fundId);
     // /settings has no dedicated prefetcher — page is small + uses session
     // data already in cache from auth.
   };
@@ -90,6 +90,88 @@ export function MobileNav() {
   // discussion in the design comment at the dot render below.
   const memoryUnreadCount = useMemoryUnreadCount(storedFundId);
 
+  // ── Swipe between the main tabs (founder 2026-06-25: "swipe through the pages
+  //    Theo/Memory/Activity/Settings, smooth, not a refresh"). A clear horizontal
+  //    swipe on a tab surface navigates to the adjacent tab; NavTransition slides
+  //    the page in. Guarded so it never fights vertical scroll, the chip-row
+  //    horizontal scrollers, an open sheet, or the left-edge back gesture.
+  useEffect(() => {
+    const onTabSurface =
+      isAuthenticated && !shouldHide && !isPublicPage && !shouldHidePrimaryNav(location);
+    if (!onTabSurface || typeof window === "undefined") return;
+    if (isFundSubPage(location)) return; // sub-pages aren't swipe stops
+
+    const indexFor = (p: string) => {
+      if (p.startsWith("/dashboard") || p.startsWith("/staging")) return 0;
+      if (p.startsWith("/memory")) return 1;
+      if (p.startsWith("/activity") || p.startsWith("/event/")) return 2;
+      if (p.startsWith("/settings")) return 3;
+      return -1;
+    };
+    const curIdx = indexFor(location);
+    if (curIdx < 0) return;
+
+    const fundId =
+      (storedFundId && funds.find((f) => f.id === storedFundId)?.id) || funds[0]?.id || null;
+    const tabs = ["/dashboard", fundId ? `/memory/${fundId}` : "/memory", "/activity", "/settings"];
+
+    const inHorizontalScroller = (start: Element | null) => {
+      let n: Element | null = start;
+      while (n && n !== document.body) {
+        if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 4) {
+          const ox = getComputedStyle(n).overflowX;
+          if (ox === "auto" || ox === "scroll") return true;
+        }
+        n = n.parentElement;
+      }
+      return false;
+    };
+
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      const t = e.touches[0];
+      // An open sheet/dialog owns gestures; the left 28px is the edge-back zone;
+      // a horizontal scroller under the finger should scroll, not switch tabs;
+      // a swipe-dismissable banner (the "while you were away" digest et al.) owns
+      // its own sideways fling — without this, dismissing one ALSO switches tabs.
+      if (
+        document.querySelector('[role="dialog"]') ||
+        t.clientX <= 28 ||
+        inHorizontalScroller(e.target as Element) ||
+        !!(e.target as Element | null)?.closest?.("[data-swipe-dismiss]")
+      ) {
+        tracking = false;
+        return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.4) return; // not a clear horizontal swipe
+      const nextIdx = curIdx + (dx < 0 ? 1 : -1); // swipe left → next tab, right → prev
+      if (nextIdx < 0 || nextIdx >= tabs.length) return;
+      handleNavTouch(tabs[nextIdx], fundId ?? undefined);
+      haptic("selection");
+      setLocation(tabs[nextIdx]);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [location, funds, storedFundId, isAuthenticated, shouldHide, isPublicPage, setLocation]);
+
   if (shouldHide || isPublicPage || isLoading || !isAuthenticated) return null;
   // /account hides the bottom-nav entirely — all four tabs (Home /
   // Memory / Activity / Settings) are fund-scoped destinations and
@@ -143,7 +225,7 @@ export function MobileNav() {
     // verb. See feedback_share_vs_gift_distinction.md "approved
     // adjustment" note for the verb/object rationale.
     { href: "__share__", icon: Share2, label: "Share" },
-    { href: "/activity", icon: CalendarDays, label: "Activity" },
+    { href: "/activity", icon: History, label: "Activity" },
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
   ];
   // Drop the Share tab on any non-fund-scoped surface — there is no
@@ -177,16 +259,28 @@ export function MobileNav() {
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="mobile-nav-shell fixed inset-x-3 bottom-3 z-50 md:hidden"
+      className="mobile-nav-shell fixed inset-x-0 bottom-0 z-50 md:hidden"
+      // Flush, edge-to-edge bottom bar (native tab-bar posture, 2026-07 — was a
+      // floating pill: inset-x-3 + a bottom offset). The iOS home-indicator
+      // safe-area now rides INSIDE the shell as padding-bottom (index.css) so the
+      // glass background extends behind the indicator instead of leaving a gap.
+      // The slide-up intro (y:100 -> 0) and the gold active-pill are unaffected.
     >
       <div
-        className="grid items-center gap-1 px-2 py-2.5"
+        /* py-1 (2026-06-07): the grid AND each tab both carried vertical
+           padding (originally grid py-2.5 + item py-2 = ~18px each side),
+           doubling into too much dead space above the icons / below the labels.
+           Trimmed the grid to py-1 here AND each tab to py-1 (below); the
+           `touch-target` class keeps every tab ≥44px tappable regardless, so
+           the rail hugs the icons+labels without shrinking the hit area. The
+           content-to-nav gap was never the issue (page pb-24 ≈ an 8px gap). */
+        className="grid items-center gap-1 px-2 py-1"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
           const isShare = item.href === "__share__";
           const isActive =
-            (item.href === "/dashboard" && (location === "/dashboard" || location.startsWith("/dashboard") || isFundSubPage(location))) ||
+            (item.href === "/dashboard" && (location === "/dashboard" || location.startsWith("/dashboard") || location.startsWith("/staging") || isFundSubPage(location))) ||
             (item.href === "/activity" && (location.startsWith("/activity") || location.startsWith("/event/"))) ||
             (item.href.startsWith("/memory") && location.startsWith("/memory")) ||
             (item.href === "/settings" && location.startsWith("/settings"));
@@ -247,18 +341,25 @@ export function MobileNav() {
                     handleNavTouch(item.href, activeFund?.id);
                   }
                 }}
-                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-1.5 py-2 touch-target"
+                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-1.5 py-1 touch-target"
                 style={isShare ? {
-                  // Elevate the Share cell ~3px above the rail line +
-                  // give the gold pill a softly stronger drop-shadow so
-                  // it reads as "physically floating above the other
-                  // tabs." Same visual-hierarchy lever Cash App's $
-                  // button uses, just dialed restrained — no extra size,
-                  // no scale tricks, just lift. The other tabs stay flat
-                  // on the rail; Share is the one thing that protrudes.
-                  // Touch target follows the lift; still 44px+ tappable
-                  // area, just centered slightly higher.
-                  transform: "translateY(-3px)",
+                  // Elevate the Share cell above the rail line + give the gold
+                  // pill a softly stronger drop-shadow so it reads as
+                  // "physically floating above the other tabs." Same
+                  // visual-hierarchy lever Cash App's $ button uses, just dialed
+                  // restrained — no extra size, no scale tricks, just lift. The
+                  // other tabs stay flat on the rail; Share is the one thing
+                  // that protrudes. Lift -3 → -6 → -8px (2026-06-07, founder:
+                  // "a drop more even"): the shell has NO overflow:hidden, so at
+                  // -8px the gold pill cleanly pokes ~4px ABOVE the rail's top
+                  // edge — the FAB-breaking-the-bar look — without clipping.
+                  // Lift via `top`, NOT `transform` (founder: "the button keeps
+                  // lowering back down"): the cell is position:relative, and
+                  // whileTap={{ scale }} owns the transform — an inline
+                  // translateY would get clobbered by the tap animation and the
+                  // pill would sink back to the rail. `top` is untouched by the
+                  // scale, so the lift holds. touch-target keeps the 44px area.
+                  top: -8,
                 } : undefined}
                 data-testid={`nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
@@ -272,7 +373,9 @@ export function MobileNav() {
                     aria-hidden
                     className="absolute inset-0 rounded-2xl bg-[hsl(var(--kora-gold))]"
                     style={{
-                      boxShadow: "0 4px 12px -2px rgba(184,121,26,0.35), 0 2px 4px rgba(184,121,26,0.18)",
+                      // Deeper shadow to match the higher -8px lift — a thing
+                      // floating higher casts a larger, softer shadow.
+                      boxShadow: "0 8px 18px -3px rgba(184,121,26,0.42), 0 3px 6px rgba(184,121,26,0.20)",
                     }}
                   />
                 )}
@@ -290,11 +393,16 @@ export function MobileNav() {
                   />
                 )}
                 <div className="relative">
+                  {/* App icon stroke scale: 2.0 resting / 2.5 active — matches the
+                      LabCollapse section icons so the nav reads as the same hand
+                      (resting was a thinner 1.8, which is what made nav icons feel
+                      "different" from the crisp section icons). Color stays role-based
+                      (muted inactive / primary active / ink-gold Share). */}
                   <Icon
                     className={`w-[22px] h-[22px] transition-colors duration-150 ${
                       isShare ? "text-[hsl(var(--kora-ink))]" : isActive ? "text-primary" : "text-muted-foreground"
                     }`}
-                    strokeWidth={isActive || isShare ? 2.5 : 1.8}
+                    strokeWidth={isActive || isShare ? 2.5 : 2.0}
                   />
                   {showUnreadDot && (
                     <span
@@ -305,7 +413,7 @@ export function MobileNav() {
                   )}
                 </div>
                 <span
-                  className={`relative mt-1 max-w-full truncate text-[11px] transition-colors duration-150 ${
+                  className={`relative mt-1 max-w-full truncate text-2xs transition-colors duration-150 ${
                     isShare ? "font-semibold text-[hsl(var(--kora-ink))]" : isActive ? "text-primary font-semibold" : "text-muted-foreground"
                   }`}
                 >

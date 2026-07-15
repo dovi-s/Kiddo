@@ -138,7 +138,7 @@ export function FeatureWallModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleDismiss(); }}>
-      <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="space-y-1">
@@ -164,7 +164,7 @@ export function FeatureWallModal({
           <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
             <div>
               <p className="text-sm font-semibold text-foreground">{tierLabel}</p>
-              <p className="text-[11px] text-muted-foreground">{priceLine}</p>
+              <p className="text-2xs text-muted-foreground">{priceLine}</p>
             </div>
           </div>
 

@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   eyebrow: {
-    color: colors.gold,
+    color: colors.goldInk,
     fontWeight: "700",
     fontSize: 13,
   },
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   description: {
-    color: "#5E675F",
+    color: colors.muted,
     fontSize: 16,
     lineHeight: 24,
   },

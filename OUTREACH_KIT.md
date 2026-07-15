@@ -262,6 +262,140 @@ SEO you can't beat — they may prefer to buy the gifting layer.
   migration. That orphaned, warm audience is both your cheapest CAC and your
   proof to an acquirer that demand for a *dedicated* product is real.
 
+### The founder-accessibility play — pour the trust floor now (it's free, and it never gets cheaper)
+
+There are two kinds of stickiness. **Hate-stuck:** the dental/EMR software in
+the r/SaaS scrape that people trash in every review but can't leave because
+their data is a hostage. **Love-stuck:** the Basecamp customer who says the
+product is "highly replaceable" and stays nine years anyway, because the
+company is honest, responsive, and answers his email. We are structurally
+*barred* from hate-stuck — the money is legally the kid's at majority, we pay
+the transfer fee, we don't charge to leave (`UNIT_ECONOMICS.md`: retention is
+earned, not coerced). So love-stuck is the *only* retention model we're allowed.
+That makes founder-accessibility not a nice-to-have but the literal mechanism of
+the moat: the thing that keeps an 18-year-old from sweeping the account to
+Robinhood "because that's what their friends use" is whether the family trusts
+Kiddo. Jason Fried is 25 years of proof that responsiveness alone holds
+customers a competitor can't pry loose.
+
+**Why now, specifically:** personal email scales *against* you. The trust floor
+you can pour by hand at 50 families is one you can never pour again at 50,000 —
+the cost only goes up. Pre-launch and solo is the cheapest this play will ever
+be, and a one-person company can out-Fried anyone.
+
+**Do it as a habit, not a feature.** Answer every email personally. Ship the fix
+and tell the person who asked. This *is* the "responsive dedicated alternative"
+pitch above, executed rather than claimed — and the most on-brand possible proof
+of the honest-fintech / anti-dark-pattern lane in §4 ("email the founder, he
+actually answers").
+
+**The discipline:** do NOT productize it. No "Contact the Founder" button, no
+support-SLA promise on the landing page. The moment it's a UI element it reads as
+theater, which is exactly what this audience roasts. It's a behavior you run
+quietly, never a banner you ship.
+
+---
+
+## 4. CREATOR / EARNED SOCIAL — the gift moment is the ad
+
+The one distribution channel we own outright, cost ~$0, and have barely turned
+on. Two facts make it ours:
+
+**(a) The product films itself.** Lovable grew on "you watch 10 seconds of it and
+go: that's new, let me try." Our equivalent is a 10-second, emotionally legible
+wow: *watch a $50 birthday gift become a real share of a company the kid knows,
+with a note attached, compounding until they turn 18.* Fintech almost never has a
+screenshot-able emotional moment; we do — the gift moment, the count-up roll, the
+Memory Book page, the "while you were away" digest are each a clip, not a
+value-prop paragraph. This audience can't be *told* the value in text; they have
+to *see it land.* That's also why influencer beats paid here: a written claim
+doesn't carry, a 10-second clip of the moment does.
+
+**(b) Building in public is warmer for us than for a dev tool.** The founder
+narrative — "why I'm building the thing that turns gifts to kids into a future
+instead of landfill" — is structurally more shareable than a product changelog,
+and it doubles as recruiting and acquirer-credibility brand. Treat audience as a
+company pillar, not marketing exhaust (`COMPANY_STRATEGY.md` §5).
+
+### What to make (cheapest first)
+- **The gift-moment clip.** Screen-record the real flow end to end: gifter picks
+  Disney, the moment, the parent's "while you were away," the Memory Book note.
+  Caption it with a real person's words, not marketing. This is the ad.
+- **Founder build-in-public posts** about the occasion the loop already lives in
+  (a pond from `COMPANY_STRATEGY.md` Phase 1: a bar/bat-mitzvah circuit, a church
+  baby-shower network). Show the thing, never a deck.
+- **Family-finance creators** — the people grandparents and values-driven parents
+  already follow. One 10-second "wait, this exists?" reaction outperforms a paid
+  placement. They reach the *parent* researching; pair them with the occasion
+  channels that reach the *gifter,* who isn't googling anything.
+
+### Stealable language (real people's words, from the field corpus — warmer than any tagline)
+- "Instead of toys they'll forget about or break in a month."
+- "Plant the seed and let it grow."
+- "Set and forget so he can look at it when he's 18."
+- "Family members can contribute to it."
+
+Use their phrasing in captions. It already converted them; it isn't invented.
+
+### Two tactics worth stealing from social-led growth (gated, post-loop-proof)
+From watching Lovable's run ($0 paid to $300M ARR). Most of their "social-led
+growth" doesn't port — it rested on ~9 hires who each arrived with a pre-built
+audience (Anton's 54k-star repo, Elena's 100k followers) on the exact platform
+their *users* live on. We have one founder and a gifter (grandma) who isn't on
+LinkedIn reading build-in-public threads. So discount the headline. But two
+mechanics are real and free:
+- **First-2-hours velocity.** When we *do* post something (a creator's
+  gift-moment clip, a real milestone), front-load engagement fast — the feed
+  algorithms reward early velocity before organic reach decays. Cheap, true,
+  applies the day we have anything to amplify.
+- **Build the audience before the asset, on a lane only we can own.** Anton
+  built credibility *years* before the product shipped. Our founder version is
+  not "post growth playbooks" — it's slow build-in-public on the
+  **honest-fintech / anti-dark-pattern** angle (retention-is-earned, no
+  return-theater, the gifter-not-the-parent is the customer). Differentiated,
+  on-brand, compounding — and a recruiting + acquirer-credibility asset, not a
+  launch lever. It's a long game; start small, don't expect it to move
+  funded-k.
+
+These are *amplifiers on a proven loop*, not a substitute for one. Bee-swarming
+a team of one is just posting. Sequence both behind funded-k ≥ 1.
+
+### The discipline (do not break these for reach)
+- **Two funnels, don't conflate them.** Creator and SEO roundups reach the
+  *parent* researching "best kids investing app." They do NOT reach the *gifter,*
+  who is stuck for a birthday present and is reached at the *occasion* (the
+  shared link, the registry, the event). Measure them separately; a roundup win
+  is not a gifter-loop win.
+  - **App Store implementation (post-launch, when the native app lists):** Apple
+    Custom Product Pages (up to 70/app, limit raised Oct 2025) are the native way
+    to serve the two funnels with different first impressions — match traffic
+    source → user intent → screenshots. The gifter-link / paid-social CPP leads
+    with the gift moment, the count-up, the Memory Book note (the "watch it land"
+    story); the organic-search CPP leads with the parent's story — real
+    ownership, the at-18 handoff, no dark patterns. Free App Store config, each
+    CPP separately measurable in App Analytics. NOT a launch task — gated behind
+    custody + email + funded-k + a shippable Expo app. Two craft guardrails for
+    the listing: (1) you are the eyes on the screenshots — generic template /
+    AI-slop store art actively hurts a trust-first children's-money brand (the
+    rejected sprout-glyph lesson); (2) the honesty rule below covers the store
+    page too — no simulated demo balance shown as real, no projection theater in
+    a screenshot.
+- **Honesty over theater is the channel's credibility, not a tax.** This audience
+  roasts return-theater on sight ("you're just buying what's hot," "don't expect
+  18.75%/yr"). Never animate a loss as a gain, never imply outside "people" for
+  the parent's own money, never show simulated demo holdings as a funded account.
+  The honesty is *why* the clip is believable.
+- **This is a channel candidate, still gated.** Per the spine, the Phase-1 job is
+  to prove funded-k ≥ 1 AND find ONE repeatable cheap channel. This is the most
+  likely "one channel" — but a clip that drives signups we can't yet fund is
+  noise. Sequence it with the loop test (`LOOP_TEST_RUNSHEET.md`); don't outrun
+  custody.
+
+(Send-ready creator DM templates, the 30-second demo-video script, and UTM
+conventions live in `CREATOR_OUTREACH_KIT.md`. This section is the *why
+this channel* and the *what makes it ours* — the part that decides where the
+founder's reps go.)
+
 ---
 
 ## The brutal footer

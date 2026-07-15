@@ -17,6 +17,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildKidMilestoneEmail } from "./templates/kidMilestone";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "kid-milestone-worker";
@@ -129,15 +130,17 @@ async function tick(log: LogFn): Promise<void> {
     const fundTotalUsd = (Number.isFinite(balanceNum) ? balanceNum : 0) + (Number.isFinite(cashNum) ? cashNum : 0);
     const dashboardUrl = `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fundId)}`;
     try {
-      await sendEmail(buildKidMilestoneEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildKidMilestoneEmail({
         to: row.parentEmail,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parentEmail, "milestones"),
         parentFirstName: row.parentFirstName,
         childFirstName: row.childFirstName,
         age,
         fundAgeYears,
         fundTotalUsd,
         dashboardUrl,
-      }));
+      }), fundId: row.fundId });
       state.lastSentByFundAge[key] = new Date().toISOString();
       sent += 1;
       log(`kid-milestone sent for fund ${row.fundId} (age ${age})`, WORKER_SOURCE);

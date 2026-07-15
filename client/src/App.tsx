@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense, type ReactNode, type ComponentType } from "react";
 import { Switch, Route, useLocation, useSearch } from "wouter";
 import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
@@ -7,12 +7,18 @@ import { normalizePath, isMarketingRoute } from "@/lib/routes";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { getActiveFundId } from "@/hooks/use-active-fund";
 import { RealtimeProvider } from "@/lib/realtime-context";
 import { Toaster } from "@/components/ui/toaster";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { DemoGiftMoment } from "@/components/DemoGiftMoment";
+import { DemoActionMoment } from "@/components/DemoActionMoment";
+import { IdleLogout } from "@/components/IdleLogout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { NavTransition } from "@/components/layout/NavTransition";
+import { markVtRouteReady } from "@/lib/view-transition";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { GlobalShareModal } from "@/components/GlobalShareModal";
 import { DemoBanner } from "@/components/DemoBanner";
@@ -20,14 +26,61 @@ import { Mascot } from "@/components/ui/mascot";
 import { GradientText } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import Home from "@/pages/Home";
+import { KID_INITIATED_ONBOARDING, IN_APP_CHECKOUT } from "@/lib/feature-flags";
 
-const NotFound = lazy(() => import("@/pages/not-found"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Settings = lazy(() => import("@/pages/Settings"));
-const Account = lazy(() => import("@/pages/Account"));
-const Activity = lazy(() => import("@/pages/Activity"));
-const ActivityDetail = lazy(() => import("@/pages/ActivityDetail"));
-const Onboard = lazy(() => import("@/pages/Onboard"));
+// Lazy import with a one-shot reload-retry. A dynamic import() can fail on a
+// transient network blip (ERR_NETWORK_CHANGED when wifi/VPN switches) or, in
+// production, when an old tab references a chunk filename a new deploy has
+// replaced. Vite/the browser cache the rejected module promise, so the route
+// would then dead-end on EVERY navigation until a manual hard reload. On
+// failure we reload exactly ONCE (guarded by a sessionStorage flag) to pull
+// the fresh module graph; a second failure falls through to the route's
+// Suspense/error boundary instead of looping. The flag clears on any success.
+const CHUNK_RELOAD_FLAG = "kiddo:chunk-reload";
+function lazyWithRetry<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    factory()
+      .then((mod) => {
+        try { sessionStorage.removeItem(CHUNK_RELOAD_FLAG); } catch {}
+        return mod;
+      })
+      .catch((err) => {
+        let alreadyReloaded = false;
+        try { alreadyReloaded = sessionStorage.getItem(CHUNK_RELOAD_FLAG) === "1"; } catch {}
+        if (!alreadyReloaded && typeof window !== "undefined") {
+          try { sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1"); } catch {}
+          window.location.reload();
+          // Reload is in flight — never resolve, so React doesn't flash error UI.
+          return new Promise<{ default: T }>(() => {});
+        }
+        throw err;
+      }),
+  );
+}
+
+// Like lazyWithRetry, but renders SYNCHRONOUSLY once preload() has resolved — no
+// Suspense fallback on the first navigation. View Transitions freeze the
+// destination's first frame, and a plain React.lazy suspends on that first render
+// even when the chunk is cached, so VT froze the loading skeleton. Preloaded
+// eagerly in prefetchCriticalRoutes; degrades to the Suspense-lazy until then.
+function preloadableLazy<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  let Loaded: T | null = null;
+  const Lazy = lazyWithRetry(factory);
+  function Wrapped(props: any) {
+    const C = Loaded;
+    return C ? <C {...props} /> : <Lazy {...props} />;
+  }
+  (Wrapped as any).preload = () => factory().then((m) => { Loaded = m.default; }).catch(() => {});
+  return Wrapped as typeof Wrapped & { preload: () => Promise<void> };
+}
+
+const NotFound = lazyWithRetry(() => import("@/pages/not-found"));
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const Settings = lazyWithRetry(() => import("@/pages/Settings"));
+const Account = lazyWithRetry(() => import("@/pages/Account"));
+const Activity = lazyWithRetry(() => import("@/pages/Activity"));
+const ActivityDetail = lazyWithRetry(() => import("@/pages/ActivityDetail"));
+const Onboard = lazyWithRetry(() => import("@/pages/Onboard"));
 // /send route was removed 2026-05-14. Send.tsx was a UI-only
 // prototype with a "Coming soon" banner and no real API. Public
 // route to a non-functional feature is worse than no route. The
@@ -35,66 +88,74 @@ const Onboard = lazy(() => import("@/pages/Onboard"));
 // feature ships later, restore the import + the Route below + the
 // page-title mapping + the hidden-paths entries in MobileNav /
 // DesktopSidebar / AppHeader title map.
-const Claim = lazy(() => import("@/pages/Claim"));
-const ClaimFund = lazy(() => import("@/pages/ClaimFund"));
-const InvitationAccept = lazy(() => import("@/pages/InvitationAccept"));
-const FundsOverview = lazy(() => import("@/pages/FundsOverview"));
-const GiftLookup = lazy(() => import("@/pages/GiftLookup"));
-const GetStarted = lazy(() => import("@/pages/GetStarted"));
-const ActivateInvesting = lazy(() => import("@/pages/ActivateInvesting"));
-const GiftCheckout = lazy(() => import("@/pages/GiftCheckout"));
-const Login = lazy(() => import("@/pages/Login"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
-const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
-const AuthMagic = lazy(() => import("@/pages/AuthMagic"));
-const FounderClaim = lazy(() => import("@/pages/FounderClaim"));
-const ConfirmEmailChange = lazy(() => import("@/pages/ConfirmEmailChange"));
-const CancelEmailChange = lazy(() => import("@/pages/CancelEmailChange"));
-const EventCreate = lazy(() => import("@/pages/EventCreate"));
-const FAQ = lazy(() => import("@/pages/FAQ"));
-const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
-const CalculatorAt18 = lazy(() => import("@/pages/CalculatorAt18"));
-const RobuxVsUtma = lazy(() => import("@/pages/RobuxVsUtma"));
-const TrumpAccountVsUtma = lazy(() => import("@/pages/TrumpAccountVsUtma"));
-const UtmaByStateIndex = lazy(() => import("@/pages/UtmaByStateIndex"));
-const UtmaByState = lazy(() => import("@/pages/UtmaByState"));
-const Pricing = lazy(() => import("@/pages/Pricing"));
-const FoundingMembers = lazy(() => import("@/pages/FoundingMembers"));
-const PmfSurvey = lazy(() => import("@/pages/PmfSurvey"));
-const SponsorSuccess = lazy(() => import("@/pages/SponsorSuccess"));
-const Blog = lazy(() => import("@/pages/Blog"));
-const BlogPost = lazy(() => import("@/pages/BlogPost"));
-const Stories = lazy(() => import("@/pages/Stories"));
-const StoryPage = lazy(() => import("@/pages/StoryPage"));
-const Compare = lazy(() => import("@/pages/Compare"));
-const Demo = lazy(() => import("@/pages/Demo"));
-const P2PDemo = lazy(() => import("@/pages/P2PDemo"));
-const Partners = lazy(() => import("@/pages/Partners"));
-const Security = lazy(() => import("@/pages/Security"));
-const Age18 = lazy(() => import("@/pages/Age18"));
-const Age18Plan = lazy(() => import("@/pages/Age18Plan"));
-const TaxDocuments = lazy(() => import("@/pages/TaxDocuments"));
-const TaxDocsExplainer = lazy(() => import("@/pages/TaxDocsExplainer"));
-const Projection = lazy(() => import("@/pages/Projection"));
-const FundSnapshot = lazy(() => import("@/pages/FundSnapshot"));
-const MemoryBook = lazy(() => import("@/pages/MemoryBook"));
-const MemoryRedirect = lazy(() => import("@/pages/MemoryRedirect"));
-const GiftSuccess = lazy(() => import("@/pages/GiftSuccess"));
-const KidView = lazy(() => import("@/pages/KidView"));
-const AgeTransitionManager = lazy(() => import("@/pages/AgeTransitionManager"));
-const AgeTransitionInvite = lazy(() => import("@/pages/AgeTransitionInvite"));
-const AgeTransitionVerify = lazy(() => import("@/pages/AgeTransitionVerify"));
-const Age18Welcome = lazy(() => import("@/pages/Age18Welcome"));
-const GiveAGift = lazy(() => import("@/pages/GiveAGift"));
-const YourStory = lazy(() => import("@/pages/YourStory"));
-const GifterShare = lazy(() => import("@/pages/GifterShare"));
-const GifterUnsubscribe = lazy(() => import("@/pages/GifterUnsubscribe"));
-const GifterDashboard = lazy(() => import("@/pages/GifterDashboard"));
-const About = lazy(() => import("@/pages/About"));
-const Contact = lazy(() => import("@/pages/Contact"));
-const PersonalFunds = lazy(() => import("@/pages/PersonalFunds"));
-const Legal = lazy(() => import("@/pages/Legal"));
-const Admin = lazy(() => import("@/pages/Admin"));
+const Claim = lazyWithRetry(() => import("@/pages/Claim"));
+const ClaimFund = lazyWithRetry(() => import("@/pages/ClaimFund"));
+const InvitationAccept = lazyWithRetry(() => import("@/pages/InvitationAccept"));
+const FundsOverview = lazyWithRetry(() => import("@/pages/FundsOverview"));
+const GiftLookup = lazyWithRetry(() => import("@/pages/GiftLookup"));
+const GetStarted = lazyWithRetry(() => import("@/pages/GetStarted"));
+const ActivateInvesting = lazyWithRetry(() => import("@/pages/ActivateInvesting"));
+const GiftCheckout = lazyWithRetry(() => import("@/pages/GiftCheckout"));
+const Login = lazyWithRetry(() => import("@/pages/Login"));
+const ResetPassword = lazyWithRetry(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazyWithRetry(() => import("@/pages/VerifyEmail"));
+const AuthMagic = lazyWithRetry(() => import("@/pages/AuthMagic"));
+const FounderClaim = lazyWithRetry(() => import("@/pages/FounderClaim"));
+const ConfirmEmailChange = lazyWithRetry(() => import("@/pages/ConfirmEmailChange"));
+const CancelEmailChange = lazyWithRetry(() => import("@/pages/CancelEmailChange"));
+const FAQ = lazyWithRetry(() => import("@/pages/FAQ"));
+const HowItWorks = lazyWithRetry(() => import("@/pages/HowItWorks"));
+const CalculatorAt18 = lazyWithRetry(() => import("@/pages/CalculatorAt18"));
+const RobuxVsUtma = lazyWithRetry(() => import("@/pages/RobuxVsUtma"));
+const TrumpAccountVsUtma = lazyWithRetry(() => import("@/pages/TrumpAccountVsUtma"));
+const UtmaByStateIndex = lazyWithRetry(() => import("@/pages/UtmaByStateIndex"));
+const UtmaByState = lazyWithRetry(() => import("@/pages/UtmaByState"));
+const Pricing = lazyWithRetry(() => import("@/pages/Pricing"));
+const FoundingMembers = lazyWithRetry(() => import("@/pages/FoundingMembers"));
+const PmfSurvey = lazyWithRetry(() => import("@/pages/PmfSurvey"));
+const SponsorSuccess = lazyWithRetry(() => import("@/pages/SponsorSuccess"));
+const Blog = lazyWithRetry(() => import("@/pages/Blog"));
+const BlogPost = lazyWithRetry(() => import("@/pages/BlogPost"));
+const Stories = lazyWithRetry(() => import("@/pages/Stories"));
+const StoryPage = lazyWithRetry(() => import("@/pages/StoryPage"));
+const Compare = lazyWithRetry(() => import("@/pages/Compare"));
+const Demo = lazyWithRetry(() => import("@/pages/Demo"));
+const P2PDemo = lazyWithRetry(() => import("@/pages/P2PDemo"));
+const GenerationalLoop = lazyWithRetry(() => import("@/pages/GenerationalLoop"));
+const HeroPreview = lazyWithRetry(() => import("@/pages/HeroPreview")); // TEMP: full-bleed hero prototype
+const FundIdea = lazyWithRetry(() => import("@/pages/FundIdea")); // flag-gated kid-initiated onboarding (KID_FUND_IDEA_SPEC.md)
+const CheckoutPreview = lazyWithRetry(() => import("@/pages/CheckoutPreview")); // flag-gated in-app embedded checkout (CHECKOUT_IN_APP_SPEC.md)
+const DashboardLab = lazyWithRetry(() => import("@/pages/DashboardLab"));
+// Full-page redesign sandbox. A complete clone of the dashboard at /staging where
+// we restructure aggressively (trimmed hero, de-duped sections) without touching
+// the live /dashboard. Port back to DashboardLab once blessed; delete if not.
+const DashboardStaging = lazyWithRetry(() => import("@/pages/DashboardStaging"));
+const Partners = lazyWithRetry(() => import("@/pages/Partners"));
+const Security = lazyWithRetry(() => import("@/pages/Security"));
+const Age18 = lazyWithRetry(() => import("@/pages/Age18"));
+const Age18Plan = preloadableLazy(() => import("@/pages/Age18Plan"));
+const TaxDocuments = preloadableLazy(() => import("@/pages/TaxDocuments"));
+const TaxDocsExplainer = lazyWithRetry(() => import("@/pages/TaxDocsExplainer"));
+const Projection = preloadableLazy(() => import("@/pages/Projection"));
+const FundSnapshot = lazyWithRetry(() => import("@/pages/FundSnapshot"));
+const MemoryBook = lazyWithRetry(() => import("@/pages/MemoryBook"));
+const MemoryRedirect = lazyWithRetry(() => import("@/pages/MemoryRedirect"));
+const GiftSuccess = lazyWithRetry(() => import("@/pages/GiftSuccess"));
+const KidView = lazyWithRetry(() => import("@/pages/KidView"));
+const AgeTransitionManager = lazyWithRetry(() => import("@/pages/AgeTransitionManager"));
+const AgeTransitionInvite = lazyWithRetry(() => import("@/pages/AgeTransitionInvite"));
+const AgeTransitionVerify = lazyWithRetry(() => import("@/pages/AgeTransitionVerify"));
+const Age18Welcome = lazyWithRetry(() => import("@/pages/Age18Welcome"));
+const GiveAGift = lazyWithRetry(() => import("@/pages/GiveAGift"));
+const YourStory = lazyWithRetry(() => import("@/pages/YourStory"));
+const GifterShare = lazyWithRetry(() => import("@/pages/GifterShare"));
+const GifterUnsubscribe = lazyWithRetry(() => import("@/pages/GifterUnsubscribe"));
+const GifterDashboard = lazyWithRetry(() => import("@/pages/GifterDashboard"));
+const About = lazyWithRetry(() => import("@/pages/About"));
+const Contact = lazyWithRetry(() => import("@/pages/Contact"));
+const PersonalFunds = lazyWithRetry(() => import("@/pages/PersonalFunds"));
+const Legal = lazyWithRetry(() => import("@/pages/Legal"));
+const Admin = lazyWithRetry(() => import("@/pages/Admin"));
 
 type SeoConfig = {
   title: string;
@@ -283,7 +344,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/give-a-gift") {
     return {
       title: "Give a gift that lasts | Kiddo",
-      description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll send them a warm note.",
+      description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll let the parents know.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -291,7 +352,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/at-18-calculator") {
     return {
       title: "UTMA Calculator: What investing for a kid becomes by 18 | Kiddo",
-      description: "Honest math for parents and grandparents investing for a child. See how consistent monthly investing through a UTMA grows over the years to age 18. Kiddo's annual fee ($1/yr per $1,000 invested) already netted from the projection.",
+      description: "Honest math for parents and grandparents: see how consistent monthly investing through a custodial UTMA grows for a child by age 18.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -299,7 +360,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/robux-vs-utma" || pathname === "/robux-vs-utma") {
     return {
       title: "Robux vs UTMA: What your kid's monthly Roblox spend could become by 18 | Kiddo",
-      description: "Real math: the same monthly dollars going into Robux versus going into a custodial UTMA investment account. Adjust monthly spend and your kid's age to see the difference at 18. Honest 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
+      description: "Real math: the same monthly dollars spent on Robux versus invested in a custodial UTMA. Adjust the spend and your kid's age to see the difference by 18.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -307,7 +368,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/trump-account-vs-utma" || pathname === "/trump-account-vs-utma") {
     return {
       title: "Trump Account vs UTMA: which is for your kid? | Kiddo",
-      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA. The federal account is index-only, capped at $5,000/yr, and locked until 59½; a UTMA holds real companies, has no cap, and is fully theirs at 18. See which does which job, and why most families want both. 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
+      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA: the caps, the lockups, what each is built for, and why many families want both.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -337,7 +398,6 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/activity") return { ...genericPrivate, title: "Activity | Kiddo", description: "Review recent gifts, updates, and account activity." };
   if (pathname.startsWith("/activity/")) return { ...genericPrivate, title: "Activity Detail | Kiddo", description: "Detailed activity record." };
   if (pathname === "/events") return { ...genericPrivate, title: "Events | Kiddo", description: "Create and manage gifting events for your fund." };
-  if (pathname === "/event/create") return { ...genericPrivate, title: "Create Event | Kiddo", description: "Set up a new gifting event in Kiddo." };
   if (pathname.startsWith("/claim/")) return { ...genericPrivate, title: "Claim Gift | Kiddo", description: "Claim and verify your gift." };
   if (pathname === "/onboard") return { ...genericPrivate, title: "Onboarding | Kiddo", description: "Finish account setup and fund preferences." };
   if (pathname === "/activate") return { ...genericPrivate, title: "Activate Investing | Kiddo", description: "Complete investing activation for your fund." };
@@ -510,10 +570,24 @@ function MarketingLoadingFallback() {
   return <div className="min-h-screen bg-background" aria-hidden="true" />;
 }
 
-function RouteSkeletonFallback() {
+function RouteSkeletonFallback({ sidebarOffset = false }: { sidebarOffset?: boolean }) {
+  // Offset for the fixed 264px DesktopSidebar when it's present (2026-06-07,
+  // founder catch: "the left panel covers the skeleton"). The global sidebar
+  // (App.tsx) paints OUTSIDE the Suspense boundary, so this lazy-chunk fallback
+  // must mirror the same md:ml-[264px] offset every real authed page uses, or
+  // its left edge renders under the menu. sidebarOffset is driven by the
+  // shell's hideGlobalNav (single source of truth) so routes that hide the
+  // sidebar (gifter / my-gifts / admin / kid / snapshot) don't get a phantom
+  // left gutter.
   return (
-    <div className="min-h-[60vh] px-4 py-8 animate-pulse" aria-hidden="true">
-      <div className="mx-auto max-w-2xl space-y-4">
+    <div className={`min-h-[60vh] px-4 py-8 animate-pulse ${sidebarOffset ? "md:ml-[264px]" : ""}`} aria-hidden="true">
+      {/* Match the real page width (.kiddo-canvas = 1120px) — not max-w-2xl
+          (672px). On a cold/slow load the Suspense fallback fires and the
+          old 672px column read as a phone-width skeleton that then snapped
+          out to the 1120px desktop layout (founder catch 2026-06-10). Same
+          single width knob every authed page uses, so there's no horizontal
+          jump when the chunk resolves. */}
+      <div className="kiddo-canvas space-y-4">
         <div className="h-8 w-48 rounded-lg bg-muted/60" />
         <div className="h-4 w-72 rounded bg-muted/40" />
         <div className="mt-6 h-40 rounded-2xl bg-muted/50" />
@@ -575,24 +649,40 @@ let _prefetchDone = false;
 function prefetchCriticalRoutes() {
   if (_prefetchDone) return;
   _prefetchDone = true;
+  const warm = (p: Promise<unknown>) => { void p.catch(() => {}); };
+  // EAGER (not idle): the View-Transition push routes. VT freezes the destination's
+  // first frame, so if the chunk isn't loaded at tap time the Suspense skeleton gets
+  // frozen. Load them immediately AND mark each ready when it resolves — the VT only
+  // fires for a route whose chunk is ready (view-transition.ts), so a tap before the
+  // chunk lands falls back to the graceful framer slide instead of freezing.
+  const eager = (comp: { preload: () => Promise<void> }, route: string) => {
+    comp.preload().then(() => markVtRouteReady(route)).catch(() => {});
+  };
+  eager(Projection, "/projection");
+  eager(Age18Plan, "/age-18-plan");
+  eager(TaxDocuments, "/tax-documents");
   const run = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (fn: () => void) => setTimeout(fn, 120);
   run(() => {
-    import("@/pages/Dashboard");
-    import("@/pages/Settings");
-    import("@/pages/Account");
-    import("@/pages/Activity");
-    import("@/pages/MemoryBook");
-    import("@/pages/MemoryRedirect");
-    import("@/pages/EventCreate");
-    import("@/pages/ActivateInvesting");
-    import("@/pages/Login");
-    import("@/pages/GetStarted");
-    import("@/pages/GiftCheckout");
-    import("@/pages/GiftSuccess");
+    // Best-effort warm-ups. A failed prefetch (transient network) must NEVER
+    // surface as an uncaught promise rejection in the console — swallow it
+    // here; the route's own lazyWithRetry import handles real navigation.
+    warm(import("@/pages/DashboardLab")); // the ported dashboard (/dashboard); classic parked at /dashboard-classic
+    warm(import("@/pages/Settings"));
+    warm(import("@/pages/Account"));
+    warm(import("@/pages/Activity"));
+    warm(import("@/pages/MemoryBook"));
+    warm(import("@/pages/MemoryRedirect"));
+    warm(import("@/pages/ActivateInvesting"));
+    warm(import("@/pages/Login"));
+    warm(import("@/pages/GetStarted"));
+    warm(import("@/pages/GiftCheckout"));
+    warm(import("@/pages/GiftSuccess"));
+    // (Projection / Age18Plan / TaxDocuments are warmed EAGERLY above — they're the
+    // View-Transition push routes and must be chunk-ready before the first tap.)
   });
 }
 
-function RouteLoadingFallback() {
+function RouteLoadingFallback({ sidebarOffset = false }: { sidebarOffset?: boolean }) {
   const [location] = useLocation();
   const pathname = normalizePath(location);
   const isPublicExperience =
@@ -605,7 +695,7 @@ function RouteLoadingFallback() {
     return <MarketingLoadingFallback />;
   }
 
-  return <RouteSkeletonFallback />;
+  return <RouteSkeletonFallback sidebarOffset={sidebarOffset} />;
 }
 
 function getRedirectTarget() {
@@ -707,17 +797,20 @@ function RouteFader({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Router() {
+function Router({ showSidebar = false }: { showSidebar?: boolean }) {
   return (
     <>
-      <ScrollToTop />
       {/* id="main-content" is the skip-to-content link target (defined
           on the App shell above). tabIndex={-1} lets the anchor jump
           focus here without making the wrapper itself part of the tab
           sequence. Audit 2026-05-25. */}
       <main id="main-content" tabIndex={-1} className="outline-none">
-      <Suspense fallback={<RouteLoadingFallback />}>
-        <RouteFader>
+      {/* sidebarOffset mirrors the shell's sidebar presence so the lazy-load
+          skeleton clears the fixed DesktopSidebar instead of rendering under
+          it (2026-06-07). NavTransition (spatial push/pop + scroll memory +
+          swipe-back) replaces the old RouteFader cross-fade + ScrollToTop. */}
+      <NavTransition>
+      <Suspense fallback={<RouteLoadingFallback sidebarOffset={showSidebar} />}>
         <Switch>
           <Route path="/"><Home /></Route>
           <Route path="/login"><Login /></Route>
@@ -729,15 +822,33 @@ function Router() {
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
           <Route path="/p2p-preview"><P2PDemo /></Route>
+          {/* Kid-initiated "fund idea" — registered ONLY when the flag is on (default
+              off → 404). v1 is local-only/zero-PII; stays off for real teens until
+              counsel clears COUNSEL_Q_KID_ONBOARDING.md. */}
+          {KID_INITIATED_ONBOARDING && <Route path="/fund-idea"><FundIdea /></Route>}
+          {/* In-app embedded checkout preview — registered only when IN_APP_CHECKOUT is
+              on (default off → 404). Hosted Checkout stays the live path. */}
+          {IN_APP_CHECKOUT && <Route path="/checkout-preview"><CheckoutPreview /></Route>}
+          <Route path="/generational-loop"><GenerationalLoop /></Route>
+          <Route path="/hero-preview"><HeroPreview /></Route>{/* TEMP: full-bleed hero prototype */}
+          {/* PORTED 2026-06-10: the redesign (DashboardLab) is now THE real
+              dashboard. /design-lab is kept as an ALIAS (existing links + the
+              build-blind dev workflow still work); both render DashboardLab.
+              The pre-port Dashboard.tsx is parked at /dashboard-classic for
+              instant rollback — to revert, point /dashboard back at <Dashboard/>
+              and the preload back at @/pages/Dashboard. The lab was written for
+              this (uses pathname-relative URLs, navigates to /dashboard). */}
+          <Route path="/design-lab"><ProtectedRoute><DashboardLab /></ProtectedRoute></Route>
           <Route path="/get-started"><GetStarted /></Route>
           <Route path="/onboard"><Onboard /></Route>
           <Route path="/activate"><ProtectedRoute><ActivateInvesting /></ProtectedRoute></Route>
-          <Route path="/dashboard"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
+          <Route path="/dashboard"><ProtectedRoute><DashboardLab /></ProtectedRoute></Route>
+          <Route path="/staging"><ProtectedRoute><DashboardStaging /></ProtectedRoute></Route>
+          <Route path="/dashboard-classic"><ProtectedRoute><Dashboard /></ProtectedRoute></Route>
           <Route path="/profile"><ProtectedRoute><Account /></ProtectedRoute></Route>
           <Route path="/activity"><ProtectedRoute><Activity /></ProtectedRoute></Route>
           <Route path="/activity/:id"><ProtectedRoute><ActivityDetail /></ProtectedRoute></Route>
           <Route path="/events">{() => { window.location.replace("/dashboard"); return null; }}</Route>
-          <Route path="/event/create"><ProtectedRoute><EventCreate /></ProtectedRoute></Route>
           <Route path="/claim/:token"><Claim /></Route>
           <Route path="/take-over/:token"><ClaimFund /></Route>
           <Route path="/invitations/:token"><InvitationAccept /></Route>
@@ -809,8 +920,8 @@ function Router() {
           <Route path="/:fund/:event"><GiftCheckout /></Route>
           <Route><NotFound /></Route>
         </Switch>
-        </RouteFader>
       </Suspense>
+      </NavTransition>
       </main>
     </>
   );
@@ -823,6 +934,29 @@ function App() {
 
   useEffect(() => {
     prefetchCriticalRoutes();
+    // Warm-data Layer 3, web half (WARM_DATA_AND_LOCK_SPEC): in PARALLEL with
+    // the /api/auth/me session check, pre-warm the funds list + the
+    // remembered active fund's dashboard-summary. By the time auth resolves
+    // and Dashboard mounts, its data is in flight or landed — the cold-load
+    // skeleton window shrinks to ~one round-trip. Gated on a remembered fund
+    // id (only written after a prior login), so public visitors never fire
+    // authed requests. (The Face ID lock-screen half is native work,
+    // deferred with the native track.)
+    const rememberedFundId = getActiveFundId();
+    if (rememberedFundId) {
+      void import("@/lib/prefetch").then(({ prefetchDashboard, prefetchActivity, prefetchMemoryBook, prefetchSettings, onIdle }) => {
+        prefetchDashboard(queryClient, rememberedFundId);
+        // Warm the OTHER bottom-nav tabs on idle (after the dashboard's critical
+        // load wins the network). With staleTime keeping them warm once fetched,
+        // every tab switch then lands on CONTENT, not a cold skeleton — the
+        // Airbnb/Apple "it's already there" feel. Idle so it never races the hero.
+        onIdle(() => {
+          prefetchActivity(queryClient, rememberedFundId);
+          prefetchMemoryBook(queryClient, rememberedFundId);
+          prefetchSettings(queryClient);
+        });
+      });
+    }
   }, []);
   const isPreview = new URLSearchParams(search).has("preview");
   const isGiftPage = isPublicGiftRoute(location);
@@ -842,6 +976,9 @@ function App() {
     const fundSlug = segments[0];
     const eventSlug = segments[1];
     if (!fundSlug) return;
+    // Internal/preview routes prefixed "__" aren't funds, so skip the public-fund
+    // prefetch (avoids a console 404).
+    if (fundSlug.startsWith("__")) return;
     void import("@/lib/prefetch").then(({ prefetchPublicGiftPage }) => {
       prefetchPublicGiftPage(queryClient, fundSlug, eventSlug ?? null);
     });
@@ -863,6 +1000,14 @@ function App() {
     // back as escapes; the sidebar's nav links aren't urgent during
     // the 2-5 minute flow.
     location === "/get-started" ||
+    // The fund snapshot is a standalone print/PDF page with its OWN chrome
+    // (Back / Options / Print toolbar) and NO sidebar. Without this it fell
+    // through to hideGlobalNav=false, which gave the demo banner the 264px
+    // sidebar offset (md:ml-[264px]) over a page that has no sidebar — a
+    // phantom left gutter that read "as if the menu is there." Hiding global
+    // nav here makes the banner full-width + drops the unused sidebar/mobile
+    // nav. 2026-06-07.
+    (location.startsWith("/fund/") && location.endsWith("/snapshot")) ||
     location === "/feedback/pmf" ||
     location.startsWith("/founder-claim/") ||
     location.startsWith("/kid/") ||
@@ -915,10 +1060,22 @@ function App() {
               </a>
               <SeoManager />
               <Toaster />
+              {/* Custom pull-to-refresh — standalone PWA only (browsers keep
+                  their native gesture). Inert + renders null in a browser tab. */}
+              <PullToRefresh />
               {/* Demo-only: one live "a gift just came in" beat ~15s after the
                   parent lands on their dashboard, so a prospect feels the
                   gifter-loop payoff. Headless; no-op for non-demo accounts. */}
               <DemoGiftMoment />
+              {/* Converts the peak-intent moment when a demo visitor completes a
+                  money-flow action (e.g. sets up recurring) — a "start your own
+                  fund" toast instead of a sandbox dead-end. Demo-only, no-op
+                  otherwise. Listens for `kiddo:demo-action`. */}
+              <DemoActionMoment />
+              {/* Idle auto-logout for signed-in (non-demo) users — warns with a
+                  countdown then signs out on a left-open / shared device. Self-
+                  gates on auth + demo; no-op otherwise. */}
+              <IdleLogout />
               {!hideGlobalNav && <DesktopSidebar />}
               {/* Demo banner lives at the shell (not inside Router) so its
                   desktop left-offset can mirror the sidebar's presence via the
@@ -927,7 +1084,7 @@ function App() {
                   at equal z-50). Offset only when the sidebar renders; full-
                   width on /admin, /gifter, /my-gifts, /kid/*, and on mobile. */}
               <DemoBanner sidebarOffset={!hideGlobalNav} />
-              <Router />
+              <Router showSidebar={!hideGlobalNav} />
               {!hideGlobalNav && <MobileNav />}
               {/* Global share modal — listens for `kiddo:open-share-modal`
                   events from any surface (e.g., the sidebar's Share quick

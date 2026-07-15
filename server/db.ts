@@ -36,8 +36,13 @@ export const pool = new Pool({
           }
         : { rejectUnauthorized: false },
   max: 20,
+  // NOTE: node-postgres Pool does NOT honor `min` (it's a no-op here); the
+  // pool only opens connections on demand and culls them after
+  // idleTimeoutMillis. We keep connections warm explicitly below instead.
   min: 2,
-  idleTimeoutMillis: 30_000,
+  // Raised from 30s so warmed connections survive between sporadic demo
+  // clicks; the keep-warm heartbeat below re-touches them well inside this.
+  idleTimeoutMillis: 60_000,
   connectionTimeoutMillis: 5_000,
 });
 
@@ -51,3 +56,76 @@ pool.on("error", (error) => {
   console.warn("Postgres pool error (transient, suppressed to prevent process crash):", error?.message ?? error);
 });
 export const db = drizzle(pool, { schema });
+
+// ── Keep the pool WARM ──────────────────────────────────────────────────────
+// The DB is remote (Supabase pooler, ~97ms/round-trip), and the hot endpoints
+// fire ~10-12 queries via Promise.all. Measured 2026-06-04: on a COLD pool
+// (only the on-demand 2 connections), 10 parallel queries take ~1015ms —
+// they SERIALIZE because the other 8 connections must each pay a TLS handshake
+// to the remote pooler. On a WARM pool (connections already established) the
+// same 10 run in ~225ms — genuinely parallel (4.5x). Because node-postgres
+// ignores `min`, idle connections get culled after idleTimeoutMillis and the
+// NEXT request burst pays the full cold penalty — which is exactly the
+// demo-login experience (first click after the pool went idle).
+//
+// Fix: a lightweight heartbeat keeps WARM_POOL_SIZE connections established and
+// idle-timer-reset, so a dashboard-summary / funds-list burst finds them ready
+// and actually runs in parallel. Runs in the background (never on a request),
+// unref'd so it never holds the process open. Skipped under tests.
+const WARM_POOL_SIZE = Math.min(12, 20);
+const POOL_WARM_INTERVAL_MS = 25_000; // < idleTimeoutMillis so warm conns persist
+async function keepPoolWarm(): Promise<void> {
+  try {
+    // Firing WARM_POOL_SIZE trivial queries concurrently forces the pool to
+    // open that many connections at once (if not already open) and resets
+    // their idle timers. After release they sit warm in the idle pool.
+    await Promise.all(Array.from({ length: WARM_POOL_SIZE }, () => pool.query("SELECT 1")));
+  } catch {
+    // Transient (a dropped pooler connection); pool.on('error') already
+    // discards broken connections and the next heartbeat re-establishes.
+  }
+}
+if (process.env.NODE_ENV !== "test" && process.env.DB_POOL_WARM !== "off") {
+  void keepPoolWarm(); // warm immediately at startup (in the background)
+  const warmTimer = setInterval(() => { void keepPoolWarm(); }, POOL_WARM_INTERVAL_MS);
+  warmTimer.unref?.();
+}
+
+// ── Cross-region misconfig tripwire ─────────────────────────────────────────
+// The single biggest perf decision for prod is co-locating the app with the DB:
+// Supabase is in us-west-2 (Oregon), so the Render service MUST be Oregon too
+// (see DEPLOYMENT_PLAN.md). A same-region round-trip is ~1-2ms; cross-region is
+// ~60-97ms, which makes every hot endpoint (10-12 queries each) ~10x slower.
+// There's no programmatic way to read the deploy region, but the ROUND-TRIP
+// TIME is a direct proxy: measure it once at startup and, in production, log a
+// loud warning if it's cross-region-slow. This turns a silent latency footgun
+// into a visible log line the first time prod boots in the wrong region.
+async function checkDbLatency(): Promise<void> {
+  try {
+    // Use an already-warm connection; take the best of 3 to discount jitter.
+    const samples: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const t = process.hrtime.bigint();
+      await pool.query("SELECT 1");
+      samples.push(Number(process.hrtime.bigint() - t) / 1e6);
+    }
+    const best = Math.min(...samples);
+    const threshold = Number(process.env.DB_LATENCY_WARN_MS || 25);
+    if (best > threshold) {
+      const msg =
+        `[db-latency] DB round-trip is ${best.toFixed(0)}ms (threshold ${threshold}ms). ` +
+        `The app and Postgres appear to be in DIFFERENT regions. Supabase is us-west-2 ` +
+        `(Oregon); deploy the app in the SAME region to cut every query ~${Math.round(best / 2)}x. ` +
+        `See DEPLOYMENT_PLAN.md. Set DB_LATENCY_WARN_MS to tune this warning.`;
+      if (process.env.NODE_ENV === "production") console.warn(msg);
+      else console.log(`[db-latency] round-trip ${best.toFixed(0)}ms (dev — remote DB from a local machine is expected to be slow; prod must co-locate). See DEPLOYMENT_PLAN.md.`);
+    }
+  } catch {
+    // Never let a diagnostic break startup.
+  }
+}
+if (process.env.NODE_ENV !== "test") {
+  // Delay so it runs after the pool has had a moment to warm (more representative).
+  const latencyTimer = setTimeout(() => { void checkDbLatency(); }, 4_000);
+  latencyTimer.unref?.();
+}

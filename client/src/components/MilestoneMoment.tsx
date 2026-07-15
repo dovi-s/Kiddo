@@ -8,7 +8,8 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 // but the locked rule is the Kora brand sprout 🌱, not generic sparkles.
 // Per feedback_iconography_consistency.md: "Sprout (brand) — reserved for the
 // Kora brand mark + first-gift confirmation."
-import { Share2, Sprout, X, Download, Loader2 } from "lucide-react";
+import { Share2, Sprout, Download, Loader2 } from "lucide-react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { haptic } from "@/lib/haptics";
 import {
   MONEY_CROSS_COPY,
@@ -57,13 +58,18 @@ interface MilestoneMomentProps {
   recipientName?: string | null;
   // True when the viewer OWNS this fund post-handoff (the kid, now adult owner).
   // The ON-SCREEN moment is shown TO them, so it reads second-person ("Your fund
-  // crossed"). NOTE: the shareable card stays third-person ("Haley's fund") on
+  // crossed"). NOTE: the shareable card stays third-person ("Mia's fund") on
   // purpose — it's an outbound image whose audience is other people.
   isOwnerMode?: boolean;
+  // Social proof for the shareable card (optional). Threaded straight through
+  // to MilestoneShareCard so the outbound image leads with the peopled story,
+  // not just the dollar figure. The on-screen moment is unaffected.
+  giftCount?: number;
+  peopleCount?: number;
   onDismiss?: () => void;
 }
 
-export function MilestoneMoment({ currentValue, previousValue, recipientName, isOwnerMode = false, onDismiss }: MilestoneMomentProps) {
+export function MilestoneMoment({ currentValue, previousValue, recipientName, isOwnerMode = false, giftCount, peopleCount, onDismiss }: MilestoneMomentProps) {
   const [milestone, setMilestone] = useState<number | null>(null);
   const [visible, setVisible] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -210,14 +216,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={dismiss}
-            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-            aria-label="Dismiss milestone"
-          >
-            <X size={16} />
-          </button>
+          <ModalCloseButton onClick={dismiss} label="Dismiss milestone" className="absolute right-3 top-3" />
 
           <div className="flex items-start gap-3">
             <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.15)]">
@@ -274,17 +273,10 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md rounded-3xl bg-background p-4 shadow-2xl"
           >
-            <button
-              type="button"
-              onClick={() => setShareOpen(false)}
-              aria-label="Close share view"
-              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-muted-foreground hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
+            <ModalCloseButton onClick={() => setShareOpen(false)} label="Close share view" className="absolute right-3 top-3 z-10" />
 
             <div ref={shareCardRef}>
-              <MilestoneShareCard threshold={milestone} recipientName={recipientName} />
+              <MilestoneShareCard threshold={milestone} recipientName={recipientName} giftCount={giftCount} peopleCount={peopleCount} />
             </div>
 
             <div className="mt-4 space-y-2">
@@ -307,7 +299,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, is
                   </>
                 )}
               </button>
-              <p className="text-center text-[11px] text-muted-foreground">
+              <p className="text-center text-2xs text-muted-foreground">
                 <Download size={11} className="mr-1 inline align-text-bottom" />
                 Opens your share menu, or saves the image if sharing isn't supported.
               </p>

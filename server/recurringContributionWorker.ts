@@ -6,6 +6,9 @@ import { renderKiddoEmail } from './templates/baseTemplate';
 import { buildParentHandoffRecurringEmail } from './templates/parentHandoffRecurring';
 import { getUncachableStripeClient } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { buildReminderStopUrl } from './reminderStopToken';
+import { getFundCoverageState } from './services/monetization';
+import { shouldSilenceForFund } from './memorialized';
 
 type LogFn = (message: string, source?: string) => void;
 
@@ -46,18 +49,30 @@ async function recordRecurringFailure(
   nextRetry: Date | null,
 ): Promise<void> {
   try {
-    const reconcileTail = reconcile?.last4
-      ? ` Your ${reconcile.brand ? reconcile.brand.charAt(0).toUpperCase() + reconcile.brand.slice(1) : 'card'} ····${reconcile.last4} was declined.`
-      : '';
+    // Lead with the reason (declined card, or a generic couldn't-collect), then the
+    // retry date, then the one next step. The old copy opened with "Last automatic
+    // charge could not run." which just restated the title, and the "Failed" pill +
+    // eyebrow already mark status — four ways of saying failed on one row (founder
+    // catch 2026-07). One reason, one action.
+    const reconcileLead = reconcile?.last4
+      ? `Your ${reconcile.brand ? reconcile.brand.charAt(0).toUpperCase() + reconcile.brand.slice(1) : 'card'} ····${reconcile.last4} was declined.`
+      : "We couldn't collect it.";
+    // NOT "Next attempt" — the worker does NOT re-run the missed charge; it just
+    // advances to the next scheduled cycle. Calling it a retry made parents wait a
+    // month expecting the failed one to re-run. State the next CHARGE date plainly;
+    // the "Add it manually" step below is how they recover the missed contribution.
+    // The plan is NOT broken and the failed charge does NOT re-run — the schedule
+    // charges again next cycle. Say so plainly so a "Charge missed" state reads as
+    // "your plan is fine, add the missed one only if you want to", not an emergency.
     const retryTail = nextRetry
-      ? ` Next attempt ${nextRetry.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
+      ? ` Your plan is still on and charges again ${nextRetry.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
       : '';
     await storage.createActivity({
       userId: String(row.user_id),
       fundId: String(row.fund_id),
       type: 'parent_contribution_failed',
-      title: 'Recurring investment failed',
-      description: `Last automatic charge could not run.${reconcileTail}${retryTail} We sent you an email reminder so you can add it manually.`,
+      title: "Automatic charge didn't go through",
+      description: `${reconcileLead}${retryTail} Add the missed one if you'd like.`,
       amount: row.amount ? String(row.amount) : null,
       metadata: JSON.stringify({
         parentContributionId: String(row.id),
@@ -83,6 +98,19 @@ function getBaseUrl() {
   return configured ? configured.replace(/\/+$/, '') : 'https://kiddofund.com';
 }
 
+// Dunning quick-retry — DEFAULT OFF. Today a failed charge just advances to the
+// next full cycle, so the missed contribution waits a whole month. When enabled,
+// the worker instead pulls the next charge in to DUNNING_RETRY_DAYS on the FIRST
+// failure; a repeat failure (one already recorded within the window) falls back to
+// the normal cycle, so it never hammers a declined card (bounded to ONE quick
+// retry). LEFT OFF because it changes WHEN a real card is charged and MUST be
+// validated against Stripe before enabling (ideally replaced by Stripe Smart
+// Retries, which handles card-network retry rules). Known first-pass limitation:
+// after a successful retry the monthly cadence shifts by the retry offset (no
+// re-alignment yet). Flip to true only after testing.
+const DUNNING_RETRY_ENABLED = false;
+const DUNNING_RETRY_DAYS = 3;
+
 function advanceDate(from: Date | string | null, frequency: string | null): Date {
   const base = from ? new Date(from) : new Date();
   const freq = (frequency || 'monthly').toLowerCase();
@@ -104,6 +132,13 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
   const amount = parseFloat(row.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     log(`skipping contribution ${row.id as string}: invalid amount ${String(row.amount)}`, WORKER_SOURCE);
+    return;
+  }
+
+  // Bereavement freeze: a memorialized fund's recurring contribution must never
+  // fire — no charge, no gift record, no date advance. See BEREAVEMENT_POSTURE.md.
+  if (await shouldSilenceForFund(String(row.fund_id))) {
+    log(`contribution ${row.id as string}: skipped — fund memorialized`, WORKER_SOURCE);
     return;
   }
 
@@ -292,6 +327,32 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
     }
   }
 
+  // Dunning quick-retry (see DUNNING_RETRY_ENABLED above). On a FIRST failure,
+  // bring the next charge in to a few days out instead of the full-cycle date set
+  // earlier. Bounded to ONE retry: count recent parent_contribution_failed rows
+  // for this contribution (this cycle's row is already written by the charge-fail
+  // paths above); more than one means we already retried, so leave the full cycle.
+  if (DUNNING_RETRY_ENABLED && !charged) {
+    try {
+      const { rows: dunRows } = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM activities
+           WHERE type = 'parent_contribution_failed'
+             AND fund_id = $1
+             AND metadata LIKE $2
+             AND created_at > NOW() - INTERVAL '7 days'`,
+        [row.fund_id, `%"parentContributionId":"${String(row.id)}"%`],
+      );
+      const recentFailures = Number(dunRows?.[0]?.n ?? 0);
+      if (recentFailures <= 1) {
+        const retryDate = new Date(Date.now() + DUNNING_RETRY_DAYS * 24 * 60 * 60 * 1000);
+        await storage.updateParentContribution(row.id as string, { nextRunDate: retryDate });
+        log(`contribution ${row.id as string}: dunning quick-retry scheduled ${retryDate.toISOString()} (${recentFailures} recent failure(s))`, WORKER_SOURCE);
+      }
+    } catch (dunErr) {
+      log(`contribution ${row.id as string}: dunning retry check failed (non-fatal): ${String(dunErr)}`, WORKER_SOURCE);
+    }
+  }
+
   if (!charged && parentEmail) {
     // In-app failure signal for the "couldn't even attempt" cases. The charge-
     // attempt paths above write a parent_contribution_failed row on decline,
@@ -334,9 +395,9 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
       const introBody = [
         greeting,
         '',
-        `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
+        `The scheduled $${amount.toFixed(2)} for ${childName} didn't go through this time. Your plan is still on and charges again next cycle.`,
         '',
-        'Head to your dashboard to add it now.',
+        'Add the missed one now if you\'d like.',
       ].join('\n');
       const { html } = renderKiddoEmail({
         heading: `Time to add to ${childName}'s fund`,
@@ -349,12 +410,12 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
         text: [
           greeting,
           '',
-          `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
+          `The scheduled $${amount.toFixed(2)} for ${childName} didn't go through this time. Your plan is still on and charges again next cycle.`,
           '',
-          'Head to your dashboard to add it now:',
+          'Add the missed one now if you\'d like:',
           dashboardUrl,
           '',
-          '— The Kiddo team',
+          'The Kiddo team',
         ].join('\n'),
         html,
         tags: ['parent_contribution_reminder'],
@@ -629,6 +690,13 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
       -- link 410s, so reminding a gifter to "gift again" there is a dead end
       -- (and reads as broken). Reminders auto-resume if the fund is reopened.
       AND f.status = 'active'
+      -- REMINDER-ONLY rows. Stripe-subscription rows auto-charge (Stripe
+      -- bills; the invoice.paid webhook advances next_charge_date) — without
+      -- this filter, a due-now sub row would get this email's "We won't
+      -- charge anything" line right before Stripe charges them, AND the
+      -- worker would advance next_charge_date underneath the webhook's
+      -- bookkeeping. Found in the 2026-06-03 gifter recurring audit.
+      AND rg.stripe_subscription_id IS NULL
       AND rg.sender_email IS NOT NULL
       AND rg.next_charge_date IS NOT NULL
       AND rg.next_charge_date <= NOW()
@@ -653,6 +721,14 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
       const nextChargeDate = advanceDate(row.next_charge_date as Date | string | null, row.frequency as string);
       await storage.updateRecurringGift(row.id as string, { nextChargeDate });
 
+      // One-click stop link. Reminder-only gifters have NO account (signup
+      // is just email + cadence), so they can't magic-link into the gifter
+      // dashboard to cancel — this signed link is their ONLY unsubscribe
+      // path, and it's what makes the "Unsubscribe any time" promise in
+      // ReminderAndAskParentsCard true. Also sent as the RFC 8058
+      // List-Unsubscribe header (these are recurring opt-in emails — the
+      // exact class Gmail/Yahoo require one-click unsubscribe for).
+      const stopUrl = buildReminderStopUrl(getBaseUrl(), row.id as string, senderEmail);
       const reminderIntro = [
         `Hi ${senderName},`,
         '',
@@ -665,6 +741,7 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
         heading: `Time to gift ${childName} again`,
         intro: reminderIntro,
         cta: { text: `Send a gift`, url: giftUrl },
+        unsubscribeUrl: stopUrl,
       });
       await sendEmail({
         to: senderEmail,
@@ -679,10 +756,12 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
           giftUrl,
           '',
           `Not the right time? Ignore this email. We won't charge anything.`,
+          `Stop these reminders: ${stopUrl}`,
           '',
-          '— The Kiddo team',
+          'The Kiddo team',
         ].join('\n'),
         html: reminderHtml,
+        listUnsubscribeUrl: stopUrl,
         tags: ['gift_reminder'],
         metadata: {
           recurringGiftId: row.id as string,
@@ -869,6 +948,291 @@ async function processGifterRecurringDunning(log: LogFn): Promise<void> {
   }
 }
 
+// Close the recurring-request loop. When a gifter on a free fund clicks
+// "ask the family to enable monthly," a `recurring_request` activity row is
+// written and the parent gets a nudge — but until 2026-06-03 NOTHING told
+// the gifter when the parent actually upgraded: their raised hand just
+// rotted. This pass scans unresolved requests on funds that NOW support
+// recurring and emails each waiting gifter once ("you can set up your
+// recurring gift now"), converting the parent's upgrade directly into the
+// gifter activation it was asked for — the highest-intent conversion signal
+// in the gifter funnel finally gets its callback.
+//
+// Worker-pass (not webhook-hook) BY DESIGN: coverage can flip on via Stripe
+// subscription, sponsorship purchase, plan change, or post-handoff — one
+// scan catches every path with one code path. Resolution is recorded in the
+// activity row's own metadata (resolvedAt — no schema change), marked
+// BEFORE sending (same crash-safe discipline as the reminder sender), and
+// deduped per fund+email so a twice-asking gifter gets one email.
+async function processRecurringRequestFulfillment(log: LogFn): Promise<void> {
+  const result = await pool.query<Record<string, any>>(`
+    SELECT
+      a.id, a.fund_id, a.metadata,
+      f.user_id AS fund_user_id, f.slug AS fund_slug,
+      f.name AS fund_name, f.recipient_first_name, f.transferred_at
+    FROM activities a
+    JOIN funds f ON f.id = a.fund_id
+    WHERE a.type = 'recurring_request'
+      AND f.status = 'active'
+      -- A year-old ask answered out of nowhere reads as zombie automation;
+      -- older requests stay quietly unresolved.
+      AND a.created_at > NOW() - INTERVAL '365 days'
+      AND (a.metadata IS NULL OR a.metadata NOT LIKE '%"resolvedAt"%')
+    ORDER BY a.created_at ASC
+    LIMIT 50
+  `);
+  if (result.rows.length === 0) return;
+
+  // Coverage computed once per fund (the rows cluster by fund).
+  const supportedByFund = new Map<string, boolean>();
+  const emailedKeys = new Set<string>();
+  let sent = 0;
+
+  for (const row of result.rows) {
+    try {
+      const fundId = String(row.fund_id);
+      let supported = supportedByFund.get(fundId);
+      if (supported === undefined) {
+        if (row.transferred_at) {
+          supported = true; // post-handoff owner funds support recurring, free
+        } else {
+          const coverage = await getFundCoverageState(String(row.fund_user_id), fundId);
+          supported = coverage === 'covered_family' || coverage === 'covered_starter' || coverage === 'trial_active';
+        }
+        supportedByFund.set(fundId, supported);
+      }
+      if (!supported) continue;
+
+      let meta: any = {};
+      try { meta = JSON.parse(String(row.metadata || '{}')) || {}; } catch { meta = {}; }
+      const gifterEmail = String(meta.gifterEmail || '').trim().toLowerCase();
+      const gifterName = String(meta.gifterName || '').trim() || 'there';
+
+      // Mark resolved FIRST (crash-safe: a crash after this loses one email,
+      // never double-sends), and regardless of email validity so malformed
+      // rows don't get rescanned forever.
+      await pool.query(
+        `UPDATE activities SET metadata = $1 WHERE id = $2`,
+        [JSON.stringify({ ...meta, resolvedAt: new Date().toISOString() }), row.id],
+      );
+      if (!gifterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gifterEmail)) continue;
+
+      const key = `${fundId}:${gifterEmail}`;
+      if (emailedKeys.has(key)) continue; // same gifter asked twice → one email
+      emailedKeys.add(key);
+
+      const childName = String(row.recipient_first_name || row.fund_name || 'the child');
+      const giftUrl = row.fund_slug
+        ? `${getBaseUrl()}/${String(row.fund_slug)}`
+        : `${getBaseUrl()}/gift/${fundId}`;
+      const firstName = gifterName.split(' ')[0] || 'there';
+      const intro = [
+        `Hi ${firstName},`,
+        '',
+        `You asked to give to ${childName} on a schedule, and we promised to let you know.`,
+        `Good news: ${childName}'s family turned on recurring contributions. You can set yours up any time from the gift page. Pick the amount and cadence, cancel whenever you like.`,
+      ].join('\n');
+      const { html } = renderKiddoEmail({
+        heading: `You can set up your recurring gift to ${childName}`,
+        intro,
+        cta: { text: `Set up your recurring gift`, url: giftUrl },
+      });
+      await sendEmail({
+        to: gifterEmail,
+        subject: `Good news: you can now give to ${childName} monthly`,
+        text: [
+          `Hi ${firstName},`,
+          '',
+          `You asked to give to ${childName} on a schedule, and we promised to let you know.`,
+          `Good news: ${childName}'s family turned on recurring contributions. Set yours up any time. Pick the amount and cadence, cancel whenever you like.`,
+          '',
+          `Set it up: ${giftUrl}`,
+          '',
+          'The Kiddo team',
+        ].join('\n'),
+        html,
+        tags: ['recurring_request_fulfilled'],
+        metadata: { fundId, activityId: String(row.id) },
+      });
+      sent += 1;
+      log(`recurring-request fulfilled: emailed ${gifterEmail} for fund ${fundId}`, WORKER_SOURCE);
+    } catch (err) {
+      log(`recurring-request fulfillment error for activity ${String(row.id)}: ${String(err)}`, WORKER_SOURCE);
+    }
+  }
+  if (sent > 0) log(`recurring-request fulfillment: ${sent} gifter(s) notified`, WORKER_SOURCE);
+}
+
+// ── Pre-charge heads-up notices ──────────────────────────────────────────────
+// A few days before each HEALTHY recurring charge, email a calm "we're about to
+// charge you on {date}, nothing to do, change or cancel anytime" notice. This is
+// the transparency-bias trust lever (Cal AI / Blinkist: stating exactly when you
+// charge raises conversion and cuts complaints), and it backs the "we'll email
+// you before each charge" line on the gift-checkout recurring surfaces.
+//
+// Covers BOTH charging systems:
+//   - gifter recurring (recurring_gifts WITH a Stripe subscription; Stripe bills,
+//     the invoice.paid webhook keeps next_charge_date current). Reminder-only
+//     rows (stripe_subscription_id IS NULL) never charge, so they're excluded.
+//   - parent auto-invest (parent_contributions; the worker charges via a
+//     PaymentIntent when next_run_date comes due).
+//
+// Dedup is EXACT: we stamp the charge date we noticed for (precharge_notice_for_date),
+// so a row sends once per cycle and re-qualifies only when its next charge date
+// advances. The query targets FUTURE charges in a short lead window, so this pass
+// is disjoint from the due-now charge passes -- it can never race a real charge.
+const PRECHARGE_LEAD_DAYS = 3;
+
+async function sendPrechargeNotice(opts: {
+  to: string;
+  fundId: string;
+  recipientName: string;
+  childName: string;
+  amount: number;
+  chargeDate: Date;
+  manageUrl: string;
+  stopUrl?: string;
+  kind: "gifter" | "parent";
+}): Promise<void> {
+  const { to, fundId, recipientName, childName, amount, chargeDate, manageUrl, stopUrl, kind } = opts;
+  const dateLabel = chargeDate.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  const amountLabel = `$${Number.isFinite(amount) ? amount.toFixed(2) : "?"}`;
+  // Gifter rows are billed by Stripe off our mirrored date, so "on or around";
+  // parent auto-invest charges off next_run_date directly, so "on".
+  const whenPhrase = kind === "gifter" ? `on or around ${dateLabel}` : `on ${dateLabel}`;
+  const heading = kind === "gifter"
+    ? `Your recurring gift to ${childName} is coming up`
+    : `${childName}'s recurring investment is coming up`;
+  const sentence = kind === "gifter"
+    ? `Your recurring gift of ${amountLabel} to ${childName}'s fund is set to run ${whenPhrase}.`
+    : `Your recurring investment of ${amountLabel} into ${childName}'s fund is set to run ${whenPhrase}.`;
+  const intro = [
+    `Hi ${recipientName},`,
+    "",
+    sentence,
+    "",
+    "Nothing to do, it happens automatically. Want to change the amount or stop it? You can do that anytime before it runs.",
+  ].join("\n");
+  const { html } = renderKiddoEmail({
+    heading,
+    intro,
+    cta: { text: "Manage or cancel", url: manageUrl },
+    ...(kind === "gifter" && stopUrl ? { unsubscribeUrl: stopUrl } : {}),
+  });
+  await sendEmail({
+    to,
+    subject: heading,
+    text: [intro, "", `Manage or cancel: ${manageUrl}`, "", "The Kiddo team"].join("\n"),
+    html,
+    fundId,
+    tags: ["recurring_precharge_notice"],
+    ...(kind === "gifter" && stopUrl ? { listUnsubscribeUrl: stopUrl } : {}),
+  } as any);
+}
+
+export async function processPrechargeNotices(log: LogFn = () => undefined): Promise<void> {
+  // --- Gifter recurring (Stripe-subscription rows; next_charge_date kept current
+  //     by the invoice.paid webhook). ---
+  const gifterRows = await pool.query<Record<string, any>>(`
+    SELECT rg.id, rg.fund_id, rg.sender_name, rg.sender_email, rg.amount,
+           rg.next_charge_date,
+           f.recipient_first_name, f.name AS fund_name
+    FROM recurring_gifts rg
+    JOIN funds f ON f.id = rg.fund_id
+    WHERE rg.status = 'active'
+      AND f.status = 'active'
+      AND rg.stripe_subscription_id IS NOT NULL
+      AND rg.sender_email IS NOT NULL
+      AND rg.next_charge_date IS NOT NULL
+      AND rg.next_charge_date > NOW()
+      AND rg.next_charge_date <= NOW() + INTERVAL '${PRECHARGE_LEAD_DAYS} days'
+      AND (rg.precharge_notice_for_date IS NULL
+           OR rg.precharge_notice_for_date IS DISTINCT FROM rg.next_charge_date)
+    ORDER BY rg.next_charge_date ASC
+    LIMIT 200
+  `);
+
+  let gifterSent = 0;
+  for (const row of gifterRows.rows) {
+    try {
+      const senderEmail = String(row.sender_email || "");
+      if (!senderEmail) continue;
+      const childName = String(row.recipient_first_name || row.fund_name || "the child");
+      const stopUrl = buildReminderStopUrl(getBaseUrl(), row.id as string, senderEmail);
+      await sendPrechargeNotice({
+        to: senderEmail,
+        fundId: String(row.fund_id),
+        recipientName: String(row.sender_name || "there"),
+        childName,
+        amount: parseFloat(String(row.amount)),
+        chargeDate: new Date(row.next_charge_date as string),
+        manageUrl: `${getBaseUrl()}/my-gifts`,
+        stopUrl,
+        kind: "gifter",
+      });
+      // Stamp the exact date we noticed for; won't re-send until the charge
+      // advances next_charge_date to a new cycle.
+      await pool.query(
+        `UPDATE recurring_gifts SET precharge_notice_for_date = $1 WHERE id = $2`,
+        [row.next_charge_date, row.id],
+      );
+      gifterSent += 1;
+    } catch (err) {
+      log(`precharge notice (gifter) failed for ${String(row.id)}: ${String(err)}`, WORKER_SOURCE);
+    }
+  }
+
+  // --- Parent auto-invest (worker-charged on next_run_date). ---
+  const parentRows = await pool.query<Record<string, any>>(`
+    SELECT pc.id, pc.fund_id, pc.amount, pc.next_run_date,
+           f.recipient_first_name, f.name AS fund_name,
+           u.email AS user_email, u.first_name AS user_first_name
+    FROM parent_contributions pc
+    JOIN funds f ON f.id = pc.fund_id
+    JOIN users u ON u.id = pc.user_id
+    WHERE pc.status = 'active'
+      AND f.status = 'active'
+      AND f.user_id = pc.user_id
+      AND pc.next_run_date IS NOT NULL
+      AND pc.next_run_date > NOW()
+      AND pc.next_run_date <= NOW() + INTERVAL '${PRECHARGE_LEAD_DAYS} days'
+      AND (pc.precharge_notice_for_date IS NULL
+           OR pc.precharge_notice_for_date IS DISTINCT FROM pc.next_run_date)
+    ORDER BY pc.next_run_date ASC
+    LIMIT 200
+  `);
+
+  let parentSent = 0;
+  for (const row of parentRows.rows) {
+    try {
+      const userEmail = String(row.user_email || "");
+      if (!userEmail) continue;
+      const childName = String(row.recipient_first_name || row.fund_name || "your child");
+      await sendPrechargeNotice({
+        to: userEmail,
+        fundId: String(row.fund_id),
+        recipientName: String(row.user_first_name || "there"),
+        childName,
+        amount: parseFloat(String(row.amount)),
+        chargeDate: new Date(row.next_run_date as string),
+        manageUrl: `${getBaseUrl()}/dashboard?fund=${String(row.fund_id)}`,
+        kind: "parent",
+      });
+      await pool.query(
+        `UPDATE parent_contributions SET precharge_notice_for_date = $1 WHERE id = $2`,
+        [row.next_run_date, row.id],
+      );
+      parentSent += 1;
+    } catch (err) {
+      log(`precharge notice (parent) failed for ${String(row.id)}: ${String(err)}`, WORKER_SOURCE);
+    }
+  }
+
+  if (gifterSent + parentSent > 0) {
+    log(`precharge notices sent: ${gifterSent} gifter, ${parentSent} parent`, WORKER_SOURCE);
+  }
+}
+
 export async function runRecurringContributionWorker(log: LogFn = () => undefined): Promise<void> {
   if (workerRunning) return;
   workerRunning = true;
@@ -876,7 +1240,10 @@ export async function runRecurringContributionWorker(log: LogFn = () => undefine
     await processParentContributions(log);
     await processGifterRecurring(log);
     await processGifterRecurringDunning(log);
+    await processRecurringRequestFulfillment(log);
     await processAnniversaryMilestones(log);
+    // Future charges only (disjoint from the due-now charge passes above).
+    await processPrechargeNotices(log);
   } catch (err) {
     log(`recurring contribution worker failed: ${String(err)}`, WORKER_SOURCE);
   } finally {

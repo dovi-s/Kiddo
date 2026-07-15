@@ -1,5 +1,6 @@
 import { getUncachableStripeClient, getStripePublishableKey } from './stripeClient';
 import type Stripe from 'stripe';
+import { shouldSilenceForFund } from './memorialized';
 import {
   calculateKoraContributionFee,
   getGiftAddOn,
@@ -23,6 +24,13 @@ export interface GiftCheckoutParams {
   photoUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
+  // Gifter opted to seal their note/voice until the child's 18th birthday.
+  voiceSealUntil18?: boolean;
+  // C3: when set, the gift media was persisted server-side under this opaque
+  // token and the media URLs are OMITTED from Stripe metadata (the webhook
+  // hydrates them back from the token). When unset, the URLs ride in metadata
+  // as before. See stripeMediaTokenFlag.ts.
+  mediaToken?: string;
   coverFees: boolean;
   hasLegacyPremiumEventCoverage?: boolean;
   hasEventBoost?: boolean;
@@ -182,6 +190,58 @@ export class StripeService {
     return await this.createCustomer(email, name, userId ? { userId } : undefined);
   }
 
+  // In-app embedded checkout (CHECKOUT_IN_APP_SPEC.md) — ON-SESSION deposit. Creates a
+  // PaymentIntent with automatic_payment_methods (so card + Apple/Google Pay + Link all
+  // surface natively in the embedded Payment Element) and vaults the method for next
+  // time via setup_future_usage. Returns the client_secret; the charge is confirmed
+  // client-side with stripe.confirmPayment — NO hosted redirect. On-session = the user
+  // is present authorizing each charge, so this carries the low-risk profile (vs the
+  // off-session capture-at-intent path, which stays counsel-gated).
+  async createDepositPaymentIntent(params: { customerId: string; amountCents: number; metadata?: Record<string, string> }): Promise<Stripe.PaymentIntent> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.paymentIntents.create({
+      amount: params.amountCents,
+      currency: 'usd',
+      customer: params.customerId,
+      automatic_payment_methods: { enabled: true },
+      setup_future_usage: 'off_session',
+      // source:'in_app' is the double-credit GUARD: the embedded flow has no Checkout
+      // Session, so it must fulfill via payment_intent.succeeded — but that event ALSO
+      // fires on the hosted path. When settlement is wired, handlePaymentIntentSucceeded
+      // must credit ONLY PIs carrying this tag (and stay idempotent), or every hosted
+      // gift double-credits. See _TANDEM_webhook_double_credit_HANDOFF.md.
+      metadata: { type: 'in_app_deposit', source: 'in_app', ...(params.metadata || {}) },
+    });
+  }
+
+  // Saved cards for the "pay with •••• 4242 / one tap" returning-user UI.
+  async listSavedPaymentMethods(customerId: string): Promise<Stripe.PaymentMethod[]> {
+    const stripe = await getUncachableStripeClient();
+    const res = await stripe.paymentMethods.list({ customer: customerId, type: 'card' });
+    return res.data;
+  }
+
+  // RETURN-USER ONE TAP — charge a saved method with NO element/form. The user is
+  // present and just tapped, so on-session (off_session:false). May come back
+  // requires_action for 3DS/SCA — the client finishes via stripe.handleNextAction.
+  // allow_redirects:'never' keeps it fully in-app. This is the loop-compounding path:
+  // every charge after the first is one tap.
+  async chargeSavedMethodOnSession(params: { customerId: string; paymentMethodId: string; amountCents: number; metadata?: Record<string, string> }): Promise<Stripe.PaymentIntent> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.paymentIntents.create({
+      amount: params.amountCents,
+      currency: 'usd',
+      customer: params.customerId,
+      payment_method: params.paymentMethodId,
+      off_session: false,
+      confirm: true,
+      automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      // source:'in_app' — see createDepositPaymentIntent: the embedded-only fulfillment
+      // guard so wiring PI settlement never double-credits the hosted path.
+      metadata: { type: 'in_app_deposit_onetap', source: 'in_app', ...(params.metadata || {}) },
+    });
+  }
+
   // P0-1 "capture money at intent" (Option C: vault-and-charge-later).
   // Hosted setup-mode Checkout that saves the gifter's card for a future
   // OFF-SESSION charge at pairing — no money is charged or held now. We use
@@ -210,6 +270,13 @@ export class StripeService {
   // pairing). Throws on decline (StripeCardError) — callers must catch and fall
   // back. Gated upstream by isGifterCaptureAtIntentEnabled().
   async chargeGifterOffSession(params: { customerId: string; paymentMethodId: string; amountCents: number; metadata?: Record<string, string>; idempotencyKey?: string }): Promise<Stripe.PaymentIntent> {
+    // Bereavement freeze (defense in depth): never charge a gifter for a
+    // memorialized fund. The caller (giftIntentSettlement) gates this gracefully;
+    // this last-line guard refuses even if a future caller forgets. Fund id rides
+    // in metadata.fundId. See BEREAVEMENT_POSTURE.md.
+    if (await shouldSilenceForFund(params.metadata?.fundId)) {
+      throw new Error("bereavement_silenced: gifter off-session charge refused for a memorialized fund");
+    }
     const stripe = await getUncachableStripeClient();
     return await stripe.paymentIntents.create(
       {
@@ -443,9 +510,15 @@ export class StripeService {
         senderName: params.senderName.slice(0, 100),
         senderEmail: params.senderEmail || '',
         message: (params.message || '').slice(0, 490),
-        photoUrl: (params.photoUrl || '').slice(0, 2000),
-        videoUrl: (params.videoUrl || '').slice(0, 2000),
-        audioUrl: (params.audioUrl || '').slice(0, 2000),
+        // C3: omit child media URLs when persisted server-side under a token
+        // (the webhook hydrates them back from mediaToken). Legacy path keeps
+        // the URLs inline when no token.
+        photoUrl: params.mediaToken ? '' : (params.photoUrl || '').slice(0, 2000),
+        videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
+        audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
+        mediaToken: params.mediaToken || '',
+        // Seal the gift's note/voice until the child's 18th (default off).
+        voiceSealUntil18: params.voiceSealUntil18 ? 'true' : 'false',
         baseAmount: params.amount.toString(),
         processingFee: fees.processingFee.toString(),
         koraFee: fees.koraFee.toString(),
@@ -479,9 +552,12 @@ export class StripeService {
           senderName: params.senderName,
           senderEmail: params.senderEmail || '',
           message: (params.message || '').slice(0, 490),
-          photoUrl: (params.photoUrl || '').slice(0, 2000),
-          videoUrl: (params.videoUrl || '').slice(0, 2000),
-          audioUrl: (params.audioUrl || '').slice(0, 2000),
+          // C3: see the checkout-session metadata block above.
+          photoUrl: params.mediaToken ? '' : (params.photoUrl || '').slice(0, 2000),
+          videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
+          audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
+          mediaToken: params.mediaToken || '',
+          voiceSealUntil18: params.voiceSealUntil18 ? 'true' : 'false',
           baseAmount: params.amount.toString(),
           processingFee: fees.processingFee.toString(),
           koraFee: fees.koraFee.toString(),
@@ -499,6 +575,90 @@ export class StripeService {
           isAnonymous: params.isAnonymous ? 'true' : '',
           source: params.source || 'web',
         },
+      },
+    }, params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : undefined);
+  }
+
+  // EMBEDDED in-app gift (CHECKOUT_IN_APP_SPEC.md) — the PaymentIntent twin of
+  // createGiftCheckoutSession. Same fee math, same total (the summed line_items the
+  // hosted session would charge), and BYTE-IDENTICAL gift metadata, so the guarded
+  // handlePaymentIntentSucceeded branch settles it through the exact same
+  // handleGiftPayment path. The ONE difference is `source: 'in_app'`, which (a) is the
+  // double-credit guard key — hosted gifts carry `'web'`/`'mobile'`, so the PI handler
+  // fulfills embedded-only — and (b) labels the gifts.source column. Returns the PI; the
+  // embedded element confirms it in-app with no redirect. The whole flow (rich amount
+  // step, fee picker, note, GiftSuccess payoff) is unchanged — only the redirect is gone.
+  async createGiftPaymentIntent(params: Omit<GiftCheckoutParams, 'successUrl' | 'cancelUrl'>): Promise<Stripe.PaymentIntent> {
+    const stripe = await getUncachableStripeClient();
+    const fees = this.calculateFees(
+      params.amount,
+      params.coverFees,
+      params.hasLegacyPremiumEventCoverage ?? params.hasEventBoost ?? false,
+      params.coverageStatus || "uncovered",
+      params.hostPlan || 'free',
+      params.paymentMethod,
+      params.giftAddOn || null,
+    );
+    const giftAmountCents = Math.round(fees.netToFund * 100);
+    if (giftAmountCents < 1) {
+      throw new Error("Gift amount is too low. Increase the gift amount to continue.");
+    }
+    // Same total the hosted session charges: net-to-fund + every fee line item.
+    const totalCents =
+      giftAmountCents +
+      Math.round(fees.processingFee * 100) +
+      Math.round(fees.koraBaseFee * 100) +
+      Math.round(fees.koraVariableFee * 100) +
+      Math.round(fees.koraLargeGiftFee * 100) +
+      Math.round(fees.giftAddOnFee * 100);
+
+    const senderEmail = this.isValidEmail(params.senderEmail) ? params.senderEmail!.trim() : undefined;
+    let customerId: string | undefined;
+    if (senderEmail) {
+      try {
+        customerId = (await this.getOrCreateCustomer(senderEmail, params.senderName, undefined)).id;
+      } catch (customerErr) {
+        console.error("Gift PI customer lookup failed:", customerErr);
+      }
+    }
+
+    return await stripe.paymentIntents.create({
+      amount: totalCents,
+      currency: 'usd',
+      ...(customerId ? { customer: customerId } : {}),
+      ...(senderEmail && !customerId ? { receipt_email: senderEmail } : {}),
+      automatic_payment_methods: { enabled: true },
+      description: `Gift of $${fees.netToFund.toFixed(2)} to ${params.recipientName || 'recipient'}'s investment fund via Kiddo`,
+      metadata: {
+        type: 'gift',
+        fundId: params.fundId,
+        fundUserId: params.fundUserId || '',
+        eventId: params.eventId || '',
+        senderName: params.senderName,
+        senderEmail: params.senderEmail || '',
+        message: (params.message || '').slice(0, 490),
+        photoUrl: params.mediaToken ? '' : (params.photoUrl || '').slice(0, 2000),
+        videoUrl: params.mediaToken ? '' : (params.videoUrl || '').slice(0, 2000),
+        audioUrl: params.mediaToken ? '' : (params.audioUrl || '').slice(0, 2000),
+        mediaToken: params.mediaToken || '',
+        // Seal the gift's note/voice until the child's 18th (default off).
+        voiceSealUntil18: params.voiceSealUntil18 ? 'true' : 'false',
+        baseAmount: params.amount.toString(),
+        processingFee: fees.processingFee.toString(),
+        koraFee: fees.koraFee.toString(),
+        koraBaseFee: fees.koraBaseFee.toString(),
+        koraVariableFee: fees.koraVariableFee.toString(),
+        koraLargeGiftFee: fees.koraLargeGiftFee.toString(),
+        giftAddOn: fees.giftAddOnId,
+        giftAddOnFee: fees.giftAddOnFee.toString(),
+        giftAddOnName: fees.giftAddOnName,
+        netToFund: fees.netToFund.toString(),
+        executionModel: params.executionModel || 'auto',
+        selectedTicker: params.selectedTicker || '',
+        isParentContribution: params.isParentContribution ? 'true' : '',
+        parentContributionId: params.parentContributionId || '',
+        isAnonymous: params.isAnonymous ? 'true' : '',
+        source: 'in_app',
       },
     }, params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : undefined);
   }

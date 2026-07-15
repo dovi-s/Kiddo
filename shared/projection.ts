@@ -44,6 +44,27 @@ export const PROJECTION_AUM_FEE_RATE = 0.001;
  */
 export const PROJECTION_DEFAULT_ANNUAL_RATE = 0.07;
 
+/**
+ * Canonical projection disclaimers. ONE source of truth for the regulated
+ * "how we got this number" copy, mirroring the one-function rule above.
+ *
+ * The honest framing the math actually implements: the 7% is the historical
+ * REAL (after-inflation) average for broad equities, so growing at it yields a
+ * value already in TODAY'S dollars (purchasing power now, not an inflated future
+ * figure). That is the real answer to "why not show ~10% like the S&P?" — 10% is
+ * the NOMINAL average; we show the real figure so the number means something.
+ * The 0.10% AUM fee is netted into the headline (we don't show gross then
+ * disclaim the fee in fine print). Never assert certainty markets don't give.
+ *
+ * Use PROJECTION_DISCLAIMER for fine-print / dedicated projection surfaces;
+ * PROJECTION_DISCLAIMER_SHORT for tight taglines.
+ */
+export const PROJECTION_DISCLAIMER =
+  "Projections use a ~7% average annual return after inflation, so figures are in today's dollars, net of Kiddo's 0.10% annual fee. The S&P 500 has historically averaged closer to 10% before inflation. Markets vary; returns are never guaranteed, and past performance does not predict future results.";
+
+export const PROJECTION_DISCLAIMER_SHORT =
+  "~7% average annual return after inflation (today's dollars), net of fees. Not guaranteed.";
+
 export type ProjectFundInput = {
   /**
    * Starting principal. Typically the fund's invested + cash balance.

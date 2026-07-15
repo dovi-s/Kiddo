@@ -117,6 +117,15 @@ Apex is most enterprise. Lean Alpaca-tier unless a DriveWealth capability
 5. Do they support **gifter-pays-them-directly** (so Kiddo stays out of the flow)
    and **collecting + remitting our 0.10%**? (The structure question from gate #1.)
 6. KYC/identity-verification cost (per check)?
+7. **Regulatory shareholder communications** (ETF prospectuses, annual/semi-annual
+   reports, proxy materials for the funds held) — who delivers them, and how? These
+   are MANDATORY and no-opt-out, and at scale a vendor (Broadridge-style) sends them
+   on the broker-dealer's behalf. Confirm: (a) the BD / its vendor owns this burden +
+   liability, NOT Kiddo (a real benefit of renting the rails — the cold regulatory mail
+   is their job); (b) whether they go out under the BD's name (third-party, dry), so we
+   can set parent expectations up front and the mail doesn't undercut Kiddo's warm
+   lifecycle email; (c) any per-account cost. (Prompted by an Acorns regulatory email
+   delivered by Broadridge on behalf of Acorns Securities, 2026-06.)
 
 Exact numbers aren't public and shift — the custodian conversation is where the
 ranges above become quotes. Walk in with this checklist.

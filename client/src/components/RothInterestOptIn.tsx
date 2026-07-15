@@ -66,6 +66,15 @@ export function RothInterestOptIn({ childName, className }: RothInterestOptInPro
       if (!response.ok) {
         throw new Error(`${response.status}`);
       }
+      // Demo accounts get a 200 { demo, saved:false } no-op — don't leave the
+      // toggle showing a saved opt-in the server never persisted. Revert and
+      // surface honestly via the existing error line.
+      const data = await response.json().catch(() => null);
+      if (data?.demo === true && data?.saved === false) {
+        setOptedIn(!next);
+        setError(data.message || "Saved only in your own fund, not the demo.");
+        return;
+      }
     } catch (e) {
       // Revert on failure; let the parent retry by tapping again.
       setOptedIn(!next);
@@ -94,7 +103,7 @@ export function RothInterestOptIn({ childName, className }: RothInterestOptInPro
               optedIn ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
             }`}
           >
-            {optedIn ? <Check size={16} strokeWidth={2.5} /> : <Bell size={16} strokeWidth={1.8} />}
+            {optedIn ? <Check size={16} strokeWidth={2.5} /> : <Bell size={16} strokeWidth={2} />}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">

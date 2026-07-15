@@ -2,7 +2,10 @@ import React from "react";
 import * as Notifications from "expo-notifications";
 import { ActivityIndicator, AppState, AppStateStatus, Linking, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { colors, radius, spacing } from "@kora/tokens";
+import { queryClient } from "./src/queryClient";
 import { elevate, loadBrandFonts } from "./src/ui";
 import { appCopy } from "@kora/content";
 import type { OnboardingAccountType, OnboardingInvestmentChoice, OnboardingStep, PublicGiftDestination } from "@kora/types";
@@ -10,14 +13,13 @@ import type { OnboardingAccountType, OnboardingInvestmentChoice, OnboardingStep,
 import { GhostButton, PrimaryButton } from "./src/Buttons";
 import { ChoiceCard } from "./src/ChoiceCard";
 import { ScreenLead } from "./src/ScreenLead";
-import { AddFundScreen } from "./src/screens/AddFundScreen";
 import { AuthScreen } from "./src/screens/AuthScreen";
-import { DashboardScreen } from "./src/screens/DashboardScreen";
-import { FundDetailScreen } from "./src/screens/FundDetailScreen";
 import { GiftLinkEntryScreen } from "./src/screens/GiftLinkEntryScreen";
 import { GifterFlowScreen } from "./src/screens/GifterFlowScreen";
 import { LockScreen } from "./src/screens/LockScreen";
+import { RootNavigator } from "./src/navigation/RootNavigator";
 import { PrivacyOverlay } from "./src/components/PrivacyOverlay";
+import { ConnectivityBanner } from "./src/components/ConnectivityBanner";
 
 import { apiGetFunds, apiGetPublicGiftDestination, apiGetUser, apiLogout, type ApiFund, type ApiUser } from "./src/api";
 import {
@@ -36,9 +38,10 @@ type Screen =
   | { name: "gifter_resolving"; identifier: string }
   | { name: "onboard"; step: OnboardStep; accountType: OnboardingAccountType; investment: OnboardingInvestmentChoice; ticker: string }
   | { name: "auth" }
-  | { name: "dashboard"; user: ApiUser }
-  | { name: "fund_detail"; user: ApiUser; fund: ApiFund }
-  | { name: "add_fund"; user: ApiUser }
+  // The authenticated app shell. Fund detail / add fund / future detail
+  // screens are now pushed inside RootNavigator's native stack, not separate
+  // top-level screens. `initialFund` deep-links straight to a fund detail.
+  | { name: "app"; user: ApiUser; initialFund?: ApiFund }
   | { name: "gifter_entry" }
   | { name: "gifter_flow"; identifier: string; destination: PublicGiftDestination }
   // Smart-lock interstitial. Carries the screen to restore once
@@ -63,7 +66,7 @@ function buildDefaultOnboardScreen(): Screen {
 // boot_error / locked itself are also excluded (locking a locked
 // screen would loop).
 function isLockableScreen(s: Screen): boolean {
-  return s.name === "dashboard" || s.name === "fund_detail" || s.name === "add_fund";
+  return s.name === "app";
 }
 
 const STATIC_ROUTE_PREFIXES = new Set([
@@ -242,14 +245,14 @@ function AppContent() {
         const funds = await apiGetFunds();
         const matchedFund = funds.find((fund) => fund.id === identifier || fund.slug === identifier);
         if (matchedFund) {
-          await gotoAuthenticatedScreen({ name: "fund_detail", user, fund: matchedFund });
+          await gotoAuthenticatedScreen({ name: "app", user, initialFund: matchedFund });
           return true;
         }
       } catch {
         // Fall back to dashboard when a deep-linked fund cannot be resolved.
       }
 
-      await gotoAuthenticatedScreen({ name: "dashboard", user });
+      await gotoAuthenticatedScreen({ name: "app", user });
       return false;
     },
     [gotoAuthenticatedScreen],
@@ -276,7 +279,7 @@ function AppContent() {
         return true;
       }
 
-      await gotoAuthenticatedScreen({ name: "dashboard", user });
+      await gotoAuthenticatedScreen({ name: "app", user });
       return true;
     },
     [gotoAuthenticatedScreen, openFundDetailFromIdentifier, openGiftDestination],
@@ -295,7 +298,7 @@ function AppContent() {
 
           const user = await apiGetUser();
           if (user) {
-            await gotoAuthenticatedScreen({ name: "dashboard", user });
+            await gotoAuthenticatedScreen({ name: "app", user });
             return;
           }
           setScreen({ name: "auth" });
@@ -343,7 +346,7 @@ function AppContent() {
           // in the locked interstitial inside gotoAuthenticatedScreen
           // when biometric is enabled.
           await clearLastActive().catch(() => undefined);
-          await gotoAuthenticatedScreen({ name: "dashboard", user });
+          await gotoAuthenticatedScreen({ name: "app", user });
         } else {
           setScreen(buildDefaultOnboardScreen());
         }
@@ -355,7 +358,15 @@ function AppContent() {
       }
     }
 
-    const t = setTimeout(() => void boot().catch(() => {}), 600);
+    const t = setTimeout(
+      () =>
+        void boot().catch(() => {
+          // Last-resort guard: any unexpected throw in boot must never strand
+          // the user on the splash screen. Fall through to onboarding.
+          if (active) setScreen(buildDefaultOnboardScreen());
+        }),
+      600,
+    );
     return () => {
       active = false;
       clearTimeout(t);
@@ -469,41 +480,19 @@ function AppContent() {
     return (
       <>
         <StatusBar barStyle="dark-content" />
-        <AuthScreen onAuth={(user) => setScreen({ name: "dashboard", user })} />
+        <AuthScreen onAuth={(user) => setScreen({ name: "app", user })} />
       </>
     );
   }
 
-  if (screen.name === "dashboard") {
+  if (screen.name === "app") {
     return (
       <>
         <StatusBar barStyle="dark-content" />
-        <DashboardScreen
+        <RootNavigator
           user={screen.user}
+          initialFund={screen.initialFund}
           onLogout={() => setScreen(buildDefaultOnboardScreen())}
-          onSelectFund={(fund) => setScreen({ name: "fund_detail", user: screen.user, fund })}
-          onAddFund={() => setScreen({ name: "add_fund", user: screen.user })}
-        />
-      </>
-    );
-  }
-
-  if (screen.name === "fund_detail") {
-    return (
-      <>
-        <StatusBar barStyle="dark-content" />
-        <FundDetailScreen fund={screen.fund} onBack={() => setScreen({ name: "dashboard", user: screen.user })} />
-      </>
-    );
-  }
-
-  if (screen.name === "add_fund") {
-    return (
-      <>
-        <StatusBar barStyle="dark-content" />
-        <AddFundScreen
-          onBack={() => setScreen({ name: "dashboard", user: screen.user })}
-          onCreated={(fund) => setScreen({ name: "fund_detail", user: screen.user, fund })}
         />
       </>
     );
@@ -643,19 +632,26 @@ export default function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <AppContent />
-        {/* PrivacyOverlay sits OUTSIDE AppContent on purpose. It needs
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundary>
+          <SafeAreaProvider>
+            <AppContent />
+            {/* PrivacyOverlay sits OUTSIDE AppContent on purpose. It needs
             to be the last child of SafeAreaProvider so it renders on
             top of every screen via z-index + absolute positioning. Its
             AppState listener is independent of the rest of the app's
             navigation state, which is correct — it should fire on
             inactive/background regardless of which screen the user is
             on. Per FACE_ID_SPEC.md app-switcher privacy item. */}
-        <PrivacyOverlay />
-      </SafeAreaProvider>
-    </ErrorBoundary>
+            {/* Slides in whenever the API is unreachable; auto-hides on the
+                next successful request. Top-level so it overlays every screen. */}
+            <ConnectivityBanner />
+            <PrivacyOverlay />
+          </SafeAreaProvider>
+        </ErrorBoundary>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 

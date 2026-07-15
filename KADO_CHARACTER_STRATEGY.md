@@ -1,8 +1,14 @@
-# Kado Character Strategy
+# Kiddo Character Strategy
+
+> Parent doc: [BRAND_IDENTITY.md](./BRAND_IDENTITY.md) is the source of truth for
+> the overall identity (the two-tier system, the sprout glyph, the two character
+> fidelities). This doc is the detailed **placement rulebook** for the character
+> within the warmth tier: where it appears, where it must not, and the emotional
+> range. The two stay in sync.
 
 ## Decision
 
-The Kado character is a product element, not the brand itself.
+The Kiddo character is a product element, not the brand itself.
 
 The logo remains the primary trust mark.
 The character exists to add warmth, encouragement, and celebration inside the product.
@@ -11,13 +17,13 @@ This decision is binding for v1: the character should support moments, not lead 
 
 ## Why
 
-Kado is a children's investing and gifting product.
+Kiddo is a children's investing and gifting product.
 That means it needs:
 - emotional warmth
 - but also financial trust
 
 Making the character the whole brand would create unnecessary trust risk.
-Using the character as a product element gives Kado warmth without weakening credibility.
+Using the character as a product element gives Kiddo warmth without weakening credibility.
 
 ## Naming
 
@@ -26,9 +32,9 @@ The character does not need a public-facing name right now.
 Guidance:
 - internal codename is fine
 - user-facing copy should not require users to "meet" the character
-- externally it should simply function as the Kado character
+- externally it should simply function as the Kiddo character
 - do not use "Pip says" or other named-character framing in public product copy
-- default alt text should be "Kado character"
+- default alt text should be "Kiddo character"
 
 ## Where It Should Appear
 
@@ -78,13 +84,13 @@ The character should be:
 - warm rather than childish
 - expressive without needing words
 - readable at small and large sizes
-- compatible with Kado's gold-forward system
+- compatible with Kiddo's gold-forward system
 
 It should not feel like:
 - a cartoon mascot for kids only
 - a joke inside a serious product
 - a replacement for the logo
-- a named assistant users must understand before using Kado
+- a named assistant users must understand before using Kiddo
 
 ## Emotion Set
 
@@ -120,7 +126,7 @@ Don't:
 
 ### Phase 1: Clean Up
 - Remove public named-character copy.
-- Set shared alt text to "Kado character."
+- Set shared alt text to "Kiddo character."
 - Remove the character from FAQ/blog-leading positions.
 - Keep mascot usage in child view, gift success, and select empty states.
 
@@ -141,11 +147,16 @@ Don't:
 ## Implementation References
 
 Current repo surfaces related to the character:
-- [mascot.tsx](/abs/path/c:/Apps/Kora%20(newest)/client/src/components/ui/mascot.tsx)
-- [mascot-moment.tsx](/abs/path/c:/Apps/Kora%20(newest)/client/src/components/ui/mascot-moment.tsx)
-- [brand-assets.ts](/abs/path/c:/Apps/Kora%20(newest)/client/src/lib/brand-assets.ts)
-- [KidView.tsx](/abs/path/c:/Apps/Kora%20(newest)/client/src/pages/KidView.tsx)
-- [Send.tsx](/abs/path/c:/Apps/Kora%20(newest)/client/src/pages/Send.tsx)
+- `client/src/components/ui/mascot.tsx`
+- `client/src/components/ui/mascot-moment.tsx`
+- `client/src/lib/brand-assets.ts`
+- `client/src/pages/KidView.tsx`
+- `client/src/pages/Send.tsx`
+
+The atomic mark (the unifying piece) lives in:
+- `client/public/sprout-glyph.svg` (vector source of truth)
+- `client/src/components/ui/sprout-glyph.tsx` (`<SproutGlyph>` in-app)
+- `script/gen-brand-icons.mjs` (regenerates the raster icon set)
 
 ## Final Rule
 

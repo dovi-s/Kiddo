@@ -145,7 +145,61 @@ These are directional targets, not hard-coded promises:
 
 - A/B test top-performing touchpoints
 - measure median time from first gift to parent fund creation
-- use results to decide whether referral incentives should sit on top of the loop
+
+(Referral incentives are settled, not a Month-3 question: gifters never pay and
+we never pay anyone to refer — gifters, parents, or kids. Bounties kill the
+trusted-family authenticity the loop runs on.)
+
+## Kid-Pull — the arrow that runs through the household (noted 2026-06-05)
+
+The loops above all start with an adult. There is a fourth arrow: **the kid
+recruits the family.** It is the one acquisition channel an incumbent cannot
+buy — EarlyBird paid $200+ to interrupt a parent with an ad; a kid asking at
+the dinner table costs $0 and arrives via the most trusted messenger alive.
+Precedent is real: Step and Current grew largely on teens pulling parents in;
+Greenlight gets a meaningful share of signups from the kid asking first.
+
+**The hook mechanism is witnessed compounding.** A kid who watches their own
+$1k become $2k — real money, their name on it — gets an imprint no classroom
+or ad can produce. That single experience is simultaneously:
+
+- **acquisition** — it's the thing the kid shows a friend ("look, it doubled"),
+  and the friend goes home and asks;
+- **retention** — the don't-cash-out-at-18 case, made visceral years before 18
+  (see `COMPOUNDING_NARRATIVE_NOTE.md`: Kid View + the handoff view);
+- **the prize, sharpened** — the 18-year-old we hand off isn't just funded and
+  trusting; they're the only person their age with *lived* proof that patience
+  pays. That's what Robinhood is paying CAC for and can't manufacture.
+
+### Discipline (hard lines)
+
+- **Never incentivize a minor. Ever.** No kid referral codes, no rewards for
+  showing friends, nothing program-shaped aimed at a child (COPPA/CARU
+  territory + brand poison for a trust anchor). The existing no-bounty rule,
+  extended to its third rail.
+- **Product-shaped only.** The mechanic is "Kid View is genuinely worth showing
+  a friend," never "share with a friend, kid!"
+- **Honest about drawdowns.** A kid can also watch $1k become $800. Kid View's
+  compounding framing must teach time-in-market (per the compounding note's
+  guardrails), or a bear year imprints the opposite lesson.
+
+### Today's three expressions (nothing new to build for launch)
+
+1. **Kid View showability** — design value, not a feature: the growth-over-time
+   view is the show-and-tell artifact.
+2. **The handoff sibling doorway** — the sharpest "kid tells parent" is the
+   18-year-old telling *their* parents "do this for my little brother." The
+   owner-mode "Start one for someone you love" doorway already ships this.
+3. **Creator briefs** — family-channel content where the kid on camera is the
+   excited one does kid-pull at scale, with zero data collected from children.
+   An angle for the outreach kit, not a product feature.
+
+### Honest constraint
+
+Kid-pull is **age-gated**: it needs a kid old enough to have agency and a
+surface to show. The wedge cohort skews young, so this channel matures with
+the book — same shape as SEO: plant now, harvest in years. It must not touch
+the funded-k test or add launch scope.
 
 ## What Not To Do Yet
 

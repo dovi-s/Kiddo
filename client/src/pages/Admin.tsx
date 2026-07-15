@@ -50,6 +50,16 @@ function asArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+// Some mutation endpoints answer 200 OK with { saved:false } / { ok:false } /
+// { updated:false } when nothing actually changed (a demo/no-op account, or a
+// write that matched no row). Treat that as a failure so action handlers don't
+// report fake success.
+function assertServerSaved(body: any) {
+  if (body && (body.saved === false || body.ok === false || body.updated === false)) {
+    throw new Error(body.message || body.error || "The server did not apply the change.");
+  }
+}
+
 function toRowsPayload<T = any>(payload: any): { rows: T[]; degraded?: boolean; queryErrors?: string[] } {
   if (Array.isArray(payload)) return { rows: payload };
   return {
@@ -158,7 +168,11 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  // The anchor must be in the DOM for the click to trigger a download in
+  // Firefox/Safari; a detached anchor's click is a silent no-op there.
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 }
 
@@ -211,7 +225,7 @@ function PercentBar({ label, pct, sub, color = "primary" }: { label: string; pct
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div className={`h-full ${barColor[color] || barColor.primary}`} style={{ width: `${safe}%` }} />
       </div>
-      {sub ? <p className="text-[11px] text-muted-foreground mt-1">{sub}</p> : null}
+      {sub ? <p className="text-2xs text-muted-foreground mt-1">{sub}</p> : null}
     </div>
   );
 }
@@ -344,7 +358,10 @@ function RowActionsMenu({ children, label = "Open actions" }: { children: ReactN
 function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoint: string; onClose: () => void }) {
   const [showRaw, setShowRaw] = useState(false);
   const { user } = useAuth();
-  const isSuperAdmin = Boolean((user as any)?.isSuperAdmin);
+  // Match the rest of the panel: super-admin is recognized by the flag OR the
+  // email allow-list. Using the bare flag here left email-only super-admins
+  // with these action buttons disabled while enabled everywhere else.
+  const isSuperAdmin = isSuperAdminUser(user as any);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useQuery<any>({
     queryKey: [endpoint],
@@ -396,6 +413,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body as any)?.error || "Update failed");
+    assertServerSaved(body);
   };
 
   const postJson = async (url: string) => {
@@ -405,6 +423,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body as any)?.error || "Action failed");
+    assertServerSaved(body);
   };
 
   const renderTable = (
@@ -466,7 +485,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {summaryEntries.slice(0, 12).map(([k, v]) => (
                     <div key={k} className="bg-muted/30 border border-border/50 rounded-lg p-2">
-                      <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{k.replace(/_/g, " ")}</p>
+                      <p className="text-2xs text-muted-foreground uppercase tracking-wide">{k.replace(/_/g, " ")}</p>
                       <p className="text-sm font-medium">{typeof v === "number" ? (String(k).includes("amount") || String(k).includes("value") || String(k).includes("total") ? fmt(v) : fmtNum(v)) : String(v ?? "-")}</p>
                     </div>
                   ))}
@@ -478,7 +497,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   <div className="bg-card rounded-xl border border-border/50 p-3">
                     <div className="flex flex-wrap gap-2">
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-50"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-50"
                         onClick={() => runAction(
                           data?.user?.is_admin ? "Remove admin role" : "Grant admin role",
                           () => patchJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}`, { isAdmin: !Boolean(data?.user?.is_admin) }),
@@ -489,26 +508,26 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                         {data?.user?.is_admin ? "Remove admin" : "Make admin"}
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => runAction("Approve KYC", () => patchJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}`, { kycStatus: "approved" }))}
                       >
                         KYC approve
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => runAction("Set free plan", () => patchJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/subscription`, { plan: "free", status: "active", billingInterval: "none" }))}
                       >
                         Set free
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => runAction("Set family plan", () => patchJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/subscription`, { plan: "family", status: "active" }))}
                       >
                         Set family
                       </button>
                       {data?.user?.sub_plan === "family" && data?.user?.stripe_subscription_id && (
                         <button
-                          className="text-[11px] px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
+                          className="text-2xs px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
                           onClick={() => runAction("Resync from Stripe", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/subscription/sync-stripe`))}
                         >
                           Resync Stripe
@@ -575,7 +594,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                           <div className="flex flex-wrap gap-1">
                             {membershipStatus === "active" ? (
                               <button
-                                className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                                className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                                 onClick={() => runAction(
                                   "Cancel Kiddo+",
                                   () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/fund-memberships/${encodeURIComponent(String(r?.id || ""))}/cancel`),
@@ -585,7 +604,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                               </button>
                             ) : (
                               <button
-                                className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                                className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                                 onClick={() => runAction(
                                   "Activate Kiddo+",
                                   () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/fund-memberships/${encodeURIComponent(String(r?.id || ""))}/activate`),
@@ -596,7 +615,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                             )}
                             {membership?.stripe_subscription_id || membership?.stripeSubscriptionId ? (
                               <button
-                                className="text-[11px] px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
+                                className="text-2xs px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
                                 onClick={() => runAction(
                                   "Resync Kiddo+ Stripe",
                                   () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/fund-memberships/${encodeURIComponent(String(r?.id || ""))}/sync-stripe`),
@@ -615,7 +634,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   {renderTable("Recent Gifts", data?.gifts || [], [
                     { key: "created_at", label: "Date", render: (r: any) => fmtDateTime(r.created_at) },
                     { key: "fund_name", label: "Fund" },
-                    { key: "sender_name", label: "Giver" },
+                    { key: "sender_name", label: "Gifter" },
                     { key: "status", label: "Status", render: (r: any) => <StatusBadge status={String(r.status || "")} /> },
                     { key: "net_amount", label: "Net", render: (r: any) => fmt(r.net_amount) },
                   ])}
@@ -627,33 +646,33 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   <div className="bg-card rounded-xl border border-border/50 p-3">
                     <div className="flex flex-wrap gap-2">
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => runAction("Toggle discoverability", () => patchJson(`/api/admin/funds/${encodeURIComponent(String(data?.fund?.id || ""))}`, { isDiscoverable: !Boolean(data?.fund?.is_discoverable) }))}
                       >
                         {data?.fund?.is_discoverable ? "Make private" : "Make public"}
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => runAction("Set active", () => patchJson(`/api/admin/funds/${encodeURIComponent(String(data?.fund?.id || ""))}`, { status: "active" }))}
                       >
                         Set active
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => runAction("Pause fund", () => patchJson(`/api/admin/funds/${encodeURIComponent(String(data?.fund?.id || ""))}`, { status: "paused" }))}
                       >
                         Pause
                       </button>
                       {String(fundStarterMembership?.status || "").toLowerCase() === "active" ? (
                         <button
-                          className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                          className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                           onClick={() => runAction("Cancel Kiddo+", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/cancel`))}
                         >
                           Cancel Kiddo+
                         </button>
                       ) : (
                         <button
-                          className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                          className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                           onClick={() => runAction("Activate Kiddo+", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/activate`))}
                         >
                           Activate Kiddo+
@@ -661,7 +680,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                       )}
                       {(fundStarterMembership?.stripeSubscriptionId || fundStarterMembership?.stripe_subscription_id) ? (
                         <button
-                          className="text-[11px] px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
+                          className="text-2xs px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
                           onClick={() => runAction("Resync Kiddo+ Stripe", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/sync-stripe`))}
                         >
                           Resync Kiddo+ Stripe
@@ -703,7 +722,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   </div>
                   {renderTable("Recent Gifts", data?.gifts || [], [
                     { key: "created_at", label: "Date", render: (r: any) => fmtDateTime(r.created_at) },
-                    { key: "sender_name", label: "Giver" },
+                    { key: "sender_name", label: "Gifter" },
                     { key: "status", label: "Status", render: (r: any) => <StatusBadge status={String(r.status || "")} /> },
                     { key: "execution_model", label: "Model" },
                     { key: "net_amount", label: "Net", render: (r: any) => fmt(r.net_amount) },
@@ -729,19 +748,19 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                 <div className="bg-card rounded-xl border border-border/50 p-3">
                   <div className="mb-3 flex flex-wrap gap-2">
                     <button
-                      className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                      className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                       onClick={() => runAction("Set invested", () => patchJson(`/api/admin/gifts/${encodeURIComponent(String(data?.id || ""))}`, { status: "invested" }))}
                     >
                       Set invested
                     </button>
                     <button
-                      className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                      className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                       onClick={() => runAction("Set settled", () => patchJson(`/api/admin/gifts/${encodeURIComponent(String(data?.id || ""))}`, { status: "settled" }))}
                     >
                       Set settled
                     </button>
                     <button
-                      className="text-[11px] px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="text-2xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
                       onClick={() => runAction("Mark failed", () => patchJson(`/api/admin/gifts/${encodeURIComponent(String(data?.id || ""))}`, { status: "failed" }), "Mark this gift as failed?")}
                       disabled={!isSuperAdmin}
                       title={!isSuperAdmin ? "Super admin required" : undefined}
@@ -769,13 +788,13 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                 <div className="bg-card rounded-xl border border-border/50 p-3">
                   <div className="mb-3 flex flex-wrap gap-2">
                     <button
-                      className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                      className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                       onClick={() => runAction("Set completed", () => patchJson(`/api/admin/transactions/${encodeURIComponent(String(data?.id || ""))}`, { status: "completed", failureReason: null }))}
                     >
                       Set completed
                     </button>
                     <button
-                      className="text-[11px] px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="text-2xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
                       onClick={() => runAction("Set failed", () => patchJson(`/api/admin/transactions/${encodeURIComponent(String(data?.id || ""))}`, { status: "failed", failureReason: "Marked failed by admin" }), "Mark this transaction failed?")}
                       disabled={!isSuperAdmin}
                       title={!isSuperAdmin ? "Super admin required" : undefined}
@@ -783,7 +802,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                       Set failed
                     </button>
                     <button
-                      className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-50"
+                      className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-50"
                       onClick={() => runAction("Set refunded", () => patchJson(`/api/admin/transactions/${encodeURIComponent(String(data?.id || ""))}`, { status: "refunded" }), "Mark this transaction refunded?")}
                       disabled={!isSuperAdmin}
                       title={!isSuperAdmin ? "Super admin required" : undefined}
@@ -811,7 +830,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   <div className="bg-card rounded-xl border border-border/50 p-3">
                     <div className="flex flex-wrap gap-2">
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => {
                           const rows = (data?.funds || []).map((r: any) => [
                             r.fund_id,
@@ -830,7 +849,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                         Export funds CSV
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => {
                           const rows = (data?.gifts || []).map((r: any) => [
                             r.id,
@@ -856,7 +875,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                         Export gift history CSV
                       </button>
                       <button
-                        className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                        className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
                         onClick={() => {
                           const rows = (data?.timeline || []).map((r: any) => [
                             r.day,
@@ -1139,23 +1158,31 @@ export default function Admin() {
     );
   }
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: "overview", label: "Overview", icon: TrendingUp },
-    { id: "funnels", label: "Funnels", icon: Activity },
-    { id: "access-review", label: "Access Review", icon: Shield },
-    { id: "loops", label: "Loops", icon: Activity },
-    { id: "users", label: "Users", icon: Users },
-    { id: "funds", label: "Funds", icon: Wallet },
-    { id: "assets", label: "Assets", icon: BarChart3 },
-    { id: "gifts", label: "Gifts", icon: Gift },
-    { id: "gifters", label: "Gifters", icon: Users },
-    { id: "transactions", label: "Transactions", icon: CreditCard },
-    { id: "moderation", label: "Moderation", icon: Shield },
-    { id: "ops", label: "Ops", icon: RefreshCw },
-    { id: "integrations", label: "Integrations", icon: Activity },
-    { id: "deliverability", label: "Deliverability", icon: Activity },
-    { id: "audit", label: "Audit", icon: Shield },
-    { id: "config", label: "Config", icon: Shield },
+  // Grouped for scannability. Order + `group` only drive the visual clustering
+  // of the tab bar — the tab ids, the activeTab switch, and the deep-link
+  // allow-list are unchanged, so routing/deep-links are unaffected.
+  const tabs: { id: Tab; label: string; icon: any; group: string }[] = [
+    // Growth & loop
+    { id: "overview", label: "Overview", icon: TrendingUp, group: "Growth" },
+    { id: "funnels", label: "Funnels", icon: Activity, group: "Growth" },
+    { id: "loops", label: "Loops", icon: Activity, group: "Growth" },
+    // Accounts & money
+    { id: "users", label: "Users", icon: Users, group: "Money" },
+    { id: "funds", label: "Funds", icon: Wallet, group: "Money" },
+    { id: "gifts", label: "Gifts", icon: Gift, group: "Money" },
+    { id: "gifters", label: "Gifters", icon: Users, group: "Money" },
+    { id: "transactions", label: "Transactions", icon: CreditCard, group: "Money" },
+    { id: "assets", label: "Assets", icon: BarChart3, group: "Money" },
+    // Trust & safety
+    { id: "moderation", label: "Moderation", icon: Shield, group: "Safety" },
+    { id: "access-review", label: "Access Review", icon: Shield, group: "Safety" },
+    { id: "audit", label: "Audit", icon: Shield, group: "Safety" },
+    // Ops & infra
+    { id: "ops", label: "Ops", icon: RefreshCw, group: "Ops" },
+    { id: "integrations", label: "Integrations", icon: Activity, group: "Ops" },
+    { id: "deliverability", label: "Deliverability", icon: Activity, group: "Ops" },
+    // Config
+    { id: "config", label: "Config", icon: Shield, group: "Config" },
   ];
 
   return (
@@ -1180,21 +1207,28 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex gap-1 -mb-px overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => goTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid={`tab-${tab.id}`}
-              >
-                <tab.icon size={15} />
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map((tab, i) => {
+              const startsGroup = i > 0 && tabs[i - 1].group !== tab.group;
+              return (
+                <div key={tab.id} className="flex items-center">
+                  {startsGroup && (
+                    <span className="mx-1.5 h-5 w-px shrink-0 self-center bg-border/70" aria-hidden="true" />
+                  )}
+                  <button
+                    onClick={() => goTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    <tab.icon size={15} />
+                    {tab.label}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </header>
@@ -1303,7 +1337,7 @@ function DeliverabilityTab() {
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
+      ) : error ? null : (
         <>
           <section>
             <h3 className="text-sm font-semibold text-foreground mb-3">Active suppressions ({activeRows.length})</h3>
@@ -1325,7 +1359,7 @@ function DeliverabilityTab() {
                     {activeRows.map((r) => (
                       <tr key={r.id} className="border-t border-border" data-testid={`suppression-row-${r.id}`}>
                         <td className="px-3 py-2 font-mono text-xs">{r.email}</td>
-                        <td className="px-3 py-2"><span className="rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">{r.reason}</span></td>
+                        <td className="px-3 py-2"><span className="rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide">{r.reason}</span></td>
                         <td className="px-3 py-2 text-muted-foreground">{r.source}</td>
                         <td className="px-3 py-2 text-muted-foreground">{new Date(r.suppressed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                         <td className="px-3 py-2 text-right">
@@ -1383,6 +1417,10 @@ function DeliverabilityTab() {
 function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, string>) => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Must stay ABOVE the early `if (isLoading) return` below — a hook after a
+  // conditional return changes the hook count between renders and crashes with
+  // "Rendered more hooks than during the previous render."
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const isSuperAdmin = isSuperAdminUser(user as any);
   // Overview panels are all-time aggregates; they do NOT need second-by-second
   // freshness. Auto-polling (15-60s) + refetchOnWindowFocus across 13 panels
@@ -1579,7 +1617,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
   const motionsLevers = [
     { motion: "Product-led", lever: "Acquisition", pct: Number(growth.share_to_gift_rate_pct || 0), sub: `${fmtNum(growth.shared_funds_with_gifts)} / ${fmtNum(growth.shared_funds)} shared funds`, color: "blue" as const },
     { motion: "Product-led", lever: "Monetization", pct: Number(growth.gift_completion_rate_pct || 0), sub: `${fmtNum(growth.checkout_complete_events)} / ${fmtNum(growth.checkout_start_events)} checkout`, color: "green" as const },
-    { motion: "Product-led", lever: "Retention", pct: Number(growth.recurring_adoption_afrg_pct || 0), sub: `${fmtNum(growth.afrg_with_recurring)} recurring AFRG funds`, color: "purple" as const },
+    { motion: "Product-led", lever: "Retention", pct: Number(growth.recurring_adoption_afrg_pct || 0), sub: `${fmtNum(growth.afrg_with_recurring)} recurring AFRG fund${Number(growth.afrg_with_recurring) === 1 ? "" : "s"}`, color: "purple" as const },
     { motion: "Marketing-led", lever: "Acquisition", pct: visitToSharePct, sub: `${fmtNum(checkoutShares30d)} / ${fmtNum(checkoutVisits30d)} visit->share`, color: "blue" as const },
     { motion: "Marketing-led", lever: "Monetization", pct: shareToCheckoutStartPct, sub: `${fmtNum(checkoutStarts30d)} / ${fmtNum(checkoutShares30d)} share->start`, color: "amber" as const },
     { motion: "Marketing-led", lever: "Retention", pct: repeatGifterRate, sub: `${fmtNum(repeatGifters)} / ${fmtNum(totalGiftersCount)} repeat gifters`, color: "green" as const },
@@ -2000,7 +2038,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             <div className="space-y-3">
               {pmfSurvey.recentNotes.slice(0, 10).map((n: any, idx: number) => (
                 <div key={idx} className="border-l-2 border-primary/40 pl-3 py-1">
-                  <div className="flex items-center gap-2 mb-1 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-2 mb-1 text-2xs text-muted-foreground">
                     <span className="font-mono">{n.emailRedacted}</span>
                     <span>·</span>
                     <span className="capitalize">{String(n.responseLabel || n.response || "").replace(/_/g, " ")}</span>
@@ -2044,8 +2082,8 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total Revenue" value={fmt(r.totalKoraRevenue)} icon={TrendingUp} color="green" sub="All-time Kiddo earnings" />
           <StatCard label="Gift Platform Fees" value={fmt(r.giftPlatformFees)} icon={Gift} color="primary" sub="Free-plan gift fees + applicable safeguards" />
-          <StatCard label="Subscription Revenue" value={fmt((Number(r.starterPlanRevenue || 0) + Number(r.familyPlanRevenue || 0)).toString())} icon={CreditCard} color="purple" sub={`${fmtNum(s.active_paid_plans)} active paid plans`} />
-          <StatCard label="Kiddo Occasion Revenue" value={fmt(r.eventPassRevenue)} icon={Calendar} color="amber" sub={`${fmtNum(e.events_with_pass)} premium occasions`} />
+          <StatCard label="Subscription Revenue" value={fmt((Number(r.starterPlanRevenue || 0) + Number(r.familyPlanRevenue || 0)).toString())} icon={CreditCard} color="purple" sub={`${fmtNum(s.active_paid_plans)} active paid plan${Number(s.active_paid_plans) === 1 ? "" : "s"}`} />
+          <StatCard label="Kiddo Occasion Revenue" value={fmt(r.eventPassRevenue)} icon={Calendar} color="amber" sub={`${fmtNum(e.events_with_pass)} premium occasion${Number(e.events_with_pass) === 1 ? "" : "s"}`} />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mt-4">
           <StatCard label="MRR" value={fmt(r.mrr)} icon={TrendingUp} color="blue" sub="Monthly recurring run-rate" />
@@ -2114,7 +2152,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             <div>
               <p className="text-xs text-muted-foreground mb-1">Total Charged</p>
               <p className="text-xl font-bold">{fmt(chargedForDisplay)}</p>
-              <p className="text-xs text-muted-foreground">to givers</p>
+              <p className="text-xs text-muted-foreground">to gifters</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Gift Amounts</p>
@@ -2139,7 +2177,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             <div>
               <p className="text-xs text-muted-foreground mb-1">Avg Gift Size</p>
               <p className="text-xl font-bold">{fmt(g.avg_gift_size)}</p>
-              <p className="text-xs text-muted-foreground">{fmtNum(g.unique_givers)} unique givers</p>
+              <p className="text-xs text-muted-foreground">{fmtNum(g.unique_givers)} unique gifters</p>
             </div>
           </div>
         </div>
@@ -2204,7 +2242,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             Funds (AUM)
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Total AUM" value={fmt(f.total_aum)} icon={Wallet} color="green" sub={`${fmtNum(f.total_funds)} funds`} onClick={() => goTab("funds")} />
+            <StatCard label="Total AUM" value={fmt(f.total_aum)} icon={Wallet} color="green" sub={`${fmtNum(f.total_funds)} fund${Number(f.total_funds) === 1 ? "" : "s"}`} onClick={() => goTab("funds")} />
             <StatCard label="Fund Balance" value={fmt(f.total_invested)} icon={TrendingUp} color="blue" sub={`Pending: ${fmt(f.total_pending)}`} onClick={() => goTab("assets")} />
             <StatCard label="UTMA (Kids)" value={fmtNum(f.utma_funds)} icon={Users} color="amber" sub="Custodial accounts" onClick={() => goTab("funds", { accountType: "UTMA" })} />
             <StatCard label="Personal" value={fmtNum(f.personal_funds)} icon={Wallet} color="primary" sub="Adult accounts" onClick={() => goTab("funds", { accountType: "Personal" })} />
@@ -2270,6 +2308,23 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         </div>
       </section>
 
+      {/* Deep diagnostics — collapsed by default so the dashboard stays
+          glanceable. The cards above are the at-a-glance health; everything
+          below is the drill-down (UX, checkout, cohorts, pending-by-fund,
+          ops, webhooks, Stripe). */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowDiagnostics((v) => !v)}
+          className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          data-testid="toggle-diagnostics"
+        >
+          {showDiagnostics ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {showDiagnostics ? "Hide" : "Show"} detailed diagnostics
+        </button>
+      </div>
+      {showDiagnostics && (
+        <>
       <section>
         <h2 className="font-heading text-lg font-semibold mb-4 flex items-center gap-2" data-testid="heading-ux-scorecard">
           <BarChart3 size={18} />
@@ -2295,7 +2350,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             value={`${trustTooltipCtrPct.toFixed(2)}%`}
             icon={Shield}
             color={trustTooltipOpens > 0 ? "purple" : "amber"}
-            sub={`${fmtNum(trustTooltipClicks)} clicks / ${fmtNum(trustTooltipOpens)} opens`}
+            sub={`${fmtNum(trustTooltipClicks)} click${trustTooltipClicks === 1 ? "" : "s"} / ${fmtNum(trustTooltipOpens)} open${trustTooltipOpens === 1 ? "" : "s"}`}
           />
           <StatCard
             label="Reactivation Recovery"
@@ -2307,19 +2362,19 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         </div>
         <div className="grid md:grid-cols-3 gap-3 mt-3">
           <PercentBar
-            label="Visit ? Share"
+            label="Visit -> Share"
             pct={visitToSharePct}
             sub={`${fmtNum(checkoutShares30d)} / ${fmtNum(checkoutVisits30d)}`}
             color="blue"
           />
           <PercentBar
-            label="Share ? Checkout Start"
+            label="Share -> Checkout Start"
             pct={shareToCheckoutStartPct}
             sub={`${fmtNum(checkoutStarts30d)} / ${fmtNum(checkoutShares30d)}`}
             color="purple"
           />
           <PercentBar
-            label="Checkout Start ? Complete"
+            label="Checkout Start -> Complete"
             pct={checkoutStartToCompletePct}
             sub={`${fmtNum(checkoutCompletes30d)} / ${fmtNum(checkoutStarts30d)}`}
             color="green"
@@ -2345,7 +2400,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
         </div>
         <div className="grid md:grid-cols-3 gap-3 mt-3">
           <PercentBar
-            label="Checkout Start ? Complete"
+            label="Checkout Start -> Complete"
             pct={Number(checkoutDiag?.completionRatePct || 0)}
             sub={`${fmtNum(checkoutCompletes)} / ${fmtNum(checkoutStarts)}`}
             color="green"
@@ -2357,7 +2412,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             color="blue"
           />
           <PercentBar
-            label="Complete Checkout ? Invested"
+            label="Complete Checkout -> Invested"
             pct={investmentsFromCheckoutPct}
             sub={`${fmtNum(checkoutGiftsInvested)} invested vs ${fmtNum(checkoutCompletes)} complete`}
             color="purple"
@@ -2570,6 +2625,8 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
           </div>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }
@@ -2700,7 +2757,7 @@ function GrowthTab() {
           <StatCard
             label="Top Touchpoint"
             value={formatLoopTouchpointLabel(topLoopTouchpoint?.touchpoint)}
-            sub={topLoopTouchpoint ? `${fmtNum(topLoopTouchpoint?.signups || 0)} signups` : "No loop conversions yet"}
+            sub={topLoopTouchpoint ? `${fmtNum(topLoopTouchpoint?.signups || 0)} signup${Number(topLoopTouchpoint?.signups || 0) === 1 ? "" : "s"}` : "No loop conversions yet"}
             icon={TrendingUp}
             color="purple"
             onClick={topLoopTouchpoint?.touchpoint ? () => setDetailTouchpoint(String(topLoopTouchpoint.touchpoint)) : undefined}
@@ -2804,6 +2861,8 @@ function FunnelsTab() {
 
       <KFactorCard />
 
+      <MoatIndicatorsCard />
+
       <FunnelCard
         title="Parent activation"
         subtitle="Signup to first received gift on the parent's first fund."
@@ -2883,7 +2942,7 @@ function KFactorCard() {
         </div>
 
         <div className="mt-4 border-t border-border/50 pt-4">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Gifter-driven acquisition (the unpaid salesforce)</div>
+          <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Gifter-driven acquisition (the unpaid salesforce)</div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
             <KStat label="Gifter-acquired parents" value={fmtNum(Number(gifter.acquiredParents ?? 0))} />
             <KStat label="…that funded (full loop)" value={fmtNum(Number(gifter.acquiredParentsFunded ?? 0))} />
@@ -2893,7 +2952,7 @@ function KFactorCard() {
 
         {occasions.length > 0 ? (
           <div className="mt-4 border-t border-border/50 pt-4">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Which occasions spin the loop (gifters per fund)</div>
+            <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Which occasions spin the loop (gifters per fund)</div>
             <div className="space-y-1">
               {occasions.map((o: any, i: number) => (
                 <div key={i} className="flex items-center justify-between gap-3 text-xs">
@@ -2911,10 +2970,90 @@ function KFactorCard() {
   );
 }
 
+// Moat leading indicators — "is the moat FORMING?" Companion to the k-factor
+// card (gate #1 / the loop). The durable moat is at-18 RETENTION (gate #2),
+// years from proof, so this surfaces the leading indicators that predict it.
+// Identity proxies (Memory Book richness, gifter density) over vanity gift
+// count. From /api/admin/moat-indicators. See MOAT_LEADING_INDICATORS.md.
+function MoatIndicatorsCard() {
+  const { data, isLoading, isError } = useQuery<any>({
+    queryKey: ["/api/admin/moat-indicators"],
+    queryFn: async () => fetchAdminJson(`/api/admin/moat-indicators`),
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+  if (isLoading) {
+    return <div className="bg-card rounded-xl border border-border/50 px-4 py-6 text-center text-xs text-muted-foreground">Loading moat indicators…</div>;
+  }
+  if (isError || !data) return null;
+  const mb = data.memoryBook || {};
+  const gd = data.gifterDensity || {};
+  const rg = data.repeatGifting || {};
+  const sf = data.stakeFormation || {};
+  const ho = data.handoff || {};
+  const teen = data.teenOwnership || {};
+  return (
+    <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/50">
+        <h3 className="text-sm font-semibold">Moat leading indicators</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Is the moat <span className="italic">forming</span>? The durable moat is at-18 retention (gate #2), years from proof, so these predict it. Identity proxies over vanity gift count.
+        </p>
+      </div>
+      <div className="p-4 space-y-4">
+        <div>
+          <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Memory Book richness <span className="text-emerald-700">· strongest proxy</span></div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+            <KStat label="Human notes" value={fmtNum(Number(mb.totalHumanNotes ?? 0))} />
+            <KStat label="Avg notes / fund" value={Number(mb.avgNotesPerFund ?? 0).toFixed(2)} />
+            <KStat label="Rich books (5+)" value={fmtNum(Number(mb.fundsRich ?? 0))} />
+            <KStat label="Funds w/ a note" value={fmtNum(Number(mb.fundsWithAnyNote ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Gifter density (peopled-ness)</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
+            <KStat label="Avg gifters / fund" value={Number(gd.avgGiftersPerFund ?? 0).toFixed(2)} />
+            <KStat label="Peopled (3+)" value={`${fmtNum(Number(gd.fundsPeopled ?? 0))} · ${Number(gd.peopledPct ?? 0).toFixed(0)}%`} />
+            <KStat label="Funds w/ gifts" value={fmtNum(Number(gd.fundsWithGifts ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Repeat / recurring (habit)</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
+            <KStat label="Repeat gifters" value={`${fmtNum(Number(rg.repeatGifters ?? 0))} · ${Number(rg.repeatPct ?? 0).toFixed(0)}%`} />
+            <KStat label="Funds w/ recurring" value={fmtNum(Number(rg.fundsWithRecurring ?? 0))} />
+            <KStat label="Distinct gifters" value={fmtNum(Number(rg.distinctGifters ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Stake formation (the sticky zone)</div>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <KStat label="Funded funds" value={fmtNum(Number(sf.fundedFunds ?? 0))} />
+            <KStat label="Over $500" value={fmtNum(Number(sf.funds500 ?? 0))} />
+            <KStat label="Over $2,000" value={fmtNum(Number(sf.funds2k ?? 0))} />
+          </div>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <div className="text-3xs uppercase tracking-wide text-muted-foreground mb-2">Gate #2: at-18 retention (the whole ballgame)</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+            <KStat label="Funds handed off" value={fmtNum(Number(ho.handedOff ?? 0))} />
+            <KStat label="Kid View opens (30d)" value={fmtNum(Number(teen.kidViewOpens30d ?? 0))} />
+            <KStat label="Suggest-a-stock" value={fmtNum(Number(teen.suggestions ?? 0))} />
+            <KStat label="Funds w/ a suggestion" value={fmtNum(Number(teen.fundsWithSuggestion ?? 0))} />
+          </div>
+          <p className="mt-2 text-2xs text-amber-700">{ho.note}</p>
+          {teen.note ? <p className="mt-1 text-2xs text-muted-foreground">{teen.note}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function KStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-3xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-0.5 font-mono text-sm">{value}</div>
     </div>
   );
@@ -3202,7 +3341,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     ADBE: { name: "Adobe", type: "Stock", source: "stock_pick", enabled: true },
   };
   const DEFAULT_AUTO_STRATEGIES: Record<string, any> = {
-    growth: { label: "Growth Mix", allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 } },
+    growth: { label: "Growth Mix", allocations: { VTI: 0.70, VXUS: 0.30 } },
     balanced: { label: "Balanced Mix", allocations: { VTI: 0.50, VXUS: 0.25, BND: 0.25 } },
     conservative: { label: "Conservative Mix", allocations: { VTI: 0.42, VXUS: 0.18, BND: 0.40 } },
   };
@@ -3317,7 +3456,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     if (autoStrategies[key]) return;
     setAutoStrategies((prev) => ({
       ...prev,
-      [key]: { label: key, allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 } },
+      [key]: { label: key, allocations: { VTI: 0.70, VXUS: 0.30 } },
     }));
     setNewStrategy("");
     setDirty(true);
@@ -3463,7 +3602,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="font-mono text-sm font-semibold">{ticker}</span>
                 <button
-                  className="text-[11px] px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="text-2xs px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
                   onClick={() => removeUniverse(ticker)}
                   disabled={!canEdit}
                 >
@@ -3472,7 +3611,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               </div>
               <div className="grid gap-2">
                 <div>
-                  <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Name</label>
+                  <label className="text-2xs uppercase tracking-wide text-muted-foreground">Name</label>
                   <input
                     value={row?.name || ""}
                     onChange={(e) => updateUniverse(ticker, { name: e.target.value })}
@@ -3482,7 +3621,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Type</label>
+                    <label className="text-2xs uppercase tracking-wide text-muted-foreground">Type</label>
                     <select
                       value={row?.type || "Stock"}
                       onChange={(e) => updateUniverse(ticker, { type: e.target.value })}
@@ -3494,7 +3633,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Availability</label>
+                    <label className="text-2xs uppercase tracking-wide text-muted-foreground">Availability</label>
                     <select
                       value={row?.source || "stock_pick"}
                       onChange={(e) => updateUniverse(ticker, { source: e.target.value })}
@@ -3546,19 +3685,19 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               <div key={key} className="rounded-lg border border-border/60 p-3 bg-muted/10">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Key</span>
+                    <span className="text-2xs uppercase tracking-wide text-muted-foreground">Key</span>
                     <span className="font-mono text-sm">{key}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      className="text-[11px] px-2 py-1 rounded-md border border-border hover:bg-muted disabled:opacity-50"
+                      className="text-2xs px-2 py-1 rounded-md border border-border hover:bg-muted disabled:opacity-50"
                       onClick={() => normalizeAllocRows(key)}
                       disabled={!canEdit}
                     >
                       Normalize 100%
                     </button>
                     <button
-                      className="text-[11px] px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="text-2xs px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
                       onClick={() => removeStrategy(key)}
                       disabled={!canEdit}
                     >
@@ -3567,7 +3706,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                   </div>
                 </div>
                 <div className="mb-2">
-                  <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Display Label</label>
+                  <label className="text-2xs uppercase tracking-wide text-muted-foreground">Display Label</label>
                   <input value={row?.label || ""} onChange={(e) => updateStrategy(key, { label: e.target.value })} className={`${fieldClass} w-full mt-1`} disabled={!canEdit} />
                 </div>
                 <div className="space-y-2">
@@ -3601,7 +3740,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                         <span className="absolute right-2 top-1.5 text-xs text-muted-foreground">%</span>
                       </div>
                       <button
-                        className="text-[11px] px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        className="text-2xs px-2 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
                         onClick={() => {
                           const next = allocRows.filter((_, i) => i !== idx);
                           setAllocRows(key, next);
@@ -3615,7 +3754,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <button
-                    className="text-[11px] px-2 py-1 rounded-md border border-border hover:bg-muted disabled:opacity-50"
+                    className="text-2xs px-2 py-1 rounded-md border border-border hover:bg-muted disabled:opacity-50"
                     onClick={() => {
                       const next = [...allocRows, { ticker: "", weightPct: 0 }];
                       setAllocRows(key, next);
@@ -3663,6 +3802,14 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           />
         )}
       </div>
+
+      {/* Feature flags, Stripe products, and cultural stats belong to the
+          Config tab. They were previously mis-rendered inside
+          AdminDeletePreviewModal, which made them reachable only by opening a
+          user delete dialog. Restored to their intended home here. */}
+      <FeatureFlagsSection canEdit={isSuperAdmin} />
+      <StripeProductsSection canEdit={isSuperAdmin} />
+      <CulturalStatsSection />
     </div>
   );
 }
@@ -3750,7 +3897,7 @@ function AdminDeletePreviewModal({
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {Object.entries(usage).map(([key, value]) => (
                   <div key={key} className="rounded-xl border border-border/50 p-3">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{key.replace(/_/g, " ")}</div>
+                    <div className="text-2xs uppercase tracking-wide text-muted-foreground">{key.replace(/_/g, " ")}</div>
                     <div className="mt-1 text-lg font-semibold">{fmtNum(value)}</div>
                   </div>
                 ))}
@@ -3825,16 +3972,12 @@ function AdminDeletePreviewModal({
           )}
         </div>
       </div>
-
-      <FeatureFlagsSection />
-      <StripeProductsSection />
-      <CulturalStatsSection />
     </div>
   );
 }
 
 // ─── Feature flags section (Config tab) ───────────────────────────
-function FeatureFlagsSection() {
+function FeatureFlagsSection({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery<{ flags: any[]; suggestions: any[] }>({
     queryKey: ["/api/admin/feature-flags"],
@@ -3852,6 +3995,7 @@ function FeatureFlagsSection() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-flags"] }),
+    onError: (err: any) => window.alert(`Could not update flag: ${err?.message || "unknown error"}`),
   });
   const deleteFlag = useMutation({
     mutationFn: async (key: string) => {
@@ -3862,6 +4006,7 @@ function FeatureFlagsSection() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-flags"] }),
+    onError: (err: any) => window.alert(`Could not delete flag: ${err?.message || "unknown error"}`),
   });
   const [newKey, setNewKey] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -3872,9 +4017,14 @@ function FeatureFlagsSection() {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold">Feature flags</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Runtime-toggleable booleans. Code reads <code className="text-[10px]">isFeatureEnabled('key', false)</code>. Cache TTL is 5s, so toggles propagate within seconds.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Runtime-toggleable booleans. Code reads <code className="text-3xs">isFeatureEnabled('key', false)</code>. Cache TTL is 5s, so toggles propagate within seconds.</p>
         </div>
       </div>
+      {!canEdit && (
+        <p className="mb-3 rounded border border-border/60 bg-muted/40 px-3 py-2 text-2xs text-muted-foreground">
+          Read-only. Flipping production feature flags requires super-admin.
+        </p>
+      )}
       {isLoading ? <div className="text-xs text-muted-foreground">Loading…</div> : (
         <div className="space-y-2">
           {flags.map((f) => (
@@ -3882,18 +4032,18 @@ function FeatureFlagsSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <code className="text-xs font-bold">{f.key}</code>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${f.enabled ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-3xs font-bold ${f.enabled ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
                     {f.enabled ? "ON" : "OFF"}
                   </span>
                 </div>
-                {f.description && <p className="text-[11px] text-muted-foreground mt-1">{f.description}</p>}
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Updated {fmtDateTime(f.updated_at)} by {f.updated_by_email || f.updated_by || "system"}</p>
+                {f.description && <p className="text-2xs text-muted-foreground mt-1">{f.description}</p>}
+                <p className="text-3xs text-muted-foreground/60 mt-0.5">Updated {fmtDateTime(f.updated_at)} by {f.updated_by_email || f.updated_by || "system"}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => upsertFlag.mutate({ key: f.key, enabled: !f.enabled, description: f.description })} className="text-[11px] px-2.5 py-1 rounded border border-border hover:bg-muted">
+                <button disabled={!canEdit} onClick={() => upsertFlag.mutate({ key: f.key, enabled: !f.enabled, description: f.description })} className="text-2xs px-2.5 py-1 rounded border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
                   {f.enabled ? "Turn off" : "Turn on"}
                 </button>
-                <button onClick={() => { if (window.confirm(`Delete flag '${f.key}'?`)) deleteFlag.mutate(f.key); }} className="text-[11px] text-red-700 hover:underline">
+                <button disabled={!canEdit} onClick={() => { if (window.confirm(`Delete flag '${f.key}'?`)) deleteFlag.mutate(f.key); }} className="text-2xs text-red-700 hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline">
                   Delete
                 </button>
               </div>
@@ -3901,15 +4051,15 @@ function FeatureFlagsSection() {
           ))}
           {suggestions.length > 0 && (
             <div className="mt-4 rounded border border-dashed border-border/60 p-3">
-              <p className="text-[11px] font-semibold text-muted-foreground mb-2">Known flags not yet created (canonical, declared in server/featureFlags.ts):</p>
+              <p className="text-2xs font-semibold text-muted-foreground mb-2">Known flags not yet created (canonical, declared in server/featureFlags.ts):</p>
               <div className="space-y-2">
                 {suggestions.map((f) => (
                   <div key={f.key} className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <code className="text-[11px] font-bold">{f.key}</code>
-                      <p className="text-[10px] text-muted-foreground">{f.description}</p>
+                      <code className="text-2xs font-bold">{f.key}</code>
+                      <p className="text-3xs text-muted-foreground">{f.description}</p>
                     </div>
-                    <button onClick={() => upsertFlag.mutate({ key: f.key, enabled: f.enabled, description: f.description })} className="shrink-0 text-[11px] px-2 py-1 rounded border border-primary text-primary hover:bg-primary/10">
+                    <button disabled={!canEdit} onClick={() => upsertFlag.mutate({ key: f.key, enabled: f.enabled, description: f.description })} className="shrink-0 text-2xs px-2 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed">
                       Create ({f.enabled ? "on" : "off"})
                     </button>
                   </div>
@@ -3918,14 +4068,14 @@ function FeatureFlagsSection() {
             </div>
           )}
           <div className="mt-4 rounded border border-border/60 p-3">
-            <p className="text-[11px] font-semibold text-muted-foreground mb-2">Create a custom flag:</p>
+            <p className="text-2xs font-semibold text-muted-foreground mb-2">Create a custom flag:</p>
             <div className="flex flex-wrap items-center gap-2">
               <input value={newKey} onChange={(e) => setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))} placeholder="flag_key" className="h-8 rounded border border-border bg-background px-2 text-xs w-44 font-mono" />
               <input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="What does it do?" className="h-8 rounded border border-border bg-background px-2 text-xs flex-1 min-w-44" />
               <button
-                disabled={!newKey.trim()}
+                disabled={!canEdit || !newKey.trim()}
                 onClick={() => { upsertFlag.mutate({ key: newKey.trim(), enabled: false, description: newDesc.trim() || undefined }); setNewKey(""); setNewDesc(""); }}
-                className="text-[11px] px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-50"
+                className="text-2xs px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-50"
               >
                 Create (off)
               </button>
@@ -3938,7 +4088,7 @@ function FeatureFlagsSection() {
 }
 
 // ─── Stripe products section (Config tab) ─────────────────────────
-function StripeProductsSection() {
+function StripeProductsSection({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery<{ products: any[] }>({
     queryKey: ["/api/admin/stripe/products"],
@@ -3977,6 +4127,7 @@ function StripeProductsSection() {
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/stripe/products"] }),
+    onError: (err: any) => window.alert(`Could not update product: ${err?.message || "unknown error"}`),
   });
   const products = asArray<any>(data?.products);
   return (
@@ -3986,7 +4137,9 @@ function StripeProductsSection() {
           <h3 className="text-sm font-semibold">Stripe products</h3>
           <p className="text-xs text-muted-foreground mt-0.5">Live from Stripe: products + prices used for subscriptions and one-off charges. Create new ones here when launching a tier; archive retired ones to hide from new signups (existing subscribers unaffected).</p>
         </div>
-        <button onClick={() => setShowCreate(v => !v)} className="text-[11px] px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10">{showCreate ? "Cancel" : "+ New product"}</button>
+        {canEdit
+          ? <button onClick={() => setShowCreate(v => !v)} className="text-2xs px-3 py-1 rounded border border-primary text-primary hover:bg-primary/10">{showCreate ? "Cancel" : "+ New product"}</button>
+          : <span className="text-3xs text-muted-foreground">Super-admin only</span>}
       </div>
       {showCreate && (
         <div className="mb-3 rounded border border-primary/30 bg-primary/5 p-3 space-y-2">
@@ -4001,14 +4154,14 @@ function StripeProductsSection() {
               <option value="year">/year</option>
             </select>
             <button
-              disabled={!name.trim() || !unitAmount.trim() || createProduct.isPending}
+              disabled={!canEdit || !name.trim() || !unitAmount.trim() || createProduct.isPending}
               onClick={() => createProduct.mutate()}
               className="text-xs px-3 py-1.5 rounded border border-primary bg-primary text-white disabled:opacity-50"
             >
               {createProduct.isPending ? "Creating…" : "Create"}
             </button>
           </div>
-          <p className="text-[11px] text-muted-foreground">Creates a Stripe Product + a single Price. For multi-price products (monthly + yearly), create the product first then add additional prices via Stripe dashboard.</p>
+          <p className="text-2xs text-muted-foreground">Creates a Stripe Product + a single Price. For multi-price products (monthly + yearly), create the product first then add additional prices via Stripe dashboard.</p>
         </div>
       )}
       {isLoading ? <div className="text-xs text-muted-foreground">Loading products…</div> : (
@@ -4019,14 +4172,14 @@ function StripeProductsSection() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold">{p.name}</p>
-                    {!p.active && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">ARCHIVED</span>}
-                    <code className="text-[10px] text-muted-foreground">{p.id}</code>
+                    {!p.active && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-3xs font-bold text-amber-800">ARCHIVED</span>}
+                    <code className="text-3xs text-muted-foreground">{p.id}</code>
                   </div>
-                  {p.description && <p className="text-[11px] text-muted-foreground mt-0.5">{p.description}</p>}
+                  {p.description && <p className="text-2xs text-muted-foreground mt-0.5">{p.description}</p>}
                   {p.prices.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {p.prices.map((pr: any) => (
-                        <span key={pr.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${pr.active ? "bg-muted" : "bg-muted/40 text-muted-foreground line-through"}`}>
+                        <span key={pr.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-3xs ${pr.active ? "bg-muted" : "bg-muted/40 text-muted-foreground line-through"}`}>
                           ${(pr.unit_amount / 100).toFixed(2)} {pr.currency.toUpperCase()}
                           {pr.recurring ? `/${pr.recurring.interval}` : ""}
                         </span>
@@ -4035,8 +4188,9 @@ function StripeProductsSection() {
                   )}
                 </div>
                 <button
+                  disabled={!canEdit}
                   onClick={() => { if (window.confirm(`${p.active ? "Archive" : "Unarchive"} '${p.name}'?`)) archiveProduct.mutate({ id: p.id, unarchive: !p.active }); }}
-                  className="shrink-0 text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+                  className="shrink-0 text-2xs px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {p.active ? "Archive" : "Unarchive"}
                 </button>
@@ -4061,19 +4215,19 @@ function CulturalStatsSection() {
     <div className="rounded-2xl border border-border/60 bg-card p-5 mt-6">
       <div className="mb-3">
         <h3 className="text-sm font-semibold">Cultural traditions</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Tradition usage across funds (which families set which heritage). Source of truth for tradition keys: <code className="text-[10px]">client/src/lib/cultural-calendar.ts</code>. Adoption signals which traditions deserve more cultural occasion suggestions and which to redesign.</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Tradition usage across funds (which families set which heritage). Source of truth for tradition keys: <code className="text-3xs">client/src/lib/cultural-calendar.ts</code>. Adoption signals which traditions deserve more cultural occasion suggestions and which to redesign.</p>
       </div>
       {isLoading ? <div className="text-xs text-muted-foreground">Loading…</div> : (
         <div className="space-y-2">
-          <p className="text-[11px] text-muted-foreground">{fmtNum(data?.totalFundsWithTraditions || 0)} funds have tradition data set.</p>
+          <p className="text-2xs text-muted-foreground">{fmtNum(data?.totalFundsWithTraditions || 0)} funds have tradition data set.</p>
           {stats.map((s) => (
             <div key={s.tradition} className="rounded border border-border/60 p-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold capitalize">{s.tradition.replace(/_/g, " ")}</p>
-                  <p className="text-[11px] text-muted-foreground">{s.sampleFunds.map((f: any) => f.recipientFirstName || f.name).filter(Boolean).join(" · ") || "no sample names"}</p>
+                  <p className="text-2xs text-muted-foreground">{s.sampleFunds.map((f: any) => f.recipientFirstName || f.name).filter(Boolean).join(" · ") || "no sample names"}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold tabular-nums">{fmtNum(s.count)} funds</span>
+                <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-2xs font-bold tabular-nums">{fmtNum(s.count)} funds</span>
               </div>
             </div>
           ))}
@@ -4085,6 +4239,11 @@ function CulturalStatsSection() {
 }
 
 function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  // Week-1 support reality (ops audit 2026-06-04): "my account is
+  // alice@example.com" is the FIRST line of most tickets, and this tab
+  // previously offered only Ctrl+F over a 500-row table. Client-side
+  // search over the already-fetched list — no server change needed.
+  const [userSearch, setUserSearch] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ title: string; endpoint: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ userId: string; email: string } | null>(null);
@@ -4163,11 +4322,15 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   if (isError) return <div className="text-center py-12 text-muted-foreground">Could not load users. {(error as any)?.message || ""}</div>;
 
   const safeUsers = asArray<any>(users);
+  const userQ = userSearch.trim().toLowerCase();
   const filteredUsers = safeUsers.filter((u: any) => {
     const matchesKyc = !kycFilter || String(u.kyc_status || "").toLowerCase() === kycFilter;
     const normalizedPlan = String(u.sub_plan || "free").toLowerCase();
     const matchesPlan = !planFilter || (planFilter === "paid" ? ["starter", "family", "legacy"].includes(normalizedPlan) : normalizedPlan === planFilter);
-    return matchesKyc && matchesPlan;
+    const matchesQ = !userQ
+      || [u.email, u.first_name, u.last_name, u.id]
+        .some((v) => String(v || "").toLowerCase().includes(userQ));
+    return matchesKyc && matchesPlan && matchesQ;
   });
 
   const handleExportUsers = () => {
@@ -4185,7 +4348,9 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       "bank_accounts",
       "joined",
     ];
-    const rows = users.map((u: any) => [
+    // Export what's on screen (honors search/KYC/plan filters) and is built
+    // from the array-guarded list, so it can't crash on a {rows} payload.
+    const rows = filteredUsers.map((u: any) => [
       u.email,
       u.first_name,
       u.last_name,
@@ -4287,9 +4452,9 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     { key: "sub_status", label: "Plan Status", render: (r: any) => r.sub_plan === "family" ? <StatusBadge status={r.sub_status || "active"} /> : <span className="text-xs text-muted-foreground">-</span> },
     { key: "utma_count", label: "Kids", align: "right", render: (r: any) => fmtNum(r.utma_count) },
     { key: "bank_accounts", label: "Banks", align: "right", render: (r: any) => fmtNum(r.bank_accounts) },
-    { key: "is_test_user", label: "Test", render: (r: any) => r.is_test_user ? <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">TEST</span> : <span className="text-[11px] text-muted-foreground/60">-</span> },
-    { key: "id", label: "User ID", render: (r: any) => <span className="font-mono text-[11px]">{String(r.id || "").slice(0, 18)}...</span> },
-    { key: "stripe_subscription_id", label: "Stripe Sub", render: (r: any) => r.stripe_subscription_id ? <span className="font-mono text-[11px]">{String(r.stripe_subscription_id).slice(0, 18)}...</span> : "-" },
+    { key: "is_test_user", label: "Test", render: (r: any) => r.is_test_user ? <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-3xs font-bold text-amber-800">TEST</span> : <span className="text-2xs text-muted-foreground/60">-</span> },
+    { key: "id", label: "User ID", render: (r: any) => <span className="font-mono text-2xs">{String(r.id || "").slice(0, 18)}...</span> },
+    { key: "stripe_subscription_id", label: "Stripe Sub", render: (r: any) => r.stripe_subscription_id ? <span className="font-mono text-2xs">{String(r.stripe_subscription_id).slice(0, 18)}...</span> : "-" },
   ];
   const columns = showAdvanced ? [...baseColumns, ...advancedColumns] : baseColumns;
 
@@ -4298,6 +4463,15 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-lg font-semibold" data-testid="heading-users-tab">All Users ({filteredUsers.length}{filteredUsers.length !== safeUsers.length ? ` of ${safeUsers.length}` : ""})</h2>
         <div className="flex items-center gap-3">
+          <input
+            type="search"
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            placeholder="Search email or name"
+            aria-label="Search users by email or name"
+            className="h-8 w-56 rounded-lg border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            data-testid="input-users-search"
+          />
           <button
             onClick={handleExportUsers}
             className="text-xs text-primary hover:underline"
@@ -4316,7 +4490,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       </div>
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
         {showAdvanced && (
-          <div className="px-3 py-2 border-b border-border/50 text-[11px] text-muted-foreground">
+          <div className="px-3 py-2 border-b border-border/50 text-2xs text-muted-foreground">
             Advanced view enabled. Scroll horizontally to see all columns.
           </div>
         )}
@@ -4494,7 +4668,7 @@ function FundsTab() {
       )}
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
         {showAdvanced && (
-          <div className="px-3 py-2 border-b border-border/50 text-[11px] text-muted-foreground">
+          <div className="px-3 py-2 border-b border-border/50 text-2xs text-muted-foreground">
             Advanced view enabled. Scroll horizontally to see all columns.
           </div>
         )}
@@ -4512,6 +4686,11 @@ function FundsTab() {
 }
 
 function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  // Week-1 support reality (ops audit 2026-06-04): "my gift never showed
+  // up, the charge is pi_..." needs a lookup by sender email / name / fund
+  // / Stripe session / payment-intent id. The endpoint SELECTs g.*, so the
+  // ids are already client-side — search the fetched rows, no server change.
+  const [giftSearch, setGiftSearch] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ title: string; endpoint: string } | null>(null);
   const queryClient = useQueryClient();
@@ -4559,7 +4738,16 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
   const parsedGifts = toRowsPayload<any>(giftsPayload);
   const safeGifts = asArray<any>(parsedGifts.rows);
-  const visibleGifts = safeGifts.filter((g: any) => !statusFilter || String(g.status || "").toLowerCase() === statusFilter);
+  const giftQ = giftSearch.trim().toLowerCase();
+  const visibleGifts = safeGifts.filter((g: any) => {
+    if (statusFilter && String(g.status || "").toLowerCase() !== statusFilter) return false;
+    if (!giftQ) return true;
+    return [
+      g.sender_email, g.sender_name, g.fund_name, g.id,
+      g.stripe_session_id, g.stripe_payment_intent_id,
+      g.stripeSessionId, g.stripePaymentIntentId,
+    ].some((v) => String(v || "").toLowerCase().includes(giftQ));
+  });
 
   const handleExportGifts = () => {
     const headers = [
@@ -4596,7 +4784,7 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   };
 
   const baseColumns = [
-    { key: "sender_name", label: "Giver", render: (r: any) => (
+    { key: "sender_name", label: "Gifter", render: (r: any) => (
       <div>
         <p className="font-medium text-sm">{r.sender_name}</p>
         <p className="text-xs text-muted-foreground">{r.sender_email || ""}</p>
@@ -4671,6 +4859,15 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-lg font-semibold" data-testid="heading-gifts-tab">All Gifts ({visibleGifts.length}{visibleGifts.length !== safeGifts.length ? ` of ${safeGifts.length}` : ""})</h2>
         <div className="flex items-center gap-3">
+          <input
+            type="search"
+            value={giftSearch}
+            onChange={(e) => setGiftSearch(e.target.value)}
+            placeholder="Search email, name, fund, or pi_/cs_ id"
+            aria-label="Search gifts by sender, fund, or Stripe id"
+            className="h-8 w-64 rounded-lg border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            data-testid="input-gifts-search"
+          />
           <button
             onClick={handleExportGifts}
             className="text-xs text-primary hover:underline"
@@ -4693,14 +4890,14 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total Charged" value={fmt(totalCharged)} icon={CreditCard} color="primary" sub="What givers paid" />
+        <StatCard label="Total Charged" value={fmt(totalCharged)} icon={CreditCard} color="primary" sub="What gifters paid" />
         <StatCard label="Processing Fees" value={fmt(totalProcessing)} icon={CreditCard} color="red" sub="Goes to Stripe" />
         <StatCard label="Kiddo Fees" value={fmt(totalKoraFees)} icon={TrendingUp} color="green" sub="Large gift premiums and services" />
         <StatCard label="Net to Recipients" value={fmt(totalNet)} icon={Gift} color="blue" sub="Invested for kids" />
       </div>
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
         {showAdvanced && (
-          <div className="px-3 py-2 border-b border-border/50 text-[11px] text-muted-foreground">
+          <div className="px-3 py-2 border-b border-border/50 text-2xs text-muted-foreground">
             Advanced view enabled. Scroll horizontally to see all columns.
           </div>
         )}
@@ -4779,7 +4976,7 @@ function GiftersTab() {
       label: "Actions",
       render: (r: any) => (
         <button
-          className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
+          className="text-2xs px-2 py-1 rounded border border-border hover:bg-muted"
           onClick={() => setDetailTarget({
             title: `Gifter Details: ${r.sender_name || r.sender_email}`,
             endpoint: `/api/admin/gifters/details?senderEmail=${encodeURIComponent(String(r.sender_email || ""))}&senderName=${encodeURIComponent(String(r.sender_name || ""))}`,
@@ -4876,10 +5073,16 @@ function TransactionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   });
 
   const giftTx = visibleTx.filter((t: any) => String(t.type || "").toLowerCase() === "gift");
-  const grossCharged = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.gross_charged ?? t.amount ?? 0), 0);
   const totalNetToFund = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.net_amount), 0);
   const totalStripeFees = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.processing_fee), 0);
   const totalKoraFees = giftTx.reduce((sum: number, t: any) => sum + toNumSafe(t.kora_fee), 0);
+  // What gifters actually paid on their card. Gifts are "whole" — the full gift
+  // reaches the fund as net, and Stripe + Kiddo fees are charged ON TOP. The
+  // server's gross_charged for a gift equals the gift face value (== net), not
+  // the card total, so derive the card total from its parts rather than
+  // mislabeling net as "gross charged" (which made the old reconciliation
+  // identity Net+Stripe+Kiddo impossible to balance).
+  const totalChargedToCard = totalNetToFund + totalStripeFees + totalKoraFees;
 
   const handleExportTransactions = () => {
     const headers = [
@@ -5022,17 +5225,17 @@ function TransactionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Gross Charged" value={fmt(grossCharged)} icon={CreditCard} color="primary" sub="Gift transactions" />
+        <StatCard label="Charged to Cards" value={fmt(totalChargedToCard)} icon={CreditCard} color="primary" sub="Gift + fees gifters paid" />
         <StatCard label="Net to Fund" value={fmt(totalNetToFund)} icon={Wallet} color="blue" sub="Gift amount invested" />
         <StatCard label="Stripe Fees" value={fmt(totalStripeFees)} icon={CreditCard} color="red" sub="Payment processing" />
         <StatCard label="Kiddo Fees" value={fmt(totalKoraFees)} icon={TrendingUp} color="green" sub="Kiddo service fees" />
       </div>
       <div className="text-xs text-muted-foreground bg-card border border-border/50 rounded-lg px-3 py-2">
-        Reconciliation: Gross Charged ({fmt(grossCharged)}) = Net to Fund ({fmt(totalNetToFund)}) + Stripe Fees ({fmt(totalStripeFees)}) + Kiddo Fees ({fmt(totalKoraFees)}).
+        Reconciliation: Charged to cards ({fmt(totalChargedToCard)}) = Net to Fund ({fmt(totalNetToFund)}) + Stripe Fees ({fmt(totalStripeFees)}) + Kiddo Fees ({fmt(totalKoraFees)}).
       </div>
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
         {showAdvanced && (
-          <div className="px-3 py-2 border-b border-border/50 text-[11px] text-muted-foreground">
+          <div className="px-3 py-2 border-b border-border/50 text-2xs text-muted-foreground">
             Advanced view enabled. Scroll horizontally to see all columns.
           </div>
         )}
@@ -5045,6 +5248,69 @@ function TransactionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           onClose={() => setDetailTarget(null)}
         />
       )}
+    </div>
+  );
+}
+
+// "Request a company" intake: the escape hatch off the curated picker. Read-only
+// manual-review queue (status escape_hatch_requested). Reviewing means deciding
+// whether to add the brand to stock-picks.ts (plus its logo, quote, and Kid View
+// explainer); nothing is auto-promoted. Endpoint: GET /api/admin/stock-requests.
+function StockRequestsPanel() {
+  const { data, isLoading, isError } = useQuery<any>({
+    queryKey: ["/api/admin/stock-requests"],
+    queryFn: async () => fetchAdminJson(`/api/admin/stock-requests`),
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+  const requests = asArray<any>(data?.requests);
+  // Demand signal: how many open requests share the same (normalized) brand,
+  // so a ticker asked for repeatedly stands out for curation. Free-text, so we
+  // normalize case + whitespace; it won't catch "Tesla" vs "TSLA" but groups
+  // the common dupes.
+  const normalizeBrand = (t: any) => String(t || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const demandCount: Record<string, number> = requests.reduce((acc: Record<string, number>, r: any) => {
+    const k = normalizeBrand(r.requested_text);
+    if (k) acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
+  return (
+    <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Company requests <span className="ml-1 text-xs font-normal text-muted-foreground">(escape hatch)</span></h3>
+          <p className="mt-1 text-xs text-muted-foreground">Brands gifters and parents asked for that aren&apos;t in the curated picker. Manual review only. Add to <span className="font-mono">stock-picks.ts</span> (plus its logo, quote, and Kid View explainer) if it earns a slot. Nothing here is auto-added.</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5" data-testid="stock-requests-count">{requests.length}</span>
+      </div>
+      <div className="p-4">
+        {isLoading ? (
+          <div className="text-center text-xs text-muted-foreground py-4">Loading requests…</div>
+        ) : isError ? (
+          <div className="text-center text-xs text-muted-foreground py-4">Could not load requests.</div>
+        ) : requests.length === 0 ? (
+          <div className="text-center text-xs text-muted-foreground py-4">No open requests.</div>
+        ) : (
+          <div className="space-y-1.5">
+            {requests.map((r: any, i: number) => (
+              <div key={r.id || i} className="flex items-center justify-between gap-3 text-xs border-b border-border/30 pb-1.5 last:border-0">
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="font-medium text-foreground truncate" title={String(r.requested_text || "")}>{r.requested_text || "-"}</span>
+                  {(() => {
+                    const n = demandCount[normalizeBrand(r.requested_text)] || 0;
+                    return n > 1 ? <span className="shrink-0 rounded-full bg-amber-100 text-amber-700 text-3xs font-semibold px-1.5 py-0.5" title={`${n} open requests for this brand`}>×{n}</span> : null;
+                  })()}
+                  {r.child_name ? <span className="shrink-0 text-muted-foreground truncate">· {String(r.child_name)}&apos;s fund</span> : null}
+                </div>
+                <span className="shrink-0 text-muted-foreground">
+                  {r.requester_email ? <span className="mr-2">{String(r.requester_email)}</span> : null}
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -5191,6 +5457,7 @@ function AssetsTab() {
 
   return (
     <div className="space-y-4">
+      <StockRequestsPanel />
       {data?.degraded && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Asset data is partially unavailable in this environment. Showing available subsets.
@@ -5261,7 +5528,7 @@ function AssetsTab() {
       {showAdvanced && (
         <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
           <div className="px-3 py-2 border-b border-border/50 text-sm font-semibold">Configured Supported Universe (Stocks, ETFs, Types)</div>
-          <div className="px-3 py-2 border-b border-border/50 text-[11px] text-muted-foreground">
+          <div className="px-3 py-2 border-b border-border/50 text-2xs text-muted-foreground">
             Scroll horizontally for full details. Use filters to reduce visual clutter.
           </div>
           <div className="px-3 py-2 border-b border-border/50 flex flex-wrap items-center gap-2">
@@ -5272,11 +5539,11 @@ function AssetsTab() {
               className="h-8 px-2 rounded border border-border bg-background text-xs"
               data-testid="input-assets-universe-search"
             />
-            <button className={`text-[11px] px-2 py-1 rounded border ${universeMode === "all" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("all")}>All</button>
-            <button className={`text-[11px] px-2 py-1 rounded border ${universeMode === "held" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("held")}>Held</button>
-            <button className={`text-[11px] px-2 py-1 rounded border ${universeMode === "gifted" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("gifted")}>Gifted</button>
-            <button className={`text-[11px] px-2 py-1 rounded border ${universeMode === "available" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("available")}>Unused</button>
-            <span className="text-[11px] text-muted-foreground ml-auto">{fmtNum(filteredUniverse.length)} shown</span>
+            <button className={`text-2xs px-2 py-1 rounded border ${universeMode === "all" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("all")}>All</button>
+            <button className={`text-2xs px-2 py-1 rounded border ${universeMode === "held" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("held")}>Held</button>
+            <button className={`text-2xs px-2 py-1 rounded border ${universeMode === "gifted" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("gifted")}>Gifted</button>
+            <button className={`text-2xs px-2 py-1 rounded border ${universeMode === "available" ? "border-primary text-primary" : "border-border"}`} onClick={() => setUniverseMode("available")}>Unused</button>
+            <span className="text-2xs text-muted-foreground ml-auto">{fmtNum(filteredUniverse.length)} shown</span>
           </div>
           <SortableTable columns={universeColumns} data={filteredUniverse} defaultSort="ticker" />
         </div>
@@ -5305,12 +5572,12 @@ function AuditTab() {
   });
   const rows = asArray<any>(data?.rows);
   const columns = [
-    { key: "created_at", label: "When", render: (r: any) => <span className="text-[11px] text-muted-foreground tabular-nums">{fmtDateTime(r.created_at)}</span> },
+    { key: "created_at", label: "When", render: (r: any) => <span className="text-2xs text-muted-foreground tabular-nums">{fmtDateTime(r.created_at)}</span> },
     { key: "actor_email", label: "Actor", render: (r: any) => <span className="text-xs">{r.actor_email || r.actor_user_id || "-"}</span> },
-    { key: "action", label: "Action", render: (r: any) => <span className="font-mono text-[11px]">{r.action}</span> },
-    { key: "resource", label: "Resource", render: (r: any) => <span className="text-[11px] text-muted-foreground">{r.resource}</span> },
-    { key: "resource_id", label: "ID", render: (r: any) => r.resource_id ? <span className="font-mono text-[10px] text-muted-foreground">{String(r.resource_id).slice(0, 16)}</span> : <span className="text-[11px] text-muted-foreground/60">-</span> },
-    { key: "metadata", label: "Metadata", render: (r: any) => r.metadata ? <details className="text-[10px]"><summary className="cursor-pointer text-muted-foreground">view</summary><pre className="mt-1 max-w-md overflow-auto rounded bg-muted/40 p-2">{typeof r.metadata === "string" ? r.metadata : JSON.stringify(r.metadata, null, 2)}</pre></details> : <span className="text-[11px] text-muted-foreground/60">-</span> },
+    { key: "action", label: "Action", render: (r: any) => <span className="font-mono text-2xs">{r.action}</span> },
+    { key: "resource", label: "Resource", render: (r: any) => <span className="text-2xs text-muted-foreground">{r.resource}</span> },
+    { key: "resource_id", label: "ID", render: (r: any) => r.resource_id ? <span className="font-mono text-3xs text-muted-foreground">{String(r.resource_id).slice(0, 16)}</span> : <span className="text-2xs text-muted-foreground/60">-</span> },
+    { key: "metadata", label: "Metadata", render: (r: any) => r.metadata ? <details className="text-3xs"><summary className="cursor-pointer text-muted-foreground">view</summary><pre className="mt-1 max-w-md overflow-auto rounded bg-muted/40 p-2">{typeof r.metadata === "string" ? r.metadata : JSON.stringify(r.metadata, null, 2)}</pre></details> : <span className="text-2xs text-muted-foreground/60">-</span> },
   ];
   return (
     <div className="space-y-4">
@@ -5383,9 +5650,11 @@ function ModerationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Unblock failed");
+      assertServerSaved(data);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/blocked-gifters"] }),
+    onError: (err: any) => window.alert(`Could not unblock: ${err?.message || "unknown error"}`),
   });
 
   const handleBlockFromQueue = (email: string | null, reason: string) => {
@@ -5436,12 +5705,14 @@ function ModerationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to flag entry");
+      assertServerSaved(data);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [memoryUrl] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/moderation/queue"] });
     },
+    onError: (err: any) => window.alert(`Could not flag entry: ${err?.message || "unknown error"}`),
   });
 
   // The four queue actions. Confirmation lives inside the handler so the
@@ -5521,15 +5792,15 @@ function ModerationTab() {
               reports that haven't been resolved yet. */}
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded border border-border/60 bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Flagged</p>
+              <p className="text-3xs uppercase tracking-wide text-muted-foreground">Flagged</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{queueCounts.flagged ?? 0}</p>
             </div>
             <div className={`rounded border p-3 ${(queueCounts.escalated ?? 0) > 0 ? "border-red-300 bg-red-50/60" : "border-border/60 bg-card"}`}>
-              <p className={`text-[10px] uppercase tracking-wide ${(queueCounts.escalated ?? 0) > 0 ? "text-red-700" : "text-muted-foreground"}`}>Escalated</p>
+              <p className={`text-3xs uppercase tracking-wide ${(queueCounts.escalated ?? 0) > 0 ? "text-red-700" : "text-muted-foreground"}`}>Escalated</p>
               <p className={`mt-1 text-2xl font-bold tabular-nums ${(queueCounts.escalated ?? 0) > 0 ? "text-red-700" : "text-foreground"}`}>{queueCounts.escalated ?? 0}</p>
             </div>
             <div className="rounded border border-border/60 bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Open reports</p>
+              <p className="text-3xs uppercase tracking-wide text-muted-foreground">Open reports</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{queueCounts.openReports ?? 0}</p>
             </div>
           </div>
@@ -5557,28 +5828,28 @@ function ModerationTab() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isEscalated ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{r.moderation_status}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{r.type}</span>
-                              <span className="text-[11px] text-muted-foreground">{r.recipient_first_name || r.fund_name || r.fund_id}</span>
-                              <span className="text-[11px] text-muted-foreground/60">· owner: {r.fund_owner_email}</span>
-                              <span className="text-[11px] text-muted-foreground/60">· created {fmtDateTime(r.created_at)}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-3xs font-bold uppercase tracking-wide ${isEscalated ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>{r.moderation_status}</span>
+                              <span className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">{r.type}</span>
+                              <span className="text-2xs text-muted-foreground">{r.recipient_first_name || r.fund_name || r.fund_id}</span>
+                              <span className="text-2xs text-muted-foreground/60">· owner: {r.fund_owner_email}</span>
+                              <span className="text-2xs text-muted-foreground/60">· created {fmtDateTime(r.created_at)}</span>
                             </div>
-                            <p className="mt-1 text-sm font-semibold text-foreground">{r.author_name || "(no name)"}{r.gift_sender_email ? <span className="text-[11px] font-normal text-muted-foreground"> · gift from {r.gift_sender_email}{r.gift_amount ? ` · $${parseFloat(r.gift_amount).toFixed(2)}` : ""}</span> : null}</p>
+                            <p className="mt-1 text-sm font-semibold text-foreground">{r.author_name || "(no name)"}{r.gift_sender_email ? <span className="text-2xs font-normal text-muted-foreground"> · gift from {r.gift_sender_email}{r.gift_amount ? ` · $${parseFloat(r.gift_amount).toFixed(2)}` : ""}</span> : null}</p>
                             {r.content && <p className="mt-1 text-sm text-foreground/85 italic">"{r.content}"</p>}
-                            {r.audio_url && <p className="mt-1 text-[11px] text-muted-foreground">🎙 audio attached</p>}
-                            {r.audio_transcript && <p className="mt-1 text-[11px] italic text-muted-foreground">transcript: "{r.audio_transcript}"</p>}
-                            {r.photo_url && <p className="mt-1 text-[11px] text-muted-foreground">📷 <a href={r.photo_url} target="_blank" rel="noreferrer" className="underline">photo</a></p>}
-                            {r.video_url && <p className="mt-1 text-[11px] text-muted-foreground">🎥 <a href={r.video_url} target="_blank" rel="noreferrer" className="underline">video</a></p>}
-                            <p className="mt-2 text-[11px] text-muted-foreground/80">
+                            {r.audio_url && <p className="mt-1 text-2xs text-muted-foreground">🎙 audio attached</p>}
+                            {r.audio_transcript && <p className="mt-1 text-2xs italic text-muted-foreground">transcript: "{r.audio_transcript}"</p>}
+                            {r.photo_url && <p className="mt-1 text-2xs text-muted-foreground">📷 <a href={r.photo_url} target="_blank" rel="noreferrer" className="underline">photo</a></p>}
+                            {r.video_url && <p className="mt-1 text-2xs text-muted-foreground">🎥 <a href={r.video_url} target="_blank" rel="noreferrer" className="underline">video</a></p>}
+                            <p className="mt-2 text-2xs text-muted-foreground/80">
                               Flagged {r.flagged_at ? fmtDateTime(r.flagged_at) : "recently"}
                               {r.flagged_reason ? <> · "{r.flagged_reason}"</> : null}
                             </p>
                           </div>
                           <div className="shrink-0 flex flex-col gap-1.5">
-                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "approve" })} disabled={actionMutation.isPending} className="text-[11px] px-2.5 py-1 rounded border border-green-300 text-green-800 hover:bg-green-50 disabled:opacity-50">Approve</button>
-                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "hide" })} disabled={actionMutation.isPending} className="text-[11px] px-2.5 py-1 rounded border border-border text-muted-foreground hover:bg-muted/40 disabled:opacity-50">Hide</button>
-                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "remove" })} disabled={actionMutation.isPending || isEscalated} className="text-[11px] px-2.5 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50">Remove</button>
-                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "escalate" })} disabled={actionMutation.isPending || isEscalated} className="text-[11px] px-2.5 py-1 rounded border border-red-400 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 font-semibold">Escalate</button>
+                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "approve" })} disabled={actionMutation.isPending} className="text-2xs px-2.5 py-1 rounded border border-green-300 text-green-800 hover:bg-green-50 disabled:opacity-50">Approve</button>
+                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "hide" })} disabled={actionMutation.isPending} className="text-2xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:bg-muted/40 disabled:opacity-50">Hide</button>
+                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "remove" })} disabled={actionMutation.isPending || isEscalated} className="text-2xs px-2.5 py-1 rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50">Remove</button>
+                            <button onClick={() => actionMutation.mutate({ id: r.id, action: "escalate" })} disabled={actionMutation.isPending || isEscalated} className="text-2xs px-2.5 py-1 rounded border border-red-400 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 font-semibold">Escalate</button>
                             {/* Separate block-sender action. Independent of
                                 approve/hide/remove because blocking is about
                                 the GIFTER, not this specific content — same
@@ -5589,7 +5860,7 @@ function ModerationTab() {
                               <button
                                 onClick={() => handleBlockFromQueue(r.gift_sender_email, r.flagged_reason || "")}
                                 disabled={blockGifterMutation.isPending}
-                                className="text-[11px] px-2.5 py-1 rounded border border-amber-400 text-amber-900 bg-amber-50 hover:bg-amber-100 disabled:opacity-50"
+                                className="text-2xs px-2.5 py-1 rounded border border-amber-400 text-amber-900 bg-amber-50 hover:bg-amber-100 disabled:opacity-50"
                                 title="Globally block this gifter from contributing to any fund"
                               >
                                 Block sender
@@ -5609,13 +5880,13 @@ function ModerationTab() {
                   {queueReports.map((r) => (
                     <div key={r.id} className="rounded border border-border/60 bg-card p-3 text-sm">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{r.target_type}</span>
-                        <code className="text-[10px] font-mono text-muted-foreground/70">{r.target_id}</code>
-                        <span className="text-[11px] text-muted-foreground">· reported {fmtDateTime(r.created_at)}</span>
-                        <span className="text-[11px] text-muted-foreground/60">· by {r.reporter_lookup_email || r.reporter_email || "anonymous"}</span>
+                        <span className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">{r.target_type}</span>
+                        <code className="text-3xs font-mono text-muted-foreground/70">{r.target_id}</code>
+                        <span className="text-2xs text-muted-foreground">· reported {fmtDateTime(r.created_at)}</span>
+                        <span className="text-2xs text-muted-foreground/60">· by {r.reporter_lookup_email || r.reporter_email || "anonymous"}</span>
                       </div>
                       <p className="mt-2 text-sm text-foreground/85">"{r.reason}"</p>
-                      {r.context && <pre className="mt-1 text-[10px] text-muted-foreground/60 whitespace-pre-wrap">{r.context}</pre>}
+                      {r.context && <pre className="mt-1 text-3xs text-muted-foreground/60 whitespace-pre-wrap">{r.context}</pre>}
                     </div>
                   ))}
                 </div>
@@ -5630,7 +5901,7 @@ function ModerationTab() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Type:</span>
             {["", "gift_message", "parent_note", "parent_letter", "milestone", "photo", "note", "parent_investment_start"].map(t => (
-              <button key={t || "all"} onClick={() => setMemoryType(t)} className={`text-[11px] px-2 py-1 rounded border ${memoryType === t ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>{t || "All"}</button>
+              <button key={t || "all"} onClick={() => setMemoryType(t)} className={`text-2xs px-2 py-1 rounded border ${memoryType === t ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>{t || "All"}</button>
             ))}
           </div>
           <p className="text-xs text-muted-foreground">Cross-fund view of every memory_entries row. Delete is permanent and audit-logged with a reason. Test-flagged fund owners marked with a TEST pill.</p>
@@ -5641,23 +5912,23 @@ function ModerationTab() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{r.type}</span>
-                        {r.fund_owner_is_test && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">TEST USER</span>}
-                        {r.visibility && r.visibility !== "kid_now" && <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-800">{r.visibility}</span>}
-                        <span className="text-[11px] text-muted-foreground">{r.recipient_first_name || r.fund_name || r.fund_id}</span>
-                        <span className="text-[11px] text-muted-foreground/60">· {r.fund_owner_email}</span>
-                        <span className="text-[11px] text-muted-foreground/60">· {fmtDateTime(r.created_at)}</span>
+                        <span className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">{r.type}</span>
+                        {r.fund_owner_is_test && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-4xs font-bold text-amber-800">TEST USER</span>}
+                        {r.visibility && r.visibility !== "kid_now" && <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-4xs font-bold text-blue-800">{r.visibility}</span>}
+                        <span className="text-2xs text-muted-foreground">{r.recipient_first_name || r.fund_name || r.fund_id}</span>
+                        <span className="text-2xs text-muted-foreground/60">· {r.fund_owner_email}</span>
+                        <span className="text-2xs text-muted-foreground/60">· {fmtDateTime(r.created_at)}</span>
                       </div>
                       <p className="mt-1 text-sm font-semibold text-foreground">{r.author_name || "-"}</p>
                       {r.content && <p className="mt-1 text-sm text-foreground/85 italic">"{r.content}"</p>}
-                      {r.audio_url && <p className="mt-1 text-[11px] text-muted-foreground">🎙 audio attached</p>}
-                      {r.audio_transcript && <p className="mt-1 text-[11px] italic text-muted-foreground">transcript: "{r.audio_transcript}"</p>}
-                      {r.photo_url && <p className="mt-1 text-[11px] text-muted-foreground">📷 photo attached</p>}
-                      {r.video_url && <p className="mt-1 text-[11px] text-muted-foreground">🎥 video attached</p>}
+                      {r.audio_url && <p className="mt-1 text-2xs text-muted-foreground">🎙 audio attached</p>}
+                      {r.audio_transcript && <p className="mt-1 text-2xs italic text-muted-foreground">transcript: "{r.audio_transcript}"</p>}
+                      {r.photo_url && <p className="mt-1 text-2xs text-muted-foreground">📷 photo attached</p>}
+                      {r.video_url && <p className="mt-1 text-2xs text-muted-foreground">🎥 video attached</p>}
                     </div>
                     <div className="shrink-0 flex flex-col gap-1.5">
-                      <button onClick={() => flagMemoryMutation.mutate(r.id)} disabled={flagMemoryMutation.isPending} className="text-[11px] px-2 py-1 rounded border border-amber-300 text-amber-800 hover:bg-amber-50 disabled:opacity-50">Flag</button>
-                      <button onClick={() => deleteMemoryMutation.mutate(r.id)} className="text-[11px] text-red-700 hover:underline">Delete</button>
+                      <button onClick={() => flagMemoryMutation.mutate(r.id)} disabled={flagMemoryMutation.isPending} className="text-2xs px-2 py-1 rounded border border-amber-300 text-amber-800 hover:bg-amber-50 disabled:opacity-50">Flag</button>
+                      <button onClick={() => deleteMemoryMutation.mutate(r.id)} className="text-2xs text-red-700 hover:underline">Delete</button>
                     </div>
                   </div>
                 </div>
@@ -5676,11 +5947,11 @@ function ModerationTab() {
                 <div key={r.id} className="rounded border border-border/60 bg-card p-3 text-sm">
                   <div className="flex items-center gap-2 flex-wrap">
                     <StatusBadge status={r.status || "unknown"} />
-                    <span className="text-[11px] text-muted-foreground">to {r.sender_name || r.sender_email || "anon"}</span>
-                    <span className="text-[11px] text-muted-foreground">· for {r.recipient_first_name || r.fund_name}</span>
-                    <span className="text-[11px] text-muted-foreground/60">· gift {fmt(r.gift_amount)}</span>
-                    <span className="text-[11px] text-muted-foreground/60">· {fmtDateTime(r.created_at)}</span>
-                    {r.sent_at && <span className="text-[11px] text-green-700">· sent {fmtDateTime(r.sent_at)}</span>}
+                    <span className="text-2xs text-muted-foreground">to {r.sender_name || r.sender_email || "anon"}</span>
+                    <span className="text-2xs text-muted-foreground">· for {r.recipient_first_name || r.fund_name}</span>
+                    <span className="text-2xs text-muted-foreground/60">· gift {fmt(r.gift_amount)}</span>
+                    <span className="text-2xs text-muted-foreground/60">· {fmtDateTime(r.created_at)}</span>
+                    {r.sent_at && <span className="text-2xs text-green-700">· sent {fmtDateTime(r.sent_at)}</span>}
                   </div>
                   {r.message && <p className="mt-2 text-sm italic text-foreground/85">"{r.message}"</p>}
                 </div>
@@ -5705,18 +5976,18 @@ function ModerationTab() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isActive ? "bg-red-100 text-red-800" : "bg-muted text-muted-foreground"}`}>
+                          <span className={`rounded-full px-2 py-0.5 text-3xs font-bold uppercase tracking-wide ${isActive ? "bg-red-100 text-red-800" : "bg-muted text-muted-foreground"}`}>
                             {isActive ? "active" : "unblocked"}
                           </span>
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{r.scope}</span>
-                          {r.fund_id && <span className="text-[11px] text-muted-foreground">· {r.recipient_first_name || r.fund_name}</span>}
-                          <span className="text-[11px] text-muted-foreground">· {fmtDateTime(r.blocked_at)}</span>
-                          {r.blocker_email && <span className="text-[11px] text-muted-foreground/60">· by {r.blocker_email}</span>}
+                          <span className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">{r.scope}</span>
+                          {r.fund_id && <span className="text-2xs text-muted-foreground">· {r.recipient_first_name || r.fund_name}</span>}
+                          <span className="text-2xs text-muted-foreground">· {fmtDateTime(r.blocked_at)}</span>
+                          {r.blocker_email && <span className="text-2xs text-muted-foreground/60">· by {r.blocker_email}</span>}
                         </div>
                         <p className="mt-1 text-sm font-semibold text-foreground">{r.email}</p>
                         {r.reason && <p className="mt-1 text-xs italic text-muted-foreground">"{r.reason}"</p>}
                         {!isActive && (
-                          <p className="mt-1 text-[11px] text-muted-foreground/80">
+                          <p className="mt-1 text-2xs text-muted-foreground/80">
                             Unblocked {fmtDateTime(r.unblocked_at)}
                             {r.unblocker_email ? ` by ${r.unblocker_email}` : ""}
                           </p>
@@ -5726,7 +5997,7 @@ function ModerationTab() {
                         <button
                           onClick={() => unblockGifterMutation.mutate(r.id)}
                           disabled={unblockGifterMutation.isPending}
-                          className="shrink-0 text-[11px] px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 disabled:opacity-50"
+                          className="shrink-0 text-2xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 disabled:opacity-50"
                         >
                           Unblock
                         </button>
@@ -5768,14 +6039,14 @@ function OpsTab() {
       <div className="rounded border border-border/60 bg-card">
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/40">
           <p className="text-sm font-semibold">{title}</p>
-          <span className="text-[11px] text-muted-foreground tabular-nums">{fmtNum(list.length)} entries</span>
+          <span className="text-2xs text-muted-foreground tabular-nums">{fmtNum(list.length)} {list.length === 1 ? "entry" : "entries"}</span>
         </div>
         {list.length === 0 ? <p className="text-xs text-muted-foreground p-3">Empty</p> : (
           <div className="max-h-72 overflow-auto p-2 space-y-1">
             {list.slice(-tail).reverse().map((item, i) => (
-              <details key={i} className="rounded bg-muted/30 px-2 py-1 text-[11px]">
+              <details key={i} className="rounded bg-muted/30 px-2 py-1 text-2xs">
                 <summary className="cursor-pointer truncate">{item.timestamp || item.createdAt || item.queuedAt || item.deliveredAt || "-"} · {item.type || item.kind || item.event || item.subject || "(untyped)"}</summary>
-                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-[10px]">{JSON.stringify(item, null, 2)}</pre>
+                <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-3xs">{JSON.stringify(item, null, 2)}</pre>
               </details>
             ))}
           </div>
@@ -5837,18 +6108,18 @@ function OpsTab() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-mono font-semibold">{w.key}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{w.description}</p>
+                  <p className="text-2xs text-muted-foreground mt-0.5 leading-relaxed">{w.description}</p>
                 </div>
                 {w.safeToTrigger ? (
                   <button
                     onClick={() => { if (window.confirm(`Run '${w.key}' now?`)) triggerWorker.mutate(w.key); }}
                     disabled={triggerWorker.isPending}
-                    className="shrink-0 text-[11px] px-2.5 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-50"
+                    className="shrink-0 text-2xs px-2.5 py-1 rounded border border-primary text-primary hover:bg-primary/10 disabled:opacity-50"
                   >
                     {triggerWorker.isPending ? "Running…" : "Run now"}
                   </button>
                 ) : (
-                  <span className="shrink-0 text-[10px] font-bold text-amber-700">DISABLED</span>
+                  <span className="shrink-0 text-3xs font-bold text-amber-700">DISABLED</span>
                 )}
               </div>
             </div>
@@ -5869,13 +6140,13 @@ function OpsTab() {
           {data.gifter?.deliveries && (
             <div className="rounded border border-border/60 bg-card p-3 md:col-span-2">
               <p className="text-sm font-semibold mb-2">Gifter notification deliveries (state)</p>
-              <pre className="max-h-60 overflow-auto rounded bg-muted/30 p-2 text-[10px]">{JSON.stringify(data.gifter.deliveries, null, 2).slice(0, 5000)}</pre>
+              <pre className="max-h-60 overflow-auto rounded bg-muted/30 p-2 text-3xs">{JSON.stringify(data.gifter.deliveries, null, 2).slice(0, 5000)}</pre>
             </div>
           )}
           {data.parentLifecycle?.deliveries && (
             <div className="rounded border border-border/60 bg-card p-3 md:col-span-2">
               <p className="text-sm font-semibold mb-2">Parent lifecycle deliveries (state)</p>
-              <pre className="max-h-60 overflow-auto rounded bg-muted/30 p-2 text-[10px]">{JSON.stringify(data.parentLifecycle.deliveries, null, 2).slice(0, 5000)}</pre>
+              <pre className="max-h-60 overflow-auto rounded bg-muted/30 p-2 text-3xs">{JSON.stringify(data.parentLifecycle.deliveries, null, 2).slice(0, 5000)}</pre>
             </div>
           )}
         </div>
@@ -5902,7 +6173,7 @@ function RealtimeStatsCard() {
     <div className="rounded border border-border/60 bg-card p-3">
       <div className="flex items-center justify-between gap-2 mb-2">
         <p className="text-sm font-semibold">Realtime (SSE) channel</p>
-        <span className="text-[10px] text-muted-foreground">refreshes 10s</span>
+        <span className="text-3xs text-muted-foreground">refreshes 10s</span>
       </div>
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Loading…</p>
@@ -5915,7 +6186,7 @@ function RealtimeStatsCard() {
         </div>
       )}
       {possiblyUnhealthy && (
-        <p className="mt-3 text-[11px] text-amber-700">
+        <p className="mt-3 text-2xs text-amber-700">
           No active SSE connections after 5+ min of uptime. Check: (1) a reverse proxy may be buffering text/event-stream (set X-Accel-Buffering: no for nginx), (2) the /api/me/events endpoint may be 401-ing for signed-in users, (3) the EventSource may be blocked by CSP connect-src on a recent deploy.
         </p>
       )}
@@ -5926,7 +6197,7 @@ function RealtimeStatsCard() {
 function Stat({ label, value, accent }: { label: string; value: string; accent?: "warn" | "default" }) {
   return (
     <div className={`rounded p-2 ${accent === "warn" ? "bg-amber-50/60 border border-amber-200/50" : "bg-muted/40"}`}>
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-3xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`text-base font-bold tabular-nums ${accent === "warn" ? "text-amber-700" : "text-foreground"}`}>{value}</p>
     </div>
   );
@@ -5971,9 +6242,12 @@ function LoopsTab() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update");
-      return res.json();
+      const body = await res.json().catch(() => ({}));
+      assertServerSaved(body);
+      return body;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/recurring?limit=200"] }),
+    onError: (err: any) => window.alert(`Could not update schedule: ${err?.message || "unknown error"}`),
   });
 
   const revokeKidView = useMutation({
@@ -5983,9 +6257,17 @@ function LoopsTab() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to revoke");
-      return res.json();
+      const body = await res.json().catch(() => ({}));
+      // A failed revoke MUST NOT report success — this gates a child's PIN
+      // access. The server returns { revoked:false } when no token matched.
+      assertServerSaved(body);
+      if (body && body.revoked === false) {
+        throw new Error("No active kid-view token matched. Access was NOT revoked; refresh and retry.");
+      }
+      return body;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/kid-views"] }),
+    onError: (err: any) => window.alert(`Could not revoke kid view: ${err?.message || "unknown error"}`),
   });
 
   const recRows = asArray<any>(recurringData?.rows);
@@ -6024,13 +6306,13 @@ function LoopsTab() {
                 { key: "amount", label: "Amount", align: "right", render: (r: any) => <span className="text-xs tabular-nums">${parseFloat(String(r.amount || 0)).toFixed(2)}/{r.frequency || "month"}</span> },
                 { key: "selected_ticker", label: "Target", render: (r: any) => <span className="text-xs font-mono">{r.selected_ticker || r.execution_model || "auto"}</span> },
                 { key: "total_contributed", label: "Total", align: "right", render: (r: any) => <span className="text-xs tabular-nums">${parseFloat(String(r.total_contributed || 0)).toFixed(2)}</span> },
-                { key: "next_run_date", label: "Next run", render: (r: any) => <span className="text-[11px] text-muted-foreground">{fmtDate(r.next_run_date)}</span> },
-                { key: "last_run_date", label: "Last run", render: (r: any) => <span className="text-[11px] text-muted-foreground">{fmtDate(r.last_run_date)}</span> },
+                { key: "next_run_date", label: "Next run", render: (r: any) => <span className="text-2xs text-muted-foreground">{fmtDate(r.next_run_date)}</span> },
+                { key: "last_run_date", label: "Last run", render: (r: any) => <span className="text-2xs text-muted-foreground">{fmtDate(r.last_run_date)}</span> },
                 { key: "actions", label: "Actions", render: (r: any) => (
                   <div className="flex gap-1">
-                    {r.status === "active" && <button onClick={() => patchRecurring.mutate({ id: r.id, status: "paused" })} className="text-[11px] text-amber-700 hover:underline">Pause</button>}
-                    {r.status === "paused" && <button onClick={() => patchRecurring.mutate({ id: r.id, status: "active" })} className="text-[11px] text-green-700 hover:underline">Resume</button>}
-                    {r.status !== "cancelled" && <button onClick={() => { if (window.confirm("Cancel this recurring schedule?")) patchRecurring.mutate({ id: r.id, status: "cancelled" }); }} className="text-[11px] text-red-700 hover:underline">Cancel</button>}
+                    {r.status === "active" && <button onClick={() => patchRecurring.mutate({ id: r.id, status: "paused" })} className="text-2xs text-amber-700 hover:underline">Pause</button>}
+                    {r.status === "paused" && <button onClick={() => patchRecurring.mutate({ id: r.id, status: "active" })} className="text-2xs text-green-700 hover:underline">Resume</button>}
+                    {r.status !== "cancelled" && <button onClick={() => { if (window.confirm("Cancel this recurring schedule?")) patchRecurring.mutate({ id: r.id, status: "cancelled" }); }} className="text-2xs text-red-700 hover:underline">Cancel</button>}
                   </div>
                 ) },
               ]}
@@ -6049,7 +6331,7 @@ function LoopsTab() {
                   <p className="text-xs font-semibold mb-2">Last 30 days, by event:</p>
                   <div className="flex flex-wrap gap-2">
                     {refSummary.map((s: any) => (
-                      <span key={s.event_type} className="text-[11px] rounded-full bg-card px-2 py-1 border border-border/60"><span className="font-mono">{s.event_type}</span> · <span className="font-semibold">{fmtNum(s.count)}</span></span>
+                      <span key={s.event_type} className="text-2xs rounded-full bg-card px-2 py-1 border border-border/60"><span className="font-mono">{s.event_type}</span> · <span className="font-semibold">{fmtNum(s.count)}</span></span>
                     ))}
                   </div>
                 </div>
@@ -6058,12 +6340,12 @@ function LoopsTab() {
                 defaultSort="created_at"
                 data={refRows}
                 columns={[
-                  { key: "created_at", label: "When", render: (r: any) => <span className="text-[11px] text-muted-foreground tabular-nums">{fmtDateTime(r.created_at)}</span> },
-                  { key: "action", label: "Event", render: (r: any) => <span className="font-mono text-[11px]">{r.action}</span> },
-                  { key: "channel", label: "Channel", render: (r: any) => <span className="text-[11px] text-muted-foreground">{r.channel || "-"}</span> },
-                  { key: "ref_code", label: "Ref code", render: (r: any) => <span className="font-mono text-[10px]">{r.ref_code}</span> },
-                  { key: "fund_id", label: "Fund", render: (r: any) => r.fund_id ? <span className="font-mono text-[10px] text-muted-foreground">{String(r.fund_id).slice(0, 12)}</span> : "-" },
-                  { key: "metadata", label: "Meta", render: (r: any) => r.metadata ? <details className="text-[10px]"><summary className="cursor-pointer text-muted-foreground">view</summary><pre className="mt-1 max-w-md overflow-auto rounded bg-muted/40 p-1">{typeof r.metadata === "string" ? r.metadata : JSON.stringify(r.metadata)}</pre></details> : "-" },
+                  { key: "created_at", label: "When", render: (r: any) => <span className="text-2xs text-muted-foreground tabular-nums">{fmtDateTime(r.created_at)}</span> },
+                  { key: "action", label: "Event", render: (r: any) => <span className="font-mono text-2xs">{r.action}</span> },
+                  { key: "channel", label: "Channel", render: (r: any) => <span className="text-2xs text-muted-foreground">{r.channel || "-"}</span> },
+                  { key: "ref_code", label: "Ref code", render: (r: any) => <span className="font-mono text-3xs">{r.ref_code}</span> },
+                  { key: "fund_id", label: "Fund", render: (r: any) => r.fund_id ? <span className="font-mono text-3xs text-muted-foreground">{String(r.fund_id).slice(0, 12)}</span> : "-" },
+                  { key: "metadata", label: "Meta", render: (r: any) => r.metadata ? <details className="text-3xs"><summary className="cursor-pointer text-muted-foreground">view</summary><pre className="mt-1 max-w-md overflow-auto rounded bg-muted/40 p-1">{typeof r.metadata === "string" ? r.metadata : JSON.stringify(r.metadata)}</pre></details> : "-" },
                 ]}
               />
             </>
@@ -6079,15 +6361,15 @@ function LoopsTab() {
               defaultSort="updatedAt"
               data={kvRows}
               columns={[
-                { key: "enabled", label: "Status", render: (r: any) => r.enabled ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">ENABLED</span> : <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">OFF</span> },
+                { key: "enabled", label: "Status", render: (r: any) => r.enabled ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-3xs font-bold text-green-700">ENABLED</span> : <span className="rounded-full bg-muted px-2 py-0.5 text-3xs font-bold text-muted-foreground">OFF</span> },
                 { key: "recipientFirstName", label: "Child", render: (r: any) => <span className="text-xs font-semibold">{r.recipientFirstName || "-"}</span> },
                 { key: "fundName", label: "Fund", render: (r: any) => <span className="text-xs">{r.fundName}</span> },
                 { key: "ownerEmail", label: "Owner", render: (r: any) => <span className="text-xs text-muted-foreground">{r.ownerEmail}</span> },
-                { key: "pinHint", label: "PIN hint", render: (r: any) => <span className="text-[11px] text-muted-foreground italic">{r.pinHint || "-"}</span> },
+                { key: "pinHint", label: "PIN hint", render: (r: any) => <span className="text-2xs text-muted-foreground italic">{r.pinHint || "-"}</span> },
                 { key: "allowTeenSuggestions", label: "Teen mode", render: (r: any) => r.allowTeenSuggestions ? "yes" : "no" },
                 { key: "suggestionsCount", label: "Suggestions", align: "right", render: (r: any) => fmtNum(r.suggestionsCount) },
-                { key: "updatedAt", label: "Updated", render: (r: any) => <span className="text-[11px] text-muted-foreground">{fmtDateTime(r.updatedAt)}</span> },
-                { key: "actions", label: "Actions", render: (r: any) => r.enabled ? <button onClick={() => { if (window.confirm(`Revoke kid view for ${r.recipientFirstName || r.fundName}?`)) revokeKidView.mutate(r.fundId); }} className="text-[11px] text-red-700 hover:underline">Revoke</button> : <span className="text-[11px] text-muted-foreground/60">-</span> },
+                { key: "updatedAt", label: "Updated", render: (r: any) => <span className="text-2xs text-muted-foreground">{fmtDateTime(r.updatedAt)}</span> },
+                { key: "actions", label: "Actions", render: (r: any) => r.enabled ? <button onClick={() => { if (window.confirm(`Revoke kid view for ${r.recipientFirstName || r.fundName}?`)) revokeKidView.mutate(r.fundId); }} className="text-2xs text-red-700 hover:underline">Revoke</button> : <span className="text-2xs text-muted-foreground/60">-</span> },
               ]}
             />
           )}
@@ -6104,11 +6386,11 @@ function LoopsTab() {
               columns={[
                 { key: "status", label: "Status", render: (r: any) => <StatusBadge status={r.status || "pending"} /> },
                 { key: "invited_email", label: "Invited", render: (r: any) => <span className="text-xs">{r.invited_email}</span> },
-                { key: "invitee_email_resolved", label: "Resolved user", render: (r: any) => <span className="text-[11px] text-muted-foreground">{r.invitee_email_resolved || "-"}</span> },
-                { key: "role", label: "Role", render: (r: any) => <span className="text-[11px]">{r.role}</span> },
+                { key: "invitee_email_resolved", label: "Resolved user", render: (r: any) => <span className="text-2xs text-muted-foreground">{r.invitee_email_resolved || "-"}</span> },
+                { key: "role", label: "Role", render: (r: any) => <span className="text-2xs">{r.role}</span> },
                 { key: "recipient_first_name", label: "For", render: (r: any) => <span className="text-xs">{r.recipient_first_name || r.fund_name}</span> },
-                { key: "invited_at", label: "Invited", render: (r: any) => <span className="text-[11px] text-muted-foreground">{fmtDateTime(r.invited_at)}</span> },
-                { key: "accepted_at", label: "Accepted", render: (r: any) => <span className="text-[11px] text-muted-foreground">{r.accepted_at ? fmtDateTime(r.accepted_at) : "-"}</span> },
+                { key: "invited_at", label: "Invited", render: (r: any) => <span className="text-2xs text-muted-foreground">{fmtDateTime(r.invited_at)}</span> },
+                { key: "accepted_at", label: "Accepted", render: (r: any) => <span className="text-2xs text-muted-foreground">{r.accepted_at ? fmtDateTime(r.accepted_at) : "-"}</span> },
               ]}
             />
           )}
@@ -6144,7 +6426,7 @@ function IntegrationsTab() {
   const orderedCategories = categoryOrder.filter(c => grouped[c]).concat(Object.keys(grouped).filter(c => !categoryOrder.includes(c)));
 
   const renderHealth = (h: any) => {
-    if (!h) return <span className="text-[11px] text-muted-foreground">-</span>;
+    if (!h) return <span className="text-2xs text-muted-foreground">-</span>;
     const styles: Record<string, string> = {
       ok: "bg-green-100 text-green-700",
       degraded: "bg-amber-100 text-amber-800",
@@ -6153,7 +6435,7 @@ function IntegrationsTab() {
     };
     const label = { ok: "OK", degraded: "DEGRADED", error: "ERROR", unknown: "DORMANT" }[h.status as string] || String(h.status || "?").toUpperCase();
     return (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${styles[h.status] || styles.unknown}`}>
+      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-3xs font-bold ${styles[h.status] || styles.unknown}`}>
         {label}
       </span>
     );
@@ -6183,7 +6465,7 @@ function IntegrationsTab() {
       </div>
 
       {!isLoading && !isError && integrations.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2 text-2xs">
           <span className="text-muted-foreground">Status:</span>
           {counts.ok > 0 && <span className="rounded-full bg-green-100 px-2 py-0.5 font-bold text-green-700">{counts.ok} OK</span>}
           {counts.degraded > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-800">{counts.degraded} degraded</span>}
@@ -6196,7 +6478,7 @@ function IntegrationsTab() {
       {isError && <div className="text-center py-12 text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
         <p className="font-semibold">Could not load integrations.</p>
         <p className="text-xs mt-1">{(error as any)?.message || "Unknown error"}</p>
-        <p className="text-[11px] mt-2 text-muted-foreground">Status code: {(error as any)?.status || "unknown"}. If the server has been restarted recently, the new endpoint may not be live yet. Give it 5s and try again.</p>
+        <p className="text-2xs mt-2 text-muted-foreground">Status code: {(error as any)?.status || "unknown"}. If the server has been restarted recently, the new endpoint may not be live yet. Give it 5s and try again.</p>
       </div>}
 
       {!isLoading && !isError && integrations.length === 0 && !isFetching && (
@@ -6210,7 +6492,7 @@ function IntegrationsTab() {
         <div className="space-y-6">
           {orderedCategories.map((category) => (
             <div key={category}>
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.10em] text-muted-foreground mb-2">{category}</h3>
+              <h3 className="text-2xs font-bold uppercase tracking-[0.10em] text-muted-foreground mb-2">{category}</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {grouped[category].map((integ: any) => (
                   <div key={integ.id} className={`rounded-2xl border p-4 ${integ.health?.status === "error" ? "border-red-200 bg-red-50/30" : integ.health?.status === "degraded" ? "border-amber-200/60 bg-amber-50/20" : integ.health?.status === "ok" ? "border-green-200/60 bg-card" : "border-border/60 bg-card"}`}>
@@ -6220,25 +6502,25 @@ function IntegrationsTab() {
                           <p className="text-sm font-semibold">{integ.label}</p>
                           {renderHealth(integ.health)}
                         </div>
-                        <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{integ.purpose}</p>
+                        <p className="text-2xs text-muted-foreground mt-1 leading-relaxed">{integ.purpose}</p>
                       </div>
                       {integ.docsUrl && (
-                        <a href={integ.docsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[11px] text-primary hover:underline">Docs ↗</a>
+                        <a href={integ.docsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-2xs text-primary hover:underline">Docs ↗</a>
                       )}
                     </div>
                     {integ.health?.message && (
-                      <div className={`text-[11px] rounded-lg px-2.5 py-1.5 mb-2 ${integ.health.status === "error" ? "bg-red-100/60 text-red-800" : integ.health.status === "degraded" ? "bg-amber-100/60 text-amber-900" : integ.health.status === "ok" ? "bg-green-100/40 text-green-900" : "bg-muted/40 text-muted-foreground"}`}>
+                      <div className={`text-2xs rounded-lg px-2.5 py-1.5 mb-2 ${integ.health.status === "error" ? "bg-red-100/60 text-red-800" : integ.health.status === "degraded" ? "bg-amber-100/60 text-amber-900" : integ.health.status === "ok" ? "bg-green-100/40 text-green-900" : "bg-muted/40 text-muted-foreground"}`}>
                         {integ.health.message}
                       </div>
                     )}
                     {integ.envVars && integ.envVars.length > 0 && (
                       <div className="space-y-0.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/70 mt-2 mb-1">Env vars</p>
+                        <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground/70 mt-2 mb-1">Env vars</p>
                         <div className="grid grid-cols-1 gap-0.5">
                           {integ.envVars.map((v: any) => (
-                            <div key={v.name} className="flex items-center justify-between gap-2 text-[11px] tabular-nums">
-                              <code className="font-mono text-[10.5px] truncate flex-1">{v.name}{v.required && <span className="text-red-500/60 ml-0.5">*</span>}</code>
-                              <span className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${v.set ? "bg-green-100 text-green-700" : v.required ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"}`}>
+                            <div key={v.name} className="flex items-center justify-between gap-2 text-2xs tabular-nums">
+                              <code className="font-mono text-3xs truncate flex-1">{v.name}{v.required && <span className="text-red-500/60 ml-0.5">*</span>}</code>
+                              <span className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-4xs font-bold ${v.set ? "bg-green-100 text-green-700" : v.required ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"}`}>
                                 {v.set ? "SET" : v.required ? "MISSING" : "unset"}
                               </span>
                             </div>
@@ -6247,7 +6529,7 @@ function IntegrationsTab() {
                       </div>
                     )}
                     {integ.notes && (
-                      <p className="text-[10.5px] italic text-muted-foreground/85 mt-2 leading-relaxed">{integ.notes}</p>
+                      <p className="text-3xs italic text-muted-foreground/85 mt-2 leading-relaxed">{integ.notes}</p>
                     )}
                   </div>
                 ))}
@@ -6257,7 +6539,7 @@ function IntegrationsTab() {
         </div>
       )}
 
-      <div className="rounded border border-border/60 bg-muted/20 p-3 text-[11px] text-muted-foreground">
+      <div className="rounded border border-border/60 bg-muted/20 p-3 text-2xs text-muted-foreground">
         <p className="font-semibold mb-1">Security note</p>
         <p>Env var values are NEVER returned to the client. Only their presence (set / missing / unset). To actually change a value, edit the environment configuration of the running deployment (Replit Secrets, .env, etc.) and restart the server.</p>
       </div>

@@ -7,11 +7,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, CheckCircle2, Heart, Lock, Mail, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
+import { formatAgeTransitionDate } from "@/lib/age-transition";
 import { getEmbedVideoUrl } from "@/lib/media";
 import { useCountUp } from "@/hooks/use-count-up";
 
@@ -27,7 +28,8 @@ type TransitionPayload = {
     id: string;
     name: string;
     recipientFirstName: string | null;
-    recipientBirthdate: string | null;
+    majorityAge: number | null;
+    majorityDate: string | null;
     balance: string;
     giftCount: number;
     contributorCount: number;
@@ -104,10 +106,16 @@ export default function AgeTransitionInvite() {
     enabled: !!token,
   });
 
-  const ageTransition = useMemo(
-    () => getAge18Transition(data?.fund.recipientBirthdate, Number((data?.fund as any)?.majorityAge) || 18),
-    [data?.fund.recipientBirthdate, (data?.fund as any)?.majorityAge],
-  );
+  // The server now sends the precomputed majority date (the raw DOB is no
+  // longer exposed for PII minimization). We only need eighteenthBirthday for
+  // formatAgeTransitionDate below.
+  const ageTransition = useMemo(() => {
+    const iso = data?.fund.majorityDate;
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return { eighteenthBirthday: d };
+  }, [data?.fund.majorityDate]);
   const currentUserEmail = user?.email ? String(user.email).trim().toLowerCase() : null;
 
   // Count-up on the kid's three hero stats. This is the celebratory
@@ -333,7 +341,7 @@ export default function AgeTransitionInvite() {
                 style={{
                   borderColor: "rgba(140,30,30,0.32)",
                   background:
-                    "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, #fff 60%, rgba(140,30,30,0.04) 100%)",
+                    "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, hsl(var(--card)) 60%, rgba(140,30,30,0.04) 100%)",
                 }}
                 data-testid="age-transition-sealed-letter"
               >
@@ -392,7 +400,7 @@ export default function AgeTransitionInvite() {
               style={{
                 borderColor: "hsl(var(--kiddo-gold) / 0.30)",
                 background:
-                  "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, #fff 60%, hsl(var(--kiddo-gold) / 0.10) 100%)",
+                  "linear-gradient(135deg, hsl(var(--kiddo-cream)) 0%, hsl(var(--card)) 60%, hsl(var(--kiddo-gold) / 0.10) 100%)",
               }}
               data-testid="age-transition-parent-letter"
             >
@@ -429,7 +437,7 @@ export default function AgeTransitionInvite() {
                       {memory.content || memory.gift?.message || "A gift that became part of your story."}
                     </p>
                     {memory.photoUrl ? (
-                      <img src={memory.photoUrl} alt="Memory" loading="lazy" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
+                      <FadeImage src={memory.photoUrl} alt="Memory" loading="lazy" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
                     ) : null}
                     {embed ? (
                       <iframe
@@ -689,7 +697,7 @@ export default function AgeTransitionInvite() {
                 );
               })}
             </div>
-            <p className="mt-4 text-[11px] text-muted-foreground">
+            <p className="mt-4 text-2xs text-muted-foreground">
               Tapping opens your mail app with a pre-filled message. You can edit it before sending.
             </p>
           </motion.section>

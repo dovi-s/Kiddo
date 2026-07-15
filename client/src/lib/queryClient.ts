@@ -1,9 +1,33 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
+  }
+}
+
+// Demo write-guard surfacing. The server blocks persisting edits from demo-
+// account visitors and returns { demo: true, saved: false, message }. Without
+// this, a blocked edit would silently no-op and read as "broken." Instead, show
+// a SUBTLE toast so the visitor learns the feature works — it just doesn't
+// persist in the shared demo, and WOULD in their own fund. Fires only for demo
+// accounts (only they get this response shape); real users never see it. Clones
+// the response so the caller can still read the body.
+async function maybeNotifyDemoBlocked(res: Response): Promise<void> {
+  try {
+    if (!(res.headers.get("content-type") || "").includes("application/json")) return;
+    const body = await res.clone().json();
+    if (body && body.demo === true && body.saved === false) {
+      toast({
+        title: "You're in the demo",
+        description:
+          body.message || "Changes aren't saved here, but they will be in your own fund.",
+      });
+    }
+  } catch {
+    /* non-JSON / already-consumed body — nothing to surface */
   }
 }
 
@@ -20,6 +44,7 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
+  void maybeNotifyDemoBlocked(res);
   return res;
 }
 

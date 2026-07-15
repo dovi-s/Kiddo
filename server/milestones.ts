@@ -181,6 +181,79 @@ export async function fireMoneyCrossMilestones(
 }
 
 // ============================================================================
+// GROWTH-PASSED-THE-GIFTS MILESTONE (earned truth, 2026-06-04)
+// ============================================================================
+// Fires ONCE per fund when total value reaches 2x total contributed — i.e.
+// the moment market growth alone exceeds everything everyone ever put in.
+// This is the single most meaningful "compounding is real" moment a
+// long-horizon fund has, and unlike threshold crossings it's an EARNED
+// TRUTH about this specific fund's history (per the meaning-over-data
+// direction, founder-locked 2026-06-04). Pure arithmetic on the fund's own
+// numbers: no projection, no promise, nothing to disclaim.
+//
+// Called from the gift-settle path with the same newTotal money-cross uses.
+// A purely price-driven crossing between gifts fires on the next settle —
+// acceptable lag for a once-per-lifetime milestone (and the next gift is
+// when the parent is looking anyway).
+
+// SINGLE SOURCE for this milestone's constants + copy. The demo seed
+// (script/seed-dunphys.ts) replays the same crossing data-driven from the
+// snapshot curve and MUST write byte-identical rows — duplicated literals
+// drifted apart was the failure mode (code-review 2026-06-04). Change the
+// floor/multiple/copy here and both the engine and the seed follow.
+export const GROWTH_PASSED_GIFTS = {
+  activityType: "milestone_growth_passed_gifts",
+  dedupeKey: "k:growth_passed_gifts",
+  contributedFloor: 250,
+  multiple: 2,
+  title: "Growth passed the gifts",
+  description: (childName: string) => `${childName}'s fund has now grown by more than everyone put in, combined.`,
+} as const;
+
+export async function fireGrowthPassedGiftsMilestone(
+  fundId: string,
+  userId: string,
+  newTotal: number,
+): Promise<void> {
+  if (!Number.isFinite(newTotal) || newTotal <= 0) return;
+  const key = GROWTH_PASSED_GIFTS.dedupeKey;
+  if (await hasMilestone(fundId, GROWTH_PASSED_GIFTS.activityType, key)) return;
+  // Total put in = every settled gift's net amount (external gifters AND the
+  // parent's own contributions — "everyone put in, combined").
+  // net_amount/amount are NUMERIC columns (drizzle decimal) — comparing them
+  // to '' coerces the literal to numeric and throws 22P02, so no NULLIF
+  // string games here: plain numeric COALESCE.
+  const result = await db.execute(sql`
+    SELECT COALESCE(SUM(COALESCE(net_amount, amount, 0)), 0) AS contributed
+    FROM gifts
+    WHERE fund_id = ${fundId}
+      AND status IN ('invested', 'settled', 'completed')
+  `);
+  const contributed = Number((result as any).rows?.[0]?.contributed ?? 0);
+  // Meaningfulness floor: "growth passed the gifts" on a $40 fund is
+  // technically true and emotionally nothing. $250+ contributed means the
+  // doubling represents real compounding the family can feel.
+  if (!Number.isFinite(contributed) || contributed < GROWTH_PASSED_GIFTS.contributedFloor) return;
+  if (Math.round(newTotal * 100) / 100 < contributed * GROWTH_PASSED_GIFTS.multiple) return;
+  const childName = await fundDisplayName(fundId);
+  try {
+    const title = GROWTH_PASSED_GIFTS.title;
+    const description = GROWTH_PASSED_GIFTS.description(childName);
+    await storage.createActivity({
+      userId,
+      fundId,
+      type: GROWTH_PASSED_GIFTS.activityType,
+      title,
+      description,
+      metadata: JSON.stringify({ milestone: "growth_passed_gifts", contributed: Math.round(contributed), key }),
+    } as any);
+    await writeMilestoneMemoryEntry(fundId, title, description);
+  } catch (err) {
+    console.warn("[milestones] growth_passed_gifts write failed:", err);
+  }
+}
+
+// ============================================================================
 // RETURNING GIFTER MILESTONE
 // ============================================================================
 // Fires after a settled gift if this senderEmail has now given the 2nd /

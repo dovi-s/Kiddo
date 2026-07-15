@@ -1,0 +1,58 @@
+# Render Blueprint — Kiddo: marketing site + web app + API + background workers,
+# all ONE service (the monolithic Express+Vite app). Native (Expo) is NOT hosted
+# here — it builds via EAS and calls this service's API.
+#
+# Stage: START FREE for demo / Alpaca-sandbox / loop-testing (Stripe is test-mode,
+# Alpaca is sandbox, so a sleeping free instance is fine). At REAL launch (live
+# money), change `plan: free` -> `plan: starter` ($7/mo, always-on) so Stripe /
+# Alpaca / Postmark webhooks are never missed while idle. One toggle, no refactor.
+#
+# Secrets are `sync: false` -> set them in the Render dashboard (Environment tab),
+# never commit them here.
+services:
+  - type: web
+    name: kiddo
+    runtime: node
+    region: oregon            # any US region is fine; change if you prefer east
+    plan: free                # <-- launch day: switch to `starter`
+    # branch omitted on purpose: Render deploys whichever branch you connect this
+    # Blueprint to (deploy the branch that has the current app, not a stale main).
+    buildCommand: npm install && npm run build   # postinstall + build.ts (server + client)
+    # Linux-safe start. The package.json `start` uses Windows `set ...&&` which
+    # fails on Render's Linux; NODE_ENV is provided via envVars below instead.
+    startCommand: node dist/index.cjs
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true   # Render generates a secure random value
+      # --- REQUIRED: set in the Render dashboard ---
+      - key: DATABASE_URL            # Supabase pooled (PgBouncer) URI, SSL on
+        sync: false
+      - key: APP_BASE_URL            # https://kiddofund.com (NOT the .onrender.com URL)
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS    # prod origin(s) — REQUIRED or authed mutations 403
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: POSTMARK_SERVER_TOKEN   # (or SENDGRID_API_KEY) — prod boot HARD-FAILS without an ESP
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: SUPABASE_URL            # Storage (Memory Book uploads)
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # --- OPTIONAL but recommended ---
+      - key: SENTRY_DSN
+        sync: false
+      - key: POSTHOG_API_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        sync: false

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Bell, BookOpen, ArrowRight } from "lucide-react";
+import { Check, Bell, BookOpen, ArrowRight, Key } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -66,6 +66,12 @@ export default function ClaimFund() {
     haptic("medium");
     setSubmitting(true);
     setError(null);
+    // Hard timeout on the highest-stakes request in the product. Without it,
+    // a hung connection leaves the kid staring at a "Claiming..." spinner
+    // forever at the moment they take ownership of their fund. ~30s then
+    // abort, show a kid-readable message, and re-enable retry.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
     try {
       const res = await fetch(`/api/kid-view/${encodeURIComponent(token)}/claim-account`, {
         method: "POST",
@@ -77,6 +83,7 @@ export default function ClaimFund() {
           password,
           firstName: firstName.trim() || undefined,
         }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -93,8 +100,14 @@ export default function ClaimFund() {
       setClaimedName(claimedFirstName);
       setSubmitting(false);
     } catch (err: any) {
-      setError(err?.message || "Network error. Try again.");
+      if (err?.name === "AbortError") {
+        setError("This is taking too long. Check your connection and try again.");
+      } else {
+        setError(err?.message || "Network error. Try again.");
+      }
       setSubmitting(false);
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
@@ -133,6 +146,10 @@ export default function ClaimFund() {
         <div className="max-w-md w-full bg-white border border-border/60 rounded-2xl p-6 text-center shadow-sm">
           <p className="text-sm font-semibold text-foreground mb-2">Open this from your Kid View.</p>
           <p className="text-xs text-muted-foreground">The claim link needs to come from inside your unlocked Kid View page so we know it's actually you.</p>
+          {/* Re-entry path (audit catch 2026-06-04): the unlock expires after
+              ~12 hours, and a kid landing here with a stale token had no next
+              step — a dead-end on the single most important flow. */}
+          <p className="text-xs text-muted-foreground mt-2">If you unlocked it earlier, the unlock may have expired. Open your Kid View link again, enter your PIN, and tap the claim button from there.</p>
         </div>
       </div>
     );
@@ -160,7 +177,7 @@ export default function ClaimFund() {
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.22)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+            className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.22)_0%,hsl(var(--card))_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
             role="status"
             aria-live="polite"
           >
@@ -184,7 +201,7 @@ export default function ClaimFund() {
               transition={{ duration: 0.45, ease: "easeOut", delay: 0.18 }}
               className="text-center mb-5"
             >
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-2">Welcome, owner</p>
+              <p className="text-2xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-2">Welcome, owner</p>
               <h1 className="font-heading text-3xl font-bold text-foreground leading-tight">
                 It's yours now, {claimedName}.
               </h1>
@@ -218,7 +235,7 @@ export default function ClaimFund() {
               <div className="flex items-start gap-2.5">
                 <Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" strokeWidth={2.5} aria-hidden="true" />
                 <p className="text-sm text-foreground/85 leading-relaxed">
-                  <span className="font-semibold text-foreground">The only ongoing charge: 10 cents per $100 invested per year, or $1 a year per $1,000.</span> That's it. No subscription. No platform fee.
+                  <span className="font-semibold text-foreground">The only ongoing charge: $1 a year for every $1,000 invested.</span> That's it. No subscription, no platform fee.
                 </p>
               </div>
             </motion.div>
@@ -250,7 +267,7 @@ export default function ClaimFund() {
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
                     rothOptedIn ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
                   }`}>
-                    {rothOptedIn ? <Check size={16} strokeWidth={2.5} /> : <Bell size={16} strokeWidth={1.8} />}
+                    {rothOptedIn ? <Check size={16} strokeWidth={2.5} /> : <Bell size={16} strokeWidth={2} />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground">
@@ -323,7 +340,7 @@ export default function ClaimFund() {
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]"
+          className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,hsl(var(--card))_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]"
         >
           <motion.div
             initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
@@ -331,9 +348,9 @@ export default function ClaimFund() {
             transition={{ duration: 0.45, ease: "easeOut", delay: 0.15 }}
             className="flex items-start gap-3 mb-4"
           >
-            <span className="text-3xl shrink-0" aria-hidden="true">🔑</span>
+            <Key className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" size={28} strokeWidth={2} aria-hidden />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">Claim your fund</p>
+              <p className="text-2xs font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-1">Claim your fund</p>
               <h1 className="font-heading text-2xl font-bold text-foreground leading-tight">It's yours now.</h1>
             </div>
           </motion.div>
@@ -345,6 +362,19 @@ export default function ClaimFund() {
             className="text-sm text-muted-foreground leading-relaxed mb-5"
           >
             Set up your own login. The fund moves from your custodian to you. Nothing gets sold. The investments stay where they are. You decide what happens next.
+          </motion.p>
+
+          {/* The sober line before the warm form (audit catch 2026-06-04):
+              claiming is a one-way legal action and the flow said so
+              nowhere. One sentence, plain register, no scare styling —
+              informed beats ambushed. */}
+          <motion.p
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.34 }}
+            className="text-xs text-muted-foreground/80 leading-relaxed mb-5"
+          >
+            One thing to know first: claiming is permanent. The account becomes yours alone, and it can't be handed back to your custodian afterward.
           </motion.p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -390,7 +420,7 @@ export default function ClaimFund() {
                 minLength={8}
                 data-testid="claim-input-password"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">If you already have a Kiddo account with this email, enter that password to claim into it.</p>
+              <p className="text-3xs text-muted-foreground mt-1">If you already have a Kiddo account with this email, enter that password to claim into it.</p>
             </div>
 
             {/* role="alert" + aria-live makes screen readers announce
@@ -400,6 +430,14 @@ export default function ClaimFund() {
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" data-testid="claim-error" role="alert" aria-live="polite">
                 {error}
+                {/* Next step travels WITH the error (audit 2026-06-04):
+                    the most common failure is an expired unlock, and the
+                    recovery lives on a different page — say so here, where
+                    screen readers announce it, instead of relying on the
+                    reassurance bullets below the fold. */}
+                <span className="block mt-1 text-red-700/80">
+                  Stuck? Open your Kid View link again, enter your PIN, and tap the claim button from there. Or email support@kiddofund.com.
+                </span>
               </div>
             )}
 
@@ -429,7 +467,7 @@ export default function ClaimFund() {
           </motion.div>
         </motion.div>
 
-        <p className="mt-6 text-center text-[11px] text-muted-foreground">
+        <p className="mt-6 text-center text-2xs text-muted-foreground">
           Already have a login? <a href="/login" className="underline hover:text-foreground">Sign in</a> instead.
         </p>
 

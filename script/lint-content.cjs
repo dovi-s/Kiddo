@@ -45,12 +45,18 @@ const PASSIVE_VOICE_PATTERNS = [
 const CONTENT_ROOTS = [
   "client/src/content",
   "client/src/pages",
-  "client/src/components/ui/share-kit.tsx",
   // shared/ is walked so the INCLUDED_SHARED_FILES allowlist below can
   // catch customer-facing copy that lives in shared modules (email
   // preference labels, gift-lesson explainers). shouldScan filters to
   // just the allowlisted files; the rest of shared/ is skipped.
   "shared",
+  // Email templates are 100% user-facing copy. Added 2026-06-03 after five
+  // em-dashes were found living in rendered email bodies (gifterMagicLink,
+  // giftReceived, parentHandoffRecurring) — the scan had never covered
+  // server/, so email copy drifted rule-free. Comments are stripped by
+  // extractSegments, so code-facing em-dashes in template comments don't
+  // false-positive.
+  "server/templates",
 ];
 
 const INCLUDED_PAGE_FILES = new Set([
@@ -187,7 +193,6 @@ const INCLUDED_COMPONENT_FILES = new Set([
 // here.
 const INCLUDED_SHARED_FILES = new Set([
   path.normalize("shared/emailPreferences.ts"),
-  path.normalize("shared/gift-lessons.ts"),
   path.normalize("shared/milestones.ts"),
 ]);
 
@@ -196,7 +201,8 @@ const SHARED_ROOT = path.normalize("shared");
 function shouldScan(filePath) {
   const normalized = path.normalize(filePath);
   if (normalized.endsWith(".md")) return true;
-  if (normalized.endsWith(path.normalize("client/src/components/ui/share-kit.tsx"))) return true;
+  // Every email template is user-facing prose — scan the whole directory.
+  if (normalized.startsWith(path.normalize("server/templates") + path.sep)) return true;
   if (INCLUDED_COMPONENT_FILES.has(normalized)) return true;
   if (INCLUDED_SHARED_FILES.has(normalized)) return true;
   return INCLUDED_PAGE_FILES.has(normalized);
@@ -292,6 +298,18 @@ function lintSegment(segment) {
     );
   }
 
+  // UTMA majority-age guard. "18 in most states" is factually backwards — 21 is
+  // the majority (shared/utma.ts: 35 states at 21, 14 at 18, CA among the 18s). It
+  // once spread to ~12 surfaces propping up the "at 18" story; this stops it
+  // re-spreading. Correct framing: "21 in most states, 18 in some". (The emotional
+  // "at 18" hero is fine — this only catches the factual "in most states" claim.)
+  if (normalized.includes("18 in most") && /utma|majorit|transfer|age of/.test(normalized)) {
+    issues.push('Backwards UTMA age "18 in most states" — 21 is the majority (shared/utma.ts); use "21 in most states, 18 in some"');
+  }
+  if (/\b21 in (ca|california|ky|kentucky)\b/.test(normalized)) {
+    issues.push('Wrong UTMA age — CA/KY are 18-states, not 21 (shared/utma.ts)');
+  }
+
   for (const phrase of BANNED_PHRASES) {
     if (normalized.includes(phrase)) issues.push(`Banned phrase "${phrase}"`);
   }
@@ -364,6 +382,17 @@ const BANNED_ICONS = ["Sparkles", "SparkleBurst", "Wand2"];
           excerpt: "(icon identifier found in non-comment code)",
         });
       }
+    }
+    // The ✨ sparkle EMOJI is the same banned AI-slop tell as the Sparkles
+    // lucide icon, but the identifier ban above misses the raw glyph — it had
+    // crept into the occasion-emoji maps + KidView copy. codeOnly has comments
+    // stripped, so in-code notes that mention ✨ don't trip this.
+    if (codeOnly.includes("✨")) {
+      allIssues.push({
+        file: full,
+        issue: `Sparkle emoji (✨) — same banned AI-slop tell as the Sparkles icon (feedback_iconography_consistency.md). Use a semantic emoji (🎁 custom, 🎉 generic) or drop it.`,
+        excerpt: "(✨ found in non-comment code)",
+      });
     }
   }
 })("client/src");

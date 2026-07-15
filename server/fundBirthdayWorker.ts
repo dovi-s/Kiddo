@@ -23,6 +23,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildFundBirthdayEmail } from "./templates/fundBirthday";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "fund-birthday-worker";
@@ -178,8 +179,11 @@ async function tick(log: LogFn): Promise<void> {
       : `${baseUrl}/dashboard`;
     const memoryBookUrl = `${baseUrl}/memory?fund=${encodeURIComponent(row.fundId)}`;
     try {
-      await sendEmail(buildFundBirthdayEmail({
+      // fundId → the bereavement freeze suppresses this at the email chokepoint
+      // (sendEmail) if the fund is memorialized. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildFundBirthdayEmail({
         to: row.parentEmail,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parentEmail, "birthday"),
         parentFirstName: row.parentFirstName,
         childFirstName: row.childFirstName,
         childAge,
@@ -187,7 +191,7 @@ async function tick(log: LogFn): Promise<void> {
         fundAgeYears: Math.max(1, fundAgeYears),
         dashboardUrl,
         memoryBookUrl,
-      }));
+      }), fundId: row.fundId });
       state.lastSentByFundYear[key] = new Date().toISOString();
       sent += 1;
       log(`fund-birthday sent for fund ${row.fundId} (kid age ${childAge})`, WORKER_SOURCE);

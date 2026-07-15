@@ -27,6 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart, Plus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { FadeImage } from "@/components/ui/fade-image";
 import { GiftersAcrossFundsSheet } from "@/components/GiftersAcrossFundsSheet";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -225,7 +226,7 @@ function HouseholdSparkline({
       </svg>
       {showDelta && (
         <p
-          className="mt-2 text-[11px] font-semibold tabular-nums opacity-80"
+          className="mt-2 text-2xs font-semibold tabular-nums opacity-80"
           data-testid="household-sparkline-delta"
         >
           {deltaPrefix}{new Intl.NumberFormat("en-US", {
@@ -527,7 +528,7 @@ export default function FundsOverview() {
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-funds-overview">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
-          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+          <div className="kiddo-card p-8 text-center">
             <p className="font-heading text-lg font-semibold text-foreground">
               Could not load your funds overview.
             </p>
@@ -538,7 +539,7 @@ export default function FundsOverview() {
               <button
                 type="button"
                 onClick={() => refetch()}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-4 py-2 text-sm font-semibold text-white"
               >
                 Try again
               </button>
@@ -562,19 +563,19 @@ export default function FundsOverview() {
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
           <div className="rounded-3xl bg-card border border-border p-6">
-            <div className="h-3 w-20 rounded bg-muted/50 mb-4" />
-            <div className="h-10 w-48 rounded bg-muted/50 mb-6" />
-            <div className="space-y-3">
+            <div className="h-3 w-20 rounded bg-primary/10 mb-4 animate-pulse" />
+            <div className="h-10 w-48 rounded bg-primary/10 mb-6 animate-pulse" />
+            <div className="space-y-3 animate-pulse">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex items-center justify-between rounded-2xl border border-border bg-background p-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-muted/40" />
+                    <div className="h-10 w-10 rounded-full bg-primary/10" />
                     <div className="space-y-1.5">
-                      <div className="h-3 w-24 rounded bg-muted/50" />
-                      <div className="h-2.5 w-16 rounded bg-muted/30" />
+                      <div className="h-3 w-24 rounded bg-primary/10" />
+                      <div className="h-2.5 w-16 rounded bg-primary/10" />
                     </div>
                   </div>
-                  <div className="h-3 w-20 rounded bg-muted/40" />
+                  <div className="h-3 w-20 rounded bg-primary/10" />
                 </div>
               ))}
             </div>
@@ -606,7 +607,7 @@ export default function FundsOverview() {
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-funds-overview">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
-          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+          <div className="kiddo-card p-8 text-center">
             <p className="font-heading text-lg font-semibold text-foreground">
               {hasNoFunds ? "This view is for funds you manage." : "The overview unlocks at 2 or more funds."}
             </p>
@@ -620,7 +621,7 @@ export default function FundsOverview() {
                 <button
                   type="button"
                   onClick={() => setLocation("/my-gifts")}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-4 py-2 text-sm font-semibold text-white"
                   data-testid="button-funds-empty-view-gifts"
                 >
                   View your gifts
@@ -639,7 +640,7 @@ export default function FundsOverview() {
               <button
                 type="button"
                 onClick={() => setLocation("/dashboard")}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-4 py-2 text-sm font-semibold text-white"
               >
                 Open Dashboard
                 <ArrowRight size={14} />
@@ -736,7 +737,7 @@ export default function FundsOverview() {
             uses. Cards staged in 80ms apart for the staged-reveal
             motion vocabulary. No emotional copy here; each kid's
             individual surface carries the warmth. */}
-        <section className="rounded-3xl border border-border bg-card p-5">
+        <section className="kiddo-card p-5">
           <p className="kiddo-section-label mb-3">Each fund</p>
           <div className="space-y-2">
             {sortedFunds.map((f, i) => {
@@ -776,6 +777,13 @@ export default function FundsOverview() {
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.35, ease: "easeOut", delay: 0.18 + i * 0.08 }}
+                  // Calm hover-lift on the primary CTA (open a fund): a 2px rise
+                  // + a soft tap-press, with the signature easing — enough to feel
+                  // alive/clickable without the lab's playful bounce. Per-state
+                  // transitions so hover stays snappy (the entrance delay above
+                  // must NOT bleed into the hover, or it lags before lifting).
+                  whileHover={{ y: -2, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                  whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
                   className={`relative w-full flex items-center justify-between gap-3 rounded-2xl border bg-card p-4 text-left transition-colors ${
                     isTransferred
                       ? "opacity-70 border-[hsl(var(--kiddo-border))]"
@@ -800,7 +808,7 @@ export default function FundsOverview() {
                         : "bg-[hsl(var(--kiddo-evergreen)/0.06)] text-[hsl(var(--kiddo-evergreen)/0.7)]"
                     }`}>
                       {f.childPhotoUrl ? (
-                        <img
+                        <FadeImage
                           src={f.childPhotoUrl}
                           alt=""
                           className="h-full w-full object-cover"
@@ -825,7 +833,7 @@ export default function FundsOverview() {
                           Settings surface; the emotional cue belongs on
                           the per-kid Dashboard. See
                           project_funds_overview_rules.md. */}
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-2xs text-muted-foreground">
                         {transferredLabel
                           ? transferredLabel
                           : (
@@ -852,7 +860,7 @@ export default function FundsOverview() {
                           Locked 2026-05-18. */}
                       {!isTransferred && typeof f.delta30dUsd === "number" && Math.abs(f.delta30dUsd) >= 1 && (
                         <p
-                          className={`text-[10px] tabular-nums leading-tight mt-0.5 ${f.delta30dUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kora-gold))]"}`}
+                          className={`text-3xs tabular-nums leading-tight mt-0.5 ${f.delta30dUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kora-gold))]"}`}
                           data-testid={`overview-fund-delta-${f.id}`}
                         >
                           {f.delta30dUsd >= 0 ? "+" : "−"}{fmtCurrency(Math.abs(f.delta30dUsd), { whole: true })}
@@ -869,7 +877,7 @@ export default function FundsOverview() {
                           market moves too. Per Tier-2 deferred #4. */}
                       {!isTransferred && typeof f.thisMonthGiftUsd === "number" && f.thisMonthGiftUsd >= 1 && (
                         <p
-                          className="text-[10px] tabular-nums leading-tight mt-0.5 text-muted-foreground"
+                          className="text-3xs tabular-nums leading-tight mt-0.5 text-muted-foreground"
                           data-testid={`overview-fund-inflow-${f.id}`}
                         >
                           {fmtCurrency(f.thisMonthGiftUsd, { whole: true })} in gifts
@@ -909,7 +917,7 @@ export default function FundsOverview() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.05 }}
-            className="rounded-3xl border border-border bg-card p-5"
+            className="kiddo-card p-5"
           >
             <p className="kiddo-section-label mb-3">This month</p>
             <div className="space-y-2 text-sm">
@@ -956,11 +964,11 @@ export default function FundsOverview() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.075 }}
-            className="rounded-3xl border border-border bg-card p-5"
+            className="kiddo-card p-5"
           >
             <div className="flex items-baseline justify-between gap-3 mb-3">
               <p className="kiddo-section-label">Growing automatically</p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 {recurring.activeCount} active
               </p>
             </div>
@@ -973,7 +981,7 @@ export default function FundsOverview() {
               >
                 {fmtCurrency(animatedRecurringMonthly)}
               </p>
-              <p className="text-[11px] text-muted-foreground">per month total</p>
+              <p className="text-2xs text-muted-foreground">per month total</p>
             </div>
             <div className="space-y-2">
               {recurringItems.map((item) => {
@@ -1002,7 +1010,7 @@ export default function FundsOverview() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-8 w-8 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
                         {item.childPhotoUrl ? (
-                          <img src={item.childPhotoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          <FadeImage src={item.childPhotoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
                         ) : (
                           String(displayName).slice(0, 1).toUpperCase()
                         )}
@@ -1021,7 +1029,7 @@ export default function FundsOverview() {
                               bank, amount). */}
                           {item.isDuplicate && (
                             <span
-                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                              className="shrink-0 rounded-full px-1.5 py-0.5 text-4xs font-bold uppercase tracking-wide"
                               style={{
                                 background: "hsl(var(--kora-gold) / 0.14)",
                                 color: "hsl(var(--kora-gold))",
@@ -1038,7 +1046,7 @@ export default function FundsOverview() {
                             on the same fund don't render as identical
                             rows. See buildRecurringRowSubtitle for the
                             format choices. */}
-                        <p className="text-[11px] text-muted-foreground truncate">
+                        <p className="text-2xs text-muted-foreground truncate">
                           {buildRecurringRowSubtitle(item)}
                         </p>
                       </div>
@@ -1065,7 +1073,7 @@ export default function FundsOverview() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.10 }}
-            className="rounded-3xl border border-border bg-card p-5"
+            className="kiddo-card p-5"
           >
             <p className="kiddo-section-label mb-3">Coming up</p>
             <div className="space-y-2">
@@ -1083,7 +1091,7 @@ export default function FundsOverview() {
                       <p className="text-sm font-medium text-foreground truncate">
                         {o.recipientFirstName ? `${capFirst(o.recipientFirstName)} · ` : ""}{o.name}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">{fmtEventDate(o.eventDate)}</p>
+                      <p className="text-2xs text-muted-foreground">{fmtEventDate(o.eventDate)}</p>
                     </div>
                   </div>
                   <ArrowRight size={14} className="text-muted-foreground shrink-0" />
@@ -1115,7 +1123,7 @@ export default function FundsOverview() {
             <button
               type="button"
               onClick={() => setGiftersSheetOpen(true)}
-              className="w-full text-left rounded-3xl border border-border bg-card p-5 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none"
+              className="w-full text-left kiddo-card p-5 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none"
               data-testid="across-all-funds-gifters-trigger"
               aria-label="View gifters across all funds"
             >
@@ -1127,7 +1135,7 @@ export default function FundsOverview() {
                     {uniqueGifterCount === 1 ? "person has" : "people have"} given to your{" "}
                     {funds.length === 1 ? "child" : "children"}.
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                  <p className="text-2xs text-muted-foreground mt-1.5">
                     See who gave to who.
                   </p>
                 </div>
@@ -1145,7 +1153,7 @@ export default function FundsOverview() {
         {/* Honest footer note. Surfaces are not pretending to be the
             kid-emotional anchor — they're an administrative glance.
             Per-fund navigation is the answer for everything else. */}
-        <p className="text-center text-[11px] text-muted-foreground/70 pt-2 pb-6">
+        <p className="text-center text-2xs text-muted-foreground/70 pt-2 pb-6">
           Each fund stays separate. Open one to see its Memory Book, activity, and settings.
         </p>
       </main>

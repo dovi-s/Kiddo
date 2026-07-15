@@ -195,13 +195,16 @@ export default function InvitationAccept() {
             </p>
             <p style={{ fontSize: 13, color: "rgba(0,0,0,0.72)", lineHeight: 1.5, marginBottom: 12 }}>
               {invitation.role === "co-admin"
-                ? `You'll be able to view ${childName}'s fund and create events, gifts, and settings changes.`
+                ? `You'll be able to view ${childName}'s fund, create occasions, add Memory Book entries, and send thank-yous. Money and account settings stay with ${inviter}.`
                 : `You'll be able to view ${childName}'s balance, gifts, and Memory Book entries. You will not be able to make changes.`}
             </p>
             <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)", lineHeight: 1.55 }}>
               <div style={{ marginBottom: 4 }}>· You are not added to the legal UTMA account itself; that stays with {inviter}.</div>
               <div style={{ marginBottom: 4 }}>· Access can be revoked any time.</div>
-              <div>· Access ends automatically when {childName} turns 18 and takes ownership of their fund.</div>
+              {/* No hardcoded 18 — majority is 21 in most states, 19 in AL/NE.
+                  The invite payload doesn't carry the fund's majorityAge, so
+                  say the rule, not a number. */}
+              <div>· Access ends automatically when {childName} reaches their state's age of majority and takes ownership of their fund.</div>
             </div>
           </div>
 

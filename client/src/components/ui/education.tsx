@@ -83,7 +83,12 @@ export function EducationTip({ title, children, icon = "help", variant = "expand
               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 rounded-xl bg-card border border-border shadow-lg z-50"
               data-testid="education-tip-tooltip"
             >
-              <button onClick={() => setIsOpen(false)} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground">
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close"
+                className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              >
                 <X size={12} />
               </button>
               <p className="text-xs font-medium text-foreground mb-1">{title}</p>
@@ -137,11 +142,11 @@ export const educationContent = {
   },
   sipc: {
     title: "What is SIPC protection?",
-    content: "Once invested, your fund is held through our broker-dealer partner, the brokerage behind Kiddo. SIPC protection then covers up to $500,000 if anything ever happens to the brokerage firm. It does not protect against market losses.",
+    content: "When investing is live, your fund will be held through our broker-dealer partner (Member FINRA/SIPC). SIPC protection then covers up to $500,000 if anything ever happens to the broker-dealer. It does not protect against market losses.",
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gift-giver. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund). Same rate on Free, Kiddo+, and Kiddo Family. Cash and pending gifts are not charged. All fees are shown before checkout.",
+    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gifter. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund). Same rate on Free, Kiddo+, and Kiddo Family. The subscription is a separate fee for product features, not a fee on the investment. Cash and pending gifts are not charged. All fees are shown before checkout.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",
@@ -149,7 +154,7 @@ export const educationContent = {
   },
   costBasis: {
     title: "What about taxes on gifts?",
-    content: "Most gifts are well under the $19,000 annual gift tax exclusion, so there's no gift tax to worry about. When investments are eventually sold, capital gains taxes apply based on the original cost basis. The recipient inherits the giver's cost basis and holding period, not the value at the time of the gift.",
+    content: "Most gifts are well under the $19,000 annual gift tax exclusion, so there's no gift tax to worry about. When investments are eventually sold, capital gains taxes apply based on the original cost basis. The recipient inherits the gifter's cost basis and holding period, not the value at the time of the gift.",
   },
   giftGrowth: {
     title: "How much can gifts grow?",
@@ -161,15 +166,15 @@ export const educationContent = {
   },
   paymentMethods: {
     title: "What payment methods are accepted?",
-    content: "Gift-givers can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest. Bank transfers have lower processing fees, which is great for larger gifts.",
+    content: "Gifters can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest. Bank transfers have lower processing fees, which is great for larger gifts.",
   },
   kiddieTax: {
     title: "What is the kiddie tax?",
-    content: "For children under 19 (or under 24 if a full-time student), unearned income over $2,600 per year may be taxed at the parent's tax rate instead of the child's. The first $1,300 is tax-free, and the next $1,300 is taxed at the child's rate. This only applies when investments are sold at a gain or when dividends exceed these thresholds. Most custodial accounts stay well below these limits.",
+    content: "For children under 19 (or under 24 if a full-time student), unearned income over $2,700 per year may be taxed at the parent's tax rate instead of the child's. The first $1,350 is tax-free, and the next $1,350 is taxed at the child's rate. This only applies when investments are sold at a gain or when dividends exceed these thresholds. Most custodial accounts stay well below these limits.",
   },
   costBasisGifted: {
     title: "How is cost basis handled for gifted stock?",
-    content: "When you receive stock as a gift, you inherit the giver's original cost basis and their holding period. This means when you eventually sell, your capital gains (or losses) are calculated from what the giver originally paid, not what the stock was worth when you received it. If the stock has gone up since the giver bought it, you will owe taxes on the full gain when you sell.",
+    content: "When you receive stock as a gift, you inherit the gifter's original cost basis and their holding period. This means when you eventually sell, your capital gains (or losses) are calculated from what the gifter originally paid, not what the stock was worth when you received it. If the stock has gone up since the gifter bought it, you will owe taxes on the full gain when you sell.",
   },
   giftTaxExclusion: {
     title: "Is there a limit on tax-free gifts?",
@@ -236,7 +241,7 @@ export function getMonthlyMoneyLesson({
       eyebrow: "This month's money lesson",
       title: "Start treating the fund like a conversation, not a surprise",
       body: "Talk through what the fund owns, why those companies or ETFs are there, and what decisions stay with you until adulthood.",
-      whyNow: "Teen years are when the fund can become part of real money judgment, not just a nice story.",
+      whyNow: "Teen years are when the fund can become part of real, hands-on money judgment.",
     });
   }
 
@@ -305,7 +310,7 @@ export function getMonthlyMoneyLesson({
       id: "foundational-stock",
       eyebrow: "This month's money lesson",
       title: "Start with one simple truth",
-      body: "A gift fund is not just stored money. It is money with time, meaning, and the chance to grow.",
+      body: "A gift fund is money with time, meaning, and the chance to grow.",
       whyNow: "This is the clearest foundational idea for parents to repeat early and often.",
     });
   }

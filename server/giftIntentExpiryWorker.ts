@@ -149,7 +149,7 @@ async function sendGifterHeadsUp(
     ``,
     `To start a fresh intent: ${giveAGiftUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
 
   try {
@@ -329,7 +329,7 @@ async function giveUpOnDeclinedIntent(
     ``,
     `To start fresh: ${giveAGiftUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   try {
     const { html } = renderKiddoEmail({
@@ -417,10 +417,32 @@ async function processDeclineRetries(log: LogFn): Promise<number> {
   return settled;
 }
 
+/**
+ * C3 hygiene: reclaim abandoned pending_gift_media rows — gift checkouts that
+ * were created with a media token but never completed (so the webhook never read
+ * the row). Rows are only created when STRIPE_MEDIA_TOKEN_ENABLED is on; this
+ * sweep is harmless otherwise. Best-effort and silent on failure (e.g. before
+ * migration 0046 is applied) — pure cleanup, never load-bearing.
+ */
+async function sweepPendingGiftMedia(log: LogFn): Promise<void> {
+  try {
+    const result = await pool.query(
+      `DELETE FROM pending_gift_media WHERE created_at < NOW() - INTERVAL '7 days' RETURNING token`,
+    );
+    if (result.rows.length > 0) {
+      log(`swept ${result.rows.length} abandoned pending_gift_media row(s)`, WORKER_SOURCE);
+    }
+  } catch {
+    // Silent: table may not exist yet (pre-migration) or a transient DB blip.
+    // Cleanup is non-critical; the next daily tick retries.
+  }
+}
+
 async function tick(log: LogFn): Promise<void> {
   const headsUps = await processHeadsUps(log);
   const expiries = await processExpiries(log);
   const retries = await processDeclineRetries(log);
+  await sweepPendingGiftMedia(log);
   if (headsUps === 0 && expiries === 0 && retries === 0) return;
   log(`tick done: headsUps=${headsUps} expiries=${expiries} declineRetries=${retries}`, WORKER_SOURCE);
 }

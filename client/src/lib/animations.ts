@@ -223,18 +223,13 @@ export const swipeCardRight: Variants = {
   }
 };
 
-export const pullToRefresh: Variants = {
-  rest: { y: 0, opacity: 0 },
-  pulling: { 
-    y: 0, 
-    opacity: 1,
-    transition: { duration: 0.1 }
-  },
-  refreshing: {
-    rotate: 360,
-    transition: { duration: 1, ease: "linear", repeat: Infinity }
-  }
-};
+// (pullToRefresh variants removed 2026-06-07: defined since an early sketch
+// but never wired to anything, and their presence misled greps into thinking
+// web pull-to-refresh exists. The deliberate decision is NO custom web PTR —
+// the dashboard self-refreshes via SSE + polling, the browser's native
+// pull-to-refresh still works as a fast warm reload, and the beautiful
+// branded version belongs in the native app's RefreshControl when the native
+// track resumes.)
 
 export const fadeIn: Variants = {
   hidden: { opacity: 0 },

@@ -48,10 +48,14 @@ export function buildGiftReceivedEmail(input: GiftReceivedInput): EmailMessage {
     : "Hi there,";
 
   const who = gifterName && gifterName.trim() ? gifterName.trim() : "Someone who loves them";
-  const openLine = `${who} just gave ${childFirstName} ${formatUsd(amountUsd)}.`;
+  // Defensive fallback — childFirstName is required by the type, but an empty
+  // string from a caller would render "gave  $50" / "in 's fund." Same guard
+  // discipline as the gifterName fallback above.
+  const kidFirst = (childFirstName || "").trim() || "your kid";
+  const openLine = `${who} just gave ${kidFirst} ${formatUsd(amountUsd)}.`;
   const noteLine = hasNote
-    ? `They left a note, too — it's waiting in ${childFirstName}'s Memory Book.`
-    : `It's recorded in ${childFirstName}'s fund.`;
+    ? `They left a note, too. It's waiting in ${kidFirst}'s Memory Book.`
+    : `It's recorded in ${kidFirst}'s fund.`;
 
   const intro = [
     greeting,
@@ -60,14 +64,14 @@ export function buildGiftReceivedEmail(input: GiftReceivedInput): EmailMessage {
     ``,
     noteLine,
     ``,
-    `This is the part that compounds — not just the money, but the people showing up for ${childFirstName} over the years. Take a look.`,
+    `The money matters. So do the people who keep showing up for ${kidFirst}. Take a look.`,
   ].join("\n");
 
   const { html } = renderKiddoEmail({
-    heading: `${who} gave ${childFirstName} a gift`,
+    heading: `${who} gave ${kidFirst} a gift`,
     intro,
     cta: { text: "See it land", url: dashboardUrl },
-    postscript: `When investing is live, every gift follows the strategy you set. Until then, it's safely recorded in ${childFirstName}'s fund.`,
+    postscript: `When investing is live, every gift follows the strategy you set. Until then, it's safely recorded in ${kidFirst}'s fund.`,
   });
 
   const text = [
@@ -84,7 +88,7 @@ export function buildGiftReceivedEmail(input: GiftReceivedInput): EmailMessage {
 
   return {
     to,
-    subject: `${who} gave ${childFirstName} a gift`,
+    subject: `${who} gave ${kidFirst} a gift`,
     text,
     html,
     tags: ["gift-received-parent"],

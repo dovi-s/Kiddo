@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theo's future</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --evergreen:#143A2C;--evergreen-deep:#0B2018;--cream:#F7F3EC;
+    --brass:#C68F30;--gilt:#E3B860;--ink:#1A1710;
+    --ease-spring:cubic-bezier(.22,1,.36,1);--ease-soft:cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--cream);color:var(--evergreen);
+    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:32px 20px;-webkit-font-smoothing:antialiased}
+  .stage{width:100%;max-width:440px}
+
+  .card{position:relative;width:100%;border-radius:32px;overflow:hidden;background:var(--cream);
+    box-shadow:0 1px 2px rgba(20,58,44,.06),0 24px 60px -20px rgba(20,58,44,.28),0 4px 12px rgba(20,58,44,.08);
+    opacity:0;transform:translateY(24px) scale(.985);animation:cardIn 1s var(--ease-spring) forwards}
+  @keyframes cardIn{to{opacity:1;transform:none}}
+
+  .scene{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden}
+  .scene svg{display:block;width:100%;height:100%}
+
+  /* smooth time-of-day transitions */
+  #skyTop,#skyMid,#skyBot{transition:stop-color 1.4s ease}
+  #sunGrp{transition:transform 1.6s var(--ease-soft),opacity 1s ease}
+  #sunCore{transition:fill 1.2s ease}
+  #moonGrp{transition:opacity 1.2s ease}
+  .stars{transition:opacity 1.2s ease}
+  .clouds{transition:opacity 1.2s ease}
+  .cloudpart{transition:fill 1.2s ease}
+  #atmos{transition:opacity 1.4s ease,fill 1.4s ease}
+
+  .layer{opacity:0;animation:layerIn 1.1s var(--ease-spring) forwards;animation-delay:var(--d,0s)}
+  @keyframes layerIn{from{opacity:0;transform:translateY(46px)}to{opacity:1;transform:translateY(0)}}
+  .l-sky{--d:.05s}.l-celestial{--d:.55s}.l-clouds{--d:.7s}
+  .l-far{--d:.25s}.l-mid{--d:.35s}.l-hills{--d:.45s}.l-forest{--d:.6s}.l-grass{--d:.75s}.l-birds{--d:1s}
+
+  .celestial-glow{transform-origin:center;animation:pulse 7s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
+
+  .cloud{animation:driftx linear infinite;filter:drop-shadow(0 12px 22px rgba(20,58,44,.035))}
+  .cloud-1{animation-duration:104s}
+  .cloud-2{animation-duration:132s;animation-delay:-58s}
+  .cloud-3{animation-duration:150s;animation-delay:-92s}
+  @keyframes driftx{from{transform:translateX(-300px)}to{transform:translateX(1180px)}}
+
+  /* grass: rooted blades; wind ripple travels via x-based delays (set in JS) */
+  .blade{transform-box:fill-box;transform-origin:bottom center}
+  .blade--soft{animation:swaySoft ease-in-out infinite alternate}
+  .blade--mid{animation:swayMid ease-in-out infinite alternate}
+  .blade--strong{animation:swayStrong ease-in-out infinite alternate}
+  @keyframes swaySoft{from{transform:rotate(-1.8deg)}to{transform:rotate(2.6deg)}}
+  @keyframes swayMid{from{transform:rotate(-3deg)}to{transform:rotate(4.8deg)}}
+  @keyframes swayStrong{from{transform:rotate(-4.2deg)}to{transform:rotate(6.5deg)}}
+
+  /* ---------- BIRDS: distant swallows — tiny, gliding, not a focal object ---------- */
+  .distant-bird{transform-box:fill-box;transform-origin:center;opacity:.58;will-change:transform;color:#2C5A3C}
+  .distant-bird .swallow{fill:currentColor;transform-box:fill-box;transform-origin:center;animation:softBank 21s ease-in-out infinite}
+  .distant-bird.b1{animation:swallowPathOne 82s cubic-bezier(.42,.02,.58,.98) infinite}
+  .distant-bird.b2{animation:swallowPathTwo 97s cubic-bezier(.42,.02,.58,.98) infinite;opacity:.46}
+  .distant-bird.b3{animation:swallowPathThree 89s cubic-bezier(.42,.02,.58,.98) infinite;opacity:.50}
+  .distant-bird.b2 .swallow{animation-delay:-8s}.distant-bird.b3 .swallow{animation-delay:-14s}
+  @keyframes swallowPathOne{
+    0%{transform:translate(-180px,430px) scale(.20) rotate(-2deg)}
+    24%{transform:translate(150px,408px) scale(.19) rotate(1deg)}
+    51%{transform:translate(535px,426px) scale(.20) rotate(3deg)}
+    76%{transform:translate(890px,398px) scale(.19) rotate(-1deg)}
+    100%{transform:translate(1190px,420px) scale(.20) rotate(2deg)}
+  }
+  @keyframes swallowPathTwo{
+    0%{transform:translate(-260px,486px) scale(.15) rotate(2deg)}
+    31%{transform:translate(120px,466px) scale(.15) rotate(-1deg)}
+    59%{transform:translate(555px,482px) scale(.155) rotate(1deg)}
+    84%{transform:translate(930px,456px) scale(.15) rotate(-2deg)}
+    100%{transform:translate(1230px,472px) scale(.15) rotate(1deg)}
+  }
+  @keyframes swallowPathThree{
+    0%{transform:translate(-310px,362px) scale(.13) rotate(-1deg)}
+    29%{transform:translate(80px,342px) scale(.13) rotate(2deg)}
+    57%{transform:translate(460px,360px) scale(.135) rotate(-1deg)}
+    82%{transform:translate(830px,334px) scale(.13) rotate(2deg)}
+    100%{transform:translate(1170px,352px) scale(.13) rotate(-1deg)}
+  }
+  @keyframes softBank{
+    0%,100%{transform:translateY(0) rotate(0deg)}
+    38%{transform:translateY(-3px) rotate(-2deg)}
+    72%{transform:translateY(2px) rotate(1.5deg)}
+  }
+  .star{animation:twinkle ease-in-out infinite}
+  .star:nth-child(2n){animation-duration:3.1s}.star:nth-child(2n+1){animation-duration:4.3s;animation-delay:-1s}
+  @keyframes twinkle{0%,100%{opacity:.25}50%{opacity:.95}}
+
+  /* gift moment */
+  .giftglow{position:absolute;inset:0;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse 90% 55% at 50% 78%,rgba(227,184,96,.38),rgba(227,184,96,0) 70%);
+    transition:opacity .5s ease}
+  .card.warm .giftglow{opacity:1}
+  .spark{position:absolute;bottom:24%;left:50%;width:7px;height:7px;border-radius:50%;
+    background:radial-gradient(circle,var(--gilt),var(--brass));box-shadow:0 0 12px 3px rgba(227,184,96,.7);pointer-events:none;opacity:0}
+  .spark.go{animation:rise 1.5s var(--ease-soft) forwards}
+  @keyframes rise{0%{opacity:0;transform:translate(-50%,10px) scale(.4)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-170px) scale(1)}}
+
+  /* ---------- OVERLAY ---------- */
+  .overlay{position:absolute;top:0;left:0;right:0;padding:28px 30px 0;z-index:3;opacity:0;animation:textIn .9s var(--ease-spring) .5s forwards}
+  @keyframes textIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+  .greeting{font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin-bottom:16px;transition:color .8s ease}
+  .label{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;opacity:.72;transition:color .8s ease}
+  .balance{font-size:54px;font-weight:300;letter-spacing:-.02em;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums;transition:color .8s ease}
+  .balance .approx{font-size:30px;font-weight:400;color:var(--brass);margin-right:2px;vertical-align:6px}
+  .balance .cents{font-size:27px;font-weight:400;opacity:.55}
+  .subline{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:13px;transition:color .8s ease}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--brass);white-space:nowrap}
+  .chip svg{width:13px;height:13px;flex:0 0 13px}
+  .meta{opacity:.55;font-weight:400}
+  .updated{margin-top:4px;font-size:11.5px;letter-spacing:.02em;opacity:.45;transition:opacity .4s ease,color .8s ease}
+  .greeting,.label,.balance,.subline,.updated{color:var(--evergreen)}
+  .card.lighttext :is(.greeting,.label,.balance,.subline,.updated){color:var(--cream)}
+  .card.lighttext .greeting{opacity:.62}.card.lighttext .label{opacity:.78}
+
+  /* ---------- POTENTIAL STRIP: simple teaser; full Potential page owns the details ---------- */
+  .horizonbar{padding:16px 24px 10px;background:var(--cream);border-top:1px solid rgba(20,58,44,.05)}
+  .potential-card{position:relative;border-radius:18px;padding:12px 0 6px;background:transparent}
+  .horizon-copy{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:10px}
+  .horizon-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--evergreen);opacity:.50}
+  .horizon-state{text-align:right;color:var(--evergreen);font-variant-numeric:tabular-nums;line-height:1}
+  .horizon-state .eyebrow{font-size:11px;font-weight:650;letter-spacing:.04em;opacity:.48;margin-right:7px}
+  .horizon-state .number{font-size:22px;font-weight:650;letter-spacing:-.035em}
+  .horizon-state .number span{color:var(--brass)}
+  .trackwrap{position:relative;height:36px;display:flex;align-items:center}
+  .track{position:absolute;left:0;right:0;top:50%;height:6px;transform:translateY(-50%);background:rgba(20,58,44,.105);border-radius:999px;box-shadow:inset 0 1px 1px rgba(20,58,44,.055)}
+  .fill{position:absolute;left:0;top:50%;height:6px;transform:translateY(-50%);background:linear-gradient(90deg,var(--evergreen),#2A583F);border-radius:999px;width:15.4%;box-shadow:0 2px 8px rgba(20,58,44,.10)}
+  .tick{display:none}
+  input[type=range].scrub{position:relative;width:100%;appearance:none;-webkit-appearance:none;background:transparent;height:36px;cursor:pointer;z-index:2}
+  input[type=range].scrub::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--cream);border:2.5px solid var(--evergreen);box-shadow:0 3px 10px rgba(20,58,44,.24),0 0 0 5px rgba(247,243,236,.9);transition:transform .18s var(--ease-spring),border-color .2s ease,box-shadow .2s ease}
+  input[type=range].scrub:active::-webkit-slider-thumb{transform:scale(1.10);border-color:var(--brass);box-shadow:0 4px 14px rgba(198,143,48,.26),0 0 0 7px rgba(198,143,48,.10)}
+  input[type=range].scrub::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--cream);border:2.5px solid var(--evergreen);box-shadow:0 3px 10px rgba(20,58,44,.24)}
+  input[type=range].scrub:focus-visible{outline:none}
+  input[type=range].scrub:focus-visible::-webkit-slider-thumb{outline:2.5px solid var(--brass);outline-offset:2px}
+  .agelabels{display:grid;grid-template-columns:auto 1fr auto;align-items:center;font-size:10.5px;letter-spacing:.04em;color:var(--evergreen);font-variant-numeric:tabular-nums;margin-top:-1px}
+  .agelabels span{opacity:.42}
+  .agelabels .a21{justify-self:start;margin-left:15.4%;color:var(--evergreen);opacity:.58;font-weight:700}
+  .age-note{display:none}
+  /* ---------- ACTIONS ---------- */
+  .actions{display:flex;align-items:center;gap:12px;padding:14px 24px 22px;background:var(--cream)}
+  .btn-gift{flex:1;appearance:none;border:none;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;letter-spacing:.01em;
+    color:var(--cream);background:var(--evergreen);padding:15px 20px;border-radius:16px;
+    transition:transform .18s var(--ease-spring),box-shadow .25s ease,background .25s ease;box-shadow:0 6px 16px -6px rgba(20,58,44,.5)}
+  .btn-gift:hover{background:#0f2f22;transform:translateY(-1px)}
+  .btn-gift:active{transform:translateY(0) scale(.985)}
+  .btn-gift:focus-visible{outline:2.5px solid var(--brass);outline-offset:2px}
+  .btn-toggle{appearance:none;cursor:pointer;width:52px;height:52px;flex:0 0 52px;border-radius:16px;
+    border:1.5px solid rgba(20,58,44,.14);background:transparent;display:flex;align-items:center;justify-content:center;color:var(--evergreen);
+    transition:background .2s ease,transform .18s var(--ease-spring)}
+  .btn-toggle:hover{background:rgba(20,58,44,.05);transform:translateY(-1px)}
+  .btn-toggle:focus-visible{outline:2.5px solid var(--brass);outline-offset:2px}
+  .btn-toggle svg{width:22px;height:22px;display:none}
+  .btn-toggle[data-state="dawn"] .i-dawn{display:block}
+  .btn-toggle[data-state="day"] .i-day{display:block}
+  .btn-toggle[data-state="dusk"] .i-dusk{display:block}
+  .btn-toggle[data-state="night"] .i-night{display:block}
+  .caption{text-align:center;font-size:11.5px;color:var(--evergreen);opacity:.4;margin-top:16px;letter-spacing:.02em}
+
+  @media (max-width:400px){.balance{font-size:46px}.overlay{padding:24px 24px 0}}
+  @media (prefers-reduced-motion:reduce){
+    .card,.layer,.overlay{animation:none!important;opacity:1!important;transform:none!important}
+    .celestial-glow,.cloud,.blade,.distant-bird,.swallow,.star{animation:none!important}
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" id="card">
+      <div class="scene">
+        <div class="giftglow"></div>
+        <div class="spark" id="spark"></div>
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A calm landscape of mountains, forest and a windswept meadow beneath a shifting sky">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop id="skyTop" offset="0" stop-color="#F1F4EF"/>
+              <stop id="skyMid" offset=".55" stop-color="#F6EFDF"/>
+              <stop id="skyBot" offset="1" stop-color="#F3E2C0"/>
+            </linearGradient>
+            <radialGradient id="glowWarm" cx="50%" cy="50%" r="50%">
+              <stop id="glowIn" offset="0" stop-color="#F6D98A" stop-opacity=".95"/>
+              <stop id="glowMid2" offset=".42" stop-color="#E9B45C" stop-opacity=".45"/>
+              <stop offset="1" stop-color="#E9B45C" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="glowMoon" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#DFE7E0" stop-opacity=".6"/><stop offset="1" stop-color="#DFE7E0" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#215033"/><stop offset="1" stop-color="#0C2418"/>
+            </linearGradient>
+          </defs>
+
+          <g class="layer l-sky"><rect x="0" y="0" width="1000" height="1000" fill="url(#sky)"/></g>
+
+          <!-- FAR RIDGE: lower, softer, more editorial than jagged -->
+          <g class="layer l-far">
+            <path d="M0,724 C90,690 162,666 250,690 C336,714 398,650 500,684 C594,716 672,660 760,688 C852,718 922,678 1000,704 L1000,1000 L0,1000 Z" fill="#B7CABD"/>
+            <path d="M0,742 C100,710 168,694 250,708 C336,726 398,672 500,702 C594,730 672,684 760,706 C850,730 918,700 1000,724 L1000,762 C912,734 846,760 760,732 C672,704 594,750 500,722 C400,692 338,744 250,722 C166,702 92,726 0,760 Z" fill="#A7BCAF" opacity=".62"/>
+          </g>
+
+          <!-- MID RIDGE: calm broad valley shapes, not sharp paper peaks -->
+          <g class="layer l-mid">
+            <path d="M0,780 C96,742 168,720 260,746 C344,770 416,724 506,748 C612,776 680,726 780,750 C866,770 920,748 1000,760 L1000,1000 L0,1000 Z" fill="#7EA188"/>
+            <path d="M0,802 C104,770 176,752 260,768 C346,784 418,746 506,768 C612,792 682,752 780,770 C866,786 920,770 1000,782 L1000,818 C914,804 862,818 780,794 C682,770 614,810 506,790 C418,770 348,804 260,790 C176,772 104,792 0,826 Z" fill="#6F947B" opacity=".58"/>
+          </g>
+
+          <!-- HILLS: one confident foreground roll -->
+          <g class="layer l-hills">
+            <path d="M0,836 C170,796 336,844 520,812 C700,782 850,836 1000,806 L1000,1000 L0,1000 Z" fill="#4E7A5F"/>
+            <path d="M0,836 C170,796 336,844 520,812 C700,782 850,836 1000,806 L1000,822 C850,850 700,798 520,828 C336,858 170,812 0,850 Z" fill="#5D8B6D" opacity=".42"/>
+          </g>
+
+          <!-- FOREST: rounded canopy mass; no graveyard pines or random triangles -->
+          <g class="layer l-forest">
+            <path fill="#356044" d="M0,870 C64,844 126,852 188,862 C268,834 350,850 430,860 C520,832 612,852 700,862 C792,840 900,852 1000,864 L1000,1000 L0,1000 Z"/>
+            <path fill="#244A31" d="M0,872 C48,846 92,838 142,858 C198,826 262,840 304,860 C370,830 434,844 484,862 C546,826 626,840 680,862 C744,832 820,840 870,860 C922,844 962,844 1000,858 L1000,1000 L0,1000 Z"/>
+            <path fill="#1C3E29" opacity=".30" d="M0,888 C116,864 210,878 320,884 C444,856 566,872 686,886 C810,862 908,872 1000,884 L1000,1000 L0,1000 Z"/>
+          </g>
+
+          <g class="layer l-grass">
+            <path d="M0,882 C210,866 330,888 520,878 C710,868 832,892 1000,880 L1000,1000 L0,1000 Z" fill="url(#grassGrad)"/>
+            <path d="M0,902 C190,888 340,908 520,898 C710,888 840,910 1000,900 L1000,1000 L0,1000 Z" fill="#123622" opacity=".28"/>
+            <g class="grass" id="grass" fill="none" stroke-linecap="round"></g>
+          </g>
+
+          <!-- colour-grade sits over the land, under sun/moon/stars/clouds/birds -->
+          <rect id="atmos" x="0" y="0" width="1000" height="1000" fill="#000" opacity="0" pointer-events="none"/>
+
+          <g class="layer l-celestial">
+            <g id="sunGrp">
+              <circle class="celestial-glow" cx="0" cy="0" r="150" fill="url(#glowWarm)"/>
+              <circle id="sunCore" cx="0" cy="0" r="56" fill="#F0C86A"/>
+            </g>
+            <g id="moonGrp" style="opacity:0">
+              <circle class="celestial-glow" cx="800" cy="240" r="130" fill="url(#glowMoon)"/>
+              <circle cx="800" cy="240" r="46" fill="#EDE7D6"/><circle cx="818" cy="231" r="46" fill="#132A21" opacity=".92"/>
+            </g>
+          </g>
+
+          <g class="stars" style="opacity:0">
+            <circle class="star" cx="140" cy="120" r="2.2" fill="#EDE7D6"/><circle class="star" cx="260" cy="210" r="1.6" fill="#EDE7D6"/>
+            <circle class="star" cx="360" cy="90" r="2.4" fill="#EDE7D6"/><circle class="star" cx="520" cy="160" r="1.7" fill="#EDE7D6"/>
+            <circle class="star" cx="640" cy="240" r="2" fill="#EDE7D6"/><circle class="star" cx="180" cy="320" r="1.5" fill="#EDE7D6"/>
+            <circle class="star" cx="880" cy="130" r="2.2" fill="#EDE7D6"/><circle class="star" cx="940" cy="290" r="1.6" fill="#EDE7D6"/>
+            <circle class="star" cx="450" cy="350" r="1.4" fill="#EDE7D6"/><circle class="star" cx="700" cy="80" r="1.8" fill="#EDE7D6"/>
+            <circle class="star" cx="300" cy="380" r="1.5" fill="#EDE7D6"/><circle class="star" cx="800" cy="380" r="1.7" fill="#EDE7D6"/>
+          </g>
+
+          <g class="clouds l-clouds layer">
+            <g class="cloud cloud-1" opacity=".58">
+              <ellipse class="cloudpart" cx="155" cy="486" rx="74" ry="18" fill="#FFFDF8"/>
+              <ellipse class="cloudpart" cx="205" cy="477" rx="48" ry="21" fill="#FFFDF8"/>
+              <ellipse class="cloudpart" cx="112" cy="480" rx="38" ry="15" fill="#FFFDF8"/>
+              <ellipse class="cloudpart" cx="235" cy="491" rx="52" ry="13" fill="#FFFDF8"/>
+            </g>
+            <g class="cloud cloud-2" opacity=".42">
+              <ellipse class="cloudpart" cx="620" cy="518" rx="64" ry="16" fill="#FFFDF8"/>
+              <ellipse class="cloudpart" cx="660" cy="510" rx="42" ry="18" fill="#FFFDF8"/>
+              <ellipse class="cloudpart" cx="695" cy="523" rx="48" ry="12" fill="#FFFDF8"/>
+            </g>
+          </g>
+
+          <!-- BIRDS: tiny distant swallows, asymmetrical silhouettes, no bat-like flap -->
+          <g class="layer l-birds" id="flock" color="#2C5A3C">
+            <g class="distant-bird b1">
+              <path class="swallow" d="M-42,2 C-27,-10 -12,-11 0,-3 C13,-12 31,-10 47,-1 C30,1 16,5 4,5 C-8,8 -20,17 -37,27 C-31,16 -30,9 -42,2 Z M-35,25 L-53,35 L-45,18 Z"/>
+            </g>
+            <g class="distant-bird b2">
+              <path class="swallow" d="M-42,2 C-27,-10 -12,-11 0,-3 C13,-12 31,-10 47,-1 C30,1 16,5 4,5 C-8,8 -20,17 -37,27 C-31,16 -30,9 -42,2 Z M-35,25 L-53,35 L-45,18 Z"/>
+            </g>
+            <g class="distant-bird b3">
+              <path class="swallow" d="M-42,2 C-27,-10 -12,-11 0,-3 C13,-12 31,-10 47,-1 C30,1 16,5 4,5 C-8,8 -20,17 -37,27 C-31,16 -30,9 -42,2 Z M-35,25 L-53,35 L-45,18 Z"/>
+            </g>
+          </g>
+        </svg>
+
+        <div class="overlay">
+          <div class="greeting" id="greeting">Good afternoon</div>
+          <div class="label" id="label">Theo's fund value</div>
+          <div class="balance" id="balance">$0<span class="cents">.00</span></div>
+          <div class="subline">
+            <span class="chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+              <span id="chipText">+$150 this month</span>
+            </span>
+            <span class="meta" id="meta">134 gifts · 12 people</span>
+          </div>
+          <div class="updated" id="updated">&nbsp;</div>
+        </div>
+      </div><!-- /scene -->
+
+      <!-- POTENTIAL: one clean teaser for the full Potential page -->
+      <div class="horizonbar">
+        <div class="potential-card">
+          <div class="horizon-copy">
+            <div class="horizon-title">Potential</div>
+            <div class="horizon-state" id="horizonState">
+              <span class="eyebrow">at 21</span>
+              <span class="number">~$52.8K</span>
+            </div>
+          </div>
+          <div class="trackwrap" id="trackwrap">
+            <div class="track"></div>
+            <div class="fill" id="fill"></div>
+            <input class="scrub" id="scrub" type="range" min="13" max="65" step="1" value="21"
+                   aria-label="Scrub Theo's age to see the projected value of his fund">
+          </div>
+          <div class="agelabels">
+            <span class="a13">Today</span>
+            <span class="a21">21</span>
+            <span class="a65">65</span>
+          </div>
+          <div class="age-note" id="ageNote"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-gift" id="giftBtn">Add a gift</button>
+        <button class="btn-toggle" id="toggleBtn" data-state="day" aria-label="Change time of day">
+          <svg class="i-dawn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 9V3M9 6l3-3 3 3"/></svg>
+          <svg class="i-day" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="i-dusk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 3v6M9 6l3 3 3-3"/></svg>
+          <svg class="i-night" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+      </div>
+    </div><!-- /card -->
+    <p class="caption">Every gift becomes Theo's on his 21st birthday · Nov 19, 2033</p>
+  </div>
+
+<script>
+  const card=document.getElementById('card');
+  const balance=document.getElementById('balance');
+  const updated=document.getElementById('updated');
+  const greeting=document.getElementById('greeting');
+  const label=document.getElementById('label');
+  const chipText=document.getElementById('chipText');
+  const meta=document.getElementById('meta');
+  const giftBtn=document.getElementById('giftBtn');
+  const toggle=document.getElementById('toggleBtn');
+  const spark=document.getElementById('spark');
+  const svgNS='http://www.w3.org/2000/svg';
+
+  /* ---------- GRASS ---------- */
+  (function makeGrass(){
+    const g=document.getElementById('grass');
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    const ROOT=1012, WAVE=3.4;
+    function blade(rx,tipY,lean,color,w,cls,op){
+      const tx=rx+lean, cx=rx+lean*0.4, cy=(ROOT+tipY)/2;
+      const p=document.createElementNS(svgNS,'path');
+      p.setAttribute('d','M'+rx.toFixed(1)+' '+ROOT+' Q'+cx.toFixed(1)+' '+cy.toFixed(1)+' '+tx.toFixed(1)+' '+tipY.toFixed(1));
+      p.setAttribute('stroke',color);p.setAttribute('stroke-width',w.toFixed(1));
+      if(op)p.setAttribute('opacity',op);
+      p.setAttribute('class','blade '+cls);
+      p.style.animationDelay=(-((rx/1000)*WAVE+rnd(0,0.2))).toFixed(2)+'s';
+      p.style.animationDuration=rnd(3.0,3.9).toFixed(2)+'s';
+      g.appendChild(p);
+    }
+    const backCols=['#1E4A30','#255A38','#2A5C3C'];
+    for(let x=-10;x<=1010;x+=rnd(16,26)){
+      const n=Math.round(rnd(4,7));
+      for(let i=0;i<n;i++) blade(x+rnd(-12,12),rnd(872,910),rnd(-10,14),pick(backCols),rnd(2.4,4.2),'blade--soft','.72');
+    }
+    const frontCols=['#2E6A44','#377A4E','#409058','#347049'];
+    for(let x=-10;x<=1010;x+=rnd(12,22)){
+      const n=Math.round(rnd(5,8));
+      for(let i=0;i<n;i++){
+        blade(x+rnd(-14,14),rnd(812,884),rnd(-16,22),pick(frontCols),rnd(2.8,5.4),Math.random()<.58?'blade--mid':'blade--strong');
+      }
+    }
+  })();
+
+  /* ---------- TIME OF DAY ---------- */
+  const STATES={
+    dawn:{sky:['#DCE0EA','#F3DCD0','#F6C9A8'],atmos:['#F3B98A',.08],
+      sun:{x:772,y:436,s:.86,fill:'#F4C79A',gi:'#F7C9A6',gm:'#EFA97E'},night:false,clouds:'#FFFDF8',
+      lightText:false,greet:'Good morning',bird:'#3A5A46'},
+    day:{sky:['#F1F4EF','#F6EFDF','#F3E2C0'],atmos:['#000000',0],
+      sun:{x:792,y:250,s:1,fill:'#F0C86A',gi:'#F6D98A',gm:'#E9B45C'},night:false,clouds:'#FFFDF8',
+      lightText:false,greet:'Good afternoon',bird:'#2C5A3C'},
+    dusk:{sky:['#3E3A63','#8A5A6E','#E8A15C'],atmos:['#B8542E',.20],
+      sun:{x:780,y:560,s:1.18,fill:'#EF8C43',gi:'#F6A84E',gm:'#E5622F'},night:false,clouds:'#FFFDF8',
+      lightText:true,greet:'Good evening',bird:'#EDE7D6'},
+    night:{sky:['#0C1D17','#132A21','#1C3A2C'],atmos:['#081420',.32],
+      night:true,lightText:true,greet:'Good evening',bird:'#D9D2C0'}
+  };
+  const ORDER=['dawn','day','dusk','night'];
+  const skyTop=document.getElementById('skyTop'),skyMid=document.getElementById('skyMid'),skyBot=document.getElementById('skyBot');
+  const sunGrp=document.getElementById('sunGrp'),sunCore=document.getElementById('sunCore');
+  const glowIn=document.getElementById('glowIn'),glowMid2=document.getElementById('glowMid2');
+  const moonGrp=document.getElementById('moonGrp');
+  const stars=card.querySelector('.stars'),clouds=card.querySelector('.clouds'),atmos=document.getElementById('atmos');
+
+  function applyState(name){
+    const s=STATES[name];
+    skyTop.setAttribute('stop-color',s.sky[0]);
+    skyMid.setAttribute('stop-color',s.sky[1]);
+    skyBot.setAttribute('stop-color',s.sky[2]);
+    atmos.setAttribute('fill',s.atmos[0]);atmos.setAttribute('opacity',s.atmos[1]);
+    if(s.night){
+      sunGrp.style.opacity='0';moonGrp.style.opacity='1';
+      stars.style.opacity='1';clouds.style.opacity='0';
+    }else{
+      sunGrp.style.opacity='1';moonGrp.style.opacity='0';
+      stars.style.opacity='0';clouds.style.opacity='1';
+      sunGrp.style.transform='translate('+s.sun.x+'px,'+s.sun.y+'px) scale('+s.sun.s+')';
+      sunCore.style.fill=s.sun.fill;
+      glowIn.setAttribute('stop-color',s.sun.gi);glowMid2.setAttribute('stop-color',s.sun.gm);
+      card.querySelectorAll('.cloudpart').forEach(c=>c.setAttribute('fill',s.clouds));
+    }
+    card.classList.toggle('lighttext',s.lightText);
+    document.getElementById('flock').style.color=s.bird;
+    greeting.textContent=s.greet;
+    toggle.dataset.state=name;
+  }
+  function autoState(){const h=new Date().getHours();
+    if(h>=5&&h<8)return'dawn';if(h>=8&&h<17)return'day';if(h>=17&&h<20)return'dusk';return'night';}
+  let curState=autoState();
+  applyState(curState);
+  toggle.addEventListener('click',()=>{curState=ORDER[(ORDER.indexOf(curState)+1)%ORDER.length];applyState(curState);});
+
+  /* ---------- BALANCE + PROJECTION (matches the full projection page: 7% moderate, $100/mo to 21) ---------- */
+  const AGE0=13, HANDOFF=21, RATE=0.07, MONTHLY=100;
+  const CACHED=23421.60;
+  let live=23577.27, shown=CACHED, raf=null;
+
+  const fmt2=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmt0=n=>Math.round(n).toLocaleString('en-US');
+  function renderLive(n){
+    const p=fmt2(n).split('.');
+    balance.innerHTML='$'+p[0]+'<span class="cents">.'+p[1]+'</span>';
+  }
+  function renderProj(n){
+    let v=n;
+    if(v<100000)v=Math.round(v/100)*100;else if(v<1000000)v=Math.round(v/1000)*1000;else v=Math.round(v/10000)*10000;
+    balance.innerHTML='<span class="approx">~</span>$'+fmt0(v);
+  }
+  function morphTo(target,ms,proj,after){
+    if(raf)cancelAnimationFrame(raf);
+    const from=shown,start=performance.now();
+    const ease=t=>1-Math.pow(1-t,3);
+    (function step(now){
+      const t=Math.min((now-start)/ms,1);
+      shown=from+(target-from)*ease(t);
+      proj?renderProj(shown):renderLive(shown);
+      if(t<1)raf=requestAnimationFrame(step);else{raf=null;if(after)after();}
+    })(start);
+  }
+  function projectAt(age){
+    let v=live;
+    for(let a=AGE0;a<age;a++){v=v*(1+RATE)+(a<HANDOFF?MONTHLY*12:0);}
+    return v;
+  }
+  function shortMoney(n){
+    if(n>=1000000) return (n/1000000).toFixed(n>=10000000?0:1)+'M';
+    if(n>=100000) return Math.round(n/1000)+'K';
+    return (Math.round(n/100)/10).toFixed(1)+'K';
+  }
+
+  const scrub=document.getElementById('scrub');
+  const fill=document.getElementById('fill');
+  const horizonState=document.getElementById('horizonState');
+  const ageNote=document.getElementById('ageNote');
+  const trackwrap=document.getElementById('trackwrap');
+  [18,21,30,40,50].forEach(a=>{
+    const t=document.createElement('div');
+    t.className='tick';
+    t.style.left=(((a-13)/52)*100)+'%';
+    trackwrap.insertBefore(t,scrub);
+  });
+
+  let prevAge=21, userScrubbed=false;
+  function setAge(age){
+    fill.style.width=(((age-13)/52)*100)+'%';
+    if(age===13){
+      label.textContent="Theo's fund value";
+      morphTo(live,420,false);
+      chipText.textContent='+$150 this month';
+      meta.textContent='134 gifts · 12 people';
+      updated.textContent='Updated just now';
+      horizonState.innerHTML='<span class="eyebrow">At 21</span><span class="number">~$'+shortMoney(projectAt(21))+'</span>';
+      ageNote.textContent='';
+    }else{
+      const v=projectAt(age);
+      label.textContent=age===HANDOFF?"Projected fund value · age 21":"Projected fund value · age "+age;
+      morphTo(v,300,true);
+      const growth=v-live;
+      chipText.textContent='+$'+(growth>=1e6?(growth/1e6).toFixed(1)+'M':Math.round(growth/1000)+'K')+' of growth ahead';
+      meta.textContent='illustrative · 7% avg';
+      updated.textContent='\u00A0';
+      horizonState.innerHTML='<span class="eyebrow">At '+age+'</span><span class="number">~$'+shortMoney(v)+'</span>';
+      ageNote.textContent='';
+    }
+    if(prevAge<HANDOFF&&age>=HANDOFF){spark.classList.remove('go');void spark.offsetWidth;spark.classList.add('go');}
+    prevAge=age;
+  }
+  scrub.addEventListener('input',()=>{userScrubbed=true;setAge(+scrub.value);});
+
+  /* load: cached -> fresh */
+  renderLive(CACHED);
+  setTimeout(()=>{morphTo(live,1100,false,()=>{updated.textContent='Updated just now';});},850);
+
+  /* gift */
+  const gifts=[25,40,50,75,100];
+  giftBtn.addEventListener('click',()=>{
+    const amount=gifts[Math.floor(Math.random()*gifts.length)];
+    live+=amount;
+    if(!userScrubbed){horizonState.innerHTML='<span class="eyebrow">At 21</span><span class="number">~$'+shortMoney(projectAt(21))+'</span>';}
+    card.classList.add('warm');setTimeout(()=>card.classList.remove('warm'),1300);
+    spark.classList.remove('go');void spark.offsetWidth;spark.classList.add('go');
+    if(!userScrubbed || +scrub.value===13){
+      morphTo(live,750,false);
+      updated.textContent='A gift of $'+amount+' just landed';
+      setTimeout(()=>{if(+scrub.value===13)updated.textContent='Updated just now';},2600);
+    }else{
+      setAge(+scrub.value);
+    }
+  });
+</script>
+</body>
+</html>

@@ -82,6 +82,58 @@ export const semanticColors = {
     text: "#991B1B",
   },
   focus: "#1B3A2D", // evergreen focus ring
+  // Activity-ledger status colors (mobile Activity/Memory feeds). Distinct from
+  // the `success`/`danger` alert groups above: these are the tints the
+  // transaction rows + status chips were tuned to, kept as named tokens so the
+  // feeds stop inlining raw hex without shifting their visual result.
+  ledger: {
+    positive: "#1A7F47", // money in / market growth / invested amounts
+    positiveSoft: "#E7F0E9", // "Invested" chip background
+    negative: "#C0392B", // withdrawals / fees (money out)
+    pendingSoft: "#FBEFD6", // "Pending" chip background
+    pendingText: "#6F4611", // "Pending" chip text (gold-ink)
+  },
+  // Native-app warm surface + tint palette. These are the warmer-than-canonical
+  // cream/border/ink values the hand-built native StyleSheets (GifterFlow,
+  // Dashboard) were tuned to. They are intentionally NOT identical to the
+  // `colors.cream`/`colors.border` canon — folding them into those would shift
+  // the native look the founder reviewed. Kept as named tokens so the screens
+  // stop inlining raw hex without changing a single rendered pixel.
+  native: {
+    // Warm off-white surfaces (cream family, warmer than colors.cream).
+    screen: "#FAF8F4", // gifter flow screen background
+    fill: "#FAF7F1", // inactive card / input fill
+    fillWarm: "#F6EFE3", // hero art + icon-chip warm tan
+    fillCream: "#F8F3EA", // fee box / summary panel cream
+    fillCard: "#FFFDF8", // memory card / composer input near-white
+    // Warm borders (warmer than colors.border #E5DDD4).
+    border: "#EEE8DD", // card / hero border
+    borderInput: "#DED7CA", // input + amount/method tile border
+    borderLogo: "#E5E0D8", // stock-logo ring
+    borderWarm: "#E7D9C5", // memory card warm border
+    borderCheckbox: "#C9BFAE", // cover-fee checkbox border
+    handle: "#DDD8D0", // bottom-sheet grab handle + idle dot
+    divider: "#F0EDE8", // switcher row divider
+    track: "#EFE7DA", // progress track background
+    // Secondary text greens/grays (lighter than text.secondary #4F5A52).
+    textSecondary: "#5E675F", // body secondary (green-gray)
+    textMeta: "#7C847D", // meta line (lighter green-gray)
+    textFaint: "#8B948C", // chevron tints + inactive tab + faint meta
+    textNeutral: "#6B7280", // neutral gray hints/body
+    textWhisper: "#A9AFA6", // build-marker whisper text
+    textQuote: "#3F3A33", // memory quote ink
+    // Dark green card surface (between evergreen and evergreenDeep).
+    surfaceDeep: "#2F3B34", // memory + gift hero dark card
+    creamOnDeep: "#FFF7E8", // cream text/headings on the dark green card
+    // Gold highlight + dark-on-gold ink (paler/darker than goldLight/goldInk).
+    goldHighlight: "#F8D889", // gold accent text on evergreen/dark
+    goldInkDeep: "#3D2B09", // text on gold buttons / gift tab
+    goldInkDeeper: "#38290A", // text on the gold primary action
+    // Red text variants used outside the danger alert group.
+    errorText: "#B42318", // inline gifter error
+    signOut: "#B23B2E", // sign-out label
+    signOutBorder: "#E4B8B0", // sign-out card border
+  },
 };
 
 export const spacing = {

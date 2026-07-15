@@ -77,7 +77,7 @@ Sender's job is done. They paid the money. Same UX as any P2P app.
 The differentiator. When the recipient gets the notification, they
 see a choice:
 
-> **Alex paid you $30**
+> **Nora paid you $30**
 >
 > "dinner at Niko's, 5/10"
 >
@@ -101,7 +101,7 @@ sender (settable by recipient).
 If the recipient doesn't have a Kiddo account, the notification
 SMS/email is the onboarding entry:
 
-> "Alex sent you $30 via Kiddo. Open the app or claim at
+> "Nora sent you $30 via Kiddo. Open the app or claim at
 > kiddofund.com/pay/[token]"
 
 Clicking the link → AuthScreen-style claim → kid signs up → lands

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Event, InsertEvent } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { DemoBlockedError, isDemoNoop } from "@/lib/demo-block";
 
 async function fetchEvents(): Promise<Event[]> {
   const response = await fetch("/api/events", { credentials: "include" });
@@ -27,7 +28,12 @@ async function createEvent(data: Partial<InsertEvent>): Promise<Event> {
     const err = await response.json().catch(() => null);
     throw new Error(err?.message || err?.error || `${response.status}: ${response.statusText}`);
   }
-  return response.json();
+  const body = await response.json().catch(() => null);
+  // Demo accounts get a 200 { demo:true, saved:false } no-op. Throw so the
+  // mutation's onError / the caller's catch shows the honest "not saved in
+  // the demo" toast instead of a false "Occasion created!" success.
+  if (isDemoNoop(body)) throw new DemoBlockedError(body?.message);
+  return body;
 }
 
 async function updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event> {
@@ -38,7 +44,9 @@ async function updateEvent(id: string, data: Partial<InsertEvent>): Promise<Even
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
+  const body = await response.json().catch(() => null);
+  if (isDemoNoop(body)) throw new DemoBlockedError(body?.message);
+  return body;
 }
 
 async function deleteEvent(id: string): Promise<void> {
@@ -47,6 +55,10 @@ async function deleteEvent(id: string): Promise<void> {
     credentials: "include",
   });
   if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+  // DELETE may return a demo no-op body too; detect + throw so callers
+  // don't optimistically claim the delete succeeded.
+  const body = await response.json().catch(() => null);
+  if (isDemoNoop(body)) throw new DemoBlockedError(body?.message);
 }
 
 export function useEvents() {

@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, Heart, Check, Plus, Trash2, ArrowRight, Zap, Calendar as CalendarIcon } from "lucide-react";
+import { Users, Heart, Check, Plus, Trash2, ArrowRight, Zap, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCreateFund, useFunds } from "@/hooks/use-funds";
 import { MOTION_DURATION } from "@/lib/motion";
+import { useFramerSheetDrag } from "@/lib/use-framer-sheet-drag";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { getPronouns } from "@/lib/pronouns";
@@ -98,6 +100,14 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
   // first-kid experience: free, with Family only at the 2nd child.
   const existingChildFundCount = (funds ?? []).filter((f) => {
     const ff = f as any;
+    // OWNED funds only (2026-06-04): the funds list includes collaborated
+    // funds (accessRole co-admin/viewer/previous_owner). Someone else's
+    // child fund must not consume the viewer's own free child-fund slot —
+    // a co-parent creating her FIRST own fund was being pushed straight
+    // to the Family upsell. Missing accessRole (older cached rows) counts
+    // as owner, matching the Dashboard's fallback direction.
+    const role = String(ff.accessRole || "owner");
+    if (role !== "owner") return false;
     const isOwnHeld =
       Boolean(ff.transferredAt) ||
       String(ff.accountType || "").toLowerCase() === "personal" ||
@@ -114,6 +124,9 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
     reset();
     onClose();
   };
+
+  // Swipe-down-to-dismiss (mobile). Grab the handle in the sticky header.
+  const { dragProps, handle } = useFramerSheetDrag(handleClose);
 
   const addChild = () => {
     setChildren([...children, emptyChild(Date.now().toString())]);
@@ -286,21 +299,16 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            {...dragProps}
             className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] max-h-[90dvh] overflow-y-auto bg-background rounded-t-3xl shadow-2xl md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:max-w-lg md:w-full"
           >
             <div className="sticky top-0 bg-background/80 backdrop-blur-lg rounded-t-3xl z-10">
+              {handle}
               <div className="flex items-center justify-between p-5 pb-3">
                 <h2 className="text-lg font-semibold text-foreground">
                   {step === "choose" ? "Add a new fund" : step === "creating" ? "Creating..." : step === "success" ? "All set" : step === "upgrade-family" ? "Upgrade to add more" : step === "culture" ? "Cultural milestones" : "Add a child's fund"}
                 </h2>
-                <button
-                  onClick={handleClose}
-                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="button-close-add-fund"
-                  aria-label="Close add fund dialog"
-                >
-                  <X size={16} />
-                </button>
+                <ModalCloseButton onClick={handleClose} label="Close add fund dialog" testId="button-close-add-fund" />
               </div>
               <div className="h-px bg-border/50 mx-5" />
             </div>
@@ -318,7 +326,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                   >
                     <p className="text-sm text-muted-foreground">What kind of fund do you want to add?</p>
                     <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-                      This quick-add sheet is for children&apos;s funds. Personal funds are live in onboarding through <span className="font-medium text-foreground">Get started &rarr; For myself</span>.
+                      This quick-add sheet is for children&apos;s funds. A fund for yourself is coming soon. You can see the idea from <span className="font-medium text-foreground">Get started &rarr; For myself</span>.
                     </div>
 
                     <button
@@ -331,7 +339,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                           setStep("details");
                         }
                       }}
-                      className="w-full p-4 rounded-2xl border-2 text-left transition-all duration-150 border-primary bg-card shadow-md ring-4 ring-primary/5"
+                      className="w-full p-4 rounded-2xl border-2 text-left transition-all duration-150 border-primary bg-card shadow-md ring-4 ring-primary/5 kiddo-press"
                       data-testid="option-add-child-fund"
                     >
                       <div className="flex items-center gap-3">
@@ -392,7 +400,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             />
                           </div>
                         </div>
-                        <p className="text-[11px] text-muted-foreground -mt-1">Legal name required for the UTMA account title.</p>
+                        <p className="text-2xs text-muted-foreground -mt-1">Legal name required for the UTMA account title.</p>
                         {/* Live UTMA-title preview — appears as the parent
                             types. Reduces "what gets recorded?" anxiety
                             (DriveWealth registers this string verbatim) and
@@ -402,7 +410,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             className="rounded-lg border border-border/50 bg-muted/40 px-3 py-2 -mt-1"
                             data-testid={`utma-title-preview-${index}`}
                           >
-                            <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                            <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                               Account will be titled
                             </p>
                             <p className="mt-1 text-[12px] font-mono leading-snug text-foreground break-words">
@@ -449,10 +457,10 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             </PopoverContent>
                           </Popover>
                           {child.birthdate && validateBirthdate(child.birthdate) && (
-                            <p className="mt-1 text-[11px] text-destructive">{validateBirthdate(child.birthdate)}</p>
+                            <p className="mt-1 text-2xs text-destructive">{validateBirthdate(child.birthdate)}</p>
                           )}
                           {(!child.birthdate || !validateBirthdate(child.birthdate)) && (
-                            <p className="mt-1 text-[11px] text-muted-foreground">Child funds are for children under 18.</p>
+                            <p className="mt-1 text-2xs text-muted-foreground">Child funds are for children under 18.</p>
                           )}
                         </div>
                         <div>
@@ -499,7 +507,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             const subj = pronouns.subject;
                             const obj = pronouns.object;
                             return (
-                              <p className="mt-2 text-[11.5px] italic text-muted-foreground/80 leading-relaxed">
+                              <p className="mt-2 text-2xs italic text-muted-foreground/80 leading-relaxed">
                                 Memory Book voice: <span className="text-foreground/85">"People wrote things for {obj} long before {subj} could read."</span>
                               </p>
                             );
@@ -516,7 +524,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             placeholder="e.g., 1234"
                             data-testid={`input-add-child-ssn-${index}`}
                           />
-                          <p className="mt-1 text-[11px] text-muted-foreground">Last 4 now. We'll ask for the full 9 before the first investment, encrypted at rest.</p>
+                          <p className="mt-1 text-2xs text-muted-foreground">Last 4 now. We'll ask for the full 9 before the first investment, encrypted at rest.</p>
                         </div>
 
                         <div>
@@ -562,7 +570,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                               <option key={s.code} value={s.code}>{s.name}</option>
                             ))}
                           </select>
-                          <p className="mt-1 text-[11px] text-muted-foreground">
+                          <p className="mt-1 text-2xs text-muted-foreground">
                             UTMA age of majority is set by state law. Most states are 18, a few are 19 or 21.
                           </p>
                           {/* Live "what this means" — turns the state pick
@@ -586,7 +594,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                 className="mt-2.5 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] px-3.5 py-2.5"
                                 data-testid={`majority-explainer-${index}`}
                               >
-                                <p className="text-[10.5px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                                   What this means
                                 </p>
                                 <p className="mt-1 text-[12.5px] leading-relaxed text-foreground">
@@ -621,8 +629,8 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                 <p className="text-xs font-bold text-foreground leading-snug">
                                   I understand {childFirst}'s fund is irrevocable.
                                 </p>
-                                <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
-                                  Once invested, the money belongs to {childFirst}. I manage it as custodian until {childFirst} turns {ageOfMajority} (your state's UTMA age of majority). That's the whole point.
+                                <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
+                                  Once invested, the money belongs to {childFirst}. I manage it as custodian until {childFirst} turns {ageOfMajority} (your state's UTMA age of majority).
                                 </p>
                               </div>
                             </label>
@@ -638,7 +646,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                           >
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-foreground">Successor custodian (optional)</p>
-                              <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                              <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">
                                 {child.successorName.trim()
                                   ? `${child.successorName.trim()} will step in if anything happens to you.`
                                   : `Who manages ${child.name.trim() || "the fund"} if something happens to you?`}
@@ -672,7 +680,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                                 data-testid={`input-successor-relation-${index}`}
                                 className="w-full h-10 px-3 border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary bg-background"
                               />
-                              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                              <p className="text-2xs text-muted-foreground/80 leading-relaxed">
                                 We won't contact them yet. This is just here so {child.name.trim() || "the fund"} doesn't end up with a court-appointed stranger.
                               </p>
                             </div>
@@ -696,7 +704,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
 
                     <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        New funds keep it simple: gifts follow your family default, and anyone can also pick a specific stock. Cash gifts stay off until you allow them. You can change any of this in Settings.
+                        Gifts follow your family default, and anyone can pick a specific stock instead. Cash gifts stay off until you allow them. Change any of this later in Settings.
                       </p>
                     </div>
 
@@ -743,7 +751,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             key={t}
                             type="button"
                             onClick={() => toggleTradition(t)}
-                            className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all ${
+                            className={`flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all kiddo-press ${
                               selected
                                 ? "border-primary bg-primary/5"
                                 : "border-border bg-card hover:border-muted-foreground/40"

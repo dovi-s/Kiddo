@@ -1,4 +1,4 @@
-// Pure (DB-free) financial core for the Dunphy demo seed.
+// Pure (DB-free) financial core for the Rivera demo seed.
 //
 // Turns a gift schedule into REAL share positions using committed historical
 // prices (script/data/historical-prices.json). Every gift buys shares at the
@@ -145,9 +145,12 @@ export function portfolioValueAtDate(prices: PriceData, events: BuildResult["eve
 // The managed index sleeve and its target weights per strategy. Contributions
 // always buy the GROWTH target (the lifelong accumulation default); the
 // glide-path rebalances the sleeve toward balanced/conservative at age
-// milestones. Weights mirror ACCOUNT_MODEL.md §2b (VGT-free, broad-market).
+// milestones. Mirrors the real product's managed presets (server
+// DEFAULT_INVESTMENT_CONFIG) — growth went ALL-EQUITY 2026-06-11 (was
+// VTI 62 / VXUS 28 / BND 10), so demo growth holdings match production.
+// (ACCOUNT_MODEL.md §2b may want the same growth update.)
 export const MIX_TARGETS: Record<"growth" | "balanced" | "conservative", Record<string, number>> = {
-  growth: { VTI: 0.62, VXUS: 0.28, BND: 0.10 },
+  growth: { VTI: 0.70, VXUS: 0.30 },
   balanced: { VTI: 0.50, VXUS: 0.25, BND: 0.25 },
   conservative: { VTI: 0.42, VXUS: 0.18, BND: 0.40 },
 };
@@ -162,7 +165,11 @@ function allocateMix(
   key: string,
   weights: Record<string, number>,
 ): Array<{ ticker: string; dollars: number }> {
-  const active = SLEEVE_TICKERS.filter((t) => priceOn(prices, t, key) != null);
+  // Only sleeves that (a) were trading at `key` AND (b) carry a positive weight
+  // for this strategy. The weight>0 guard matters now that the Growth target is
+  // all-equity (no BND): without it, a 0-weight sleeve would still get a $0 leg
+  // and seed an ugly "Bonds $0.00" holding/ledger row.
+  const active = SLEEVE_TICKERS.filter((t) => priceOn(prices, t, key) != null && (weights[t] ?? 0) > 0);
   const activeWeightSum = active.reduce((s, t) => s + (weights[t] ?? 0), 0);
   if (activeWeightSum <= 0) {
     // Nothing in the sleeve traded yet — put it all in the broadest survivor.

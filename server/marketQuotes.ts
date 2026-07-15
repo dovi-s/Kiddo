@@ -42,6 +42,36 @@ export const MARKET_QUOTE_ESTIMATES: Record<string, number> = {
   RBLX: 47,
   MSFT: 415.00,
   MCD: 295.00,
+  MAT: 19.00,
+  HAS: 67.00,
+  NVDA: 140.00,
+  KO: 68.00,
+  HSY: 185.00,
+  CROX: 110.00,
+  // Roster 2026-06-17 additions (snapped to live Yahoo quotes 2026-06-17)
+  PEP: 142.00,
+  ELF: 62.00,
+  BBW: 32.00,
+  CMG: 32.00,
+  SONY: 20.00,
+  // Completed the universe's fallback coverage (snapped to live Yahoo quotes
+  // 2026-07). These 8 universe tickers previously had NO estimate, so a total
+  // quote-provider outage would have valued them at the bare $100 placeholder.
+  // The holdings-revaluation worker skips estimate-only quotes, but the
+  // gift-buy share calc + price display use this fallback directly, so every
+  // ticker a fund can hold now has a realistic stand-in.
+  CMCSA: 23.79,
+  DPZ: 311.66,
+  DUOL: 125.76,
+  NTDOY: 11.09,
+  VUG: 85.50,
+  VYM: 159.48,
+  SCHD: 32.39,
+  QQQ: 712.60,
+  TGT: 130.21,
+  ABNB: 148.93,
+  CHWY: 20.85,
+  ADBE: 219.72,
 };
 
 export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | "Stock"; source: "auto_invest" | "stock_pick" | "both" }> = {
@@ -75,13 +105,26 @@ export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | 
   DPZ:   { name: "Domino's",  type: "Stock", source: "stock_pick" },
   CHWY:  { name: "Chewy",     type: "Stock", source: "stock_pick" },
   ADBE:  { name: "Adobe",     type: "Stock", source: "stock_pick" },
+  // Roster 2026-06-09 additions
+  MAT:   { name: "Mattel",    type: "Stock", source: "stock_pick" },
+  HAS:   { name: "Hasbro",    type: "Stock", source: "stock_pick" },
+  NVDA:  { name: "Nvidia",    type: "Stock", source: "stock_pick" },
+  KO:    { name: "Coca-Cola", type: "Stock", source: "stock_pick" },
+  HSY:   { name: "Hershey",   type: "Stock", source: "stock_pick" },
+  CROX:  { name: "Crocs",     type: "Stock", source: "stock_pick" },
+  // Roster 2026-06-17 additions
+  PEP:   { name: "PepsiCo",      type: "Stock", source: "stock_pick" },
+  ELF:   { name: "e.l.f.",       type: "Stock", source: "stock_pick" },
+  BBW:   { name: "Build-A-Bear", type: "Stock", source: "stock_pick" },
+  CMG:   { name: "Chipotle",     type: "Stock", source: "stock_pick" },
+  SONY:  { name: "Sony",         type: "Stock", source: "stock_pick" },
   // Z (Zillow) intentionally NOT in the gifter/parent picker. It's not on the approved list
   // (not warm, not child-friendly). Legacy Zillow holdings still resolve via ticker-names.ts
   // and HoldingDetailSheet's TICKER_INFO so historical positions render correctly, but the
   // ticker is no longer offered for new investments.
 };
 
-export type MarketQuoteSource = "finnhub" | "alpha_vantage" | "cache" | "estimate";
+export type MarketQuoteSource = "finnhub" | "alpha_vantage" | "yahoo" | "cache" | "estimate";
 
 export type MarketQuote = {
   symbol: string;
@@ -204,12 +247,46 @@ async function getStaleCachedQuote(symbol: string): Promise<MarketQuote | null> 
   };
 }
 
+// Keyless fallback via Yahoo's public chart endpoint (the same one
+// /api/stock-price already uses for charts). The chart meta carries the live
+// price AND the prior close, so we get a real daily change with no API key.
+// This is what keeps quotes (and the holding sheet's "Today" tile) populated
+// in dev and anywhere the keyed providers are missing or rate-limited.
+async function fetchYahooQuote(symbol: string): Promise<{ price: number; change?: number; changePercent?: number } | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
+    if (!response.ok) return null;
+    const data = await response.json() as {
+      chart?: { result?: Array<{ meta?: { regularMarketPrice?: number; chartPreviousClose?: number; previousClose?: number } }> };
+    };
+    const meta = data?.chart?.result?.[0]?.meta;
+    const price = Number(meta?.regularMarketPrice);
+    if (!isValidPrice(price)) return null;
+    const result: { price: number; change?: number; changePercent?: number } = { price };
+    const prevClose = Number(meta?.chartPreviousClose ?? meta?.previousClose);
+    if (Number.isFinite(prevClose) && prevClose > 0) {
+      result.change = Math.round((price - prevClose) * 100) / 100;
+      result.changePercent = Math.round(((price - prevClose) / prevClose) * 10000) / 100;
+    }
+    return result;
+  } catch (error) {
+    console.warn("[market-quotes] Yahoo quote unavailable:", symbol, (error as Error)?.message || error);
+    return null;
+  }
+}
+
 async function fetchProviderQuote(symbol: string): Promise<{ price: number; change?: number; changePercent?: number; source: Exclude<MarketQuoteSource, "cache" | "estimate"> } | null> {
   const finnhub = await fetchFinnhubQuote(symbol);
   if (finnhub) return { ...finnhub, source: "finnhub" };
 
   const alpha = await fetchAlphaVantageQuote(symbol);
   if (alpha) return { ...alpha, source: "alpha_vantage" };
+
+  // Universal keyless fallback before the static estimate, so a missing key
+  // never silently degrades a real quote to a flat placeholder.
+  const yahoo = await fetchYahooQuote(symbol);
+  if (yahoo) return { ...yahoo, source: "yahoo" };
 
   return null;
 }
@@ -271,6 +348,24 @@ export async function getMarketQuote(symbol: string): Promise<MarketQuote | null
 async function warmMarketQuoteCache() {
   const symbols = Object.keys(ADMIN_ASSET_UNIVERSE);
   await Promise.allSettled(symbols.map((symbol) => getMarketQuote(symbol)));
+}
+
+// Batch fetch: resolve many tickers to a ticker -> MarketQuote map in one call.
+// Mirrors warmMarketQuoteCache's Promise.allSettled pattern (per-symbol cached +
+// deduped). Non-universe tickers and hard failures are simply absent from the
+// map (caller decides how to handle a miss); the map DOES include estimate
+// fallbacks (quote.isEstimate === true) so callers that must not bake a
+// fabricated value should filter those out themselves.
+export async function getMarketQuotes(symbols: string[]): Promise<Map<string, MarketQuote>> {
+  const distinct = Array.from(
+    new Set(symbols.map((s) => String(s || "").trim().toUpperCase()).filter(Boolean)),
+  );
+  const map = new Map<string, MarketQuote>();
+  const results = await Promise.allSettled(distinct.map((s) => getMarketQuote(s)));
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled" && r.value) map.set(distinct[i], r.value);
+  });
+  return map;
 }
 
 export function startMarketQuoteCacheRefresher() {

@@ -1,54 +1,82 @@
-// DemoGiftMoment — the live "a gift just came in" beat(s) in the Dunphy demo.
+// DemoGiftMoment — the live "a gift just came in" beat(s) in the Rivera demo.
 //
 // Why it exists: the most emotional moment in the product is the parent seeing
-// "Gloria added $75 to Haley's future." Reading about it isn't feeling it. The
+// "Sofia added $75 to Mia's future." Reading about it isn't feeling it. The
 // demo is the distribution/conversion surface (creator outreach links land
 // here), so letting a prospect FEEL that beat is high-leverage — it's the
 // "show, don't tell" of the gifter loop.
 //
-// Two beats, in priority order:
-//   1. LOOP CLOSURE (the strong one): if the prospect just role-played SENDING
-//      a gift (the demo gift checkout routes through server/demoSandbox.ts →
-//      GiftSuccess?demo=1, which stashes what they sent in sessionStorage),
-//      then on returning to the dashboard they feel the parent-side arrival of
-//      the *exact* gift they just sent. They experience both sides of the loop.
-//   2. GENERIC SEEDED BEAT (the ambient one): absent a just-sent gift, ~15s
-//      after they settle on the dashboard, one warm seeded gift arrives so a
-//      passive browser still feels the moment once.
+// ONE beat: LOOP CLOSURE (the earned one). If the prospect just role-played
+// SENDING a gift (the demo gift checkout routes through server/demoSandbox.ts ->
+// GiftSuccess?demo=1, which stashes what they sent in sessionStorage), then on
+// returning to the dashboard they feel the parent-side arrival of the *exact*
+// gift they just sent. They experience both sides of the loop, and the moment is
+// EARNED by their own action.
+//
+// (A second "generic seeded beat" — an ambient, unprompted gift from Leo/Sofia
+// that fired on a fund-switch or after a dwell — was REMOVED 2026-06-10. It was
+// the one beat that animated a gift that never happened: the roll-in is real
+// (cache -> live) and this beat is the prospect's own real send, but the ambient
+// one invented an arrival. Mild theater in a brand whose moat is honesty, and it
+// was the beat that collided with the opening roll/digest cascade. The "watch it
+// land" moment is now earned-only; the dashboard's "give a gift, then watch it
+// land" CTA carries the invitation. Some switch/dwell scaffolding for it remains
+// below but is inert; a future pass can prune it.)
 //
 // Discipline (what keeps it magic, not slop):
-//   • The generic beat fires ONCE per browser session — not a stream of fake
-//     gifts (a notification slot-machine would violate the calm register).
+//   • The generic beat fires ONCE PER SESSION — not per fund, not a stream
+//     ("it shouldn't happen more than once for the same user — confusing
+//     otherwise"). A fresh / incognito session resets it, so the demo can be
+//     re-experienced clean.
 //   • Demo accounts only (user.isDemoAccount); a no-op for everyone else.
-//   • NO data mutation — a client-side toast reusing the app's real toast UI,
-//     so it never drifts the (carefully reconciled) fund balance/counts.
-//   • Honest — it's inside the clearly-"illustrative" Dunphy demo; the
+//   • NO data mutation beyond the recorded session gift — a client-side toast
+//     reusing the app's real toast UI, so it never drifts the (carefully
+//     reconciled) fund balance/counts.
+//   • Honest — it's inside the clearly-"illustrative" Rivera demo; the
 //     loop-closure beat mirrors the gift the prospect literally just sent, and
 //     the generic beat mirrors a real seeded gifter/amount for the active child.
 import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
-import { getActiveFundId } from "@/hooks/use-active-fund";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
+import { markNotificationsReadAsOf, getLastReadAt } from "@/components/NotificationsPanel";
+import { DEMO_AWAY_MS } from "@/components/dashboard/SinceLastVisitDigest";
+import { STOCK_PICK_NAMES } from "@shared/stock-picks";
 
-const SESSION_KEY = "kiddo.demo.giftMoment.shown.v1"; // generic beat: once per session
 const PENDING_KEY = "kiddo.demo.pendingGift.v1";       // set by GiftSuccess after a demo send
-const DELAY_MS = 15_000;          // generic beat — after they settle in
-const JUST_SENT_DELAY_MS = 3_000; // loop closure — they came back to feel it; don't make them wait
 
-// Per-child gift that matches the seeded personas, so the ambient beat reads
-// real ("Gloria added $75 to Haley"). Falls back to a generic warm gifter.
-const DEMO_GIFTS: Record<string, { sender: string; amount: string; ticker: string }> = {
-  haley: { sender: "Gloria Pritchett", amount: "75", ticker: "DIS" },
-  alex: { sender: "Jay Pritchett", amount: "250", ticker: "GOOGL" },
-  luke: { sender: "Manny Delgado", amount: "50", ticker: "RBLX" },
-};
-const TICKER_NAME: Record<string, string> = {
-  DIS: "Disney", GOOGL: "Google", RBLX: "Roblox", AAPL: "Apple", VTI: "the diversified mix",
+// Loop closure (the only beat now). Lands the just-sent gift as its OWN beat
+// AFTER the initial-landing cascade settles, not on top of it: the pre-cache
+// returning-roll PLUS the since-last-visit digest (which reveals ~2.9s). At 3.0s
+// the gift dropped on top of the digest (founder-reported collision, 2026-06-10:
+// "gift from Leo same time as the roll"). 4.8s lands it ~1.5s after the digest
+// settles, so the sequence reads roll, then digest, then gift, one beat at a time.
+// Still filled time, not empty waiting: the cascade plays the whole while.
+// Founder-tunable.
+const JUST_SENT_DELAY_MS = 4_800;
+
+// Where the gift goes, in friendly terms. Uses the CANONICAL curated-stock name
+// map (STOCK_PICK_NAMES — all ~24 picks) so a loop-closure gift to ANY curated
+// stock reads true ("Going into Nike"); the old local 5-ticker map fell back to
+// a FALSE "the diversified mix" for the other 19. No specific ticker (managed
+// mix / VTI) → the honest "the diversified mix."
+const giftDestination = (ticker: string | null | undefined): string =>
+  STOCK_PICK_NAMES[String(ticker || "").toUpperCase()] || "the diversified mix";
+
+// Gift amount, currency-formatted: "$50", "$1,500", "$75.50" — never a raw
+// "$1500" or an ugly "$50.00". Matters for the loop-closure beat, where the
+// prospect picks the amount.
+const fmtGiftAmount = (raw: string | number): string => {
+  const n = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(n)) return String(raw);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 export function DemoGiftMoment() {
@@ -58,7 +86,56 @@ export function DemoGiftMoment() {
   const timerRef = useRef<number | null>(null);
 
   const isDemo = Boolean((user as any)?.isDemoAccount);
-  const onDashboard = location === "/dashboard" || location === "/";
+
+  // Demo opens CAUGHT UP — but NOT empty. A fresh viewer has no notification
+  // read-state, so all 8 years of seeded activity count as unread and the bell +
+  // Activity badges open at "9+/9+" — anxiety on the conversion surface. But a
+  // worn, active account shouldn't open with a DEAD bell either: there should be
+  // a genuine, account-true notification waiting — a recent gift, a co-parent who
+  // just joined, an upcoming occasion (founder 2026-06-08). So instead of marking
+  // EVERYTHING read, we stamp "caught up as of the digest's window" (~6 days):
+  // the years-old backlog reads as seen, while the genuinely-recent items — the
+  // SAME ones the SinceLastVisitDigest summarizes (e.g. Theo: a gift from Leo;
+  // Nora: a gift from Robert + "Co-parent joined") — stay unread. Bounded (~1–2 per
+  // fund after the bell's noise filter), true to each worn fund, and the live gift
+  // THIS component lands below adds to it. Once-per-session so reading them sticks;
+  // a fresh / incognito session re-experiences it. Real accounts untouched
+  // (isDemo-gated).
+  useEffect(() => {
+    if (!isDemo || typeof window === "undefined") return;
+    try {
+      // Self-healing catch-up. The guard keys on the ACTUAL persisted read-state
+      // (getLastReadAt), not just a sessionStorage flag. Why this matters: the
+      // seeded backlog spans years; if lastReadAt is missing or ancient, EVERY
+      // worn item counts as unread and the bell + Activity badges open at "9+"
+      // (the anxiety-on-the-conversion-surface case this whole block exists to
+      // prevent). The old flag-only guard skipped re-applying whenever the flag
+      // was set on an earlier view but the persisted read-state was never
+      // written / got cleared — leaving the badges stuck at 9+ despite "caught
+      // up." Now: if lastReadAt is unset or older than the catch-up window, we
+      // (re)stamp "caught up as of the digest window" (~6 days). The genuinely-
+      // recent items the SinceLastVisitDigest summarizes (a fresh gift, a
+      // co-parent who just joined) stay unread, so the bell is ACTIVE, not dead.
+      // Idempotent + self-healing: the guard uses a STABLE staleness threshold
+      // (30 days), while the stamp sets the 6-day window. So once we stamp
+      // lastReadAt to ~now-6d (which is well inside 30d), the guard reads
+      // "caught up" and skips on every later load — it never re-clobbers a
+      // user's swipe-to-unread. It only (re)fires when lastReadAt is genuinely
+      // unset (0) or ancient, i.e. exactly the "whole backlog unread → 9+" state.
+      const STALE_MS = 30 * 24 * 60 * 60 * 1000;
+      if (getLastReadAt() < Date.now() - STALE_MS) {
+        markNotificationsReadAsOf(Date.now() - DEMO_AWAY_MS);
+      }
+    } catch {
+      // storage blocked → skip; badges just open as before (no worse).
+    }
+  }, [isDemo]);
+  // Includes /design-lab AND /staging so both redesign surfaces get the same
+  // live-gift beat as /dashboard (they're being groomed to replace it). Without
+  // this, the rebuilt hero had its in-hero arc + roll but no loop-closure TOAST,
+  // so the "watch it land" moment was only half-present. The only navigate() is
+  // on a toast tap, so firing here never yanks the viewer off the page.
+  const onDashboard = location === "/dashboard" || location === "/" || location === "/design-lab" || location === "/staging";
 
   useEffect(() => {
     if (!isDemo || !onDashboard) return;
@@ -66,13 +143,15 @@ export function DemoGiftMoment() {
 
     // Build the beat to fire — loop-closure if the prospect just role-played
     // sending a gift, else the once-per-session generic beat — as a single
-    // `fire()` thunk plus its `delay`. We then arm it behind a visibility gate
-    // (below) so the beat plays to the prospect's EYES, not to a backgrounded
-    // tab. (Gift arrival is the product's signature "watch it land" moment; a
-    // fixed timer that elapses while they've tabbed away — then marks itself
-    // shown — is exactly how that moment gets silently missed.)
+    // `fire()` thunk. We then arm it behind a visibility gate (below) so the
+    // beat plays to the prospect's EYES, not to a backgrounded tab. (Gift
+    // arrival is the product's signature "watch it land" moment; a fixed timer
+    // that elapses while they've tabbed away — then marks itself shown — is
+    // exactly how that moment gets silently missed.)
+    // Beat 1 (loop closure) is the only beat now; it arms on landing and fires
+    // after the initial-landing cascade (JUST_SENT_DELAY_MS).
     let fire: (() => void) | null = null;
-    let delay = DELAY_MS;
+    const delay = JUST_SENT_DELAY_MS;
 
     // --- Beat 1: loop closure. Did the prospect just role-play SENDING a gift?
     // Replay it as the parent-side arrival of the exact gift they sent. The
@@ -91,16 +170,16 @@ export function DemoGiftMoment() {
         const senderRaw = String(pending.senderName || "").trim();
         const sender = senderRaw && senderRaw.toLowerCase() !== "someone" ? senderRaw : "Someone";
         const amount = String(pending.amount || "").replace(/[^0-9.]/g, "") || "0";
-        const where = TICKER_NAME[String(pending.ticker || "").toUpperCase()] || "the diversified mix";
+        const where = giftDestination(pending.ticker);
         const isRecurring = !!pending.isRecurring;
-        delay = JUST_SENT_DELAY_MS;
         fire = () => {
           try { window.sessionStorage.removeItem(PENDING_KEY); } catch { /* ignore */ }
           haptic("success");
           toast({
+            variant: "gift", // warm, branded delight treatment — not a system card
             title: isRecurring
-              ? `${sender}'s monthly gift to ${child} is on its way 🌱`
-              : `${sender} added $${amount} to ${child}'s future 🌱`,
+              ? `${sender}'s monthly gift to ${child} is on its way`
+              : `${sender} added $${fmtGiftAmount(amount)} to ${child}'s future`,
             description: `Going into ${where}. The gift you just sent is landing in ${child}'s Memory Book.`,
             duration: 9000, // a delight beat needs time to read both lines + tap View
             action: (
@@ -112,81 +191,56 @@ export function DemoGiftMoment() {
               </ToastAction>
             ),
           });
-          // Presentational hero-roll signal (Dashboard listens). Only for a
-          // real landed amount — a recurring "on its way" hasn't landed, so it
-          // shouldn't roll the hero. No data mutated.
-          if (!isRecurring) {
-            window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(amount) } }));
-          }
+          // No presentational hero-roll hack needed: the gift was recorded into
+          // the overlay by GiftSuccess, so it lands in a holding → the hero's
+          // invested total rises → the count-up rolls it (real + sticky) → and
+          // it's in the Activity feed, bell, and Memory Book. One recorded fact,
+          // reflected everywhere.
         };
       }
     }
 
-    // --- Beat 2: generic seeded beat. Once per session, ~15s after they settle.
-    // sessionStorage (set only when the beat fires) is the once-per-session
-    // guard, so a bounce away before it fires re-arms on return.
-    if (!fire) {
-      try {
-        if (window.sessionStorage.getItem(SESSION_KEY)) return; // already shown this session
-      } catch {
-        return; // sessionStorage blocked → skip rather than risk repeating
-      }
-
-      const activeId = getActiveFundId();
-      const fund = (funds.find((f) => f.id === activeId) ?? funds[0]) as any;
-      if (!fund) return;
-      const childRaw = String(fund.recipientFirstName || "");
-      const child = capFirst(childRaw) || "your child";
-      const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
-      const where = TICKER_NAME[g.ticker] || "the diversified mix";
-
-      fire = () => {
-        try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
-        haptic("success");
-        toast({
-          title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
-          description: `Going into ${where}. A new moment in ${child}'s Memory Book.`,
-          duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
-          action: (
-            <ToastAction
-              altText={`View ${child}'s Memory Book`}
-              onClick={() => { haptic("selection"); navigate(`/memory/${fund.id}`); }}
-            >
-              View
-            </ToastAction>
-          ),
-        });
-        // Presentational hero-roll signal — Dashboard rolls the hero up by this
-        // amount, synced to the toast. No data mutated.
-        window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(g.amount) } }));
-      };
-    }
-
+    // --- Beat 2 (the ambient, unprompted seeded gift from Leo/Sofia) was
+    // REMOVED 2026-06-10 (founder call). It was the only beat that animated a gift
+    // that never happened: the roll-in is real (cache -> live) and beat 1 is the
+    // prospect's OWN real send, but beat 2 invented an arrival. That is mild
+    // theater in a product whose moat is honesty, and it was the beat that collided
+    // with the opening roll/digest cascade. The "watch it land" moment is now
+    // EARNED only: the prospect sends a gift (beat 1) and feels it land; the
+    // dashboard's "give a gift, then watch it land ->" CTA carries the invitation.
+    // With no just-sent gift to replay, there is nothing to fire. (Its switch/dwell
+    // arming scaffolding was pruned in the same change.)
     if (!fire) return;
     const fireOnce = fire;
 
-    // Visibility-gated arming. The beat counts down ONLY while the tab is
-    // actually visible, and (re)starts its full delay when the prospect
-    // returns to a backgrounded tab. So "15s after they settle in" means 15s
-    // of them actually looking — never 15s burned against a hidden tab that
-    // then marks the once-per-session beat shown having played to no one.
+    const currentDelay = delay;
+    let fired = false; // hard once-per-mount latch
+
     const clear = () => {
       if (timerRef.current != null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     };
+    // Beat 1 arms on landing and fires fireOnce after currentDelay, once. It pauses
+    // while the tab is hidden so the "watch it land" beat plays to the prospect's
+    // eyes, not a backgrounded tab; re-arms fresh when they return.
     const arm = () => {
-      if (timerRef.current != null) return;
+      if (fired || timerRef.current != null) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      timerRef.current = window.setTimeout(() => { timerRef.current = null; fireOnce(); }, delay);
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        if (fired) return;
+        fired = true;
+        fireOnce();
+      }, currentDelay);
     };
     const onVis = () => {
       if (document.visibilityState === "visible") arm();
-      else clear(); // tabbed away mid-countdown → reset; re-arms fresh on return
+      else clear(); // tabbed away mid-countdown -> reset; re-arms on return
     };
 
-    arm();
+    arm(); // arms beat 1 on landing
     document.addEventListener("visibilitychange", onVis);
     return () => {
       clear();

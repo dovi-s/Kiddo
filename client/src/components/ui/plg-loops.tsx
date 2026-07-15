@@ -228,7 +228,7 @@ export function RecurringSetupModal({
               data-testid="input-reminder-email"
               className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/20 focus:border-stone-400"
             />
-            <p className="mt-2 text-[11px] text-stone-500">
+            <p className="mt-2 text-2xs text-stone-500">
               {defaultEmail && !emailTouched
                 ? "Pre-filled from your gift receipt. Change it if you want reminders sent to a different inbox."
                 : "Where we'll send the reminder. One email per reminder, unsubscribe anytime."}
@@ -255,7 +255,7 @@ export function RecurringSetupModal({
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-stone-500">
+            <p className="mt-2 text-2xs text-stone-500">
               We'll suggest this amount in the reminder email. You can change it when you actually send the gift.
             </p>
           </div>
@@ -410,8 +410,14 @@ export function CollaboratorInviteModal({
     { 
       id: "co-admin", 
       label: "Co-Admin", 
-      description: "Can manage events and settings",
-      permissions: ["All viewer permissions", "Create events", "Edit fund settings", "Send thank-yous"]
+      description: "Can manage events and thank-yous",
+      // Co-admin is enforced server-side for exactly these: create/edit events
+      // (routes.ts ~11017/11167) + send thank-yous (~15645). Fund SETTINGS
+      // (profile, strategy, kid-view, gifter-notifications) are OWNER-ONLY on
+      // the server — they touch custodian/SSN/state/majority-age fields — so
+      // "Edit fund settings" was dropped: the modal must not promise a power a
+      // co-admin gets a silent 403 on. (Audit 2026-07.)
+      permissions: ["All viewer permissions", "Create and edit events", "Send thank-yous"]
     },
   ];
 
@@ -427,7 +433,7 @@ export function CollaboratorInviteModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-card p-0 gap-0 border border-border/50 shadow-premium-lg" aria-describedby={undefined}>
+      <DialogContent className="max-w-md bg-card p-0 gap-0 border border-border/50 shadow-premium-lg max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <div className="p-5 border-b border-border/50">
           <DialogTitle className="font-heading font-semibold text-foreground">Invite to {fundName}</DialogTitle>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -473,7 +479,7 @@ export function CollaboratorInviteModal({
                   <p className="text-sm text-muted-foreground mb-2">{r.description}</p>
                   <div className="flex flex-wrap gap-1">
                     {r.permissions.map((p) => (
-                      <span key={p} className="text-[10px] bg-background text-muted-foreground px-2 py-0.5 rounded-full border border-border/50">
+                      <span key={p} className="text-3xs bg-background text-muted-foreground px-2 py-0.5 rounded-full border border-border/50">
                         {p}
                       </span>
                     ))}

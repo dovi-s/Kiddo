@@ -134,6 +134,14 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         const data = await res.json().catch(() => null);
         throw new Error(data?.error || "Could not delete account. Try again or email support@kiddofund.com.");
       }
+      // Demo accounts can't actually delete — the server returns {saved:false}.
+      // NEVER show the "deleted" success state + force logout on a demo.
+      const okData = await res.json().catch(() => null);
+      if (okData && okData.demo === true && okData.saved === false) {
+        setError(okData.message || "This is the demo. Your account isn't actually deleted.");
+        setStep("confirm");
+        return;
+      }
       setStep("done");
       haptic("success");
       // Give the success state ~2.5s to read, then trigger logout + redirect.

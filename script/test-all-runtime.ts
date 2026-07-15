@@ -4,7 +4,11 @@ import process from "node:process";
 
 const HEALTH_URL = process.env.SMOKE_BASE_URL || "http://127.0.0.1:5000";
 const HEALTH_PATH = "/api/health";
-const HEALTH_TIMEOUT_MS = 90_000;
+// Cold start on a remote dev DB routinely exceeds 90s (every round-trip ~100ms,
+// ~20 workers boot) — that caused a false "timed out waiting for health" before
+// the server was actually up. 180s tolerates the real cold-start window; warm
+// reuse short-circuits via the isHealthy() check, so this only applies on spawn.
+const HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_POLL_MS = 1_000;
 
 const TEST_STEPS = [
@@ -20,6 +24,10 @@ const TEST_STEPS = [
   "test:capture-at-intent",
   "test:launch-readiness",
   "test:memory-utils",
+  "test:gift-draft",
+  "test:gift-text-safety",
+  "test:gifter-identity",
+  "test:activity-semantics",
   "test:mobile-gifter-logos",
   "test:ui:smoke",
 ] as const;

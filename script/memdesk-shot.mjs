@@ -1,0 +1,18 @@
+import path from "node:path";import { mkdirSync } from "node:fs";import { chromium } from "playwright";
+const base="http://127.0.0.1:5000";const out=path.join(process.cwd(),"artifacts","dash");mkdirSync(out,{recursive:true});
+const b=await chromium.launch();const p=await (await b.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1})).newPage();
+await p.addInitScript(()=>sessionStorage.setItem("kora-launched","1"));
+await p.goto(base+"/login",{waitUntil:"domcontentloaded"});
+await p.getByTestId("input-login-email").fill("elena@riverafamily.com");
+await p.getByTestId("input-login-password").fill("riverafamily");
+await p.getByTestId("button-login").click();
+await p.waitForURL(/dashboard|funds|\/$/i,{timeout:60000}).catch(()=>{});
+await p.waitForURL(/fund=/i,{timeout:15000}).catch(()=>{});
+const fund=(p.url().match(/fund=([a-f0-9-]+)/i)||[])[1];
+await p.goto(base+"/memory"+(fund?`?fund=${fund}`:""),{waitUntil:"domcontentloaded"});
+await p.locator('[data-testid="memory-hero"]').waitFor({state:"visible",timeout:30000}).catch(()=>{});
+await p.waitForTimeout(3500);
+await p.screenshot({path:path.join(out,"memdesk.png"),clip:{x:0,y:0,width:1440,height:560}});
+const box=await p.evaluate(()=>{const el=document.querySelector('[data-testid="memory-hero"]');if(!el)return null;const r=el.getBoundingClientRect();return{left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width),radius:getComputedStyle(el).borderTopLeftRadius};});
+console.log("hero:",JSON.stringify(box),"vw=1440");
+await b.close();

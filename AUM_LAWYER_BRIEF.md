@@ -75,7 +75,7 @@ subscription doesn't) and requires rebuilding pricing/marketing copy.
    registration if the platform doesn't otherwise constitute "advice"? (The fee does NOT stop at
    handoff; only the subscription does.)
 2. Does our product surface constitute "investment advice" under the Advisers Act three-prong
-   test? We let the parent pick from a curated ~17-stock universe (we surface options, don't
+   test? We let the parent pick from a curated 24-stock universe (we surface options, don't
    recommend a specific stock); we project future value at a 7% historical-average assumption
    (disclaimed, not a guarantee); we do NOT charge per-trade, execute trades, or custody
    securities (the broker-dealer does).

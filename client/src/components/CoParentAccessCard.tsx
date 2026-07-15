@@ -44,12 +44,15 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { UserPlus } from "lucide-react";
+import { UserPlus, KeyRound, Eye, Ban, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
+import { KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY } from "@shared/monetization";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 
 // Per-fund collaborators cache. Same readLocalCache / writeLocalCache
@@ -90,10 +93,6 @@ type Collaborator = {
   status?: string | null;
   invitedAt?: string | null;
 };
-
-const VIEWER_PERMS = ["View balance", "View activity", "See Memory Book"];
-const ADMIN_PERMS = ["View balance", "View activity", "See Memory Book", "Create events", "Edit settings"];
-const DENIED_VIEWER = ["Create events", "Edit settings"];
 
 export function CoParentAccessCard({
   fund,
@@ -156,6 +155,8 @@ export function CoParentAccessCard({
         credentials: "include",
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         queryClient.invalidateQueries({ queryKey: ["/api/funds", fund.id, "collaborators"] });
         toast({ title: "Collaborator removed" });
       } else {
@@ -171,16 +172,17 @@ export function CoParentAccessCard({
     <SectionCard>
       <div className="p-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div>
-            <h2 className="text-base font-bold text-foreground">Co-parent access</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Share {childName ? `${childName}'s` : "this"} fund with a partner or guardian.
-            </p>
-          </div>
+        {/* heading + Invite on one row; the description moves full-width below so it
+            stays a SINGLE line on mobile (it was wrapping to two next to the button). */}
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-foreground">Co-parent access</h2>
+          {/* Outline (not filled) so this secondary action doesn't read as a
+              heavy green block competing with the section title on mobile.
+              Compact height + tighter padding keep it proportionate. */}
           <Button
+            variant="outline"
             size="sm"
-            className="shrink-0 rounded-xl gap-1.5"
+            className="shrink-0 rounded-xl gap-1.5 h-8 px-3 text-xs"
             onClick={() => {
               haptic("light");
               // Free users: open the FeatureWallModal so the tap
@@ -201,6 +203,9 @@ export function CoParentAccessCard({
             Invite
           </Button>
         </div>
+        <p className="mt-1 mb-5 text-sm text-muted-foreground">
+          Share {childName ? `${childName}'s` : "this"} fund with a partner or guardian.
+        </p>
 
         {/* How it works — shown only when the query has confirmed
             there are zero collaborators. Gating on isFetched (rather
@@ -212,16 +217,16 @@ export function CoParentAccessCard({
         {isFetched && collaborators.length === 0 && (
           <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-gradient-to-br from-[hsl(var(--kiddo-evergreen)/0.05)] to-[hsl(var(--kiddo-cream-dark)/0.4)] p-4">
             <p className="kiddo-section-label mb-3">How co-parent access works</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { emoji: "🔑", title: "You stay in control", body: "You are the legal custodian. They have no legal claim." },
-                { emoji: "👁", title: "Choose their role", body: "Viewer or Co-Admin. You decide what they can see and do." },
-                { emoji: "🚫", title: "Revoke anytime", body: "Remove access instantly. Their session ends immediately." },
-              ].map((item) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {([
+                { Icon: KeyRound, title: "You stay in control", body: "You are the legal custodian. They have no legal claim." },
+                { Icon: Eye, title: "Choose their role", body: "Viewer or Co-Admin. You decide what they can see and do." },
+                { Icon: Ban, title: "Revoke anytime", body: "Remove access instantly. Their session ends immediately." },
+              ] as { Icon: LucideIcon; title: string; body: string }[]).map((item) => (
                 <div key={item.title} className="rounded-xl bg-card p-3">
-                  <p className="text-lg mb-1.5">{item.emoji}</p>
-                  <p className="text-[11.5px] font-bold text-foreground mb-0.5">{item.title}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{item.body}</p>
+                  <item.Icon className="mb-1.5 text-[hsl(var(--kiddo-evergreen))]" size={20} strokeWidth={2} aria-hidden />
+                  <p className="text-2xs font-bold text-foreground mb-0.5">{item.title}</p>
+                  <p className="text-2xs text-muted-foreground leading-relaxed">{item.body}</p>
                 </div>
               ))}
             </div>
@@ -236,7 +241,7 @@ export function CoParentAccessCard({
         {!isFetched && collaborators.length === 0 && (
           <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border)/0.5)] bg-muted/30 p-4 animate-pulse">
             <div className="h-3 w-32 bg-muted rounded mb-3" />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="rounded-xl bg-card p-3">
                   <div className="h-5 w-5 bg-muted rounded mb-1.5" />
@@ -255,56 +260,73 @@ export function CoParentAccessCard({
             <div className="space-y-3">
               {collaborators.map((collab) => {
                 const isAdmin = collab.role === "co-admin";
-                const granted = isAdmin ? ADMIN_PERMS : VIEWER_PERMS;
-                const denied = isAdmin ? [] : DENIED_VIEWER;
                 const invitedDate = collab.invitedAt
                   ? new Date(collab.invitedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                   : null;
                 return (
                   <div key={collab.id} className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4">
+                    {/* Avatar + email on the top line (email gets the full row
+                        width so it no longer hard-truncates to "marcus@r…" on
+                        narrow phones). Status badge and Revoke share the line
+                        below — status left, action right — with the role beneath.
+                        Keeping Revoke OFF the email line is what frees the width. */}
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-cream-dark))] border border-[hsl(var(--kiddo-border))] text-sm font-bold text-foreground">
                         {(collab.email || "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                          <p className="text-sm font-bold text-foreground truncate">{collab.email}</p>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.05em] ${
+                        <p className="text-sm font-bold text-foreground break-all">{collab.email}</p>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          <span className={`rounded-full px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.05em] ${
                             collab.status === "accepted"
                               ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"
                               : "bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold-ink))]"
                           }`}>
                             {collab.status === "accepted" ? "active" : "pending"}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(collab.id)}
+                            className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-2xs font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
+                            data-testid={`button-revoke-collab-${collab.id}`}
+                          >
+                            Revoke
+                          </button>
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {/* Accepted: just the role — the ACTIVE pill above already says
+                              "accepted," so "· Accepted" here was the same status twice.
+                              Pending keeps its suffix because it carries real detail (the
+                              invited date + that it's still awaiting). */}
                           {collab.status === "accepted"
-                            ? `${isAdmin ? "Co-Admin" : "Viewer"} · Accepted`
+                            ? (isAdmin ? "Co-Admin" : "Viewer")
                             : invitedDate
                               ? `Invited ${invitedDate} · Awaiting acceptance`
                               : "Awaiting acceptance"}
                         </p>
+                        {/* The role IMPLIES the permissions — a Co-Admin badge already says
+                            "can manage," a Viewer badge says "view-only." Enumerating all five
+                            permissions as chips per member was engineering detail as UI, and it
+                            wrapped to a crammed 2-3 rows of pills on mobile. One plain-language
+                            line reads calmer and clearer; the granular grant is set at invite.
+                            Tense-aware (2026-07): a PENDING invitee doesn't see or manage
+                            anything yet, so the present-tense wording is future-framed ("Once
+                            they accept: ...") until acceptance, and reads accurately in both
+                            states rather than promising access that isn't live.
+                            Positioned INSIDE the content column (not a full-width sibling of
+                            the avatar row) so it aligns under the email instead of hanging out
+                            to the left under the avatar — the misalignment read as off on
+                            mobile (founder catch 2026-07). */}
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground/85">
+                          {collab.status === "accepted"
+                            ? (isAdmin
+                                ? "Full access: sees everything and can manage the fund. You stay the legal custodian."
+                                : "View-only: the balance, activity, and Memory Book. Can't change settings or create occasions.")
+                            : (isAdmin
+                                ? "Once they accept: full access to see everything and manage the fund. You stay the legal custodian."
+                                : "Once they accept: view-only access to the balance, activity, and Memory Book.")}
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(collab.id)}
-                        className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
-                        data-testid={`button-revoke-collab-${collab.id}`}
-                      >
-                        Revoke
-                      </button>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {granted.map((p) => (
-                        <span key={p} className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                          ✓ {p}
-                        </span>
-                      ))}
-                      {denied.map((p) => (
-                        <span key={p} className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground/60">
-                          ✗ {p}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 );
@@ -319,16 +341,16 @@ export function CoParentAccessCard({
           <div className="flex items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
               {user?.profileImageUrl
-                ? <img src={user.profileImageUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+                ? <FadeImage src={user.profileImageUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
                 : ownerInitial}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-foreground">{ownerName}</p>
+              {/* "Primary custodian · Full control" already names the role, so
+                  the separate "Primary" badge that used to sit here was the word
+                  twice over — dropped it. */}
               <p className="text-xs text-muted-foreground">Primary custodian · Full control</p>
             </div>
-            <span className="shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">
-              Primary
-            </span>
           </div>
         </div>
 
@@ -344,7 +366,7 @@ export function CoParentAccessCard({
           <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm font-semibold text-foreground">Invite a co-parent with Kiddo+</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              $3.99/month or $29/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up on the kid's timeline alongside yours.
+              ${KORA_STARTER_MONTHLY}/month or ${KORA_STARTER_YEARLY}/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up alongside yours.
             </p>
             <Button
               size="sm"

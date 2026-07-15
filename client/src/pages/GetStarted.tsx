@@ -7,7 +7,7 @@ import { Link, useLocation, useSearch } from "wouter";
 // feedback_animation_primitives.md — replace with static text-only), (3)
 // two orbiting Sparkles around the success Check (the worst AI-slop
 // pattern in the file — deleted entirely; the pulsing Check is enough).
-import { Apple, ArrowLeft, ArrowRight, CalendarIcon, Check, Copy, Gift, Lock, Mail, MessageSquare, PiggyBank, QrCode, Search, Shield, TrendingUp, User, Users, X } from "lucide-react";
+import { Apple, ArrowLeft, ArrowRight, CalendarIcon, Check, Copy, Gift, Lock, Mail, MessageSquare, PiggyBank, QrCode, Search, Shield, TrendingUp, User, Users, X, Pin, Banknote } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -170,9 +170,9 @@ function Shell({
               <div className="flex gap-1.5" aria-hidden="true">
                 {Array.from({ length: progress.total }).map((_, i) => <span key={i} className={`h-1.5 rounded-full ${i < progress.current ? "w-7 bg-primary" : "w-3 bg-border"}`} />)}
               </div>
-              <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>
+              <span className="text-2xs uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>
             </div>
-          ) : <Logo size="sm" className="text-primary" linkTo={null} />}
+          ) : <Logo size="sm" className="text-primary" linkTo="/" />}
           <div className="w-11" />
         </div>
       </header>
@@ -198,7 +198,7 @@ export default function GetStarted() {
   // which stays "free" without a paid sub — verified live), so the "free for 14
   // days" line shows only when the trial really granted, never if it's disabled.
   const { data: subscription } = useSubscription();
-  // A Dunphy demo login is a REAL authenticated session (as phil@dunphyfamily.com
+  // A Rivera demo login is a REAL authenticated session (as marcus@riverafamily.com
   // etc.). For onboarding that must NOT count as "signed in" — otherwise a
   // prospect who explored the demo and then clicked Get Started skips signup
   // entirely and ends up creating a fund under the DEMO account instead of a
@@ -215,7 +215,7 @@ export default function GetStarted() {
   //      don't use useAuth's logout(), which hard-redirects to "/" and would
   //      bounce them off this page; we do the fetch + cache reset inline.)
   //   2. Clear the demo's cached per-user client state — chiefly the active-fund
-  //      id, which Dashboard reads to pick a fund (a demo Luke/Alex/Haley id
+  //      id, which Dashboard reads to pick a fund (a demo Theo/Nora/Mia id
   //      would otherwise survive the redirect-based OAuth signup and briefly
   //      render a demo fund under the new account).
   //   3. Reset the auth query to null so the page re-renders as anonymous.
@@ -256,6 +256,10 @@ export default function GetStarted() {
   useScrollResetOnChange(step);
   const [authMode, setAuthMode] = useState<OnboardingAuthMode>("none");
   const [oauth, setOauth] = useState<AuthProvidersStatus>({ google: false, apple: false });
+  // The default {false,false} is indistinguishable from "fetched, no providers",
+  // so track whether the providers fetch has actually resolved before deciding
+  // to auto-expand the email form.
+  const [oauthLoaded, setOauthLoaded] = useState(false);
   const [accountType, setAccountType] = useState<OnboardingAccountType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -299,7 +303,7 @@ export default function GetStarted() {
   const [projectionMilestone, setProjectionMilestone] = useState(18);
   // Recipient state — collected inline on the projection step so the
   // load-bearing aha math respects the kid's actual UTMA majority age
-  // (18 in most states, 19-21 in a few like AL/MS/CA/NE). Optional
+  // (21 in most states, 18 in some e.g. CA, 19 in AL/NE). Optional
   // field with smart default: empty string falls back to age 18 via
   // getMajorityAgeForState. When set, the projection numbers + the
   // "by the time {kid} is N" copy + the fund-creation payload all
@@ -497,8 +501,23 @@ export default function GetStarted() {
   }, [accountType, birthdate, email, investment, name, progress?.current, progress?.total, step]);
 
   useEffect(() => {
-    void fetchAuthProviders().then(setOauth).catch(() => undefined);
+    void fetchAuthProviders()
+      .then(setOauth)
+      .catch(() => undefined)
+      .finally(() => setOauthLoaded(true));
   }, []);
+
+  // Auto-expand the email fields when NO OAuth provider is configured: email is
+  // then the only sign-up path, so hiding it behind a "Continue with email"
+  // click (which leaves an orphaned button with no visible field) is pure
+  // friction on the most conversion-critical screen. Only flips the untouched
+  // "none" state, so a resumed-draft / manual choice is respected, and it never
+  // shows the form to an already-authenticated visitor. When OAuth IS wired, the
+  // progressive disclosure (OAuth buttons primary, email behind the reveal) stays.
+  useEffect(() => {
+    if (!oauthLoaded || oauth.google || oauth.apple || isRealAuthenticated) return;
+    setAuthMode((m) => (m === "none" ? "email" : m));
+  }, [oauthLoaded, oauth.google, oauth.apple, isRealAuthenticated]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -520,6 +539,17 @@ export default function GetStarted() {
       if (d.gifterAudience) setGifterAudience(d.gifterAudience);
       if (d.recipientState) setRecipientState(d.recipientState);
       if (d.country) setCountry(d.country);
+      // Resume sanity clamp (audit catch 2026-06-04): a draft can carry a
+      // step its restored fields can't support (e.g. step="projection" with
+      // no birthdate after a partial save), rendering a half-broken screen
+      // the parent didn't break. If the draft step is past "details" but the
+      // details prerequisites are missing, resume AT details — the fields
+      // they did enter are intact, and the flow re-validates forward.
+      const pastDetails = d.step === "projection" || d.step === "investment";
+      const detailsIncomplete = (d.accountType ?? "child") === "child"
+        ? !(d.name && d.birthdate && d.occasion && d.gifterAudience)
+        : !d.name;
+      if (pastDetails && detailsIncomplete) setStep("details");
     } catch {
       window.sessionStorage.removeItem(DRAFT_KEY);
     }
@@ -564,6 +594,12 @@ export default function GetStarted() {
 
   const startOAuth = (provider: "google" | "apple") => {
     haptic("medium");
+    // Save the FULL draft before the OAuth redirect (audit catch 2026-06-04):
+    // this used to write a 9-field subset, silently dropping lastName /
+    // occasion / gifterAudience / recipientState / country. Harmless on the
+    // normal path (auth is step one, those fields are still empty), but a
+    // user who filled details and then back-navigated to auth lost them on
+    // return. step stays "who" — the post-OAuth landing point.
     const draft: OnboardingDraft = {
       step: "who",
       authMode,
@@ -574,6 +610,11 @@ export default function GetStarted() {
       annualGift,
       investment,
       ticker,
+      lastName,
+      occasion,
+      gifterAudience,
+      recipientState,
+      country,
     };
     window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     const returnTo = search ? `/get-started?${search}` : "/get-started";
@@ -759,17 +800,13 @@ export default function GetStarted() {
                     (reported: "kiddo logo twice, top of page and middle"). Every
                     other onboarding step shows only the header mark; welcome now
                     matches. */}
-                {/* Headline: emotional brand promise condensed. The contrast
-                    structure ("X disappear. Y last.") names the alternative
-                    (cash) and the upgrade (a permanent record of investments)
-                    in 6 words. Functional headlines like "Set up the gift
-                    link first" don't make that case — they describe a task. */}
+                {/* Headline: emotional brand promise. Names the keystone
+                    moment (the at-18 handoff) and the permanence of the gift,
+                    without a contrast/antithesis structure. */}
                 <h1 className="font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
-                  Cash gifts disappear.
-                  <br />
-                  Kiddo gifts last.
+                  The gift they'll still have at&nbsp;18.
                 </h1>
-                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in under a minute. No app, no account, nothing to download.</p>
+                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once and share one link. Anyone in your family can gift real stock in seconds, with no account or download needed.</p>
               </AnimatedBlock>
               <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
@@ -791,7 +828,7 @@ export default function GetStarted() {
                         on narrow viewports that crashed into the
                         labels above. Fixed 2026-05-15 per the parent's
                         "labels get cut off, spacing is weird" flag. */}
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{item.copy}</p>
+                    <p className="mt-1 text-2xs leading-snug text-muted-foreground">{item.copy}</p>
                   </div>
                 ))}
               </AnimatedBlock>
@@ -875,16 +912,25 @@ export default function GetStarted() {
                     <p className="text-lg font-semibold text-foreground">For my child.</p>
                   </div>
                 </button>
+                {/* "For myself" — a DOORWAY, not a dead button (2026-06-04).
+                    Previously disabled + "Coming soon": a dead control on the
+                    most precious funnel step made the product read unfinished
+                    at the exact moment trust forms. Now it routes to the P2P
+                    concept preview, which exists precisely to tell this story
+                    honestly ("the grown-up version, coming later") and whose
+                    finale routes back here — a closed loop instead of a wall.
+                    The dormant personal-account flow plumbing in this file
+                    stays intact for the day the door opens for real. */}
                 <button
-                  disabled
-                  className="get-started-choice opacity-50 cursor-not-allowed"
+                  onClick={() => { haptic("light"); setLocation("/p2p-preview"); }}
+                  className="get-started-choice"
                   data-testid="option-personal-fund"
                 >
                   <div className="flex items-center gap-4">
                     <div className="get-started-choice__icon text-xl">🙋</div>
                     <div className="flex items-center gap-3">
                       <p className="text-lg font-semibold text-foreground">For myself.</p>
-                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon</span>
+                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">See the idea →</span>
                     </div>
                   </div>
                 </button>
@@ -898,7 +944,7 @@ export default function GetStarted() {
             <div className="flex flex-1 flex-col">
               <AnimatedBlock>
                 <ScreenLead
-                  title={accountType === "child" ? "Who's this fund for?" : "What should we call your fund?"}
+                  title={accountType === "child" ? `Tell us about your child` : "What should we call your fund?"}
                   description={accountType === "personal" ? "This is what people will see when they land on your page." : "One thing at a time. Name, occasion, then who should get the link."}
                 />
               </AnimatedBlock>
@@ -920,7 +966,16 @@ export default function GetStarted() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { haptic("selection"); setCountry("OTHER"); }}
+                    onClick={() => {
+                      haptic("selection");
+                      setCountry("OTHER");
+                      // International demand was previously captured ZERO
+                      // times (audit 2026-06-04) — the off-ramp rendered and
+                      // the signal vanished. One event per selection makes
+                      // "how many non-US parents tried to sign up" a real
+                      // number when expansion gets prioritized.
+                      void trackOnboardingSignal("cta_click", "onboarding_country_other", { step: "details" });
+                    }}
                     className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${country === "OTHER" ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"}`}
                     data-testid="option-country-other"
                   >
@@ -970,7 +1025,7 @@ export default function GetStarted() {
                       className="get-started-input"
                       data-testid="input-recipient-last-name"
                     />
-                    <p className="text-[11px] text-muted-foreground/80 leading-snug pl-1">
+                    <p className="text-2xs text-muted-foreground/80 leading-snug pl-1">
                       Used on tax documents and the brokerage account when set. You can add it later.
                     </p>
                   </div>
@@ -1060,7 +1115,35 @@ export default function GetStarted() {
                   <p className="mt-1 text-sm text-muted-foreground">Let's build something incredible for {name}.</p>
                 </AnimatedBlock>
               )}
-              <Dock primary={<Button onClick={() => void handleContinue()} disabled={!canContinue || creating} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-details-continue">{isLastStep ? (creating ? "Creating fund..." : "Create fund and get gift link") : "Continue"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
+              {/* Blocked-tap telemetry (audit catch 2026-06-04): a disabled
+                  button swallows clicks, so "1,000 parents stuck on the
+                  details step missing field Y" was invisible to analytics.
+                  The capture-phase wrapper sees the tap the button can't,
+                  names the missing fields, and throttles to once per step
+                  per session — diagnosis, not keystroke surveillance. */}
+              <Dock primary={
+                <span
+                  onClickCapture={() => {
+                    if (canContinue || creating) return;
+                    try {
+                      const k = "kiddo.onboarding.blockedSignal.details";
+                      if (window.sessionStorage.getItem(k)) return;
+                      window.sessionStorage.setItem(k, "1");
+                      const missing: string[] = [];
+                      if (country !== "US") missing.push("country");
+                      if (!name.trim()) missing.push("name");
+                      if (accountType === "child") {
+                        if (!birthdate || dobIssue) missing.push("birthdate");
+                        if (!occasion) missing.push("occasion");
+                        if (!gifterAudience) missing.push("gifterAudience");
+                      }
+                      void trackOnboardingSignal("cta_click", "onboarding_blocked_details", { missing: missing.join(",") });
+                    } catch { /* telemetry only */ }
+                  }}
+                >
+                  <Button onClick={() => void handleContinue()} disabled={!canContinue || creating} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-details-continue">{isLastStep ? (creating ? "Creating fund..." : "Create fund and get gift link") : "Continue"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>
+                </span>
+              } />
             </div>
           </Shell>
         )}
@@ -1069,7 +1152,26 @@ export default function GetStarted() {
           <Shell key="projection" back={goBack} progress={progress} direction={direction}>
             <div className="flex flex-1 flex-col">
               <AnimatedBlock>
-                <ScreenLead title={accountType === "personal" ? "Here is what your gifts could become." : `Here is what starting today looks like for ${displayName}.`} />
+                {/* Occasion-personalized aha moment (audit catch 2026-06-04:
+                    the occasion the parent JUST chose was collected and then
+                    ignored by the very next screen). The math stays the
+                    honest $X/yr slider — the occasion line gives that number
+                    a mental model: "$300/yr" is abstract; "one birthday's
+                    worth of gifts, every year" is the family they actually
+                    have. Personalized-outcome framing is the documented
+                    5-20% conversion lever this step exists for. */}
+                <ScreenLead
+                  title={accountType === "personal" ? "Here is what your gifts could become." : `Here is what starting today looks like for ${displayName}.`}
+                  description={accountType === "child"
+                    ? occasion === "Birthday"
+                      ? "Think of it as one birthday's worth of gifts, arriving every year."
+                      : occasion === "Holiday"
+                        ? "Think of it as one holiday season's worth of gifts, arriving every year."
+                        : occasion === "Just because"
+                          ? "No occasion required. Steady gifts, year after year."
+                          : undefined
+                    : undefined}
+                />
               </AnimatedBlock>
               <AnimatedBlock className="mt-6 space-y-3">
                 <div className="flex flex-wrap gap-2">{onboardingAnnualGiftOptions.map((amount) => <button key={amount} onClick={() => { haptic("selection"); setAnnualGift(amount); }} className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${annualGift === amount ? "bg-primary text-primary-foreground shadow-premium-sm" : "bg-card text-foreground"}`} data-testid={`projection-amount-${amount}`}>${amount.toLocaleString()}/yr</button>)}</div>
@@ -1125,13 +1227,13 @@ export default function GetStarted() {
                         the parent any way to fix the math for their
                         state. The audit caught that the load-bearing
                         aha number was wrong for ~15% of US parents. */}
-                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. Past performance does not guarantee future results.</p>
+                    <p className="mt-2 text-3xs leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. Past performance does not guarantee future results.</p>
                   </motion.div>
                 </div>
               </AnimatedBlock>
               {/* Inline state picker — REQUIRED for child funds. The state
-                  sets the UTMA age of majority (18 in most states, 19–21 in
-                  several), which anchors the legal handoff date, the at-18
+                  sets the UTMA age of majority (21 in most states, 18 in some,
+                  19 in AL/NE), which anchors the legal handoff date, the at-18
                   worker, the KidView countdown and the claim gate. Defaulting
                   a missing state to 18 is wrong by up to 3 years in PA/NY/TX,
                   so we require it rather than guess (matches AddFundSheet).
@@ -1142,7 +1244,7 @@ export default function GetStarted() {
                 <AnimatedBlock className="mt-4">
                   <div className="rounded-2xl border border-border bg-card px-4 py-3">
                     <label htmlFor="get-started-state" className="text-xs font-semibold text-foreground mb-1.5 block">
-                      Where do you live?
+                      Which state?
                     </label>
                     <select
                       id="get-started-state"
@@ -1156,10 +1258,10 @@ export default function GetStarted() {
                         <option key={s.code} value={s.code}>{s.name}</option>
                       ))}
                     </select>
-                    <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/80">
+                    <p className="mt-1.5 text-3xs leading-snug text-muted-foreground/80">
                       {recipientState
                         ? `In your state, UTMA control transfers to ${displayName} at age ${effectiveMajorityAge}. Projection updated.`
-                        : "We need this to get the handoff date right. UTMA control transfers at 18 in most states, 19 to 21 in others."}
+                        : "We need this to get the handoff date right. UTMA control transfers at 21 in most states, 18 in some (19 in Alabama and Nebraska)."}
                     </p>
                   </div>
                 </AnimatedBlock>
@@ -1175,8 +1277,8 @@ export default function GetStarted() {
             <div className="flex flex-1 flex-col">
               <AnimatedBlock><ScreenLead title="What should gifts do by default?" description="Pick the family default for new gifts. Gifter overrides only appear later if you allow them in settings." /></AnimatedBlock>
               <AnimatedBlock className="mt-8 space-y-4">
-                <button onClick={() => { haptic("selection"); setInvestment("sp500"); }} className={`get-started-choice ${investment === "sp500" ? "get-started-choice--active" : ""}`} data-testid="option-investment-sp500"><div className="flex items-center gap-3"><span className="text-xl">📈</span><p className="text-lg font-semibold text-foreground">Managed mix</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Recommended for most families. You can refine the investment mix any time in settings.</p></button>
-                <button onClick={() => { haptic("selection"); setInvestment("stock"); }} className={`get-started-choice ${investment === "stock" ? "get-started-choice--active" : ""}`} data-testid="option-investment-stock"><div className="flex items-center gap-3"><span className="text-xl">⭐</span><p className="text-lg font-semibold text-foreground">One default stock</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Every gift follows one stock unless you later allow a gifter override.</p></button>
+                <button onClick={() => { haptic("selection"); setInvestment("sp500"); }} className={`get-started-choice ${investment === "sp500" ? "get-started-choice--active" : ""}`} data-testid="option-investment-sp500"><div className="flex items-center gap-3"><TrendingUp size={22} strokeWidth={2} className="text-[hsl(var(--kiddo-evergreen))]" /><p className="text-lg font-semibold text-foreground">Diversified mix</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">A broad-market ETF mix you choose. Refine it any time in settings.</p></button>
+                <button onClick={() => { haptic("selection"); setInvestment("stock"); }} className={`get-started-choice ${investment === "stock" ? "get-started-choice--active" : ""}`} data-testid="option-investment-stock"><div className="flex items-center gap-3"><Pin size={22} strokeWidth={2} className="text-[hsl(var(--kiddo-evergreen))]" /><p className="text-lg font-semibold text-foreground">One default stock</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Every gift follows one stock unless you later allow a gifter override.</p></button>
                 {investment === "stock" && (
                   <div className="get-started-panel space-y-4">
                     <div className="relative">
@@ -1209,7 +1311,7 @@ export default function GetStarted() {
                     )}
                   </div>
                 )}
-                <button onClick={() => { haptic("selection"); setInvestment("cash"); }} className={`get-started-choice ${investment === "cash" ? "get-started-choice--active" : ""}`} data-testid="option-investment-cash"><div className="flex items-center gap-3"><span className="text-xl">💵</span><p className="text-lg font-semibold text-foreground">Hold as cash</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Gifts land as cash until you decide when to invest them.</p></button>
+                <button onClick={() => { haptic("selection"); setInvestment("cash"); }} className={`get-started-choice ${investment === "cash" ? "get-started-choice--active" : ""}`} data-testid="option-investment-cash"><div className="flex items-center gap-3"><Banknote size={22} strokeWidth={2} className="text-[hsl(var(--kiddo-evergreen))]" /><p className="text-lg font-semibold text-foreground">Hold as cash</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Gifts land as cash until you decide when to invest them.</p></button>
               </AnimatedBlock>
               <AnimatedBlock className="mt-4"><p className="text-center text-sm text-muted-foreground">This sets the default for new gifts. You can change it any time in settings.</p></AnimatedBlock>
               {submitError && <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>}
@@ -1299,7 +1401,7 @@ export default function GetStarted() {
                         360px viewport, wrapping 4 lines and pushing the
                         "Investing" / "Memory Book" labels into a visually
                         cut-off feel. Fixed 2026-05-15. */}
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{item.copy}</p>
+                    <p className="mt-1 text-2xs leading-snug text-muted-foreground">{item.copy}</p>
                   </div>
                 ))}
               </AnimatedBlock>

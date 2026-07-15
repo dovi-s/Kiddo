@@ -4,11 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Printer, ArrowLeft, Settings2 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
+import { isAnonGifterName } from "@/lib/gifter-name";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { useCountUp } from "@/hooks/use-count-up";
 import { getMajorityAgeForState, US_STATES } from "@shared/utma";
 import { projectFundValue } from "@shared/projection";
+import { investingLiveCopy } from "@shared/legal-copy";
 import type { Fund, Holding, Gift } from "@shared/schema";
 
 // ── Print-ready snapshot of a single fund ─────────────────────────────────────
@@ -219,7 +221,7 @@ export default function FundSnapshot() {
     for (const g of gifts) {
       totalGifts += 1;
       const name = String(g.senderName || "").trim();
-      const isAnon = !name || /^someone who loves/i.test(name) || name.toLowerCase() === "anonymous";
+      const isAnon = isAnonGifterName(name);
       if (isAnon) anonCount += 1;
       else namedContribs.add(name.toLowerCase());
     }
@@ -256,7 +258,7 @@ export default function FundSnapshot() {
   // Age18Plan / GiftSuccess already use. Fall back to the state statutory
   // default only when no election was made (stored value is the schema
   // default of 18), preserving the state-variance fix for funds that never
-  // set an explicit age. Without this, an elected-21 fund (every Dunphy
+  // set an explicit age. Without this, an elected-21 fund (every Rivera
   // demo fund) showed "Est. at 18" here while the rest of the app said 21.
   const storedMajorityAge = Number((fund as any)?.majorityAge);
   const fundMajorityAge = fund
@@ -276,6 +278,12 @@ export default function FundSnapshot() {
     if (yearsLeft <= 0) return null;
     const projected = projectFundValue({
       startingValue: balance,
+      // INTENTIONAL: a formal statement projects only the CURRENT balance
+      // forward — it doesn't assume the parent keeps contributing. This makes
+      // "Est. at {age}" deliberately lower than the dashboard's "On track for
+      // $X", which includes ongoing recurring. The footnote spells this out so
+      // the two surfaces don't read as a contradiction. Do not change to a
+      // recurring amount to "match" the dashboard. 2026-06-05.
       monthlyContribution: 0,
       yearsAhead: yearsLeft,
     });
@@ -406,8 +414,8 @@ export default function FundSnapshot() {
             </summary>
             <div className="snapshot-options-panel">
               <p className="snapshot-options-label">What to include</p>
-              <label><input type="checkbox" checked={showGifts} onChange={(e) => setShowGifts(e.target.checked)} /> Gift history</label>
-              <label><input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} disabled={!showGifts} /> Gifter names</label>
+              <label><input type="checkbox" checked={showGifts} onChange={(e) => setShowGifts(e.target.checked)} /> Contribution history</label>
+              <label><input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} disabled={!showGifts} /> Contributor names</label>
               <label><input type="checkbox" checked={showProjection} onChange={(e) => setShowProjection(e.target.checked)} /> Projection at {fundMajorityAge}</label>
               <label><input type="checkbox" checked={exactAmounts} onChange={(e) => setExactAmounts(e.target.checked)} /> Exact amounts (vs rounded)</label>
               {/* Disabled when the fund has no recipientLastName on file —
@@ -466,39 +474,62 @@ export default function FundSnapshot() {
         {/* Hero — balance + gain */}
         <div className="snapshot-hero">
           <p className="snapshot-eyebrow">Total balance</p>
+          {/* Print truth: every count-up value renders TWICE — the animated
+              span for the screen, the true final value in a print-only span.
+              window.print() snapshots whatever is currently rendered, and the
+              auto-print timer (600ms) fires while these curves (0.7-1.2s) are
+              still mid-count — without the swap, a PDF can bake in a wrong
+              dollar amount on a document people keep. CSS swap = zero timing
+              assumptions; covers auto-print, the Print button, and Ctrl+P. */}
           <p
             className="snapshot-balance"
             aria-live={balanceAnimating ? "off" : "polite"}
             aria-label={fmt(balance)}
-          >{fmt(animatedBalance)}</p>
+          >
+            <span className="snapshot-anim-value">{fmt(animatedBalance)}</span>
+            <span className="snapshot-true-value">{fmt(balance)}</span>
+          </p>
           {Math.abs(gain) > 0.01 && (
             <p
               className={`snapshot-gain ${isUp ? "is-up" : "is-down"}`}
               aria-live={gainAnimating ? "off" : "polite"}
               aria-label={`${isUp ? "+" : ""}${fmt(gain)} (${isUp ? "+" : ""}${gainPct.toFixed(2)}%) all-time`}
             >
-              {isUp ? "+" : ""}{fmt(animatedGain)} ({isUp ? "+" : ""}{gainPct.toFixed(2)}%) all-time
+              {isUp ? "+" : ""}<span className="snapshot-anim-value">{fmt(animatedGain)}</span><span className="snapshot-true-value">{fmt(gain)}</span> ({isUp ? "+" : ""}{gainPct.toFixed(2)}%) all-time
             </p>
+          )}
+          {/* The principal put in. The stats strip shows the gift COUNT (134),
+              but every audience — spouse, grandparent, advisor — wants the gift
+              DOLLARS that grew into the balance. Cost basis = the total
+              invested. Completes the "$X in → $Y today" story. 2026-06-05. */}
+          {costBasis > 0 && (
+            <p className="snapshot-contributed">From {fmt(costBasis)} in contributions</p>
           )}
         </div>
 
         {/* Stats strip */}
         <div className="snapshot-stats">
           <div className="snapshot-stat">
-            <p className="snapshot-stat-label">Gifters</p>
+            <p className="snapshot-stat-label">Contributors</p>
             <p
               className="snapshot-stat-value"
               aria-live={contributorCountAnimating ? "off" : "polite"}
               aria-label={String(stats.contributorCount)}
-            >{Math.round(animatedContributorCount)}</p>
+            >
+              <span className="snapshot-anim-value">{Math.round(animatedContributorCount)}</span>
+              <span className="snapshot-true-value">{stats.contributorCount}</span>
+            </p>
           </div>
           <div className="snapshot-stat">
-            <p className="snapshot-stat-label">Gifts received</p>
+            <p className="snapshot-stat-label">Contributions</p>
             <p
               className="snapshot-stat-value"
               aria-live={giftCountAnimating ? "off" : "polite"}
               aria-label={String(stats.giftCount)}
-            >{Math.round(animatedGiftCount)}</p>
+            >
+              <span className="snapshot-anim-value">{Math.round(animatedGiftCount)}</span>
+              <span className="snapshot-true-value">{stats.giftCount}</span>
+            </p>
           </div>
           <div className="snapshot-stat">
             <p className="snapshot-stat-label">Active since</p>
@@ -511,12 +542,27 @@ export default function FundSnapshot() {
                 className="snapshot-stat-value"
                 aria-live={projectionAt18Animating ? "off" : "polite"}
                 aria-label={fmt(projectionValue)}
-              >{fmt(animatedProjectionAt18)}</p>
+              >
+                <span className="snapshot-anim-value">{fmt(animatedProjectionAt18)}</span>
+                <span className="snapshot-true-value">{fmt(projectionValue)}</span>
+              </p>
             </div>
           )}
         </div>
 
-        {/* Holdings */}
+        {/* Holdings. Deliberately NO StockLogo here (considered + rejected,
+            2026-06-05): this is the statement-genre surface, shown to third
+            parties (advisor / co-parent / skeptical grandparent) as proof the
+            fund is real. Brokerage statements are typographic, and that
+            absence is part of what reads as "credible record" vs "app
+            screenshot." Also practical: logos are remote images (broken
+            squares if window.print() races the fetch; mud on grayscale
+            printers) and the ETF rows (VTI/VXUS/BND) have no real logos, so
+            the column would render ragged half-logo. The Disney/Apple logo
+            magic lives on the dashboard / gift flow / Kid View on purpose:
+            playful where it's for the family, bank-grade where it's about
+            the money. If this page ever needs more visual, go typographic
+            (e.g. asset-class tint on the ticker chip), never logos. */}
         {holdings.length > 0 && (
           <div className="snapshot-section">
             <p className="snapshot-section-label">Current holdings</p>
@@ -534,6 +580,11 @@ export default function FundSnapshot() {
                 // matters more than visual chrome. Audit-flagged
                 // 2026-05-26.
                 const hasMeaningfulGain = Math.abs(hgain) > 0.01;
+                // Position weight — the standard brokerage-statement column. An
+                // advisor scans these to see concentration; "<1%" matches the
+                // dashboard's holding-weight format. value ÷ total, no risky
+                // math. 2026-06-05.
+                const pctOfFund = balance > 0 ? (value / balance) * 100 : 0;
                 return (
                   <div key={h.id} className="snapshot-holding">
                     <div className="snapshot-ticker">{h.ticker}</div>
@@ -546,6 +597,11 @@ export default function FundSnapshot() {
                     ) : (
                       <div className="snapshot-holding-gain snapshot-holding-gain--neutral">—</div>
                     )}
+                    {pctOfFund > 0 && (
+                      <div className="snapshot-holding-pct">
+                        {pctOfFund < 1 ? "<1" : Math.round(pctOfFund)}% of fund
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -553,16 +609,38 @@ export default function FundSnapshot() {
           </div>
         )}
 
-        {/* Gift history */}
+        {/* Contribution history — every inflow (gifts from others AND the
+            parent's own contributions), matching the "Contributions /
+            Contributors" stats above. Renamed from "Gift history" 2026-06-07
+            to close the last seam in the gifts-vs-contributions reconciliation:
+            the stats already speak the honest superset ("contribution" = any
+            inflow; a gift is one kind), so the section that lists those same
+            rows must too — otherwise "Gift history" sits over rows that include
+            Dad's auto-invest, which aren't gifts. */}
         {showGifts && gifts.length > 0 && (
           <div className="snapshot-section">
-            <p className="snapshot-section-label">Gift history</p>
+            <p className="snapshot-section-label">Contribution history</p>
             <div className="snapshot-gifts">
               {gifts.map((g) => {
                 const name = String(g.senderName || "").trim();
-                const isAnon = !name || /^someone who loves/i.test(name) || name.toLowerCase() === "anonymous";
+                // Belt-and-suspenders anonymity: honor the explicit
+                // isAnonymous flag on the gift row (the canonical signal,
+                // same as Dashboard's displayGifterName) IN ADDITION to the
+                // name-pattern inference that predates it.
+                const isAnon = Boolean((g as any).isAnonymous) || !name || /^someone who loves/i.test(name) || name.toLowerCase() === "anonymous";
                 const displayGifter = !showNames || isAnon ? "Anonymous" : name;
                 const initial = displayGifter.slice(0, 1).toUpperCase();
+                // Gifter profile photo (server enriches gift rows with
+                // gifterAvatarUrl when the gifter has an account + photo —
+                // the same faces the Dashboard roster shows). Unlike stock
+                // logos on the holdings table (rejected — see comment
+                // there), faces BELONG on the gift history: it's the human
+                // ledger, not the financial table, and its whole job is
+                // "real people showed up for this kid." A photo IS a name,
+                // so it obeys the showNames toggle and never renders for
+                // anonymous gifts. Monogram stays underneath as the
+                // broken-image / no-photo fallback (print-safe).
+                const avatarUrl = showNames && !isAnon ? String((g as any).gifterAvatarUrl || "").trim() : "";
                 const amount = parseFloat(String(g.netAmount || g.amount || "0"));
                 const date = (g as any).settledAt || g.createdAt;
                 // Suppress the auto-invest boilerplate message from
@@ -577,7 +655,21 @@ export default function FundSnapshot() {
                 const displayMessage = rawMessage && !AUTO_INVEST_MSG_RE.test(rawMessage) ? rawMessage : null;
                 return (
                   <div key={g.id} className="snapshot-gift">
-                    <div className="snapshot-gift-avatar">{initial}</div>
+                    <div className="snapshot-gift-avatar">
+                      {initial}
+                      {/* Eager (no loading="lazy") on purpose: this page's
+                          destiny is window.print(), and Chromium leaves
+                          below-fold lazy images blank in print output.
+                          30px avatars are cheap; load them all. */}
+                      {avatarUrl && (
+                        <img
+                          className="snapshot-gift-avatar-img"
+                          src={avatarUrl}
+                          alt=""
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
+                    </div>
                     <div className="snapshot-gift-body">
                       <p className="snapshot-gift-name">{displayGifter}</p>
                       {displayMessage && showNames && (
@@ -597,7 +689,7 @@ export default function FundSnapshot() {
 
         {/* What this means / disclosure */}
         <div className="snapshot-disclosure">
-          <p className="snapshot-disclosure-title">{displayName}'s fund is invested in real markets.</p>
+          <p className="snapshot-disclosure-title">{investingLiveCopy(`${displayName}'s fund is invested in real markets.`, `${displayName}'s fund will invest in real markets once investing is live.`)}</p>
           <p className="snapshot-disclosure-body">
             Once investing is live, every gift is invested in publicly-traded stocks through <strong>our broker-dealer partner</strong>, Member FINRA / SIPC.
             {stateName && (
@@ -608,13 +700,14 @@ export default function FundSnapshot() {
             )}
           </p>
           <p className="snapshot-disclosure-footer">
-            SIPC coverage up to $500,000 per account. Securities are not FDIC insured. Investments may lose value. Any projection assumes a 7% average annual return, net of Kiddo's annual fee, and is an estimate, not a guarantee. Past performance does not guarantee future returns. Custodian: {ownerName || "Parent / Guardian"}.
+            SIPC coverage up to $500,000 per account. Securities are not FDIC insured. Investments may lose value. Any projection grows the current balance at a 7% average annual return, net of Kiddo's annual fee, and assumes no further gifts (so it runs lower than the in-app estimate, which counts ongoing contributions). It is an estimate, not a guarantee. Past performance does not guarantee future returns. Custodian: {ownerName || "Parent / Guardian"}.
           </p>
         </div>
 
-        {/* Page footer */}
+        {/* Page footer — dropped the "One page" claim (2026-06-05): a full gift
+            history runs to several pages when printed, so it was inaccurate. */}
         <p className="snapshot-footer">
-          Generated by Kiddo · {generatedAt} · One page · Print or save as PDF
+          Generated by Kiddo · {generatedAt} · Print or save as PDF
         </p>
       </div>
 
@@ -642,6 +735,20 @@ export default function FundSnapshot() {
           flex-wrap: wrap;
         }
         .snapshot-toolbar-title {
+          /* Truly centered, not "between Back and the wider actions group".
+             Absolutely centered in the (positioned) sticky toolbar so the side
+             widths can't pull it off-center; truncates rather than overlapping
+             a long fund name; pointer-events:none so it never intercepts a
+             click meant for Back / the actions. 2026-06-05. */
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          max-width: 42%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          pointer-events: none;
           font-weight: 600;
           font-size: 14px;
           color: rgba(26, 23, 16, 0.85);
@@ -717,6 +824,15 @@ export default function FundSnapshot() {
         @media (max-width: 480px) {
           .snapshot-toolbar { padding: 12px 14px; gap: 8px; }
           .snapshot-toolbar-title {
+            /* On mobile the toolbar stacks, so the title returns to the flow
+               (full-width, centered below) — undo the desktop absolute centering. */
+            position: static;
+            transform: none;
+            left: auto;
+            top: auto;
+            max-width: none;
+            white-space: normal;
+            pointer-events: auto;
             order: 2;
             width: 100%;
             text-align: center;
@@ -817,6 +933,12 @@ export default function FundSnapshot() {
         }
         .snapshot-gain.is-up { color: hsl(143, 47%, 28%); }
         .snapshot-gain.is-down { color: hsl(0, 65%, 42%); }
+        .snapshot-contributed {
+          font-size: 12.5px;
+          color: rgba(26, 23, 16, 0.50);
+          margin-top: 5px;
+          font-variant-numeric: tabular-nums;
+        }
 
         .snapshot-stats {
           display: grid;
@@ -860,12 +982,20 @@ export default function FundSnapshot() {
           letter-spacing: 0.08em;
           margin-bottom: 12px;
         }
+        /* Flex-wrap (not grid) so an incomplete last row CENTERS instead of
+           leaving a lone card orphaned on the left. Works for ANY holding count
+           — no fixed column count eliminates orphans (a 3-col grid orphans at
+           4 holdings, a 4-col at 5/9, etc.); centering the remainder is the only
+           universal fix. Four cards per row: 4 × calc(25% - 6px) + 3 × 8px gap
+           = 100%. 2026-06-05. */
         .snapshot-holdings {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
           gap: 8px;
         }
         .snapshot-holding {
+          flex: 0 0 calc(25% - 6px);
           background: #fdfaf3;
           border: 1px solid rgba(26, 23, 16, 0.08);
           border-radius: 12px;
@@ -904,6 +1034,12 @@ export default function FundSnapshot() {
         }
         .snapshot-holding-gain.is-up { color: hsl(143, 47%, 28%); }
         .snapshot-holding-gain.is-down { color: hsl(0, 65%, 42%); }
+        .snapshot-holding-pct {
+          font-size: 10px;
+          color: rgba(26, 23, 16, 0.42);
+          margin-top: 4px;
+          font-variant-numeric: tabular-nums;
+        }
         /* Neutral delta — added 2026-05-26 to standardize the column.
            Holdings with |gain| < $0.01 now render an em-dash placeholder
            instead of leaving the row visually shorter than its neighbors.
@@ -938,6 +1074,16 @@ export default function FundSnapshot() {
           font-size: 12px;
           font-weight: 800;
           flex-shrink: 0;
+          position: relative;
+          overflow: hidden;
+        }
+        .snapshot-gift-avatar-img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: inherit;
         }
         .snapshot-gift-body { flex: 1; min-width: 0; }
         .snapshot-gift-name {
@@ -1003,12 +1149,20 @@ export default function FundSnapshot() {
           margin-top: 10px;
         }
 
+        /* Print-truth swap: count-up values animate on screen, but the PDF
+           must always carry the true final number (window.print() snapshots
+           mid-animation otherwise — the auto-print timer fires at 600ms
+           while the curves run 0.7-1.2s). */
+        .snapshot-true-value { display: none; }
+
         /* ── Print styles — produce a clean PDF on Cmd-P ─────────── */
         @media print {
           @page { size: letter; margin: 0.45in; }
           html, body, #root { background: #fff !important; }
           .snapshot-root { background: #fff !important; }
           .snapshot-toolbar { display: none !important; }
+          .snapshot-anim-value { display: none !important; }
+          .snapshot-true-value { display: inline !important; }
           .snapshot-page {
             box-shadow: none !important;
             margin: 0 auto !important;

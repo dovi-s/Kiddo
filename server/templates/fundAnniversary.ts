@@ -44,13 +44,13 @@ export function buildFundAnniversaryEmail(input: FundAnniversaryInput): EmailMes
   const intro = [
     greeting,
     ``,
-    `${childFirstName}'s fund turned ${fundAgeYears} years old today. ${yearLabel} year of compounding.`,
+    `${childFirstName}'s fund turned ${fundAgeYears} years old today. ${yearLabel} year of building it for ${childFirstName}.`,
     ``,
     `As of this morning the fund is at ${formatUsd(fundTotalUsd)}. Every dollar of that is still ${childFirstName}'s, still working.`,
     ``,
     memoryBookUrl
       ? `If you want to mark the year with a note, the Memory Book is where it goes.`
-      : `Quiet years compound the same as loud ones.`,
+      : `Quiet years count the same as loud ones.`,
   ].join("\n");
 
   const { html } = renderKiddoEmail({
@@ -64,7 +64,7 @@ export function buildFundAnniversaryEmail(input: FundAnniversaryInput): EmailMes
   const text = [
     greeting,
     ``,
-    `${childFirstName}'s fund turned ${fundAgeYears} years old today. ${yearLabel} year of compounding.`,
+    `${childFirstName}'s fund turned ${fundAgeYears} years old today. ${yearLabel} year of building it for ${childFirstName}.`,
     ``,
     `As of this morning the fund is at ${formatUsd(fundTotalUsd)}.`,
     ``,

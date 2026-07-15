@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, Check, Printer, Download, X, Link, Mail, ArrowLeft, Share2, Hash } from "lucide-react";
+import { Copy, Check, Printer, Download, Link, Mail, ArrowLeft, Share2, Hash } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 
@@ -271,7 +272,7 @@ function getEventTone(recipientName: string, page: SharePage): EventTone {
 
 function getShareText(recipientName: string, page: SharePage): string {
   const tone = getEventTone(recipientName, page);
-  return `${tone.shareLine} Takes 60 seconds. No account needed.\n\n${page.url}`;
+  return `${tone.shareLine} Takes seconds. No account needed.\n\n${page.url}`;
 }
 
 function getEmailSubject(recipientName: string, page: SharePage): string {
@@ -281,7 +282,7 @@ function getEmailSubject(recipientName: string, page: SharePage): string {
 function getEmailBody(recipientName: string, page: SharePage): string {
   const first = recipientName.split(" ")[0];
   const tone = getEventTone(recipientName, page);
-  return `Hi there,\n\n${tone.emailOpening}\n\nInstead of a traditional gift, you can invest directly in ${first}'s future through Kiddo. It takes 60 seconds and no account is needed. Every dollar becomes a real investment.\n\n👉 ${page.url}\n\n${first} will see your name in their Memory Book, a permanent record of everyone who showed up for them.\n\nWith love 💚`;
+  return `Hi there,\n\n${tone.emailOpening}\n\nInstead of a traditional gift, you can invest directly in ${first}'s future through Kiddo. It takes seconds and no account is needed. Every dollar becomes a real investment.\n\n👉 ${page.url}\n\n${first} will see your name in their Memory Book, a permanent record of everyone who showed up for them.\n\nWith love 💚`;
 }
 
 // ─── Inline SVG icons for platforms ────────────────────────────────────────
@@ -380,7 +381,7 @@ function ShareRow({
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(26,23,16)", lineHeight: 1.2 }}>{label}</p>
+        <p style={{ fontSize: 13.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>{label}</p>
         <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 1 }}>{subtitle}</p>
       </div>
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "rgb(200,190,182)", flexShrink: 0 }}>
@@ -677,13 +678,20 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     const dataUrl = await getQrDataUrl();
     if (!dataUrl) { toast({ title: "QR not ready", variant: "destructive" }); setPrinting(false); return; }
     const pageLabel = selected.isPermanent ? "Gift anytime" : selected.label;
+    // HTML-escape any user-controlled value before it goes into document.write —
+    // a child name / event label like `</title><script>…` would otherwise execute
+    // in the print window (security audit 2026-06-15, XSS). CSS gradient + the QR
+    // data-URL are NOT escaped (escaping would corrupt them) and aren't user text.
+    const esc = (s: unknown) =>
+      String(s ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
     const win = window.open("", "_blank", "width=800,height=1100");
     if (!win) { toast({ title: "Pop-up blocked", description: "Allow pop-ups to print the flyer.", variant: "destructive" }); setPrinting(false); return; }
     win.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Gift ${recipientName}</title>
+  <title>Gift ${esc(recipientName)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -704,7 +712,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     .code-line strong { color: #111827; font-weight: 700; letter-spacing: 0.08em; }
     .divider { width: 48px; height: 2px; background: #e5e7eb; border-radius: 2px; }
     .footer { padding: 24px 40px; border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .footer-logo { font-size: 15px; font-weight: 700; color: #111827; }
+    .footer-logo { font-size: 15px; font-weight: 700; color: #1a3d2b; }
     .footer-tag { font-size: 11px; color: #9ca3af; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { width: 100%; min-height: 100vh; } }
   </style>
@@ -713,17 +721,17 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
   <div class="page">
     <div class="hero">
       <p class="hero-eyebrow">Investment gift</p>
-      <p class="hero-name">${recipientName}</p>
-      <p class="hero-sub">Give a gift that grows. Every dollar becomes a real investment.</p>
+      <p class="hero-name">${esc(recipientName)}</p>
+      <p class="hero-sub">Give a gift that grows into a real investment.</p>
     </div>
     <div class="body">
-      ${pageLabel && !selected.isPermanent ? `<p class="event-label">${pageLabel}</p>` : ""}
+      ${pageLabel && !selected.isPermanent ? `<p class="event-label">${esc(pageLabel)}</p>` : ""}
       <div class="qr-wrap"><img src="${dataUrl}" alt="QR code" /></div>
       <p class="scan-cta">Scan to give a gift that grows</p>
-      <p class="scan-sub">Scan the QR code or visit the link below to send ${recipientName} a real stock investment. No account needed.</p>
+      <p class="scan-sub">Scan the QR code or visit the link below to send ${esc(recipientName)} a gift. Once investing is live, it's invested in real stock. No account needed.</p>
       <div class="divider"></div>
-      <p class="url-chip">${selected.url}</p>
-      ${exportGiftCode ? `<p class="code-line">No camera handy? Enter code <strong>${exportGiftCode}</strong> at ${codeLookupDisplay}</p>` : ""}
+      <p class="url-chip">${esc(selected.url)}</p>
+      ${exportGiftCode ? `<p class="code-line">No camera handy? Enter code <strong>${esc(exportGiftCode)}</strong> at ${esc(codeLookupDisplay)}</p>` : ""}
     </div>
     <div class="footer">
       <span class="footer-logo">Kiddo</span>
@@ -745,13 +753,16 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
           available px reads as "default tablet width" not "intentional
           mobile width". md:max-w-md bumps to 448px on tablet/desktop
           where there's room; mobile keeps the tighter 384 footprint. */}
-      <DialogContent className="max-w-sm md:max-w-md p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
-        <DialogTitle className="sr-only">Share {recipientName}'s gift link</DialogTitle>
+      <DialogContent sheet className="p-0 gap-0 overflow-hidden sm:max-w-md" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">{recipientIsOwner ? "Share your gift link" : recipientName ? `Share ${recipientName}'s gift link` : "Share gift link"}</DialogTitle>
+        {/* Mobile grab-handle — the native bottom-sheet affordance. Hidden on
+            desktop (centered modal). Decorative; flex-shrink-0 so it stays put. */}
+        <div aria-hidden className="sm:hidden" style={{ flexShrink: 0, margin: "8px auto 2px", width: 36, height: 4, borderRadius: 999, background: "hsl(var(--kiddo-ink) / 0.15)" }} />
 
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "18px 20px 16px", borderBottom: "1px solid rgba(26,23,16,0.08)",
+          padding: "18px 20px 16px", borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.08)",
           flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
@@ -759,31 +770,33 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
               <button
                 type="button"
                 onClick={() => { setView("main"); haptic("selection"); }}
-                style={{ padding: 4, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "rgb(26,23,16)", display: "flex", alignItems: "center", flexShrink: 0 }}
+                style={{ padding: 4, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "hsl(var(--kiddo-ink))", display: "flex", alignItems: "center", flexShrink: 0 }}
               >
                 <ArrowLeft size={16} />
               </button>
             )}
             <div>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.2 }}>
-                {view === "email" ? `Email invite` : `Share`}
+              <p style={{ fontSize: 14, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
+                {view === "email"
+                  ? `Email invite`
+                  : recipientIsOwner
+                    ? `Share your gift link`
+                    : recipientName
+                      ? `Share ${recipientName}'s gift link`
+                      : `Share gift link`}
               </p>
               <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 2 }}>
                 {view === "email" ? "Pre-written. Warm. Edit anything." : "Choose how you'd like to share"}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ width: 28, height: 28, borderRadius: 999, border: "none", background: "rgb(243,240,236)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-          >
-            <X size={14} color="rgb(100,92,86)" />
-          </button>
+          <ModalCloseButton onClick={onClose} label="Close" />
         </div>
 
-        {/* Scrollable body */}
-        <div style={{ overflowY: "auto", maxHeight: "calc(88vh - 68px)" }}>
+        {/* Scrollable body — flex-1 + minHeight:0 so it fills the flex-col sheet
+            and scrolls (instead of a fixed maxHeight, which broke scroll reach to
+            the bottom section under the bottom-sheet anchor). */}
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
           <AnimatePresence mode="wait">
             {view === "main" ? (
               <motion.div
@@ -827,7 +840,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      style={{ background: "white", borderRadius: 20, padding: 16, boxShadow: "0 2px 12px rgba(26,23,16,0.08), 0 0 0 1px rgba(26,23,16,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ background: "white", borderRadius: 20, padding: 16, boxShadow: "0 2px 12px hsl(var(--kiddo-ink) / 0.08), 0 0 0 1px hsl(var(--kiddo-ink) / 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       <QRCodeSVG
                         ref={(el) => { qrRef.current = el as SVGSVGElement | null; }}
@@ -1040,9 +1053,9 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         disabled={printing}
                         style={{
                           flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid rgba(26,23,16,0.12)",
+                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)",
                           background: "white", cursor: printing ? "wait" : "pointer", opacity: printing ? 0.6 : 1,
-                          fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)", fontFamily: "inherit",
+                          fontSize: 12.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", fontFamily: "inherit",
                           transition: "all 0.12s",
                         }}
                       >
@@ -1055,9 +1068,9 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         disabled={downloading}
                         style={{
                           flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid rgba(26,23,16,0.12)",
+                          padding: "11px 14px", borderRadius: 12, border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)",
                           background: "white", cursor: downloading ? "wait" : "pointer", opacity: downloading ? 0.6 : 1,
-                          fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)", fontFamily: "inherit",
+                          fontSize: 12.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))", fontFamily: "inherit",
                           transition: "all 0.12s",
                         }}
                       >
@@ -1114,12 +1127,12 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       placeholder="email@example.com, another@example.com"
                       style={{
                         width: "100%", padding: "10px 12px", borderRadius: 10,
-                        border: "1.5px solid rgba(26,23,16,0.12)", fontSize: 13,
-                        color: "rgb(26,23,16)", background: "white", outline: "none",
+                        border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", fontSize: 13,
+                        color: "hsl(var(--kiddo-ink))", background: "white", outline: "none",
                         fontFamily: "inherit", boxSizing: "border-box" as const,
                       }}
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+                      onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
                     />
                   </div>
 
@@ -1134,12 +1147,12 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       onChange={e => setEmailSubject(e.target.value)}
                       style={{
                         width: "100%", padding: "10px 12px", borderRadius: 10,
-                        border: "1.5px solid rgba(26,23,16,0.12)", fontSize: 13,
-                        color: "rgb(26,23,16)", background: "white", outline: "none",
+                        border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", fontSize: 13,
+                        color: "hsl(var(--kiddo-ink))", background: "white", outline: "none",
                         fontFamily: "inherit", boxSizing: "border-box" as const,
                       }}
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+                      onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
                     />
                   </div>
 
@@ -1154,13 +1167,13 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       rows={10}
                       style={{
                         width: "100%", padding: "10px 12px", borderRadius: 10,
-                        border: "1.5px solid rgba(26,23,16,0.12)", fontSize: 13,
-                        color: "rgb(26,23,16)", background: "white", outline: "none",
+                        border: "1.5px solid hsl(var(--kiddo-ink) / 0.12)", fontSize: 13,
+                        color: "hsl(var(--kiddo-ink))", background: "white", outline: "none",
                         fontFamily: "inherit", resize: "vertical" as const, lineHeight: 1.6,
                         boxSizing: "border-box" as const,
                       }}
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
-                      onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
+                      onBlur={e => (e.target.style.borderColor = "hsl(var(--kiddo-ink) / 0.12)")}
                     />
                     <p style={{ fontSize: 10.5, color: "rgb(112,103,95)", marginTop: 5, lineHeight: 1.5 }}>
                       Pre-written and warm. Edit anything. The link is already in the message.
@@ -1202,9 +1215,9 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
         {snapshotHref && view === "main" && (
           <div
             style={{
-              borderTop: "1px solid rgba(26,23,16,0.08)",
+              borderTop: "1px solid hsl(var(--kiddo-ink) / 0.08)",
               padding: "10px 20px 14px 20px",
-              background: "rgba(26,23,16,0.015)",
+              background: "hsl(var(--kiddo-ink) / 0.015)",
             }}
           >
             {/* Mini-header — calls out the AUDIENCE difference for
@@ -1238,7 +1251,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                   spouse, advisor, or grandparent who needs to review
                   the fund's structure, not gift to it. Renaming to
                   "Fund snapshot" makes the difference legible. */}
-              <p style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)" }}>
+              <p style={{ fontSize: 12.5, fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>
                 Fund snapshot
               </p>
               <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 1, lineHeight: 1.4 }}>

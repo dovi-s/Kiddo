@@ -36,12 +36,15 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFramerSheetDrag } from "@/lib/use-framer-sheet-drag";
 import { X, CalendarIcon, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "./MemoryMediaPicker";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { capFirst } from "@/lib/format-name";
+import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 export type ScheduledLetterEntry = {
   id: string;
@@ -62,6 +65,8 @@ export type ScheduledLetterEditorProps = {
   parentName: string;
   pronoun?: string | null;
   recipientBirthdate?: string | null;
+  /** State-specific UTMA majority age (18-21). Defaults to 18 when omitted. */
+  majorityAge?: number;
   /** Whether the parent's fund coverage allows sealed letters (Plus/Family/trial).
    *  When false, the composer renders the FeatureWallModal instead of the form.
    *  Caller should compute this from the fund's coverage state. */
@@ -107,11 +112,25 @@ export function ScheduledLetterEditor({
   parentName,
   pronoun: _pronoun,
   recipientBirthdate,
+  majorityAge,
   isPlusOnFund,
   existingEntry,
   onSaved,
 }: ScheduledLetterEditorProps) {
   const isEditMode = !!existingEntry?.id;
+  // State-specific majority age (UTMA is 18-21). Ordinal for the "through their
+  // Nth birthday" series copy so a 21-state fund doesn't say "18th".
+  const safeMajorityAge = majorityAge && majorityAge > 0 ? majorityAge : 18;
+  const majorityOrdinal = (() => {
+    const n = safeMajorityAge;
+    const lastTwo = n % 100;
+    if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
+    const lastOne = n % 10;
+    if (lastOne === 1) return `${n}st`;
+    if (lastOne === 2) return `${n}nd`;
+    if (lastOne === 3) return `${n}rd`;
+    return `${n}th`;
+  })();
   // When editing a series entry, series-level operations (changing the
   // repeat cadence, regenerating future entries) are out of MVP scope.
   // Edit mode only adjusts THIS specific entry's content/media/date.
@@ -251,6 +270,8 @@ export function ScheduledLetterEditor({
         setSaving(false);
         return;
       }
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setSaving(false); return; }
       haptic("success");
       onSaved?.();
       // Edit mode: skip the celebration sheet and close cleanly. The
@@ -282,11 +303,14 @@ export function ScheduledLetterEditor({
         featureId="scheduled_sealed_letter"
         requiredTier="plus"
         title={`Schedule a sealed letter for ${displayName}.`}
-        body={`Write a letter today and pick the exact date ${displayName} reads it. ${displayName}'s 13th birthday. Graduation. The day they leave for college. Whatever moment you want to be there for. Kiddo+ on the fund unlocks this and unlocks recurring contributions, custom mix, parent-authored media, co-parent access, and tax summary.`}
+        body={`Write a letter today and pick the exact date ${displayName} reads it. ${displayName}'s 13th birthday. Graduation. The day they leave for college. Whatever moment you want to be there for. Kiddo+ on the fund unlocks this and unlocks recurring contributions, custom mix, parent-authored media, co-parent access, and unlimited occasions.`}
         upgradePath={`/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`}
       />
     );
   }
+
+  // Swipe-down-to-dismiss (mobile) — grab the handle at the top of the sheet.
+  const { dragProps, handle } = useFramerSheetDrag(onClose);
 
   return (
     <AnimatePresence>
@@ -307,11 +331,13 @@ export function ScheduledLetterEditor({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 300 }}
+            {...dragProps}
             className="fixed bottom-0 left-0 right-0 z-[71] bg-background rounded-t-[28px] flex flex-col overflow-hidden"
             style={{ maxHeight: "92dvh" }}
             onClick={(e) => e.stopPropagation()}
             data-testid="scheduled-letter-editor"
           >
+            {handle}
             {showCelebration ? (
               <div className="flex flex-col items-center text-center px-8 pt-12 pb-10">
                 <motion.div
@@ -463,7 +489,7 @@ export function ScheduledLetterEditor({
                     </div>
                     {repeat === "yearly" && (
                       <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s 18th birthday. Same content each year. Edit or cancel any individual year, or cancel the whole series.
+                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s {majorityOrdinal} birthday. Same content each year. Edit or cancel any individual year, or cancel the whole series.
                       </p>
                     )}
                   </div>
@@ -494,7 +520,7 @@ export function ScheduledLetterEditor({
                       <p className="text-xs font-semibold text-foreground mb-1">
                         Or leave a photo, video, or voice memo.
                       </p>
-                      <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+                      <p className="text-2xs text-muted-foreground mb-2.5 leading-relaxed">
                         {displayName} hearing your voice or seeing your face on the exact day you picked is the kind of moment nothing else gives them.
                       </p>
                       <MemoryMediaPicker
@@ -526,7 +552,7 @@ export function ScheduledLetterEditor({
                       ? (isEditMode ? "Saving..." : "Sealing...")
                       : (isEditMode ? "Save changes" : "Seal until that day")}
                   </Button>
-                  <p className="mt-2 text-[10px] text-muted-foreground/70 text-center leading-snug">
+                  <p className="mt-2 text-3xs text-muted-foreground/70 text-center leading-snug">
                     <Lock className="inline-block w-2.5 h-2.5 mr-0.5 -mt-0.5" />
                     Hidden from {displayName}'s Kid View until {formattedDeliveryDate || "the chosen day"}. You can edit or reschedule any time before then.
                   </p>

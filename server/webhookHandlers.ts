@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { db } from './db';
-import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers, giftIntents } from '@shared/schema';
+import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers, giftIntents, pendingGiftMedia } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { captureError, sendOpsAlert } from './ops';
 import { recordEvent } from './analytics';
@@ -11,6 +11,7 @@ import path from 'path';
 import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations } from './fundStrategyConfig';
 import {
   fireMoneyCrossMilestones,
+  fireGrowthPassedGiftsMilestone,
   fireReturningGifterMilestone,
   fireUniqueGiftersMilestone,
   fireFirstVoiceMilestone,
@@ -35,11 +36,12 @@ export class WebhookHandlers {
   // sector tilt. The VGT tech sleeve was removed (the hardest allocation line to
   // defend as non-advice); VGT stays available only as an explicit user CUSTOM
   // pick, never a Kiddo-chosen default. Weights match the documented 90/75/60%
-  // equity gradient used client-side (Dashboard/Settings) and in the Dunphy seed.
+  // equity gradient used client-side (Dashboard/Settings) and in the Rivera seed.
   private static readonly DEFAULT_AUTO_STRATEGIES: Record<string, { label: string; allocations: Record<string, number> }> = {
     growth: {
       label: 'Growth Mix',
-      allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 },
+      // All-equity (2026-06-11) — see DEFAULT_INVESTMENT_CONFIG.growth in routes.ts.
+      allocations: { VTI: 0.70, VXUS: 0.30 },
     },
     balanced: {
       label: 'Balanced Mix',
@@ -89,7 +91,12 @@ export class WebhookHandlers {
     return allowed ? normalized : null;
   }
 
-  private static async reconcileFundFromGifts(fundId?: string | null): Promise<void> {
+  // PUBLIC (was private): the gift-claim endpoint must re-reconcile the ORIGINAL
+  // fund after moving a gift to a new fund, or the original stays credited while
+  // the target is also credited = double-count (security audit 2026-06-15, CRITICAL).
+  // Idempotent: recomputes pendingBalance + contributorCount from the fund's actual
+  // remaining pending/processing gifts, so calling it after a move drops the moved gift.
+  static async reconcileFundFromGifts(fundId?: string | null): Promise<void> {
     if (!fundId) return;
     const fund = await storage.getFund(fundId);
     if (!fund) return;
@@ -277,7 +284,7 @@ export class WebhookHandlers {
     const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
     if (!isParentContrib) {
       try {
-        await this.ensureMemoryEntryForGift(gift.id, this.normalizeVideoUrl(metadata?.videoUrl), metadata?.audioUrl || null);
+        await this.ensureMemoryEntryForGift(gift.id, this.normalizeVideoUrl(metadata?.videoUrl), metadata?.audioUrl || null, metadata?.voiceSealUntil18 === true || metadata?.voiceSealUntil18 === 'true');
         console.log('[Webhook] Memory entry created for gift:', gift.id);
       } catch (memoryError) {
         console.error('[Webhook] Failed to create memory entry for gift:', gift.id, memoryError);
@@ -387,6 +394,16 @@ export class WebhookHandlers {
           parseFloat(settledFund.pendingBalance || '0') +
           parseFloat(String((settledFund as any).cashBalance || '0'));
         await fireMoneyCrossMilestones(gift.fundId, ownerId, prevTotal, newTotal);
+        // Growth-passed compares SETTLED money only (balance + cash, NO
+        // pendingBalance): `contributed` sums settled-status gifts, so a
+        // large pending/held gift would inflate the value side without the
+        // contributed side and falsely fire this once-per-lifetime claim
+        // (code-review catch, 2026-06-04). Money-cross keeps the full total;
+        // it's a loose celebration, not a precise arithmetic statement.
+        const settledTotal =
+          parseFloat(settledFund.balance || '0') +
+          parseFloat(String((settledFund as any).cashBalance || '0'));
+        await fireGrowthPassedGiftsMilestone(gift.fundId, ownerId, settledTotal);
         if (!isParentContrib) {
           if (gift.senderEmail) {
             await fireReturningGifterMilestone(gift.fundId, ownerId, gift.senderEmail, gift.senderName || null);
@@ -433,11 +450,11 @@ export class WebhookHandlers {
   }
 
   private static getAutoInvestBasket() {
-    // Broad market-cap default (no sector tilt) — see DEFAULT_AUTO_STRATEGIES.growth.
+    // Broad market-cap default, all-equity (no sector tilt, no bonds) — see
+    // DEFAULT_AUTO_STRATEGIES.growth.
     return [
-      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.62 },
-      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.28 },
-      { ticker: 'BND', name: 'Vanguard Total Bond Market ETF', weight: 0.10 },
+      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.70 },
+      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.30 },
     ];
   }
 
@@ -838,7 +855,7 @@ export class WebhookHandlers {
     });
   }
 
-  private static async ensureMemoryEntryForGift(giftId: string, fallbackVideoUrl?: string | null, fallbackAudioUrl?: string | null): Promise<void> {
+  private static async ensureMemoryEntryForGift(giftId: string, fallbackVideoUrl?: string | null, fallbackAudioUrl?: string | null, sealUntil18?: boolean): Promise<void> {
     const gift = await storage.getGift(giftId);
     if (!gift) return;
 
@@ -914,6 +931,10 @@ export class WebhookHandlers {
       photoUrl: resolvedPhotoUrl,
       videoUrl: resolvedVideoUrl,
       audioUrl: resolvedAudioUrl,
+      // The gifter can opt to SEAL this gift's note/voice until the child's
+      // 18th birthday (passed from checkout metadata, default off). 'kid_now'
+      // is today's behavior, so this is a no-op unless they chose to seal.
+      visibility: sealUntil18 ? 'kid_at_18' : 'kid_now',
       status: entryStatus,
     });
   }
@@ -1231,6 +1252,29 @@ export class WebhookHandlers {
     }
 
     const metadata = session.metadata || {};
+    // C3 (data-privacy): if the gift media was persisted server-side (token in
+    // metadata, URLs omitted from Stripe), hydrate the URLs back onto `metadata`
+    // so every downstream read-site behaves exactly as the legacy path —
+    // the gift-row creation below, the existing-gift early return, and the
+    // threaded completeGiftPostPayment (memory entry + media milestones). Read-
+    // only here (idempotent under Stripe webhook retries); a TTL sweep cleans the
+    // row up later. No-op when there is no token (the default / flag off).
+    if (metadata.mediaToken) {
+      try {
+        const [pending] = await db
+          .select()
+          .from(pendingGiftMedia)
+          .where(eq(pendingGiftMedia.token, String(metadata.mediaToken)))
+          .limit(1);
+        if (pending) {
+          if (pending.photoUrl) (metadata as any).photoUrl = pending.photoUrl;
+          if (pending.videoUrl) (metadata as any).videoUrl = pending.videoUrl;
+          if (pending.audioUrl) (metadata as any).audioUrl = pending.audioUrl;
+        }
+      } catch (hydrateErr) {
+        console.warn('[Webhook] pending gift-media hydrate failed:', (hydrateErr as any)?.message || hydrateErr);
+      }
+    }
     const rawExecutionModel = String(metadata.executionModel || '').toLowerCase();
     const normalizedExecutionModel =
       rawExecutionModel.includes('pick')
@@ -1260,7 +1304,7 @@ export class WebhookHandlers {
         // gift path that was bypassing it.
         const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
         if (!isParentContrib) {
-          await this.ensureMemoryEntryForGift(existingGift.id, this.normalizeVideoUrl(metadata.videoUrl), metadata?.audioUrl || null);
+          await this.ensureMemoryEntryForGift(existingGift.id, this.normalizeVideoUrl(metadata.videoUrl), metadata?.audioUrl || null, metadata?.voiceSealUntil18 === true || metadata?.voiceSealUntil18 === 'true');
         }
         await this.ensureFundPendingCoversPendingGifts(existingGift.fundId);
       }
@@ -1809,6 +1853,41 @@ export class WebhookHandlers {
   static async handlePaymentIntentSucceeded(paymentIntent: any): Promise<void> {
     console.log('[Webhook] payment_intent.succeeded:', paymentIntent.id);
 
+    // ── EMBEDDED in-app checkout fulfillment (CHECKOUT_IN_APP_SPEC.md) ──
+    // The embedded Payment Element has NO Checkout Session, so it can't fulfill via
+    // checkout.session.completed — it must fulfill here. The DANGER (see
+    // _TANDEM_webhook_double_credit_HANDOFF.md): hosted gifts ALSO fire
+    // payment_intent.succeeded, so crediting unconditionally here would DOUBLE-CREDIT
+    // every hosted gift on real custodial money. The guard is therefore strict and
+    // double-keyed: fulfill ONLY when (a) metadata.source === 'in_app' (hosted PIs lack
+    // this) AND (b) a fund target is present (a bare /checkout-preview PI carries neither
+    // a fund nor the fulfillment fields, so it safely no-ops). Fulfillment reuses the
+    // PROVEN handleGiftPayment path (create→credit→invest→reconcile), which is itself
+    // idempotent via getGiftByPaymentIntent — so a redelivered event never re-credits.
+    //
+    // ⚠️ NOT YET LIVE-VERIFIED. Gated by the IN_APP_CHECKOUT flag upstream. Before any
+    // prod-like flag flip, the real in-app PIs must carry the SAME metadata the hosted
+    // gift/parent-contribution checkout sets (fundId, isParentContribution, fundUserId,
+    // amounts, executionModel, …), AND the 4-case `stripe listen` test must pass:
+    // hosted-credits-once / embedded-credits-once / redelivered-no-double / refund-reverses.
+    const md = paymentIntent.metadata || {};
+    if (md.source === 'in_app' && (md.fundId || md.fundSlug)) {
+      // Adapt the PaymentIntent into the minimal session shape handleGiftPayment reads,
+      // then reuse the proven, idempotent fulfillment. No new credit logic.
+      await this.handleGiftPayment({
+        id: `inapp_${paymentIntent.id}`,
+        payment_status: 'paid',
+        payment_intent: paymentIntent.id,
+        amount_total: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        metadata: md,
+        customer: paymentIntent.customer,
+      });
+      return;
+    }
+
+    // Default (hosted gifts + everything else): hosted fulfillment owns the credit via
+    // checkout.session.completed; here we only advance the gift's lifecycle state.
     const gift = await storage.getGiftByPaymentIntent(paymentIntent.id);
     if (gift && gift.status === 'pending') {
       await storage.updateGift(gift.id, { status: 'processing' });
@@ -1858,10 +1937,12 @@ export class WebhookHandlers {
         // double-debiting. Draw the refunded amount from balance first, then
         // cash, so the fund's total holdable value drops by exactly the refund
         // regardless of which bucket the gift landed in; clamp at 0.
-        // NOTE: holding SHARES are not yet reversed here — once DriveWealth
-        // settlement is live the true reversal is a custodian sell; until then
-        // `balance` (which drives withdrawals) is the figure that must not
-        // retain refunded money. Tracked for the custody-wiring work.
+        // Holding SHARES are also reversed below (see the gift_allocations
+        // loop): a settled-then-refunded gift must not leave phantom sellable
+        // shares in the holdings table after its dollars are clawed back. This
+        // is a LOCAL-DB reversal only (custody is still a scaffold stub, so
+        // there is no real custodian sell to place); when DriveWealth settlement
+        // is live, the same allocation rows drive the real sell order.
         if (priorStatus === 'invested' || priorStatus === 'settled') {
           try {
             const fund = await storage.getFund(gift.fundId);
@@ -1883,6 +1964,58 @@ export class WebhookHandlers {
             }
           } catch (reverseErr) {
             console.error('[Webhook] Failed to reverse fund balance on refund:', gift.id, reverseErr);
+          }
+
+          // Reverse this gift's INVESTED HOLDINGS (shares + cost basis). The cash
+          // reversal above pulls dollars out of balance/cash, but an already-
+          // invested gift also created holdings rows + per-gift gift_allocations;
+          // left alone, those become phantom sellable shares for money the fund
+          // no longer holds. Back out ONLY this gift's slice via its own
+          // allocation rows (a gift may span several tickers in an auto basket;
+          // a ticker may be co-funded by other gifts). Mirrors the partial-sell
+          // math in routes.ts. Idempotent: this runs only when priorStatus was
+          // invested/settled (the gift is already 'refunded' above), and the
+          // allocation rows are deleted at the end as a second backstop. Clamped
+          // at 0 so a rounding drift can never go negative.
+          try {
+            const allocations = await storage.getGiftAllocationsByGift(gift.id);
+            for (const alloc of allocations) {
+              const allocShares = parseFloat(String(alloc.shares || '0')) || 0;
+              const allocCost = parseFloat(String(alloc.costBasis || '0')) || 0;
+              if (allocShares <= 0 && allocCost <= 0) continue;
+              const holding = await storage.getHoldingByFundAndTicker(gift.fundId, alloc.ticker);
+              if (!holding) continue;
+              const curShares = parseFloat(String(holding.shares || '0')) || 0;
+              const curCost = parseFloat(String(holding.costBasis || '0')) || 0;
+              const curValue = parseFloat(String(holding.currentValue || '0')) || 0;
+              const remainingShares = curShares - allocShares;
+              if (remainingShares <= 0.0001) {
+                // This gift was the last/only contributor — remove the holding
+                // and any straggler allocation rows for the ticker.
+                await storage.deleteHolding(holding.id);
+                await storage.deleteGiftAllocationsByFundAndTicker(gift.fundId, alloc.ticker);
+              } else {
+                // Preserve the holding's current per-share market value: scale
+                // currentValue by the surviving share fraction (no re-quote in a
+                // webhook); costBasis drops by this gift's actual basis.
+                const remainingFraction = curShares > 0 ? remainingShares / curShares : 0;
+                const remainingCost = Math.max(0, curCost - allocCost);
+                const remainingValue = Math.max(0, curValue * remainingFraction);
+                await storage.updateHolding(holding.id, {
+                  shares: remainingShares.toFixed(6),
+                  costBasis: remainingCost.toFixed(2),
+                  currentValue: remainingValue.toFixed(2),
+                  gain: (remainingValue - remainingCost).toFixed(2),
+                });
+              }
+            }
+            // Drop this gift's allocation rows last — finishes attribution
+            // cleanup and acts as a second idempotency backstop.
+            if (allocations.length > 0) {
+              await storage.deleteGiftAllocationsByGift(gift.id);
+            }
+          } catch (holdingReverseErr) {
+            console.error('[Webhook] Failed to reverse holdings on refund:', gift.id, holdingReverseErr);
           }
         }
       }
@@ -2518,7 +2651,7 @@ export class WebhookHandlers {
       const introLines = [
         sponsorFirst ? `Hi ${sponsorFirst},` : `Hi,`,
         '',
-        `Thank you for gifting a Kiddo Founding Member slot to ${recipientName}. They were just emailed the good news — they're founding member #${entry.position} of 1,000.`,
+        `Thank you for gifting a Kiddo Founding Member slot to ${recipientName}. They were just emailed the good news. They're founding member #${entry.position} of 1,000.`,
         '',
         `When Kiddo launches, ${recipientName} will claim their slot via the email link we sent them. They keep the $19/yr lifetime price-lock and the Founding Member badge for as long as they're with Kiddo.`,
         '',
@@ -2610,6 +2743,37 @@ export class WebhookHandlers {
     const selectedTicker = String(subMetadata.selectedTicker || "");
     const isAnonymousFlag = String(subMetadata.isAnonymous || "0") === "1";
 
+    // T&S blocklist cascade (2026-06-06, sibling of M5 below): a parent/admin
+    // block issued AFTER the subscription was created must stop future cycles
+    // — otherwise a blocked gifter keeps charging money and planting content
+    // into the child's fund every month. Mirrors the closed-fund cascade
+    // above: cancel the subscription, skip this cycle's gift insert. (As with
+    // closed-fund, Stripe already took this cycle's payment — refund is the
+    // same separate operational concern.)
+    if (senderEmail) {
+      try {
+        const blockRows = await db.execute(sql`
+          SELECT id FROM blocked_gifters
+          WHERE unblocked_at IS NULL
+            AND email = ${senderEmail.toLowerCase()}
+            AND (scope = 'global' OR (scope = 'fund' AND fund_id = ${fundId}))
+          LIMIT 1
+        `);
+        if ((blockRows.rows as any[])?.[0]) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            if (stripeSubscriptionId) await stripe.subscriptions.cancel(stripeSubscriptionId);
+          } catch (cancelErr) {
+            console.warn("[Webhook] failed to cancel gifter recurring for blocked sender:", cancelErr);
+          }
+          console.warn(`[Webhook] gifter_recurring charge from BLOCKED sender to fund ${fundId}; sub canceled, charge not processed`);
+          return true;
+        }
+      } catch (blockErr) {
+        console.warn("[Webhook] blocklist check failed on recurring charge (continuing):", blockErr);
+      }
+    }
+
     // Look up the recurring_gifts row by stripe_subscription_id so we can
     // stamp the gift's recurring_gift_id foreign key. Best-effort: if the
     // lookup fails the gift still gets created without the tag, just
@@ -2625,6 +2789,32 @@ export class WebhookHandlers {
       if (rgRow?.id) recurringGiftId = String(rgRow.id);
     } catch (rgErr) {
       console.warn("[Webhook] recurring_gift_id lookup failed:", rgErr);
+    }
+
+    // T&S M5 (2026-06-06): when a parent/admin removed, hid, or escalated a
+    // PRIOR cycle's Memory Book entry from this same subscription, the next
+    // invoice used to re-create the identical message verbatim — moderation
+    // that didn't stick. If any earlier cycle's entry was moderated away,
+    // suppress the message for this and every later cycle (the money still
+    // flows; the gift row just carries no note). Fail-open on lookup error:
+    // a DB blip shouldn't strip a legitimate gifter's note.
+    let cycleMessage = message;
+    if (recurringGiftId && message) {
+      try {
+        const flaggedPrior = await db.execute(sql`
+          SELECT me.id FROM memory_entries me
+          JOIN gifts g ON g.id = me.gift_id
+          WHERE g.recurring_gift_id = ${recurringGiftId}
+            AND me.moderation_status IN ('removed', 'hidden', 'escalated')
+          LIMIT 1
+        `);
+        if ((flaggedPrior.rows as any[])?.[0]) {
+          cycleMessage = "";
+          console.warn(`[Webhook] gifter_recurring message suppressed for sub ${stripeSubscriptionId} (prior cycle's entry was moderated)`);
+        }
+      } catch (modErr) {
+        console.warn("[Webhook] M5 moderation lookback failed (message kept):", modErr);
+      }
     }
 
     // BUG FIX (2026-05-27): credit the fund the amount that ACTUALLY settles,
@@ -2648,7 +2838,7 @@ export class WebhookHandlers {
         stripe_payment_intent_id, recurring_gift_id, created_at
       ) VALUES (
         ${fundId}, ${senderName}, ${senderEmail || null}, ${amountUsd.toFixed(2)},
-        ${recurringNetToFund.toFixed(2)}, 'processing', ${message || null},
+        ${recurringNetToFund.toFixed(2)}, 'processing', ${cycleMessage || null},
         ${selectedTicker || null}, ${executionModel}, ${isAnonymousFlag},
         ${invoice.payment_intent || null}, ${recurringGiftId},
         NOW()
@@ -2689,7 +2879,7 @@ export class WebhookHandlers {
         const { renderKiddoEmail } = await import("./templates/baseTemplate");
         const childName = fund.recipientFirstName || fund.name || "the fund";
         const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
-        const subject = `$${amountUsd.toFixed(0)} added to ${childName}'s fund — ${monthLabel}`;
+        const subject = `$${amountUsd.toFixed(0)} added to ${childName}'s fund, ${monthLabel}`;
         const body = [
           `Your $${amountUsd.toFixed(2)} recurring landed in ${childName}'s fund.`,
           "",

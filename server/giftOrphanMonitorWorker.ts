@@ -35,11 +35,19 @@ export async function runGiftOrphanMonitor(log: LogFn = () => undefined): Promis
   running = true;
   try {
     const res = await pool.query(
+      // Exclude the automated UI-test harness's throwaway funds (slug
+      // 'qa-ui-fund-<timestamp>'). Each playwright smoke run creates a fund + a
+      // $25 gift that never finishes the invest step before teardown, so they
+      // permanently read as "charged, not invested" and spam this ops alert on
+      // every dev boot. Real funds never carry that slug (it's set explicitly
+      // by the test), so this only filters dev test residue — production is
+      // unaffected.
       `SELECT id, fund_id, amount, created_at
          FROM gifts
         WHERE status = 'processing'
           AND invested_at IS NULL
           AND created_at < NOW() - ($1 || ' hours')::interval
+          AND fund_id NOT IN (SELECT id FROM funds WHERE slug LIKE 'qa-ui-fund-%')
         ORDER BY created_at ASC
         LIMIT 100`,
       [String(ORPHAN_GRACE_HOURS)],

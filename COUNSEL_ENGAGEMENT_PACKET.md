@@ -119,8 +119,10 @@ three options below into one posture.*
    post-handoff), **by itself** enough to trigger RIA registration if our platform
    doesn't otherwise constitute "advice"?
 2. Does our surface constitute "investment advice" under the Advisers Act
-   three-prong test? Inputs: parent picks from a **curated 17-stock universe** (we
-   surface, don't recommend a specific stock), plus **user-selected broad-market ETF
+   three-prong test? Inputs: parent picks from a **curated 24-stock universe** of
+   recognizable consumer brands (we *surface* a neutral menu, framed by meaning
+   not performance; we do not recommend, rank by returns, or label "top picks"),
+   plus **user-selected broad-market ETF
    mix presets** (growth / balanced / conservative — chosen by the user, never
    auto-assigned by age; sharpened in the managed-allocation flags below); we
    **project** future value at a 7% historical assumption (disclaimed); we do **not**
@@ -208,9 +210,20 @@ need a **written yes/no** on each:
    vs. investment date) in a way we must disclose?
 6. **Tie-in:** if the answer is "only behind the BD / via segregated account," does
    that change anything in the Part 1 AUM structure?
+7. **Escrow — chosen vs. imposed (two questions).** (a) Does a true licensed-escrow
+   structure buy us anything over Option C (no funds held) or the FBO account, or
+   is it strictly heavier and skippable? (b) **More important:** if we *do* hold
+   funds in a segregated/FBO account conditioned on a future event (parent opens
+   account, else refund), could a regulator characterize that arrangement **itself
+   as escrow** and pull us under **state escrow-agent licensing** (e.g. CA Escrow
+   Law / DFPI), separate from the money-transmission analysis in #1? Does the
+   BD-as-holder structure inoculate us, and does the refund condition make it look
+   like escrow vs. a simple refundable pre-payment (#2-iii)? Full framing in
+   `LAWYER_Q_HOLDING_GIFT_FUNDS.md`.
 
 **What we need back:** which holding structure is permissible and cleanest, the
-max defensible hold window, and the required gifter disclosures.
+max defensible hold window, the required gifter disclosures, **and whether the
+funds-held fallback trips escrow-agent licensing.**
 
 **The five written gates that must close before we flip the flag.** The built
 flow is the no-funds-held SetupIntent design above; an internal implementation
@@ -237,6 +250,17 @@ Please address each **in writing**:
 5. **Gift-completion timing** *(tax counsel)* — confirm the UTMA gift completes on
    the **off-session charge date, not the SetupIntent date** (IRC §2511), no
    Form 709 ambiguity.
+
+**Operational vs. legal — gates 2 and 4 are APPROVALS, not opinions (advisory-panel
+sharpening 2026-06-16).** Gates 1, 3, 5 are *counsel opinions*. But gates 2 (BD multi-
+gifter AML) and 4 (Stripe) are live *gatekeepers who must affirmatively say yes BEFORE
+the flag flips* — and the failure mode is asymmetric: if the BD's AML team flags the
+multi-contributor surge, or Stripe's policy team rejects the off-session-gifting use
+case, *after* launch, gifts get **charged-but-orphaned** (the gifter is debited, the
+investment never lands) — a silent cascade of chargebacks, support fires, and
+consumer-protection exposure. So treat 2 and 4 as production blockers requiring written
+sign-off from the BD's AML desk and Stripe Compliance specifically, not just a lawyer's
+read of whether they'd be permissible.
 
 Nothing flips the `GIFTER_CAPTURE_AT_INTENT` flag until these five land in
 writing. The **code is complete**: the card is auto-deleted at 60-day expiry, the
@@ -296,14 +320,53 @@ owner mode), which is in tension with our "not a cash-out terminal" thesis.
 
 # Part 5 — COPPA / children's-privacy applicability ⭐ (Privacy)
 
-**Source:** `SECURITY_AND_COMPLIANCE_POSTURE.md` (External matrix).
+**Source:** `SECURITY_AND_COMPLIANCE_POSTURE.md` (External matrix) +
+`COPPA_APPLICABILITY_MEMO.md` (full grounded analysis with file:line evidence).
 
-We store children's PII (name, DOB, SSN, photos, voice). The **parent (not the
-child) provides it**, and Kid View is **PIN-gated / parent-controlled**, which
-*narrows* COPPA's "collected from a child" trigger. **Question:** is COPPA
-applicable given that posture, and what **state children's-privacy** obligations
-(e.g., state acts) attach? This pairs with Part 3 but is the broader
-applicability/obligations question, not just deletion.
+We store children's PII (name, DOB, SSN, photos, voice), but the **parent or
+gifter (never the child) provides all of it**, and the only child-touching surface
+(Kid View) is **PIN-gated and read-only for under-13s** — the one write path (teen
+stock suggestions) is hard-gated to age 13+ in code (`routes.ts:6892`), i.e. above
+the COPPA age. COPPA triggers on collecting personal information **from a child**;
+our position is that we collect *from the adult about the child*, which puts the
+core product outside COPPA.
+
+**Two things make this load-bearing rather than academic:** (1) we can never argue
+*lack of knowledge* (the product is "give to a child"), so the entire position
+rests on the single hinge "from the adult, not the child" — there is no backup
+argument; and (2) the 2025 amendments' **indefinite-retention prohibition** would
+make our permanent-Memory-Book moat partially illegal **if** COPPA applied, so the
+applicability answer gates the business model, not just a compliance checkbox. The
+2025 Rule amendments are already in effect (full-compliance date April 22, 2026,
+now passed).
+
+**Question for counsel (narrow):** Confirm Kiddo is **not a COPPA-covered
+operator** on the collected-from-the-adult theory, given PIN-gated read-only Kid
+View + teen-only (13+) write access. Identify the one or two surfaces where that
+conclusion is fragile (Kid View third-party egress — note we are self-hosting fonts
+to remove the IP-to-Google leak; Memory Book indefinite retention), and tell us
+which **state children's-privacy / age-appropriate-design** obligations (CA AADC
+and the wave behind it, which reach minors up to 18) attach **regardless** of the
+COPPA answer. Pairs with Part 3 (deletion) but is the broader applicability question.
+
+**Additional fragile surface flagged 2026-06-09 — the public gift link exposes a
+child's first name + photo to anyone who guesses the URL.** The gift page lives at a
+**guessable, un-tokened slug** (`/<child-name>`, e.g. `/luke-dunphy`):
+`generateUniqueFundSlug` (`routes.ts:2224`) is `slugify(name)` + a numeric
+collision suffix — no random token — and `GET /api/public/funds/:slug`
+(`routes.ts:7186`) returns the child's **first name + photo URL** with **no auth and
+no token check**. The page is `noindex,nofollow` (`GiftCheckout.tsx:455`), so it is
+not *search-indexed*, but it IS *enumerable/guessable* by anyone who knows or
+guesses the child's name. This is intrinsic to the gifter loop (a clean,
+shareable, child-named link is the conversion surface), so it is a deliberate
+product trade-off, not a bug — but the guessability + photo is the sharp edge.
+**Question for counsel:** does a child's first name + photo being retrievable by a
+guessable (un-indexed, un-authenticated) URL create COPPA / CA-AADC /
+state-children's-privacy exposure? If so, is `noindex` + rate-limiting the public
+endpoint sufficient, or must we gate the photo (and/or randomize the slug) behind
+an unguessable share token? Product mitigations are scoped and reversible; we are
+holding that build for this answer. (Honest-copy fix already shipped: the in-app +
+marketing copy no longer claims "only people you share with can reach it.")
 
 ---
 
@@ -321,6 +384,27 @@ wired:
   another broker or liquidate to the funding source). This is a trust gate that
   needs to be live on the FAQ at launch-with-custody — but cannot ship until the
   custodian name + ACAT mechanics are real.
+
+**Q6a — Cash-float / shared-yield on idle custodial cash (NOT launch-gating; answer
+while custody is on the table).** The custodian (e.g. Alpaca) pays interest (~3.6%)
+on uninvested cash sitting in the FDIC-sweep program, and that program covers
+custodial accounts. Our **pinned stance** (`REVENUE_MODEL.md`): the yield accrues to
+the **child** (shared-yield, disclosed), with at most a thin *disclosed* spread to
+Kiddo — never silently pocketed (taxing a minor's money is off the table on brand
+grounds). Questions:
+1. On a **minor's UTMA/UGMA custodial** account, is paying yield to the beneficiary
+   on idle cash clean, and does Kiddo **retaining a disclosed slice of the spread**
+   create any adviser/custody/fee characterization problem (and does it touch the
+   Part 1 RIA determination)?
+2. What **disclosure** does the cash-sweep require — specifically that swept cash is
+   **FDIC pass-through, NOT SIPC**, and that "neither Kiddo nor the custodian is a
+   bank"? We need the exact present-tense wording counsel will bless before any
+   "your child's cash earns X%" copy ships (pairs with the copy blessing above).
+3. Any state-level wrinkle (interest-on-others'-funds / escheatment) we're missing.
+
+This is a thin, post-custody revenue line, not a launch blocker — folded in here so
+the answer arrives **bundled with custody** and it's a same-day flip later, rather
+than a second engagement.
 
 ---
 
@@ -466,6 +550,22 @@ is live** ahead of custody going live.
    securities held at a broker-dealer right now).
 3. What disclaimer placement/proximity makes present-tense framing defensible, if
    it's allowed at all?
+4. **Forward projections / hypothetical performance** *(not pre-custody-specific —
+   applies whenever a projection shows, so answer it on this same advertising
+   pass).* The product surfaces forward value projections **everywhere** — "$50 →
+   ~$82 when Luke turns 18," "On track for $1,490,926 at 65," the growth curves —
+   at a disclosed **7% historical assumption** with "not guaranteed" disclaimers
+   (rationale in `COMPOUNDING_NARRATIVE_NOTE.md`: 7% not the viral 10%, always
+   disclaimed, real-first). Projecting investment value to retail is governed by
+   securities-advertising rules on **hypothetical / projected performance** (SEC /
+   FINRA marketing rules, FTC) that are stricter than ordinary startup copy. Are
+   these illustrations defensible as **hypotheticals** given the assumption +
+   not-guaranteed disclaimers, and what wording / placement / proximity does the
+   projection need to be clean (or is any forward-dollar projection a line we
+   should not cross)? Separately, confirm our **kiddie-tax + projection
+   disclosures are accurate and sufficient** — the kiddie-tax fact is settled and
+   our copy is corrected in `shared/legal-copy.ts`, so this is an
+   accuracy/sufficiency review, not a question about the underlying law.
 
 **Why it matters:** a not-yet-live investment product worded as live is the
 textbook misrepresentation-of-a-securities-product risk. "It's gonna be" is not a
@@ -476,44 +576,158 @@ site keeps the disclaimers and the few hard money-mechanics claims stay honest
 
 ---
 
+# Part 10 — Paying institutions per funded account (referral / solicitor rules) — NOT launch-gating, forward-looking (Securities / Consumer)
+
+**Source:** the institutional-aggregator channel plan
+(`memory/project_babylist_integration_plan.md`). **Not a launch blocker** — Act-2
+distribution, gated behind the proven loop like every partner channel. Mapped now
+because it shares the Advisers Act / referral-compensation analysis with Parts 1
+and 8, so it costs ~nothing to answer on the same call.
+
+**The plan.** Trusted institutions (churches/synagogues, hospital-adjacent vendors,
+registries like Babylist) promote Kiddo at life moments (baptisms, namings, b'nai
+mitzvah, new-baby registries). The proposed Tier-1 arrangement is a
+**per-funded-account bounty paid as a charitable donation** to the institution's
+foundation or ministry — "Kiddo donates $X to your foundation for every funded
+account started through your community." Gifters themselves are never paid and
+never pay (that discipline is locked); the institution never holds or routes money.
+
+**The questions:**
+1. Does a per-funded-account payment to an institution (or its 501(c)(3)) for
+   promoting a platform that opens brokerage accounts trigger **solicitor/promoter
+   rules** — Advisers Act marketing rule (presumably moot if Part 1 lands on
+   no-RIA), FINRA referral-compensation rules via the BD, or state-level analogs?
+   Does our self-directed-platform posture keep this in ordinary
+   **affiliate-marketing** territory?
+2. Does paying the bounty **as a donation to a 501(c)(3)** rather than cash
+   compensation change the analysis — better (not "compensation" to a solicitor)
+   or worse (charitable-solicitation registration, the institution's own
+   disclosure duties to its community, private-benefit issues on their side)?
+3. What **disclosure at the point of referral** is required or prudent ("[Church]
+   receives a donation when an account is opened through this link")?
+4. Same analysis for **commercial partners** (registry affiliates, hospital
+   welcome-kit vendors): is a flat placement fee structurally cleaner than a
+   per-funded-account bounty, or are both fine under the same conditions?
+
+**Note the symmetry with Part 8 Q2** — that part asks whether Kiddo can earn a fee
+referring users *out* to RIAs; this part is the reverse direction: institutions
+compensated for referring *into* Kiddo. Same compensation-for-referral family;
+please answer both in one pass and state whether the direction changes anything.
+
+---
+
+# Part 11 — Hosting third-party content on a child surface ⭐ (Privacy / Consumer / Criminal-reporting)
+
+**Source:** `TRUST_SAFETY_FINDINGS.md` (two independent multi-agent audits),
+`KID_VIEW_SAFETY_GATE_SPEC.md`, `CONTENT_SCANNER_VENDOR_SPEC.md`. **Gated by opening
+the public UGC surface to strangers — not by custody or launch-day** — so fold it in
+now and it rides the same engagement. Pairs with Part 5: Part 5 is the *privacy of
+the child's data*; this is the *posture for hosting third-party content that reaches
+a child*. Added 2026-06-09 (the one launch-gating area the packet did not yet ask).
+
+**Context.** Gifters submit user-generated content — notes, photos, video, voice —
+that lands on a child's surface (the Memory Book / PIN-gated Kid View). Via the
+public gift link a gifter can be a **stranger**. Our moderation stack today:
+submission-time text-safety on all five gifter text paths (`giftTextSafety.ts`); a
+content-scanner seam that **fails closed in production** (unscanned media is refused
+until a real vendor — PhotoDNA + a moderation vendor — is wired); a proposed
+**sender-trust pre-visibility gate** (untrusted/public senders' media held for
+parent approval before a child can see it); and a per-item report → auto-flag. The
+questions are about legal **sufficiency and obligations**, which only counsel can
+set.
+
+**The questions:**
+1. **CSAM reporting (18 U.S.C. §2258A).** As a platform hosting user-uploaded
+   images/video on a child-directed service, do we have a **registration + 24-hour
+   NCMEC reporting** obligation, and what **triggers** it (any UGC hosting, or only
+   a detected hit)? When must registration be in place relative to opening the
+   public upload path, and what record-retention attaches to a report?
+2. **Moderation sufficiency / duty of care.** Is the stack above — CSAM hash-match
+   + a moderation vendor + the sender-trust pre-visibility hold for untrusted
+   senders + report-and-remove — a **legally sufficient** standard of care for a
+   **child-facing** UGC platform before we open the public link? What is the
+   **minimum** bar (we would rather know the floor than guess), and are we over- or
+   under-built?
+3. **Platform liability / Section 230.** Does **Section 230** shield us for
+   gifter-submitted content that reaches a minor, or does the **child-directed
+   nature** plus the fact that we **curate** what the child sees (visibility rules,
+   the at-18 unlock) limit the shield? Does adding moderation **reduce** exposure or
+   create a "we assumed the duty" theory?
+4. **State duty-of-care for minors.** Beyond COPPA / CA-AADC (Part 5), do any state
+   **age-appropriate-design / duty-of-care** regimes impose obligations on a
+   platform that **transmits third-party content to a minor** (vs. merely collecting
+   the child's data)? Any **mandatory-reporter** status?
+5. **Grooming / contact-channel (cross-ref Part 5).** Part 5 asks the privacy
+   question about the child's name + photo at a guessable URL; the adjacent T&S
+   question: does letting a stranger reach a child's gift page and **submit
+   content** raise grooming / contact-channel duties we must design against (we
+   already strip contact info from gifter text)?
+
+**What we need back:** the **floor** for a child-facing UGC moderation posture; a
+yes/no + timing on the §2258A / NCMEC obligation; and whether opening the public
+upload path **before** the sender-trust gate + a real scanner are live is a
+**must-not** (our current engineering assumption) or merely advisable. The
+moderation builds are **scoped and reversible; we are holding the public-UGC opening
+for this answer.**
+
+---
+
+# Part 12 — Charitable "solidarity pool" / fund-the-unfunded (NOT launch-gating, forward-looking) (Securities / Charity / Consumer)
+
+**Forward-looking — design intent, not a launch-day feature.** Post-launch we want a
+**solidarity pool** that closes the model's structural equity gap (gifting favors kids with
+generous networks; a kid with none gets nothing). Intended mechanic:
+
+- **Funding:** gifters opt in at checkout to add a small amount ("add $1 to fund a kid who
+  doesn't have a Kiddo yet"), plus a Kiddo baseline contribution.
+- **Distribution:** funds that **languish** (zero gifts in N days — a non-means-tested proxy
+  for "no network") are auto-seeded a small amount from the pool, **locked in the recipient
+  kid's UTMA** (only theirs at majority).
+- A related **at-18 hand-back** (a kid taking over their fund may seed another kid's first fund).
+- **At scale (year 3–5 vision):** the same pool could take **institutional capital** —
+  foundations, corporate ESG, UHNWI / family-office / DAF philanthropy, and **government CSA
+  programs** (cf. CalKIDS, baby-bonds). This sharpens Q1 (the 501c3/DAF structure must
+  accommodate institutional donors and their deductions) and Q4 (beneficiary selection at scale).
+
+**The questions:**
+1. **Structure.** Soliciting contributions, holding a pool, and granting it to chosen minor
+   beneficiaries — does this require a **separate 501(c)(3) / charitable entity** (a "Kiddo
+   Foundation")? Does running it through that entity keep the for-profit perimeter clean? Could
+   a **donor-advised-fund** arrangement be cleaner?
+2. **Charitable solicitation.** State charitable-solicitation registration obligations if we
+   ask gifters to contribute to the pool.
+3. **Money transmission / custody.** Does Kiddo (or the foundation) holding pooled funds
+   pre-grant trigger MTL / FinCEN / safeguarding? (Ties to Part 2.)
+4. **Gift/tax + beneficiary selection.** Who is the donor of a pool-seeded gift into a child's
+   UTMA; any gift-tax / 1099 / disclosure obligations; and does the **languishing proxy** avoid
+   the fair-selection / protected-class issues a means-test would raise?
+
+Cleanest hypothesis to validate: **a separate Kiddo Foundation (501c3) runs the pool and grants
+into funds**, keeping all regulated charity activity outside the operating company.
+
+---
+
 # Engagement logistics
 
-**Firm type (in order):** SEC-RIA specialist boutiques (Hardin Compliance, ACA
-Group, Wagner Law Group's RIA practice); securities boutiques with fintech focus in
-Miami/SF/NYC ($500–800/hr but efficient); **avoid generalist corporate firms**.
-Names to verify: Hardin Compliance, ACA Group, Foley Hoag fintech, Cooley emerging
-companies + fintech regulatory, Lowenstein Sandler fintech/RIA.
+**Firm type:** a **boutique securities / investment-adviser attorney** — senior enough to
+give a privileged opinion, small enough to take a bounded fixed-fee job; fintech focus;
+**avoid generalist corporate firms.** ⚠️ **Hardin Compliance and ACA Group are compliance
+*consultancies*, not law firms** — they do RIA registration *mechanics* but cannot opine on
+the fee-vs-advisory or money-transmission questions; dropped from the list. **Verified
+shortlist (2026-06-24):** Parker MacIntyre (RIA/IA regulatory boutique — `jsparker@parkmac.com`),
+Fintech Law (Bo Howell, ex-SEC — fintechlaw.ai/contact); for the money-transmission half if
+the securities firm doesn't cover it: Cogent Law or Hudson Cook; optional pricier BigLaw
+comparison: Cooley / Lowenstein / Foley Hoag fintech.
 
-**Ask:** a 60–90 min initial call + a **2–3 page written memo within 2 weeks**
-(which option, why, what to change in product / website / TOS to be clean) + an
-estimate for follow-up work. **Budget envelope: $3K–$5K** for call + memo;
-follow-up scoped separately.
+**Ask:** a 60–90 min initial call + a **2–3 page written memo within 2 weeks** (which option,
+why, what to change in product / website / TOS to be clean) + an estimate for follow-up work.
+**Don't name a budget — describe the bounded scope and ask them to propose a fixed fee.** (The
+old "$3K–$5K envelope" was dropped: it's too low for the multi-domain scope at a real
+securities firm, and naming a lowball number anchors you and signals "not a serious client.")
 
-**Cover email (paste, fill the brackets):**
-
-> **Subject:** RIA-registration + fund-holding questions — pre-launch UTMA fintech,
-> need a directional call + short memo
->
-> Hi [Name],
->
-> We're Kiddo, Inc., a pre-launch, US-only fintech. Parents open custodial (UTMA)
-> investment accounts for their kids, and friends and family contribute
-> gift-investments. Investments are intended to be custodied and executed by a
-> third-party broker-dealer; we are the technology/UX layer, and we are pre-launch
-> (custody is not yet live).
->
-> We need directional answers, before public launch, on two linked questions: (1)
-> whether our planned 0.10% AUM fee requires SEC RIA registration (we've sketched a
-> self-directed-platform posture plus three fallback structures), and (2) whether we
-> may capture a gifter's payment before the recipient's account exists. A short
-> attached packet lays out these plus a few tightly-scoped privacy questions
-> (children's data). We're looking for a 60–90 minute call plus a short written
-> memo, roughly a $3K–$5K initial engagement, with follow-up scoped separately.
->
-> Does this fit your practice? Happy to answer scoping questions first.
->
-> Best,
-> [Your name], Kiddo, Inc.
+**Cover email:** the canonical, short/human version lives in **`LAUNCH_OUTREACH_EMAILS.md` §1**
+(all launch outreach is consolidated there). `COUNSEL_OUTREACH_EMAIL.md` now just points to it
+— don't maintain a second copy.
 
 **Timeline:** Week 1 send to 3 firms + intake calls; Week 2 pick + schedule the
 substantive meeting; Weeks 3–4 meeting + memo; Weeks 4–6 act on the memo (file
@@ -532,3 +746,10 @@ Form ADV / sign DriveWealth amendment / rewrite TOS, per chosen option).
 - `LAUNCH_CHECKLIST.md` — where Part 2 (capture-at-intent, P0-1) is tracked.
 - `P0-1_SPEC_CAPTURE_AT_INTENT.md` / `P0-1_ADVISORY_PANEL_DECISION.md` — the built
   capture-at-intent design the Part 2 answer unblocks.
+- `memory/project_babylist_integration_plan.md` (institutional-aggregators section) —
+  Part 10 (full channel plan + arrangement ladder).
+- `TRUST_SAFETY_FINDINGS.md` + `KID_VIEW_SAFETY_GATE_SPEC.md` +
+  `CONTENT_SCANNER_VENDOR_SPEC.md` — Part 11 (UGC-hosting / child-safety legal posture).
+- `SIPC_COPY_REVIEW.md` — Parts 6 & 9 (full inventory of every live SIPC / broker-dealer
+  line + the two open questions: the coverage-trigger to state ("investing is live" vs
+  "account open") and the custodian-specific boilerplate to bless at flip).

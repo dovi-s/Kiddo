@@ -58,7 +58,7 @@ export function FirstSellTaxExplainerModal({ payload, busy, onConfirm, onCancel 
 
   return (
     <Dialog open={!!payload} onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent sheet className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-2">
             <Receipt size={14} className="text-primary" />
@@ -100,7 +100,7 @@ export function FirstSellTaxExplainerModal({ payload, busy, onConfirm, onCancel 
                 value={fmt(estimatedTax)}
                 strong
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 {payload.incomeBracket
                   ? "Based on the income bracket you told us."
                   : "Based on an average. Set your income in Settings for a closer estimate."}

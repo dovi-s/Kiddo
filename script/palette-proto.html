@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Palette — panel decision</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#d9d2c7;padding:36px;display:flex;gap:30px;justify-content:center;align-items:flex-start}
+  .col{width:360px;display:flex;flex-direction:column;gap:14px}
+  .cap{font-family:'Bricolage Grotesque';font-size:15px;font-weight:800;color:#3a352d;letter-spacing:-.01em}
+  .cap.star{color:#7a5310}
+  .cap span{display:block;font-family:Inter;font-size:11.5px;font-weight:500;color:#8a8073;margin-top:2px;line-height:1.35}
+
+  /* Shipped now (my saturation guess) */
+  .a{--eg:153 47% 15%; --eg-deep:154 55% 9%; --gold:40 86% 52%; --gold-lt:44 92% 64%;
+     --cream:42 26% 97%; --ink:155 30% 9%; --border:38 22% 88%; --gain:152 52% 36%; --loss:8 64% 50%;}
+  /* Gilt Ledger — recommended */
+  .b{--eg:158 49% 15%; --eg-deep:157 49% 8%; --gold:38 61% 48%; --gold-lt:40 70% 63%;
+     --cream:38 41% 95%; --ink:33 22% 8%; --border:36 20% 87%; --gain:149 41% 41%; --loss:10 50% 47%;}
+  /* Heirloom Brass — runner-up */
+  .c{--eg:159 60% 16%; --eg-deep:154 66% 9%; --gold:37 51% 48%; --gold-lt:41 56% 65%;
+     --cream:38 41% 95%; --ink:33 22% 8%; --border:36 20% 87%; --gain:149 41% 41%; --loss:9 48% 47%;}
+
+  .hero{border-radius:18px;overflow:hidden;box-shadow:0 10px 28px rgba(26,23,16,.18)}
+  .hero .top{padding:20px 20px 22px;
+    background:radial-gradient(120% 80% at 50% 8%, hsl(var(--gold-lt)/.13) 0%, transparent 46%),
+               linear-gradient(168deg, hsl(var(--eg)) 0%, hsl(var(--eg-deep)) 100%)}
+  .eyebrow{font-size:10.5px;font-weight:600;color:hsl(var(--cream)/.62)}
+  .bal{font-family:'Bricolage Grotesque';font-size:38px;font-weight:700;letter-spacing:-.03em;color:#fff;margin-top:2px}
+  .bal .c{font-size:.5em;opacity:.55}
+  .today{margin-top:4px;font-size:12px;font-weight:700;color:hsl(var(--gain))}  /* GAIN on the green hero — the legibility test */
+  .share{margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:hsl(var(--gold));color:#2a1c06;
+    border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;box-shadow:0 6px 16px hsl(var(--eg-deep)/.45)}
+  .proj{margin-top:12px;font-size:12px;color:hsl(var(--gold-lt))}
+
+  .card{background:hsl(var(--cream));border:1px solid hsl(var(--border));border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:9px}
+  .row{display:flex;align-items:center;justify-content:space-between}
+  .row .nm{font-size:13.5px;font-weight:600;color:hsl(var(--ink))}
+  .row .v{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .row .v.up{color:hsl(var(--gain))}
+  .row .v.dn{color:hsl(var(--loss))}
+
+  .sw{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:8.5px;font-weight:600;color:#6b6358}
+  .chip i{width:42px;height:42px;border-radius:10px;display:block;border:1px solid rgba(0,0,0,.06)}
+</style>
+</head>
+<body>
+  <div class="col a">
+    <div class="cap">Shipped now<span>my saturation guess — candy-marigold gold, gain camouflaged on green</span></div>
+    <div class="hero"><div class="top">
+      <div class="eyebrow">Theo's future</div>
+      <div class="bal">$23,577<span class="c">.27</span></div>
+      <div class="today">▲ +$420 today</div>
+      <button class="share">◔ Share Theo's link</button>
+      <div class="proj">↗ Growing toward ~$51k by 21</div>
+    </div></div>
+    <div class="card">
+      <div class="row"><span class="nm">Apple</span><span class="v up">+$1,446 (+153%)</span></div>
+      <div class="row"><span class="nm">Disney</span><span class="v dn">−$193 (−10%)</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip"><i style="background:hsl(153 47% 15%)"></i>green</div>
+      <div class="chip"><i style="background:hsl(40 86% 52%)"></i>gold</div>
+      <div class="chip"><i style="background:hsl(152 52% 36%)"></i>gain</div>
+      <div class="chip"><i style="background:hsl(8 64% 50%)"></i>loss</div>
+      <div class="chip"><i style="background:hsl(42 26% 97%)"></i>cream</div>
+    </div>
+  </div>
+
+  <div class="col b">
+    <div class="cap star">★ Gilt Ledger — recommended<span>bottle-green + antique brass-leaf on ivory rag paper · gain lifted for legibility</span></div>
+    <div class="hero"><div class="top">
+      <div class="eyebrow">Theo's future</div>
+      <div class="bal">$23,577<span class="c">.27</span></div>
+      <div class="today">▲ +$420 today</div>
+      <button class="share">◔ Share Theo's link</button>
+      <div class="proj">↗ Growing toward ~$51k by 21</div>
+    </div></div>
+    <div class="card">
+      <div class="row"><span class="nm">Apple</span><span class="v up">+$1,446 (+153%)</span></div>
+      <div class="row"><span class="nm">Disney</span><span class="v dn">−$193 (−10%)</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip"><i style="background:hsl(158 49% 15%)"></i>green</div>
+      <div class="chip"><i style="background:hsl(38 61% 48%)"></i>brass</div>
+      <div class="chip"><i style="background:hsl(149 41% 41%)"></i>gain</div>
+      <div class="chip"><i style="background:hsl(10 50% 47%)"></i>loss</div>
+      <div class="chip"><i style="background:hsl(38 41% 95%)"></i>ivory</div>
+    </div>
+  </div>
+
+  <div class="col c">
+    <div class="cap">Heirloom Brass — runner-up<span>one notch more conservative: deeper floor, more muted antique brass</span></div>
+    <div class="hero"><div class="top">
+      <div class="eyebrow">Theo's future</div>
+      <div class="bal">$23,577<span class="c">.27</span></div>
+      <div class="today">▲ +$420 today</div>
+      <button class="share">◔ Share Theo's link</button>
+      <div class="proj">↗ Growing toward ~$51k by 21</div>
+    </div></div>
+    <div class="card">
+      <div class="row"><span class="nm">Apple</span><span class="v up">+$1,446 (+153%)</span></div>
+      <div class="row"><span class="nm">Disney</span><span class="v dn">−$193 (−10%)</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip"><i style="background:hsl(159 60% 16%)"></i>green</div>
+      <div class="chip"><i style="background:hsl(37 51% 48%)"></i>brass</div>
+      <div class="chip"><i style="background:hsl(149 41% 41%)"></i>gain</div>
+      <div class="chip"><i style="background:hsl(9 48% 47%)"></i>loss</div>
+      <div class="chip"><i style="background:hsl(38 41% 95%)"></i>ivory</div>
+    </div>
+  </div>
+</body>
+</html>

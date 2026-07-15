@@ -1,12 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, CheckCircle2, Info, Clock, Zap, Banknote } from "lucide-react";
+import { DrawIcon } from "@/components/DrawIcon";
 import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { recordDemoBuy } from "@/lib/demo-live-gifts";
+import { demoBlocked } from "@/lib/demo-block";
 import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
+import { STRATEGY_LABEL, type StrategyKey } from "@/lib/strategy";
+import { projectFundValue } from "@shared/projection";
+import { investingLiveCopy, PROJECTION_DISCLAIMER, INVESTING_LIVE } from "@shared/legal-copy";
 
 // Derived from the canonical universe (shared/stock-picks.ts) — the cash-invest
 // picker (adult / owner-mode) now reads the SAME list as the gift page, parent
@@ -28,9 +35,11 @@ function getDefaultLabel(prefs: any): string {
     return stock ? `${stock.name} (${stock.ticker})` : (prefs.defaultTicker || "Fund default");
   }
   if (prefs.defaultMode === "cash") return "Hold as cash";
-  const strategy = prefs.managedStrategy;
-  if (strategy === "balanced") return "Steady & Balanced portfolio";
-  return "Growth index portfolio";
+  // Canonical strategy names (lib/strategy.ts) — "Mix" is load-bearing so
+  // "Growth" the strategy never reads as "Growth" the gain. Was hand-typed as
+  // "Growth index portfolio" / "Balanced portfolio" here, which also silently
+  // mislabeled the conservative tier as growth.
+  return STRATEGY_LABEL[prefs.managedStrategy as StrategyKey] ?? STRATEGY_LABEL.growth;
 }
 
 function isMarketOpen(): boolean {
@@ -63,8 +72,22 @@ interface InvestCashModalProps {
   fundMonthReturnPct?: number;
   fundAgeYears?: number;
   fundAverageGiftDate?: string;
+  // Years until the child reaches majority, plus the age, so the invest
+  // confirmation can show a forward "by the time {child} turns {age}" glimpse
+  // (connects this contribution to the handoff). Optional — callers that omit
+  // them simply don't render the glimpse.
+  yearsToMajority?: number;
+  majorityAge?: number;
   onSuccess?: () => void;
 }
+
+// Sticky footer for the destination step: "Pick one company" reveals a ~29-stock grid
+// that used to push the "Review investment" button below the fold (founder catch
+// 2026-07: "the buttons should always be visible"). Pin the action to the bottom of the
+// scroll viewport. -mx-6/-mb-6 cancel the scroll body's px-6/pb-6 so the bar sits flush;
+// bg + border-t let the stock grid scroll cleanly behind it. (Home-indicator safe
+// area is handled globally by the sheet's bottom spacer in ui/dialog.tsx.)
+const STICKY_SHEET_NAV = "sticky bottom-0 z-10 -mx-6 mt-1 border-t border-[hsl(var(--kiddo-border))] bg-background px-6 pt-3.5 pb-3.5";
 
 export function InvestCashModal({
   open,
@@ -78,8 +101,12 @@ export function InvestCashModal({
   fundMonthReturnPct: _fundMonthReturnPct,
   fundAgeYears: _fundAgeYears,
   fundAverageGiftDate: _fundAverageGiftDate,
+  yearsToMajority,
+  majorityAge,
   onSuccess,
 }: InvestCashModalProps) {
+  const { user } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const [step, setStep] = useState<"choose" | "confirm" | "done">("choose");
   const [investMode, setInvestMode] = useState<"default" | "stock" | "keep" | "withdraw">("default");
   const [selectedTicker, setSelectedTicker] = useState("");
@@ -115,21 +142,28 @@ export function InvestCashModal({
     staleTime: 60_000,
   });
 
+  // Reset ONLY on the closed→open transition. Resetting on every cashAmount change
+  // clobbered the post-invest "done" screen: a successful invest drops cashAmount
+  // (e.g. $50 → $0), which used to re-fire this and bounce the step back to "choose"
+  // with $0 available, showing the impossible "Enter an amount between $0.01 and
+  // $0.00" (founder bug report). Now cashAmount changes while open never reset it.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setStep("choose");
       setInvestMode(initialTicker ? "stock" : "default");
       setSelectedTicker(initialTicker || "");
       setSelectedBankId("");
       setInvestAmount(cashAmount > 0 ? cashAmount.toFixed(2) : "");
     }
+    wasOpen.current = open;
   }, [cashAmount, initialTicker, open]);
 
   const contextMessages: Record<CashContext, string> = {
     kyc_pending: "Verification is complete. You can invest some, all, or none of this cash.",
     held_as_cash: `This fund holds gifts as cash until you choose what to invest.`,
     sold_proceeds: `These are the proceeds from a recent stock sale, ready to reinvest.`,
-    gifts_settled: `${childName}'s settled gifts are ready when you are.`,
+    gifts_settled: `${childName}'s gift money is in and ready to invest.`,
   };
 
   const selectedStockName = STOCK_CHOICES.find((s) => s.ticker === selectedTicker)?.name || selectedTicker;
@@ -144,6 +178,9 @@ export function InvestCashModal({
     Math.round((cashAmount / 2) * 100) / 100,
     cashAmount,
   ].filter((value) => value > 0))).sort((a, b) => a - b);
+  // The "half your cash" quick amount — shown as "Half", not an oddly precise
+  // "$1,193.04" that reads like a calculator instead of a choice.
+  const halfAmount = Math.round((cashAmount / 2) * 100) / 100;
 
   const confirmDescription =
     investMode === "stock"
@@ -151,9 +188,12 @@ export function InvestCashModal({
       : `Using ${childName}'s fund default: ${prefs ? getDefaultLabel(prefs) : "fund strategy"}`;
 
   const marketOpen = isMarketOpen();
-  const executionNote = marketOpen
-    ? "Markets are open. This executes at the current price."
-    : "Will execute at the next market open (weekdays, 9:30am ET).";
+  const executionNote = investingLiveCopy(
+    marketOpen
+      ? "Markets are open. This executes at the current price."
+      : "Will execute at the next market open (weekdays, 9:30am ET).",
+    "This records your choice. It invests once investing goes live.",
+  );
 
   const handleConfirm = async () => {
     setInvesting(true);
@@ -172,6 +212,18 @@ export function InvestCashModal({
       if (res.ok) {
         haptic("success");
         setStep("done");
+        // Demo: record the buy so it reflects — the holding grows, the cash
+        // drops by the same amount (invested↑ + cash↓ = same hero total), and an
+        // "Invested $X" row shows in Activity. The sandbox mocks the POST, so the
+        // refetch alone would drop it. Only the invest modes move cash into a
+        // holding ("keep" is a no-op; "withdraw" leaves the fund entirely).
+        if (isDemoAccount && (investMode === "default" || investMode === "stock")) {
+          recordDemoBuy({
+            fundId,
+            ticker: investMode === "stock" ? selectedTicker : "",
+            amount: roundedAmountToInvest.toFixed(2),
+          });
+        }
         void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
         void queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "holdings"] });
         void queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
@@ -202,11 +254,16 @@ export function InvestCashModal({
         body: JSON.stringify({ autoInvestEnabled: enabled }),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) return;
         await refetchPrefs();
         toast({
           title: enabled ? "Investing future gifts automatically" : "Future gifts will sit as cash",
           description: enabled
-            ? "Future cash will invest automatically per the fund default."
+            ? investingLiveCopy(
+                "Future cash will invest automatically per the fund default.",
+                "Future cash is set to invest automatically once investing goes live.",
+              )
             : "Cash will sit until you manually invest it.",
         });
       }
@@ -247,22 +304,37 @@ export function InvestCashModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]" aria-describedby={undefined}>
-        <DialogHeader className="px-6 pt-6 pb-0 shrink-0">
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[90vh]" aria-describedby={undefined}>
+        {/* Mode + fund pills — matches the one-time / recurring invest sheets so the
+            cash flow reads as the same family. This sheet was the only invest surface
+            missing the "{child}'s fund" context pill (founder catch 2026-07). */}
+        <div className="px-6 pt-5 shrink-0 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
+            <Banknote size={11} /> Cash
+          </span>
+          <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-2xs font-bold uppercase tracking-[0.08em] text-foreground/75">
+            {childName}'s fund
+          </span>
+        </div>
+        <DialogHeader className="px-6 pt-3 pb-0 shrink-0">
           <DialogTitle className="font-heading text-xl font-semibold">
             {step === "done" ? "All set" : "Put cash to work"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 pt-4 space-y-5 overflow-y-auto flex-1 min-h-0">
+        <div className="px-6 pb-4 pt-4 space-y-5 overflow-y-auto flex-1 min-h-0">
           {step === "choose" && (
             <>
               {/* Cash amount + context */}
               <div className="rounded-2xl bg-[hsl(var(--kiddo-cream))] border border-[hsl(var(--kiddo-gold)/0.28)] p-4 space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Ready when you are</p>
+                <p className="text-2xs font-semibold uppercase text-muted-foreground">Available cash</p>
                 <p className="text-3xl font-bold text-foreground font-heading">{formatCurrency(cashAmount)}</p>
                 <p className="text-sm text-muted-foreground">{contextMessages[cashContext]}</p>
-                {!marketOpen && (
+                {/* Market-hours note only makes sense once investing is LIVE. While
+                    gated, nothing executes at the next open, so this line would be a
+                    false timing claim; the confirm-step executionNote carries the
+                    honest "invests once investing goes live" copy instead. */}
+                {INVESTING_LIVE && !marketOpen && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Clock size={12} className="text-muted-foreground" />
                     <p className="text-xs text-muted-foreground">Markets closed. Executes at next open.</p>
@@ -271,14 +343,14 @@ export function InvestCashModal({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <label htmlFor="invest-cash-amount" className="text-sm font-semibold text-foreground">How much should move today?</label>
+                <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground">{formatCurrency(cashAmount)} available</span>
                 </div>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
                   <input
                     id="invest-cash-amount"
+                    aria-label="Amount to invest"
                     value={investAmount}
                     onChange={(event) => setInvestAmount(event.target.value)}
                     inputMode="decimal"
@@ -292,9 +364,9 @@ export function InvestCashModal({
                       key={amount}
                       type="button"
                       onClick={() => setInvestAmount(amount.toFixed(2))}
-                      className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                      className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground kiddo-press"
                     >
-                      {amount === cashAmount ? "All cash" : formatCurrency(amount)}
+                      {amount === cashAmount ? "All cash" : amount === halfAmount ? "Half" : amount % 1 === 0 ? `$${amount}` : formatCurrency(amount)}
                     </button>
                   ))}
                 </div>
@@ -313,19 +385,21 @@ export function InvestCashModal({
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-foreground">Where should this amount go?</p>
 
+                {/* No "Recommended" badge — even nudging toward the fund's own
+                    default counts as steering an investment choice, and the
+                    self-directed posture keeps every menu neutral. The card is
+                    already listed first and pre-selected; that's enough. */}
                 <OptionCard
                   selected={investMode === "default"}
                   onClick={() => setInvestMode("default")}
                   title={`Use ${childName}'s fund default`}
                   description={prefs ? getDefaultLabel(prefs) : "Loading..."}
-                  badge="Recommended"
                 />
 
                 <OptionCard
                   selected={investMode === "stock"}
                   onClick={() => setInvestMode("stock")}
                   title="Pick one company"
-                  description="Only the amount above goes into this choice"
                 />
 
                 {investMode === "stock" && (
@@ -337,7 +411,7 @@ export function InvestCashModal({
                           key={stock.ticker}
                           type="button"
                           onClick={() => setSelectedTicker(stock.ticker)}
-                          className={`rounded-xl border p-3 text-left transition-all ${
+                          className={`rounded-xl border p-3 text-left transition-all kiddo-press ${
                             isSelected
                               ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
                               : "border-border hover:border-[hsl(var(--kiddo-evergreen)/0.4)] bg-background"
@@ -345,10 +419,14 @@ export function InvestCashModal({
                         >
                           <StockLogo ticker={stock.ticker} size={32} className="mb-1.5" />
                           <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
-                          {amountToInvest > 0 && (
-                            <p className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
-                              {formatCurrency(amountToInvest)} invested
+                          <p className="text-2xs text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                          {/* Only the SELECTED pick shows the amount, and it's the
+                              ACTION ("goes here"), not "invested" (done) — this was
+                              rendering "$X invested" on all 24 rows, implying $X was
+                              already in each. */}
+                          {isSelected && amountToInvest > 0 && (
+                            <p className="text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] mt-1.5">
+                              {formatCurrency(amountToInvest)} goes here
                             </p>
                           )}
                         </button>
@@ -361,7 +439,6 @@ export function InvestCashModal({
                   selected={investMode === "keep"}
                   onClick={() => setInvestMode("keep")}
                   title="Keep as cash for now"
-                  description="Make no investment today"
                   variant="muted"
                 />
 
@@ -390,7 +467,7 @@ export function InvestCashModal({
                           key={bank.id}
                           type="button"
                           onClick={() => setSelectedBankId(bank.id)}
-                          className={`w-full text-left rounded-xl border px-3.5 py-2.5 transition-all flex items-center gap-3 ${
+                          className={`w-full text-left rounded-xl border px-3.5 py-2.5 transition-all flex items-center gap-3 kiddo-press ${
                             isSelected ? "border-primary bg-primary/6" : "border-border hover:border-primary/40 bg-background"
                           }`}
                         >
@@ -415,22 +492,24 @@ export function InvestCashModal({
                 )}
               </div>
 
-              <Button
-                className="w-full h-12 rounded-xl font-semibold"
-                disabled={
-                  (investMode !== "keep" && investMode !== "withdraw" && amountInvalid) ||
-                  (investMode === "stock" && !selectedTicker) ||
-                  (investMode === "withdraw" && activeBanks.length === 0)
-                }
-                onClick={() => {
-                  if (investMode === "keep") { onClose(); return; }
-                  if (investMode === "withdraw") { setStep("confirm"); haptic("light"); return; }
-                  setStep("confirm");
-                  haptic("light");
-                }}
-              >
-                {investMode === "keep" ? "Keep as cash" : investMode === "withdraw" ? "Review withdrawal" : "Review investment"}
-              </Button>
+              <div className={STICKY_SHEET_NAV}>
+                <Button
+                  className="w-full h-12 rounded-xl font-semibold"
+                  disabled={
+                    (investMode !== "keep" && investMode !== "withdraw" && amountInvalid) ||
+                    (investMode === "stock" && !selectedTicker) ||
+                    (investMode === "withdraw" && activeBanks.length === 0)
+                  }
+                  onClick={() => {
+                    if (investMode === "keep") { onClose(); return; }
+                    if (investMode === "withdraw") { setStep("confirm"); haptic("light"); return; }
+                    setStep("confirm");
+                    haptic("light");
+                  }}
+                >
+                  {investMode === "keep" ? "Keep as cash" : investMode === "withdraw" ? "Review withdrawal" : "Review investment"}
+                </Button>
+              </div>
             </>
           )}
 
@@ -515,7 +594,7 @@ export function InvestCashModal({
             <>
               <div className="text-center py-3 space-y-3">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-                  <CheckCircle2 size={32} className="text-green-600" />
+                  <DrawIcon icon={CheckCircle2} size={32} className="text-green-600" />
                 </div>
                 <div>
                   {investMode === "withdraw" ? (
@@ -531,18 +610,66 @@ export function InvestCashModal({
                   ) : (
                     <>
                       <p className="text-lg font-semibold text-foreground">
-                        {formatCurrency(roundedAmountToInvest)} is being invested
+                        {investingLiveCopy(
+                          `${formatCurrency(roundedAmountToInvest)} is being invested`,
+                          `${formatCurrency(roundedAmountToInvest)} is set to invest`,
+                        )}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {investMode === "stock" && selectedTicker
-                          ? `${childName}'s cash is buying ${selectedStockName} (${selectedTicker}).${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`
-                          : `${childName}'s fund is back to work.${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`}
+                          ? investingLiveCopy(
+                              `${childName}'s cash is buying ${selectedStockName} (${selectedTicker}).${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`,
+                              `${childName}'s cash is set to buy ${selectedStockName} (${selectedTicker}) once investing goes live.`,
+                            )
+                          : investingLiveCopy(
+                              `${childName}'s fund is back to work.${marketOpen ? " It will appear in Holdings shortly." : " It will execute at the next market open and appear in Holdings."}`,
+                              `We've recorded your choice. ${formatCurrency(roundedAmountToInvest)} invests once investing goes live.`,
+                            )}
                         {remainingCash > 0.009 ? ` ${formatCurrency(remainingCash)} remains available as cash.` : ""}
                       </p>
                     </>
                   )}
                 </div>
               </div>
+
+              {/* Forward glimpse — ties this contribution to the handoff (the
+                  keystone moment). Honest: "could be about", the SAME canonical
+                  projectFundValue math as the dashboard's "on track for" number,
+                  projecting a single lump with NO assumed further contributions,
+                  whole dollars (no false precision). Only for a real investment
+                  (not hold-as-cash or withdraw) with a real horizon to majority. */}
+              {(investMode === "default" || investMode === "stock") &&
+                typeof yearsToMajority === "number" &&
+                yearsToMajority >= 1 &&
+                roundedAmountToInvest > 0 &&
+                (() => {
+                  const future = projectFundValue({
+                    startingValue: roundedAmountToInvest,
+                    monthlyContribution: 0,
+                    yearsAhead: yearsToMajority,
+                  });
+                  if (future <= roundedAmountToInvest) return null;
+                  const fmt0 = (v: number) =>
+                    new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      maximumFractionDigits: 0,
+                    }).format(v);
+                  return (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-2.5">
+                      <span className="text-base leading-none mt-0.5" aria-hidden>🌱</span>
+                      <div>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          Left to grow, this {formatCurrency(roundedAmountToInvest)} could be about{" "}
+                          <span className="font-semibold">{fmt0(future)}</span> by the time {childName} turns {majorityAge ?? 18}.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                          {PROJECTION_DISCLAIMER}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
 
               {/* Auto-invest toggle - only shown after investing, not withdrawing */}
               {investMode !== "withdraw" && prefs !== null && prefs !== undefined && (
@@ -597,7 +724,7 @@ function OptionCard({
   selected: boolean;
   onClick: () => void;
   title: string;
-  description: string;
+  description?: string;
   badge?: string;
   variant?: "default" | "muted";
 }) {
@@ -605,7 +732,7 @@ function OptionCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-xl border p-3.5 transition-all ${
+      className={`w-full text-left rounded-xl border p-3.5 transition-all kiddo-press ${
         selected
           ? "border-primary bg-primary/6 shadow-sm"
           : "border-border hover:border-primary/40 bg-background"
@@ -622,11 +749,11 @@ function OptionCard({
             <p className={`text-sm font-semibold ${variant === "muted" ? "text-muted-foreground" : "text-foreground"}`}>
               {title}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
+            {description && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>}
           </div>
         </div>
         {badge && (
-          <span className="shrink-0 text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+          <span className="shrink-0 text-2xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
             {badge}
           </span>
         )}

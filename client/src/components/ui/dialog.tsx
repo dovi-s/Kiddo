@@ -2,6 +2,7 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { cn } from "@/lib/utils"
 import { haptic } from "@/lib/haptics"
+import { useSheetDragDismiss } from "@/lib/use-sheet-drag-dismiss"
 
 const Dialog = DialogPrimitive.Root
 
@@ -14,9 +15,14 @@ const DialogClose = DialogPrimitive.Close
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
+    // Easing aligned to lib/motion (outExpo, the same curve as the count-up +
+    // chevron) via INLINE animation-timing-function — reliably overrides
+    // tailwindcss-animate's default (the per-state Tailwind utility didn't take).
+    // Merged so a consumer's style still wins.
+    style={{ animationTimingFunction: "cubic-bezier(0.16,1,0.3,1)", ...style }}
     className={cn(
       "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200",
       className
@@ -40,24 +46,77 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 //     PersonalFundWaitlistModal.tsx (had both — the bug).
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { sheet?: boolean }
+>(({ className, children, style, sheet = false, ...props }, ref) => {
   React.useEffect(() => {
     haptic('light')
   }, [])
+
+  // Swipe-down-to-dismiss for the bottom-sheet variant on mobile (founder ask
+  // 2026-06-14: "anything that slides up should slide down to dismiss"). Shared
+  // hook: a center-strip drag handle that never fights body scroll and triggers
+  // the real Radix close past a threshold. Desktop (centered) keeps no handle;
+  // backdrop-tap + the X button stay as fallbacks regardless.
+  const { setContentRef, closeRef, handleProps } = useSheetDragDismiss<HTMLDivElement>(ref)
 
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
-        ref={ref}
+        ref={setContentRef}
+        // Easing via INLINE animation-timing-function (reliably overrides
+        // tailwindcss-animate): outExpo on open + close — the same curve as the
+        // count-up/chevron — so the subtle zoom-95 scale-in settles on our system
+        // curve. Merged so a consumer's style still wins.
+        style={{ animationTimingFunction: "cubic-bezier(0.16,1,0.3,1)", ...style }}
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-5 border-0 bg-background p-6 shadow-premium-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl",
+          sheet
+            // Sheet variant — FLEX-COL so the consumer's body can be flex-1 + scroll
+            // (the fix for the earlier regression: a fixed-height body broke scroll
+            // under the bottom anchor). Bottom-anchored slide-up on mobile, centered
+            // zoom on desktop. Inline outExpo easing above drives the motion.
+            // pt bumped on mobile to make room for the drag handle.
+            ? "fixed inset-x-0 bottom-0 z-50 flex flex-col w-full max-h-[92vh] gap-5 border-0 bg-background p-6 pt-7 shadow-premium-lg rounded-t-2xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-[100%] data-[state=closed]:slide-out-to-bottom-[100%] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[88vh] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6 sm:duration-200 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95"
+            : "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-5 border-0 bg-background p-6 shadow-premium-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-2xl",
           className
         )}
         {...props}
       >
+        {sheet && (
+          <>
+            {/* Drag handle — center-only touch zone so it never intercepts a
+                corner close button or steals the body's scroll. Mobile only. */}
+            <div
+              {...handleProps}
+              className="absolute left-1/2 top-0 z-10 flex h-8 w-24 -translate-x-1/2 items-start justify-center pt-2 touch-none cursor-grab active:cursor-grabbing sm:hidden"
+              aria-hidden="true"
+              data-testid="sheet-drag-handle"
+            >
+              <span className="h-1.5 w-10 rounded-full bg-foreground/20" />
+            </div>
+            {/* Hidden real close so the drag dismiss runs Radix's onOpenChange +
+                slide-out exit, identical to tapping the X. */}
+            <DialogPrimitive.Close ref={closeRef} aria-hidden="true" tabIndex={-1} className="sr-only">
+              close
+            </DialogPrimitive.Close>
+          </>
+        )}
         {children}
+        {/* Bottom safe-area spacer for the mobile sheet. Sheets slide to
+            bottom-0 = the screen edge, so on devices with a home indicator the
+            last content (a sticky action bar, the last option) sits under it and
+            reads as "cut off." A trailing flex-shrink-0 spacer of exactly
+            env(safe-area-inset-bottom) pushes content clear. Universal: reaches
+            even p-0 sheets that manage their own inner padding (most of them).
+            0-height on any device without an inset, so it never regresses
+            desktop or non-notch phones. */}
+        {sheet && (
+          <div
+            aria-hidden="true"
+            className="shrink-0 sm:hidden"
+            style={{ height: "env(safe-area-inset-bottom, 0px)" }}
+          />
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   )

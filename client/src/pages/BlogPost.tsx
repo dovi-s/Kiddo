@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useParams, useSearch } from "wouter";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
@@ -8,6 +8,7 @@ import { blogPosts, getBlogPost } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 import { buildTrackedGetStartedHref, trackReferralEvent } from "@/lib/acquisition";
 import { usePageSeo } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
 import NotFound from "@/pages/not-found";
 
 export default function BlogPost() {
@@ -30,12 +31,14 @@ export default function BlogPost() {
   const startHref = buildTrackedGetStartedHref(search, { ref: `blog:${post.slug}`, src: `blog_${post.slug}` });
   const primaryHref = post.ctaHref || "/get-started";
   const resolvedPrimaryHref = primaryHref === "/get-started" ? startHref : primaryHref;
+  // Always keep the signup path reachable: when the primary CTA points somewhere
+  // educational (how-it-works / pricing / faq), the secondary is "Start your
+  // child's fund". Only when the primary IS get-started does the secondary fall
+  // back to pricing. Fixes the leak where /how-it-works posts never offered signup.
   const secondaryCta =
-    primaryHref === "/pricing"
-      ? { href: "/faq", label: "Read FAQ", destination: "faq" }
-      : primaryHref === "/faq"
-        ? { href: "/pricing", label: "See pricing", destination: "pricing" }
-        : { href: "/pricing", label: "See pricing", destination: "pricing" };
+    primaryHref === "/get-started"
+      ? { href: "/pricing", label: "See pricing", destination: "pricing" }
+      : { href: startHref, label: "Start your child's fund", destination: "get_started" };
   const relatedPosts = blogPosts.filter((entry) => entry.slug !== post.slug).slice(0, 3);
 
   usePageSeo({
@@ -43,8 +46,23 @@ export default function BlogPost() {
     description: post.description,
   });
 
+  // Article structured data so blog posts can earn article rich results.
+  const articleJsonLd = useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: post.title,
+      description: post.description,
+      ...(post.publishedAt ? { datePublished: post.publishedAt } : {}),
+      author: { "@type": "Organization", name: "Kiddo" },
+      publisher: { "@type": "Organization", name: "Kiddo" },
+    }),
+    [post.title, post.description, post.publishedAt],
+  );
+
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd data={articleJsonLd} id="blogpost-jsonld" />
       <Nav />
 
       <article className="pt-24 pb-20 md:pt-32 md:pb-28">
@@ -60,7 +78,7 @@ export default function BlogPost() {
               <span>{post.publishedAt}</span>
               {post.readTime ? <span>{post.readTime}</span> : null}
             </div>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight text-foreground mt-6">
+            <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-[-0.03em] text-foreground mt-6">
               {post.title}
             </h1>
             <p className="text-lg leading-8 text-muted-foreground mt-5">{post.description}</p>
@@ -71,7 +89,7 @@ export default function BlogPost() {
             ) : null}
 
             <div className="mt-6 rounded-3xl border border-border bg-muted/20 p-6 md:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Make this useful now</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Make this useful now</p>
               <h2 className="mt-3 font-heading text-2xl font-semibold text-foreground">
                 Read it now. Set it up before the next occasion.
               </h2>

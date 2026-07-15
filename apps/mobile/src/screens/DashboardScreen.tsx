@@ -8,21 +8,28 @@ import {
   RefreshControl,
   ScrollView,
   Share,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { slugify } from "@kora/utils";
 import { KText, KiddoCard, Button, elevate } from "../ui";
+import { areFontsLoaded } from "../ui/native";
+import { fontLoadError } from "../ui/fonts";
 import {
   apiCreateEvent,
   apiCreateMemoryNote,
   apiCreateMemoryPhoto,
+  apiUpdateMemoryEntry,
+  apiDeleteMemoryEntry,
   apiUploadMemoryPhoto,
+  apiGetActivities,
   apiGetAllEvents,
   apiGetDashboardSummary,
   apiGetFundGifts,
@@ -34,6 +41,7 @@ import {
   apiRegisterMobilePushToken,
   apiUpdateMobilePushPreferences,
   formatBalance,
+  type ApiActivity,
   type ApiEvent,
   type ApiFund,
   type ApiGift,
@@ -64,6 +72,11 @@ import {
   apiRevokeTrustedDevice,
   type TrustedDeviceRow,
 } from "../api";
+
+// Bump this whenever you want to confirm the phone picked up a fresh bundle.
+// It prints at the bottom of the Settings tab. If you DON'T see this exact
+// string there, your Expo Go is serving a stale cached build (run mobile:reset).
+const BUILD_TAG = "Jun17-fonts-1";
 
 type Tab = "home" | "memory" | "gift" | "growth" | "settings";
 
@@ -195,7 +208,7 @@ function TabBar({ active, onPress }: { active: Tab; onPress: (tab: Tab) => void 
               <Ionicons
                 name={(isActive ? tab.iconActive : tab.icon) as any}
                 size={isGift ? 22 : 20}
-                color={isGift ? "#3D2B09" : isActive ? colors.evergreen : "#8B948C"}
+                color={isGift ? semanticColors.native.goldInkDeep : isActive ? colors.evergreen : semanticColors.native.textFaint}
               />
             </View>
             <Text style={[tabStyles.tabLabel, isActive && tabStyles.tabLabelActive, isGift && tabStyles.tabLabelGift]}>
@@ -236,7 +249,11 @@ function AccountTab({
   activeFund: ApiFund | null;
   onLogout: () => void;
 }) {
+  // useNavigation resolves the parent native-stack so the Account tab (rendered
+  // deep inside DashboardScreen) can push the Plan screen.
+  const navigation = useNavigation<any>();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [taxOpen, setTaxOpen] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushDeviceCount, setPushDeviceCount] = useState(0);
   const [pushBusy, setPushBusy] = useState(false);
@@ -330,6 +347,12 @@ function AccountTab({
             deviceName,
             platform: Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web",
           });
+          // Reload the list AFTER registration resolves. The bioEnabled
+          // effect fires loadTrustedDevices() the moment we flip the flag
+          // above, which races ahead of this register call and loads an
+          // empty list — leaving "Face ID is ON" with no devices shown.
+          // Re-loading here guarantees the just-registered device appears.
+          await loadTrustedDevices();
         } catch {
           // Non-fatal.
         }
@@ -401,6 +424,21 @@ function AccountTab({
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const childName = getChildName(activeFund);
+  const majorityAge = Number((activeFund as any)?.majorityAge) || 18;
+  const transferDate = (() => {
+    if (!activeFund?.recipientBirthdate) return null;
+    const d = new Date(`${activeFund.recipientBirthdate}T12:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setFullYear(d.getFullYear() + majorityAge);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  })();
+  const statusRaw = String(activeFund?.status || "active").toLowerCase();
+  const statusText = statusRaw === "active" ? "Active" : statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
+  const fundDetails: [string, string][] = [
+    ["Account type", String(activeFund?.accountType || "UTMA").toUpperCase()],
+    ["Status", statusText],
+    ...(transferDate ? ([[`Transfers to ${childName}`, transferDate]] as [string, string][]) : []),
+  ];
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -409,7 +447,7 @@ function AccountTab({
       <CoParentSection activeFund={activeFund} />
       <KidViewSection activeFund={activeFund} />
 
-      <Section title={`When ${childName} turns 18`}>
+      <Section title={`When ${childName} turns ${majorityAge}`}>
         <View style={styles.planCard}>
           <Text style={styles.planTitle}>They get full control.</Text>
           <Text style={styles.planBody}>
@@ -418,17 +456,78 @@ function AccountTab({
         </View>
       </Section>
 
+      <Section title="Fund details">
+        <View style={styles.planCard}>
+          {fundDetails.map(([label, value], i) => (
+            <View
+              key={label}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingVertical: 9,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: semanticColors.native.border,
+              }}
+            >
+              <Text style={{ color: semanticColors.native.textSecondary, fontSize: 14 }}>{label}</Text>
+              <Text
+                style={{
+                  color: label === "Status" && statusRaw === "active" ? semanticColors.ledger.positive : colors.ink,
+                  fontSize: 14,
+                  fontWeight: "700",
+                }}
+              >
+                {value}
+              </Text>
+            </View>
+          ))}
+          {(
+            [
+              ["Tax documents", `${WEB_BASE}/tax-documents`],
+              ["Legal & disclosures", `${WEB_BASE}/legal`],
+            ] as [string, string][]
+          ).map(([label, url]) => (
+            <Pressable
+              key={label}
+              onPress={() => Linking.openURL(url).catch(() => {})}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingVertical: 11,
+                borderTopWidth: 1,
+                borderTopColor: semanticColors.native.border,
+              }}
+            >
+              <Text style={{ color: colors.evergreen, fontSize: 14, fontWeight: "700" }}>{label}</Text>
+              <Ionicons name="chevron-forward" size={16} color={semanticColors.native.textFaint} />
+            </Pressable>
+          ))}
+        </View>
+      </Section>
+
+      <Section title="Account">
+        <View style={styles.planCard}>
+          <Text style={styles.planTitle}>{displayName}</Text>
+          <Text style={styles.planBody}>{user.email}</Text>
+          <Pressable style={styles.primarySmallBtn} onPress={() => navigation.navigate("Profile")}>
+            <Text style={styles.primarySmallBtnText}>Edit profile</Text>
+          </Pressable>
+        </View>
+      </Section>
+
       <Section title="Membership">
         <View style={styles.planCard}>
-          <Text style={styles.planTitle}>Free</Text>
+          <Text style={styles.planTitle}>Kiddo membership</Text>
           <Text style={styles.planBody}>
-            One active event. Platform fee: $2 on gifts up to $200, then 1% of the full gift amount over $200.
+            See your plan, manage billing, or unlock more with Kiddo+ and Family. No platform fee on gifts: the full gift goes to the fund.
           </Text>
           <Pressable
             style={styles.primarySmallBtn}
-            onPress={() => Linking.openURL(`${WEB_BASE}/pricing`).catch(() => {})}
+            onPress={() => navigation.navigate("Plan", { fundId: activeFund?.id })}
           >
-            <Text style={styles.primarySmallBtnText}>See Kiddo+</Text>
+            <Text style={styles.primarySmallBtnText}>Manage plan</Text>
           </Pressable>
         </View>
       </Section>
@@ -462,6 +561,12 @@ function AccountTab({
             on this device. Lets the user see + revoke biometric on
             other devices where they've enabled Face ID. Per
             FACE_ID_SPEC.md (trusted devices panel item). */}
+        {bioEnabled && trustedDevices.length === 0 && (
+          <View style={[styles.pushCard, { marginTop: spacing.sm }]}>
+            <Text style={styles.pushTitle}>Devices using Face ID</Text>
+            <Text style={styles.pushBody}>Devices will appear here once registered.</Text>
+          </View>
+        )}
         {bioEnabled && trustedDevices.length > 0 && (
           <View style={[styles.pushCard, { marginTop: spacing.sm }]}>
             <Text style={styles.pushTitle}>Devices using Face ID</Text>
@@ -522,14 +627,53 @@ function AccountTab({
         <SettingsRow title="Name" value={displayName} />
         <SettingsRow title="Email" value={user.email} />
         <SettingsRow title="Privacy" value="Private" />
-        <SettingsRow title="Tax documents" value="View" />
-        <SettingsRow title="Legal" value="Disclosures" />
+        <SettingsRow title="Tax documents" value="View" onPress={() => setTaxOpen(true)} />
+        <SettingsRow
+          title="Legal"
+          value="Disclosures"
+          onPress={() => Linking.openURL(`${WEB_BASE}/legal?tab=terms`).catch(() => {})}
+        />
       </Section>
 
       <Pressable onPress={handleLogout} disabled={loggingOut} style={styles.signOutBtn}>
         <Text style={styles.signOutText}>{loggingOut ? "Signing out..." : "Sign out"}</Text>
       </Pressable>
+
+      {/* Build marker — confirms the phone is running the latest bundle (vs a
+          stale Expo Go cache). Bump BUILD_TAG whenever you want a fresh check. */}
+      <Text
+        style={{ textAlign: "center", color: semanticColors.native.textWhisper, fontSize: 12, marginTop: spacing.md, marginBottom: 4 }}
+      >
+        Kiddo native · build {BUILD_TAG}
+        {"\n"}fonts: {areFontsLoaded() ? "loaded ✓" : `FALLBACK ${fontLoadError ?? "…"}`}
+      </Text>
+
+      <TaxDocsSheet visible={taxOpen} childName={childName} onClose={() => setTaxOpen(false)} />
     </ScrollView>
+  );
+}
+
+// Tax documents — honest pre-custody state. No 1099/tax forms are generated until
+// investing is live and a tax year closes; mirror the web's "nothing yet" posture
+// rather than imply documents exist.
+function TaxDocsSheet({ visible, childName, onClose }: { visible: boolean; childName: string; onClose: () => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(14,37,24,0.4)" }} onPress={onClose} />
+      <View style={{ backgroundColor: colors.cream, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 40 }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface.muted, alignSelf: "center", marginBottom: spacing.md }} />
+        <KText variant="heading">Tax documents</KText>
+        <KText variant="body" color={semanticColors.text.muted} style={{ marginTop: spacing.sm }}>
+          There aren't any yet. Tax forms (like a 1099) are issued once investing is live and a tax year
+          closes — they'll appear here, and we'll email you when one is ready.
+        </KText>
+        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: spacing.sm }}>
+          A UTMA's earnings are reported under {childName}'s Social Security Number. Most kids owe little or
+          no tax thanks to the standard deduction, but this isn't tax advice — check with a tax professional.
+        </KText>
+        <Button label="Done" onPress={onClose} fullWidth style={{ marginTop: spacing.lg }} />
+      </View>
+    </Modal>
   );
 }
 
@@ -624,11 +768,11 @@ function EventComposer({
 
       <View style={styles.formCard}>
         <Text style={styles.inputLabel}>Event name</Text>
-        <TextInput value={name} onChangeText={setName} placeholder="Emma's Birthday" placeholderTextColor="#8B948C" style={styles.input} />
+        <TextInput value={name} onChangeText={setName} placeholder="Emma's Birthday" placeholderTextColor={semanticColors.native.textFaint} style={styles.input} />
         <Text style={styles.inputLabel}>Date</Text>
-        <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8B948C" keyboardType="numbers-and-punctuation" style={styles.input} />
+        <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor={semanticColors.native.textFaint} keyboardType="numbers-and-punctuation" style={styles.input} />
         <Text style={styles.inputLabel}>Goal</Text>
-        <TextInput value={goal} onChangeText={setGoal} placeholder="Optional" placeholderTextColor="#8B948C" keyboardType="decimal-pad" style={styles.input} />
+        <TextInput value={goal} onChangeText={setGoal} placeholder="Optional" placeholderTextColor={semanticColors.native.textFaint} keyboardType="decimal-pad" style={styles.input} />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
 
@@ -646,7 +790,17 @@ function EventComposer({
 
 export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: DashboardScreenProps) {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const [tab, setTab] = useState<Tab>("home");
+  // Acorns-style contextual chrome: the HOME tab is the green-topped screen, so
+  // the system status bar (clock/wifi/battery) sits ON green with light glyphs,
+  // and the app header below it is green too — one continuous green surface from
+  // the notch through the hero. Every other tab (and any pushed cream screen)
+  // stays cream with dark glyphs. Gating on `isFocused` is what prevents the
+  // light bar leaking onto a pushed detail screen (FundDetail etc.): when this
+  // screen is covered, homeChrome flips false and the bar returns to dark — so
+  // we never need to touch the other screens. (Native only; the web PWA can't do
+  // per-screen glyph color, see the web theme-color/overscroll work.)
   const [funds, setFunds] = useState<ApiFund[]>([]);
   const [selectedFundId, setSelectedFundId] = useState<string>("");
   const [fundSwitcherOpen, setFundSwitcherOpen] = useState(false);
@@ -663,6 +817,8 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
   // The Memory Book timeline for the active fund (drives MemoryTab).
   const [memory, setMemory] = useState<MemoryEntry[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
+  // The canonical per-fund activity feed (Activity tab). null = loading.
+  const [activities, setActivities] = useState<ApiActivity[] | null>(null);
 
   const activeFund = useMemo(
     () => (selectedFundId ? funds.find((f) => f.id === selectedFundId) : null) ?? funds[0] ?? null,
@@ -711,14 +867,34 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     }
   }, []);
 
+  // Per-fund activity feed (Activity tab). null = loading; on error we keep
+  // null so the tab shows skeletons (never a false "Nothing yet"), and
+  // pull-to-refresh recovers.
+  const activitiesReqRef = useRef<string | undefined>(undefined);
+  const loadActivities = useCallback(async (fundId: string | undefined) => {
+    activitiesReqRef.current = fundId;
+    if (!fundId) {
+      setActivities([]);
+      return;
+    }
+    try {
+      const next = await apiGetActivities(fundId);
+      if (activitiesReqRef.current === fundId) setActivities(next);
+    } catch {
+      // leave null → skeletons; the connectivity banner + refresh recover.
+    }
+  }, []);
+
   useEffect(() => {
     // Clear stale data immediately on switch so the new fund never shows the
     // previous fund's holdings/gifts/memory for a frame.
     setSummary(null);
     setMemory([]);
+    setActivities(null);
     loadSummary(activeFund?.id);
     loadMemory(activeFund?.id);
-  }, [activeFund?.id, loadSummary, loadMemory]);
+    loadActivities(activeFund?.id);
+  }, [activeFund?.id, loadSummary, loadMemory, loadActivities]);
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -759,6 +935,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     loadDashboard(true);
     loadSummary(activeFund?.id);
     loadMemory(activeFund?.id);
+    loadActivities(activeFund?.id);
   };
 
   const childName = getChildName(activeFund);
@@ -791,27 +968,50 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
     );
   }
 
+  const homeChrome = isFocused && tab === "home";
+
   return (
     <View style={styles.screen}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      {/* Status bar: green + light glyphs over the home hero, cream + dark
+          elsewhere. backgroundColor is the Android bar fill; iOS ignores it and
+          shows the green header bg (which spans from y=0 behind the notch). */}
+      <StatusBar
+        barStyle={homeChrome ? "light-content" : "dark-content"}
+        backgroundColor={homeChrome ? colors.evergreen : colors.cream}
+      />
+      {/* Header — greens on the home tab so the status bar + header + hero read
+          as one continuous green surface (Acorns-style); cream on every other tab. */}
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + 10 },
+          homeChrome && { backgroundColor: colors.evergreen, borderBottomColor: "transparent" },
+        ]}
+      >
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerKiddo}>Kiddo</Text>
             {activeFund ? (
               <Pressable
                 onPress={() => funds.length > 1 && setFundSwitcherOpen(true)}
                 style={styles.fundSwitcherBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.fundSwitcherName}>{childName}</Text>
-                {funds.length > 1 && (
-                  <Ionicons name="chevron-down" size={14} color={colors.evergreen} style={{ marginTop: 1 }} />
-                )}
+                <Text style={[styles.fundSwitcherName, homeChrome && { color: colors.cream }]}>{childName}'s Fund</Text>
+                <Ionicons name="chevron-down" size={16} color={homeChrome ? colors.cream : colors.ink} style={{ marginTop: 2 }} />
               </Pressable>
-            ) : null}
+            ) : (
+              <Text style={[styles.headerKiddo, homeChrome && { color: colors.cream }]}>Kiddo</Text>
+            )}
           </View>
-          <Text style={styles.headerTabLabel}>{headerTitle[tab]}</Text>
+          {/* profile/account icon (web parity, replaces the page-name label) */}
+          <Pressable
+            onPress={() => setTab("settings")}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+          >
+            <Ionicons name="person-circle-outline" size={30} color={homeChrome ? colors.cream : colors.evergreen} />
+          </Pressable>
         </View>
 
         {/* Fund switcher tabs (multi-fund parents) — mirrors the web's
@@ -820,32 +1020,40 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={{ marginTop: 10, marginHorizontal: -2 }}
-            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 2 }}
+            style={{ marginTop: 12, marginHorizontal: -2 }}
+            contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: 2, paddingVertical: 2 }}
           >
             {funds.map((f) => {
               const isActive = f.id === activeFund?.id;
+              // On the green header the pills invert: active = cream chip with
+              // evergreen text (stands off the green), idle = light translucent
+              // border + cream text. Cream header keeps the original treatment.
+              const pillOverride = homeChrome
+                ? isActive
+                  ? { backgroundColor: colors.cream }
+                  : { borderColor: "rgba(248,245,240,0.45)" }
+                : null;
+              const pillTextColor = homeChrome
+                ? isActive ? colors.evergreen : colors.cream
+                : isActive ? colors.cream : semanticColors.native.textSecondary;
               return (
                 <Pressable
                   key={f.id}
                   onPress={() => setSelectedFundId(f.id)}
-                  style={{ paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: isActive ? colors.evergreen : "transparent" }}
+                  style={[tabStyles.fundPill, isActive ? tabStyles.fundPillActive : tabStyles.fundPillIdle, pillOverride]}
                 >
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: isActive ? "900" : "700",
-                      color: isActive ? colors.evergreen : "#8B948C",
-                    }}
-                  >
+                  <Text style={[tabStyles.fundPillText, { color: pillTextColor }]}>
                     {getChildName(f)}
                   </Text>
                 </Pressable>
               );
             })}
-            <Pressable onPress={onAddFund} style={{ paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Ionicons name="add" size={15} color="#8B948C" />
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#8B948C" }}>Add</Text>
+            <Pressable
+              onPress={onAddFund}
+              style={[tabStyles.fundPill, tabStyles.fundPillIdle, { flexDirection: "row", gap: 3 }, homeChrome && { borderColor: "rgba(248,245,240,0.45)" }]}
+            >
+              <Ionicons name="add" size={15} color={homeChrome ? colors.cream : semanticColors.native.textSecondary} />
+              <Text style={[tabStyles.fundPillText, { color: homeChrome ? colors.cream : semanticColors.native.textSecondary }]}>Add</Text>
             </Pressable>
           </ScrollView>
         ) : null}
@@ -865,6 +1073,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           onSelectFund={onSelectFund}
           onAddFund={onAddFund}
           onCreateEvent={() => setCreatingEvent(true)}
+          isDemoAccount={user.isDemoAccount}
         />
       )}
       {tab === "memory" && (
@@ -874,6 +1083,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
           loading={loading || memoryLoading}
           refreshing={refreshing}
           onRefresh={handleRefresh}
+          onAddFund={onAddFund}
           onAddNote={
             activeFund
               ? async (content: string) => {
@@ -895,6 +1105,22 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
                 }
               : undefined
           }
+          onEditEntry={
+            activeFund
+              ? async (id: string, content: string) => {
+                  await apiUpdateMemoryEntry(id, content);
+                  await loadMemory(activeFund.id);
+                }
+              : undefined
+          }
+          onDeleteEntry={
+            activeFund
+              ? async (id: string) => {
+                  await apiDeleteMemoryEntry(id);
+                  await loadMemory(activeFund.id);
+                }
+              : undefined
+          }
         />
       )}
       {tab === "gift" && (
@@ -912,6 +1138,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
         <ActivityTab
           activeFund={activeFund}
           summary={summary}
+          activities={activities}
           loading={loading || summaryLoading}
           refreshing={refreshing}
           onRefresh={handleRefresh}
@@ -1000,13 +1227,20 @@ function StatPill({ value, label }: { value: string; label: string }) {
   );
 }
 
-function SettingsRow({ title, value }: { title: string; value: string }) {
-  return (
-    <View style={styles.settingsRow}>
+function SettingsRow({ title, value, onPress }: { title: string; value: string; onPress?: () => void }) {
+  const inner = (
+    <>
       <Text style={styles.settingsTitle}>{title}</Text>
-      <Text style={styles.settingsValue} numberOfLines={1}>{value}</Text>
-    </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "60%" }}>
+        <Text style={styles.settingsValue} numberOfLines={1}>{value}</Text>
+        {onPress ? <Ionicons name="chevron-forward" size={15} color={semanticColors.native.textFaint} /> : null}
+      </View>
+    </>
   );
+  if (onPress) {
+    return <Pressable style={styles.settingsRow} onPress={onPress}>{inner}</Pressable>;
+  }
+  return <View style={styles.settingsRow}>{inner}</View>;
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -1014,7 +1248,7 @@ function SettingsRow({ title, value }: { title: string; value: string }) {
 const switcher = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
   sheet: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: semanticColors.surface.raised,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: spacing.lg,
@@ -1022,7 +1256,7 @@ const switcher = StyleSheet.create({
     gap: 4,
     ...elevate({ y: -8, blur: 24, opacity: 0.14, color: colors.ink }),
   },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#DDD8D0", alignSelf: "center", marginBottom: spacing.sm },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.native.handle, alignSelf: "center", marginBottom: spacing.sm },
   heading: { color: colors.ink, fontSize: 17, fontWeight: "800", marginBottom: spacing.sm },
   row: {
     flexDirection: "row",
@@ -1030,15 +1264,15 @@ const switcher = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0EDE8",
+    borderBottomColor: semanticColors.native.divider,
   },
-  rowActive: { backgroundColor: "#F8F4EE", marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg, borderRadius: 0 },
-  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: "#DDD8D0", backgroundColor: "transparent" },
+  rowActive: { backgroundColor: semanticColors.native.fillCream, marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg, borderRadius: 0 },
+  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: semanticColors.native.handle, backgroundColor: "transparent" },
   dotActive: { borderColor: colors.evergreen, backgroundColor: colors.evergreen },
   rowInfo: { flex: 1, gap: 2 },
   rowName: { color: colors.ink, fontSize: 16, fontWeight: "700" },
   rowNameActive: { color: colors.evergreen, fontWeight: "800" },
-  rowBal: { color: "#6B7280", fontSize: 13, fontWeight: "600" },
+  rowBal: { color: semanticColors.native.textNeutral, fontSize: 13, fontWeight: "600" },
   addRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1049,6 +1283,11 @@ const switcher = StyleSheet.create({
 });
 
 const tabStyles = StyleSheet.create({
+  // Fund switcher pills (web parity: filled active / outline idle, not underline).
+  fundPill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  fundPillActive: { backgroundColor: colors.evergreen },
+  fundPillIdle: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border },
+  fundPillText: { fontSize: 14, fontWeight: "700" },
   bar: {
     flexDirection: "row",
     backgroundColor: semanticColors.surface.card,
@@ -1073,11 +1312,11 @@ const tabStyles = StyleSheet.create({
     height: 44,
     borderRadius: 14,
     backgroundColor: colors.gold,
-    ...elevate({ y: 5, blur: 10, opacity: 0.2, color: "#3D2B09" }),
+    ...elevate({ y: 5, blur: 10, opacity: 0.2, color: semanticColors.native.goldInkDeep }),
   },
-  tabLabel: { fontSize: 10, fontWeight: "600", color: "#8B948C" },
+  tabLabel: { fontSize: 10, fontWeight: "600", color: semanticColors.native.textFaint },
   tabLabelActive: { color: colors.evergreen, fontWeight: "800" },
-  tabLabelGift: { color: "#3D2B09", fontWeight: "800" },
+  tabLabelGift: { color: semanticColors.native.goldInkDeep, fontWeight: "800" },
 });
 
 const styles = StyleSheet.create({
@@ -1094,12 +1333,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: semanticColors.surface.muted,
   },
-  headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { gap: 1 },
   headerKiddo: { color: colors.evergreen, fontSize: 12, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" },
   fundSwitcherBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  fundSwitcherName: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 26 },
-  headerTabLabel: { color: "#8B948C", fontSize: 13, fontWeight: "700" },
+  fundSwitcherName: { color: colors.ink, fontSize: 17, fontWeight: "800", lineHeight: 22 },
+  headerTabLabel: { color: semanticColors.native.textFaint, fontSize: 13, fontWeight: "700" },
 
   // Back nav
   backTap: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingVertical: 4 },
@@ -1108,10 +1347,10 @@ const styles = StyleSheet.create({
 
   // Loading / error
   center: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 10 },
-  loadingText: { color: "#6B7280", fontSize: 14 },
-  errorBox: { backgroundColor: "#FEF2F2", borderRadius: 22, padding: spacing.lg, gap: spacing.sm },
-  errorTitle: { color: "#991B1B", fontSize: 18, fontWeight: "900" },
-  errorText: { color: "#B91C1C", fontSize: 14, lineHeight: 20 },
+  loadingText: { color: semanticColors.native.textNeutral, fontSize: 14 },
+  errorBox: { backgroundColor: semanticColors.danger.background, borderRadius: 22, padding: spacing.lg, gap: spacing.sm },
+  errorTitle: { color: semanticColors.danger.text, fontSize: 18, fontWeight: "900" },
+  errorText: { color: semanticColors.buttonIntent.destructive, fontSize: 14, lineHeight: 20 },
 
   // Hero card
   heroCard: {
@@ -1122,127 +1361,131 @@ const styles = StyleSheet.create({
     ...elevate({ y: 14, blur: 24, opacity: 0.12, color: colors.ink }),
   },
   heroLabel: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "700" },
+  // White-on-evergreen hero amount: keep white (text.inverse cream would cut contrast).
   heroAmount: { color: "#FFFFFF", fontSize: 44, lineHeight: 50, fontWeight: "900" },
-  heroGain: { color: "#F8D889", fontSize: 15, fontWeight: "800" },
+  heroGain: { color: semanticColors.native.goldHighlight, fontSize: 15, fontWeight: "800" },
   heroSubline: { color: "rgba(255,255,255,0.72)", fontSize: 14, lineHeight: 20, fontWeight: "600", marginTop: 4 },
 
   // Action row
   actionRow: { flexDirection: "row", gap: spacing.sm },
   primaryAction: { flex: 1.35, flexDirection: "row", backgroundColor: colors.gold, borderRadius: 999, paddingVertical: 15, alignItems: "center", justifyContent: "center" },
-  primaryActionText: { color: "#38290A", fontSize: 15, fontWeight: "900" },
-  secondaryAction: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 999, paddingVertical: 15, alignItems: "center", borderWidth: 1, borderColor: "#EEE8DD" },
+  primaryActionText: { color: semanticColors.native.goldInkDeeper, fontSize: 15, fontWeight: "900" },
+  secondaryAction: { flex: 1, backgroundColor: semanticColors.surface.raised, borderRadius: 999, paddingVertical: 15, alignItems: "center", borderWidth: 1, borderColor: semanticColors.native.border },
   secondaryActionText: { color: colors.ink, fontSize: 15, fontWeight: "800" },
 
   // Section
   section: { gap: spacing.sm },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "900" },
-  sectionCta: { color: "#8B948C", fontSize: 12, fontWeight: "700" },
+  sectionCta: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "700" },
 
   // Soft card
-  softCard: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: "#EEE8DD" },
+  softCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: semanticColors.native.border },
   softTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
-  softBody: { color: "#6B7280", fontSize: 14, lineHeight: 20 },
+  softBody: { color: semanticColors.native.textNeutral, fontSize: 14, lineHeight: 20 },
 
   // List row
-  listRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
-  rowMark: { width: 34, height: 34, borderRadius: 10, backgroundColor: "#F6EFE3", alignItems: "center", justifyContent: "center" },
+  listRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
+  rowMark: { width: 34, height: 34, borderRadius: 10, backgroundColor: semanticColors.native.fillWarm, alignItems: "center", justifyContent: "center" },
   flexOne: { flex: 1, minWidth: 0 },
   rowTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
-  rowBody: { color: "#6B7280", fontSize: 13, lineHeight: 18, marginTop: 2 },
-  rowRight: { color: "#8B948C", fontSize: 12, fontWeight: "700" },
+  rowBody: { color: semanticColors.native.textNeutral, fontSize: 13, lineHeight: 18, marginTop: 2 },
+  rowRight: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "700" },
 
   // Event preview
-  eventPreview: { backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: colors.evergreen + "30" },
+  eventPreview: { backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, gap: 4, borderWidth: 1, borderColor: colors.evergreen + "30" },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   eventName: { flex: 1, color: colors.ink, fontSize: 15, fontWeight: "900" },
   liveBadge: { backgroundColor: colors.evergreen + "18", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   liveBadgeText: { color: colors.evergreen, fontSize: 11, fontWeight: "900" },
-  eventMeta: { color: "#5E675F", fontSize: 13, fontWeight: "700" },
-  eventDate: { color: "#8B948C", fontSize: 12, fontWeight: "600" },
+  eventMeta: { color: semanticColors.native.textSecondary, fontSize: 13, fontWeight: "700" },
+  eventDate: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "600" },
 
   textAction: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingVertical: 8, paddingHorizontal: 2 },
   textActionText: { color: colors.evergreen, fontSize: 14, fontWeight: "800" },
 
   // Countdown
-  countdownCard: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: spacing.lg, gap: 4, borderWidth: 1, borderColor: "#EEE8DD" },
-  countdownLabel: { color: "#6B7280", fontSize: 13, fontWeight: "800" },
+  countdownCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 22, padding: spacing.lg, gap: 4, borderWidth: 1, borderColor: semanticColors.native.border },
+  countdownLabel: { color: semanticColors.native.textNeutral, fontSize: 13, fontWeight: "800" },
   countdownValue: { color: colors.ink, fontSize: 22, fontWeight: "900" },
-  countdownBody: { color: "#6B7280", fontSize: 14, lineHeight: 20 },
+  countdownBody: { color: semanticColors.native.textNeutral, fontSize: 14, lineHeight: 20 },
 
   // Next step card
-  nextStepCard: { backgroundColor: "#FFFFFF", borderRadius: 24, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.gold + "55" },
+  nextStepCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 24, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.gold + "55" },
   nextStepEyebrow: { color: colors.gold, fontSize: 12, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" },
   nextStepTitle: { color: colors.ink, fontSize: 24, lineHeight: 29, fontWeight: "900" },
-  nextStepBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
+  nextStepBody: { color: semanticColors.native.textSecondary, fontSize: 15, lineHeight: 23 },
 
   // Empty hero
-  emptyHero: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
+  emptyHero: { backgroundColor: semanticColors.surface.raised, borderRadius: 28, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
   emptyTitle: { color: colors.ink, fontSize: 28, lineHeight: 32, fontWeight: "900" },
-  emptyBody: { color: "#6B7280", fontSize: 16, lineHeight: 24 },
+  emptyBody: { color: semanticColors.native.textNeutral, fontSize: 16, lineHeight: 24 },
 
   // Buttons
   primaryBtn: { backgroundColor: colors.evergreen, borderRadius: 999, paddingVertical: 16, alignItems: "center" },
+  // White-on-evergreen button text: keep white (text.inverse cream would cut contrast).
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
   primarySmallBtn: { alignSelf: "flex-start", backgroundColor: colors.evergreen, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 16 },
+  // White-on-evergreen button text: keep white.
   primarySmallBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "900" },
 
   // Memory
-  memoryCover: { backgroundColor: "#2F3B34", borderRadius: 28, padding: spacing.xl, gap: spacing.md },
-  memoryEyebrow: { color: "#F8D889", fontSize: 12, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" },
-  memoryTitle: { color: "#FFF7E8", fontSize: 30, lineHeight: 34, fontWeight: "900" },
+  memoryCover: { backgroundColor: semanticColors.native.surfaceDeep, borderRadius: 28, padding: spacing.xl, gap: spacing.md },
+  memoryEyebrow: { color: semanticColors.native.goldHighlight, fontSize: 12, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" },
+  memoryTitle: { color: semanticColors.native.creamOnDeep, fontSize: 30, lineHeight: 34, fontWeight: "900" },
   memoryBody: { color: "rgba(255,247,232,0.8)", fontSize: 16, lineHeight: 24 },
   memoryStats: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   statPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  // White-on-dark-card stat value: keep white (creamOnDeep would warm it).
   statValue: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
   statLabel: { color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: "700" },
-  memoryEmpty: { backgroundColor: "#FFFDF8", borderRadius: 24, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: "#E7D9C5" },
+  memoryEmpty: { backgroundColor: semanticColors.native.fillCard, borderRadius: 24, padding: spacing.xl, gap: spacing.md, borderWidth: 1, borderColor: semanticColors.native.borderWarm },
   memoryEmptyTitle: { color: colors.ink, fontSize: 24, fontWeight: "900" },
-  memoryEmptyBody: { color: "#6B7280", fontSize: 15, lineHeight: 23 },
+  memoryEmptyBody: { color: semanticColors.native.textNeutral, fontSize: 15, lineHeight: 23 },
   memoryNoteBtn: { alignSelf: "flex-start", backgroundColor: colors.gold, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 18 },
-  memoryNoteText: { color: "#3D2B09", fontWeight: "900" },
+  memoryNoteText: { color: semanticColors.native.goldInkDeep, fontWeight: "900" },
   memoryList: { gap: spacing.sm },
   chapterTitle: { color: colors.ink, fontSize: 18, fontWeight: "900", marginTop: spacing.xs },
-  memoryGiftCard: { backgroundColor: "#FFFDF8", borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: "#E7D9C5" },
+  memoryGiftCard: { backgroundColor: semanticColors.native.fillCard, borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.native.borderWarm },
   memoryGiftFrom: { color: colors.ink, fontSize: 17, fontWeight: "900" },
-  memoryGiftDate: { color: "#8B948C", fontSize: 12, fontWeight: "700" },
-  memoryQuote: { color: "#3F3A33", fontSize: 16, lineHeight: 25, fontStyle: "italic" },
+  memoryGiftDate: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "700" },
+  memoryQuote: { color: semanticColors.native.textQuote, fontSize: 16, lineHeight: 25, fontStyle: "italic" },
   memoryGiftAmount: { color: colors.ink, fontSize: 22, fontWeight: "900" },
-  memoryProvenance: { borderTopWidth: 1, borderTopColor: "#E7D9C5", paddingTop: spacing.sm },
-  memoryProvenanceText: { color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "800" },
+  memoryProvenance: { borderTopWidth: 1, borderTopColor: semanticColors.native.borderWarm, paddingTop: spacing.sm },
+  memoryProvenanceText: { color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "800" },
 
   // Gift tab
   giftHero: {
-    backgroundColor: "#2F3B34",
+    backgroundColor: semanticColors.native.surfaceDeep,
     borderRadius: 30,
     padding: spacing.xl,
     gap: spacing.md,
     ...elevate({ y: 14, blur: 24, opacity: 0.12, color: colors.ink }),
   },
-  giftEyebrow: { color: "#F8D889", fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  giftTitle: { color: "#FFF7E8", fontSize: 28, lineHeight: 33, fontWeight: "900" },
+  giftEyebrow: { color: semanticColors.native.goldHighlight, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  giftTitle: { color: semanticColors.native.creamOnDeep, fontSize: 28, lineHeight: 33, fontWeight: "900" },
   giftBody: { color: "rgba(255,247,232,0.8)", fontSize: 15, lineHeight: 23 },
   giftUrlBox: { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 14, paddingHorizontal: spacing.md, paddingVertical: 13 },
-  giftUrlText: { color: "#FFF7E8", fontSize: 13, fontWeight: "800" },
+  giftUrlText: { color: semanticColors.native.creamOnDeep, fontSize: 13, fontWeight: "800" },
   giftPrimaryBtn: { flexDirection: "row", backgroundColor: colors.gold, borderRadius: 999, paddingVertical: 16, alignItems: "center", justifyContent: "center" },
-  giftPrimaryBtnText: { color: "#3D2B09", fontSize: 16, fontWeight: "900" },
+  giftPrimaryBtnText: { color: semanticColors.native.goldInkDeep, fontSize: 16, fontWeight: "900" },
   giftSecondaryBtn: { alignItems: "center", paddingVertical: 4 },
-  giftSecondaryBtnText: { color: "#FFF7E8", fontSize: 14, fontWeight: "800" },
-  giftTrustStrip: { flexDirection: "row", alignItems: "flex-start", backgroundColor: "#FFFFFF", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
-  giftTrustText: { flex: 1, color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "600" },
+  giftSecondaryBtnText: { color: semanticColors.native.creamOnDeep, fontSize: 14, fontWeight: "800" },
+  giftTrustStrip: { flexDirection: "row", alignItems: "flex-start", backgroundColor: semanticColors.surface.raised, borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.border },
+  giftTrustText: { flex: 1, color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   giftLoopNudge: { backgroundColor: colors.evergreen + "0E", borderRadius: 18, padding: spacing.md, borderWidth: 1, borderColor: colors.evergreen + "22", alignItems: "center" },
   giftLoopText: { color: colors.evergreen, fontSize: 15, fontWeight: "800", textAlign: "center" },
 
   // Growth tab
-  growthHero: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.xl, gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
-  growthLabel: { color: "#6B7280", fontSize: 12, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
+  growthHero: { backgroundColor: semanticColors.surface.raised, borderRadius: 28, padding: spacing.xl, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.native.border },
+  growthLabel: { color: semanticColors.native.textNeutral, fontSize: 12, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
   growthAmount: { color: colors.ink, fontSize: 42, lineHeight: 48, fontWeight: "900" },
-  growthBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
-  growthTrack: { height: 8, borderRadius: 999, backgroundColor: "#EFE7DA", overflow: "hidden", marginTop: 4 },
+  growthBody: { color: semanticColors.native.textSecondary, fontSize: 15, lineHeight: 23 },
+  growthTrack: { height: 8, borderRadius: 999, backgroundColor: semanticColors.native.track, overflow: "hidden", marginTop: 4 },
   growthFill: { height: "100%", borderRadius: 999, backgroundColor: colors.evergreen },
-  growthMeta: { color: "#8B948C", fontSize: 12, fontWeight: "800" },
-  growthTrustBox: { backgroundColor: "#F8F4EC", borderRadius: 16, padding: spacing.md, borderWidth: 1, borderColor: "#E7D9C5" },
-  growthTrustText: { color: "#5E675F", fontSize: 13, lineHeight: 19, fontWeight: "600" },
+  growthMeta: { color: semanticColors.native.textFaint, fontSize: 12, fontWeight: "800" },
+  growthTrustBox: { backgroundColor: semanticColors.native.fillCream, borderRadius: 16, padding: spacing.md, borderWidth: 1, borderColor: semanticColors.native.borderWarm },
+  growthTrustText: { color: semanticColors.native.textSecondary, fontSize: 13, lineHeight: 19, fontWeight: "600" },
 
   // Settings / Account
   settingsRow: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, flexDirection: "row", justifyContent: "space-between", gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.surface.muted },
@@ -1270,21 +1513,23 @@ const styles = StyleSheet.create({
   toggleBtn: { borderRadius: radius.pill, backgroundColor: semanticColors.surface.muted, paddingVertical: 8, paddingHorizontal: 14 },
   toggleBtnOn: { backgroundColor: colors.evergreen },
   toggleText: { color: semanticColors.text.muted, fontSize: 12, fontWeight: "900" },
+  // White-on-evergreen (toggle on): keep white.
   toggleTextOn: { color: "#FFFFFF" },
-  signOutBtn: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, alignItems: "center", borderWidth: 1, borderColor: "#E4B8B0" },
-  signOutText: { color: "#B23B2E", fontSize: 15, fontWeight: "800" },
+  signOutBtn: { backgroundColor: semanticColors.surface.card, borderRadius: radius.card, padding: spacing.md, alignItems: "center", borderWidth: 1, borderColor: semanticColors.native.signOutBorder },
+  signOutText: { color: semanticColors.native.signOut, fontSize: 15, fontWeight: "800" },
 
   // Event composer
   composerWrap: { padding: spacing.md, gap: spacing.md, paddingBottom: 32 },
   composerLead: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: "900" },
   typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  typeChip: { backgroundColor: "#FFFFFF", borderRadius: 999, paddingHorizontal: 15, paddingVertical: 12, borderWidth: 1, borderColor: "#EEE8DD" },
+  typeChip: { backgroundColor: semanticColors.surface.raised, borderRadius: 999, paddingHorizontal: 15, paddingVertical: 12, borderWidth: 1, borderColor: semanticColors.native.border },
   typeChipActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },
   typeChipText: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  // White-on-evergreen (active chip): keep white.
   typeChipTextActive: { color: "#FFFFFF" },
-  formCard: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: "#EEE8DD" },
+  formCard: { backgroundColor: semanticColors.surface.raised, borderRadius: 22, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: semanticColors.native.border },
   inputLabel: { color: colors.ink, fontSize: 13, fontWeight: "900", marginTop: 4 },
-  input: { minHeight: 52, borderRadius: 14, borderWidth: 1.5, borderColor: "#E5DDD0", paddingHorizontal: spacing.md, color: colors.ink, fontSize: 16, backgroundColor: "#FFFDF8" },
+  input: { minHeight: 52, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 16, backgroundColor: semanticColors.native.fillCard },
   secondaryFullBtn: { alignItems: "center", paddingVertical: 12 },
   secondaryFullBtnText: { color: colors.ink, fontSize: 15, fontWeight: "800" },
   disabled: { opacity: 0.6 },

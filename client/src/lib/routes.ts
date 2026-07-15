@@ -22,7 +22,7 @@ export function normalizePath(path: string): string {
 // Public, unauthenticated marketing surfaces. These render their own
 // Nav + Footer chrome (no app sidebar / mobile nav) and never show the
 // demo banner. /demo is included: it is the marketing landing page for
-// the Dunphy demo (the actual demo *experience* after login is the
+// the Rivera demo (the actual demo *experience* after login is the
 // app, not this page).
 export function isMarketingRoute(path: string): boolean {
   const pathname = normalizePath(path);
@@ -50,6 +50,7 @@ export function isMarketingRoute(path: string): boolean {
     // Now reserved slugs, so listed here explicitly to keep their chrome
     // intentional and net-neutral. /p2p-preview is the fenced P2P concept demo.
     pathname === "/p2p-preview" ||
+    pathname === "/generational-loop" ||
     pathname === "/legal" ||
     pathname === "/tools/at-18-calculator" ||
     pathname === "/tools/robux-vs-utma" ||
@@ -71,7 +72,7 @@ export function isMarketingRoute(path: string): boolean {
 
 // Authenticated app surfaces — the pages where a signed-in user is
 // actually operating on fund data (theirs or, in the demo, the seeded
-// Dunphy data). This is an ALLOWLIST on purpose: the demo banner shows
+// Rivera data). This is an ALLOWLIST on purpose: the demo banner shows
 // ONLY here. Any route not listed (marketing, /login, /get-started,
 // claim / transfer / invite flows, public gift checkout, password
 // reset, email verify, magic-link landing, etc.) is a public /
@@ -88,9 +89,9 @@ export function isMarketingRoute(path: string): boolean {
 // When you add a new authenticated app page, add its path here.
 const APP_SURFACE_EXACT = new Set<string>([
   "/dashboard",
+  "/design-lab", // redesign fork of /dashboard — same demo chrome (banner, etc.)
   "/activity",
   "/events",
-  "/event/create",
   "/settings",
   "/account",
   "/profile",

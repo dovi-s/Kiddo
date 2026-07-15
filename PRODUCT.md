@@ -314,7 +314,6 @@ win on the objector's terms.
   "how do I gift stocks to a kid" threads honestly
 - `shared/schema.ts` — data model
 - `shared/monetization.ts` — locked plan matrix in code
-- `shared/gift-lessons.ts` — the gifter-curated lesson catalog
 - The locked memory directory — durable principles. Each file is
   one decision; together they encode the design discipline that
   makes Kiddo Kiddo.

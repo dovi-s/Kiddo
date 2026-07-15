@@ -1,0 +1,82 @@
+# Codemagic CI — builds the Kiddo Capacitor apps for iOS + Android in the cloud.
+# No Mac required (Codemagic provides macOS build machines for iOS).
+#
+# ONE-TIME SETUP (in the Codemagic web UI — only you can do these):
+#  1. Connect this repo at https://codemagic.io
+#  2. iOS: add your Apple Developer signing (App Store Connect API key + a
+#     distribution cert/profile for bundle id `com.kiddo.app`).
+#  3. Android: add a keystore (App > Code signing identities) referenced below.
+#  4. Set env var WEB_API_URL to your DEPLOYED backend URL (the bundled web build
+#     points the API there). Until the backend is deployed, builds still produce
+#     installable apps, but they need a reachable API to log in.
+#
+# Then: push to the repo (or hit "Start new build") and Codemagic builds both.
+
+workflows:
+  android:
+    name: Kiddo Android (Play Store)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      node: 20
+      groups:
+        - kiddo            # define WEB_API_URL (+ keystore vars) in this group
+      android_signing:
+        - kiddo_keystore   # the keystore reference you add in Codemagic
+    scripts:
+      - name: Install deps
+        script: npm ci
+      - name: Build web + sync Capacitor (production)
+        script: |
+          # Production: bundle the web build, don't use the dev server.url.
+          # (Either remove the `server` block in capacitor.config.ts for prod,
+          #  or keep a separate prod config — see CAPACITOR_BUILD.md.)
+          npm run build
+          npx cap sync android
+      - name: Build signed .aab
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
+    # publishing:
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
+
+  ios:
+    name: Kiddo iOS (App Store / TestFlight)
+    instance_type: mac_mini_m2     # macOS build machine — no Mac of your own needed
+    max_build_duration: 60
+    integrations:
+      app_store_connect: kiddo_asc  # the App Store Connect API key you add in Codemagic
+    environment:
+      node: 20
+      groups:
+        - kiddo
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.kiddo.app
+    scripts:
+      - name: Install deps
+        script: npm ci
+      - name: Build web + sync Capacitor (production)
+        script: |
+          npm run build
+          npx cap sync ios
+      - name: CocoaPods
+        script: cd ios/App && pod install
+      - name: Set signing
+        script: xcode-project use-profiles
+      - name: Build .ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "App"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

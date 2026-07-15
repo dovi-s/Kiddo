@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { isAnonGifterName } from "@shared/gifter-anon";
 import fs from "fs/promises";
 import path from "path";
 import { pool } from "./db";
@@ -6,6 +7,7 @@ import { sendEmail } from "./emailDelivery";
 import { renderKiddoEmail } from "./templates/baseTemplate";
 import { getMarketQuote } from "./marketQuotes";
 import { MONEY_CROSS_COPY } from "@shared/milestones";
+import { GIFT_TAX_EXCLUSION_LABEL } from "@shared/legal-copy";
 
 const GIFTER_NOTIFICATION_STATE_PATH = path.join(process.cwd(), ".local", "gifter-notifications.json");
 const GIFTER_NOTIFICATION_QUEUE_PATH = path.join(process.cwd(), ".local", "gifter-notification-queue.jsonl");
@@ -385,6 +387,7 @@ async function getFundReminderRows(): Promise<FundReminderRow[]> {
     FROM funds f
     LEFT JOIN users u ON u.id = f.user_id
     WHERE f.recipient_birthdate IS NOT NULL
+      AND f.memorialized_at IS NULL -- bereavement freeze: never nudge gifters about a memorialized child (BEREAVEMENT_POSTURE.md)
       -- Exclude post-handoff funds: a transferred fund is owned by the now-adult recipient,
       -- so gifter birthday/holiday/age-18 reminders ("Emma's birthday is in 14 days") are
       -- contextually wrong once Emma is grown and owns the fund. Mirrors fundBirthdayWorker.
@@ -734,7 +737,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   // given" social-proof list. This is the only paper trail they get; it
   // should be complete.
   const namedSender = entry.senderName ? String(entry.senderName).trim() : "";
-  const isAnonymous = !namedSender || /^anonymous$/i.test(namedSender) || /^someone who loves /i.test(namedSender);
+  const isAnonymous = isAnonGifterName(namedSender);
   const visibilityLine = isAnonymous
     ? "You sent this anonymously, so no name appears on the Memory Book or the gift page."
     : `Your first name (${namedSender.split(/\s+/)[0]}) appears in ${childName}'s family Memory Book and as a "who's already given" name on their gift page. Full name stays private. Reply to this email if you'd like it changed.`;
@@ -796,11 +799,11 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   //   (c) Kiddie-tax rules apply at the recipient level above the
   //       inflation-adjusted threshold (currently $2,700/yr for 2025)
   //   (d) Form 709 may apply if THIS gifter's total annual gifts to
-  //       this recipient exceed the IRS annual exclusion (currently
-  //       $18,000 for 2024, rising with inflation)
+  //       this recipient exceed the IRS annual exclusion (GIFT_TAX_EXCLUSION_LABEL
+  //       in @shared/legal-copy, rising with inflation)
   // Kept brief; the gifter's CPA fills in the rest.
   const taxLine = amount >= 500
-    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from our broker-dealer partner. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (\$18,000 for 2024, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
+    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from our broker-dealer partner. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (${GIFT_TAX_EXCLUSION_LABEL} per recipient, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
     : "";
 
   return {
@@ -1370,6 +1373,7 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
     FROM gifts g
     LEFT JOIN funds f ON f.id = g.fund_id
     WHERE g.sender_email IS NOT NULL
+      AND (f.memorialized_at IS NULL) -- bereavement: exclude memorialized recipients (BEREAVEMENT_POSTURE.md)
       AND TRIM(g.sender_email) <> ''
       AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold', 'pending')
       AND g.created_at >= NOW() - INTERVAL '14 days'
@@ -1516,6 +1520,7 @@ async function enqueueGiftAnniversaryEmails(log: (message: string, source?: stri
     FROM gifts g
     LEFT JOIN funds f ON f.id = g.fund_id
     WHERE g.sender_email IS NOT NULL
+      AND (f.memorialized_at IS NULL) -- bereavement: exclude memorialized recipients (BEREAVEMENT_POSTURE.md)
       AND TRIM(g.sender_email) <> ''
       AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold', 'pending')
       AND g.created_at <= NOW() - INTERVAL '1 year'

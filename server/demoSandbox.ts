@@ -69,3 +69,140 @@ export function demoMockCheckoutResponse(returnUrl?: string) {
     message: "This is a demo account. The flow completes without charging a card or moving real money.",
   };
 }
+
+// ── Demo write-guard ─────────────────────────────────────────────────────────
+// A demo VISITOR logs in as a SHARED demo account (phil@/robert@riverafamily.com).
+// The money-flow endpoints already self-sandbox (mock responses above). But the
+// REST of the mutation surface would PERSIST to the shared demo and pollute it
+// for the next visitor — or, worst case, LOCK it (2FA enroll, password change)
+// or HIJACK it (email change, account delete). This middleware blocks persisting
+// writes from demo accounts:
+//   - PATCH / PUT / DELETE: blanket-blocked. These are always mutations; no read
+//     or money-flow endpoint uses them.
+//   - POST: blocked only for the known mutation paths below — so read-via-POST,
+//     the money-flow mocks, /auth/login, and /auth/register still pass through.
+// Real (non-demo) users are NEVER affected (gated on req.user.isDemoAccount).
+// Returns 200 with a benign {demo, saved:false} body so the client cleanly
+// no-ops (a refetch shows the unchanged demo) instead of surfacing a scary
+// error. Keep DEMO_BLOCKED_POST_PATTERNS in sync as new persisting POSTs land.
+// Mapped from the full mutation-surface audit, 2026-06-05.
+const DEMO_BLOCKED_POST_PATTERNS: RegExp[] = [
+  // Catastrophic — lock or hijack the shared demo account
+  /^\/api\/user\/change-password$/,
+  /^\/api\/me\/change-email$/,
+  /^\/api\/auth\/2fa(\/|$)/,
+  /^\/api\/account\/delete$/,
+  // Profile / settings
+  /^\/api\/user\/feature-walls\/[^/]+\/dismiss$/,
+  /^\/api\/users\/me\/(roth-interest|earned-income)$/,
+  // Fund + child content
+  /^\/api\/funds\/[^/]+\/child-photo$/,
+  /^\/api\/funds\/[^/]+\/gift-code\/reset$/,
+  /^\/api\/funds\/[^/]+\/memory(\/|$)/, // add + photo/video/audio uploads
+  /^\/api\/memory\/[^/]+\/approve$/,
+  /^\/api\/funds\/[^/]+\/collaborators$/,
+  /^\/api\/funds\/[^/]+\/welcome-complete$/,
+  /^\/api\/funds\/[^/]+\/(snooze|unsnooze)-action$/,
+  // Events / occasions
+  /^\/api\/events$/,
+  /^\/api\/events\/[^/]+\/upload-image$/,
+  // Gifter-side
+  /^\/api\/gifter-account\/funds\/[^/]+\/(follow|unfollow)$/,
+  /^\/api\/gifter-account\/save-fund$/,
+  /^\/api\/gifter-account\/recurring\/[^/]+\/(cancel|pause|resume|update)$/,
+  // Thank-yous + gifter notifications (writes the seeded tray)
+  /^\/api\/funds\/[^/]+\/gifter-notifications\/(remove|memory-share)$/,
+  /^\/api\/funds\/[^/]+\/thank-yous\/[^/]+\/send$/,
+  /^\/api\/funds\/[^/]+\/thank-yous\/bulk-send$/,
+  /^\/api\/funds\/[^/]+\/thank-yous\/generate$/,
+  // Money / investing actions — these persist holdings + balances on the
+  // SHARED demo fund, so a demo visitor selling or deploying cash pollutes the
+  // demo for everyone after them (bug found 2026-06-18: a sell in the demo
+  // saved for all demo users). The 2026-06-05 audit predated investing being
+  // clickable in the demo. Block the whole money-mutation cluster.
+  // NOTE: /api/withdrawals and /api/funds/:id/auto-invest ALSO self-mock via
+  // isDemoFund (early {isDemo} return before any write), but list them here too
+  // so the block is belt-and-suspenders and independent of the inline check.
+  /^\/api\/holdings\/sell$/,
+  /^\/api\/funds\/[^/]+\/liquidate$/,
+  /^\/api\/funds\/[^/]+\/auto-invest$/,
+  /^\/api\/withdrawals$/,
+  /^\/api\/funds\/activate$/,
+  /^\/api\/funds\/activate-pending-drafts$/,
+  /^\/api\/funds\/[^/]+\/parent-contributions$/,
+  // Pulls 14 days of real Stripe checkout sessions and may persist them onto the
+  // demo fund (real money state reaching the shared demo). Owner-only, and the
+  // demo user IS the demo fund owner, so it's reachable.
+  /^\/api\/funds\/[^/]+\/reconcile-stripe-gifts$/,
+  // Releasing a held large gift credits the demo fund balance + flips gift state.
+  /^\/api\/funds\/[^/]+\/large-gift-holds\/[^/]+\/release$/,
+  // Claiming a gift debits the source fund and credits the target — a real
+  // balance/holding mutation on the shared demo.
+  /^\/api\/gifts\/[^/]+\/claim$/,
+  // Fund lifecycle — creating, closing, deleting, reopening funds all persist on
+  // the SHARED demo account, so a visitor could spawn/destroy demo funds for
+  // everyone after them. (POST /api/funds/:id/delete is a POST, not DELETE, so
+  // it is NOT caught by the blanket hard-write block above.)
+  /^\/api\/funds$/,
+  /^\/api\/funds\/[^/]+\/close$/,
+  /^\/api\/funds\/[^/]+\/delete$/,
+  /^\/api\/funds\/[^/]+\/reopen$/,
+  // SSN persists onto the demo fund (raw SQL UPDATE) — and writing a real SSN to
+  // the shared demo would be a privacy leak, like the bank-link case below.
+  /^\/api\/funds\/[^/]+\/recipient-ssn$/,
+  // Dismissing a nudge persists dismissedNudges on the shared demo fund.
+  /^\/api\/funds\/[^/]+\/dismiss-nudge$/,
+  // KYC submit writes kycStatus on the shared demo user (+ may activate a fund).
+  /^\/api\/kyc\/submit$/,
+  // Previous-owner access toggles persist on the shared demo fund (updateFund).
+  /^\/api\/funds\/[^/]+\/(revoke-previous-owner-access|previous-owner-live-access)$/,
+  // Age-transition lifecycle — preview/invite/verify/claim/complete/handoff all
+  // persist the age-transition record (and some send real email / queue a real
+  // custodian transfer) on the shared demo fund.
+  /^\/api\/funds\/[^/]+\/age-transition\/(preview-link|invite-link|handoff|verify-email-link)$/,
+  /^\/api\/age-transition\/[^/]+\/(claim|complete)$/,
+  // Device + push registration persists tokens tied to the shared demo user.
+  /^\/api\/mobile-push\/(register|test)$/,
+  /^\/api\/me\/trusted-devices$/,
+  /^\/api\/me\/trusted-devices\/[^/]+\/revoke$/,
+  // Subscription state mutations on the shared demo user (cancel/reactivate/
+  // overlap-cleanup persist subscription + membership rows; downgrade/portal
+  // self-mock via isDemoUser but block here too for independence). NOT blocking
+  // /api/subscription/sync-stripe — it's a POST-as-read the dashboard calls to
+  // refresh subscription state (idempotent ensureSubscription, no pollution).
+  /^\/api\/subscription\/(cancel|reactivate|cancel-starter-overlaps|downgrade-to-plus|portal)$/,
+  // Collaborator invitation accept/decline persist collaborator rows on the
+  // shared demo fund.
+  /^\/api\/invitations\/[^/]+\/(accept|decline)$/,
+  // Monetization telemetry inserts an activities row per call for the shared
+  // demo user — unbounded growth + pollution of the demo's activity table.
+  /^\/api\/monetization\/triggers$/,
+  // Kid View
+  /^\/api\/funds\/[^/]+\/kid-view-link$/,
+  // Banking — NEVER link a real bank to the shared demo account. A demo visitor
+  // completing Plaid would persist a real person's bank details on the demo user,
+  // visible to the next visitor (a privacy leak, not just state pollution).
+  // PATCH/DELETE on bank-accounts are already caught as hard writes; these cover
+  // the POSTs: Plaid link-token + exchange-public-token, and bank-account create.
+  /^\/api\/plaid(\/|$)/,
+  /^\/api\/bank-accounts(\/|$)/,
+];
+
+export function blockDemoMutations(req: any, res: any, next: any) {
+  if (!req.user?.isDemoAccount) return next();
+  const p = String(req.path || "");
+  if (!p.startsWith("/api/")) return next();
+  const method = req.method;
+  const isHardWrite = method === "PATCH" || method === "PUT" || method === "DELETE";
+  const isBlockedPost = method === "POST" && DEMO_BLOCKED_POST_PATTERNS.some((re) => re.test(p));
+  if (!isHardWrite && !isBlockedPost) return next();
+  return res.status(200).json({
+    demo: true,
+    saved: false,
+    // Framed to REASSURE, not just block: the feature works — it just doesn't
+    // persist in the shared demo. The client surfaces this as a subtle toast
+    // (see client/src/lib/queryClient.ts) so a blocked edit reads as "demo,"
+    // not "broken."
+    message: "Changes aren't saved here in the demo, but they will be in your own fund.",
+  });
+}

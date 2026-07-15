@@ -19,9 +19,9 @@ The first version of that idea showed up around her baby shower. By the time Emm
 
 ## Why they used Kiddo
 
-They wanted the birthday ask to feel warm, not transactional. One private link felt easier than registry instructions or brokerage setup notes.
+They wanted the birthday ask to feel warm. One private link felt easier than registry instructions or brokerage setup notes.
 
-They also wanted the gifts to feel like they were building something, not just disappearing into another pile of stuff.
+They also wanted the gifts to build something instead of disappearing into another pile of stuff.
 
 ## What family did
 
@@ -35,7 +35,7 @@ One link let everyone participate in the same moment without extra explanation.
 
 The family chose a stock that felt personal to Emma's interests, which made the gift feel like more than cash.
 
-It gave relatives a story to tell, not just a payment confirmation.
+It gave relatives a story to tell.
 
 ## Memory Book highlight
 

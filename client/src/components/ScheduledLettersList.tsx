@@ -26,7 +26,10 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Image as ImageIcon, Video, Mic, Trash2, Pencil, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
 import { haptic } from "@/lib/haptics";
+import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 type MemoryEntryRow = {
   id: string;
@@ -74,6 +77,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
 
   const { data: entries = [] } = useQuery<MemoryEntryRow[]>({
     queryKey: ["memory", fundId],
@@ -152,9 +156,6 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
 
   async function handleCancel(entryId: string) {
     if (cancellingId) return;
-    if (!window.confirm("Cancel this sealed letter? You can write a new one any time, but this one will not be delivered.")) {
-      return;
-    }
     setCancellingId(entryId);
     haptic("medium");
     try {
@@ -163,12 +164,14 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
       // is filtered out of the scheduled list above (kidVisibility !==
       // 'sealed' after the patch). Cleaner than a hard DELETE — keeps
       // the parent's authorship history intact even after cancellation.
-      await fetch(`/api/memory/${encodeURIComponent(entryId)}`, {
+      const res = await fetch(`/api/memory/${encodeURIComponent(entryId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ kidVisibility: "parent_only" }),
       });
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setCancellingId(null); return; }
       haptic("success");
       void queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
     } catch {
@@ -180,17 +183,15 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
 
   async function handleCancelSeries(seriesId: string, count: number) {
     if (cancellingId) return;
-    const msg = count === 1
-      ? "Cancel this sealed letter series? You can write new letters any time, but the remaining year of deliveries will not happen."
-      : `Cancel this sealed letter series? You can write new letters any time, but the remaining ${count} years of deliveries will not happen.`;
-    if (!window.confirm(msg)) return;
     setCancellingId(seriesId);
     haptic("medium");
     try {
-      await fetch(`/api/funds/${encodeURIComponent(fundId)}/sealed-series/${encodeURIComponent(seriesId)}`, {
+      const res = await fetch(`/api/funds/${encodeURIComponent(fundId)}/sealed-series/${encodeURIComponent(seriesId)}`, {
         method: "DELETE",
         credentials: "include",
       });
+      const data = await res.json().catch(() => null);
+      if (demoBlocked(data, toast)) { setCancellingId(null); return; }
       haptic("success");
       void queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
     } catch {
@@ -240,13 +241,13 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground mt-0.5">
-                      <Calendar size={14} strokeWidth={1.8} />
+                      <Calendar size={14} strokeWidth={2} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-foreground">
                         Yearly series · {count} {count === 1 ? "delivery" : "deliveries"}
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-2xs text-muted-foreground mt-0.5">
                         Next: <span className="text-foreground font-medium">{dateLabel || "scheduled"}</span>
                         {years !== null && years > 0 ? (
                           <> ({years} {years === 1 ? "year" : "years"} away)</>
@@ -261,7 +262,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                         </p>
                       )}
                       {(hasPhoto || hasVideo || hasAudio) && (
-                        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                        <div className="mt-1.5 flex items-center gap-1.5 text-3xs text-muted-foreground/80">
                           {hasPhoto && (
                             <span className="inline-flex items-center gap-0.5"><ImageIcon size={10} /> photo</span>
                           )}
@@ -288,7 +289,16 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                       )}
                       <button
                         type="button"
-                        onClick={() => void handleCancelSeries(group.seriesId, count)}
+                        onClick={() => setConfirmReq({
+                          title: "Cancel this sealed letter series?",
+                          body: count === 1
+                            ? "You can write new letters any time, but the remaining year of deliveries won't happen."
+                            : `You can write new letters any time, but the remaining ${count} years of deliveries won't happen.`,
+                          confirmLabel: "Cancel the series",
+                          cancelLabel: "Keep it",
+                          destructive: true,
+                          onConfirm: () => void handleCancelSeries(group.seriesId, count),
+                        })}
                         disabled={cancellingId === group.seriesId}
                         className="text-muted-foreground hover:text-destructive transition-colors p-1"
                         aria-label="Cancel entire scheduled series"
@@ -317,7 +327,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
               >
                 <div className="flex items-start gap-3">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
-                    <Calendar size={14} strokeWidth={1.8} />
+                    <Calendar size={14} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground">
@@ -334,7 +344,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                       </p>
                     )}
                     {(hasPhoto || hasVideo || hasAudio) && (
-                      <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                      <div className="mt-1.5 flex items-center gap-1.5 text-3xs text-muted-foreground/80">
                         {hasPhoto && (
                           <span className="inline-flex items-center gap-0.5"><ImageIcon size={10} /> photo</span>
                         )}
@@ -361,7 +371,14 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
                     )}
                     <button
                       type="button"
-                      onClick={() => void handleCancel(entry.id)}
+                      onClick={() => setConfirmReq({
+                        title: "Cancel this sealed letter?",
+                        body: "You can write a new one any time, but this one won't be delivered.",
+                        confirmLabel: "Cancel the letter",
+                        cancelLabel: "Keep it",
+                        destructive: true,
+                        onConfirm: () => void handleCancel(entry.id),
+                      })}
                       disabled={cancellingId === entry.id}
                       className="text-muted-foreground hover:text-destructive transition-colors p-1"
                       aria-label="Cancel scheduled letter"
@@ -389,6 +406,7 @@ export function ScheduledLettersList({ fundId, childName, className, onEdit }: S
           </Button>
         )}
       </div>
+      <ConfirmDialog request={confirmReq} onClose={() => setConfirmReq(null)} />
     </div>
   );
 }

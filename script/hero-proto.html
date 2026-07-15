@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hero moment — refined</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --evergreen:      #1B3A2D;
+    --evergreen-hi:   #234A3A;  /* lighter top of gradient */
+    --evergreen-deep: #0E2518;
+    --cream:          #F8F5F0;
+    --canvas:         #FAFAF9;
+    --gold:           #C5821E;
+    --gold-light:     #EDC164;
+    --ink:            #1A1710;
+    --border:         #E5DDD4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #d9d2c7;
+    padding: 44px;
+    display: flex;
+    gap: 44px;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .cap { font-size: 13.5px; font-weight: 700; color: #5c554a; }
+  .cap span { font-weight: 500; color: #8a8073; }
+
+  .phone { width: 392px; border-radius: 46px; background: #000; padding: 10px;
+    box-shadow: 0 30px 70px rgba(26,23,16,0.30), 0 6px 14px rgba(26,23,16,0.16); }
+  .screen { border-radius: 37px; overflow: hidden; position: relative; height: 812px; background: var(--canvas); }
+
+  /* ===== HERO (shared) ===== */
+  .hero { position: relative; overflow: hidden;
+    background:
+      radial-gradient(120% 80% at 50% 8%, rgba(237,193,100,0.16) 0%, rgba(237,193,100,0) 46%),
+      linear-gradient(168deg, var(--evergreen-hi) 0%, var(--evergreen) 42%, var(--evergreen-deep) 100%);
+    color: var(--cream); padding: 0 24px 30px; }
+  /* faint growth arc behind the number */
+  .arc { position: absolute; left: 0; right: 0; bottom: 64px; width: 100%; height: 150px; opacity: 0.5; pointer-events: none; }
+
+  .statusbar { display: flex; align-items: flex-end; justify-content: space-between;
+    height: 46px; padding: 0 6px 4px; font-size: 13px; font-weight: 700; }
+  .statusbar .ic { display: flex; gap: 6px; opacity: 0.85; font-weight: 600; font-size: 11px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 22px; }
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .brand .mark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(150deg, var(--gold-light), var(--gold)); display: flex; align-items: center; justify-content: center; }
+  .brand .mark svg { width: 15px; height: 15px; }
+  .wordmark { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 19px; letter-spacing: -0.02em; }
+  .topicons { display: flex; align-items: center; gap: 14px; }
+  .topicons svg { width: 20px; height: 20px; opacity: 0.82; }
+  .av { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+  .chip { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(248,245,240,0.10); border: 1px solid rgba(248,245,240,0.16);
+    border-radius: 999px; padding: 5px 7px 5px 6px; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
+  .chip .kidav { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(150deg,#3c6b53,#1f4435); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; color: var(--cream); }
+  .chip .chev { opacity: 0.65; }
+
+  .eyebrow { position: relative; z-index: 2; font-family: 'Bricolage Grotesque'; font-size: 15px; font-weight: 600; color: var(--gold-light); letter-spacing: -0.01em; }
+  .bal { position: relative; z-index: 2; font-family: 'Bricolage Grotesque'; font-weight: 700; font-size: 52px; letter-spacing: -0.03em; line-height: 1.02; color: #fff; margin-top: 4px;
+    text-shadow: 0 2px 30px rgba(237,193,100,0.18); }
+  .bal .c { font-size: 0.46em; opacity: 0.55; font-weight: 600; }
+
+  /* peopled line — gifter avatar stack + count (the moat, made visual) */
+  .peopled { position: relative; z-index: 2; display: flex; align-items: center; gap: 11px; margin-top: 16px; }
+  .stack { display: flex; }
+  .stack .a { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--evergreen); margin-left: -8px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
+  .stack .a:first-child { margin-left: 0; }
+  .peopled .txt { font-size: 13px; font-weight: 500; color: rgba(248,245,240,0.78); }
+  .peopled .txt b { font-weight: 700; color: var(--cream); }
+
+  .cta { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 9px;
+    width: 100%; margin-top: 24px; background: linear-gradient(180deg, #d28f24, var(--gold));
+    color: #2a1c06; border: none; border-radius: 16px; padding: 16px;
+    font-family: 'Inter'; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em;
+    box-shadow: 0 8px 22px rgba(14,37,24,0.40), inset 0 1px 0 rgba(255,255,255,0.25); cursor: pointer; }
+  .cta svg { width: 16px; height: 16px; }
+
+  .proj { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px;
+    font-size: 13px; color: rgba(248,245,240,0.7); }
+  .proj b { color: var(--gold-light); font-weight: 700; }
+  .proj .spark { width: 13px; height: 13px; opacity: 0.8; }
+
+  /* ===== content lifting over hero (de-AI'd: no emoji tiles, typographic) ===== */
+  .content { position: relative; margin-top: -26px; background: var(--canvas); border-radius: 24px 24px 0 0; padding: 24px 22px 30px; }
+  .grab { width: 34px; height: 4px; border-radius: 999px; background: var(--border); margin: 0 auto 18px; }
+  .clabel { font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(26,23,16,0.45); margin-bottom: 6px; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .row .t { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .row .s { font-size: 12px; color: rgba(26,23,16,0.5); margin-top: 2px; }
+  .row .v { font-size: 14.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .row .v.up { color: #1f5a3b; }
+
+  /* cream-header variant overrides */
+  .creamtop { background: var(--cream); color: var(--ink); padding: 0 24px; }
+  .creamtop .statusbar .ic { opacity: 0.7; }
+  .creamtop .wordmark { color: var(--evergreen); }
+</style>
+</head>
+<body>
+
+<!-- =================== VARIANT 1 — HEADER ON GREEN =================== -->
+<div class="col">
+  <div class="cap">1 · <span>header on the green (one moment, owns the top)</span></div>
+  <div class="phone"><div class="screen">
+    <div class="hero" style="padding-top:0;">
+      <svg class="arc" viewBox="0 0 360 150" preserveAspectRatio="none" fill="none">
+        <path d="M0 140 C 70 130, 120 96, 180 78 S 300 22, 360 8" stroke="rgba(237,193,100,0.45)" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="statusbar" style="color:var(--cream);"><span>9:41</span><span class="ic">●&nbsp;▮&nbsp;▰</span></div>
+      <div class="topbar">
+        <div class="brand">
+          <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3c0 5-4 6-4 10a4 4 0 0 0 8 0c0-4-4-5-4-10z" fill="#2a1c06"/></svg></span>
+          <span class="wordmark">Kiddo</span>
+        </div>
+        <div class="topicons">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(248,245,240,0.85)" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
+          <span class="av" style="background:linear-gradient(150deg,#3c6b53,#1f4435);color:var(--cream);">E</span>
+        </div>
+      </div>
+
+      <span class="chip"><span class="kidav">T</span> Theo's Fund <span class="chev">▾</span></span>
+      <div class="eyebrow">Theo's future</div>
+      <div class="bal">$23,577<span class="c">.27</span></div>
+
+      <div class="peopled">
+        <span class="stack">
+          <span class="a" style="background:#3c6b53;">G</span>
+          <span class="a" style="background:#b07a2a;">M</span>
+          <span class="a" style="background:#7a5a3c;">S</span>
+          <span class="a" style="background:#4d7a64;">J</span>
+          <span class="a" style="background:rgba(248,245,240,0.18);">+8</span>
+        </span>
+        <span class="txt"><b>134 gifts</b> from 12 people</span>
+      </div>
+
+      <button class="cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2a1c06" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke-linecap="round"/></svg>
+        Share Theo's link
+      </button>
+      <div class="proj">
+        <svg class="spark" viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="2"><path d="M3 17l5-6 4 3 8-9" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 5h4v4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Growing toward <b>~$51k by 21</b>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="clabel">Theo's fund so far</div>
+      <div class="row"><div><div class="t">Growth this year</div><div class="s">Real prices, simulated holdings</div></div><div class="v up">+$3,140</div></div>
+      <div class="row"><div><div class="t">Recurring</div><div class="s">$100/month · Managed mix</div></div><div class="v">Active</div></div>
+      <div class="row"><div><div class="t">Last gift</div><div class="s">Grandma · 2 days ago</div></div><div class="v">$250</div></div>
+    </div>
+  </div></div>
+</div>
+
+<!-- =================== VARIANT 2 — CREAM HEADER, GREEN HERO =================== -->
+<div class="col">
+  <div class="cap">2 · <span>cream header, hero starts below (status bar blends cream)</span></div>
+  <div class="phone"><div class="screen">
+    <div class="creamtop">
+      <div class="statusbar"><span>9:41</span><span class="ic">●&nbsp;▮&nbsp;▰</span></div>
+      <div class="topbar" style="padding-bottom:14px;">
+        <div class="brand">
+          <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3c0 5-4 6-4 10a4 4 0 0 0 8 0c0-4-4-5-4-10z" fill="#2a1c06"/></svg></span>
+          <span class="wordmark">Kiddo</span>
+        </div>
+        <div class="topicons">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(26,23,16,0.7)" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
+          <span class="av" style="background:var(--evergreen);color:var(--cream);">E</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero" style="padding-top:20px; border-radius: 0;">
+      <svg class="arc" viewBox="0 0 360 150" preserveAspectRatio="none" fill="none">
+        <path d="M0 140 C 70 130, 120 96, 180 78 S 300 22, 360 8" stroke="rgba(237,193,100,0.45)" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="chip"><span class="kidav">T</span> Theo's Fund <span class="chev">▾</span></span>
+      <div class="eyebrow">Theo's future</div>
+      <div class="bal">$23,577<span class="c">.27</span></div>
+
+      <div class="peopled">
+        <span class="stack">
+          <span class="a" style="background:#3c6b53;">G</span>
+          <span class="a" style="background:#b07a2a;">M</span>
+          <span class="a" style="background:#7a5a3c;">S</span>
+          <span class="a" style="background:#4d7a64;">J</span>
+          <span class="a" style="background:rgba(248,245,240,0.18);">+8</span>
+        </span>
+        <span class="txt"><b>134 gifts</b> from 12 people</span>
+      </div>
+
+      <button class="cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2a1c06" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke-linecap="round"/></svg>
+        Share Theo's link
+      </button>
+      <div class="proj">
+        <svg class="spark" viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="2"><path d="M3 17l5-6 4 3 8-9" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 5h4v4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Growing toward <b>~$51k by 21</b>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="clabel">Theo's fund so far</div>
+      <div class="row"><div><div class="t">Growth this year</div><div class="s">Real prices, simulated holdings</div></div><div class="v up">+$3,140</div></div>
+      <div class="row"><div><div class="t">Recurring</div><div class="s">$100/month · Managed mix</div></div><div class="v">Active</div></div>
+      <div class="row"><div><div class="t">Last gift</div><div class="s">Grandma · 2 days ago</div></div><div class="v">$250</div></div>
+    </div>
+  </div></div>
+</div>
+
+</body>
+</html>

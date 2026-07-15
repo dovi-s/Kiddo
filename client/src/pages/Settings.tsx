@@ -2,12 +2,15 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch, Link } from "wouter";
 import { ACTIVE_FUND_CHANGE_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
+import { STRATEGY_ICONS } from "@/lib/strategy";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { StockLogo } from "@/components/ui/stock-logo";
@@ -26,13 +29,15 @@ import { KidsViewCard } from "@/components/KidsViewCard";
 import { FundSettingsChildPanel } from "@/components/FundSettingsChildPanel";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { isPushSupported, pushPermission, subscribeToPush, unsubscribeFromPush, sendTestPush } from "@/lib/push";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
-  ChevronRight, ChevronDown, Star, Lock, Crown, ArrowUpRight, Wallet, Plus, Minus, Loader2,
+  ChevronRight, ChevronDown, Lock, Crown, ArrowUpRight, Wallet, Plus, Minus, Loader2,
   Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus, Pencil, Share2, ExternalLink, Camera,
-  Calendar as CalendarIcon, Mail,
+  Calendar as CalendarIcon, Mail, Bell, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import { EMAIL_PREFERENCE_CATEGORIES } from "@shared/emailPreferences";
+import { investingLiveCopy } from "@shared/legal-copy";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -46,10 +51,9 @@ import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, safeLocalSet } from 
 import { PRONOUN_OPTIONS } from "@/lib/pronouns";
 import { toMonthlyEquivalent } from "@shared/recurring-math";
 import { getMajorityDate, getMajorityAgeForState, US_STATES } from "@shared/utma";
-import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
+import { GifterInvestmentRulesEditor } from "@/components/GifterInvestmentRulesEditor";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity, prefetchTaxDocuments, onIdle } from "@/lib/prefetch";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { FundTabs } from "@/components/layout/FundTabs";
 import {
   KIDDO_LEGACY_YEARLY,
   KORA_FAMILY_MONTHLY,
@@ -100,7 +104,15 @@ function getFundTotalValue(fund: { balance?: string; pendingBalance?: string; ca
 // (Mother's/Father's Day is left visible: it's warmth-only + toggleable, and
 // hiding it without a server-side send-gate would trap the user into receiving
 // it with no way to opt out.)
-const OWNER_HIDDEN_EMAIL_PREFS = new Set<string>(["milestones"]);
+const OWNER_HIDDEN_EMAIL_PREFS = new Set<string>([
+  "milestones",
+  // Parent-engagement drip categories only fire for a parent-held child
+  // fund (the worker excludes owner-held funds), so hide them from an
+  // owner who has no child fund.
+  "activationNudges",
+  "fundMilestones",
+  "birthdayDormant",
+]);
 // First-person rewrites of the "your child's …" descriptions for that case.
 const OWNER_EMAIL_PREF_DESC: Record<string, string> = {
   birthday: "A once-a-year note from the fund itself on your birthday.",
@@ -110,6 +122,9 @@ function EmailPreferenceCenterCard({ hasChildFund }: { hasChildFund: boolean }) 
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  // The optional-email toggles default ON and live behind a disclosure, so the
+  // Notifications tab opens calm instead of as a wall of ~9 switches.
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,23 +177,163 @@ function EmailPreferenceCenterCard({ hasChildFund }: { hasChildFund: boolean }) 
             </p>
           </div>
         </div>
-        <div className="mt-5 space-y-3">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading preferences…</p>
-          ) : (
-            EMAIL_PREFERENCE_CATEGORIES
-              .filter((cat) => hasChildFund || !OWNER_HIDDEN_EMAIL_PREFS.has(cat.key))
-              .map((cat) => (
-              <NotificationSwitchRow
-                key={cat.key}
-                title={cat.label}
-                body={!hasChildFund && OWNER_EMAIL_PREF_DESC[cat.key] ? OWNER_EMAIL_PREF_DESC[cat.key] : cat.description}
-                checked={isEnabled(cat.key)}
-                onCheckedChange={(next) => void togglePreference(cat.key, next)}
-                disabled={saving === cat.key}
-                testId={`row-email-pref-${cat.key}`}
-              />
-            ))
+        {(() => {
+          const visibleCats = EMAIL_PREFERENCE_CATEGORIES.filter(
+            (cat) => hasChildFund || !OWNER_HIDDEN_EMAIL_PREFS.has(cat.key),
+          );
+          const enabledCount = visibleCats.filter((cat) => isEnabled(cat.key)).length;
+          return (
+            <>
+              {/* Disclosure: these emails are all on by default, so the summary
+                  carries the state and the toggles stay one tap away — the tab
+                  no longer opens as a wall of switches. */}
+              <button
+                type="button"
+                onClick={() => setOptionsOpen((o) => !o)}
+                aria-expanded={optionsOpen}
+                className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.46)] px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                data-testid="button-email-prefs-toggle"
+              >
+                <span className="text-sm font-semibold text-foreground">
+                  {optionsOpen ? "Hide email options" : "Customize emails"}
+                  {!loading && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {enabledCount} of {visibleCats.length} on
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className="shrink-0 text-muted-foreground"
+                  style={{ transform: optionsOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}
+                />
+              </button>
+              {optionsOpen && (
+                <div className="mt-3 space-y-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">Loading preferences…</p>
+                  ) : (
+                    visibleCats.map((cat) => (
+                      <NotificationSwitchRow
+                        key={cat.key}
+                        title={cat.label}
+                        body={!hasChildFund && OWNER_EMAIL_PREF_DESC[cat.key] ? OWNER_EMAIL_PREF_DESC[cat.key] : cat.description}
+                        checked={isEnabled(cat.key)}
+                        onCheckedChange={(next) => void togglePreference(cat.key, next)}
+                        disabled={saving === cat.key}
+                        testId={`row-email-pref-${cat.key}`}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
+      </div>
+    </SectionCard>
+  );
+}
+
+// Push notifications opt-in for THIS device. Deliberately a user-tapped toggle
+// (never an on-load prompt). Subscribes via the browser PushManager + registers
+// it server-side. The founder owns the triggers (which events fire a push) and
+// the copy each push carries. Hidden where push isn't supported. 2026-06-25.
+function PushNotificationCard() {
+  const [supported] = useState(() => isPushSupported());
+  const [enabled, setEnabled] = useState(false);
+  const [perm, setPerm] = useState<NotificationPermission | "unsupported">(() => pushPermission());
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!supported) return;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => setEnabled(!!sub))
+      .catch(() => {});
+  }, [supported]);
+
+  if (!supported) return null;
+
+  const handleToggle = async (next: boolean) => {
+    setBusy(true);
+    try {
+      if (next) {
+        const ok = await subscribeToPush();
+        setPerm(pushPermission());
+        setEnabled(ok);
+        toast(
+          ok
+            ? { title: "Notifications on", description: "We'll buzz this device when something happens on your fund." }
+            : {
+                title: "Couldn't turn on notifications",
+                description:
+                  pushPermission() === "denied"
+                    ? "They're blocked in your browser settings. Re-allow there first."
+                    : "Please try again.",
+                variant: "destructive",
+              },
+        );
+      } else {
+        await unsubscribeFromPush();
+        setEnabled(false);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setBusy(true);
+    try {
+      const r = await sendTestPush();
+      toast(
+        r.sent > 0
+          ? { title: "Test sent", description: "Check this device's notifications." }
+          : { title: "No active devices", description: "Turn notifications on first." },
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SectionCard>
+      <div className="p-5">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] text-[hsl(var(--kiddo-evergreen))]">
+            <Bell size={16} />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-bold text-foreground">Notifications on this device</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Get notified the moment a gift lands or something needs you, even when Kiddo is closed. Turns on push for this device only.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <NotificationSwitchRow
+            title="Push notifications"
+            body={
+              perm === "denied"
+                ? "Blocked in your browser settings. Re-allow there to turn on."
+                : "Buzz this device for gifts and fund updates."
+            }
+            checked={enabled}
+            onCheckedChange={(next) => void handleToggle(next)}
+            disabled={busy || perm === "denied"}
+            testId="row-push-notifications"
+          />
+          {enabled && (
+            <button
+              type="button"
+              onClick={() => void handleTest()}
+              disabled={busy}
+              className="mt-3 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline disabled:opacity-50"
+              data-testid="button-push-test"
+            >
+              Send a test notification
+            </button>
           )}
         </div>
       </div>
@@ -216,7 +371,7 @@ function NotificationSwitchRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-bold text-foreground">{title}</p>
           {meta && (
-            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
+            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
               {meta}
             </span>
           )}
@@ -243,26 +398,21 @@ function hasStarterEntitlement(membership: any): boolean {
   return false;
 }
 
-function getFundCoverageStatus(
-  fundId: string,
-  userPlan: "free" | "starter" | "family" | "legacy",
-  starterByFund: Record<string, any>,
-): { label: string; tone: "free" | "starter" | "family" } {
-  if (userPlan === "family" || userPlan === "legacy") {
-    return { label: "Covered by Kiddo Family", tone: "family" };
-  }
-  if (hasStarterEntitlement(starterByFund[String(fundId)])) {
-    return { label: "Covered by Kiddo+", tone: "starter" };
-  }
-  return { label: "Free", tone: "free" };
-}
-
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
+// Whole-dollar currency (commas, no cents) for amounts shown without decimals.
+function usd0(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
   }).format(Number.isFinite(value) ? value : 0);
 }
 
@@ -323,9 +473,9 @@ function FundDetailsSnapshot({
     <div className={`rounded-xl border border-border/50 bg-muted/20 ${compact ? "p-3" : "p-4"}`} data-testid={`fund-details-snapshot-${fund.id}`}>
       <div className="flex items-center justify-between gap-2 mb-2">
         <p className="text-xs font-medium text-foreground">Fund details</p>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-2xs text-muted-foreground">
           {fund.investmentStrategy === "balanced"
-            ? "Steady & Balanced"
+            ? "Balanced Mix"
             : fund.investmentStrategy === "conservative"
               ? "Conservative Mix"
               : fund.investmentStrategy === "custom"
@@ -338,7 +488,7 @@ function FundDetailsSnapshot({
         <p className="text-xs text-muted-foreground">Loading details...</p>
       ) : (
         <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="grid grid-cols-2 gap-2 text-2xs">
             <div className="rounded-lg bg-background border border-border/40 p-2">
               <p className="text-muted-foreground">Total value</p>
               <p className="text-foreground font-semibold">{formatUsd(totalValue)}</p>
@@ -365,7 +515,7 @@ function FundDetailsSnapshot({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div className="grid grid-cols-3 gap-2 text-2xs">
             <div className="rounded-lg bg-background border border-border/40 p-2">
               <p className="text-muted-foreground">Positions</p>
               <p className="text-foreground font-semibold">{holdings.length}</p>
@@ -381,13 +531,13 @@ function FundDetailsSnapshot({
           </div>
 
           <div className="rounded-lg bg-background border border-border/40 p-2">
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Net gifted into this fund: <span className="text-foreground font-semibold">{formatUsd(giftsNet)}</span>
             </p>
           </div>
 
           <div className="rounded-lg bg-background border border-border/40 p-2">
-            <p className="text-[11px] text-muted-foreground mb-1">What this fund owns</p>
+            <p className="text-2xs text-muted-foreground mb-1">What this fund owns</p>
             {/* Three-state ladder: loading → skeleton rows, loaded-empty →
                 honest empty-state copy, loaded-with-data → the list. The
                 skeleton uses the same row geometry (ticker on left, value
@@ -396,18 +546,18 @@ function FundDetailsSnapshot({
             {isLoading && topHoldings.length === 0 ? (
               <div className="space-y-1.5" aria-hidden="true">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center justify-between text-[11px]">
+                  <div key={i} className="flex items-center justify-between text-2xs">
                     <span className="inline-block h-2.5 w-16 rounded bg-muted/50" />
                     <span className="inline-block h-2.5 w-12 rounded bg-muted/40" />
                   </div>
                 ))}
               </div>
             ) : topHoldings.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">No holdings yet. Kiddo invests new gifts automatically based on your strategy.</p>
+              <p className="text-2xs text-muted-foreground">No holdings yet. Kiddo invests new gifts automatically based on your strategy.</p>
             ) : (
               <div className="space-y-1">
                 {topHoldings.map((h: any) => (
-                  <div key={h.id} className="flex items-center justify-between text-[11px]">
+                  <div key={h.id} className="flex items-center justify-between text-2xs">
                     <span className="font-medium text-foreground">{h.ticker || h.name}</span>
                     <span className="text-muted-foreground">{formatUsd(parseFloat(h.currentValue || "0"))}</span>
                   </div>
@@ -435,7 +585,7 @@ function FundAgeTransitionSnapshot({ fund }: { fund: any }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-foreground">Age-{fundMajorityAge} handoff</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
             {transition
               ? `${fund.recipientFirstName || "Your child"} turns ${fundMajorityAge} on ${formatAgeTransitionDate(transition.eighteenthBirthday)}. That date is the planning anchor. Legal control transfers at the age of majority for your state, usually 18 or 21.`
               : `Add a birthdate so this fund has a clear age-${fundMajorityAge} planning anchor. The legal handoff still happens at the age of majority for your state, usually 18 or 21.`}
@@ -443,7 +593,7 @@ function FundAgeTransitionSnapshot({ fund }: { fund: any }) {
         </div>
         {transition ? (
           <span
-            className={`rounded-full px-2 py-1 text-[11px] font-medium ${
+            className={`rounded-full px-2 py-1 text-2xs font-medium ${
               transition.stage === "imminent"
                 ? "bg-amber-100 text-amber-800"
                 : transition.stage === "approaching"
@@ -459,14 +609,14 @@ function FundAgeTransitionSnapshot({ fund }: { fund: any }) {
         ) : null}
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-2xs text-muted-foreground">
           Nothing is sold automatically. The investments stay where they are unless the new owner later chooses to sell, withdraw, or transfer them.
         </p>
         <div className="flex items-center gap-3">
-          <Link href={`/transition/fund/${fund.id}`} className="text-[11px] text-primary hover:underline" data-testid={`link-fund-age18-manage-${fund.id}`}>
+          <Link href={`/transition/fund/${fund.id}`} className="text-2xs text-primary hover:underline" data-testid={`link-fund-age18-manage-${fund.id}`}>
             Manage handoff
           </Link>
-          <Link href="/faq" className="text-[11px] text-primary hover:underline" data-testid={`link-fund-age18-faq-${fund.id}`}>
+          <Link href="/faq" className="text-2xs text-primary hover:underline" data-testid={`link-fund-age18-faq-${fund.id}`}>
             Read the FAQ
           </Link>
           <WhoControlsDrawer />
@@ -533,7 +683,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Move {holding.ticker} to cash</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -551,12 +701,12 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Current value</span>
-              <span className="font-medium">${parseFloat(holding.currentValue).toFixed(2)}</span>
+              <span className="font-medium">{formatUsd(parseFloat(holding.currentValue))}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Gain/Loss</span>
               <span className={`font-medium ${parseFloat(holding.gain) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {parseFloat(holding.gain) >= 0 ? "+" : ""}${parseFloat(holding.gain).toFixed(2)}
+                {parseFloat(holding.gain) >= 0 ? "+" : ""}{formatUsd(parseFloat(holding.gain))}
               </span>
             </div>
           </div>
@@ -564,15 +714,15 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
           <div className="space-y-3">
             <button
               onClick={() => { setSellAll(true); haptic("selection"); }}
-              className={`w-full p-3 rounded-xl border-2 text-left transition-all ${sellAll ? "border-primary bg-primary/5" : "border-border"}`}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-all kiddo-press ${sellAll ? "border-primary bg-primary/5" : "border-border"}`}
               data-testid="option-sell-all"
             >
               <p className="text-sm font-medium">Move all to cash</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Move {parseFloat(holding.shares).toFixed(4)} shares for about ${parseFloat(holding.currentValue).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Move {parseFloat(holding.shares).toFixed(4)} shares for about {formatUsd(parseFloat(holding.currentValue))}</p>
             </button>
             <button
               onClick={() => { setSellAll(false); haptic("selection"); }}
-              className={`w-full p-3 rounded-xl border-2 text-left transition-all ${!sellAll ? "border-primary bg-primary/5" : "border-border"}`}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-all kiddo-press ${!sellAll ? "border-primary bg-primary/5" : "border-border"}`}
               data-testid="option-sell-partial"
             >
               <p className="text-sm font-medium">Move part of it</p>
@@ -603,7 +753,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
           <div className="bg-blue-50 rounded-xl border border-blue-200/50 p-3">
             <p className="text-xs font-medium text-blue-900 mb-1">Tax note: cost basis</p>
             <p className="text-xs text-blue-800">
-              Moving an investment to cash can create tax reporting. Kiddo will keep the activity visible, but a tax professional can help with personal guidance.
+              Moving an investment to cash can mean a tax form at year-end. Kiddo will keep the activity visible, but a tax professional can help with personal guidance.
             </p>
           </div>
 
@@ -779,7 +929,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Taking money out</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -787,7 +937,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
               <ArrowDownToLine size={24} className="text-primary" />
             </div>
             <h2 className="font-heading text-xl font-semibold text-foreground">Taking money out</h2>
-            <p className="text-sm text-muted-foreground">Available: ${availableCash.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">Available: {formatUsd(availableCash)}</p>
           </div>
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -849,7 +999,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
                     <button
                       key={ba.id}
                       onClick={() => { setSelectedBank(ba.id); haptic("selection"); }}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selectedBank === ba.id ? "border-primary bg-primary/5" : "border-border"}`}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all kiddo-press ${selectedBank === ba.id ? "border-primary bg-primary/5" : "border-border"}`}
                       data-testid={`option-bank-${ba.id}`}
                     >
                       <Building2 size={16} className="text-muted-foreground" />
@@ -891,13 +1041,13 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
                   disabled={!selectedBank}
                   data-testid="button-liquidate-all"
                 >
-                  Sell everything (${investedBalance.toFixed(2)}) and send to bank →
+                  Sell everything ({formatUsd(investedBalance)}) and send to bank →
                 </button>
               ) : (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
                   <p className="text-sm font-semibold text-amber-900">Close out the whole fund?</p>
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    We'll sell all holdings and send the full balance (~${(availableCash + investedBalance).toFixed(2)}) to {bankAccounts.find(b => b.id === selectedBank)?.bankName || "your bank"}.
+                    We'll sell all holdings and send the full balance (~{formatUsd(availableCash + investedBalance)}) to {bankAccounts.find(b => b.id === selectedBank)?.bankName || "your bank"}.
                     Cash settles in 1 to 2 business days. This may have tax implications.
                   </p>
                   <div className="flex gap-2">
@@ -927,7 +1077,7 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground/70 text-center leading-relaxed">
+          <p className="text-2xs text-muted-foreground/70 text-center leading-relaxed">
             During early access, our team completes withdrawals manually. You'll see the activity in your feed and a confirmation email when funds arrive.
           </p>
         </div>
@@ -1012,7 +1162,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Link Bank Account</DialogTitle>
         <div className="p-6 space-y-5">
           <div className="text-center space-y-2">
@@ -1046,7 +1196,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 
           <div className="relative flex items-center justify-center">
             <div className="h-px flex-1 bg-border" />
-            <span className="px-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Manual fallback</span>
+            <span className="px-3 text-2xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Manual fallback</span>
             <div className="h-px flex-1 bg-border" />
           </div>
 
@@ -1141,7 +1291,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
 // converges to the mean over longer horizons (sigma / sqrt(years)). Always paired with
 // the standard "past performance does not guarantee future results" disclaimer.
 // Canonical strategy emojis (per project locked emoji map):
-//   📈 Growth · 🌿 Balanced · ⚖️ Conservative · 🎯 Custom
+//   📈 Growth · ⚖️ Balanced · 🛡️ Conservative · 🎛️ Custom
 // Surface the emoji on each card title for instant differentiation
 // (matches the chip on the holdings header, the StrategyIcon on the
 // recurring schedule cards, and the per-strategy register elsewhere).
@@ -1151,22 +1301,21 @@ const STRATEGIES = [
     emoji: "📈",
     label: "Growth Mix",
     description: "Long-term growth with broad diversification",
-    bestFor: "Best for children with 10+ years to go.",
+    bestFor: "Best when the money won't be used for 10+ years.",
     minYearsTo18: 10,
     expectedMean: 0.07,
     expectedSigma: 0.16,
     allocations: [
-      { ticker: "VTI", name: "Total Market Stocks", weight: 62, color: "#4F46E5" },
-      { ticker: "VXUS", name: "International Stocks", weight: 28, color: "#0EA5E9" },
-      { ticker: "BND", name: "Bonds", weight: 10, color: "#10B981" },
+      { ticker: "VTI", name: "Total Market Stocks", weight: 70, color: "#4F46E5" },
+      { ticker: "VXUS", name: "International Stocks", weight: 30, color: "#0EA5E9" },
     ],
   },
   {
     key: "balanced",
-    emoji: "🌿",
+    emoji: "⚖️",
     label: "Balanced Mix",
-    description: "Growth with stability · more bonds to soften ups and downs.",
-    bestFor: "Best for children with 5–10 years to go.",
+    description: "Growth with stability · more bonds, smoother.",
+    bestFor: "Best when it'll be used in about 5–10 years.",
     minYearsTo18: 5,
     expectedMean: 0.06,
     expectedSigma: 0.12,
@@ -1178,10 +1327,10 @@ const STRATEGIES = [
   },
   {
     key: "conservative",
-    emoji: "⚖️",
+    emoji: "🛡️",
     label: "Conservative Mix",
-    description: "Capital preservation tilt · protect what's there as 18 approaches.",
-    bestFor: "Best for children approaching 18.",
+    description: "Capital-preservation tilt · more bonds, steadier.",
+    bestFor: "Best when it'll be used within about 5 years.",
     minYearsTo18: 0,
     expectedMean: 0.05,
     expectedSigma: 0.09,
@@ -1193,7 +1342,7 @@ const STRATEGIES = [
   },
   {
     key: "custom",
-    emoji: "🎯",
+    emoji: "🎛️",
     label: "Custom ETF Mix",
     // Explicit "ETFs only" framing — addresses the architectural-rule
     // confusion ("can I add stocks to this?"). Pairs with the
@@ -1255,23 +1404,16 @@ function projectionRangeForStrategy(
   };
 }
 
-// Maps years-until-18 to the recommended preset key. The picker uses this to highlight
-// one preset with a "Recommended for {child}" badge based on the child's actual age.
-// Suggestion only — parent always overrides with no friction.
-function recommendedStrategyKey(yearsTo18: number | null): string | null {
-  if (yearsTo18 == null || !Number.isFinite(yearsTo18)) return null;
-  if (yearsTo18 >= 10) return "growth";
-  if (yearsTo18 >= 5) return "balanced";
-  if (yearsTo18 >= 0) return "conservative";
-  return null;
-}
-
-// Family-default stock picker on Settings → Gifting Defaults. Derived from the
-// canonical universe (shared/stock-picks.ts) so the parent's "Family default"
-// menu is the exact same list gifters, the parent picker, the cash-invest
-// modal, and onboarding all see. Was a hand-synced copy that had drifted
-// (Adobe/Comcast, no Tesla/Microsoft/McDonald's).
-const GIFTER_STOCK_OPTIONS = CANON_STOCK_PICKS.map((s) => ({ ticker: s.ticker, name: s.name }));
+// (Removed 2026-06-03: recommendedStrategyKey + the "★ Recommended for
+// {child}" badge. Matching a preset to THIS child's age is a personalized
+// investment recommendation — the exact surface the self-directed pivot
+// (ACCOUNT_MODEL.md §2b, 2026-05-28) removed to preserve the
+// platform-not-adviser posture; the Dashboard's age-band nudge was already
+// disabled behind STRATEGY_NUDGE_ENABLED=false for the same reason. The
+// picker is now a neutral menu: generic per-card horizon descriptors stay
+// (uniform for every user, counsel packet Part 8 Q1 covers where that line
+// sits), but nothing is matched to a specific child. Re-add only if the
+// RIA memo blesses a recommendation surface.)
 
 // Managed-mix custom allocations are ETFs only. Individual stocks live in
 // the gifter pick list ("Chosen with Love"), never in the managed mix.
@@ -1292,186 +1434,11 @@ const CUSTOM_ALLOCATION_OPTIONS = [
 const DEFAULT_CUSTOM_ALLOCATION_ROWS = [
   // Broad market-cap starting point (no pre-selected sector tilt). The user
   // edits this freely; VGT and other tickers remain available to add by choice.
-  { ticker: "VTI", weight: 62 },
-  { ticker: "VXUS", weight: 28 },
-  { ticker: "BND", weight: 10 },
+  { ticker: "VTI", weight: 70 },
+  { ticker: "VXUS", weight: 30 },
 ];
 
 const MAX_CUSTOM_HOLDINGS = 10;
-
-function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess: () => void }) {
-  const { data, isLoading } = useQuery<{
-    defaultMode: "managed" | "stock" | "cash";
-    managedStrategy: "growth" | "balanced" | "custom";
-    defaultTicker: string;
-    allowGifterStockPick: boolean;
-    allowGifterCashGift: boolean;
-  }>({
-    queryKey: ["/api/funds", fund.id, "investment-preferences"],
-    queryFn: async () => {
-      const res = await fetch(`/api/funds/${fund.id}/investment-preferences`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load investment preferences");
-      return res.json();
-    },
-    enabled: !!fund?.id,
-    staleTime: 1000 * 30,
-  });
-
-  const [defaultMode, setDefaultMode] = useState<"managed" | "stock" | "cash">("managed");
-  const [defaultTicker, setDefaultTicker] = useState("DIS");
-  // Match the server defaults (server/fundInvestmentPreferences.ts DEFAULTS):
-  // gifter stock-picks are allowed by default (the "Chosen with Love" magic,
-  // and they land in a separate sleeve so they don't touch the managed mix);
-  // cash gifts are NOT allowed by default (keep gifts auto-investing — the
-  // "your gift bought shares" moment + no idle cash). These get reconciled with
-  // saved prefs on load; initializing them to the true defaults avoids showing
-  // the wrong state for a beat before the query resolves.
-  const [allowGifterStockPick, setAllowGifterStockPick] = useState(true);
-  const [allowGifterCashGift, setAllowGifterCashGift] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!data) return;
-    setDefaultMode(data.defaultMode || "managed");
-    setDefaultTicker(data.defaultTicker || "DIS");
-    setAllowGifterStockPick(Boolean(data.allowGifterStockPick));
-    setAllowGifterCashGift(Boolean(data.allowGifterCashGift));
-  }, [data]);
-
-  const hasChanged =
-    defaultMode !== (data?.defaultMode || "managed") ||
-    defaultTicker !== (data?.defaultTicker || "DIS") ||
-    allowGifterStockPick !== Boolean(data?.allowGifterStockPick) ||
-    allowGifterCashGift !== Boolean(data?.allowGifterCashGift);
-
-  const handleSave = async () => {
-    setSaving(true);
-    haptic("medium");
-    try {
-      const res = await fetch(`/api/funds/${fund.id}/investment-preferences`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          defaultMode,
-          defaultTicker,
-          allowGifterStockPick,
-          allowGifterCashGift,
-        }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast({ title: "Could not update gifting rules", description: payload.error || "Please try again", variant: "destructive" });
-        return;
-      }
-      haptic("success");
-      toast({ title: "Gifting rules updated", description: "Future gifts will follow these defaults." });
-      onSuccess();
-    } catch {
-      toast({ title: "Could not update gifting rules", description: "Please try again", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Post-handoff owner has no "family" — it's just their own default.
-  const rulesIsOwnerHeld = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
-  const familyDefaultLabel = rulesIsOwnerHeld ? "default" : "family default";
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
-        <p className="kiddo-section-label">Default path for new gifts</p>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Pick one {familyDefaultLabel}. Most gifts follow this. Gifter stock picks or cash gifts only happen if you allow those overrides below.
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          If a gifter chooses a stock, it applies only to that gift. Your {familyDefaultLabel} stays the same for future gifts.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => { setDefaultMode("managed"); haptic("selection"); }}
-          className={`w-full rounded-2xl border p-4 text-left transition-all ${defaultMode === "managed" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-          data-testid="option-gifting-default-managed"
-        >
-          <p className="text-sm font-medium text-foreground">Managed mix</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Use your fund's investing style, like Growth Mix or Steady & Balanced.</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setDefaultMode("stock"); haptic("selection"); }}
-          className={`w-full rounded-2xl border p-4 text-left transition-all ${defaultMode === "stock" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-          data-testid="option-gifting-default-stock"
-        >
-          <p className="text-sm font-medium text-foreground">Specific stock</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Every gift follows one default stock unless a gifter override is allowed.</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setDefaultMode("cash"); haptic("selection"); }}
-          className={`w-full rounded-2xl border p-4 text-left transition-all ${defaultMode === "cash" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-          data-testid="option-gifting-default-cash"
-        >
-          <p className="text-sm font-medium text-foreground">Cash until invested</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Gifts land as cash and you decide when to invest later.</p>
-        </button>
-      </div>
-
-      {defaultMode === "stock" && (
-        <div className="space-y-2">
-          <p className="kiddo-section-label">Family default</p>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-            {GIFTER_STOCK_OPTIONS.map((stock) => (
-              <button
-                key={stock.ticker}
-                type="button"
-                onClick={() => { setDefaultTicker(stock.ticker); haptic("selection"); }}
-                className={`rounded-2xl border px-3 py-3 text-left transition-all ${defaultTicker === stock.ticker ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
-                data-testid={`option-gifting-default-ticker-${stock.ticker}`}
-              >
-                <p className="text-sm font-medium text-foreground">{stock.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{stock.ticker}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Allow people to choose a stock</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">If off, gifts follow your {familyDefaultLabel}.</p>
-          </div>
-          <Switch checked={allowGifterStockPick} onCheckedChange={setAllowGifterStockPick} data-testid="switch-allow-gifter-stock-pick" />
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Allow people to send to cash instead</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">If off, people cannot send a gift to cash unless cash is your default.</p>
-          </div>
-          <Switch checked={allowGifterCashGift} onCheckedChange={setAllowGifterCashGift} data-testid="switch-allow-gifter-cash" />
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
-        <p className="kiddo-section-label">What people will see</p>
-        <p className="mt-2 text-sm text-foreground">
-          Use {familyDefaultLabel}
-          {allowGifterStockPick ? " · Choose a stock" : ""}
-          {allowGifterCashGift ? " · Let the family decide later" : ""}
-        </p>
-      </div>
-
-      <Button onClick={handleSave} disabled={isLoading || saving || !hasChanged} className="w-full" data-testid="button-save-gifting-rules">
-        {saving ? "Saving..." : "Save gifting rules"}
-      </Button>
-    </div>
-  );
-}
 
 function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCustom: boolean; onSuccess: () => void }) {
   const rawCurrentStrategy = fund.investmentStrategy || "growth";
@@ -1554,24 +1521,30 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
     ? Math.round((managedMixInvestedValue / investedValue) * 100)
     : 0;
 
-  // Compute years-until-18 from the recipient's birthdate, then surface the
-  // age-appropriate strategy as "Recommended for {child}". Suggestion only — parent overrides.
+  // Compute years-until-18 from the recipient's birthdate. Feeds the
+  // projection-range context line below (NOT a recommendation — the
+  // age-matched "Recommended for {child}" badge was removed 2026-06-03 per
+  // the self-directed posture — the picker is a neutral menu, not advice).
+  // Years until the fund's REAL age of majority (state-specific: 18/19/21), NOT a
+  // flat 18. The projection range below scales sigma by 1/sqrt(years), so a
+  // hardcoded 18 made AL/NE (19) and CA/KY/MS/PA (21) funds show a too-wide band
+  // for the wrong transfer age. (Variable name kept as yearsTo18 to avoid churn;
+  // it now means years-to-majority.)
   const yearsTo18 = ((): number | null => {
     const raw = (fund as any)?.recipientBirthdate;
     if (!raw) return null;
     const bd = new Date(raw);
     if (isNaN(bd.getTime())) return null;
-    const eighteenth = new Date(bd);
-    eighteenth.setFullYear(eighteenth.getFullYear() + 18);
-    const ms = eighteenth.getTime() - Date.now();
+    const majorityAge = Number((fund as any)?.majorityAge) || 18;
+    const majorityBirthday = new Date(bd);
+    majorityBirthday.setFullYear(majorityBirthday.getFullYear() + majorityAge);
+    const ms = majorityBirthday.getTime() - Date.now();
     return ms > 0 ? ms / (365.25 * 24 * 60 * 60 * 1000) : 0;
   })();
-  // Post-handoff adult owner: suppress the age-to-majority recommendation +
-  // child horizon. yearsTo18 clamps to 0 past the 18th birthday, which would
-  // otherwise force "Recommended: Conservative — best for children approaching
-  // 18" onto a grown owner whose real horizon is decades. Let them just pick.
+  // Post-handoff adult owner: suppress the child-horizon framing. yearsTo18
+  // clamps to 0 past the 18th birthday, which would otherwise render
+  // kid-horizon copy onto a grown owner whose real horizon is decades.
   const seIsOwnerMode = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
-  const recommendedKey = seIsOwnerMode ? null : recommendedStrategyKey(yearsTo18);
   // Tier copy hardcodes "18" (only the conservative tier: "approaching 18" /
   // "as 18 approaches"). Reflect the fund's REAL age of majority so an AL/NE
   // (19) or MS/PA/CA (21) fund reads its true handoff age, not a flat 18. The
@@ -1609,6 +1582,8 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
       .join("|");
   const customChanged = serializeCustomRows(customRows) !== serializeCustomRows(initialCustomRows);
   const hasChanged = selected !== (currentStrategy === "auto_invest" ? "growth" : currentStrategy) || (selected === "custom" && customChanged);
+  // Warn on tab-close/refresh while a strategy / custom-mix change is staged but unsaved.
+  useUnsavedGuard(hasChanged);
   const totalCustom = customRows.reduce((sum, row) => sum + (Number.isFinite(row.weight) ? row.weight : 0), 0);
   const customTickerSet = new Set(customRows.map((row) => row.ticker).filter(Boolean));
   const customHasDuplicates = customTickerSet.size !== customRows.filter((row) => row.ticker).length;
@@ -1673,6 +1648,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
       });
       const data = await res.json();
       if (res.ok) {
+        if (demoBlocked(data, toast)) return;
         haptic("success");
         if (selected === "custom") {
           setInitialCustomRows(customRows);
@@ -1751,13 +1727,15 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2 flex-wrap">
-                    {/* Canonical strategy emoji — matches the locked map
-                        (📈 Growth · 🌿 Balanced · ⚖️ Conservative · 🎯
-                        Custom). Helps the eye distinguish options at a
-                        glance instead of having to read each label. */}
-                    {strategy.emoji && (
-                      <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>{strategy.emoji}</span>
-                    )}
+                    {/* Bespoke brand glyph (TrendingUp / Scale / Shield /
+                        SlidersHorizontal), the same STRATEGY_ICONS set the
+                        dashboard and the Activity strategy-change row use.
+                        Helps the eye distinguish options at a glance instead
+                        of having to read each label. */}
+                    {(() => {
+                      const Icon = (STRATEGY_ICONS as any)[strategy.key];
+                      return Icon ? <Icon size={15} strokeWidth={2.25} aria-hidden /> : null;
+                    })()}
                     {strategy.label}
                     {/* "Currently active" pill — only appears on the
                         strategy that's actually saved to the fund. Lets
@@ -1765,7 +1743,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                         NOW, distinct from the "selected" border state
                         which only reflects what they're about to commit. */}
                     {currentStrategy === strategy.key && (
-                      <span className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]">
+                      <span className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]">
                         ✓ Active
                       </span>
                     )}
@@ -1779,25 +1757,19 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                         accents elsewhere on the page (matches the
                         FeatureWallModal's tier-label visual). */}
                     {isLocked && (
-                      <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
+                      <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
                         🔒 Plus
                       </span>
                     )}
-                    {/* Stronger "Recommended for Emma" badge — gold/cream
-                        warmth (vs the previous evergreen which competed
-                        with Active), bigger type, slightly more padding.
-                        Only appears on the age-band-matched preset, so
-                        it's a single quiet recommendation per render. */}
-                    {recommendedKey === strategy.key && (
-                      <span className="rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.07em]" style={{ background: "hsl(43, 75%, 55%, 0.16)", color: "hsl(43, 55%, 30%)" }}>
-                        ★ Recommended{childName ? ` for ${childName}` : ""}
-                      </span>
-                    )}
+                    {/* (The "★ Recommended for {child}" badge was removed
+                        2026-06-03 — an age-matched preset is a personalized
+                        investment recommendation, which the self-directed
+                        posture forbids. Neutral menu only.) */}
                     {isLocked && <Lock size={12} className="text-muted-foreground" />}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{seIsOwnerMode ? strategy.description.replace(/\s*·?\s*protect what's there as \d+ approaches/i, " · protect what's there").replace(/\s*as \d+ approaches/i, "") : ageifyTierCopy(strategy.description)}</p>
                   {!seIsOwnerMode && strategy.bestFor && (
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">{ageifyTierCopy(strategy.bestFor)}</p>
+                    <p className="text-2xs text-muted-foreground/70 mt-0.5">{ageifyTierCopy(strategy.bestFor)}</p>
                   )}
                   {/* At-a-glance stocks/bonds split per option. The one
                       number a parent actually weighs when choosing a mix
@@ -1815,7 +1787,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                     );
                     const stocks = Math.max(0, 100 - bonds);
                     return (
-                      <p className="text-[11px] font-medium text-muted-foreground/80 mt-1 tabular-nums">
+                      <p className="text-2xs font-medium text-muted-foreground/80 mt-1 tabular-nums">
                         {stocks}% stocks · {bonds}% bonds
                       </p>
                     );
@@ -1824,7 +1796,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 {selected === strategy.key && <Check size={16} className="text-primary flex-shrink-0" />}
               </div>
               {isLocked && (
-                <p className="text-[11px] text-muted-foreground mt-1">Requires Kiddo+ or Family</p>
+                <p className="text-2xs text-muted-foreground mt-1">Requires Kiddo+ or Family</p>
               )}
             </button>
           );
@@ -1849,7 +1821,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-foreground">{a.ticker} <span className="text-muted-foreground font-normal">{a.weight}%</span></p>
-                  <p className="text-[11px] text-muted-foreground truncate">{a.name}</p>
+                  <p className="text-2xs text-muted-foreground truncate">{a.name}</p>
                 </div>
               </div>
             ))}
@@ -1873,11 +1845,34 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             // love remain two separate buckets with two different stories; this
             // view is the managed-mix story.
             const rowTickers = new Set([...Object.keys(targetMap), ...Object.keys(currentAllocPct)]);
-            const rows = Array.from(rowTickers).map((t) => {
-              const target = targetMap[t] ?? 0;
-              const current = currentAllocPct[t] ?? 0;
-              return { ticker: t, target, current, diff: current - target };
-            }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+            // Largest-remainder (Hamilton) rounding so the displayed today% and
+            // target% each sum to EXACTLY 100 within the managed sleeve, and the
+            // drift column nets to 0. Rounding each cell independently with
+            // toFixed(0) read "66 + 27 + 6 = 99" and made the over/underweights
+            // total -1 instead of balancing — accurate underneath, but it looked
+            // broken. Round both columns to integers that sum to 100, then derive
+            // each drift from the ROUNDED values so "current - target" always
+            // equals the shown drift and the drift column sums to zero.
+            const hamiltonRound = (vals: number[]): number[] => {
+              const floors = vals.map((v) => Math.floor(v));
+              let leftover = Math.round(vals.reduce((s, v) => s + v, 0)) - floors.reduce((s, n) => s + n, 0);
+              const order = vals
+                .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+                .sort((a, b) => b.frac - a.frac);
+              const out = floors.slice();
+              for (let k = 0; k < order.length && leftover > 0; k++) { out[order[k].i] += 1; leftover -= 1; }
+              return out;
+            };
+            const baseRows = Array.from(rowTickers).map((t) => ({
+              ticker: t,
+              target: targetMap[t] ?? 0,
+              current: currentAllocPct[t] ?? 0,
+            }));
+            const roundedCurrent = hamiltonRound(baseRows.map((r) => r.current));
+            const roundedTarget = hamiltonRound(baseRows.map((r) => r.target));
+            const rows = baseRows
+              .map((r, i) => ({ ticker: r.ticker, target: roundedTarget[i], current: roundedCurrent[i], diff: roundedCurrent[i] - roundedTarget[i] }))
+              .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
             const maxDriftPts = rows.reduce((m, r) => Math.max(m, Math.abs(r.diff)), 0);
             const inLine = maxDriftPts <= 3;
             const childPossessive = seIsOwnerMode ? "your mix" : (childName ? `${childName}'s mix` : "Managed mix");
@@ -1887,7 +1882,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                   <p className="kiddo-section-label">
                     Today vs target
                   </p>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className={`text-3xs ${inLine ? "text-[hsl(var(--kiddo-evergreen))] font-semibold" : "text-muted-foreground"}`}>
                     {inLine ? "On target" : `${maxDriftPts.toFixed(0)} pts off`}
                   </span>
                 </div>
@@ -1898,23 +1893,32 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                     parent needs to know they're looking at the managed-mix
                     story, not their whole portfolio. */}
                 {investedValue > 0 && managedMixShareOfFund > 0 && managedMixShareOfFund < 100 && (
-                  <p className="text-[10px] text-muted-foreground/75 leading-snug -mt-1">
+                  <p className="text-3xs text-muted-foreground/75 leading-snug -mt-1">
                     {childPossessive} is {managedMixShareOfFund}% of the whole fund. The other {100 - managedMixShareOfFund}% is in Chosen with Love (no targets).
                   </p>
                 )}
                 <div className="space-y-1.5">
                   {rows.map((r) => {
-                    const sign = r.diff > 0.5 ? "+" : r.diff < -0.5 ? "-" : "";
                     const driftAbs = Math.abs(r.diff);
-                    const driftLabel = driftAbs < 0.5 ? "on target" : `${sign}${driftAbs.toFixed(0)} pts`;
-                    const driftColor =
-                      driftAbs < 0.5
-                        ? "text-muted-foreground"
-                        : r.diff > 0
-                          ? "text-[hsl(var(--kiddo-evergreen))]"
-                          : "text-amber-700";
+                    const onTarget = driftAbs < 0.5;
+                    // Direction word instead of a bare +/- sign: "+5" sitting next
+                    // to a "67% → 62%" (downward) arrow read ambiguously. "5 pts
+                    // over" / "4 pts under" is unambiguous on its own.
+                    const direction = r.diff > 0 ? "over" : "under";
+                    const driftLabel = onTarget ? "on target" : `${driftAbs.toFixed(0)} pts ${direction}`;
+                    // Reserve the reassuring evergreen for the GOAL state (on
+                    // target). Drift in EITHER direction is neutral — it isn't
+                    // good or bad, it's just "not there yet," and the mix self-
+                    // corrects by weighting new contributions toward the underweight
+                    // side (see the footer). The old scheme rendered overweight
+                    // green (read as "good") and underweight amber (read as an
+                    // alarm), implying a value judgment that isn't real: both are
+                    // equidistant from target.
+                    const driftColor = onTarget
+                      ? "text-[hsl(var(--kiddo-evergreen))]"
+                      : "text-muted-foreground";
                     return (
-                      <div key={r.ticker} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 text-[11px]">
+                      <div key={r.ticker} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 text-2xs">
                         <span className="font-semibold text-foreground tabular-nums">{r.ticker}</span>
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-foreground tabular-nums">{r.current.toFixed(0)}%</span>
@@ -1926,10 +1930,10 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+                <p className="text-3xs text-muted-foreground/80 leading-relaxed">
                   {inLine
                     ? `${childPossessive} matches the target today.`
-                    : "We don't sell to rebalance. Every sale is a taxable event. Future ETF gifts are weighted toward the underweight side here until the mix lands on target. (Chosen with Love stocks are separate and aren't rebalanced.)"}
+                    : "We don't sell to rebalance, since every sale is taxable. New gifts fill the underweight side, steering the mix toward target over time (a large fund may not fully get there on gifts alone)."}
                 </p>
               </div>
             );
@@ -1952,20 +1956,20 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 </p>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <p className="text-[10px] text-muted-foreground">Low</p>
+                    <p className="text-3xs text-muted-foreground">Low</p>
                     <p className={`font-heading text-base font-bold tabular-nums ${range.low < 0 ? "text-red-600" : "text-foreground"}`}>{fmt(range.low)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground">Average</p>
+                    <p className="text-3xs text-muted-foreground">Average</p>
                     <p className="font-heading text-base font-bold tabular-nums text-[hsl(var(--kiddo-evergreen))]">{fmt(range.avg)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground">High</p>
+                    <p className="text-3xs text-muted-foreground">High</p>
                     <p className="font-heading text-base font-bold tabular-nums text-foreground">{fmt(range.high)}</p>
                   </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                  Projections are hypothetical and based on historical market data. Past performance does not guarantee future results. Investing involves risk. But so does a gift card.
+                <p className="text-3xs text-muted-foreground/70 leading-relaxed">
+                  Projections are hypothetical. Past performance does not guarantee future results. Investing involves risk.
                 </p>
               </div>
             );
@@ -1982,7 +1986,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               enforced server-side via CUSTOM_STRATEGY_ALLOWED_TICKERS,
               so copy and code agree. Individual stocks live in Chosen
               with Love (one-time contributions or recurring picks). */}
-          <p className="text-[11.5px] text-muted-foreground/85 leading-relaxed -mt-1">
+          <p className="text-2xs text-muted-foreground/85 leading-relaxed -mt-1">
             Pick the ETFs and weights for {seIsOwnerMode ? "your" : (fund?.recipientFirstName ? `${fund.recipientFirstName}'s` : "your child's")} managed mix.
             Up to {MAX_CUSTOM_HOLDINGS} holdings. Want a specific stock like Apple or Disney instead? That goes in <span className="font-semibold">Chosen with Love</span>.
           </p>
@@ -2097,7 +2101,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                             return adjusted;
                           });
                         }}
-                        className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+                        className="rounded-md border border-border px-2 py-0.5 text-2xs text-muted-foreground hover:text-foreground"
                         data-testid={`button-remove-custom-holding-${index}`}
                       >
                         Remove
@@ -2257,7 +2261,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               auto-fades via the useEffect on autoAdjustHint. */}
           {autoAdjustHint && (
             <div
-              className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-[11px] text-[hsl(var(--kiddo-evergreen))]"
+              className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-2xs text-[hsl(var(--kiddo-evergreen))]"
               data-testid="custom-mix-auto-adjust-hint"
               aria-live="polite"
             >
@@ -2315,7 +2319,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             className="rounded-xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.06)] p-3 space-y-2"
             data-testid="strategy-switch-disclosure"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
+            <p className="text-2xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
               What changes
             </p>
             {/* Mutation clarity — locked rule per feedback_mutation_clarity.
@@ -2327,28 +2331,33 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 to change something"; the diff makes the change explicit. */}
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <span className="inline-flex items-center gap-1 rounded-full bg-background border border-border/70 px-2.5 py-0.5 text-muted-foreground">
-                <span aria-hidden>{prevStrategy?.emoji || "•"}</span>
+                {/* Brand glyph, matches STRATEGY_ICONS on the cards above +
+                    the Activity strategy-change row (not the old emoji). */}
+                {(() => {
+                  const PrevIcon = prevStrategy ? (STRATEGY_ICONS as any)[prevStrategy.key] : null;
+                  return PrevIcon ? <PrevIcon size={13} strokeWidth={2.25} aria-hidden /> : <span aria-hidden>•</span>;
+                })()}
                 <span className="font-semibold">{prevStrategy?.label || "Current"}</span>
               </span>
               <span className="text-muted-foreground/60" aria-hidden>→</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] border border-[hsl(var(--kiddo-gold)/0.35)] px-2.5 py-0.5 text-[hsl(var(--kiddo-gold-ink))]">
-                <span aria-hidden>{nextStrategy?.emoji || "•"}</span>
+                {(() => {
+                  const NextIcon = nextStrategy ? (STRATEGY_ICONS as any)[nextStrategy.key] : null;
+                  return NextIcon ? <NextIcon size={13} strokeWidth={2.25} aria-hidden /> : <span aria-hidden>•</span>;
+                })()}
                 <span className="font-bold">{newLabel}</span>
               </span>
             </div>
             <p className="text-xs leading-relaxed text-foreground">
-              {whoPossessive} existing {formattedInvested} stays invested as it is. New gifts and recurring investments will follow the {newLabel} from now on.
+              {whoPossessive} {formattedInvested} stays put. New gifts and recurring investments follow the {newLabel} from here on, so the fund shifts toward it over time.
             </p>
-            {/* Em-dash removed (feedback_no_emdash). Orphan-holding consequence
-                added: previously the copy implied existing positions stay
-                untouched, but a parent reading it could reasonably wonder
-                whether their VGT (say) keeps growing as new money arrives.
-                It doesn't — new money flows into the new mix only. The
-                orphan position holds steady at its current value, never
-                added to and never sold. Worth saying explicitly so the
-                parent isn't surprised three months later. */}
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              We don't sell holdings to switch. Every sale would be a taxable event for {whoObject}. Holdings that aren't in the new mix stay where they are. We won't add to them or sell them. The new mix drifts toward target as fresh gifts arrive.
+            {/* Muted "why", said once (was five choppy sentences saying "we don't
+                touch existing holdings" three ways). Keeps the two facts a parent
+                actually needs: we don't rebalance by selling (a sale is taxable),
+                and an orphan position (one not in the new mix) just holds at its
+                value, never added to or sold. No em-dash (feedback_no_emdash). */}
+            <p className="text-2xs leading-relaxed text-muted-foreground">
+              We never sell to switch mixes. A sale would be a taxable event for {whoObject}, so anything already outside the new mix just holds, never added to or sold.
             </p>
           </div>
         );
@@ -2419,7 +2428,7 @@ function KidOwnerTaxSection() {
   const updateEarnedIncome = async (hasIncome: boolean, bracket: string | null) => {
     setBusy(true);
     try {
-      await fetch("/api/users/me/earned-income", {
+      const res = await fetch("/api/users/me/earned-income", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -2428,6 +2437,8 @@ function KidOwnerTaxSection() {
           estimatedIncomeBracket: bracket,
         }),
       });
+      const body = await res.json().catch(() => null);
+      if (demoBlocked(body, toast)) return;
       await refetch();
     } finally {
       setBusy(false);
@@ -2438,12 +2449,14 @@ function KidOwnerTaxSection() {
     setBusy(true);
     try {
       const next = !data.rothIraInterestAt;
-      await fetch("/api/users/me/roth-interest", {
+      const res = await fetch("/api/users/me/roth-interest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ interested: next }),
       });
+      const body = await res.json().catch(() => null);
+      if (demoBlocked(body, toast)) return;
       await refetch();
       toast({
         title: next ? "You're on the list" : "Removed from waiting list",
@@ -2617,27 +2630,12 @@ const [editFundName, setEditFundName] = useState("");
   const [editRecipientState, setEditRecipientState] = useState("");
   const [savingFundEdit, setSavingFundEdit] = useState(false);
   const [selectedSettingsFundId, setSelectedSettingsFundId] = useState<string>(() => getActiveFundId() || "");
-  const [settingsFundMenuOpen, setSettingsFundMenuOpen] = useState(false);
-  const settingsFundMenuRef = useRef<HTMLDivElement | null>(null);
   // (coParentWallOpen state moved into CoParentAccessCard on
   // 2026-05-14 — Phase 2 sheet-extraction chunk 7.)
-  const [parentLifecycleSettings, setParentLifecycleSettings] = useState<{
-    activationNudges: boolean;
-    milestoneEmails: boolean;
-    birthdayDormantReminders: boolean;
-  }>(() => {
-    const defaults = {
-      activationNudges: true,
-      milestoneEmails: true,
-      birthdayDormantReminders: true,
-    };
-    if (typeof window === "undefined") return defaults;
-    try {
-      return { ...defaults, ...JSON.parse(window.localStorage.getItem("kiddo-parent-lifecycle-settings") || "{}") };
-    } catch {
-      return defaults;
-    }
-  });
+  // (Parent-lifecycle email toggles were localStorage-only and the server
+  // worker never read them, so the switches did nothing. Folded into the
+  // server-backed Email preferences center as real categories on
+  // 2026-07-03: activationNudges / fundMilestones / birthdayDormant.)
 
   const queryClient = useQueryClient();
 
@@ -2651,7 +2649,7 @@ const [editFundName, setEditFundName] = useState("");
     const cancel = onIdle(() => {
       prefetchDashboard(queryClient, activeFundId);
       if (activeFundId) prefetchMemoryBook(queryClient, activeFundId);
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, activeFundId);
     });
     return cancel;
   }, [authLoading, user, queryClient]);
@@ -2714,6 +2712,8 @@ const [editFundName, setEditFundName] = useState("");
   });
 
   const primaryFund = (selectedSettingsFundId && funds.find((f: any) => String(f.id) === String(selectedSettingsFundId))) || funds[0];
+  // Fund's actual UTMA majority age (18/21/25 by state) for handoff copy.
+  const primaryFundMajorityAge = Number((primaryFund as any)?.majorityAge) || 18;
   // Display-capitalized kid first name. Used everywhere primaryFund's
   // name is rendered to user-facing copy. Form/state usages (the
   // Edit-fund modal, editingFund, editRecipientName, raw `fund?.`
@@ -2891,7 +2891,7 @@ const [editFundName, setEditFundName] = useState("");
   // renders the empty/upsell state. See Settings audit notes for why
   // this surface exists in Money tab even though the canonical
   // management UI lives on the Dashboard.
-  const { data: recurringContributions = [] } = useQuery<Array<{ id: string; amount: string; frequency: string; status: string; nextRunDate?: string | null }>>({
+  const { data: recurringContributions = [] } = useQuery<Array<{ id: string; amount: string; frequency: string; status: string; nextRunDate?: string | null; bankAccountId?: string | null }>>({
     queryKey: ["/api/funds", primaryFund?.id, "parent-contributions"],
     queryFn: async () => {
       if (!primaryFund?.id) return [];
@@ -2978,6 +2978,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save settings");
+      if (demoBlocked(data, toast)) throw new Error("__DEMO_NOOP__");
       return data;
     },
     onSuccess: () => {
@@ -2985,6 +2986,7 @@ const [editFundName, setEditFundName] = useState("");
       void queryClient.invalidateQueries({ queryKey: ["/api/funds", selectedSettingsFundId, "gifter-notifications"] });
     },
     onError: (error: any) => {
+      if (error?.message === "__DEMO_NOOP__") return; // demoBlocked already toasted
       toast({ title: "Could not save settings", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -3002,6 +3004,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update subscriber");
+      if (demoBlocked(data, toast)) throw new Error("__DEMO_NOOP__");
       return data;
     },
     onSuccess: (_data, vars) => {
@@ -3024,6 +3027,7 @@ const [editFundName, setEditFundName] = useState("");
       }
     },
     onError: (error: any) => {
+      if (error?.message === "__DEMO_NOOP__") return; // demoBlocked already toasted
       toast({ title: "Could not update", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -3045,6 +3049,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save setting");
+      if (demoBlocked(data, toast)) throw new Error("__DEMO_NOOP__");
       return data;
     },
     // Optimistic update — the toggle should feel instant. Previously
@@ -3085,6 +3090,7 @@ const [editFundName, setEditFundName] = useState("");
       if (context?.previous) {
         queryClient.setQueryData(["/api/funds"], context.previous);
       }
+      if (error?.message === "__DEMO_NOOP__") return; // demoBlocked already toasted; optimistic toggle rolled back above
       toast({ title: "Could not save setting", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -3339,7 +3345,7 @@ const [editFundName, setEditFundName] = useState("");
     ? `Final thank-you note when control passes at ${notificationMajorityAge}. Add a birthdate first.`
     : notificationAgeTransition.stage === "adult"
       ? `Age-${notificationMajorityAge} handoff is ready now. Review transfer steps before sending this note.`
-      : `Final thank-you note when control passes at ${notificationMajorityAge}. Planning anchor: ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
+      : `Final thank-you note when control passes at ${notificationMajorityAge}, around ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
   // The active notification fund has already transferred to the owner → the
   // age-of-majority handoff note no longer applies (hide the row below).
   const notificationFundIsOwnerHeld =
@@ -3349,19 +3355,6 @@ const [editFundName, setEditFundName] = useState("");
     parseFloat(fund?.balance || "0") +
     parseFloat(fund?.pendingBalance || "0") +
     parseFloat(fund?.cashBalance || "0");
-  const selectSettingsFund = (fund: any) => {
-    setSelectedSettingsFundId(String(fund.id));
-    setActiveFundId(String(fund.id));
-    setSettingsFundMenuOpen(false);
-    haptic("selection");
-  };
-  const updateParentLifecycleSetting = (key: keyof typeof parentLifecycleSettings, value: boolean) => {
-    setParentLifecycleSettings((current) => {
-      const next = { ...current, [key]: value };
-      safeLocalSet("kiddo-parent-lifecycle-settings", JSON.stringify(next));
-      return next;
-    });
-  };
   const updateGifterNotificationSetting = (
     key: "birthdayReminders" | "memoryBookSharing" | "age18Notification" | "giftConfirmations",
     value: boolean,
@@ -3393,24 +3386,6 @@ const [editFundName, setEditFundName] = useState("");
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handleActiveFundChange);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handleActiveFundChange);
   }, []);
-
-  useEffect(() => {
-    if (!settingsFundMenuOpen) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!settingsFundMenuRef.current?.contains(event.target as Node)) {
-        setSettingsFundMenuOpen(false);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSettingsFundMenuOpen(false);
-    };
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [settingsFundMenuOpen]);
 
   useEffect(() => {
     if (starterEligibleFunds.length === 0) {
@@ -3777,6 +3752,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       if (res.ok) {
         const body = await res.json().catch(() => ({} as any));
+        if (demoBlocked(body, toast)) return;
         queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
         if (body?.forcedPrivate) {
           toast({
@@ -3799,16 +3775,48 @@ const [editFundName, setEditFundName] = useState("");
     }
   };
 
-  const handleDeleteBankAccount = async (id: string) => {
+  // Removal is confirmed through a dialog (never one instant tap) because it's
+  // destructive and can silently break a recurring pull that draws from this
+  // bank. `bankPendingRemoval` holds the account the dialog is asking about.
+  const [bankPendingRemoval, setBankPendingRemoval] = useState<any | null>(null);
+  const [removingBank, setRemovingBank] = useState(false);
+
+  const confirmRemoveBank = async () => {
+    const account = bankPendingRemoval;
+    if (!account) return;
+    setRemovingBank(true);
     haptic("medium");
     try {
-      const res = await fetch(`/api/bank-accounts/${id}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`/api/bank-accounts/${account.id}`, { method: "DELETE", credentials: "include" });
+      // DELETE returns 204 (no body) on success; older/demo paths may return JSON.
       if (res.ok) {
+        const data = res.status === 204 ? null : await res.json().catch(() => null);
+        if (demoBlocked(data, toast)) { setRemovingBank(false); setBankPendingRemoval(null); return; }
+        // The server does not reassign the default when the default bank is
+        // removed, which would leave the user with no default funding source.
+        // Promote the first remaining account so recurring pulls always have a
+        // default to fall back to.
+        if (account.isDefault) {
+          const remaining = (bankAccounts || []).filter((b: any) => b.id !== account.id);
+          if (remaining.length > 0) {
+            await fetch(`/api/bank-accounts/${remaining[0].id}`, {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isDefault: true }),
+            }).catch(() => {});
+          }
+        }
         queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
         toast({ title: "Bank account removed" });
+        setBankPendingRemoval(null);
+      } else {
+        toast({ title: "Could not remove account", variant: "destructive" });
       }
     } catch {
       toast({ title: "Could not remove account", variant: "destructive" });
+    } finally {
+      setRemovingBank(false);
     }
   };
 
@@ -3823,6 +3831,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not update default bank.");
+      if (demoBlocked(data, toast)) return;
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       toast({ title: "Default bank updated" });
     } catch (error) {
@@ -3909,6 +3918,7 @@ const [editFundName, setEditFundName] = useState("");
         toast({ title: "Could not update fund", description: data?.error || "Please try again", variant: "destructive" });
         return;
       }
+      if (demoBlocked(data, toast)) return;
 
       setEditFundOpen(false);
       setEditingFund(null);
@@ -3932,12 +3942,13 @@ const [editFundName, setEditFundName] = useState("");
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (demoBlocked(data, toast)) return;
         haptic("success");
         toast({ title: "Invite sent!", description: `${email} has been invited as ${role}` });
         queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "collaborators"] });
       } else {
-        const data = await res.json();
         toast({ title: "Could not send invite", description: data.error || "Please try again", variant: "destructive" });
       }
     } catch {
@@ -3972,21 +3983,17 @@ const [editFundName, setEditFundName] = useState("");
   // 2026-05-14 — Phase 2 sheet-extraction chunk 2.)
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+    // No mobile pb-24: the app shell already adds bottom-nav clearance (it doubled to
+    // ~190px of dead space). Fixed 2026-06-23, same as the dashboards.
+    <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-settings">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 space-y-6">
-        {/* Fund switcher tabs for Settings — multi-fund parents need
-            to switch which kid's settings they're editing without
-            backtracking through Dashboard. Same component as the
-            Dashboard's FundTabs (introduced 2026-05-26); renders
-            nothing for single-fund parents. Audit 2026-05-26 caught
-            the gap: the hero copy "tap the name to switch child"
-            had no clear referent because there was no name-row to
-            tap on Settings (the AppHeader dropdown was the implicit
-            answer but discoverability was poor). With FundTabs
-            rendered here, the copy now points at a visible row of
-            tabs. */}
-        <FundTabs funds={funds} activeFundId={selectedSettingsFundId} />
+        {/* Fund switcher pills removed 2026-07 to match the live dashboard
+            (DashboardLab dropped its FundTabs too). The AppHeader
+            "{child}'s fund" dropdown is now the single fund switcher
+            app-wide: it drives ACTIVE_FUND_CHANGE_EVENT, which
+            selectedSettingsFundId listens to (~3126), so switching which
+            kid's settings you edit still works without a duplicate row. */}
 
         {/* In-content back link removed 2026-05-11. Settings is Tier-1
             fund-scoped per page-scope.ts; AppHeader (logo + fund switcher
@@ -4180,66 +4187,18 @@ const [editFundName, setEditFundName] = useState("");
             className="px-1"
             data-testid="settings-hero"
           >
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+            <p className="text-3xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
               Settings
             </p>
-            {/* Multi-fund parents get an in-place fund switcher on the
-                headline. The per-fund tabs below (Child / Money / Gifts)
-                silently scope to ONE child, so with several kids a bare
-                "this fund" reads as ambiguous — "which one did it land
-                on?" Naming the child AND making it a picker answers both
-                "which fund am I editing" and "how do I switch" without
-                leaving Settings. Single-fund parents keep the static
-                headline; there's nothing to disambiguate. Reuses the
-                pre-existing selectSettingsFund + settingsFundMenuOpen
-                plumbing (state, ref, outside-click/Escape close). */}
+            {/* The headline just NAMES the fund; it used to double as a dropdown
+                picker but that was redundant. Fund switching now lives solely in
+                the AppHeader "{child}'s fund" dropdown (selectedSettingsFundId
+                listens to ACTIVE_FUND_CHANGE_EVENT at ~3126). One switcher (the
+                header), one namer (this). Pills cut 2026-07; inline picker cut earlier. */}
             {funds.length > 1 ? (
-              <div className="relative mt-1 w-fit" ref={settingsFundMenuRef}>
-                <h1 className="font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
-                  <button
-                    type="button"
-                    onClick={() => { setSettingsFundMenuOpen((o) => !o); haptic("selection"); }}
-                    className="group inline-flex items-center gap-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-haspopup="listbox"
-                    aria-expanded={settingsFundMenuOpen}
-                    data-testid="settings-fund-switcher"
-                  >
-                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "This fund"}
-                    <ChevronDown
-                      size={20}
-                      className={`shrink-0 text-muted-foreground transition-transform group-hover:text-foreground ${settingsFundMenuOpen ? "rotate-180" : ""}`}
-                      aria-hidden
-                    />
-                  </button>
-                </h1>
-                {settingsFundMenuOpen && (
-                  <div
-                    role="listbox"
-                    aria-label="Choose a fund to configure"
-                    className="absolute left-0 z-20 mt-1.5 max-h-72 w-64 overflow-auto rounded-2xl border border-border bg-card p-1.5 shadow-lg"
-                    data-testid="settings-fund-dropdown"
-                  >
-                    {funds.map((f: any) => {
-                      const selected = String(f.id) === String(primaryFund?.id);
-                      const name = capFirst(f.recipientFirstName) || f.name || "Fund";
-                      return (
-                        <button
-                          key={f.id}
-                          type="button"
-                          role="option"
-                          aria-selected={selected}
-                          onClick={() => selectSettingsFund(f)}
-                          className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${selected ? "bg-[hsl(var(--kiddo-cream))]" : "hover:bg-muted/60"}`}
-                          data-testid={`settings-fund-option-${f.id}`}
-                        >
-                          <span className="truncate text-sm font-semibold text-foreground">{name}'s fund</span>
-                          {selected && <Check size={16} className="shrink-0 text-foreground" aria-hidden />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight" data-testid="settings-fund-name">
+                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "This fund"}
+              </h1>
             ) : (
               <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
                 {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt))
@@ -4251,7 +4210,7 @@ const [editFundName, setEditFundName] = useState("");
               {primaryFundIsPreviousOwner ? (
                 <>You're viewing {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} as the previous owner.{" "}</>
               ) : funds.length > 1 ? (
-                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund above"}. Tap the tabs above to switch child.{" "}</>
+                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the selected fund"}.{" "}</>
               ) : (
                 <>Changes apply to this fund.{" "}</>
               )}
@@ -4262,7 +4221,15 @@ const [editFundName, setEditFundName] = useState("");
           </motion.div>
         )}
 
-        <div className="space-y-2">
+        {/* Sticky tab strip: pins just under the sticky AppHeader (~56px) so a
+            parent deep in a long tab (Money / Notifications scroll for several
+            screens) can switch sections without scrolling back to the top.
+            Matches the header's frosted-cream treatment (cream/0.9 + blur) so
+            content scrolls cleanly behind it — the blur is the separation, so no
+            permanent divider line at rest. -mx-4 px-4 bleeds the bg to the
+            screen edges. env() offset keeps it flush under the notch-extended
+            header in standalone PWA. Added 2026-07. */}
+        <div className="sticky top-[calc(var(--app-safe-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px] space-y-2">
           <div className={`kiddo-tab-row max-w-full overflow-x-auto${primaryFundIsPreviousOwner ? " hidden" : ""}`} data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
             {/* "Membership" tab removed from the in-app navigation
                 on 2026-05-14 per the WHO/HOW IA Phase 1c. Account is
@@ -4282,7 +4249,11 @@ const [editFundName, setEditFundName] = useState("");
             {[
               { id: "child", label: ((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "You" : "Child" },
               { id: "gifts", label: "Gifts" },
-              { id: "notifications", label: "Notifications" },
+              // Responsive label: 4 equal-width tabs can't fit "Notifications"
+              // (~91px) on a phone, so show "Alerts" below sm and the full word
+              // from sm up (where the columns have room). Keeps the app-wide
+              // "Notifications" term on desktop; data-testid stays notifications.
+              { id: "notifications", label: <><span className="sm:hidden">Alerts</span><span className="hidden sm:inline">Notifications</span></> },
               { id: "money", label: "Money" },
             ].filter((tab) => !(primaryFundIsCoAdmin && tab.id === "money")).map((tab) => (
               <button
@@ -4294,6 +4265,11 @@ const [editFundName, setEditFundName] = useState("");
                 data-active={settingsTab === tab.id ? "true" : "false"}
                 data-testid={`settings-tab-${tab.id}`}
                 onClick={() => {
+                  // Start a newly-selected tab at the TOP. Without this the previous
+                  // tab's scroll position carried over, dropping you mid-content in a
+                  // different tab (reads as broken). Only on an actual switch, and
+                  // instant (no smooth-scroll fighting the tab's fade-in). 2026-07-08.
+                  if (tab.id !== settingsTab) window.scrollTo({ top: 0 });
                   setSettingsTab(tab.id as typeof settingsTab);
                   haptic("selection");
                 }}
@@ -4384,7 +4360,7 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <p className="kiddo-section-label mb-1">Gift page</p>
-                <p className="text-[11px] text-muted-foreground mb-4">How your fund looks and who can find it.</p>
+                <p className="text-2xs text-muted-foreground mb-4">How your fund looks and who can find it.</p>
                 {primaryFund?.slug && (
                   <div className="rounded-xl border border-border bg-muted/30 px-3.5 py-3 flex items-center gap-2 mb-4">
                     <span className="text-xs text-muted-foreground truncate flex-1">{window.location.origin}/{primaryFund.slug}</span>
@@ -4414,8 +4390,8 @@ const [editFundName, setEditFundName] = useState("");
                     </span>
                     <span className="text-sm font-semibold text-foreground">Link only · Private</span>
                   </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                    Only people you share the link with can reach this fund. {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "It is never publicly searchable." : "Funds for children are never publicly searchable."}
+                  <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">
+                    Never listed or publicly searchable. Anyone with the link can reach it, so share it only with people you trust.
                   </p>
                 </div>
               </div>
@@ -4430,7 +4406,7 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <p className="kiddo-section-label mb-1">What people can do</p>
-                <p className="text-[11px] text-muted-foreground mb-4">Choose how personal gifts can be for {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "you" : (recipientFirstNameDisplay || "your child")}.</p>
+                <p className="text-2xs text-muted-foreground mb-4">Choose how personal gifts can be for {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "you" : (recipientFirstNameDisplay || "your child")}.</p>
                 {primaryFund ? (
                   <div data-testid="settings-gifts-gifter-rules-editor">
                     <GifterInvestmentRulesEditor fund={primaryFund} onSuccess={refreshAll} />
@@ -4449,10 +4425,16 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <p className="kiddo-section-label mb-1">Memory Book entries from gifters</p>
-                <p className="text-[11px] text-muted-foreground mb-4">Default: instant. Your gift link is private, and you can delete any entry anytime.</p>
+                {/* Copy honesty (2026-06-03): the gift link is NOT private — slugs
+                    are derived from the child's name (/emma), the page is public
+                    by design. "Unlisted" is the true claim: only people you share
+                    it with are likely to find it. And no "most parents do X"
+                    pre-launch — we have no usage base to claim a majority; say
+                    what OFF does instead. */}
+                <p className="text-2xs text-muted-foreground mb-4">Default: instant. Your gift link is unlisted (only people you share it with are likely to find it), and you can delete any entry anytime.</p>
                 <NotificationSwitchRow
                   title="Require my approval first"
-                  body={`When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. ${((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "Most people" : "Most parents"} leave this off so notes appear in real time as gifters add them.`}
+                  body={`If off, gifter notes and media appear right away.`}
                   checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
                   disabled={!primaryFund?.id || updateMemoryModeration.isPending}
                   onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
@@ -4551,15 +4533,15 @@ const [editFundName, setEditFundName] = useState("");
                   {/* What's paused — itemized, so the parent sees what they're walking away from */}
                   {cancellationImpact && (cancellationImpact.parentContributions.length > 0 || cancellationImpact.recurringGifts.length > 0) && (
                     <div className="rounded-lg border border-amber-200/60 bg-white/60 p-3 space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">What pauses when {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends</p>
+                      <p className="text-2xs font-semibold uppercase tracking-wide text-amber-900/70">What pauses when {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends</p>
                       {cancellationImpact.parentContributions.map(c => (
                         <p key={c.id} className="text-xs text-amber-900 leading-relaxed">
-                          ⏸ {c.childName}'s recurring investment{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""}, ${c.amount.toFixed(2)}/{c.frequency}
+                          ⏸ {c.childName}'s recurring investment{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""}, {formatUsd(c.amount)}/{c.frequency}
                         </p>
                       ))}
                       {cancellationImpact.recurringGifts.map(rg => (
                         <p key={rg.id} className="text-xs text-amber-900 leading-relaxed">
-                          ⏸ {rg.senderName}'s gift reminder for {rg.childName}, ${rg.amount.toFixed(2)} every {rg.frequency === "yearly" ? "year" : rg.frequency === "quarterly" ? "3 months" : "month"}
+                          ⏸ {rg.senderName}'s gift reminder for {rg.childName}, {formatUsd(rg.amount)} every {rg.frequency === "yearly" ? "year" : rg.frequency === "quarterly" ? "3 months" : "month"}
                         </p>
                       ))}
                     </div>
@@ -4660,13 +4642,13 @@ const [editFundName, setEditFundName] = useState("");
                 : null;
               const badgeClass = (tone: "current" | "gold" | "evergreen") =>
                 tone === "current"
-                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white"
                   : tone === "gold"
-                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
-                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white";
+                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white"
+                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white";
               return (
             <div className={`grid gap-4 ${isLegacyCurrent ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
-              <SectionCard className={`relative border-2 ${isStarterCurrent ? "border-[hsl(var(--kiddo-evergreen))]" : "border-[hsl(var(--kiddo-gold))]"} shadow-[0_2px_8px_rgba(26,23,16,0.10),0_8px_24px_rgba(26,23,16,0.08)]`}>
+              <SectionCard className={`relative border-2 ${isStarterCurrent ? "border-[hsl(var(--kiddo-evergreen))]" : "border-[hsl(var(--kiddo-gold))]"} shadow-[0_2px_8px_hsl(var(--kiddo-ink) / 0.10),0_8px_24px_hsl(var(--kiddo-ink) / 0.08)]`}>
                 {starterBadge && (
                   <div className={`absolute left-5 top-0 -translate-y-1/2 ${badgeClass(starterBadge.tone)}`}>
                     {starterBadge.label}
@@ -4678,7 +4660,7 @@ const [editFundName, setEditFundName] = useState("");
                     ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Build it up, month after month.</p>
                   <div className="mt-5 space-y-2 text-sm text-muted-foreground">
                     {/* Plus upgrade-card bullets. Synced 2026-05-14 to
                         match Pricing.tsx leading constraint so existing
@@ -4693,7 +4675,7 @@ const [editFundName, setEditFundName] = useState("");
                     ))}
                   </div>
                   {includedHint("starter") && (
-                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
+                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
                       <Check size={10} />
                       {includedHint("starter")}
                     </p>
@@ -4710,11 +4692,11 @@ const [editFundName, setEditFundName] = useState("");
               </SectionCard>
 
               <div
-                className={`relative overflow-hidden rounded-2xl ${isFamilyCurrent ? "border-2 border-[hsl(var(--kiddo-evergreen))]" : "border border-[hsl(var(--kiddo-evergreen)/0.22)]"} bg-[linear-gradient(145deg,hsl(var(--kiddo-evergreen))_0%,hsl(153_48%_11%)_100%)] text-white shadow-[0_2px_8px_rgba(26,23,16,0.10),0_18px_38px_rgba(27,58,45,0.20)]`}
+                className={`relative overflow-hidden rounded-2xl ${isFamilyCurrent ? "border-2 border-[hsl(var(--kiddo-evergreen))]" : "border border-[hsl(var(--kiddo-evergreen)/0.22)]"} bg-[linear-gradient(145deg,hsl(var(--kiddo-evergreen))_0%,hsl(153_48%_11%)_100%)] text-white shadow-[0_2px_8px_hsl(var(--kiddo-ink) / 0.10),0_18px_38px_rgba(27,58,45,0.20)]`}
                 data-testid="card-kiddo-family"
               >
                 {familyBadge && (
-                  <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em]`}>
+                  <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em]`}>
                     {familyBadge.label}
                   </div>
                 )}
@@ -4754,7 +4736,7 @@ const [editFundName, setEditFundName] = useState("");
                     ))}
                   </div>
                   {includedHint("family") && (
-                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
+                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
                       <Check size={10} />
                       {includedHint("family")}
                     </p>
@@ -4844,60 +4826,24 @@ const [editFundName, setEditFundName] = useState("");
           >
             <EmailPreferenceCenterCard hasChildFund={funds.some((f) => !(f as any).transferredAt)} />
 
-            <SectionCard>
-              <div className="p-5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold))]">
-                    <Star size={16} />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-foreground">{notificationFundIsOwnerHeld ? "Lifecycle emails" : "Parent lifecycle emails"}</h2>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      Kiddo sends a lightweight series so important moments do not rely on memory alone.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-5 space-y-3">
-                  <NotificationSwitchRow
-                    title="Activation nudges"
-                    body="Follow-ups on days 1, 3, and 7 after fund creation."
-                    checked={parentLifecycleSettings.activationNudges}
-                    onCheckedChange={(checked) => updateParentLifecycleSetting("activationNudges", checked)}
-                    testId="row-parent-activation-nudges"
-                  />
-                  <NotificationSwitchRow
-                    title="Milestone emails"
-                    body="When the first gift lands and when a fund crosses $100, $500, and $1,000."
-                    checked={parentLifecycleSettings.milestoneEmails}
-                    onCheckedChange={(checked) => updateParentLifecycleSetting("milestoneEmails", checked)}
-                    testId="row-parent-milestone-emails"
-                  />
-                  <NotificationSwitchRow
-                    title="Birthday and dormant reminders"
-                    body="Before a birthday and after a long quiet stretch."
-                    checked={parentLifecycleSettings.birthdayDormantReminders}
-                    onCheckedChange={(checked) => updateParentLifecycleSetting("birthdayDormantReminders", checked)}
-                    testId="row-parent-birthday-dormant"
-                  />
-                </div>
-                <div className="hidden">
-                  {[
-                    ["Activation nudges", "Follow-ups on days 1, 3, and 7 after fund creation."],
-                    ["Milestone emails", "When the first gift lands and when a fund crosses $100, $500, and $1,000."],
-                    ["Birthday & dormant reminders", "Before a birthday and after a long quiet stretch."],
-                  ].map(([title, body]) => (
-                    <div key={title} className="flex gap-3">
-                      <span className="mt-0.5 text-[hsl(var(--kiddo-gold))]">✦</span>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </SectionCard>
+            <PushNotificationCard />
 
+            {/* The parent-lifecycle email drip (activation nudges, fund
+                milestones, birthday/dormant reminders) now lives as real
+                categories inside EmailPreferenceCenterCard above — the
+                server worker honors those toggles at delivery. The old
+                standalone card here wrote localStorage the server never
+                read, so its switches did nothing. Removed 2026-07-03. */}
+
+            {/* Gifter-notification controls are owner-only on the server
+                (PATCH .../gifter-notifications/settings + the subscriber
+                remove POST both gate on req.fundAccessRole === 'owner').
+                Hide both cards for a co-parent (co-admin) so they don't hit
+                a wall of dead toggles that 403 on use. Same pattern as the
+                Money tab + the Gifts-tab owner-only sections. The co-parent
+                keeps their own Email preferences + lifecycle toggles above
+                (user-scoped, not fund-owner-scoped). */}
+            {!primaryFundIsCoAdmin && (<>
             <SectionCard>
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Notifications for people who gifted</h2>
@@ -4946,18 +4892,6 @@ const [editFundName, setEditFundName] = useState("");
                     />
                   )}
                 </div>
-                <div className="hidden">
-                  {[
-                    ["Birthday reminders", `Annual reminder on ${recipientFirstNameDisplay || "your child"}'s birthday with a one-tap gift-back path.`],
-                    ["Memory Book sharing", "Lets you send warm parent-written updates. 0 of 4 used this year."],
-                    [age18NotificationTitle, age18NotificationBody],
-                  ].map(([title, body]) => (
-                    <div key={title} className="py-4 first:pt-0 last:pb-0">
-                      <p className="text-sm font-bold text-foreground">{title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             </SectionCard>
 
@@ -4972,7 +4906,7 @@ const [editFundName, setEditFundName] = useState("");
                   </div>
                   {gifterNotifications?.nextBirthdayLabel && (
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Birthday</p>
+                      <p className="text-3xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Birthday</p>
                       <p className="text-xs font-semibold text-foreground">{gifterNotifications.nextBirthdayLabel}</p>
                     </div>
                   )}
@@ -5001,16 +4935,16 @@ const [editFundName, setEditFundName] = useState("");
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-foreground truncate">{s.name || s.email}</p>
-                            <p className="text-[11px] text-muted-foreground">{s.contributionCount} {s.contributionCount === 1 ? "gift" : "gifts"} · {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(s.totalContributed / 100)}</p>
+                            <p className="text-2xs text-muted-foreground">{s.contributionCount} {s.contributionCount === 1 ? "gift" : "gifts"} · {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(s.totalContributed)}</p>
                           </div>
-                          <p className="text-[10px] text-muted-foreground shrink-0">
+                          <p className="text-3xs text-muted-foreground shrink-0">
                             {s.lastGiftAt ? new Date(s.lastGiftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                           </p>
                           <button
                             type="button"
                             disabled={removeGifterSubscriber.isPending}
                             onClick={() => { haptic("selection"); removeGifterSubscriber.mutate({ email: s.email }); }}
-                            className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                            className="shrink-0 rounded-lg px-2 py-1 text-2xs font-semibold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
                             aria-label={`Remove ${s.name || s.email} from notifications`}
                             data-testid={`button-remove-gifter-subscriber-${s.email}`}
                           >
@@ -5037,7 +4971,7 @@ const [editFundName, setEditFundName] = useState("");
                             <p className="text-sm font-semibold text-foreground">
                               {anonymousActiveCount} anonymous {anonymousActiveCount === 1 ? "subscriber" : "subscribers"}
                             </p>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            <p className="text-2xs text-muted-foreground leading-relaxed">
                               Receive milestone updates. Names hidden because they gifted anonymously.
                             </p>
                           </div>
@@ -5048,12 +4982,13 @@ const [editFundName, setEditFundName] = useState("");
                 })()}
               </div>
             </SectionCard>
+            </>)}
 
             <SectionCard>
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Need help instead?</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  If a gift is missing, identity verification failed, or a link is acting strange, reach out directly and we will help you sort it out fast.
+                  If a gift is missing, identity verification failed, or a link is acting strange, reach out and we'll help you sort it out fast.
                 </p>
                 <Button variant="outline" className="mt-4 rounded-xl" onClick={() => window.location.assign("mailto:support@kiddofund.com")} data-testid="button-settings-contact-support-compact">
                   Contact support
@@ -5080,9 +5015,14 @@ const [editFundName, setEditFundName] = useState("");
               <div className="flex items-start gap-3 p-5">
                 <Check size={18} className={`mt-0.5 ${kycCompleted ? "text-green-600" : "text-amber-500"}`} />
                 <div>
-                  <p className="text-sm font-bold text-foreground">{kycCompleted ? "Investing is active" : "Activate investing"}</p>
+                  <p className="text-sm font-bold text-foreground">{kycCompleted ? investingLiveCopy("Investing is active", "Verified and ready") : "Activate investing"}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {kycCompleted ? "Identity verified. Your funds are investing automatically." : "Until we verify your identity, gifts collect as cash."}
+                    {kycCompleted
+                      ? investingLiveCopy(
+                          "Identity verified. Your funds are investing automatically.",
+                          "Identity verified. Gifts collect as cash and start investing once investing goes live.",
+                        )
+                      : "Until we verify your identity, gifts collect as cash."}
                   </p>
                   {!kycCompleted && (
                     <Button size="sm" className="mt-3 rounded-xl" onClick={() => navigate("/activate")} data-testid="button-activate-investing-money-tab">
@@ -5158,7 +5098,7 @@ const [editFundName, setEditFundName] = useState("");
                     {activeRecurring.length === 0 ? (
                       <>
                         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                          Set up automatic monthly contributions from the dashboard. {primaryFundIsOwnerHeld ? "Your" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The")} fund grows on its own rhythm.
+                          Set up automatic monthly contributions from the dashboard.
                         </p>
                         <Link href="/dashboard">
                           <Button variant="outline" size="sm" className="mt-4 rounded-xl" data-testid="link-recurring-dashboard-empty">
@@ -5194,38 +5134,79 @@ const [editFundName, setEditFundName] = useState("");
                   {bankAccounts.length === 0 ? "No bank accounts linked yet." : `${bankAccounts.length} bank account${bankAccounts.length === 1 ? "" : "s"} linked.`}
                 </p>
                 <p className={`mt-1 text-sm font-semibold ${bankAccounts.length > 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kiddo-gold-ink))]"}`}>
-                  {bankAccounts.length > 0 ? "Withdrawals are connected." : "Link withdrawals to unlock full fund protection."}
+                  {bankAccounts.length > 0 ? `Withdrawals are linked for the age-${primaryFundMajorityAge} handoff.` : `Link a withdrawal bank for the age-${primaryFundMajorityAge} handoff.`}
                 </p>
                 {bankAccounts.length > 0 && (
                   <div className="mt-4 space-y-2" data-testid="settings-money-bank-list">
-                    {bankAccounts.map((account: any) => (
-                      <div key={account.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4" data-testid={`settings-money-bank-${account.id}`}>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.08)] text-[hsl(var(--kiddo-evergreen))]">
+                    {bankAccounts.map((account: any) => {
+                      const isDefault = Boolean(account.isDefault);
+                      const connStatus = String(account.connectionStatus || account.status || "active").toLowerCase();
+                      const needsRefresh = connStatus !== "active";
+                      // Recurring pulls that draw from THIS bank (primary fund's
+                      // active schedules). Lets Remove name what it would break
+                      // and lets the row show its funding role at a glance.
+                      const pulls = (recurringContributions || []).filter(
+                        (c) => String(c.status || "").toLowerCase() === "active" && (c.bankAccountId || null) === account.id,
+                      );
+                      const pullMonthly = pulls.reduce((s, c) => s + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency), 0);
+                      return (
+                      <div key={account.id} className="flex items-start justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4" data-testid={`settings-money-bank-${account.id}`}>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${needsRefresh ? "bg-amber-50 text-amber-700" : "bg-[hsl(var(--kiddo-evergreen)/0.08)] text-[hsl(var(--kiddo-evergreen))]"}`}>
                             <Building2 size={17} />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-foreground">{account.bankName || account.institutionName || "Linked bank"}</p>
-                            <p className="text-xs text-muted-foreground">{account.accountType || "Account"} ending in {account.accountLast4 || account.lastFour || "----"}</p>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <p className="truncate text-sm font-bold text-foreground">{account.bankName || account.institutionName || "Linked bank"}</p>
+                              {isDefault && (
+                                <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]" data-testid={`badge-bank-default-${account.id}`}>
+                                  Default
+                                </span>
+                              )}
+                              {needsRefresh && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800" data-testid={`badge-bank-refresh-${account.id}`}>
+                                  <RefreshCw size={10} /> Needs refresh
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{account.accountType || "Account"} ending in {account.accountLast4 || account.lastFour || "----"}</p>
+                            {pulls.length > 0 && (
+                              <p className="mt-1 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                                Funds {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this fund's"} {formatUsd(pullMonthly)}/mo
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          className="rounded-xl px-3 py-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700"
-                          onClick={() => handleDeleteBankAccount(account.id)}
-                          data-testid={`button-remove-bank-${account.id}`}
-                        >
-                          Remove
-                        </button>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {!isDefault && !needsRefresh && (
+                            <button
+                              type="button"
+                              className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] kiddo-press"
+                              onClick={() => handleSetDefaultBankAccount(account.id)}
+                              data-testid={`button-make-default-bank-${account.id}`}
+                            >
+                              Make default
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-700 kiddo-press"
+                            onClick={() => { setBankPendingRemoval(account); haptic("selection"); }}
+                            data-testid={`button-remove-bank-${account.id}`}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 <Button variant="outline" className="mt-4 rounded-xl" onClick={() => { setLinkBankOpen(true); haptic("selection"); }} data-testid="button-link-bank-compact">
                   {bankAccounts.length > 0 ? "Add another bank" : "Link bank account"}
                 </Button>
                 <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                  Cash from sold investments can move to your linked bank after settlement. Usually 1-3 business days. Kiddo does not charge withdrawal fees.
+                  Cash from sold investments can move to your linked bank after settlement. Usually 1 to 3 business days. Kiddo doesn't charge withdrawal fees.
                 </p>
               </div>
             </SectionCard>
@@ -5238,9 +5219,9 @@ const [editFundName, setEditFundName] = useState("");
                 <h2 className="text-base font-bold text-foreground">Taking money out</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? (
-                    <>Move cash from your fund to your bank. This is a deliberate action. The money is yours; selling investments to withdraw may have capital-gains tax implications.</>
+                    <>Move cash from your fund to your bank. The money is yours; selling investments to withdraw may have capital-gains tax implications.</>
                   ) : (
-                    <>Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank. This is a deliberate action. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"}, so withdrawals are distributions to them and may have tax implications.</>
+                    <>Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"}, so withdrawals are distributions to them and may have tax implications.</>
                   )}
                 </p>
                 <Button
@@ -5253,7 +5234,7 @@ const [editFundName, setEditFundName] = useState("");
                   Take money out
                 </Button>
                 {bankAccounts.length === 0 && (
-                  <p className="mt-3 text-[11px] text-muted-foreground/70">
+                  <p className="mt-3 text-2xs text-muted-foreground/70">
                     Link a bank account above first.
                   </p>
                 )}
@@ -5334,6 +5315,66 @@ const [editFundName, setEditFundName] = useState("");
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] })}
       />
 
+      {/* Remove-bank confirm. Mirrors the strategy-switch "what changes" rule:
+          a destructive money action shows its consequence before it commits.
+          Names the recurring pull it would break (when we can match one),
+          flags a default-account removal, and never claims safety when the
+          primary-fund-scoped query can't see every fund's pulls. */}
+      <Dialog open={!!bankPendingRemoval} onOpenChange={(o) => { if (!o && !removingBank) setBankPendingRemoval(null); }}>
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Remove bank account</DialogTitle>
+          {bankPendingRemoval && (() => {
+            const acct = bankPendingRemoval;
+            const last4 = acct.accountLast4 || acct.lastFour || "----";
+            const pulls = (recurringContributions || []).filter(
+              (c) => String(c.status || "").toLowerCase() === "active" && (c.bankAccountId || null) === acct.id,
+            );
+            const pullMonthly = pulls.reduce((s, c) => s + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency), 0);
+            const remaining = (bankAccounts || []).filter((b: any) => b.id !== acct.id);
+            const nextDefaultName = remaining[0]?.bankName || remaining[0]?.institutionName || "another linked bank";
+            return (
+              <div className="p-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="font-heading text-lg font-semibold text-foreground">Remove {acct.bankName || acct.institutionName || "this bank"}?</h2>
+                    <p className="text-sm text-muted-foreground">{acct.accountType || "Account"} ending in {last4}</p>
+                  </div>
+                </div>
+
+                {pulls.length > 0 ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-relaxed text-amber-900" data-testid="bank-remove-consequence-pull">
+                    This bank funds {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "an"} {formatUsd(pullMonthly)}/mo recurring investment. Removing it leaves that pull without a source until you relink or point it at another bank.
+                    {acct.isDefault && remaining.length > 0 ? ` We'll make ${nextDefaultName} your default.` : ""}
+                  </div>
+                ) : acct.isDefault ? (
+                  <div className="rounded-xl border border-[hsl(var(--kiddo-border))] bg-muted/30 p-3 text-sm leading-relaxed text-foreground" data-testid="bank-remove-consequence-default">
+                    This is your default account for recurring investments and withdrawals.
+                    {remaining.length > 0 ? ` We'll make ${nextDefaultName} your default.` : ` You'll have no bank linked for the age-${primaryFundMajorityAge} handoff until you add one.`}
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed text-muted-foreground" data-testid="bank-remove-consequence-neutral">
+                    Any recurring investment set to pull from this account will need a new source before its next run. You can relink anytime.
+                  </p>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <Button variant="outline" className="flex-1 rounded-xl" disabled={removingBank} onClick={() => setBankPendingRemoval(null)} data-testid="button-cancel-remove-bank">
+                    Keep it
+                  </Button>
+                  <Button variant="destructive" className="flex-1 rounded-xl" disabled={removingBank} onClick={confirmRemoveBank} data-testid="button-confirm-remove-bank">
+                    {removingBank && <Loader2 size={16} className="mr-2 animate-spin" />}
+                    Remove bank
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       <CollaboratorInviteModal
         isOpen={collabModalOpen}
         onClose={() => setCollabModalOpen(false)}
@@ -5348,7 +5389,7 @@ const [editFundName, setEditFundName] = useState("");
           project_cancellation_dark_pattern_avoidance.md +
           project_close_fund_design_lens.md. */}
       <Dialog open={closeFundOpen} onOpenChange={(o) => { if (!o) setCloseFundOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl flex max-h-[90vh] flex-col">
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden">
           {/* Scrollable body — capped to 90vh with the action buttons pinned
               in a non-scrolling footer below, so on short/mobile viewports the
               disclosure scrolls and the confirm/cancel buttons stay reachable
@@ -5400,7 +5441,7 @@ const [editFundName, setEditFundName] = useState("");
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.14)]">
                           <Check className="h-3 w-3 text-[hsl(var(--kiddo-evergreen))]" />
                         </span>
-                        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[hsl(var(--kiddo-evergreen))]">What stays</p>
+                        <p className="text-2xs font-bold uppercase tracking-[0.1em] text-[hsl(var(--kiddo-evergreen))]">What stays</p>
                       </div>
                       <ul className="mt-3 space-y-2.5">
                         {stays.map(([lead, detail]) => (
@@ -5420,7 +5461,7 @@ const [editFundName, setEditFundName] = useState("");
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/10">
                           <Minus className="h-3 w-3 text-muted-foreground" />
                         </span>
-                        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">What stops</p>
+                        <p className="text-2xs font-bold uppercase tracking-[0.1em] text-muted-foreground">What stops</p>
                       </div>
                       <ul className="mt-3 space-y-2.5">
                         {stops.map(([lead, detail]) => (
@@ -5434,7 +5475,7 @@ const [editFundName, setEditFundName] = useState("");
                         Gifts already paid but still settling (1–2 business days) still arrive in the fund. Closing doesn't claw them back.
                       </p>
                       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                        Want to withdraw cash first? Use Money → Take money out. It's a separate, deliberate action.
+                        Want to withdraw cash first? Use Money → Take money out. It's a separate action.
                       </p>
                     </div>
                   </>
@@ -5443,7 +5484,7 @@ const [editFundName, setEditFundName] = useState("");
             </div>
 
             <div className="mt-5">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <label className="text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Why are you closing? (optional)
               </label>
               <textarea
@@ -5464,7 +5505,7 @@ const [editFundName, setEditFundName] = useState("");
               there; the server enforces it regardless). */}
           {fundIsDeletable && (
             <div className="border-t border-border px-6 py-3">
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <p className="text-2xs leading-relaxed text-muted-foreground">
                 This fund has never held money.{" "}
                 <button
                   type="button"
@@ -5505,7 +5546,7 @@ const [editFundName, setEditFundName] = useState("");
       </Dialog>
 
       <Dialog open={editFundOpen} onOpenChange={(o) => { if (!o) setEditFundOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           {(() => {
             // Title + subtitle adapt to who the fund belongs to. UTMA funds
             // get the child's name in the heading because this surface is
@@ -5559,7 +5600,7 @@ const [editFundName, setEditFundName] = useState("");
                         {/* Quiet legal-record footnote — parents need to
                             know a name edit isn't cosmetic. UTMA brokerage
                             accounts and 1099s carry whatever's saved here. */}
-                        <p className="text-[11px] text-muted-foreground leading-snug">
+                        <p className="text-2xs text-muted-foreground leading-snug">
                           Use {possessiveMid} legal first name. This appears on the brokerage account and tax documents.
                         </p>
                       </div>
@@ -5581,7 +5622,7 @@ const [editFundName, setEditFundName] = useState("");
                           data-testid="input-edit-recipient-last-name"
                           autoComplete="family-name"
                         />
-                        <p className="text-[11px] text-muted-foreground leading-snug">
+                        <p className="text-2xs text-muted-foreground leading-snug">
                           Optional, but appears on tax documents and the brokerage account record when set.
                         </p>
                       </div>
@@ -5643,7 +5684,7 @@ const [editFundName, setEditFundName] = useState("");
                         {/* Birthdate isn't cosmetic either — it's the
                             anchor for the age-of-majority transfer date.
                             A parent fixing a typo should know that. */}
-                        <p className="text-[11px] text-muted-foreground leading-snug">
+                        <p className="text-2xs text-muted-foreground leading-snug">
                           Sets when the fund transfers to {childFirst || "them"} at the state's age of majority.
                         </p>
                       </div>
@@ -5680,7 +5721,7 @@ const [editFundName, setEditFundName] = useState("");
                             <option key={s.code} value={s.code}>{s.name}</option>
                           ))}
                         </select>
-                        <p className="text-[11px] text-muted-foreground leading-snug">
+                        <p className="text-2xs text-muted-foreground leading-snug">
                           {editRecipientState
                             ? `UTMA control transfers to ${childFirst || "them"} at age ${getMajorityAgeForState(editRecipientState)} in ${US_STATES.find((s) => s.code === editRecipientState)?.name || editRecipientState}.`
                             : "Sets the age of majority for the handoff. Without it we use 18 (the most common), which is wrong in states like PA, NY, and TX (21)."}
@@ -5727,7 +5768,7 @@ const [editFundName, setEditFundName] = useState("");
             content under the address bar on iOS Safari.
             overflow-hidden stays on the outer so the rounded-2xl
             clip works at the corners. */}
-        <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Cancel plan</DialogTitle>
 
           {cancelStep === "warn" ? (
@@ -5747,7 +5788,7 @@ const [editFundName, setEditFundName] = useState("");
                   After that, the plan moves to Free and your money keeps working. Still invested, still growing, gifts arriving the same way they always have.
                   {cancellationImpact && cancellationImpact.growthSinceSubscribed > 0.01 && (
                     <>
-                      {" "}Your {cancellationImpact.funds.length === 1 ? "fund has" : "funds have"} grown ${cancellationImpact.growthSinceSubscribed.toFixed(0)} since you subscribed; that growth stays.
+                      {" "}Your {cancellationImpact.funds.length === 1 ? "fund has" : "funds have"} grown {usd0(cancellationImpact.growthSinceSubscribed)} since you subscribed; that growth stays.
                     </>
                   )}
                 </p>
@@ -5773,7 +5814,7 @@ const [editFundName, setEditFundName] = useState("");
                         ? `${c.childName}'s ${c.selectedTicker} pick`
                         : `${c.childName}'s mix`;
                       const freq = c.frequency === "weekly" ? "/wk" : c.frequency === "yearly" ? "/yr" : "/mo";
-                      return `$${c.amount.toFixed(0)}${freq} into ${destLabel}`;
+                      return `${usd0(c.amount)}${freq} into ${destLabel}`;
                     });
                     const joined = items.length === 1
                       ? items[0]
@@ -5783,14 +5824,14 @@ const [editFundName, setEditFundName] = useState("");
                     return (
                       <p>
                         Your recurring investments pause: {joined}.
-                        {monthlyTotal > 0 ? ` That's $${monthlyTotal.toFixed(0)}/month of automatic growth that stops until you turn the plan back on.` : ""}
+                        {monthlyTotal > 0 ? ` That's ${usd0(monthlyTotal)}/month of automatic growth that stops until you turn the plan back on.` : ""}
                       </p>
                     );
                   }
                   return (
                     <p>
                       Your {contribs.length} recurring investments pause.
-                      {monthlyTotal > 0 ? ` That's $${monthlyTotal.toFixed(0)}/month of automatic growth that stops until you turn the plan back on.` : ""}
+                      {monthlyTotal > 0 ? ` That's ${usd0(monthlyTotal)}/month of automatic growth that stops until you turn the plan back on.` : ""}
                     </p>
                   );
                 })()}
@@ -5879,7 +5920,7 @@ const [editFundName, setEditFundName] = useState("");
                         key={r.value}
                         type="button"
                         onClick={() => setCancelReason((cur) => (cur === r.value ? "" : r.value))}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                        className={`rounded-full px-2.5 py-1 text-2xs font-medium transition-colors ${
                           cancelReason === r.value
                             ? "bg-foreground text-background"
                             : "border border-border text-muted-foreground hover:text-foreground"

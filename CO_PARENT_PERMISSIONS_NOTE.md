@@ -9,7 +9,7 @@ security-adjacent product decision, deliberately flagged not silently shipped.*
 
 The **server is safe and the permission model is sensible.** The gap is
 **client-side only**: Settings has zero co-admin awareness, so a co-parent
-(e.g. Claire on Luke's/Alex's fund) sees the FULL owner Settings UI and hits
+(e.g. Elena on Theo's/Nora's fund) sees the FULL owner Settings UI and hits
 "View-only access. Ask the fund owner." 403s on the owner-only controls
 (investing strategy, gift routing, money movement, fund structure). Same
 dead-control class as the `previous_owner` Settings bug I just fixed, but with a
@@ -47,7 +47,7 @@ check is `accessRole === "owner"` (for owner-mode/transferredAt). So:
 - Settings renders all tabs + controls to a co-admin, including the owner-only
   ones, which then 403.
 
-Demo symptom: log in as `claire@dunphyfamily.com`, open Luke's Settings ->
+Demo symptom: log in as `elena@riverafamily.com`, open Theo's Settings ->
 Money tab shows the strategy picker, bank, and "Taking money out"; Gifts tab
 shows the gift-routing toggles -> all 403 on use.
 

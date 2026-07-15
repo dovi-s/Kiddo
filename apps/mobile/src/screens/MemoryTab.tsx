@@ -6,13 +6,23 @@
 // This rebuild consumes the real GET /api/funds/:fundId/memory feed (the same
 // entries the web renders) on the brand kit.
 
-import React, { useMemo, useState } from "react";
-import { Image, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, Image, Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
-import { KText, KiddoCard, KInput, Button, Skeleton, haptic } from "../ui";
-import { API_BASE, formatBalance, type ApiFund, type MemoryEntry, type MemoryEntryType } from "../api";
+import { KText, KiddoCard, KInput, Button, Skeleton, haptic, Appear } from "../ui";
+import {
+  API_BASE,
+  WEB_BASE,
+  apiGetMarketQuotes,
+  formatBalance,
+  type ApiFund,
+  type MemoryEntry,
+  type MemoryEntryType,
+} from "../api";
+import { isReadOnlyFund } from "../lib/fund";
+import { looksLikeTestSender } from "../lib/gifters";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -46,6 +56,131 @@ function presentation(type: MemoryEntryType): { icon: any; tint: string } {
   }
 }
 
+// Collapse consecutive "Recurring started" (parent_investment_start) entries into
+// one summary row, so a fund with several recurring schedules doesn't flood the
+// timeline (mirrors the web's recurring-cycle compression). A lone one stays as-is.
+type Row = { kind: "entry"; entry: MemoryEntry } | { kind: "recurringGroup"; entries: MemoryEntry[] };
+function collapseRecurring(entries: MemoryEntry[]): Row[] {
+  const rows: Row[] = [];
+  let i = 0;
+  while (i < entries.length) {
+    if (entries[i].type === "parent_investment_start") {
+      const group: MemoryEntry[] = [];
+      while (i < entries.length && entries[i].type === "parent_investment_start") {
+        group.push(entries[i]);
+        i++;
+      }
+      rows.push(group.length === 1 ? { kind: "entry", entry: group[0] } : { kind: "recurringGroup", entries: group });
+    } else {
+      rows.push({ kind: "entry", entry: entries[i] });
+      i++;
+    }
+  }
+  return rows;
+}
+
+// ─── "Who loves {name}" roster (web parity, the people-first centerpiece) ────
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return ((parts[0][0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+const AVATAR_TINTS = ["#1B3A2D", "#6F4611", "#24543F", "#7A4E00", "#3D5A4A"];
+function tintFor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_TINTS[h % AVATAR_TINTS.length];
+}
+function wholeMoney(n: number): string {
+  return "$" + Math.round(n).toLocaleString("en-US");
+}
+
+function WhoLovesRoster({
+  childName,
+  roster,
+}: {
+  childName: string;
+  roster: { name: string; total: number; count: number }[];
+}) {
+  return (
+    <Appear delay={60}>
+      <KiddoCard>
+        <KText variant="heading">Who loves {childName}</KText>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: spacing.sm, marginHorizontal: -4 }}
+          contentContainerStyle={{ gap: spacing.md, paddingHorizontal: 4 }}
+        >
+          {roster.map((p) => (
+            <View key={p.name} style={{ width: 74, alignItems: "center", gap: 3 }}>
+              <View
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: tintFor(p.name),
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <KText variant="label" color="#F8F5F0">
+                  {initialsOf(p.name)}
+                </KText>
+              </View>
+              <KText variant="caption" color={semanticColors.text.primary} style={{ textAlign: "center" }}>
+                {p.name.split(/\s+/)[0]}
+              </KText>
+              <KText variant="caption" color={semanticColors.text.muted} style={{ textAlign: "center" }}>
+                {wholeMoney(p.total)}
+              </KText>
+            </View>
+          ))}
+        </ScrollView>
+      </KiddoCard>
+    </Appear>
+  );
+}
+
+// ─── "Capture a moment" prompts (web parity) ────────────────────────────────
+const MOMENT_PROMPTS = ["First steps", "First word", "Lost a tooth", "Started a sport", "First sleepover", "Something they said"];
+
+function CaptureMoment({ childName, onPick }: { childName: string; onPick: (text: string) => void }) {
+  return (
+    <Appear delay={70}>
+      <KiddoCard>
+        <KText variant="heading">Capture a moment</KText>
+        <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: 2, marginBottom: spacing.sm }}>
+          Tap one, then add a note or a photo. {childName} reads it later.
+        </KText>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+          {MOMENT_PROMPTS.map((p) => (
+            <Pressable
+              key={p}
+              onPress={() => {
+                haptic("selection");
+                onPick(p);
+              }}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 999,
+                backgroundColor: "#F6EFE3",
+                borderWidth: 1,
+                borderColor: "#E8DEC9",
+              }}
+            >
+              <KText variant="caption" color={colors.goldInk}>
+                {p}
+              </KText>
+            </Pressable>
+          ))}
+        </View>
+      </KiddoCard>
+    </Appear>
+  );
+}
+
 export interface MemoryTabProps {
   activeFund: ApiFund | null;
   entries: MemoryEntry[];
@@ -56,24 +191,122 @@ export interface MemoryTabProps {
   onAddNote?: (content: string) => Promise<void>;
   /** Upload + attach a photo (data URL) with an optional caption. */
   onAddPhoto?: (dataUrl: string, caption: string) => Promise<void>;
+  /** Edit a parent-authored entry's text. */
+  onEditEntry?: (id: string, content: string) => Promise<void>;
+  /** Delete a parent-authored entry. */
+  onDeleteEntry?: (id: string) => Promise<void>;
+  /** Start the create-fund flow (shown in the no-fund first-run state). */
+  onAddFund?: () => void;
 }
 
-export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh, onAddNote, onAddPhoto }: MemoryTabProps) {
+export function MemoryTab({
+  activeFund,
+  entries,
+  loading,
+  refreshing,
+  onRefresh,
+  onAddNote,
+  onAddPhoto,
+  onEditEntry,
+  onDeleteEntry,
+  onAddFund,
+}: MemoryTabProps) {
   const childName = childNameOf(activeFund);
-  const isReadOnly =
-    (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
+  const isReadOnly = isReadOnlyFund(activeFund);
+  // A tapped "Capture a moment" prompt; bumping .n re-opens the composer.
+  const [seed, setSeed] = useState<{ text: string; n: number }>({ text: "", n: 0 });
+
+  // Hide test/seed-sender gift entries (the "test" gift) so the timeline + cover
+  // counts match Home, which already filters them.
+  const visibleEntries = useMemo(
+    () => entries.filter((e) => !(e.gift && looksLikeTestSender(e.gift.senderName, e.gift.senderEmail))),
+    [entries],
+  );
 
   const stats = useMemo(() => {
-    const giftEntries = entries.filter((e) => e.gift && !NON_COUNTING.has(String(e.gift.status || "").toLowerCase()));
+    const giftEntries = visibleEntries.filter(
+      (e) => e.gift && !NON_COUNTING.has(String(e.gift.status || "").toLowerCase()),
+    );
+    // Unique named people, excluding the anonymous "Someone" fallback (matches Home).
     const people = new Set(
       giftEntries
         .map((e) => (e.gift?.senderName || "").trim().toLowerCase())
-        .filter(Boolean),
+        .filter((n) => n && !/^someone\b/.test(n)),
     ).size;
     return { gifts: giftEntries.length, people };
-  }, [entries]);
+  }, [visibleEntries]);
+
+  const rows = useMemo(() => collapseRecurring(visibleEntries), [visibleEntries]);
+
+  // Live prices for the gift tickers, so entries can show "now worth $X" (web
+  // parity) instead of just a raw share count.
+  const [quotes, setQuotes] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const tickers = Array.from(
+      new Set(
+        visibleEntries
+          .map((e) => (e.gift?.selectedTicker || "").trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    );
+    if (tickers.length === 0) return;
+    let active = true;
+    apiGetMarketQuotes(tickers)
+      .then((qs) => {
+        if (!active) return;
+        const map: Record<string, number> = {};
+        for (const q of qs) if (q.symbol && q.price) map[q.symbol.toUpperCase()] = q.price;
+        setQuotes(map);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [visibleEntries]);
+
+  // "Who loves {name}" — aggregate counting gifts by named sender (sum + count).
+  const roster = useMemo(() => {
+    const map = new Map<string, { name: string; total: number; count: number }>();
+    for (const e of visibleEntries) {
+      const g = e.gift;
+      if (!g) continue;
+      if (NON_COUNTING.has(String(g.status || "").toLowerCase())) continue;
+      const name = (g.senderName || "").trim();
+      if (!name || /^someone\b/i.test(name)) continue;
+      const key = name.toLowerCase();
+      const amt = parseFloat(String(g.netAmount ?? g.amount ?? "0")) || 0;
+      const cur = map.get(key) || { name, total: 0, count: 0 };
+      cur.total += amt;
+      cur.count += 1;
+      map.set(key, cur);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 14);
+  }, [visibleEntries]);
 
   const refresh = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />;
+
+  // No fund yet: the Memory Book can't exist without one. Mirror the Activity
+  // tab's first-run state (consistent messaging + a create-fund CTA) rather than
+  // the "once the link is shared" copy, which wrongly implies a fund already
+  // exists.
+  if (!activeFund) {
+    return (
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.md }} refreshControl={refresh}>
+        <View style={{ paddingTop: spacing.xl, gap: spacing.sm }}>
+          <KText variant="title">The Memory Book starts with a gift.</KText>
+          <KText variant="body" color={semanticColors.text.muted}>
+            Create a fund and share the link. Every gift, note, and photo lands here and builds the story
+            over the years.
+          </KText>
+          {onAddFund ? (
+            <Button label="Start a fund" onPress={onAddFund} size="lg" style={{ marginTop: spacing.sm }} />
+          ) : null}
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView
@@ -83,6 +316,7 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
       refreshControl={refresh}
     >
       {/* cover */}
+      <Appear delay={0}>
       <KiddoCard variant="hero">
         <KText variant="eyebrow" color="#F8D889">Memory Book</KText>
         <KText variant="title" color="#FFF7E8" style={{ marginTop: 4 }}>
@@ -95,14 +329,84 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
           <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, flexWrap: "wrap" }}>
             <CoverStat value={`${stats.people}`} label={stats.people === 1 ? "person" : "people"} />
             <CoverStat value={`${stats.gifts}`} label={stats.gifts === 1 ? "gift" : "gifts"} />
-            <CoverStat value={formatBalance(activeFund.balance)} label="fund" />
+            <CoverStat
+              value={formatBalance(
+                parseFloat(activeFund.balance || "0") +
+                  parseFloat((activeFund as any).cashBalance || "0") +
+                  parseFloat(activeFund.pendingBalance || "0"),
+              )}
+              label="fund"
+            />
+          </View>
+        ) : null}
+
+        {/* hero action buttons (web parity: Share update + Add memory) */}
+        {activeFund && !isReadOnly ? (
+          <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
+            <Pressable
+              onPress={() => {
+                haptic("selection");
+                Share.share({
+                  message: `Follow ${childName}'s fund: ${WEB_BASE}/${activeFund.slug}`,
+                  url: `${WEB_BASE}/${activeFund.slug}`,
+                }).catch(() => {});
+              }}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                backgroundColor: "rgba(14,37,24,0.55)",
+                borderRadius: radius.control,
+                paddingVertical: 12,
+              }}
+            >
+              <Ionicons name="share-social-outline" size={16} color="#F8F5F0" />
+              <KText variant="label" color="#F8F5F0">
+                Share update
+              </KText>
+            </Pressable>
+            {onAddNote ? (
+              <Pressable
+                onPress={() => {
+                  haptic("selection");
+                  setSeed((s) => ({ text: "", n: s.n + 1 }));
+                }}
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  backgroundColor: colors.gold,
+                  borderRadius: radius.control,
+                  paddingVertical: 12,
+                }}
+              >
+                <Ionicons name="add" size={18} color="#38290A" />
+                <KText variant="label" color="#38290A">
+                  Add memory
+                </KText>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </KiddoCard>
+      </Appear>
 
-      {/* composer — write a note / add a photo (owner / co-admin only) */}
+      {/* who loves {name} — the people-first roster (web parity) */}
+      {roster.length > 0 ? <WhoLovesRoster childName={childName} roster={roster} /> : null}
+
+      {/* composer + capture-a-moment prompts (owner / co-admin only) */}
       {activeFund && !isReadOnly && onAddNote ? (
-        <NoteComposer childName={childName} onAddNote={onAddNote} onAddPhoto={onAddPhoto} />
+        <>
+          <CaptureMoment
+            childName={childName}
+            onPick={(t) => setSeed((s) => ({ text: t, n: s.n + 1 }))}
+          />
+          <NoteComposer childName={childName} onAddNote={onAddNote} onAddPhoto={onAddPhoto} seed={seed} />
+        </>
       ) : null}
 
       {loading ? (
@@ -110,7 +414,7 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
           <Skeleton height={110} rounded={radius.card} />
           <Skeleton height={110} rounded={radius.card} />
         </>
-      ) : entries.length === 0 ? (
+      ) : visibleEntries.length === 0 ? (
         <KiddoCard>
           <KText variant="heading">It starts with the first gift.</KText>
           <KText variant="caption" style={{ marginTop: spacing.xs }}>
@@ -120,9 +424,19 @@ export function MemoryTab({ activeFund, entries, loading, refreshing, onRefresh,
         </KiddoCard>
       ) : (
         <View style={{ gap: spacing.sm }}>
-          {entries.map((entry) => (
-            <MemoryCard key={entry.id} entry={entry} />
-          ))}
+          {rows.map((row, i) =>
+            row.kind === "recurringGroup" ? (
+              <RecurringGroupCard key={`rg-${i}`} entries={row.entries} />
+            ) : (
+              <MemoryCard
+                key={row.entry.id}
+                entry={row.entry}
+                quotes={quotes}
+                onEdit={!isReadOnly ? onEditEntry : undefined}
+                onDelete={!isReadOnly ? onDeleteEntry : undefined}
+              />
+            ),
+          )}
         </View>
       )}
     </ScrollView>
@@ -136,15 +450,26 @@ function NoteComposer({
   childName,
   onAddNote,
   onAddPhoto,
+  seed,
 }: {
   childName: string;
   onAddNote: (content: string) => Promise<void>;
   onAddPhoto?: (dataUrl: string, caption: string) => Promise<void>;
+  /** A "Capture a moment" prompt; bumping seed.n opens the composer pre-filled. */
+  seed?: { text: string; n: number };
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Apply a tapped capture-moment prompt: open + pre-fill with the starter.
+  useEffect(() => {
+    if (seed && seed.n > 0) {
+      setOpen(true);
+      setText(seed.text);
+    }
+  }, [seed?.n]);
 
   const submit = async () => {
     const content = text.trim();
@@ -280,6 +605,51 @@ function NoteComposer({
   );
 }
 
+// Summary card for a run of collapsed "Recurring started" entries.
+function RecurringGroupCard({ entries }: { entries: MemoryEntry[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const dates = entries
+    .map((e) => new Date(e.createdAt))
+    .filter((d) => !Number.isNaN(d.getTime()))
+    .sort((a, b) => b.getTime() - a.getTime());
+  const when = dates.length
+    ? dates[0].toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : "";
+  return (
+    <KiddoCard onPress={() => setExpanded((v) => !v)}>
+      <View style={{ flexDirection: "row", gap: spacing.sm, alignItems: "center" }}>
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: colors.evergreen + "18",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="repeat" size={18} color={colors.evergreen} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <KText variant="bodyStrong">{entries.length} recurring investments set up</KText>
+          <KText variant="caption" color={semanticColors.text.muted}>
+            {when} · tap to {expanded ? "hide" : "see each"}
+          </KText>
+        </View>
+      </View>
+      {expanded ? (
+        <View style={{ marginTop: spacing.sm, gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: semanticColors.surface.muted }}>
+          {entries.map((e) => (
+            <KText key={e.id} variant="caption" color={semanticColors.text.muted}>
+              • {e.content || "Recurring investment"}
+            </KText>
+          ))}
+        </View>
+      ) : null}
+    </KiddoCard>
+  );
+}
+
 function CoverStat({ value, label }: { value: string; label: string }) {
   return (
     <View
@@ -300,10 +670,59 @@ function CoverStat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function MemoryCard({ entry }: { entry: MemoryEntry }) {
+function MemoryCard({
+  entry,
+  quotes,
+  onEdit,
+  onDelete,
+}: {
+  entry: MemoryEntry;
+  quotes?: Record<string, number>;
+  onEdit?: (id: string, content: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
+}) {
   const { icon, tint } = presentation(entry.type);
   const gift = entry.gift;
   const isGift = entry.type === "gift_message" && gift;
+  // Parent-authored, non-gift entries are editable/deletable (matches the
+  // server: gift-linked entries reject edits). Backfilled gift rows have a giftId.
+  const canManage = !entry.giftId && (entry.type === "note" || entry.type === "photo" || entry.type === "parent_note");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry.content || "");
+  const [busy, setBusy] = useState(false);
+
+  const saveEdit = async () => {
+    if (!onEdit || busy) return;
+    setBusy(true);
+    try {
+      await onEdit(entry.id, draft);
+      haptic("success");
+      setEditing(false);
+    } catch {
+      haptic("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!onDelete) return;
+    Alert.alert("Delete this entry?", "This removes it from the Memory Book. This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await onDelete(entry.id);
+            haptic("success");
+          } catch {
+            haptic("error");
+          }
+        },
+      },
+    ]);
+  };
   const who = isGift
     ? gift!.senderName?.trim() || "Someone"
     : entry.authorName?.trim() || (entry.type.startsWith("parent") ? "You" : "Kiddo");
@@ -353,8 +772,16 @@ function MemoryCard({ entry }: { entry: MemoryEntry }) {
             {isGift && gift!.eventName ? ` · ${gift!.eventName}` : ""}
           </KText>
 
-          {/* body */}
-          {entry.content || gift?.message ? (
+          {/* body (or inline editor) */}
+          {editing ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <KInput value={draft} onChangeText={setDraft} multiline style={{ minHeight: 72, textAlignVertical: "top" }} />
+              <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+                <Button label="Save" onPress={saveEdit} loading={busy} disabled={!draft.trim()} style={{ flex: 1 }} />
+                <Button label="Cancel" variant="ghost" onPress={() => { setEditing(false); setDraft(entry.content || ""); }} />
+              </View>
+            </View>
+          ) : entry.content || gift?.message ? (
             <KText
               variant="body"
               style={{ marginTop: spacing.sm, fontStyle: entry.type === "milestone" ? "normal" : "italic" }}
@@ -382,20 +809,60 @@ function MemoryCard({ entry }: { entry: MemoryEntry }) {
             />
           ) : null}
 
-          {/* invested-into line for gifts */}
+          {/* invested-into line for gifts: ticker chip + "now worth $X" (web parity) */}
           {isGift && gift!.selectedTicker ? (
-            <View
-              style={{
-                marginTop: spacing.sm,
-                paddingTop: spacing.sm,
-                borderTopWidth: 1,
-                borderTopColor: semanticColors.surface.muted,
-              }}
-            >
-              <KText variant="caption" color={colors.evergreen}>
-                Invested in {gift!.selectedTicker}
-                {gift!.sharesAcquired ? ` · ${parseFloat(gift!.sharesAcquired).toFixed(4)} shares` : ""}
-              </KText>
+            (() => {
+              const ticker = String(gift!.selectedTicker).toUpperCase();
+              const shares = gift!.sharesAcquired ? parseFloat(gift!.sharesAcquired) : 0;
+              const price = quotes?.[ticker];
+              const nowWorth = shares > 0 && price ? shares * price : null;
+              return (
+                <View
+                  style={{
+                    marginTop: spacing.sm,
+                    paddingTop: spacing.sm,
+                    borderTopWidth: 1,
+                    borderTopColor: semanticColors.surface.muted,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: colors.evergreen + "14",
+                      borderRadius: radius.pill,
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <KText variant="caption" color={colors.evergreen}>
+                      {ticker}
+                    </KText>
+                  </View>
+                  <KText variant="caption" color={semanticColors.text.muted} style={{ flex: 1 }}>
+                    {nowWorth != null
+                      ? `Invested · now worth ${formatBalance(nowWorth)}`
+                      : `Invested${shares > 0 ? ` · ${shares.toFixed(4)} shares` : ""}`}
+                  </KText>
+                </View>
+              );
+            })()
+          ) : null}
+
+          {/* manage (parent-authored entries only) */}
+          {canManage && !editing && (onEdit || onDelete) ? (
+            <View style={{ flexDirection: "row", gap: spacing.lg, marginTop: spacing.sm }}>
+              {onEdit ? (
+                <Pressable onPress={() => { setDraft(entry.content || ""); setEditing(true); }} hitSlop={8}>
+                  <KText variant="caption" color={colors.evergreen}>Edit</KText>
+                </Pressable>
+              ) : null}
+              {onDelete ? (
+                <Pressable onPress={confirmDelete} hitSlop={8}>
+                  <KText variant="caption" color="#C0392B">Delete</KText>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </View>

@@ -25,7 +25,7 @@ import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sprout, TrendingUp, He
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
-import { projectFundValue } from "@shared/projection";
+import { projectFundValue, PROJECTION_DISCLAIMER } from "@shared/projection";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { MomentParticles } from "@/components/MomentParticles";
@@ -102,6 +102,27 @@ export default function Age18Welcome() {
     enabled: !!fundId,
     staleTime: 5 * 60_000, // 5 minutes — the kid won't be reloading this
   });
+
+  // The OLDEST note, surfaced as a taste on Screen 1. The supporters strip
+  // proves people showed up (a count + names); this lets the kid actually
+  // READ one at the climax instead of deferring every word to the Memory Book
+  // at the end. Feeling a real sentence someone wrote years ago is the beat;
+  // the number is the smaller gift. Best-effort + gated, so it silently adds
+  // nothing when there are no notes (no empty state in the calm register).
+  const { data: memoryPreview } = useQuery<any[]>({
+    queryKey: ["/api/funds", fundId, "memory"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${fundId}/memory`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!fundId,
+    staleTime: 5 * 60_000,
+  });
+  const oldestNote = useMemo(() => {
+    const notes = (memoryPreview || []).filter((e: any) => String(e?.content || "").trim() && e?.type !== "parent_letter");
+    return notes.slice().sort((a: any, b: any) => new Date(a?.createdAt || 0).getTime() - new Date(b?.createdAt || 0).getTime())[0] || null;
+  }, [memoryPreview]);
 
   const [screen, setScreen] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [hasJob, setHasJob] = useState<boolean | null>(null);
@@ -259,8 +280,8 @@ export default function Age18Welcome() {
               </h1>
             </div>
             <p className="text-base text-foreground/80 leading-relaxed">
-              What you see here is yours legally as of today. Nothing was sold. Nothing was moved.
-              Just the name on the paperwork. Your fund kept growing the whole time you were growing up.
+              What you see here is yours legally as of today. Nothing was sold or moved. Only the name
+              on the paperwork changed. Your fund kept growing the whole time you were growing up.
             </p>
             {totalGain > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 space-y-1">
@@ -269,7 +290,7 @@ export default function Age18Welcome() {
                   +{formatMoney(totalGain)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  The cash gifts cousins gave you would be long gone. This isn't.
+                  The cash gifts cousins gave you would be long gone by now. This grew instead.
                 </p>
               </div>
             )}
@@ -291,9 +312,23 @@ export default function Age18Welcome() {
                 <div className="flex items-center gap-2">
                   <Heart size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
                   <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-wide">
-                    Built by {communityData.totalContributors} {communityData.totalContributors === 2 ? "people" : "people"} who showed up for you
+                    Built by {communityData.totalContributors} {communityData.totalContributors === 1 ? "person" : "people"} who showed up for you
                   </p>
                 </div>
+                {oldestNote && (() => {
+                  const raw = String(oldestNote.content).trim();
+                  const excerpt = raw.length > 140 ? raw.slice(0, 140).replace(/\s+\S*$/, "") + "…" : raw;
+                  const author = String(oldestNote.authorName || "").trim();
+                  const yr = oldestNote.createdAt ? new Date(oldestNote.createdAt).getFullYear() : null;
+                  return (
+                    <figure className="m-0 border-l-2 border-[hsl(var(--kiddo-gold))]/50 pl-3">
+                      <p className="text-sm italic leading-relaxed text-foreground/85">&ldquo;{excerpt}&rdquo;</p>
+                      <figcaption className="mt-1 text-2xs text-muted-foreground">
+                        {author || "someone who showed up"}{yr ? ` · the first note, ${yr}` : ""}
+                      </figcaption>
+                    </figure>
+                  );
+                })()}
                 <div className="flex flex-wrap gap-1.5">
                   {communityData.series.map((s, idx) => (
                     <motion.span
@@ -307,8 +342,8 @@ export default function Age18Welcome() {
                     </motion.span>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Every gift they sent kept compounding. The Memory Book has all of it — notes, photos, the moments behind each one.
+                <p className="text-2xs text-muted-foreground leading-relaxed">
+                  Every gift they sent kept compounding. The Memory Book has all of it: notes, photos, the moments behind each one.
                 </p>
               </motion.div>
             )}
@@ -318,7 +353,7 @@ export default function Age18Welcome() {
 
         {screen === 2 && (
           <ScreenShell key="s2">
-            <Eyebrow icon={<TrendingUp size={14} />}>Three buttons, three different futures.</Eyebrow>
+            <Eyebrow icon={<TrendingUp size={14} />}>Your options from here.</Eyebrow>
             <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
               You have real choices now.
             </h1>
@@ -327,7 +362,7 @@ export default function Age18Welcome() {
                 title="Keep growing it"
                 math={
                   balance > 0
-                    ? `${formatMoney(balance)} today becomes about ${formatMoney(projectedAt65, { decimals: 0 })} by 65 if you don't touch it. Markets average ~7% a year long-term.`
+                    ? `${formatMoney(balance)} today becomes about ${formatMoney(projectedAt65, { decimals: 0 })} by 65 if you don't touch it. Markets average ~7% a year long-term; estimate is net of Kiddo's annual fee.`
                     : "Markets average ~7% a year long-term. Compounding works while you sleep."
                 }
                 tone="grow"
@@ -361,12 +396,12 @@ export default function Age18Welcome() {
                   </p>
                 </div>
                 <p className="text-sm text-foreground/85 leading-relaxed">
-                  You don't have to be the last person this fund belongs to. Keep it invested through your own life and your own kids' childhoods, and at {multiGenHorizonYears} years from now it could be worth around{" "}
-                  <span className="font-semibold text-foreground">{formatMoney(projectedMultiGen, { decimals: 0 })}</span>{" "}
-                  — enough to start another Kiddo for the next generation.
+                  You don't have to be the last person this fund belongs to. Keep it invested through your own life and your own kids' childhoods, and {multiGenHorizonYears} years from now it could be worth around{" "}
+                  <span className="font-semibold text-foreground">{formatMoney(projectedMultiGen, { decimals: 0 })}</span>
+                  . That's enough to start another Kiddo for the next generation.
                 </p>
-                <p className="text-[10px] text-muted-foreground/70 leading-snug">
-                  Assumes 7% yearly average. Illustrative only. Markets vary.
+                <p className="text-3xs text-muted-foreground/70 leading-snug">
+                  {PROJECTION_DISCLAIMER}
                 </p>
               </div>
             )}
@@ -394,7 +429,7 @@ export default function Age18Welcome() {
               />
               <TaxConcept
                 title="Low-income years are sell-friendly years."
-                body="Once you're on your own tax rates, selling in a low-earning year can mean 0% on long-term gains; selling at 30 earning $80k might be 15%. The same sale, very different bill. Timing matters."
+                body="Once you're on your own tax rates, selling in a low-earning year can mean 0% on long-term gains; selling at 30 earning $80k might be 15%. The year you sell changes the bill on the same shares."
               />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">General information, not tax advice. A CPA can confirm what applies to you.</p>
@@ -425,7 +460,17 @@ export default function Age18Welcome() {
                 <ToggleBtn active={hasJob === true} onClick={() => setHasJob(true)}>
                   Yes
                 </ToggleBtn>
-                <ToggleBtn active={hasJob === false} onClick={() => setHasJob(false)}>
+                <ToggleBtn
+                  active={hasJob === false}
+                  onClick={() => {
+                    // Clear any previously-picked bracket when switching to
+                    // "Not yet" — the bracket field hides, but a stale value
+                    // would otherwise still feed the server's tax math.
+                    // Mirrors Settings.tsx updateEarnedIncome(false, null).
+                    setHasJob(false);
+                    setBracket(null);
+                  }}
+                >
                   Not yet
                 </ToggleBtn>
               </div>
@@ -485,7 +530,7 @@ export default function Age18Welcome() {
                       Notify me when Roth IRA is ready in Kiddo.
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      No spam, no waitlist drama — one email when it's actually live so you can move the first $1 in.
+                      One email when it's actually live so you can move the first $1 in. No spam.
                     </p>
                   </div>
                 </div>
@@ -532,9 +577,9 @@ export default function Age18Welcome() {
             <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-5">
               <p className="text-sm text-foreground/85 leading-relaxed">
                 Someone started this for you before you were old enough to ask. One day there may be
-                someone whose future you want to show up for the same way, and now you know how:
-                quietly, early, and for years. The book you're about to open is the one you'll
-                someday know how to write.
+                someone whose future you want to show up for the same way, and now you know how it's
+                done: a little, early, and kept up over years. The book you're about to open shows you
+                what that looks like.
               </p>
             </div>
             <div className="flex flex-col gap-3 pt-2">

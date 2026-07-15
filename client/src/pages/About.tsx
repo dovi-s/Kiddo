@@ -1,11 +1,13 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, BookOpen, Eye, Gift } from "lucide-react";
+import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { Button } from "@/components/ui/button";
 import { FounderMedia } from "@/components/ui/founder-media";
+import { investingLiveCopy } from "@shared/legal-copy";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -23,7 +25,7 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Nav />
 
       {/* Hero */}
@@ -31,14 +33,14 @@ export default function About() {
         <GeminiHeroGradient />
         <div className="max-w-3xl mx-auto px-4 relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground tracking-tight leading-tight" data-testid="text-about-headline">
+            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground tracking-[-0.03em] leading-tight" data-testid="text-about-headline">
               Most birthday gifts are forgotten by <GradientText>Tuesday</GradientText>.
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-              The check gets lost. The savings bond sits in a drawer for a decade. The toy breaks in a week.
+              The check gets lost, the savings bond sits in a drawer for a decade, and the toy breaks in a week.
             </p>
             <p className="mt-4 text-lg md:text-xl font-semibold text-foreground">
-              Kiddo is different.
+              A gift through Kiddo is built to last and grow with them.
             </p>
           </motion.div>
         </div>
@@ -49,15 +51,23 @@ export default function About() {
         <div className="max-w-3xl mx-auto px-4">
           <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12 space-y-5">
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              Family and friends gift money in under 60 seconds. No account needed. No app to download. Just a link, a stock pick, and a note.
+              Family and friends gift money in a few seconds. No account needed, no app to download. Just a link, a stock pick, and a note.
             </p>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              That gift gets automatically invested in real stocks inside your child's UTMA account.{" "}
+              That gift goes into your child's UTMA fund and, once investing is live, is invested in real stocks.{" "}
               <span className="font-semibold text-foreground">Disney. Apple. Nike.</span>{" "}
               Whatever feels meaningful to them.
             </p>
             <p className="text-base md:text-lg font-semibold text-foreground">And it keeps growing.</p>
           </FadeIn>
+          <BrowserFrame
+            src="/product/dashboard-desktop.webp"
+            alt="The Kiddo dashboard: the fund, the gifts, who built it, and what it's on track to be worth, on any device."
+            caption="The real thing, on phone or web."
+            href="/demo"
+            liveLabel="See it live"
+            className="mt-12"
+          />
         </div>
       </section>
 
@@ -70,17 +80,17 @@ export default function About() {
                 <BookOpen className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Memory Book</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">Memory Book</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  Every gift. Every note. Every person who showed up.
+                  A record of every gift, every note, and who it came from.
                 </h2>
               </div>
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>Every gift, every note, every person who showed up for your kid gets captured in the Memory Book.</p>
-              <p>A living record of everyone who believed in them before they even knew what a stock was.</p>
+              <p>A record of everyone who put something toward their future, from long before the child could understand it.</p>
               <p className="font-medium text-foreground">
-                This is the most differentiated feature in Kiddo. Not a transaction log. A story.
+                Every gift and note is kept with the account, as a story they can read.
               </p>
             </div>
           </FadeIn>
@@ -96,20 +106,20 @@ export default function About() {
                 <Eye className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Kid View</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">Kid View</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  They watch it grow, in shares they actually own.
+                  {investingLiveCopy("They own real shares, and can see what those shares are worth.", "Real shares in companies their family chose, owned in their name.")}
                 </h2>
               </div>
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                The Kid View lets them see their fund. The companies they own. The gifts that built it. Real financial education that does not feel like education.
+                The Kid View lets them see their fund: the companies it follows and the gifts that built it.
               </p>
               <p>
-                A 10-year-old opens the app and sees Disney stock growing. They own a piece of it. Someone in their family put it there for them.
+                Once investing is live, a 10-year-old can open the app, see the Disney stock their family picked, and own a real share of it. Seeing what they own is how money starts to make sense, long before they have to manage it. Someone in their family put it there.
               </p>
-              <p className="font-medium text-foreground">That is the moment. That is what changes how they think about money forever.</p>
+              <p className="font-medium text-foreground">That is how money becomes real to a kid, years early.</p>
             </div>
           </FadeIn>
         </div>
@@ -124,20 +134,20 @@ export default function About() {
                 <Gift className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">The moment it all comes together</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">The moment it all comes together</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  When they turn 18, they do not just get the money. They get the whole story.
+                  When the fund becomes theirs, they get the money and the whole story behind it.
                 </h2>
               </div>
             </div>
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                Every gift. Every note. Every stock pick. Every person who believed in them. Delivered at the moment it matters most.
+                Every gift, note, and stock pick, with the name behind each one, delivered when the fund becomes theirs.
               </p>
               <p>
-                Not just a brokerage balance dropped on them one day. A record of everyone who showed up for them. Starting from before they could even say thank you.
+                They inherit the balance and the record of who built it, going back further than they can remember.
               </p>
-              <p className="font-heading text-xl font-semibold text-foreground">That is Kiddo.</p>
+              <p className="font-heading text-xl font-semibold text-foreground">That is what Kiddo hands them.</p>
             </div>
           </FadeIn>
         </div>
@@ -162,6 +172,23 @@ export default function About() {
                 </div>
               ))}
             </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Belief — the mission line given room to own the space (2026-07-01) */}
+      <section className="bg-[hsl(var(--kiddo-evergreen))] py-24 md:py-36">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <FadeIn>
+            <p className="mb-7 text-xs font-semibold uppercase tracking-[0.2em] text-[hsl(var(--kiddo-gold))]">
+              Our belief
+            </p>
+            <h2 className="font-heading text-4xl md:text-6xl font-bold tracking-[-0.03em] leading-[1.05] text-[hsl(var(--kiddo-cream))]">
+              Invest in someone,<br className="hidden sm:block" /> not something.
+            </h2>
+            <p className="mx-auto mt-7 max-w-xl text-lg md:text-xl leading-relaxed text-[hsl(var(--kiddo-cream)/0.68)]">
+              Kiddo is where people invest in people, across generations. A real account your child inherits at 18, with the story of who built it.
+            </p>
           </FadeIn>
         </div>
       </section>

@@ -316,16 +316,30 @@ export default function P2PDemo() {
               <motion.div key="convert" {...fade} className="text-center">
                 <div className="text-5xl">🌱</div>
                 <h2 className="mt-5 font-heading text-3xl font-bold text-foreground md:text-4xl">
-                  You just felt the whole idea.
+                  That's the whole idea.
                 </h2>
+                {/* Name the newborn's horizon (audit 2026-06-04): Maya's
+                    block states its 30 years, so this one states its sixty —
+                    an unverifiable big number reads as marketing math; a
+                    checkable one reads as honesty. "whole childhood" instead
+                    of "eighteen years": warmer, and majority is 21 in some
+                    states (the locked hardcoded-18 rule). */}
                 <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
-                  For Maya, thirty years turned that $30 into {usd0(futureVal)}. Start the same $30
-                  for a newborn instead of a thirty-something and it has a whole lifetime to
-                  compound: closer to {usd0(kidVal)}. The head start is the entire trick.
+                  For Maya, thirty years turned that $30 into {usd0(futureVal)}. Give that same $30
+                  to a newborn instead and it has thirty more years to grow, reaching closer to{" "}
+                  {usd0(kidVal)} by the time they turn sixty.
                 </p>
+                {/* The two-lane bridge (founder note 2026-06-04): the P2P
+                    mechanic the visitor just played with is the ADULT
+                    personal-account concept (post-licensing, per the locked
+                    account model) — the KID fund is the product that exists
+                    today. The convert step names both lanes explicitly so
+                    the insight transfers without implying friend-to-friend
+                    stock is the live kid product. */}
                 <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-                  Start it for a kid you love, and let everyone who loves them add to it for the
-                  next eighteen years.
+                  The grown-up version, friend to friend, is still on its way. The kid version is
+                  real today: start a fund for a kid you love, and let everyone who loves them add
+                  to it for their whole childhood.
                 </p>
                 <p className="mx-auto mt-3 max-w-md text-xs text-muted-foreground/70">
                   Same 7 percent illustration. Not a guarantee.

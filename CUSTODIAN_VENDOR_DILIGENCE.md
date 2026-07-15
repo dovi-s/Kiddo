@@ -1,0 +1,365 @@
+# Custodian / Brokerage Vendor Diligence — Alpaca Broker API vs DriveWealth
+
+**Decision owner: founder.** This is the regulated core of Kiddo (custodial UTMA +
+the at-18 handoff). Per `CLAUDE.md`, custody is the ONE provider worth keeping
+swappable — both candidates live behind `server/custodianService.ts`
+(`getCustodianProvider()`), never inlined in `routes.ts`.
+
+## The state of play (2026-06)
+
+It became a real two-horse race **one month ago**. Before 2026-05-11, Alpaca had
+no custodial support and DriveWealth was the obvious pick. Now both can do the
+core UTMA use case.
+
+| | **Alpaca Broker API** | **DriveWealth** |
+|---|---|---|
+| Custodial UTMA/UGMA | ✅ launched **2026-05-11** (UTMA all states exc. SC, VT) | ✅ years in production (powers many kids' fintechs) |
+| Developer experience | 🥇 modern, free self-serve sandbox today | enterprise / sales-led, heavier |
+| Fractional in custodial | ⚠️ generally yes, **not confirmed in custodial docs** | 🥇 pioneered fractional, confirmed |
+| At-majority handoff | ⚠️ **undocumented** for the new custodial product | explicit teen/custodial age-transition flows |
+| Cost / minimums | startup-friendly, lower | enterprise pricing, higher minimums |
+| Use the **Broker API**, not Trading API | (Trading API = self-directed/algo; Broker API = embed + own users) | n/a |
+
+**Recommendation:** lean Alpaca on velocity + cost, but do NOT commit before
+sandbox-verifying the three make-or-break flows below. Get DriveWealth on a sales
+call in parallel as the proven comparison. Decide on facts, not the table above.
+
+## 🔴 The 3 make-or-break questions (any "no" is disqualifying)
+
+1. **Fractional by dollar amount, inside a custodial account.** Gifts are $25–$100,
+   so we must buy *notional* (e.g. "$50 of VOO") in a UTMA account — not whole
+   shares. Alpaca's custodial docs don't confirm fractional works in custodial;
+   confirm explicitly.
+2. **The at-18/at-majority handoff.** Can the custodial account convert/transfer to
+   an *individual* account owned by the (now-adult) child at the state majority age
+   (18–21, varies; CA = 21)? This is Kiddo's entire thesis. Alpaca's is
+   undocumented; DriveWealth has explicit flows.
+3. **Regulatory model — can we operate WITHOUT being our own broker-dealer?**
+   Confirm we run as an introducing/technology partner under the vendor's
+   broker-dealer of record (Alpaca Clearing is FINRA/SIPC), and get, in writing,
+   exactly what registrations *we* must hold (RIA? none?) given our model. This
+   ties directly into `COUNSEL_ENGAGEMENT_PACKET`.
+
+## Full question set (paste into the vendor email / call)
+
+**Accounts & custody**
+- Custodial UTMA *and* UGMA? Which states excluded? Who is custodian of record?
+- Exact `minor` / beneficiary fields required at open? KYC on custodian only?
+- Successor custodian support? Irrevocability handling / statements / 1099 tax
+  reporting under the minor's SSN?
+
+**Money in / investing**
+- Fractional **notional** buys in custodial accounts — confirm yes.
+- Supported instruments: US equities + ETFs (our managed mix + curated single
+  stocks)? Any restricted symbols in custodial?
+- Order idempotency (so a gift retry can't double-invest)?
+- ACH/funding: who moves money, settlement timing, return/NSF handling?
+
+**The handoff (keystone)**
+- At majority: custodial → individual account transfer for the child — supported?
+  Automated or manual/ops ticket? Timeline? What does the child have to do (KYC)?
+- Can the *previous custodian* be cleanly removed from access at transfer?
+
+**Refunds / liquidation**
+- Partial + full liquidation by dollar amount? Timeline to cash? Withdrawal rails?
+
+**Commercials & ops**
+- Minimums (monthly platform fee, per-account, AUM floor)? Per-trade / clearing
+  costs? Fractional-share economics?
+- Sandbox terms (free? how close to prod?) and **production go-live timeline +
+  prerequisites** (the "Full Live" sign-offs).
+- PFOF / order-routing model (we will NOT build on PFOF-dependent economics —
+  see `UNIT_ECONOMICS.md`).
+- SLAs, support tier, incident history, data-portability / exit terms (we keep
+  the orchestration layer — see "integrate up, rent rails down").
+
+### 🔬 Sharpened / new questions (2026-06-12, after sandbox onboarding + reading the Custodial / ACAT / FDIC Sweep docs)
+
+**The handoff — now the #1 risk (ACAT liquidates fractional):**
+- At majority, is it an **in-place re-registration** of the custodial account into the
+  beneficiary's individual account (same account, **fractional positions + cost basis
+  preserved, NO liquidation**), or does it require an **ACAT**? Your ACAT docs say a full
+  ACAT **liquidates fractional shares** before transfer — we are fractional-heavy and tell
+  customers "nothing was sold," so an ACAT-based handoff is disqualifying as-is. Confirm the
+  exact mechanism.
+- API-triggered or ops ticket? Timeline? Does the now-adult re-KYC / sign new agreements?
+  Does cost basis + holding period carry through for their future capital-gains?
+- Do you track the **state-specific majority age** (18–21) and drive UTMA termination, or do we?
+
+**Third-party (gifter) funding — core to our model, not yet covered anywhere:**
+- Accounts are funded by **many gifters who are NOT the custodian** (often no Alpaca/KYC
+  relationship). Supported architecture? We expect to collect gifts via our PSP (Stripe) into
+  a **pooled FBO / sweep account**, then ACH/journal into each custodial account — do you
+  support that, and what are the **AML / source-of-funds** expectations for third-party-
+  originated deposits?
+- Supported rails: ACH, wire, **Instant/JIT funding** (invest a gift before ACH settles)?
+  Journal API between a partner FBO and customer accounts?
+
+**Curated mix / managed portfolios (the RIA line):**
+- We offer a **default curated-but-self-directed** ETF basket (Growth/Balanced/Conservative;
+  no individual recommendations, no discretion). Does using your **Portfolio Rebalancing API**
+  to maintain those model portfolios keep us a **Technology Partner**, or tip us into needing
+  **RIA** registration? What's the supported non-RIA structure for default model portfolios?
+- Confirm **fully-disclosed** (not omnibus) is the structure for our per-kid accounts.
+
+**Kiddo Cash / FDIC sweep:**
+- Custodial accounts are eligible for the FDIC sweep — what are the **partner economics** (do
+  we share in the interest/float, or does it pass to the customer)? Any extra disclosures we
+  must surface (cash is FDIC pass-through, **not SIPC**)?
+
+**Sandbox smoke-test progress (2026-06-12):** auth works (use **Legacy** credential type =
+Basic auth; the new `Client Secret` type is OAuth2 and 401s the script). Identity payload now
+valid (Alpaca requires the custodian financial profile — income/net-worth/risk/objective). Hit
+**`403 {40310000} "creating custodial USA accounts is not enabled"`** → custodial creation is an
+**entitlement gated per-correspondent**, OFF by default even in sandbox. **ACTION: ask Alpaca to
+enable custodial account creation for our sandbox correspondent (firm `frvq`)**, then re-run.
+Fractional-in-custodial (#2) still needs a re-run during market hours once #1 is enabled.
+
+**Update 2026-06-16:** sandbox Broker API keys now configured in `.env`
+(`ALPACA_BROKER_API_KEY`/`ALPACA_BROKER_API_SECRET`; `.env` is gitignored — safe). Smoke
+test re-run **confirms credentials are valid (auth passes)** and **reproduces the same
+`403 {40310000} "creating custodial USA accounts is not enabled"`** — so the ONLY remaining
+sandbox blocker is the per-correspondent custodial entitlement. The smoke script now loads
+`.env` via `dotenv/config` (was reading bare `process.env`). **NEXT (founder action): send the
+drafted email** (`LAUNCH_OUTREACH_EMAILS.md` #4) to enable custodial creation for correspondent
+`frvq`; once enabled, re-run during market hours to settle fractional-in-custodial + the handoff.
+
+**Update 2026-06-18:** re-ran `npm run smoke:alpaca-custodial` — STILL the same
+`403 {40310000} "creating custodial USA accounts is not enabled"` (auth valid, keys good).
+So the correspondent-`frvq` custodial entitlement is STILL not granted: the
+`LAUNCH_OUTREACH_EMAILS.md` #4 enablement email either hasn't been sent or hasn't been
+actioned by Alpaca yet. Until it is, make-or-break #1 and #2 stay untestable. This is the
+single open action on the Alpaca track (founder send, no code).
+
+### Doc research findings (deep-research run 2026-06-16, 20 claims verified 3-0 against Alpaca's own docs)
+
+**CONFIRMED — de-risks Alpaca:**
+- **Alpaca Securities LLC = BD of record** (Member FINRA/SIPC, carrying/clearing); does account
+  maintenance, reporting, confirms, statements, settlement on partners' behalf → Kiddo need not be
+  a BD. (docs/account-opening, docs/use-cases)
+- **Alpaca custodies + generates monthly statements + handles ALL annual tax reporting** under the
+  MINOR's SSN → Kiddo does NOT generate 1099s/statements. Big compliance offload. (docs/custodial-accounts)
+- **Fractional + notional supported** ("$1 minimum," 9 decimals, 2,000+ equities). (docs/fractional-trading)
+- **Gifter-funding FBO architecture exists:** "send customer deposits in bulk to your firm account
+  first and reconcile later using the Journals API"; firm/FBO account can be the journal source —
+  BUT "we need to review the entire flow first... you may need a local [money-transmission] license."
+  (docs/funding-accounts, learn/journal-cash-securities)
+- **FDIC Sweep EXPLICITLY supports Custodial accounts** (pass-through to $1M, $250k/bank); disclosure =
+  brokerage cash SIPC-not-FDIC, swept cash FDIC-not-SIPC. Enables the shared-yield line. (docs/fdic-sweep-program)
+- **Custodial open flow matches our smoke test** (`minor_identity` fields; KYC on the adult). (docs/custodial-accounts)
+
+**TWO REAL UNKNOWNS — Alpaca docs explicitly DON'T answer; MUST get written confirmation:**
+1. **The at-majority handoff mechanics (#1 risk) — LIKELY DE-RISKED (doc search 2026-06-16).** Two docs
+   together point to SAFE: (a) the at-majority handoff is described as **"the beneficiary assumes full
+   control of the account"** (= in-place, same account, control re-registers → fractional + cost basis
+   PRESERVED), and (b) the **fractional-liquidation rule is specifically for ACATS** — *"if the user is
+   requesting a full [ACATS] transfer... fractional shares... will be liquidated before being sent out"*
+   (docs/us/docs/acat-api) — i.e. liquidation is the **moving-to-ANOTHER-broker** case, NOT the
+   coming-of-age case. Docs STRONGLY IMPLY in-place but don't explicitly say "no liquidation," so confirm
+   ONE sentence with Alpaca: *"Is the age-of-majority transition an in-place re-registration of the same
+   account (preserves fractional + cost basis, no ACATS), and is it Alpaca-driven by DOB/state or
+   platform-triggered?"* **WIND-DOWN IMPLICATION:** an ACATS-OUT to a different broker DOES liquidate
+   fractional → the "if Kiddo shuts down" FAQ can't promise "nothing sold" via ACATS; keep accounts at
+   Alpaca or liquidate-to-cash and say so (align counsel-packet wind-down copy).
+2. **Non-BD + FBO approval:** non-BD tech providers supported "on a CASE-BY-CASE basis, select countries"
+   (= why we're 403'd); FBO gifter-pooling needs Alpaca's flow review + possibly an MTL.
+
+**NEW FRICTION:** Travel Rule enforced on **EVERY incoming deposit regardless of amount** (transmitter
+identity name/acct/address/institution, retained 5yr) on Journals + Instant Funding → AML overhead on
+every small gifter deposit. Shapes the gifter-funding UX. (docs/funding-accounts, docs/instant-funding-1)
+
+**NOT pinned from docs (ask Alpaca/counsel):** exact pricing/minimums/float-share (fee-schedule PDF
+exists, specifics unverified); excluded-states list ("all exc SC/VT" did NOT verify); whether the
+Rebalancing API for model portfolios triggers RIA registration (counsel Part 1).
+
+**Sandbox pre-validation (2026-06-16, `script/alpaca-sandbox-probe.ts`):** auth + regular account open
++ ACH funding all WORK; the fractional buy itself is market-hours-gated (probe auto-re-runs at ET open
+via a background waiter). So make-or-break #1's mechanism (fractional/notional) is being confirmed live.
+
+**📄 DOC FINDINGS round 2 (2026-06-12 — Funding / Rebalancing / SSE / Instant Funding / Market Data):**
+- **🟢 Gifter-funding architecture RESOLVED → Cash Pooling + Journals API.** Alpaca's "Funding Accounts" doc: *"send customer deposits in a bulk to your firm account first and reconcile later using the Journals API"* (= aggregate funding). This is exactly Kiddo's model: collect gifts via Stripe → pool in a Kiddo firm/FBO account → `Journals API` (JNLC) into each kid's custodial account. **Caveat (not new): "you may need a local license… check your counsel"** + **Travel Rule** transmitter info on journals → this is the SAME money-transmission gate already in `COUNSEL_ENGAGEMENT_PACKET` (holding gift funds pre-account), now concretely mapped to the Alpaca funding path. Not a new blocker; the known counsel gate.
+- **🟢 Curated mixes RESOLVED → Portfolio Rebalancing API.** Define Growth/Balanced/Conservative as **Portfolios** (weighted VTI/VXUS/BND), **subscribe** each account, Alpaca auto-runs `invest_cash` (cash >$10 → buys toward target, 9:30-3:30 ET) + `full_rebalance` on drift-band/calendar. Uses **fractional/notional** orders. Min $1/asset, $10 invest_cash. Our gifts ($25-100) + 2-3 assets fit cleanly. (Doc frames it "for investment advisors" — the RIA-vs-tech-partner characterization is still the counsel question, but the *mechanic* is a perfect fit.)
+- **🟢 Event sync → SSE Events** (account status / journal / transfer / trade / non-trade-activity / system EOD): replayable by ULID, maps to Kiddo's existing webhook+outbox pattern.
+- **🟡 Instant Funding = available but SKIP at launch.** It extends instant buying power *before* funds settle (for ACH-first apps) — needs a partner deposit, T+1 wire settlement, signed pricing amendment, late interest (Fed+8%). Kiddo **pre-collects via Stripe**, so we already hold the cash before investing → don't need the credit/risk. Revisit only if we want sub-day "watch it land."
+- **Market data:** Broker API plans = Basic (free, IEX/15-min-delayed) → Standard $500-$2,000/mo. Delayed/IEX is fine for showing fund values. NB market-data auth uses the **OAuth Client-Credentials** flow → the `Client Secret` credential we generated earlier IS the one for market data (Legacy/Basic-auth is for the Broker REST endpoints). Both have a use.
+
+### 🟢 ENTITLEMENT ENABLED + MAKE-OR-BREAK #1 & #2 VERIFIED IN SANDBOX (2026-06-24)
+
+Alpaca support (agent "Radzi", ticket **309412**) **enabled custodial USA account creation for correspondent `frvq`**. He only said "completed, please retry" — did NOT answer Dovi's 2 confirmation questions or name a partnerships contact (the reply was an UNBLOCK, not answers). We then verified the two testable make-or-breaks directly:
+
+- **#1 custodial account opens — ✅ PROVEN.** `npm run smoke:alpaca-custodial` opens `account_type:"custodial"` + `minor_identity`, reaches `APPROVED` / trading `ACTIVE`.
+- **#2 fractional notional buy INSIDE custodial — ✅ PROVEN with a real fill.** A `$50` notional AAPL buy filled in the custodial account → position **`qty=0.168967335`** (clearly fractional), mv ~$49.99. Earlier "inconclusive" runs were a FALSE NEGATIVE from sandbox ACH funding lag (see below), NOT a custodial rejection — the order validator accepted the notional order and failed only on `insufficient buying power`, identically on a regular account.
+- **#3 at-majority handoff — STILL the only open make-or-break.** Untestable in sandbox; Radzi didn't answer it. This is the one genuine remaining Alpaca question (see the strong-but-unconfirmed doc evidence above).
+
+### 📺 WEBINAR FINDINGS (2026-06-24) — 3 Alpaca Broker API webinars (RIA onboarding / KYC+funding / Ribbit reference app)
+
+Mined for our open questions. Net effect: the procedural unknowns are now answered, so the Alpaca email shrinks to custodial-specifics only.
+
+- **🟢 Sandbox ACH delay is BY DESIGN (resolves the 2026-06-24 funding saga).** *"We have some of the ACH delay built into sandbox… about an hour"* + *"cash is not made available right away — you have to wait for it to clear before you can place an order."* So the `QUEUED` transfer wasn't wedged — it's a deliberate ~1hr simulated clearing delay, and the buy correctly failed on buying power until it cleared. **One ACH relationship per account** (*"one account is only allowed to have one relationship"*) — matched our `409 only one active ach relationship` on re-issue; change-bank = delete + re-add. **No sandbox-funding question to ask Alpaca; we know the answer.**
+- **🟢 Go-live pipeline (the production-onboarding answer for make-or-break #6 commercials):** three stages — **Sandbox** (1-6mo, unlimited) → **Limited Live** (1-3mo, up to **35 real internal accounts**, Alpaca does KYC, **$5k buying-power / $2k withdrawal cap per account**, no margin/short) → **Full Live** (unrestricted). Sandbox→Limited: submit legal entity + control-person → **sign carrying agreement w/ sales** → build compliant onboarding flow (Alpaca reviews; exact reqs NOT in docs, sales sends them) → hand a pre-funded test account to their tech consultant. Limited→Full: due-diligence packet **~1mo before launch** — entity docs, **W9 (required if you ever custody stock)**, UBOs to 10%, authorized users (photo ID + CIP), **InfoSec policy** + P&Ps, AML program if you self-conduct KYC; remediations bucket into immediate / 30-day / 90-day. **Two support models:** self-service (email) vs **project-managed** (~1hr/day PM + tech consultant + DD specialist — worth it given custodial is new).
+- **🟢 Non-BD / RIA reconfirmed AND reconfirmed as counsel's call.** *"Do we need the RIA license to start go-live? Nope, not at all… various partnership types… you could launch as a tech partner."* But asked "do we still need our own investment license," Alpaca said *"yes, you operate on your own licenses… differs by jurisdiction"* then **deferred to sales/counsel.** Starting doesn't require it; whether Kiddo's 0.10% + curated-mix model ultimately needs RIA registration is the **counsel Part 1** question — Alpaca won't answer it.
+- **🟢 Journals are near-instant (intraday), vs ~1hr ACH** (*"the journaling is near real-time… settles at EOD"*). Right rail for "invest a gift the moment it lands," but needs the **firm/FBO account**, which only exists post-carrying-agreement → confirms the gifter-funding plan is gated on partnership, not code.
+- **🟢 Agreements are HOSTED BY ALPACA.** *"The customer agreement is already created by Alpaca; we recommend you link directly to it (auto-updates); there are requirements on how you present it + e-signature."* → refine `alpacaBrokerClient.ts`: present Alpaca's hosted customer agreement + capture the real e-sig + IP at activate-investing time, don't hardcode a `signed_at`.
+- **Other:** no bulk-order API (workaround: trade in firm account → journal shares out); order types = market/limit/stop/stop-limit/trailing-stop; per-account fee tiers (different bips/account) NOT native — "get creative" w/ PMs; rate limit 1000 calls/min, negotiable w/ partnerships; international funding = wire (not ACH), not simulable in sandbox; market data = SIP aggregate, free Basic (IEX/delayed) fine for showing fund values.
+- **NOT answered by any webinar:** the at-majority custodial handoff (generic webinars, custodial barely mentioned) and the excluded-states list. Handoff stays make-or-break #3.
+
+**→ The Alpaca partnerships email now collapses to TWO custodial-specific asks only:** (1) handoff = in-place re-registration vs ACAT *(already in the ticket-309412 reply)*, and (2) Kiddo-specific commercials — per-account/clearing economics, AUM floor, and whether partners share the FDIC-sweep interest. Everything procedural is answered above.
+
+### 🟢 RADZI REPLIED ON THE HANDOFF (2026-06-25) — directionally in-place, mechanism still soft
+
+Radzi replied to Dovi's handoff + production follow-up (ticket 309412):
+- **Handoff:** *"custodial accounts are designed to transition into a standard individual brokerage account once the beneficiary reaches the age of majority."* This is the **third** signal pointing to in-place (docs: beneficiary "assumes full control of the account" + the fractional-liquidation rule being ACATS-out-specific; now support: "transitions into a standard individual brokerage account"). BUT he answered the WHAT, not the HOW — did **not** explicitly confirm (a) same account / not an ACATS, (b) fractional positions + cost basis preserved, no liquidation, no taxable event, or (c) the trigger (automatic at majority vs Alpaca ops vs an API call we make). For the counsel packet + tax disclosures we need that one explicit sentence.
+- **Production:** punted to *"the customer success team assigned to your organization"* — but we're sandbox-only with no CS assigned yet, so it's a non-answer until we get routed.
+- **→ Follow-up SENT 2026-06-25:** pins the mechanism three ways (yes/no on same-account vs ACATS, cost-basis-preserved/no-liquidation, and the trigger) + converts the CS punt into a concrete routing request for production onboarding + commercials. **AWAITING.** If the reply is "in-place, cost basis preserved," make-or-break #3 clears and Alpaca passes all 3 gates.
+
+## The plan (sandbox-first, decide on evidence)
+
+1. **Alpaca sandbox today** (free, self-serve). Prototype the three make-or-break
+   flows *behind* `custodianService.ts`'s `alpaca` adapter:
+   open custodial (`minor_identity`) → fractional gift buy → at-majority transfer.
+   If fractional-in-custodial or the handoff don't work cleanly → Alpaca is out.
+2. **DriveWealth sales call** in parallel — run the same question set; get real
+   pricing/minimums + custodial maturity + handoff confirmation.
+3. **Decide** on: fractional + handoff actually work, pricing/minimums for our
+   stage, and which structure counsel signs off. Set `CUSTODIAN_PROVIDER` and
+   implement that one adapter.
+
+## Integration status & exact wiring (when you pick a provider)
+
+**Built (all inert at the default `stub` provider — zero app risk):**
+- `server/custodianService.ts` — the interface + `getCustodianProvider()` (env `CUSTODIAN_PROVIDER`).
+- `server/alpacaBrokerClient.ts` — sandbox-ready Alpaca client (real HTTP, inert without keys).
+- `server/driveWealthAccountSetup.ts` — DriveWealth account-open scaffold (reused by both the `drivewealth` adapter and the Alpaca payload mapping).
+- `script/alpaca-custodial-smoke.ts` (`npm run smoke:alpaca-custodial`) — one-command make-or-break verifier.
+
+**Already live + already provider-neutral (don't refactor — it's compliant):**
+- The custodian transfer/handoff path goes through `queueCustodianTransfer` (a webhook + outbox
+  event queue, NOT a vendor SDK) in `routes.ts` (withdrawal/handoff) + `routes/ageTransitionLifecycle.ts`.
+  `routes.ts` inlines no vendor SDK, so the boundary already holds here.
+
+**NOT yet wired (intentionally — gated on the provider pick + counsel):**
+- The account-open path. There is no activate-investing → open-account route yet; building it is a
+  founder-owned + counsel-gated feature, not a refactor.
+
+**To wire account-open once a provider is chosen (the only code that should change):**
+1. Set `CUSTODIAN_PROVIDER=<drivewealth|alpaca>` + that provider's credentials.
+2. In the activate-investing handler, call
+   `getCustodianProvider().openCustodialAccount({ fundId, childSsnDigits, custodianSsnDigits })`
+   and persist `result.accountId` to `funds.drivewealthAccountId` (or rename that column to
+   `custodianAccountId` via a migration — a founder call, not required to ship).
+3. Wire `investGift` at gift settlement, `liquidate` at refund/withdrawal, and route the age-18
+   worker's handoff through `getCustodianProvider().handoffAtMajority(...)`.
+4. Never import a vendor SDK into `routes.ts` — only the interface.
+
+## Reminders
+
+- The provider does NOT clear our regulatory gate — the AUM/RIA decision +
+  holding-gift-funds-pre-account questions in `COUNSEL_ENGAGEMENT_PACKET` still
+  gate launch regardless of vendor.
+- Whichever wins, it stays behind `custodianService.ts`. No vendor SDK in
+  `routes.ts`.
+
+## Outreach drafts (ready to send)
+
+Fill the brackets. Brand is **Kiddo** (never "Kora"). Keep these tight; the goal
+is a sandbox/call, not a full pitch.
+
+### → Alpaca (Broker API partnerships)
+
+> **Subject: Broker API for a custodial kids' investing + gifting product**
+>
+> Hi Alpaca team,
+>
+> I'm building Kiddo, a custodial investing product for kids funded by family
+> gifting. The flow: relatives gift small amounts, we invest them in a UTMA
+> account managed by the parent, and the account hands off to the child at the
+> age of majority. We've signed up for the Broker API sandbox and are
+> prototyping now.
+>
+> Three things decide our fit, and I'd love a straight answer on each:
+>
+> 1. Do fractional, notional (dollar-amount) buys work inside a custodial
+>    account? Our gifts are $25 to $100, so notional orders are mandatory.
+> 2. What is the at-majority path? Can a custodial account convert or transfer to
+>    an individual account owned by the child when they reach the state majority
+>    age, and is that automated or an ops process?
+> 3. Can we operate as an introducing/technology partner under Alpaca Securities
+>    as broker-dealer of record, and what registrations (if any) must we hold
+>    given that model?
+>
+> Also keen to understand minimums, per-account and clearing economics, and the
+> production go-live timeline and prerequisites. Could we get 30 minutes with
+> someone on the partnerships team?
+>
+> Thanks,
+> [Name], Founder, Kiddo
+> [email] · [site]
+
+### → DriveWealth (sales)
+
+> **Subject: Custodial + fractional API for a kids' gifting investing product**
+>
+> Hi DriveWealth team,
+>
+> I'm the founder of Kiddo, a custodial investing product for kids funded by
+> family gifting (gifts get invested into a UTMA account, which hands off to the
+> child at the age of majority). I'm evaluating custody/brokerage partners and
+> DriveWealth's track record with custodial and teen accounts puts you on the
+> shortlist.
+>
+> Could we set up a call? The questions that matter most to us:
+>
+> 1. Fractional, dollar-amount investing inside custodial accounts (our gifts are
+>    $25 to $100).
+> 2. The at-majority handoff: custodial to individual ownership for the child,
+>    and how automated that transfer is.
+> 3. Account minimums, per-account and per-trade economics, and your typical
+>    onboarding/go-live timeline.
+> 4. A couple of reference customers running custodial/teen accounts at scale.
+>
+> Happy to share more on the product and volume expectations on a call. What does
+> your availability look like next week?
+>
+> Thanks,
+> [Name], Founder, Kiddo
+> [email] · [site]
+
+## Decision scorecard (fill in as answers arrive)
+
+**Step 1 — gates (any FAIL eliminates that vendor, no scoring needed):**
+
+| Gate | Alpaca | DriveWealth |
+|---|---|---|
+| Fractional notional buy works IN custodial (run `npm run smoke:alpaca-custodial`) | ✅ **PASS** (2026-06-24, real fill qty=0.169 in custodial) | ☐ pass / ☐ fail |
+| At-majority handoff to the child exists (custodial → individual) | 🟡 likely+ (2026-06-25: support confirms it transitions to a standard individual account; in-place/cost-basis mechanism follow-up sent — ticket 309412) | ☐ pass / ☐ fail |
+| We can operate WITHOUT being our own broker-dealer | ✅ **PASS** (Alpaca Securities = BD of record; tech-partner path confirmed in webinar — RIA-vs-not is the separate counsel question) | ☐ pass / ☐ fail |
+
+**Step 2 — score the survivors (1-5 each; weight in parens). Highest total wins:**
+
+| Criterion (weight) | Alpaca | DriveWealth |
+|---|---|---|
+| Developer experience / speed to build (×3) | _ | _ |
+| Cost + minimums at our stage (×3) | _ | _ |
+| Custodial maturity / proven at scale (×3) | _ | _ |
+| Handoff automation quality (×2) | _ | _ |
+| Time to production go-live (×2) | _ | _ |
+| Support / SLA / references (×1) | _ | _ |
+| **Weighted total** | **_** | **_** |
+
+**Decision rule:** a gate FAIL eliminates outright. Otherwise pick the higher weighted
+total. If within ~10%, **default to Alpaca on velocity + cost** UNLESS DriveWealth is
+materially stronger on custodial maturity or the handoff (the two places Alpaca's
+month-old product is least proven). Record the call + date here: ______________________
+
+**Raw answers captured (paste vendor responses):**
+- Alpaca: ______________________________________________________________
+- DriveWealth: _________________________________________________________
+
+## Sources
+
+- Alpaca custodial launch (2026-05-11): https://alpaca.markets/blog/alpaca-launches-custodial-accounts-for-broker-partners/
+- Alpaca custodial docs: https://docs.alpaca.markets/docs/custodial-accounts
+- Alpaca Broker vs Trading API: https://docs.alpaca.markets/us/docs/about-broker-api
+- Alpaca Broker API onboarding: https://alpaca.markets/broker-resources/guide/getting-started-with-broker-api-guide-to-onboarding-process
+- DriveWealth teen & custodial: https://developer.drivewealth.com/apis/docs/teen-custodial-accounts
+- DriveWealth fractional: https://developer.drivewealth.com/apis/docs/fractionalized-assets

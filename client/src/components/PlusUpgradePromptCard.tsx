@@ -36,12 +36,13 @@
 // (use-auth.ts) so shared-browser users don't inherit each other's
 // dismissals.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { Camera, Gift, TrendingUp, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
+import { CollapseDismissSection } from "@/components/dashboard/CollapseDismissSection";
 
 const DISMISS_KEY_PREFIX = "kora:dismissed:plus-prompt:";
 
@@ -62,7 +63,7 @@ type PromptCopy = {
 const PROMPT_COPY: Record<PlusUpgradePromptKind, PromptCopy> = {
   "third-entry": {
     headline: "You're building something.",
-    body: "Plus lets you add your own photos, voice memos, and video so the Memory Book feels like yours, not just a list of gifts.",
+    body: "Plus lets you add your own photos, voice memos, and video so the Memory Book feels like yours.",
     icon: Camera,
     modalTitle: (childName) => `Make ${childName}'s Memory Book yours.`,
     modalBody: (childName) =>
@@ -89,11 +90,11 @@ const PROMPT_COPY: Record<PlusUpgradePromptKind, PromptCopy> = {
   },
   "thirty-day-anniversary": {
     headline: "You've committed for a month.",
-    body: "Plus gives you the operator tools: custom fund mix, your own photos and voice memos in the Memory Book, co-parent access, and a tax summary at year-end. The features for the parent who's in it for the long run.",
+    body: "Plus gives you the operator tools: custom fund mix, your own photos and voice memos in the Memory Book, co-parent access, and unlimited occasions. The features for the parent who's in it for the long run.",
     icon: Crown,
     modalTitle: (childName) => `30 days into ${childName}'s fund.`,
     modalBody: (childName) =>
-      `A month in is the moment Plus pays for itself. Custom fund mix so the money grows where you choose. Your own photos and voice memos in the Memory Book (the kid hearing your voice from years ago is the artifact nothing else gives them). Co-parent invite to share the work. Annual tax summary so January is easy. The features for the parent who's in this for ${childName}'s long run.`,
+      `A month in is the moment Plus pays for itself. Custom fund mix so the money grows where you choose. Your own photos and voice memos in the Memory Book (the kid hearing your voice from years ago is the artifact nothing else gives them). Co-parent invite to share the work. The features for the parent who's in this for ${childName}'s long run.`,
   },
 };
 
@@ -112,44 +113,55 @@ export function PlusUpgradePromptCard({
 }: PlusUpgradePromptCardProps) {
   const dismissKey = `${DISMISS_KEY_PREFIX}${kind}`;
 
-  // Initialize dismissed from localStorage so the card doesn't flash
-  // in for one frame on a return visit before the effect runs.
-  const [dismissed, setDismissed] = useState<boolean>(() => {
+  // Already dismissed on a prior visit → render nothing (no flash, no animation).
+  // Read once; the live dismiss below is driven by `open` so it can collapse out.
+  const initiallyDismissed = useMemo(() => {
     if (typeof window === "undefined") return false;
     try {
       return !!window.localStorage.getItem(dismissKey);
     } catch {
       return false;
     }
-  });
+  }, [dismissKey]);
 
+  const [open, setOpen] = useState(true);
   // FeatureWallModal state lives next to the trigger that opens it.
   const [wallOpen, setWallOpen] = useState(false);
 
-  if (dismissed) return null;
+  if (initiallyDismissed) return null;
 
   const copy = PROMPT_COPY[kind];
   const Icon = copy.icon;
   const displayChild = (childName || "your kid").trim() || "your kid";
 
-  const handleDismiss = () => {
+  // Persist AFTER the collapse exit so the card glides closed (was an instant
+  // unmount → snap). The "Not now" button just flips `open`.
+  const persistDismiss = () => {
     try {
       safeLocalSet(dismissKey, new Date().toISOString());
     } catch {
       // best-effort
     }
-    setDismissed(true);
   };
 
   return (
     <div className={className}>
-      <div
+      <CollapseDismissSection
+        open={open}
+        onExitComplete={persistDismiss}
+        // Swipe-to-dismiss, same as every other dashboard banner. This is a
+        // conversion card, so "should an upgrade nudge resist dismissal?" is a
+        // fair question — but a card that won't swipe when everything else does
+        // reads as a friction-trap, and this trust-anchor brand avoids
+        // manipulative monetization. Wired to the SAME persisted dismiss as the
+        // "Not now" button (setOpen(false) -> onExitComplete persists it).
+        onRequestDismiss={() => setOpen(false)}
         className="rounded-2xl border border-primary/20 bg-primary/5 p-4"
         data-testid={`plus-upgrade-prompt-${kind}`}
       >
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-            <Icon size={16} className="text-primary" strokeWidth={1.8} />
+            <Icon size={16} className="text-primary" strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -165,9 +177,18 @@ export function PlusUpgradePromptCard({
                 disclosure), muted on the daily equivalent (cognitive
                 reframe). Same pattern as MemoryMediaPicker Plus wall
                 (commit 67bed3c). */}
-            <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+            <p className="mt-1.5 text-2xs text-muted-foreground/85">
               <span className="font-semibold text-foreground">$3.99/month</span>
               <span className="text-muted-foreground/70">, about 13¢ a day.</span>
+            </p>
+            {/* Charge-timing + nothing-lost transparency. Highest-ROI paywall add
+                per the conversion research (Blinkist: +23% conversion, -55%
+                complaints from stating "exactly what happens"). Answers the two
+                silent objections a price callout leaves open: "am I locked in?"
+                and "do I lose what I've already built?" The "stays" half is
+                already true in code. Proposed + founder-approved 2026-06-12. */}
+            <p className="mt-1 text-2xs leading-relaxed text-muted-foreground/70">
+              Cancel anytime. Anything you've added to {displayChild}'s fund stays, on any plan.
             </p>
             <div className="mt-3 flex gap-2">
               <Button
@@ -177,13 +198,13 @@ export function PlusUpgradePromptCard({
                 onClick={() => { haptic("selection"); setWallOpen(true); }}
                 data-testid={`plus-prompt-cta-${kind}`}
               >
-                Learn more
+                See what Plus adds
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 className="rounded-xl text-muted-foreground"
-                onClick={() => { haptic("light"); handleDismiss(); }}
+                onClick={() => { haptic("light"); setOpen(false); }}
                 data-testid={`plus-prompt-dismiss-${kind}`}
               >
                 Not now
@@ -191,7 +212,7 @@ export function PlusUpgradePromptCard({
             </div>
           </div>
         </div>
-      </div>
+      </CollapseDismissSection>
       <FeatureWallModal
         open={wallOpen}
         onClose={() => setWallOpen(false)}

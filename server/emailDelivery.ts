@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { isEmailSuppressed } from "./postmarkWebhook";
+import { shouldSilenceForFund } from "./memorialized";
 
 export type EmailMessage = {
   to: string;
@@ -10,6 +11,11 @@ export type EmailMessage = {
   html?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  // Fund this email is about, when fund-scoped. Fund-scoped workers set this so
+  // the bereavement freeze can suppress at this single chokepoint: a memorialized
+  // fund's automated mail never sends. Omitted for non-fund mail (password reset,
+  // verification) — those must never be gated. See BEREAVEMENT_POSTURE.md.
+  fundId?: string;
   // Optional unsubscribe URL for non-transactional emails. When set:
   //   - The HTML body's footer should already include a visible
   //     unsubscribe link (renderKiddoEmail's unsubscribeUrl arg).
@@ -27,9 +33,27 @@ export type EmailMessage = {
 
 export type EmailDeliveryResult = {
   delivered: boolean;
-  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed";
+  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed" | "demo_suppressed" | "bereavement_suppressed";
   providerId?: string | null;
 };
+
+// Domains we deliberately never deliver to via a REAL provider. The Rivera
+// demo accounts live at riverafamily.com — a domain WE DO NOT OWN. Demo
+// lifecycle workers (recurring reminders, anniversaries, age-18, thank-yous,
+// milestone updates) address these accounts, and some of those emails carry
+// BEARER TOKENS (collaborator invites, age-transition invites, kid-view
+// links): delivered for real, they'd hand working access links to whoever
+// registers the domain with a catch-all inbox — plus burn sender reputation
+// on bounces. Per-worker isDemoAccount skips exist but are opt-in; this is
+// the chokepoint backstop. example.* are IANA-reserved (test senders).
+// The guard only fires when a real provider is enabled, so the dev
+// console/outbox transport still shows demo emails for local testing.
+const NEVER_DELIVER_DOMAINS = new Set([
+  "riverafamily.com",
+  "example.com",
+  "example.org",
+  "example.net",
+]);
 
 const EMAIL_OUTBOX_PATH = path.join(process.cwd(), ".local", "email-outbox.jsonl");
 
@@ -201,6 +225,16 @@ async function sendWithSendGrid(message: EmailMessage): Promise<EmailDeliveryRes
 }
 
 export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryResult> {
+  // Bereavement freeze (the email chokepoint). A memorialized fund's automated
+  // mail never sends. Fund-scoped workers set message.fundId; non-fund/
+  // transactional mail has none and is never gated. Fail-closed inside
+  // shouldSilenceForFund (a fund we can't read is treated as silenced). This is
+  // the single place that protects every fund-scoped email at once. See
+  // BEREAVEMENT_POSTURE.md.
+  if (message.fundId && await shouldSilenceForFund(message.fundId)) {
+    return { delivered: false, mode: "bereavement_suppressed", providerId: null };
+  }
+
   // Suppression pre-flight. Hard-bounce + spam-complaint addresses
   // are stored in the email_suppressions table by the ESP webhook
   // handler (server/postmarkWebhook.ts). Sending to a suppressed
@@ -227,6 +261,21 @@ export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryRes
 
   const postmarkEnabled = Boolean(String(process.env.POSTMARK_SERVER_TOKEN || "").trim());
   const sendgridEnabled = Boolean(String(process.env.SENDGRID_API_KEY || "").trim());
+
+  // Demo/never-deliver domain guard — ONLY when a real provider would fire.
+  // Without a provider, sends fall to the local outbox below, which is the
+  // desired dev behavior (you can still inspect what a demo persona would
+  // have received). With a provider, delivering to riverafamily.com (a
+  // domain we don't own) could hand bearer-token links to a stranger's
+  // catch-all and burn sender reputation. See NEVER_DELIVER_DOMAINS above.
+  if (postmarkEnabled || sendgridEnabled) {
+    const recipientDomain = String(message.to || "").split("@")[1]?.trim().toLowerCase() || "";
+    if (NEVER_DELIVER_DOMAINS.has(recipientDomain)) {
+      console.log(`[email] demo_suppressed: ${message.subject} -> ${message.to} (never-deliver domain)`);
+      dedupeCache.set(dedupeKey, { sentAt: now, mode: "demo_suppressed" });
+      return { delivered: false, mode: "demo_suppressed", providerId: null };
+    }
+  }
 
   try {
     if (postmarkEnabled) {

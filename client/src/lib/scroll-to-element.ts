@@ -73,7 +73,12 @@ export type ScrollToOpts = {
 };
 
 export function scrollToTestId(
-  testId: string,
+  // Accepts a single testid or a list of candidates. With a list we scroll to
+  // the FIRST one that mounts — used when the same logical target renders under
+  // different testids by role (e.g. a writable "recurring-list-view" vs a
+  // read-only "recurring-readonly"), which can't be resolved up front if the
+  // section lives in a collapse that hasn't opened yet.
+  testId: string | string[],
   opts: ScrollToOpts = {},
 ): () => void {
   const {
@@ -84,16 +89,30 @@ export function scrollToTestId(
     onMissed,
   } = opts;
 
+  const candidates = Array.isArray(testId) ? testId : [testId];
   let attempts = 0;
   let cancelled = false;
   let timer: number | null = null;
+  let settleTimer: number | null = null;
 
   const tick = () => {
     if (cancelled) return;
-    const el = document.querySelector(`[data-testid="${CSS.escape(testId)}"]`);
+    const el = candidates
+      .map((id) => document.querySelector(`[data-testid="${CSS.escape(id)}"]`))
+      .find((n): n is Element => n instanceof HTMLElement) ?? null;
     if (el instanceof HTMLElement) {
       el.scrollIntoView({ behavior: "smooth", block });
       onFound?.(el);
+      // If the target sits inside a JUST-opened collapse, its section is still
+      // ANIMATING its height when this first scroll fires, so scrollIntoView
+      // lands on a position that keeps shifting as it expands — the row ends up
+      // off-screen and the user taps a second time ("press twice"). Re-scroll
+      // once the expand has settled so a single tap lands correctly. No-op for
+      // already-static targets (they don't move, so the second scroll doesn't
+      // budge and reads as the same motion).
+      settleTimer = window.setTimeout(() => {
+        if (!cancelled && el.isConnected) el.scrollIntoView({ behavior: "smooth", block });
+      }, 500);
       return;
     }
     if (++attempts >= maxAttempts) {
@@ -110,6 +129,7 @@ export function scrollToTestId(
     cancelled = true;
     window.cancelAnimationFrame(raf);
     if (timer != null) window.clearTimeout(timer);
+    if (settleTimer != null) window.clearTimeout(settleTimer);
   };
 }
 
@@ -179,6 +199,7 @@ export function scrollToFirstMatchingTestId(
   let attempts = 0;
   let cancelled = false;
   let timer: number | null = null;
+  let settleTimer: number | null = null;
 
   const tick = () => {
     if (cancelled) return;
@@ -187,6 +208,11 @@ export function scrollToFirstMatchingTestId(
       if (el instanceof HTMLElement) {
         el.scrollIntoView({ behavior: "smooth", block });
         onFound?.(el);
+        // Re-scroll after a just-opened collapse settles — see scrollToTestId
+        // for why (the "press twice" fix). No-op for already-static targets.
+        settleTimer = window.setTimeout(() => {
+          if (!cancelled && el.isConnected) el.scrollIntoView({ behavior: "smooth", block });
+        }, 500);
         return;
       }
     }
@@ -203,5 +229,6 @@ export function scrollToFirstMatchingTestId(
     cancelled = true;
     window.cancelAnimationFrame(raf);
     if (timer != null) window.clearTimeout(timer);
+    if (settleTimer != null) window.clearTimeout(settleTimer);
   };
 }

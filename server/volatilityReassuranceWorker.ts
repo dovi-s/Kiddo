@@ -18,6 +18,7 @@ import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildVolatilityReassuranceEmail } from "./templates/volatilityReassurance";
 import { isCategoryEnabled } from "@shared/emailPreferences";
+import { buildEmailUnsubscribeUrl } from "./emailUnsubscribeToken";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "volatility-worker";
@@ -113,15 +114,17 @@ async function tick(log: LogFn): Promise<void> {
       now,
     );
     try {
-      await sendEmail(buildVolatilityReassuranceEmail({
+      // fundId → bereavement freeze suppresses at the email chokepoint. See BEREAVEMENT_POSTURE.md.
+      await sendEmail({ ...buildVolatilityReassuranceEmail({
         to: row.parent_email,
+        unsubscribeUrl: buildEmailUnsubscribeUrl(baseUrl, row.parent_email, "volatility"),
         parentFirstName: row.parent_first_name,
         childFirstName: row.child_first_name,
         yearsToMajority: yrsToMaj,
         dropPct,
         currentBalanceUsd: current,
         dashboardUrl: `${baseUrl}/dashboard?fund=${encodeURIComponent(row.fund_id)}`,
-      }));
+      }), fundId: String(row.fund_id) });
       state.sentByFundDate[key] = new Date().toISOString();
       sent += 1;
     } catch (err: any) {

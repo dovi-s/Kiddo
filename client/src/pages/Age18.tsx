@@ -3,6 +3,7 @@ import { animate, motion, useReducedMotion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, CalendarClock, Gift, GraduationCap, TrendingUp } from "lucide-react";
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export default function Age18() {
   usePageSeo({
     title: "What happens when your child turns 18 | Kiddo",
     description:
-      "At 18, the fund becomes hers. Here is exactly what happens legally, what she receives, and how Kiddo makes the handoff matter.",
+      "At 18, the fund becomes theirs. Exactly what happens legally, what your child receives, and how Kiddo makes the handoff matter.",
     ogType: "article",
   });
 
@@ -110,12 +111,19 @@ export default function Age18() {
 
       <section className="pt-24 pb-14 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Age-18 transition</p>
-          <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-            At 18, the fund becomes hers.
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Age-18 transition</p>
+          {/* "theirs", not "hers" (2026-06-04): the hero + meta are the
+              impression-setters on a public page about EVERY family's kid;
+              a generic-she H1 reads as not-for-you to half the audience.
+              Named-example sections below keep their pronouns. The early
+              "(some states say 19 or 21)" hedge keeps the 18 shorthand
+              honest before nine more instances of it land; the full state
+              note stays at the bottom. */}
+          <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
+            At 18, the fund becomes theirs.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-            Everything her family built. Every gift. Every note. Every investment. Hers. Here is exactly what happens and how Kiddo makes it matter.
+            Everything their family built (every gift, every note, every investment) becomes theirs. Exactly what happens, and how Kiddo makes it matter. (The exact age is 18 to 21 depending on your state; the handoff works the same way.)
           </p>
           <div className="mx-auto mt-8 max-w-3xl rounded-[28px] border border-border bg-card px-6 py-6 text-left shadow-premium-sm">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Most platforms do nothing at 18</p>
@@ -138,8 +146,8 @@ export default function Age18() {
       <section className="pb-14 md:pb-20">
         <div className="mx-auto max-w-4xl px-4">
           <div className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-12">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-              Here is how it actually works.
+            <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground">
+              How it actually works.
             </h2>
             <div className="mt-8 space-y-8">
               <div>
@@ -154,7 +162,7 @@ export default function Age18() {
                   </p>
                 </div>
                 <p className="mt-4 text-base leading-8 text-muted-foreground">
-                  A conversation guide arrives. Real things to say. Not a financial lecture. A parent-to-child conversation about what has been built and why.
+                  A conversation guide arrives, with real things to say to her about what has been built and why.
                 </p>
               </div>
               <div>
@@ -194,6 +202,15 @@ export default function Age18() {
               </div>
             </div>
 
+            <ProductFrame
+              src="/product/age18.webp"
+              alt="The age-of-majority handoff page: the time remaining, the projected value, what transfers to them, and the family record of who showed up."
+              caption="The handoff page itself."
+              href="/demo"
+              liveLabel="See it live"
+              className="mt-12"
+            />
+
             <div className="mt-10 overflow-hidden rounded-3xl bg-primary/5 p-4 sm:p-5 md:p-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="max-w-2xl">
@@ -211,7 +228,7 @@ export default function Age18() {
                   animate="animate"
                   className="w-full rounded-2xl bg-card px-4 py-4 shadow-premium-sm md:w-auto md:min-w-[240px]"
                 >
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Projected by age {selectedHorizon}</p>
+                  <p className="text-2xs uppercase tracking-[0.18em] text-muted-foreground">Projected by age {selectedHorizon}</p>
                   <p className="mt-2 font-heading text-3xl font-bold leading-none text-foreground md:text-4xl">
                     <AnimatedCurrencyValue value={finalPoint.projectedValue} />
                   </p>
@@ -222,7 +239,7 @@ export default function Age18() {
               <div className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr] lg:gap-6">
                 <div className="rounded-3xl border border-border/60 bg-background/90 p-4 md:p-5">
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Annual gifts</p>
+                    <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Annual gifts</p>
                     <div className="grid grid-cols-1 gap-1 rounded-[20px] bg-card/80 p-1 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:gap-1.5">
                     {giftOptions.map((amount) => (
                       <button
@@ -242,7 +259,7 @@ export default function Age18() {
                   </div>
 
                   <div className="mt-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Growth rate</p>
+                    <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Growth rate</p>
                     <div className="grid grid-cols-1 gap-1 rounded-[20px] bg-card/80 p-1 sm:flex sm:flex-wrap sm:gap-1.5">
                     {rateOptions.map((option) => (
                       <button
@@ -262,7 +279,7 @@ export default function Age18() {
                   </div>
 
                   <div className="mt-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Show value by age</p>
+                    <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Show value by age</p>
                     <div className="grid grid-cols-1 gap-1 rounded-[20px] bg-card/80 p-1 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:gap-1.5">
                     {horizonOptions.map((age) => (
                       <button
@@ -342,7 +359,7 @@ export default function Age18() {
                 </div>
 
                 <div className="space-y-3 lg:space-y-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:hidden">Milestones</p>
+                  <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:hidden">Milestones</p>
                   <div className="grid gap-3 lg:block lg:overflow-visible lg:pb-0">
                   {milestoneValues.map((milestone, index) => (
                     <motion.div
@@ -395,7 +412,7 @@ export default function Age18() {
                 </div>
               </div>
               <div className="rounded-3xl border border-border bg-card p-6 shadow-premium-sm">
-                <h3 className="font-heading text-2xl font-semibold text-foreground">Here is something most people do not know.</h3>
+                <h3 className="font-heading text-2xl font-semibold text-foreground">Something most people do not know.</h3>
                 <div className="mt-4 space-y-4 text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
                   <p>
                     Over time, the account becomes more tax-efficient, not less.
@@ -410,6 +427,24 @@ export default function Age18() {
                     Consult a tax professional about your specific situation. Kiddo does not provide tax advice.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-premium-sm">
+              <h3 className="font-heading text-2xl font-semibold text-foreground">"What if she just spends it all?"</h3>
+              <div className="mt-4 space-y-4 text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
+                <p>
+                  It is the fear every parent has, and we will not pretend it away. By law, the account is hers, and she can do anything with it.
+                </p>
+                <p>
+                  What we can do is the years before it. Emma watches the fund grow, sees who showed up for her, learns how investing works from her own money, and reads the notes the people who love her left along the way.
+                </p>
+                <p className="font-medium text-foreground">
+                  So when it becomes hers, it's something she has understood, and felt loved through, for as long as she can remember.
+                </p>
+                <p>
+                  We cannot promise what she will do. We can promise we spent those years preparing her to do it well. That is the whole reason Kiddo exists.
+                </p>
               </div>
             </div>
 

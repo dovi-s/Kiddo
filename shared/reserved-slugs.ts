@@ -13,7 +13,7 @@
 // didn't check at all). Keeping ONE list here prevents that.
 export const RESERVED_FUND_SLUGS: ReadonlySet<string> = new Set([
   // App (authenticated) + core flows
-  "login", "get-started", "onboard", "activate", "dashboard", "account",
+  "login", "get-started", "onboard", "activate", "dashboard", "dashboard-classic", "account",
   "settings", "activity", "events", "event", "send", "claim", "admin",
   "memory", "gift", "kid", "transition", "gifter", "my-gifts",
   "personal-funds", "projection", "tax-documents", "funds", "invitations",
@@ -27,12 +27,17 @@ export const RESERVED_FUND_SLUGS: ReadonlySet<string> = new Set([
   "faq", "how-it-works", "about", "legal", "pricing", "compare", "blog",
   "stories", "security", "updates", "contact", "age-18", "age-18-plan",
   "demo", "tools", "robux-vs-utma", "trump-account-vs-utma", "partners",
-  "p2p-preview",
+  "p2p-preview", "design-lab", "generational-loop", "staging",
   // Common infra/well-known segments a fund slug must never shadow
   "api", "assets", "static", "uploads", "public", "app", "www", "robots.txt",
   "sitemap.xml", "favicon.ico", "manifest.json", "health",
 ]);
 
 export function isReservedFundSlug(segment: string | null | undefined): boolean {
-  return RESERVED_FUND_SLUGS.has(String(segment || "").trim().toLowerCase());
+  const s = String(segment || "").trim().toLowerCase();
+  // `__`-prefixed paths are throwaway dev/prototype routes (e.g. /__voice,
+  // /__shared) — never fund slugs. Reserving the prefix stops the public-fund
+  // resolver from firing a spurious /api/public/funds/__x 404 prefetch on them.
+  if (s.startsWith("__")) return true;
+  return RESERVED_FUND_SLUGS.has(s);
 }

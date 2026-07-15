@@ -222,11 +222,12 @@ async function loadDueFunds(): Promise<{
       FROM funds f
       JOIN users u ON u.id = f.user_id
       WHERE f.recipient_birthdate IS NOT NULL
+        AND f.memorialized_at IS NULL -- bereavement freeze: a memorialized child never reaches handoff (BEREAVEMENT_POSTURE.md)
         AND f.status = 'active'
         AND u.email IS NOT NULL
         -- Demo-safety: never fire real age-of-majority emails for demo
-        -- funds. The Dunphy seed puts Alex ~30 days from 21 (inside the
-        -- T-30 window), which would email phil@dunphyfamily.com for real.
+        -- funds. The Rivera seed puts Nora ~30 days from 21 (inside the
+        -- T-30 window), which would email marcus@riverafamily.com for real.
         -- The demo showcases the handoff via the interactive claim flow +
         -- seeded state, not via this background worker's live emails.
         AND COALESCE(u.is_demo_account, false) = false
@@ -310,7 +311,7 @@ async function sendT30Email(row: DueRow, log: LogFn): Promise<void> {
     "",
     `When the day arrives, ${childName} gets an email with a private link to claim the fund into their own Kiddo account.`,
     "",
-    "— The Kiddo team",
+    "The Kiddo team",
   ].join("\n");
   const { html: t30Html } = renderKiddoEmail({
     heading: `${childName} turns ${majorityAge} in a month`,
@@ -346,7 +347,7 @@ async function sendT1Email(row: DueRow, log: LogFn): Promise<void> {
     "",
     "Nothing sells. The investments stay where they are. Only legal control changes.",
     "",
-    "— The Kiddo team",
+    "The Kiddo team",
   ].join("\n");
   const { html: t1Html } = renderKiddoEmail({
     heading: `${childName} turns ${majorityAge} tomorrow`,
@@ -406,7 +407,7 @@ async function sendKidInviteEmail(
       "",
       "Nothing has been sold. The investments stay exactly where they are. What changes is who decides, and from today, that's you.",
       "",
-      "— The Kiddo team",
+      "The Kiddo team",
     ].join("\n"),
     html: kidHtml,
     tags: ["age_transition", "invite", "auto"],
@@ -565,7 +566,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
           fundId,
           type: "kid_age_18_reached",
           title: `${childName} turned ${majorityAge}`,
-          description: `Legal control of the fund transfers to ${childName} today (UTMA majority age ${majorityAge} per state law). Memory Book entries reserved for this milestone are now visible in their Kid View. Nothing was sold.`,
+          description: `Legal control of the fund transferred to ${childName} (UTMA majority age ${majorityAge} per state law). Memory Book entries reserved for this milestone are now visible in their Kid View. Nothing was sold.`,
         })
         .catch((err: any) => {
           log(`activity log write failed for fund ${fundId}: ${String(err)}`, WORKER_SOURCE);
@@ -617,7 +618,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
               fundId,
               type: "age18_invite_auto_sent",
               title: `Auto-sent claim link to ${childName}`,
-              description: `${childName}'s claim link was sent automatically to ${childEmail} today.`,
+              description: `${childName}'s claim link was sent automatically to ${childEmail}.`,
             })
             .catch(() => undefined);
         } catch {

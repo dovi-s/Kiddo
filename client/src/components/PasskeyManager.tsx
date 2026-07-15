@@ -16,6 +16,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 type Passkey = {
@@ -32,6 +33,10 @@ export function PasskeyManager() {
   const [adding, setAdding] = useState(false);
   const [nickname, setNickname] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  // Removing a sign-in credential is consequential enough to confirm (a top-tier
+  // settings pattern) — even though the password fallback keeps the account
+  // reachable, so this isn't a lockout risk.
+  const [pendingDelete, setPendingDelete] = useState<Passkey | null>(null);
 
   const { data, isLoading } = useQuery<{ passkeys: Passkey[] }>({
     queryKey: ["/api/me/passkeys"],
@@ -115,8 +120,7 @@ export function PasskeyManager() {
           <h3 className="font-heading text-base font-semibold text-foreground">Passkeys</h3>
         </div>
         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-          Sign in with Face ID, Touch ID, Windows Hello, or a security key. No password needed.
-          Your account password keeps working as a fallback.
+          Sign in with Face ID, Touch ID, Windows Hello, or a security key. Your password still works too.
         </p>
       </div>
 
@@ -132,13 +136,13 @@ export function PasskeyManager() {
                   <p className="text-sm font-medium text-foreground truncate">
                     {p.nickname || "Unnamed passkey"}
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     Last used {lastUsed}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => deleteMutation.mutate(p.id)}
+                  onClick={() => setPendingDelete(p)}
                   disabled={deleteMutation.isPending}
                   className="shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1.5"
                   aria-label="Remove passkey"
@@ -194,11 +198,23 @@ export function PasskeyManager() {
               disabled={adding}
               className="flex-1 rounded-xl"
             >
-              {adding ? "Setting up..." : "Set up with Face ID"}
+              {adding ? "Setting up…" : "Set up with Face ID"}
             </Button>
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        request={pendingDelete ? {
+          title: "Remove this passkey?",
+          body: `"${pendingDelete.nickname || "Unnamed passkey"}" will stop working for sign-in. You can add it again anytime, and your password still works.`,
+          confirmLabel: "Remove passkey",
+          cancelLabel: "Keep it",
+          destructive: true,
+          onConfirm: () => deleteMutation.mutate(pendingDelete.id),
+        } : null}
+        onClose={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

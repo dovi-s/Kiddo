@@ -59,6 +59,15 @@ type Scanner = {
 // landed before real scanning was wired.
 const noopScanner: Scanner = {
   async scanImageBuffer(_buffer: Buffer, _mime: string): Promise<ScanResult> {
+    // FAIL-CLOSED in production: with no real scanner configured, unscanned
+    // media must NOT be admitted to a child-facing surface (trust-safety audit
+    // 2026-06-04, CRITICAL C1 — the prior unconditional `safe:true` served
+    // stranger-uploaded media to a child's Memory Book with zero scanning).
+    // Dev/test stay fail-OPEN so local work isn't blocked. The real fix is to
+    // wire a CONTENT_SCANNER (PhotoDNA + a moderation vendor) before public launch.
+    if (process.env.NODE_ENV === 'production') {
+      return { safe: false, provider: 'noop', reason: 'scanner-not-configured' };
+    }
     return { safe: true, provider: 'noop' };
   },
 };
@@ -78,10 +87,10 @@ async function awsRekognitionScanner(_buffer: Buffer, _mime: string): Promise<Sc
   //   4. const out = await client.send(cmd)
   //   5. Map out.ModerationLabels into categories + decide safe based on threshold
   //
-  // Until installed, return scanner-error so the caller can decide
-  // fail-open vs fail-closed. Falling open silently in the no-op case
-  // would mask a configuration error in prod.
-  return { safe: true, provider: 'aws-rekognition', reason: 'scanner-not-implemented' };
+  // FAIL-CLOSED until implemented: if prod sets CONTENT_SCANNER=aws-rekognition
+  // but the SDK isn't wired, reject media rather than silently admit it
+  // unscanned (trust-safety audit 2026-06-04).
+  return { safe: false, provider: 'aws-rekognition', reason: 'scanner-not-implemented' };
 }
 
 // Stub for Microsoft PhotoDNA (the CSAM hash-matching standard).
@@ -103,7 +112,8 @@ async function photoDnaScanner(_buffer: Buffer, _mime: string): Promise<ScanResu
   // NCMEC within 24 hours. That reporting workflow lives off the T&S
   // queue's escalate action, NOT here. This function just returns the
   // detection; the policy is the caller's.
-  return { safe: true, provider: 'photodna', reason: 'scanner-not-implemented' };
+  // FAIL-CLOSED until implemented (see the aws-rekognition note above).
+  return { safe: false, provider: 'photodna', reason: 'scanner-not-implemented' };
 }
 
 // Pick the scanner based on env config. Defaults to noop so dev +
@@ -155,12 +165,30 @@ export async function scanImageBuffer(buffer: Buffer, mime: string): Promise<Sca
     return await getScanner().scanImageBuffer(buffer, mime);
   } catch (err) {
     console.error('[contentScanner] scan failed:', err);
+    // FAIL-CLOSED: a scanner error must NOT admit unscanned media on a
+    // child-facing surface. The prior `safe: true` here contradicted this
+    // module's own doc + the documented caller pattern (trust-safety audit
+    // 2026-06-04).
     return {
-      safe: true,
-      provider: getScanner().constructor.name || 'unknown',
+      safe: false,
+      provider: getActiveScannerName(),
       reason: 'scanner-error',
     };
   }
+}
+
+/**
+ * Whether real, implemented content scanning is active. Callers that accept
+ * media on child-facing surfaces (esp. the video/audio upload endpoints that
+ * don't yet call scanImageBuffer) should gate on this and FAIL-CLOSED (reject
+ * the upload) when it returns false, rather than serving unscanned media.
+ * False for noop (no scanner) and for the not-yet-implemented vendor stubs.
+ */
+export function isContentScanningLive(): boolean {
+  const name = getActiveScannerName();
+  // Update this allowlist when a vendor stub becomes a real implementation.
+  const IMPLEMENTED: string[] = [];
+  return name !== 'noop' && IMPLEMENTED.includes(name);
 }
 
 /** Diagnostic helper for the admin ops surface. */

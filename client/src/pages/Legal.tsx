@@ -47,10 +47,16 @@ export default function Legal() {
           </h1>
         </div>
 
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2" role="tablist" aria-label="Legal documents">
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              id={`legal-tab-${tab.id}`}
+              aria-selected={activeTab === tab.id}
+              aria-controls={`legal-panel-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
@@ -59,7 +65,7 @@ export default function Legal() {
               }`}
               data-testid={`button-tab-${tab.id}`}
             >
-              <tab.icon size={15} />
+              <tab.icon size={15} aria-hidden="true" />
               {tab.label}
             </button>
           ))}
@@ -67,10 +73,14 @@ export default function Legal() {
 
         <motion.div
           key={activeTab}
+          role="tabpanel"
+          id={`legal-panel-${activeTab}`}
+          aria-labelledby={`legal-tab-${activeTab}`}
+          tabIndex={0}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12"
+          className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12 focus:outline-none"
         >
           {activeTab === "terms" && (
             <div className="prose prose-sm max-w-none" data-testid="content-terms">
@@ -84,15 +94,15 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">2. Account Eligibility</h3>
-                  <p>You must be at least 18 years old and a U.S. resident to create a Kiddo account. Custodial (UTMA) accounts can be opened for minors by a parent or legal guardian. Gift-givers do not need an account to send gifts.</p>
+                  <p>You must be at least 18 years old and a U.S. resident to create a Kiddo account. Custodial (UTMA) accounts can be opened for minors by a parent or legal guardian. Gifters do not need an account to send gifts.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">3. How Gifts Work</h3>
-                  <p>When someone sends a gift through Kiddo, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides. Gift-givers may also set up recurring gifts (weekly, monthly, or yearly), which create a Stripe Subscription that can be cancelled at any time via the gifter's account dashboard.</p>
+                  <p>When someone sends a gift through Kiddo, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides. Gifters may also set up recurring gifts (weekly, monthly, or yearly), which create a Stripe Subscription that can be cancelled at any time via the gifter's account dashboard.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">4. Fees</h3>
-                  <p>Kiddo offers three plans: Free, Kiddo+, and Kiddo Family. Kiddo+ costs $3.99 per month or $29 per year and covers one child fund. Kiddo Family costs $6.99 per month or $59 per year and covers unlimited child funds in your household. New accounts receive 14 days of Kiddo+ features at no additional charge. Kiddo does not charge a platform fee on gifts: the gift amount goes to the fund in full. Across all plans, Kiddo charges an annual fee of $1 per $1,000 invested (0.10% annually on invested assets only); cash and pending gifts are not charged. This fee is prorated daily, so you only pay for the days assets are invested. Payment processing fees on gifts are paid by the gift-giver: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction, and bank transfers (ACH) are 0.8%, capped at $5. All fees are disclosed before payment.</p>
+                  <p>Kiddo offers three plans: Free, Kiddo+, and Kiddo Family. Kiddo+ costs $3.99 per month or $29 per year and covers one child fund. Kiddo Family costs $6.99 per month or $59 per year and covers unlimited child funds in your household. New accounts receive 14 days of Kiddo+ features at no additional charge. Kiddo does not charge a platform fee on gifts: the gift amount goes to the fund in full. Across all plans, once investing is live, Kiddo charges an annual fee of $1 per $1,000 invested (0.10% annually on invested assets only); cash and pending gifts are not charged. This fee is prorated daily, so you only pay for the days assets are invested. It applies on every plan, because it is the fee on the invested assets themselves; a Kiddo+ or Kiddo Family subscription is a separate fee for product features. Payment processing fees on gifts are paid by the gifter: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction, and bank transfers (ACH) are 0.8%, capped at $5. All fees are disclosed before payment.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">5. Investment Risk</h3>
@@ -172,7 +182,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through our broker-dealer partner, a FINRA-registered broker-dealer and SIPC member. Once your investing account is open, clearing and custody are handled by our broker-dealer partner. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
+                  <p>When investing is live, our broker-dealer partner (a FINRA-registered broker-dealer and SIPC member) will offer the securities and handle clearing and custody. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>
@@ -188,7 +198,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Tax Information</h3>
-                  <p>Gifts of securities may have tax implications. The annual gift tax exclusion is $19,000 per recipient (2025). Gifts over this amount may require filing a gift tax return. Investment gains in UTMA accounts may be subject to the kiddie tax if unearned income exceeds $2,700. Consult a tax professional for advice specific to your situation.</p>
+                  <p>Gifts of securities may have tax implications. The annual gift tax exclusion is $19,000 per recipient. Gifts over this amount may require filing a gift tax return. Investment gains in UTMA accounts may be subject to the kiddie tax if unearned income exceeds $2,700. Consult a tax professional for advice specific to your situation.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Regulatory Information</h3>

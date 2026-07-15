@@ -83,6 +83,37 @@ export const funds = pgTable("funds", {
   // consuming UX is multi-day work and deferred until explicitly
   // pulled in.
   previousOwnerId: varchar("previous_owner_id"),
+  // Owner-side revocation of the previous custodian's read-only window
+  // (2026-06-07, migration 0042). After handoff the former parent keeps
+  // view-only access by default (warm, right for most families) — but the
+  // ADULT owner can close that window: a permanent, irrevocable observer on
+  // an adult's financial account is a coercive-control vector in the
+  // estranged-parent case. A timestamp instead of nulling previousOwnerId so
+  // the custodial attribution record (who managed this kid's money for 18
+  // years) survives revocation. NULL = access active (default behavior
+  // unchanged).
+  previousOwnerAccessRevokedAt: timestamp("previous_owner_access_revoked_at"),
+  // The fund's value at the moment of handoff (transferredAt). Captured ONCE
+  // when ownership flips, in both handoff doors (age-transition complete +
+  // kid-view claim). The previous owner's (parent's) post-handoff view shows
+  // THIS frozen keepsake number — "what you handed them on {date}" — instead of
+  // the now-adult's LIVE balance, which is the adult's private finance. NULL =
+  // not transferred, or a legacy transfer that predates this column (view
+  // falls back to a clearly-labeled live value). (2026-06-09, founder-approved.)
+  valueAtTransfer: decimal("value_at_transfer", { precision: 12, scale: 2 }),
+  // Phase 2 of the keepsake (2026-06-09): the now-adult can opt to let the
+  // previous owner see this fund LIVE again, instead of the frozen keepsake
+  // default. NULL = keepsake (default); non-null = live access granted at that
+  // moment. Freely reversible by the owner (a visibility preference — unlike the
+  // one-way safety revoke in previousOwnerAccessRevokedAt). The previous-owner
+  // dashboard reads this to choose keepsake vs live.
+  previousOwnerLiveAccessGrantedAt: timestamp("previous_owner_live_access_granted_at"),
+  // Bereavement / memorial freeze (2026-06-11). Set by a HUMAN on a confirmed
+  // loss (a child or a family death). NULL = active; non-null = memorialized, at
+  // which point ALL automated comms + charges for this fund must go silent (the
+  // charge paths + the email chokepoint hard-gate on it, fail-closed). Reversible
+  // (set-in-error recovery). See BEREAVEMENT_POSTURE.md. NEVER set by automation.
+  memorializedAt: timestamp("memorialized_at"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks
@@ -116,8 +147,9 @@ export const funds = pgTable("funds", {
   // Moved 2026-05-15 from a .gitignore'd .local/fund-strategy-overrides.json
   // file to this column. The file storage worked in dev but was wiped on
   // every container deploy in production, silently reverting parents'
-  // Custom mixes to the default {VTI 62%, VXUS 28%, BND 10%} —
-  // worst-case fund-execution bug. See migration 0020 + commit log.
+  // Custom mixes to the default (now {VTI 70%, VXUS 30%} all-equity; was
+  // {VTI 62, VXUS 28, BND 10} pre-2026-06-11) — worst-case fund-execution
+  // bug. See migration 0020 + commit log.
   customAllocations: jsonb("custom_allocations"),
   isDiscoverable: boolean("is_discoverable").notNull().default(false),
   // Memory Book moderation toggle (per-fund). OFF by default — the
@@ -293,11 +325,9 @@ export const gifts = pgTable("gifts", {
   // boolean fields, not inferred from string patterns. Backfilled by
   // migration 0009 from the legacy fallback strings.
   isAnonymous: boolean("is_anonymous").notNull().default(false),
-  // Orphaned column from the retired 8-tag lesson system (see
-  // feedback_structure_vs_behavior.md). Kept in DB for historical
-  // data; not read by any current code path. Safe to drop in a future
-  // schema cleanup pass.
-  lessonTag: varchar("lesson_tag", { length: 64 }),
+  // (lesson_tag column dropped 2026-06-09 via migration 0043 — the retired
+  // 8-tag lesson system; see feedback_structure_vs_behavior.md. Drizzle no
+  // longer models it, so any residual column in an un-migrated DB is ignored.)
   // Client source — which surface created the gift. Populated by the
   // gift-checkout endpoint from a `clientSource` body field that the
   // mobile app sets explicitly; web clients leave it absent and the
@@ -662,8 +692,14 @@ export const activities = pgTable("activities", {
   metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
-  index("activities_user_id_idx").on(table.userId),
-  index("activities_fund_id_idx").on(table.fundId),
+  // Composite (col, created_at) so the feed's "WHERE user/fund = ? ORDER BY
+  // created_at DESC LIMIT n" resolves as a single index scan instead of matching on
+  // the single-column index and then SORTING every matched row — the ~5s feed on a
+  // heavy account. The composite still covers the bare WHERE user_id / fund_id lookups
+  // (leftmost-prefix), so it replaces the old single-column indexes cleanly.
+  // ⚠️ Needs a migration to take effect (drizzle generate + push/migrate).
+  index("activities_user_created_idx").on(table.userId, table.createdAt),
+  index("activities_fund_created_idx").on(table.fundId, table.createdAt),
 ]);
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
@@ -879,6 +915,11 @@ export const recurringGifts = pgTable("recurring_gifts", {
   // Reset to null on schedule resume so a future failure starts a
   // fresh 14/30 day clock.
   lastDeclineReminderAt: timestamp("last_decline_reminder_at"),
+  // Pre-charge heads-up dedup: the charge date we last emailed a "we're about to
+  // charge you" notice for. Sent once per cycle; when next_charge_date advances,
+  // this differs and the row re-qualifies. See recurringContributionWorker
+  // processPrechargeNotices. Nullable for legacy rows.
+  prechargeNoticeForDate: timestamp("precharge_notice_for_date"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("recurring_gifts_fund_id_idx").on(table.fundId),
@@ -915,6 +956,9 @@ export const parentContributions = pgTable("parent_contributions", {
   // accurate; the cooldown is email-only. Nullable for legacy rows that
   // pre-date the column.
   lastDeclineEmailAt: timestamp("last_decline_email_at"),
+  // Pre-charge heads-up dedup (see recurring_gifts.precharge_notice_for_date):
+  // the next_run_date we last emailed a "we're about to charge you" notice for.
+  prechargeNoticeForDate: timestamp("precharge_notice_for_date"),
   totalContributed: decimal("total_contributed", { precision: 12, scale: 2 }).default("0"),
   executionModel: text("execution_model").default("auto"), // auto | pick | family
   selectedTicker: text("selected_ticker"),
@@ -1009,6 +1053,68 @@ export const webhookEvents = pgTable("webhook_events", {
   index("webhook_events_type_idx").on(table.eventType),
   index("webhook_events_status_idx").on(table.status),
 ]);
+
+// Web Push subscriptions — one row per browser/device that opted into push.
+// endpoint + keys come from the browser's PushManager.subscribe(); the server
+// uses them with web-push (VAPID) to deliver OS-level notifications even when the
+// app is closed. Pruned on 404/410 (expired) at send time. Gated by PUSH_NOTIFICATIONS.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => [
+  index("push_subscriptions_user_idx").on(table.userId),
+]);
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+
+// Inbound partnership interest from the (unlisted) /partners page. A public form
+// (no auth) where an org tells us who they are and how they reach families.
+// Persisted instead of a raw mailto so a lead is never lost to email
+// deliverability. Reviewed from the admin side via `status`. Holds no sensitive
+// data beyond a business contact email; rate-limited at the route.
+export const partnerInquiries = pgTable("partner_inquiries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgName: text("org_name").notNull(),
+  orgType: text("org_type"), // hospital | registry | pediatric | school | employer | other
+  contactName: text("contact_name"),
+  email: text("email").notNull(),
+  message: text("message"),
+  status: text("status").notNull().default("new"), // new | reviewed | archived
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("partner_inquiries_status_idx").on(table.status),
+  index("partner_inquiries_created_idx").on(table.createdAt),
+]);
+
+export const insertPartnerInquirySchema = createInsertSchema(partnerInquiries).omit({
+  id: true,
+  status: true,
+  ipAddress: true,
+  userAgent: true,
+  createdAt: true,
+}).extend({
+  orgName: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(200),
+  orgType: z.string().trim().max(60).optional().nullable(),
+  contactName: z.string().trim().max(120).optional().nullable(),
+  message: z.string().trim().max(4000).optional().nullable(),
+});
+export type InsertPartnerInquiry = z.infer<typeof insertPartnerInquirySchema>;
+export type PartnerInquiry = typeof partnerInquiries.$inferSelect;
 
 // Blocked gifters. Two scopes:
 //   - 'global'  : admin-applied. Email (or userId, if known) cannot
@@ -1150,6 +1256,19 @@ export const analyticsEvents = pgTable("analytics_events", {
 // The pairing logic runs in POST /api/funds when a parent creates a
 // new fund: any pending intent matching the parent's email AND the
 // kid's first name (case-insensitive) gets paired automatically.
+// C3 (data-privacy audit): ephemeral store so child Memory Book media URLs do
+// NOT ride in Stripe checkout metadata. The gift-checkout path writes a row
+// keyed by an opaque token, passes only the token through Stripe, and the
+// webhook hydrates the URLs back. Read at webhook time; swept after a few days.
+// Inert unless STRIPE_MEDIA_TOKEN_ENABLED is on. See migration 0046.
+export const pendingGiftMedia = pgTable("pending_gift_media", {
+  token: varchar("token").primaryKey(),
+  photoUrl: text("photo_url"),
+  videoUrl: text("video_url"),
+  audioUrl: text("audio_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const giftIntents = pgTable("gift_intents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   // Token for the nudge URL the parent receives. Unguessable; rotates

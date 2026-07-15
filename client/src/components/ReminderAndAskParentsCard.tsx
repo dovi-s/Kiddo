@@ -160,7 +160,7 @@ export function ReminderAndAskParentsCard({
         >
           <div className="flex items-start gap-3">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Bell size={14} strokeWidth={1.8} />
+              <Bell size={14} strokeWidth={2} />
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Remind me to give again</p>
@@ -175,7 +175,7 @@ export function ReminderAndAskParentsCard({
             <p className="text-sm font-semibold text-foreground">Email reminders</p>
           </div>
           <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">How often</label>
+            <label className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">How often</label>
             <div className="mt-1.5 flex gap-2">
               {(["monthly", "quarterly", "yearly"] as const).map((f) => (
                 <button
@@ -239,7 +239,12 @@ export function ReminderAndAskParentsCard({
               <Check size={14} strokeWidth={2.5} />
             </div>
             <div className="flex-1 text-xs text-foreground leading-relaxed">
-              We let {safeChildName}'s family know you'd love to give monthly. The decision is theirs; we'll never pressure them.
+              {/* "we'll email you" is a REAL promise: the recurring-request
+                  fulfillment pass in recurringContributionWorker emails this
+                  gifter when the fund's coverage flips recurring on. Added
+                  2026-06-03 with that worker — don't soften one without the
+                  other. */}
+              We let {safeChildName}'s family know you'd love to give monthly. The decision is theirs; we'll never pressure them. If they turn it on, we'll email you.
             </div>
           </div>
         ) : askOpen === "idle" ? (

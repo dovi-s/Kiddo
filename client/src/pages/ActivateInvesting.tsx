@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Check, Shield, ShieldCheck, Lock, TrendingUp, Wa
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
+import { STRATEGY_LABEL } from "@/lib/strategy";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { haptic } from "@/lib/haptics";
@@ -16,6 +17,7 @@ import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { ProcessingState, SuccessState } from "@/components/ui/gemini";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { KORA_STARTER_MONTHLY } from "@shared/monetization";
 import { prefetchDashboard } from "@/lib/prefetch";
 import { getActiveFundId } from "@/hooks/use-active-fund";
@@ -588,23 +590,17 @@ export default function ActivateInvesting() {
                   Activate your fund
                 </h1>
                 <p className="text-muted-foreground leading-relaxed text-sm" data-testid="text-welcome-description">
-                  This takes about 3 minutes. Once you are verified, every gift your child receives can be automatically invested in real stocks. Identity verification is a legal requirement to open the investment account and make the fund real.
+                  This takes about 3 minutes. Verifying your identity is a legal requirement to open the investment account. Once you're verified, every gift your child receives can invest automatically.
                 </p>
                 <p className="text-sm text-muted-foreground italic">
-                  If you wait, gifts can still arrive, but they stay in cash until you come back and activate investing. Once verified, that cash starts investing automatically.
+                  Gifts can still arrive before you verify; they stay in cash until you activate investing, then invest automatically.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-start gap-3 shadow-sm" data-testid="card-benefit-auto-invest">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <TrendingUp size={20} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">Verification unlocks investing</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Once verified, gifts settle into real stocks without extra steps.</p>
-                  </div>
-                </div>
+                {/* The "verification unlocks investing" benefit card was removed — it
+                    restated the intro paragraph above. The two cards below are
+                    DISTINCT benefits (ownership, SIPC), so the list stays meaningful. */}
                 <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-start gap-3 shadow-sm" data-testid="card-benefit-real-stocks">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Wallet size={20} className="text-primary" />
@@ -873,7 +869,7 @@ export default function ActivateInvesting() {
                 <h1 className="font-heading text-xl font-semibold text-foreground mb-1" data-testid="text-identity-heading">
                   Identity verification
                 </h1>
-                <p className="text-sm text-muted-foreground">Just a few more questions to confirm your identity. The account holder's. Not your child's.</p>
+                <p className="text-sm text-muted-foreground">Just a few more questions to confirm your identity, the account holder's.</p>
               </div>
 
               <div className="space-y-4">
@@ -1075,7 +1071,7 @@ export default function ActivateInvesting() {
                 {[
                   {
                     id: "growth",
-                    label: "Growth Mix",
+                    label: STRATEGY_LABEL.growth,
                     description: "Long-term growth with broad diversification",
                     icon: <TrendingUp size={20} />,
                     tag: "Most popular",
@@ -1083,16 +1079,16 @@ export default function ActivateInvesting() {
                   },
                   {
                     id: "balanced",
-                    label: "Steady & Balanced",
-                    description: "Lower risk with more bond allocation",
+                    label: STRATEGY_LABEL.balanced,
+                    description: "A steadier mix with more bonds",
                     icon: <Shield size={20} />,
                     tag: null,
                     locked: false,
                   },
                   {
                     id: "conservative",
-                    label: "Conservative Mix",
-                    description: "Capital preservation tilt. Steadier as the handoff nears",
+                    label: STRATEGY_LABEL.conservative,
+                    description: "Capital preservation tilt. Steadier, for money you'll use soon",
                     icon: <ShieldCheck size={20} />,
                     tag: null,
                     locked: false,
@@ -1156,7 +1152,7 @@ export default function ActivateInvesting() {
                           <div className="mt-2.5 space-y-2">
                             <p className="text-xs text-muted-foreground">Unlock here, or continue and upgrade later from your Account.</p>
                             <div className="space-y-1.5">
-                              <p className="text-[11px] text-muted-foreground">Choose which fund to cover now:</p>
+                              <p className="text-2xs text-muted-foreground">Choose which fund to cover now:</p>
                               <select
                                 value={starterFundId}
                                 onChange={(e) => setStarterFundId(e.target.value)}
@@ -1220,7 +1216,7 @@ export default function ActivateInvesting() {
                   </div>
                   <div className="flex items-start gap-2">
                     <Gift size={13} className="text-primary shrink-0 mt-0.5" />
-                    <p><span className="font-medium text-foreground">If a giver picks a specific stock</span> (like $50 of Disney), that gift goes exactly where they chose. Your default isn't used.</p>
+                    <p><span className="font-medium text-foreground">If a gifter picks a specific stock</span> (like $50 of Disney), that gift goes exactly where they chose. Your default isn't used.</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <User size={13} className="text-primary shrink-0 mt-0.5" />
@@ -1294,11 +1290,11 @@ export default function ActivateInvesting() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Investment approach</p>
                   <p className="text-sm font-medium text-foreground" data-testid="text-review-strategy">
                     {strategy === "growth"
-                      ? "Growth Mix"
+                      ? STRATEGY_LABEL.growth
                       : strategy === "balanced"
-                        ? "Steady & Balanced"
+                        ? STRATEGY_LABEL.balanced
                         : strategy === "conservative"
-                          ? "Conservative Mix"
+                          ? STRATEGY_LABEL.conservative
                           : "Custom"}
                   </p>
                 </div>
@@ -1375,6 +1371,8 @@ export default function ActivateInvesting() {
                           }),
                         });
                         if (!res.ok) throw new Error("save failed");
+                        const data = await res.json().catch(() => null);
+                        if (demoBlocked(data, toast)) return;
                         haptic("success");
                         setSuccessorSaved(true);
                         toast({
@@ -1399,7 +1397,7 @@ export default function ActivateInvesting() {
                   >
                     {successorSubmitting ? "Saving..." : "Save successor"}
                   </Button>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="text-2xs text-muted-foreground leading-relaxed">
                     Skip this and finish below if you'd rather add it later from Settings.
                   </p>
                 </div>
@@ -1427,7 +1425,7 @@ export default function ActivateInvesting() {
                   I agree to the {" "}<a href="/legal" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-2 hover:text-primary" data-testid="link-account-agreement" onClick={(e) => e.stopPropagation()}>Account Agreement</a>{" "}and authorize Kiddo and its clearing partners to open an investment account.
                 </span>
               </label>
-              <p className="text-[11px] text-muted-foreground -mt-2">
+              <p className="text-2xs text-muted-foreground -mt-2">
                 Once your account is open, investment accounts are SIPC protected up to $500,000 at the brokerage custodian. This does not protect against market losses. Investing involves risk, including possible loss of principal.
               </p>
 
@@ -1476,7 +1474,7 @@ export default function ActivateInvesting() {
               className="py-16 space-y-6"
             >
               <SuccessState
-                message="You're all set!"
+                message="Investing is active."
                 submessage="Your gifts will now be automatically invested."
               />
               <div className="max-w-xs mx-auto">
@@ -1535,7 +1533,7 @@ export default function ActivateInvesting() {
             >
               <SuccessState
                 message="Your identity check is in review"
-                submessage="Gifts can still arrive in cash while we finish the manual review. We will email you as soon as investing is ready."
+                submessage="Gifts can still arrive in cash while we finish the manual review. Your dashboard updates the moment investing is ready."
               />
               <div className="max-w-xs mx-auto">
                 <Button

@@ -57,7 +57,7 @@ export default function VerifyEmail() {
         setVerifiedEmail(body?.email || null);
         setState("success");
         haptic("success");
-        toast({ title: "Email verified", description: "You're all set." });
+        toast({ title: "Email verified", description: "Taking you to your dashboard." });
         // Brief delay so the toast renders before nav.
         setTimeout(() => {
           if (!cancelled) setLocation("/dashboard");
@@ -101,7 +101,7 @@ export default function VerifyEmail() {
                 <p className="text-base text-muted-foreground">
                   {verifiedEmail
                     ? `${verifiedEmail} is confirmed. Taking you to Dashboard.`
-                    : "You're all set. Taking you to Dashboard."}
+                    : "Your email is confirmed. Taking you to Dashboard."}
                 </p>
               </>
             )}

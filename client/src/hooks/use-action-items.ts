@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ActionItem, ActionItemType } from "@shared/action-items";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeEvents } from "@/lib/realtime-context";
+import { DemoBlockedError, isDemoNoop } from "@/lib/demo-block";
 
 type ActionItemsResponse = {
   items: ActionItem[];
@@ -68,10 +69,15 @@ export function useActionItems() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Could not snooze");
       }
+      const data = await res.json().catch(() => null);
+      // Demo accounts get a 200 { demo:true, saved:false } no-op. Throw so the
+      // caller doesn't treat the snooze as persisted (and so we don't refetch
+      // a cache that didn't change). Callers surface the honest demo toast.
+      if (isDemoNoop(data)) throw new DemoBlockedError(data?.message);
       // Optimistic-ish — we just refetch instead of patching the
       // cache. Action-items list is small and refetch is fast.
       void queryClient.invalidateQueries({ queryKey: ["/api/me/action-items"] });
-      return res.json();
+      return data;
     },
     [queryClient],
   );
@@ -88,8 +94,10 @@ export function useActionItems() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Could not clear snooze");
       }
+      const data = await res.json().catch(() => null);
+      if (isDemoNoop(data)) throw new DemoBlockedError(data?.message);
       void queryClient.invalidateQueries({ queryKey: ["/api/me/action-items"] });
-      return res.json();
+      return data;
     },
     [queryClient],
   );

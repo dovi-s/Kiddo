@@ -82,7 +82,7 @@ a settling-specific treatment.
 **5. Approaching 18**
 
 Definition: `recipientBirthdate` puts the kid within 90 days of state
-majority age (state-aware per `MEMORY.md` Dunphy demo; UTMA majority
+majority age (state-aware per `MEMORY.md` Rivera demo; UTMA majority
 varies by state).
 
 Where it shows: Dashboard hero gets a calm prep banner; the bell

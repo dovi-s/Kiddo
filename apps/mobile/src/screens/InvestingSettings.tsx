@@ -18,6 +18,7 @@ import {
   type ManagedStrategy,
   type InvestmentPreferences,
 } from "../api";
+import { isReadOnlyFund } from "../lib/fund";
 
 function childNameOf(fund?: ApiFund | null): string {
   return fund?.recipientFirstName || fund?.name || "your child";
@@ -83,8 +84,7 @@ export function InvestingSection({ activeFund }: { activeFund: ApiFund | null })
 
   if (!activeFund) return null;
   const childName = childNameOf(activeFund);
-  const isReadOnly =
-    (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
+  const isReadOnly = isReadOnlyFund(activeFund);
 
   const pickStrategy = async (key: ManagedStrategy) => {
     if (key === strategy || busyKey || isReadOnly) return;

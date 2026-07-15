@@ -48,14 +48,17 @@ explicitly, deliberately chosen a no-charge reminder), and there is a state
 machine: `captured → invested-on-fund-creation` OR `captured → auto-refunded
 after N days`.
 
-**Implementation-ready:** the full 3-way build spec (auth-hold / charge-and-hold /
-vault-and-charge-later) with schema deltas, the settlement hook at the pairing
-point (`routes.ts:3402`), the expiry/dunning worker, edge cases, and a
-lawyer-answer→which-option decision matrix is in `P0-1_SPEC_CAPTURE_AT_INTENT.md`.
-The moment counsel answers `LAWYER_Q_HOLDING_GIFT_FUNDS.md`, building is
-mechanical. Default recommendation: **Option C (vault-and-charge-later)** — no
-funds held, lightest legal dependency — unless the lawyer affirmatively clears
-holding funds, then **Option B** for best conversion.
+**✅ CORRECTION (verified against code 2026-06-12): this is BUILT, not a pending
+build.** Option C (vault-and-charge-later) is implemented and INERT behind a flag:
+`server/giftCaptureFlag.ts` (`isGifterCaptureAtIntentEnabled()`, env
+`GIFTER_CAPTURE_AT_INTENT`, defaults OFF) + `server/giftIntentSettlement.ts`
+(off-session SetupIntent charge of the pledged amount, netted to the fund) +
+`server/giftIntentExpiryWorker.ts` (decline recovery + expiry) + the
+`stripeService.ts` SetupIntent helpers + `giftOrphanMonitorWorker.ts`
+(charged-never-invested guard). So P0-1 is NOT a code task — it's exactly like
+custody/email: built-but-gated. To go live: counsel answers
+`LAWYER_Q_HOLDING_GIFT_FUNDS.md` → flip `GIFTER_CAPTURE_AT_INTENT=true`. The full
+spec is `P0-1_SPEC_CAPTURE_AT_INTENT.md` (+ `P0-1_IMPLEMENTATION_REVIEW.md`).
 
 ---
 
@@ -115,15 +118,97 @@ bank payment clears.
 
 All verified-inert in project memory; launch-day hygiene — the moat is moot if we
 can't charge:
-- **Reverse trial defaults OFF** (`reverseTrialEnabled`, `routes.ts ~3427` /
-  `monetization.ts ~194`) while pricing advertises "14 days of Plus free." Either
-  `setReverseTrialEnabled(true)` in prod + verify a fresh signup gets
-  `trial_active`, or soften the copy. (`project_reverse_trial_off_by_default`)
+- **Reverse trial — ✅ RESOLVED (stale entry, corrected 2026-06-12).** It now
+  defaults ON in code (`monetization.ts:211-216,223`, founder decision 2026-05-31),
+  matching the "14 days of Plus free" pricing copy — default-in-code so it survives
+  redeploys (the ephemeral state-file toggle wouldn't). No prod action needed; an
+  admin can still disable via the state file. Just verify a fresh prod signup gets
+  `trial_active`.
 - **AUM fee is display-only** — correct pre-custody; do NOT build a collector now.
   Collection design is locked in `AUM_FEE_COLLECTION_SPEC.md`.
   (`project_aum_fee_display_only`)
 - **Founder Stripe products inert** until `npm run founder:seed-stripe` is run.
   (`project_founding_member_claim_flow_spec`)
+- **`STRIPE_WEBHOOK_SECRET` MUST be set in production.** Webhook signature
+  verification + idempotency are built correctly (`webhookHandlers.ts:1010-1023`,
+  `constructEvent` + `onConflictDoNothing` on `stripeEventId`), but the secret is
+  `.optional()` (`env.ts:31`) and `index.ts:234` warns "verification disabled" if
+  unset. Unset in prod = either spoofable money webhooks or a throwing handler.
+  Same shape as the CSRF deploy gotcha. Verify it is set before launch.
+  **And the endpoint itself must exist:** create a LIVE-mode webhook in the Stripe
+  dashboard pointed at the prod domain + `/api/stripe/webhook`, subscribed to the 9
+  events the handler processes (`webhookHandlers.ts:1043-1067`):
+  `checkout.session.completed`, `customer.subscription.updated`,
+  `customer.subscription.deleted`, `customer.deleted`, `payment_intent.succeeded`,
+  `payment_intent.payment_failed`, `charge.refunded`, `invoice.paid`,
+  `invoice.payment_failed`. Then set `STRIPE_WEBHOOK_SECRET` to THAT endpoint's
+  signing secret. Do NOT aim it at an ephemeral dev host: a test-mode endpoint
+  pointed at an old Replit URL got auto-disabled after 9 days of 404s (2026-05,
+  harmless in test mode, but the live equivalent is silent billing + gift-settlement
+  failure with no error). For dev, use `stripe listen --forward-to <url>/api/stripe/webhook`.
+- **Failed-payment behavior (dunning).** `past_due` now KEEPS Plus access through
+  Stripe's retry window (`hasEntitlementFromStatus`, fixed 2026-06-12) and a
+  `payment_failed` nudge fires in-app (`actionItems.ts:146`). The remaining gap is
+  the EMAIL: dunning / card-failed / renewal-receipt emails depend on the
+  unconfigured email provider (the launch-critical email gap). Wire the
+  card-failed email when email goes live — it is the highest-value transactional.
+  **Spec (best-practice from the insurer/sub playbook): dunning is a SEQUENCE, not one
+  email** — escalating touches before access lapses (e.g. retry-failed → "update your
+  card, your Plus is at risk" → final "Plus ends [date]"), with **friction stripped
+  out**: a one-click card-update link (Stripe customer-portal / billing magic link, no
+  login). Mirror the existing **gifter** 2-stage dunning (14d card-update + 30d cancel,
+  per `EXTERNAL_SERVICES.md`) for the PARENT subscription. Keep Stripe's own dunning
+  emails OFF so it's one branded sender, not two (double-dunning reads as a scam).
+- **Sales tax on subscriptions (verify).** No Stripe Tax wiring found in the
+  pricing sweep. US SaaS subscriptions are taxable in some states; minor pre-scale,
+  but confirm the posture (enable Stripe Tax or document why not) before scaling.
+- **Upgrade-overlap filter misses `past_due` (minor, pre-existing).** When a parent
+  upgrades to Family/Legacy, the filter that schedules their old Plus subs to cancel
+  (`webhookHandlers.ts:1432` / `:1530`) only includes `active` + canceled-in-period,
+  NOT `past_due`. A Plus sub mid-dunning would not be auto-scheduled to cancel, so if
+  its retry later succeeds the parent could be briefly double-billed (Plus + Family).
+  Low severity, rare. Fix = mirror `hasEntitlementFromStatus` (add `past_due`) in that
+  filter. Touches the recurring-precharge webhook area, so coordinate before editing.
+
+### Transactional email program — the full set (all gated on the email provider)
+
+Mapped 2026-06-12 from a competitor-email sweep (Acorns/Prime Video/Amazon/Progressive/
+Canva). The provider (Postmark/SendGrid) is the launch-critical gate; templates are
+being built ahead of it. State:
+- **BUILT:** gifter gift receipt (`gift_receipt_followup`), recurring-contribution
+  pre-charge heads-up (`sendPrechargeNotice`), monthly relationship digest
+  (`monthlyPulse`, now names + a note), cancellation confirmation
+  (`templates/subscriptionCanceled.ts` — template only, trigger pending its
+  downgrade-guard).
+- **GAP — failed-payment / dunning:** the single highest-value transactional; wire
+  first when email goes live (see the dunning item above).
+- **GAP — parent subscription receipt** (the Canva email): a parent charged $29/$59
+  should get a receipt. Default to **Stripe's built-in receipt emails** (a dashboard
+  config, no custom template) unless a branded one is wanted. Decide + enable.
+- **GAP — annual auto-renewal advance reminder (COMPLIANCE, not just nicety):** an
+  annual Kiddo+ that auto-renews likely **requires** advance notice under California's
+  Automatic Renewal Law + the FTC negative-option / "click-to-cancel" rule. No renewal
+  reminder exists. Counsel should confirm the required cadence + content; then build the
+  template. Add to `COUNSEL_ENGAGEMENT_PACKET.md`.
+- **NOT ours:** regulatory shareholder comms (prospectus/annual-report/proxy) are the
+  rented BD partner's job, not Kiddo's (see `BUSINESS_STRUCTURE.md` checklist #7).
+
+**Deliverability + warmup (the two real gates, more than warmup itself):** The code
+hygiene is GOOD — Postmark+SendGrid adapters, RFC 8058 one-click List-Unsubscribe now
+across all 10 promotional workers (the 2026-06-03 audit gap is closed), bounce/complaint
+suppression (`postmarkWebhook` + `email_suppressions`), dedupe, demo-domain guards. What
+remains is operational and external:
+1. **Wire the provider** (`POSTMARK_SERVER_TOKEN`) and point `EMAIL_FROM` at a
+   **monitored** inbox (trusted-contact email invites replies).
+2. **Authenticate the sending domain — SPF + DKIM + DMARC** on kiddofund.com (Postmark
+   gives the records). This is the actual inbox-vs-spam decider; can't be verified from
+   code. Confirm the DNS records are live before any real send.
+3. **Warmup itself is near-automatic at our volume:** use Postmark's **shared,
+   pre-warmed IP pool** (no manual IP warmup; a dedicated IP isn't worth it until
+   ~100k+/mo). The warmup that matters is **sequencing** — turn on transactional,
+   high-engagement mail first (verification, "your gift just landed", pre-charge), then
+   layer in the monthly pulse. The relationship-email mix warms gently; we are not a
+   bulk blaster. The gate is provider + DNS auth, not warmup.
 
 ---
 

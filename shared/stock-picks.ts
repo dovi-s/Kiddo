@@ -54,6 +54,13 @@ export const STOCK_PICKS: readonly StockPick[] = [
   { ticker: "RBLX",  name: "Roblox",     tagline: "for the gamers",               featured: true,  fallbackPrice: 37.44,  emoji: "🎮" },
   { ticker: "TSLA",  name: "Tesla",      tagline: "for the road ahead",           featured: true,  fallbackPrice: 171.27, emoji: "🚗" },
   { ticker: "MSFT",  name: "Microsoft",  tagline: "for the world-builders",       featured: true,  fallbackPrice: 415.00, emoji: "🧱" },
+  // CUSTODY FLAG (2026-06-09 check): NTDOY is a PINK-SHEET OTC ADR — the only
+  // pick that is not a clean NYSE/NASDAQ listing. DriveWealth supports OTC/ADR
+  // fractional trading but only a LIMITED set, and NTDOY's specific eligibility
+  // is UNCONFIRMED; Nintendo has no clean US-listed alternative. MUST be
+  // confirmed with the actual custodian before custody goes live. If
+  // unsupported, drop it (gaming is already covered by RBLX + MSFT). Pre-custody
+  // it is display-only, so no live impact today. See project_stock_curation_liability.
   { ticker: "NTDOY", name: "Nintendo",   tagline: "for the players",              featured: false, fallbackPrice: 13.40,  emoji: "🎮" },
   { ticker: "DUOL",  name: "Duolingo",   tagline: "for the lifelong learners",    featured: false, fallbackPrice: 200.00, emoji: "🦉" },
   { ticker: "DPZ",   name: "Domino's",   tagline: "for the Friday night classic", featured: false, fallbackPrice: 470.00, emoji: "🍕" },
@@ -61,6 +68,36 @@ export const STOCK_PICKS: readonly StockPick[] = [
   { ticker: "ABNB",  name: "Airbnb",     tagline: "for the travelers",            featured: false, fallbackPrice: 130.00, emoji: "🌍" },
   { ticker: "TGT",   name: "Target",     tagline: "for the everyday family",      featured: false, fallbackPrice: 150.00, emoji: "🎯" },
   { ticker: "MCD",   name: "McDonald's", tagline: "for the little treats",        featured: false, fallbackPrice: 295.00, emoji: "🍟" },
+  // Roster 2026-06-09: closed the obvious category gaps that made the picker feel
+  // thin. TOYS had zero names (the most kid-recognizable category of all), plus
+  // the era-defining chip stock, the two iconic treats, and a beloved kid
+  // footwear brand. All clean US listings (no OTC/ADR liquidity trap like NTDOY).
+  // Each is also wired with a logo (holding-logos), quote metadata (marketQuotes),
+  // and a Kid View explainer so it lands on the child's screen, not a fallback.
+  { ticker: "MAT",   name: "Mattel",     tagline: "for the toy box",              featured: true,  fallbackPrice: 19.00,  emoji: "🧸" },
+  { ticker: "HAS",   name: "Hasbro",     tagline: "for game night",               featured: true,  fallbackPrice: 67.00,  emoji: "🎲" },
+  { ticker: "NVDA",  name: "Nvidia",     tagline: "for what's next",              featured: true,  fallbackPrice: 140.00, emoji: "🤖" },
+  { ticker: "KO",    name: "Coca-Cola",  tagline: "for the classics",             featured: false, fallbackPrice: 68.00,  emoji: "🥤" },
+  { ticker: "HSY",   name: "Hershey",    tagline: "for the sweet tooth",          featured: false, fallbackPrice: 185.00, emoji: "🍫" },
+  { ticker: "CROX",  name: "Crocs",      tagline: "for the originals",            featured: false, fallbackPrice: 110.00, emoji: "🐊" },
+  // Roster 2026-06-17: closed the remaining recognizable-brand gaps a kid feels
+  // something about — PlayStation/console gaming (Sony), a snack name beyond Coke
+  // (PepsiCo = Frito-Lay/Gatorade), an entire missing BEAUTY category (e.l.f. —
+  // dominant with tweens/teens), a literal kids' brand (Build-A-Bear), and the
+  // kid/teen restaurant favorite (Chipotle, affordable per-share post 50:1 split).
+  // Deliberately NOT added: SpaceX/OpenAI/Epic/Lego (all private, unbuyable) and
+  // EA (pending take-private → delist risk). Social names (Meta/Snap) skipped —
+  // off-thesis to push Instagram/Snapchat inside a kids' product.
+  { ticker: "PEP",   name: "PepsiCo",    tagline: "for the snack drawer",         featured: false, fallbackPrice: 142.00, emoji: "🥨" },
+  { ticker: "ELF",   name: "e.l.f.",     tagline: "for the get-ready routine",    featured: false, fallbackPrice: 62.00,  emoji: "💄" },
+  { ticker: "BBW",   name: "Build-A-Bear", tagline: "for the one you build",      featured: false, fallbackPrice: 32.00,  emoji: "🐻" },
+  { ticker: "CMG",   name: "Chipotle",   tagline: "for the usual order",          featured: false, fallbackPrice: 32.00,  emoji: "🌯" },
+  // CUSTODY FLAG: SONY is a sponsored NYSE-listed ADR (Sony Group, Japan) — far
+  // more liquid/standard than NTDOY's pink-sheet ADR, and the only way to give a
+  // child PlayStation exposure (no clean US-listed alternative). Major sponsored
+  // ADRs are broadly supported, but confirm SONY fractional eligibility with the
+  // live custodian before custody goes live, same as NTDOY. Display-only today.
+  { ticker: "SONY",  name: "Sony",       tagline: "for the PlayStation crew",     featured: false, fallbackPrice: 20.00,  emoji: "🕹️" },
 ] as const;
 
 export const FEATURED_STOCK_PICKS: readonly StockPick[] = STOCK_PICKS.filter((s) => s.featured);

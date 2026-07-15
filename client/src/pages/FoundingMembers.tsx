@@ -321,7 +321,7 @@ export default function FoundingMembers() {
                 </p>
                 {submitted.spotsRemaining > 0 && submitted.spotsRemaining <= 100 && (
                   <p className="mt-4 text-xs text-muted-foreground">
-                    Only {submitted.spotsRemaining} spots left after you. Forward this link to anyone who'd want one.
+                    Only {submitted.spotsRemaining} spot{submitted.spotsRemaining === 1 ? "" : "s"} left after you. Forward this link to anyone who'd want one.
                   </p>
                 )}
                 <Link href="/">
@@ -404,7 +404,7 @@ export default function FoundingMembers() {
                   {capFilled ? "All spots taken" : submitting ? "Reserving..." : "Reserve my Founder spot"}
                   {!submitting && !capFilled && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                <p className="text-2xs leading-relaxed text-muted-foreground">
                   We'll only email you about launch, founder-exclusive previews, and the quarterly survey. No marketing list, no third parties. Unsubscribe at any time.
                 </p>
               </form>
@@ -443,7 +443,7 @@ export default function FoundingMembers() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold))]/15 text-[hsl(var(--kiddo-gold-ink))]">
-                        <Heart size={16} strokeWidth={1.8} />
+                        <Heart size={16} strokeWidth={2} />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-foreground">Or gift a Founder slot to someone you love</p>
@@ -551,7 +551,7 @@ export default function FoundingMembers() {
                       {giftSubmitting ? "Opening checkout..." : `Give ${giftRecipientName.trim() || "them"} a Founder slot for $19`}
                       {!giftSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
                     </Button>
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    <p className="text-2xs leading-relaxed text-muted-foreground">
                       <Lock className="inline-block w-3 h-3 mr-0.5 -mt-0.5" />
                       One-time payment via Stripe. We never charge your card again. Counts against the 1,000-cap shared with direct signups.
                     </p>

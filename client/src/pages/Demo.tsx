@@ -1,31 +1,25 @@
-// Public landing page for the Dunphy family demo. Lists the seven
-// shareable accounts with one-click login buttons that auto-submit
-// the /api/auth/login endpoint with the appropriate email +
-// universal password.
+// Public landing page for the Rivera family demo. Lists the shareable
+// accounts with one-click login buttons that auto-submit the auth flow.
 //
 // Route: /demo. Per DUNPHY_DEMO_SPEC.md.
-//
-// Disclaimer footer satisfies the character-name IP risk noted in
-// the spec (small-risk-rising-with-scale per the spec's Open Questions
-// section). Says "not affiliated with or endorsed by 20th Century
-// Studios or Disney" explicitly. Buys runway if a C&D ever lands.
 
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Mascot } from "@/components/ui/mascot";
-import { GradientText } from "@/components/ui/gemini";
 import { useToast } from "@/hooks/use-toast";
+import { writeLocalCache } from "@/lib/local-cache";
 import { haptic } from "@/lib/haptics";
 import { setActiveFundId } from "@/hooks/use-active-fund";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, Users, Gift, ShieldCheck, Star, GraduationCap } from "lucide-react";
+import { ArrowRight, Gift, GraduationCap, ShieldCheck, Star, Users } from "lucide-react";
 import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
 import { usePageSeo } from "@/lib/seo";
 
-const DEMO_PASSWORD = "dunphyfamily";
+const DEMO_PASSWORD = "riverafamily";
 
 type DemoAccount = {
   email: string;
@@ -36,92 +30,119 @@ type DemoAccount = {
 
 const ACCOUNTS: DemoAccount[] = [
   {
-    email: "phil@dunphyfamily.com",
-    display: "Phil Dunphy",
-    role: "parent",
-    oneLiner: "Parent dashboard, Family tier. All three kids' funds from one seat.",
-  },
-  {
-    email: "claire@dunphyfamily.com",
-    display: "Claire Dunphy",
+    email: "marcus@riverafamily.com",
+    display: "Marcus Rivera",
     role: "co-parent",
-    oneLiner: "Co-parent view of the same three funds. Demonstrates the partner-access flow.",
+    oneLiner: "Dad, the co-parent. The same three funds from his own login.",
   },
   {
-    email: "jay@dunphyfamily.com",
-    display: "Jay Pritchett",
+    email: "elena@riverafamily.com",
+    display: "Elena Rivera",
+    role: "parent",
+    oneLiner: "Mom. The parent dashboard on the Family plan, with all three kids' funds in one place.",
+  },
+  {
+    email: "robert@riverafamily.com",
+    display: "Robert Rivera",
     role: "gifter",
-    oneLiner: "Grandfather. Large birthday gifts in Google stock. The cool-grandpa pattern.",
+    oneLiner: "Grandfather. Big birthday gifts in Google stock.",
   },
   {
-    email: "gloria@dunphyfamily.com",
-    display: "Gloria Pritchett",
+    email: "sofia@riverafamily.com",
+    display: "Sofia Rivera",
     role: "gifter",
-    oneLiner: "Grandmother. Disney gifts with Spanish-language notes. The Memory Book emotional layer.",
+    oneLiner: "Step-grandmother, married to Robert. Disney gifts with notes in Spanish.",
   },
   {
-    email: "mitchell@dunphyfamily.com",
-    display: "Mitchell Pritchett",
+    email: "david@riverafamily.com",
+    display: "David Rivera",
     role: "gifter",
-    oneLiner: "Uncle. Recurring annual birthday gift in Apple. Set-it-and-forget-it gifter.",
+    oneLiner: "Uncle. A recurring Apple gift every birthday, on autopilot.",
   },
   {
-    email: "cameron@dunphyfamily.com",
-    display: "Cameron Tucker",
+    email: "chris@riverafamily.com",
+    display: "Chris Bennett",
     role: "gifter",
-    oneLiner: "Uncle. Gifts Disney stock to all three kids. \"Because magic is always a good investment.\"",
+    oneLiner: "Uncle. Disney stock for all three kids. \"Because magic is always a good investment.\"",
   },
   {
-    email: "manny@dunphyfamily.com",
-    display: "Manny Delgado",
+    email: "leo@riverafamily.com",
+    display: "Leo Rivera",
     role: "gifter",
-    oneLiner: "Step-uncle, close to the kids' age. Small gift in Roblox stock. The young-gifter angle.",
+    oneLiner: "Step-uncle, closest to the kids' age. A small Roblox gift.",
   },
   {
-    email: "haley@dunphyfamily.com",
-    display: "Haley Dunphy",
+    email: "mia@riverafamily.com",
+    display: "Mia Rivera",
     role: "graduate",
-    oneLiner: "Graduated to her own account. The fund is fully hers now, the real post-handoff adult experience.",
+    oneLiner: "Her own account now, one year after the handoff.",
   },
 ];
 
+const PERSONA_PHOTOS: Record<string, string> = {};
+
+function PersonaAvatar({ email, name, size }: { email: string; name: string; size: number }) {
+  const [failed, setFailed] = useState(false);
+  const src = PERSONA_PHOTOS[email];
+  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  if (!src || failed) {
+    return (
+      <div
+        style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
+        className="flex shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] font-bold text-[hsl(var(--kiddo-evergreen))]"
+        aria-hidden
+      >
+        {initials}
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: size, height: size }} className="shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-black/5">
+      <FadeImage src={src} alt={name} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+    </div>
+  );
+}
+
 export default function Demo() {
-  // Now linked from the footer ("See it live"), so it's no longer an orphan URL.
-  // Stay noindex,nofollow regardless: this page one-click logs a visitor into a
-  // seeded persona's account — not something we want in search results or
-  // competing with the real marketing pages. Mirrors /partners. Kept out of the
-  // sitemap too (see server/seoMeta.ts).
   usePageSeo({
     title: "See Kiddo live | Explore a real family's funds",
-    description:
-      "Step into a live Kiddo demo. Explore the parent, co-parent, gifter, and grown-up views of a family's investment funds, with no signup.",
+    description: "Step into a live Kiddo demo. Explore the parent, co-parent, gifter, and grown-up views of a family's investment funds, with no signup.",
     robots: "noindex,nofollow",
     ogType: "website",
   });
+
   const [, setLocation] = useLocation();
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
   const { toast } = useToast();
-  // Use useAuth's login mutation rather than raw fetch — it clears
-  // the per-user localStorage caches (funds list, active fund ID,
-  // per-fund snapshots) on success. Going through fetch directly
-  // (the old Demo.tsx pattern) left the previous user's cached funds
-  // in localStorage, which caused Demo logins to render the previous
-  // account's funds instead of the Dunphy seed.
   const { login } = useAuth();
 
-  // Generic demo login. After successful auth, parents go to
-  // /dashboard and gifters go to /my-gifts. The "Skip to Haley"
-  // featured CTA below uses a specialized version that auto-selects
-  // Haley's fund and lands on /age-18-plan.
+  const preSeedDemoRoll = async () => {
+    try {
+      const res = await fetch("/api/funds", { credentials: "include" });
+      if (!res.ok) return;
+      const funds = await res.json().catch(() => []) as Array<{ id: string; balance?: string; pendingBalance?: string; cashBalance?: string }>;
+      for (const f of funds) {
+        const total = (parseFloat(String(f.balance || "0")) || 0)
+          + (parseFloat(String(f.pendingBalance || "0")) || 0)
+          + (parseFloat(String(f.cashBalance || "0")) || 0);
+        if (total > 0 && f.id) {
+          writeLocalCache(`kiddo.fund.balance.v1:${f.id}`, total * 0.994);
+        }
+      }
+    } catch {
+      // Set dressing only; never block the login.
+    }
+  };
+
   const handleLogin = async (email: string) => {
     setLoadingEmail(email);
     haptic("selection");
     try {
       await login({ email, password: DEMO_PASSWORD });
-      haptic("success");
       const account = ACCOUNTS.find((a) => a.email === email);
-      const dest = account?.role === "gifter" ? "/my-gifts" : "/dashboard";
-      setLocation(dest);
+      if (account?.role !== "gifter") await preSeedDemoRoll();
+      haptic("success");
+      setLocation(account?.role === "gifter" ? "/my-gifts" : "/dashboard");
     } catch (err) {
       haptic("error");
       toast({
@@ -134,19 +155,15 @@ export default function Demo() {
     }
   };
 
-  // Featured-walkthrough shortcut: log in as Phil, auto-select the
-  // approaching-handoff fund (Alex, ~30 days from majority) as the active
-  // fund, land on /age-18-plan. (Haley is now PAST majority — her fund is the
-  // graduated adult-account demo, reachable from the dashboard/Kid View.)
-  const FEATURED_EMAIL = "phil@dunphyfamily.com";
-  const FEATURED_SLUG = "alex-dunphy";
+  const FEATURED_EMAIL = "elena@riverafamily.com";
+  const FEATURED_SLUG = "nora-rivera";
+
   const handleFeaturedShortcut = async () => {
     setLoadingEmail(FEATURED_EMAIL);
     haptic("selection");
     try {
       await login({ email: FEATURED_EMAIL, password: DEMO_PASSWORD });
-      // After login (which cleared the previous user's caches), fetch
-      // Phil's funds fresh from server and locate the featured fund by slug.
+      await preSeedDemoRoll();
       const fundsRes = await fetch("/api/funds", { credentials: "include" });
       if (!fundsRes.ok) {
         haptic("success");
@@ -158,10 +175,6 @@ export default function Demo() {
       if (featured?.id) {
         setActiveFundId(featured.id);
         haptic("success");
-        // Route is /age-18-plan (with dashes) per App.tsx. Navigating to
-        // /age18-plan fell through to the public /:fund catch-all, which
-        // tried to resolve a fund slug "age18-plan", 404'd, and rendered
-        // the "this gift link is outdated" page. Fixed 2026-05-26.
         setLocation(`/age-18-plan?fund=${featured.id}`);
       } else {
         haptic("success");
@@ -179,189 +192,195 @@ export default function Demo() {
     }
   };
 
+  const parentAccounts = ACCOUNTS.filter((a) => a.role === "parent");
+  const graduateAccounts = ACCOUNTS.filter((a) => a.role === "graduate");
+  const gifterAccounts = ACCOUNTS.filter((a) => a.role !== "parent" && a.role !== "graduate");
+
   return (
     <div className="min-h-screen bg-background">
       <Nav />
-      <main className="px-4 pb-20 pt-24 md:pb-28 md:pt-32">
-        <div className="mx-auto max-w-5xl">
+      <main className="overflow-x-hidden px-4 pb-20 pt-24 md:pb-28 md:pt-32">
+        <div className="mx-auto max-w-6xl">
           <div className="mx-auto max-w-3xl text-center">
             <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="demo" />
-            <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-              See Kiddo through the <GradientText>Dunphys</GradientText>.
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Live demo</p>
+            <h1 className="font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
+              Step into one family's full Kiddo story.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              A paper-trading-style demo. Real screens, illustrative dollars. Pick any account below to log in. No card needed.
+              This is the live Rivera-family demo: parent, gifter, and post-handoff views, all connected to the same funds. Real product behavior. Illustrative dollars.
             </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-muted-foreground">
+              {["Real screens", "No signup required", "No card needed"].map((item) => (
+                <span key={item} className="inline-flex items-center rounded-full bg-card px-3.5 py-2 shadow-premium-sm ring-1 ring-black/5">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Featured walkthrough — drops the visitor straight on
-              Alex's handoff plan (the /age-18-plan page): the
-              centerpiece slider + Phil's sealed letter + the at-21
-              handoff countdown. Saves 3 navigation clicks vs the
-              standard "log in as Phil → dashboard → age-18-plan →
-              switch funds" path. (Haley, the older sister, is already
-              PAST majority — her fund is the graduated adult-account
-              demo, reachable from the dashboard.) Sits above
-              the per-account login grid so the first-time visitor
-              sees the highest-leverage demo surface as the default
-              call to action; the per-account grid stays for visitors
-              who want to explore the gifter / co-parent angles. */}
-          <section className="mx-auto mt-12 max-w-4xl rounded-3xl border-2 border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-6 sm:p-8">
+          <section className="mx-auto mt-12 max-w-5xl rounded-[2rem] border border-[hsl(var(--kiddo-evergreen)/0.24)] bg-[linear-gradient(135deg,hsl(var(--kiddo-evergreen)/0.08),hsl(var(--kiddo-cream))_72%)] p-6 shadow-premium-sm sm:p-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex items-center gap-2">
                   <Star size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
-                  <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-widest">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[hsl(var(--kiddo-evergreen))]">
                     Featured walkthrough
                   </p>
                 </div>
                 <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-                  Alex is weeks from 21.
+                  Start with the handoff.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already graduated a year ago; log in as Haley below to step into the adult account after the handoff.)
+                  Nora is weeks from taking ownership. This route drops you into the most emotionally important surface in the demo: the handoff plan, the projection, the sealed letter, and the accumulated record of who showed up for her.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleFeaturedShortcut}
                 disabled={loadingEmail === FEATURED_EMAIL}
-                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                 data-testid="demo-featured-shortcut"
               >
-                {loadingEmail === FEATURED_EMAIL ? "Opening…" : "Open Alex's plan"}
+                {loadingEmail === FEATURED_EMAIL ? "Opening..." : "Open Nora's plan"}
                 <ArrowRight size={14} />
               </button>
             </div>
           </section>
 
-          <section className="mx-auto mt-10 grid max-w-4xl gap-4">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Or start with Phil</h2>
-            <p className="text-sm text-muted-foreground">
-              Three kids at three life stages: Luke growing up and getting gifts, Alex weeks from taking ownership, Haley already graduated to her own adult account. The whole arc in one family.
-            </p>
-            {ACCOUNTS.filter((a) => a.role === "parent").map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => handleLogin(account.email)}
-                disabled={loadingEmail === account.email}
-                className="group flex items-center justify-between gap-4 rounded-2xl border-2 border-primary/30 bg-primary/5 px-5 py-4 text-left transition-all hover:border-primary/60 hover:bg-primary/10 disabled:opacity-60"
-                data-testid={`demo-login-${account.email.split("@")[0]}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                    <Users size={18} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{account.display}</p>
-                    <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
-                  </div>
-                </div>
-                <ArrowRight size={18} className="shrink-0 text-primary transition-transform group-hover:translate-x-1" />
-              </button>
-            ))}
-          </section>
+          <section className="mx-auto mt-12 max-w-5xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Choose an angle</p>
+              <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
+                The same family, from three points of view.
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+                Start with the parent, the grown-up child, or one of the people who gives. Each login shows the same product from their side.
+              </p>
+            </div>
 
-          <section className="mx-auto mt-10 grid max-w-4xl gap-4">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Or step into the adult account</h2>
-            <p className="text-sm text-muted-foreground">
-              Haley crossed majority a year ago, so her fund transferred to her. Log in as Haley to step into the real adult account after the handoff: the same fund, now self-directed and fully hers, with the whole Memory Book unlocked. From Phil's dashboard you also see it as a fund he can no longer touch. That's the other half of the moment.
-            </p>
-            {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => handleLogin(account.email)}
-                disabled={loadingEmail === account.email}
-                className="group flex items-center justify-between gap-4 rounded-2xl border-2 border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-5 py-4 text-left transition-all hover:border-[hsl(var(--kiddo-evergreen)/0.6)] hover:bg-[hsl(var(--kiddo-evergreen)/0.1)] disabled:opacity-60"
-                data-testid={`demo-login-${account.email.split("@")[0]}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]">
-                    <GraduationCap size={18} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{account.display}</p>
-                    <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
-                  </div>
+            <div className="mt-10 grid gap-6 lg:grid-cols-3">
+              <div className="rounded-[1.75rem] border border-border/60 bg-card/90 p-6 shadow-premium-sm">
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+                  <Users size={18} className="text-primary" />
                 </div>
-                <ArrowRight size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))] transition-transform group-hover:translate-x-1" />
-              </button>
-            ))}
-          </section>
+                <h3 className="font-heading text-xl font-semibold text-foreground">Parent view</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Elena sees the full family arc: one child still receiving gifts, one nearing handoff, and one already transferred.
+                </p>
+                <div className="mt-5">
+                  {parentAccounts.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => handleLogin(account.email)}
+                      disabled={loadingEmail === account.email}
+                      className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 text-left transition-all hover:border-primary/40 hover:bg-primary/10 disabled:opacity-60"
+                      data-testid={`demo-login-${account.email.split("@")[0]}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <PersonaAvatar email={account.email} name={account.display} size={40} />
+                        <div>
+                          <p className="font-semibold text-foreground">{account.display}</p>
+                          <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
+                        </div>
+                      </div>
+                      <ArrowRight size={16} className="shrink-0 text-primary transition-transform group-hover:translate-x-1" />
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <section className="mx-auto mt-10 grid max-w-4xl gap-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Or log in as a gifter</h2>
-            <p className="text-sm text-muted-foreground">
-              See the gifter side of the loop. Each account demonstrates a different gifter pattern.
-            </p>
-            <div className="grid gap-2 md:grid-cols-2">
-              {ACCOUNTS.filter((a) => a.role !== "parent" && a.role !== "graduate").map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => handleLogin(account.email)}
-                  disabled={loadingEmail === account.email}
-                  className="group flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left transition-all hover:border-foreground/30 hover:bg-card/80 disabled:opacity-60"
-                  data-testid={`demo-login-${account.email.split("@")[0]}`}
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                    {account.role === "co-parent" ? <Users size={14} /> : <Gift size={14} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">{account.display}</p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{account.oneLiner}</p>
-                  </div>
-                  <ArrowRight size={14} className="shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </button>
-              ))}
+              <div className="rounded-[1.75rem] border border-border/60 bg-card/90 p-6 shadow-premium-sm">
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)]">
+                  <GraduationCap size={18} className="text-[hsl(var(--kiddo-evergreen))]" />
+                </div>
+                <h3 className="font-heading text-xl font-semibold text-foreground">Personal account</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Mia's fund transferred a year ago. This shows what the product feels like once the account is fully hers.
+                </p>
+                <div className="mt-5">
+                  {graduateAccounts.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => handleLogin(account.email)}
+                      disabled={loadingEmail === account.email}
+                      className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.24)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-4 text-left transition-all hover:border-[hsl(var(--kiddo-evergreen)/0.42)] hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] disabled:opacity-60"
+                      data-testid={`demo-login-${account.email.split("@")[0]}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <PersonaAvatar email={account.email} name={account.display} size={40} />
+                        <div>
+                          <p className="font-semibold text-foreground">{account.display}</p>
+                          <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
+                        </div>
+                      </div>
+                      <ArrowRight size={16} className="shrink-0 text-[hsl(var(--kiddo-evergreen))] transition-transform group-hover:translate-x-1" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[1.75rem] border border-border/60 bg-card/90 p-6 shadow-premium-sm">
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-gold)/0.18)]">
+                  <Gift size={18} className="text-[hsl(var(--kiddo-gold-ink))]" />
+                </div>
+                <h3 className="font-heading text-xl font-semibold text-foreground">Gifter side</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Grandparents, uncles, and family friends all show up differently. These logins show their side of the story.
+                </p>
+                <div className="mt-5 grid gap-2">
+                  {gifterAccounts.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => handleLogin(account.email)}
+                      disabled={loadingEmail === account.email}
+                      className="group flex items-start gap-3 rounded-2xl border border-border bg-card px-3.5 py-3 text-left transition-all hover:border-foreground/20 hover:bg-card/80 disabled:opacity-60"
+                      data-testid={`demo-login-${account.email.split("@")[0]}`}
+                    >
+                      <PersonaAvatar email={account.email} name={account.display} size={34} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">{account.display}</p>
+                        <p className="mt-0.5 text-2xs leading-snug text-muted-foreground">{account.oneLiner}</p>
+                      </div>
+                      <ArrowRight size={14} className="shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-1" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* Locked refusals panel — extracted to a shared component
-              2026-05-21 so the same trust frame can render on both
-              /demo and the public marketing site (Home.tsx). Single
-              source of truth for the copy; edits in
-              LockedRefusalsPanel.tsx propagate to both surfaces. */}
           <div className="mt-12">
             <LockedRefusalsPanel variant="demo" />
           </div>
 
-          <section className="mx-auto mt-8 max-w-3xl rounded-2xl border border-border bg-card p-6 text-sm leading-relaxed text-muted-foreground">
+          <section className="mx-auto mt-8 max-w-3xl rounded-[1.75rem] border border-border/60 bg-card/90 p-6 text-sm leading-relaxed text-muted-foreground shadow-premium-sm">
             <p className="flex items-start gap-2 font-semibold text-foreground">
               <ShieldCheck size={16} className="mt-0.5 shrink-0 text-primary" />
               How the demo works
             </p>
             <ul className="mt-3 space-y-2 pl-6">
-              <li className="list-disc">
-                Everything you see is illustrative. Dollar amounts, gifts, and holdings are seeded; no real money moved.
-              </li>
-              <li className="list-disc">
-                Try the full flow. Sending a gift, setting up recurring investments, exploring the Memory Book all work, but no card is charged and no brokerage order fires.
-              </li>
-              <li className="list-disc">
-                Demo state resets periodically. If something looks different from what you expected, that's why.
-              </li>
-              <li className="list-disc">
-                Want your own? <a href="/get-started" className="text-primary underline-offset-2 hover:underline">Create a real fund</a> with your own child, your own gift link, and the same product behavior on real money.
-              </li>
+              <li className="list-disc">Everything you see is illustrative. Dollar amounts, gifts, and holdings are seeded; no real money moved.</li>
+              <li className="list-disc">You can explore the real product flow, including gifting, recurring, Memory Book, and account transitions.</li>
+              <li className="list-disc">Demo state resets periodically. If something looks different from what you expected, that is why.</li>
+              <li className="list-disc">Want your own? <a href="/get-started" className="text-primary underline-offset-2 hover:underline">Create a real fund</a> with the same product behavior on real money.</li>
             </ul>
           </section>
 
-          <p className="mx-auto mt-10 max-w-3xl text-center text-[11px] leading-relaxed text-muted-foreground">
-            The Dunphy family is a cultural reference used for demonstration purposes. Kiddo is not affiliated with or endorsed by 20th Century Studios, The Walt Disney Company, or the creators of Modern Family.
+          <p className="mx-auto mt-10 max-w-3xl text-center text-2xs leading-relaxed text-muted-foreground">
+            The Rivera family is fictional, created to demonstrate how Kiddo works. Names, gifts, notes, and dollar amounts are illustrative; any resemblance to real people is coincidental.
           </p>
 
           <div className="mt-12 text-center">
-            <a
-              href="/get-started"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-              data-testid="demo-create-real-fund"
-            >
-              Create a real fund
-              <ArrowRight size={14} />
-            </a>
+            <Button asChild size="lg" className="h-14 px-8 text-base" data-testid="demo-create-real-fund">
+              <a href="/get-started">
+                Create a real fund
+                <ArrowRight size={14} />
+              </a>
+            </Button>
           </div>
         </div>
       </main>

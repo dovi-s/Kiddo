@@ -2,6 +2,7 @@ import { useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, Quote } from "lucide-react";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { storyEntries } from "@/lib/content";
@@ -39,14 +40,28 @@ export default function Stories() {
                 specific story is a verified customer. When real
                 customer stories ship (with verified quotes + permission),
                 the page copy can return to the stronger framing. */}
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Stories</p>
-            <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Stories</p>
+            <h1 className="mt-4 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl">
               The kinds of stories Kiddo is built for.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
               Examples of how families turn everyday occasions into something that lasts. As Kiddo families share their own, real stories will live here too.
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="pb-14 md:pb-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <ProductFrame
+            src="/product/memory-full.webp"
+            alt="A family's Memory Book: the occasions, who gave, and every gift with its note, scrolling through the whole story."
+            caption="Every story becomes a Memory Book."
+            mode="scroll"
+            imgHeight={3762}
+            href="/demo"
+            liveLabel="See it live"
+          />
         </div>
       </section>
 
@@ -64,6 +79,10 @@ export default function Stories() {
               >
                 <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                   <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">{story.occasion || story.category}</span>
+                  {/* Honesty: these are illustrative launch examples, not real
+                      customer stories — label each card so a quoted, named story
+                      never reads as a testimonial (the footer alone isn't enough). */}
+                  <span className="rounded-full bg-muted px-2.5 py-1 font-medium">Illustrative example</span>
                   <span>{story.publishedAt}</span>
                 </div>
                 <h2 className="mt-5 font-heading text-3xl font-semibold text-foreground">{story.title}</h2>
@@ -84,9 +103,10 @@ export default function Stories() {
                     })
                   }
                   className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                  aria-label={`Read story: ${story.title}`}
                 >
                   Read story
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </motion.article>
             ))}
@@ -101,7 +121,7 @@ export default function Stories() {
               <Quote className="h-4 w-4" />
               Stories become proof when families share them
             </div>
-            <h2 className="mt-6 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            <h2 className="mt-6 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
               Is your family using Kiddo?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">

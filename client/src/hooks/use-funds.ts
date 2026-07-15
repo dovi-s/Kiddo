@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { Fund, Event, Gift, Holding, InsertFund } from "@shared/schema";
 import {
   createFund,
@@ -12,7 +12,26 @@ import {
 } from "@kora/api";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { useAuth } from "@/hooks/use-auth";
-import { applyDemoLiveGiftsToFunds } from "@/lib/demo-live-gifts";
+import { applyDemoLiveGiftsToFunds, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+
+/**
+ * Synchronous, best-effort fund lookup for FRAME-ONE render on a push-navigation.
+ * `useFunds()` briefly returns [] on a freshly-mounted page (its query is gated on
+ * an async auth re-check), and the raw query cache can be momentarily empty too —
+ * so a page landing via a View Transition would freeze its loading skeleton. This
+ * walks the durable caches in order: the raw ["/api/funds"] query cache, then the
+ * localStorage snapshot useFunds persists (auth-independent, survives the flash).
+ * Callers use it as the fallback: `funds.find(...) ?? findFundInCaches(qc, id)`.
+ */
+export function fundsFromCaches(queryClient: QueryClient): Fund[] {
+  const fromQuery = queryClient.getQueryData<Fund[]>(["/api/funds"]);
+  if (fromQuery && fromQuery.length) return fromQuery;
+  return readLocalCache<Fund[]>(LOCAL_CACHE_KEYS.funds) || [];
+}
+export function findFundInCaches(queryClient: QueryClient, fundId: string): Fund | undefined {
+  if (!fundId) return undefined;
+  return fundsFromCaches(queryClient).find((f) => f.id === fundId);
+}
 
 export function useFunds() {
   // Gate the funds query on auth state. Logged-out visitors land on public
@@ -32,6 +51,12 @@ export function useFunds() {
   // for ground truth before firing.
   const { isAuthenticated, isAuthChecked, user } = useAuth();
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  // Re-derive the merge when a demo gift is recorded in-place (the ambient beat
+  // fires while the prospect sits on the dashboard) so the useFunds-backed
+  // surfaces (/funds total, header) update immediately instead of waiting for a
+  // refetch/remount. (The Dashboard hero reads its own /api/funds query, so it's
+  // reconciled separately in Stage 1b.)
+  const overlayVersion = useDemoOverlayVersion();
   const query = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
     queryFn: async () => {
@@ -54,7 +79,7 @@ export function useFunds() {
   // the same session store (MemoryBook.tsx), so both sides of the loop land.
   const data = useMemo(
     () => applyDemoLiveGiftsToFunds(query.data ?? [], isDemoAccount),
-    [query.data, isDemoAccount],
+    [query.data, isDemoAccount, overlayVersion],
   );
   return { ...query, data };
 }

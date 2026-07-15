@@ -16,27 +16,22 @@ export function metaImagesPlugin(): Plugin {
         return html;
       }
 
-      // Check if opengraph image exists in public directory
+      // Find the OpenGraph image in the public directory. The real asset is
+      // kiddo-og-image.png (the index.html default + what the app ships); the
+      // older opengraph.* names are kept as fallbacks. Matching the wrong name
+      // was why this plugin always no-op'd and production shipped a RELATIVE
+      // og:image that social scrapers reject (no link preview on shared gift
+      // links). 2026-06-15 fix.
       const publicDir = path.resolve(process.cwd(), 'client', 'public');
-      const opengraphPngPath = path.join(publicDir, 'opengraph.png');
-      const opengraphJpgPath = path.join(publicDir, 'opengraph.jpg');
-      const opengraphJpegPath = path.join(publicDir, 'opengraph.jpeg');
+      const candidates = ['kiddo-og-image.png', 'opengraph.png', 'opengraph.jpg', 'opengraph.jpeg'];
+      const fileName = candidates.find((name) => fs.existsSync(path.join(publicDir, name))) ?? null;
 
-      let imageExt: string | null = null;
-      if (fs.existsSync(opengraphPngPath)) {
-        imageExt = 'png';
-      } else if (fs.existsSync(opengraphJpgPath)) {
-        imageExt = 'jpg';
-      } else if (fs.existsSync(opengraphJpegPath)) {
-        imageExt = 'jpeg';
-      }
-
-      if (!imageExt) {
+      if (!fileName) {
         log('[meta-images] OpenGraph image not found, skipping meta tag updates');
         return html;
       }
 
-      const imageUrl = `${baseUrl}/opengraph.${imageExt}`;
+      const imageUrl = `${baseUrl}/${fileName}`;
 
       log('[meta-images] updating meta image tags to:', imageUrl);
 

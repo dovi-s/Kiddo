@@ -56,7 +56,7 @@
 
 import { ReactNode, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { X } from "lucide-react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import {
   DUR_FAST,
   DUR_NORMAL,
@@ -206,15 +206,7 @@ export function KiddoSheet({
                   <span aria-hidden />
                 )}
                 {!hideClose && (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    data-testid={`${testId}-close`}
-                    aria-label={closeLabel}
-                  >
-                    <X size={18} className="text-muted-foreground" />
-                  </button>
+                  <ModalCloseButton onClick={onClose} label={closeLabel} testId={`${testId}-close`} />
                 )}
               </div>
             )}

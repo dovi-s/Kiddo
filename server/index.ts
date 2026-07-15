@@ -9,6 +9,7 @@ import { pool, db } from "./db";
 import { captureError, captureEvent, initOpsMonitoring, sendOpsAlert } from "./ops";
 import { startGifterNotificationWorker } from "./gifterNotificationWorker";
 import { startRecurringContributionWorker } from "./recurringContributionWorker";
+import { startHoldingsRevaluationWorker } from "./holdingsRevaluationWorker";
 import { logStorageMode } from "./objectStorage";
 import { startParentLifecycleWorker } from "./parentLifecycleWorker";
 import { startMobilePushWorker } from "./mobilePushWorker";
@@ -36,11 +37,12 @@ import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
 import { buildPlatformReadiness, summarizePlatformReadiness } from "@shared/platformReadiness";
-import { US_STATES } from "@shared/utma";
+import { renderSitemapXml } from "./sitemap";
 import { inArray, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import net from "net";
+import crypto from "crypto";
 import { checkRateLimit } from "./rateLimiter";
 
 const app = express();
@@ -48,6 +50,68 @@ const httpServer = createServer(app);
 const uploadsPath = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+// --- Private site lock (optional preview gating) ----------------------------
+// OFF by default. Set SITE_LOCK_KEY to make the WHOLE deployed site reachable
+// only by you — useful for a private kiddofund.com preview before public
+// launch. Flow:
+//   1. Visit https://<host>/?unlock=<SITE_LOCK_KEY> once. We set an httpOnly
+//      cookie and redirect to a clean URL (the key never lingers in the bar).
+//   2. That cookie lets you back in from then on, from ANY device or network —
+//      so it survives a dynamic home IP, unlike a raw IP allowlist.
+// Optionally also allow fixed IPs via SITE_LOCK_ALLOW_IPS (comma-separated).
+// (IP matching is reliable only when the app is hit directly; behind a proxying
+// CDN like Cloudflare, req.ip is the CDN edge — use the cookie path there, or
+// gate at the CDN.) /api/health stays open so the host's liveness probe passes.
+// Everyone else gets a bare 404 (no hint the app exists). Unset SITE_LOCK_KEY
+// to lift the gate at launch — one env var, no redeploy of code.
+if (process.env.SITE_LOCK_KEY) {
+  const lockKey = process.env.SITE_LOCK_KEY;
+  const allowIps = new Set(parseEnvList(process.env.SITE_LOCK_ALLOW_IPS));
+  const COOKIE_NAME = "kf_unlock";
+  const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+  const safeEqual = (a: string, b: string): boolean => {
+    const ab = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ab.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ab, bb);
+  };
+  const readCookie = (header: string | undefined, name: string): string | undefined => {
+    if (!header) return undefined;
+    for (const part of header.split(";")) {
+      const eq = part.indexOf("=");
+      if (eq === -1) continue;
+      if (part.slice(0, eq).trim() === name) {
+        return decodeURIComponent(part.slice(eq + 1).trim());
+      }
+    }
+    return undefined;
+  };
+
+  app.use((req, res, next) => {
+    if (req.path === "/api/health") return next();
+
+    const ip = req.ip || req.socket.remoteAddress || "";
+    if (allowIps.size > 0 && allowIps.has(ip)) return next();
+
+    const provided = typeof req.query.unlock === "string" ? req.query.unlock : "";
+    if (provided && safeEqual(provided, lockKey)) {
+      res.cookie(COOKIE_NAME, lockKey, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: ONE_YEAR_MS,
+      });
+      return res.redirect(req.path); // strip ?unlock= from the address bar
+    }
+
+    const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
+    if (cookie && safeEqual(cookie, lockKey)) return next();
+
+    return res.status(404).send("Not found");
+  });
 }
 // SECURITY (PII): /uploads (local-disk dev/fallback path) holds children's
 // Memory Book media, child hero photos, and gift media. Some of it is
@@ -119,7 +183,15 @@ function buildContentSecurityPolicy() {
 
   if (!isProd) {
     scriptSrc.push("'unsafe-eval'");
-    connectSrc.push("ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*");
+    // Dev-only: allow local device-frame preview tools (Responsively App, and
+    // similar) to inject their browser-sync client, which loads from a local
+    // https://localhost:<port> origin (the port varies per session) and opens
+    // a socket back to it for cross-device mirroring + live reload. Without
+    // localhost in script-src, the browser-sync-client.js is refused (it was
+    // only in connect-src before). Production never gets any of this — gated on
+    // !isProd, same as the vscode-webview frame-ancestors accommodation below.
+    scriptSrc.push("http://localhost:*", "https://localhost:*", "http://127.0.0.1:*", "https://127.0.0.1:*");
+    connectSrc.push("ws:", "wss:", "http://localhost:*", "https://localhost:*", "http://127.0.0.1:*", "https://127.0.0.1:*");
   }
 
   // Dev-only: allow the app to be embedded in the VS Code "Mobile Preview"
@@ -143,6 +215,12 @@ function buildContentSecurityPolicy() {
     // here keeps the strict default-src 'self' baseline while permitting
     // the specific worker pattern that the app actually uses.
     `worker-src 'self' blob:`,
+    // media-src must be set explicitly too. Without it, <audio>/<video> fall
+    // back to default-src 'self', which blocks `blob:` URLs — and recorded
+    // audio (e.g. the voice-note feature) plays from a blob: URL produced by
+    // MediaRecorder + createObjectURL. `data:` and `https:` cover data-URI and
+    // stored/CDN-served media. Same rationale as the worker-src blob: line.
+    `media-src 'self' blob: data: https:`,
     `connect-src ${connectSrc.join(" ")}`,
     `frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://cdn.plaid.com https://*.plaid.com https://s.tradingview.com https://www.tradingview.com`,
     `form-action 'self'`,
@@ -286,14 +364,26 @@ app.get("/robots.txt", (req, res) => {
   const lines = [
     "User-agent: *",
     "Allow: /",
+    // Private / app / user-scoped routes — aligned to the real routes in
+    // client/src/App.tsx (2026-06-15). These are also noindex'd client-side, but
+    // a non-JS crawler only sees robots.txt, so the list must be accurate.
     "Disallow: /admin",
     "Disallow: /dashboard",
+    "Disallow: /account",
     "Disallow: /profile",
     "Disallow: /settings",
     "Disallow: /activity",
+    "Disallow: /funds",
+    "Disallow: /gifter",
+    "Disallow: /my-gifts",
+    "Disallow: /tax-documents",
+    "Disallow: /age-18-plan",
+    "Disallow: /transition/",
+    "Disallow: /welcome-at-18",
+    "Disallow: /take-over/",
+    "Disallow: /your-story/",
     "Disallow: /events",
     "Disallow: /event/create",
-    "Disallow: /send",
     "Disallow: /memory/",
     "Disallow: /kid/",
     "Disallow: /claim/",
@@ -306,82 +396,10 @@ app.get("/robots.txt", (req, res) => {
 });
 
 app.get("/sitemap.xml", (req, res) => {
-  const base = getPublicBaseUrl(req);
-  const now = new Date().toISOString();
-  // Every PUBLIC, indexable, non-user-scoped page. The satellite SEO surface
-  // (comparisons, tools, programmatic state pages) is the gifter-intent funnel
-  // — these were built but absent from the sitemap, so search engines weren't
-  // told they exist. Private/user-scoped routes stay out (and are also blocked
-  // in robots.txt above); orphan/noindex pages (/partners, /demo) stay out by
-  // design. See SEO_GTM_STRATEGY.md.
-  const routes: Array<{ path: string; changefreq: string; priority: string }> = [
-    // Core funnel
-    { path: "/", changefreq: "weekly", priority: "1.0" },
-    { path: "/get-started", changefreq: "weekly", priority: "0.9" },
-    { path: "/how-it-works", changefreq: "monthly", priority: "0.8" },
-    { path: "/give-a-gift", changefreq: "monthly", priority: "0.8" },
-    { path: "/pricing", changefreq: "monthly", priority: "0.7" },
-    { path: "/founding-members", changefreq: "monthly", priority: "0.7" },
-    { path: "/personal-funds", changefreq: "monthly", priority: "0.6" },
-    { path: "/age-18", changefreq: "monthly", priority: "0.6" },
-    // Gifter-intent SEO satellites (the strategic core: comparison + tools)
-    { path: "/compare", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/at-18-calculator", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/robux-vs-utma", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/trump-account-vs-utma", changefreq: "monthly", priority: "0.8" },
-    { path: "/tools/utma-by-state", changefreq: "monthly", priority: "0.7" },
-    // Content hubs (children discovered via the hub + entries below)
-    { path: "/blog", changefreq: "weekly", priority: "0.6" },
-    { path: "/stories", changefreq: "weekly", priority: "0.6" },
-    // Trust / info
-    { path: "/faq", changefreq: "monthly", priority: "0.7" },
-    { path: "/security", changefreq: "monthly", priority: "0.5" },
-    { path: "/about", changefreq: "monthly", priority: "0.6" },
-    { path: "/contact", changefreq: "monthly", priority: "0.4" },
-    { path: "/legal", changefreq: "monthly", priority: "0.4" },
-  ];
-  // Programmatic: one UTMA page per state. Self-maintaining from shared
-  // US_STATES; canonical URL is lowercase (matches UtmaByStateIndex links).
-  for (const s of US_STATES) {
-    routes.push({ path: `/tools/utma-by-state/${s.code.toLowerCase()}`, changefreq: "monthly", priority: "0.6" });
-  }
-  // Programmatic: comparison pages. Keep in sync with COMPARISONS in
-  // client/src/pages/Compare.tsx (small, stable set).
-  const COMPARE_SLUGS = ["earlybird", "acorns-early", "greenlight", "stockpile", "529", "savings-account", "fidelity-utma"];
-  for (const slug of COMPARE_SLUGS) {
-    routes.push({ path: `/compare/${slug}`, changefreq: "monthly", priority: "0.7" });
-  }
-  // Blog articles (the gifter-intent SEO clusters — see SEO_CLUSTERS_PLAN.md).
-  // Markdown-file-driven; the server bundle can't read the client glob, so keep
-  // this in sync with client/src/content/blog/*.md (add a slug when a post ships).
-  const BLOG_SLUGS = [
-    "best-way-to-invest-birthday-money-for-kids",
-    "how-to-ask-family-to-invest-instead-of-buying-toys",
-    "how-to-set-up-a-fund-before-your-baby-shower",
-    "gifts-for-a-kid-who-has-everything",
-    "utma-vs-529-for-family-gifting",
-    "earlybird-alternative",
-  ];
-  for (const slug of BLOG_SLUGS) {
-    routes.push({ path: `/blog/${slug}`, changefreq: "monthly", priority: "0.6" });
-  }
-  // Story entries (the occasion-narrative SEO surface). Same markdown-driven,
-  // server-can't-read-the-client-glob constraint as BLOG_SLUGS above: keep in
-  // sync with client/src/content/stories/*.md (one entry per file; add a slug
-  // when a story ships). The /stories hub is listed above; these are its
-  // indexable children — both are index,follow in client getSeoForPath, so they
-  // belong in the sitemap too (they were previously omitted).
-  const STORY_SLUGS = ["emma-birthday-fund", "noah-baby-shower-fund"];
-  for (const slug of STORY_SLUGS) {
-    routes.push({ path: `/stories/${slug}`, changefreq: "monthly", priority: "0.5" });
-  }
-  const urlset = routes
-    .map(
-      (r) =>
-        `<url><loc>${base}${r.path}</loc><lastmod>${now}</lastmod><changefreq>${r.changefreq}</changefreq><priority>${r.priority}</priority></url>`,
-    )
-    .join("");
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlset}</urlset>`;
+  // All routing logic lives in server/sitemap.ts (buildSitemapRoutes) so it can
+  // be unit-tested without HTTP. Dynamic URLs (states, comparisons, blog, story)
+  // are derived from their sources of truth there, not hand-maintained here.
+  const xml = renderSitemapXml(getPublicBaseUrl(req), new Date().toISOString());
   res.type("application/xml").status(200).send(xml);
 });
 
@@ -565,6 +583,23 @@ app.get("/api/health", async (req, res) => {
     if (!deep) {
       return res.status(200).json({ ...base, db: "ok" });
     }
+    // The deep variant exposes secret-presence/readiness detail. Smoke/deploy
+    // scripts hit ?deep=1 UNAUTHENTICATED and require HTTP 200, so we keep the
+    // route open and 200 for everyone — but only AUTHENTICATED ADMINS get the
+    // detailed payload; everyone else gets the minimal liveness body.
+    let isAdminCaller = false;
+    try {
+      const sessionUser =
+        (req as any).user ?? (req as any).session?.user;
+      isAdminCaller = Boolean(
+        sessionUser?.isAdmin || sessionUser?.isSuperAdmin,
+      );
+    } catch {
+      isAdminCaller = false;
+    }
+    if (!isAdminCaller) {
+      return res.status(200).json({ ...base, db: "ok" });
+    }
     return res.status(200).json({
       ...base,
       db: "ok",
@@ -592,7 +627,7 @@ app.get("/api/health", async (req, res) => {
 });
 
 // Backward-compatible deep health route alias.
-app.get("/api/health/deep", async (_req, res) => {
+app.get("/api/health/deep", async (req, res) => {
   const base = {
     ok: true,
     status: "ok",
@@ -601,6 +636,22 @@ app.get("/api/health/deep", async (_req, res) => {
   };
   try {
     await pool.query("select 1");
+    // Only AUTHENTICATED ADMINS get the secret-presence/readiness detail;
+    // everyone else gets the minimal liveness body. Always 200 (smoke/deploy
+    // scripts hit this unauthenticated and require 200).
+    let isAdminCaller = false;
+    try {
+      const sessionUser =
+        (req as any).user ?? (req as any).session?.user;
+      isAdminCaller = Boolean(
+        sessionUser?.isAdmin || sessionUser?.isSuperAdmin,
+      );
+    } catch {
+      isAdminCaller = false;
+    }
+    if (!isAdminCaller) {
+      return res.status(200).json({ ...base, db: "ok" });
+    }
     return res.status(200).json({
       ...base,
       db: "ok",
@@ -649,6 +700,15 @@ const rateLimitRules: RateLimitRule[] = [
   // digits) and mint an access token that drives a permanent custodial
   // ownership transfer at majority. Cap unlock attempts hard.
   { name: "kid-view-unlock", methods: ["POST"], match: /^\/api\/kid-view\/[^/]+\/unlock$/, max: 8, windowMs: 15 * 60 * 1000 },
+  // Public gift-fund fetch: the slug is a guessable child-name (slugify(name),
+  // no token — see routes.ts:7186) and the response carries the child's first
+  // name + photo. noindex blocks search discovery but NOT enumeration; the
+  // limiter keys per-IP across the whole rule (not per-slug), so one source
+  // can't sweep the slug space to harvest kids. Tuned GENEROUS on purpose — this
+  // is the gifter conversion surface, and a false 429 is a lost gift — but still
+  // far below a dictionary sweep. (Guessing ONE known name is a single request;
+  // that targeted case is the photo-gating decision held for counsel, not this.)
+  { name: "public-fund-view", methods: ["GET"], match: /^\/api\/public\/funds\/[^/]+$/, max: 60, windowMs: 10 * 60 * 1000 },
 ];
 
 // Durable (cross-instance) rate limiter — see server/rateLimiter.ts. Backed by
@@ -769,6 +829,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // SECURITY: the dev-auth override (server/auth.ts getDevHeaderUserId) lets any
+  // request impersonate any user via the x-kora-dev-user-id header. It's already
+  // double-gated (env flag + localhost Host check), but a production deploy that
+  // accidentally carries KORA_ENABLE_DEV_AUTH_OVERRIDE=1 is catastrophic. Refuse
+  // to boot rather than run with the bypass armed in prod.
+  if (process.env.NODE_ENV === "production" && process.env.KORA_ENABLE_DEV_AUTH_OVERRIDE === "1") {
+    throw new Error(
+      "FATAL: KORA_ENABLE_DEV_AUTH_OVERRIDE=1 in production. The dev-auth header bypass must never be enabled in prod — unset it and redeploy.",
+    );
+  }
   await initStripe();
   await initOpsMonitoring();
   await bootstrapSuperAdmins();
@@ -778,6 +848,7 @@ app.use((req, res, next) => {
   startParentLifecycleWorker(log);
   startMobilePushWorker(log);
   startRecurringContributionWorker(log);
+  startHoldingsRevaluationWorker(log); // OFF unless HOLDINGS_REVALUATION_MINUTES set (marks simulated holdings to live prices)
   startAge18TransitionWorker(log);
   startStalledHandoffWorker(log);
   startDemoResetWorker(log);

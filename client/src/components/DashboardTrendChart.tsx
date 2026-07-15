@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { trendYDomain } from "@/lib/trend-domain";
 
@@ -55,7 +55,7 @@ function HoverTooltip({ active, payload, label }: any) {
           so leading with it (instead of the value) makes the tooltip feel
           alive even when consecutive snapshots happen to share the same
           dollar amount. */}
-      <div style={{ fontSize: 9.5, opacity: 0.55, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
+      <div style={{ fontSize: 9.5, opacity: 0.72, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
         {label}
       </div>
       <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.2 }}>
@@ -65,11 +65,11 @@ function HoverTooltip({ active, payload, label }: any) {
         <>
           <div style={{ height: 1, background: "currentColor", opacity: 0.1, margin: "6px 0 5px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
-            <span style={{ fontSize: 10, opacity: 0.52 }}>Contributed</span>
+            <span style={{ fontSize: 10, opacity: 0.68 }}>Contributed</span>
             <span style={{ fontSize: 10, fontWeight: 600 }}>{formatCurrency(principal)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginTop: 3 }}>
-            <span style={{ fontSize: 10, opacity: 0.52 }}>Market change</span>
+            <span style={{ fontSize: 10, opacity: 0.68 }}>Market change</span>
             <span style={{ fontSize: 10, fontWeight: 600, color: Math.abs(growth) < 0.01 ? "currentColor" : (growth > 0 ? "hsl(143, 64%, 58%)" : "hsl(0, 70%, 62%)") }}>
               {Math.abs(growth) < 0.01 ? formatCurrency(0) : `${growth > 0 ? "+" : ""}${formatCurrency(growth)}`}
             </span>
@@ -83,8 +83,15 @@ function HoverTooltip({ active, payload, label }: any) {
 export default function DashboardTrendChart({
   data,
   onScrub,
+  costBasis,
 }: {
   data: DashboardTrendPoint[];
+  // Optional total invested / cost basis. When provided (and within the visible
+  // y-band), draws a subtle dashed baseline so the area above it reads as growth
+  // at a glance — the always-on complement to the tooltip's contributed/growth
+  // split. Opt-in per caller, so the live dashboard is unaffected until it
+  // passes the prop too (promotion-only discipline).
+  costBasis?: number;
   // Fires whenever the user is actively scrubbing the chart (hover on
   // desktop, finger drag on mobile). Hero consumes this to swap its
   // "Today / live balance" surface for the scrubbed date / scrubbed
@@ -108,6 +115,33 @@ export default function DashboardTrendChart({
   // on mouse-leave because the cursor crossing the chart edge is an
   // unambiguous "I'm done" signal.
   const scrubReleaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── "Quietly alive" chart ──────────────────────────────────────────────────
+  // (1) A heartbeat on TODAY's point (see renderDot) and (2) a smooth morph when
+  // the timeframe changes (see the Area below). The promise on this screen is
+  // "watch it grow", so a frozen line undercuts it. Calm-alive, never casino:
+  // the pulse is a slow ambient ring (an EMOTIONAL "still growing" cue), NOT a
+  // live-price ticker — investing isn't live yet, so nothing counts or ticks.
+  //
+  // Respect reduced-motion: skip the pulse for users who ask for less motion.
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    try {
+      setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch {
+      /* matchMedia unavailable — leave motion on */
+    }
+  }, []);
+  // Animate ONLY on a genuine window change. `data` is a stable memo from the
+  // parent (keyed on chartRange), so a NEW reference means the timeframe actually
+  // changed — vs. an unrelated re-render (tooltip/scrub), which reuses the same
+  // reference. First render has no previous reference → false, so the mount stays
+  // instant (the deliberate no-baseline-morph behavior is preserved).
+  const prevDataRef = useRef<DashboardTrendPoint[] | null>(null);
+  const isDataUpdate = prevDataRef.current !== null && prevDataRef.current !== data;
+  useEffect(() => {
+    prevDataRef.current = data;
+  });
 
   const emitScrub = useCallback((point: DashboardTrendPoint | null) => {
     if (!onScrub) return;
@@ -154,6 +188,19 @@ export default function DashboardTrendChart({
 
   const renderDot = useCallback((props: any) => {
     const { cx, cy, payload, index } = props;
+
+    // TODAY (the last point) is marked by the PARENT's gold live-dot overlay
+    // (the pulsing "this is where the fund is right now" dot in DashboardLab /
+    // Dashboard). The chart must NOT also draw its own dot here — it used to
+    // render a green heartbeat dot at the same point, and because the two are
+    // positioned by different math (recharts cx/cy vs the overlay's CSS %), the
+    // green peeked out from under the gold and read as TWO dots (founder catch).
+    // Drawing nothing here leaves a single, clean gold live-dot. (No usage of
+    // this chart renders without that overlay.)
+    if (index === data.length - 1) {
+      return <g key={`dot-today-${index}`} />;
+    }
+
     if (!payload?.event) return <g key={`dot-empty-${index}`} />;
     const ev = payload.event as { label: string; detail: string };
 
@@ -195,7 +242,33 @@ export default function DashboardTrendChart({
         />
       </g>
     );
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data.length, reduceMotion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Multi-year views (ALL) format labels as "MMM YYYY"; Recharts auto-thins the
+  // ticks by pixels, so the months drift (Jul → Aug → Sep → Oct) and the axis looks
+  // irregular. Collapse to the year so a long axis reads clean (2009 · 2011 · … ·
+  // 2026). Only when the data spans many years (>= 7 distinct) — so 5Y and shorter
+  // keep their month labels. Short ranges pass through unchanged.
+  const xTickFormatter = (() => {
+    const distinctYears = new Set(
+      data.map((d) => (/\b(\d{4})\b/.exec(d.label) || [])[1]).filter(Boolean),
+    );
+    const collapse = distinctYears.size >= 7;
+    // Recharts thins ticks by pixel gap, THEN formats — so on a dense series two
+    // surviving ticks can land in the same year and both format to e.g. "2017",
+    // making the axis read "2017 2017 2018 2018 …". Dedupe: emit each year once
+    // (ticks format left-to-right), repeats return "" so the (line-less, mark-
+    // less) tick collapses to empty space. Fresh Set per render.
+    const emitted = new Set<string>();
+    return (v: string) => {
+      if (!collapse) return v;
+      const m = /\b(\d{4})\b/.exec(v);
+      const year = m ? m[1] : v;
+      if (emitted.has(year)) return "";
+      emitted.add(year);
+      return year;
+    };
+  })();
 
   return (
     <div
@@ -234,7 +307,7 @@ export default function DashboardTrendChart({
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={28} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+          <XAxis dataKey="label" tickFormatter={xTickFormatter} tickLine={false} axisLine={false} minTickGap={28} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
           <YAxis
             hide
             // Auto-scale per window so short, low-variance ranges (1W/1M/YTD)
@@ -259,7 +332,38 @@ export default function DashboardTrendChart({
             strokeWidth={2.5}
             dot={renderDot}
             activeDot={{ r: 4, fill: "hsl(143, 64%, 41%)" }}
+            // Mount renders the true shape INSTANTLY (false on first paint):
+            // Recharts' mount animation interpolates every point up from a flat
+            // baseline, reading as an off-brand straight-diagonal morph. But on a
+            // genuine timeframe change (`isDataUpdate`) we let it animate, so
+            // 1W -> 1M -> ALL morphs between shapes instead of hard-cutting.
+            // Short + eased so it feels responsive, not floaty.
+            isAnimationActive={isDataUpdate}
+            animationDuration={550}
+            animationEasing="ease-out"
           />
+          {/* Cost-basis baseline. Neutral (not green) so it reads as "what went
+              in," leaving the green area above it to read as growth. Hidden when
+              the value is outside the auto-scaled window (e.g. short 1W ranges
+              where the whole band sits above cost basis) so it never distorts the
+              domain. Honest framing: it's your total invested, clearly labeled. */}
+          {typeof costBasis === "number" && costBasis > 0 && (
+            <ReferenceLine
+              y={costBasis}
+              ifOverflow="hidden"
+              stroke="hsl(var(--muted-foreground))"
+              strokeOpacity={0.55}
+              strokeDasharray="5 4"
+              strokeWidth={1}
+              label={{
+                value: `cost basis · ${formatCurrency(costBasis)}`,
+                position: "insideTopLeft",
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            />
+          )}
         </AreaChart>
       </ChartContainer>
 

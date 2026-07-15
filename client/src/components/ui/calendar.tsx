@@ -118,7 +118,12 @@ function Calendar({
           defaultClassNames.outside
         ),
         disabled: cn(
-          "text-muted-foreground opacity-50",
+          // `text-muted-foreground` alone reads as disabled AND meets WCAG AA
+          // (~5.3:1). The previous `opacity-50` compounded on top of it dropped
+          // the effective contrast to ~1.7:1 (fails AA), making disabled dates
+          // nearly unreadable in the GetStarted birthdate / AddFund / Settings
+          // pickers, esp. on high-brightness displays. Color is the disabled cue.
+          "text-muted-foreground",
           defaultClassNames.disabled
         ),
         hidden: cn("invisible", defaultClassNames.hidden),

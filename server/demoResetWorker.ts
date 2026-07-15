@@ -1,7 +1,7 @@
-// Nightly Dunphy-demo reset worker.
+// Nightly Rivera-demo reset worker.
 //
 // Runs once a day at ~03:00 UTC (≈8 PM Pacific, when demo traffic is
-// lowest) and re-seeds the Dunphy family demo state. Off by default —
+// lowest) and re-seeds the Rivera family demo state. Off by default —
 // only fires when `ENABLE_DEMO_RESET=1` is set. That gating matters
 // because we DON'T want this firing on a developer's laptop or on any
 // non-demo production environment.
@@ -10,7 +10,7 @@
 //   1. Boot picks up the env flag. If unset, log "demo reset disabled" and exit.
 //   2. setInterval ticks every 5 minutes checking "is it the reset window
 //      AND have we not run yet today?" Cheap check, never holds the loop.
-//   3. When the window matches, runs `resetDunphys()` (wipe + re-seed).
+//   3. When the window matches, runs `resetRiveras()` (wipe + re-seed).
 //
 // Why an in-process worker rather than Render Cron Jobs ($1/mo):
 //   - Render Hobby workspaces are limited to one project; cron jobs as
@@ -24,7 +24,7 @@
 // the next 03:00 will cause an extra reset — fine, it's idempotent.
 // Persisting the timestamp wasn't worth the disk write.
 
-import { resetDunphys } from "../script/reset-dunphys";
+import { resetRiveras } from "../script/reset-dunphys";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "demo-reset-worker";
@@ -62,7 +62,7 @@ async function tickDemoReset(log: LogFn): Promise<void> {
   try {
     log("nightly demo reset starting", WORKER_SOURCE);
     // closePool=false: the worker reuses the server's connection pool.
-    await resetDunphys({ closePool: false });
+    await resetRiveras({ closePool: false });
     lastResetYmd = ymd;
     log(`nightly demo reset complete for ${ymd}`, WORKER_SOURCE);
   } catch (err) {

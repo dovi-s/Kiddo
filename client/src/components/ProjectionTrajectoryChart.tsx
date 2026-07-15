@@ -54,6 +54,20 @@ interface Props {
   currentAge?: number;
   // Optional CSS height. Defaults to 168px.
   heightPx?: number;
+  // Optional milestone marker drawn ON the curve, distinct from the
+  // target endpoint — e.g. the at-majority handoff age. Renders a small
+  // hollow dot + tiny label at that age so the curve reads as "the climb
+  // CONTINUES past this point" (the handoff is a waypoint, not the finish
+  // line). When omitted, no milestone is drawn (Projection.tsx behaviour
+  // is unchanged).
+  milestoneAge?: number;
+  milestoneLabel?: string;
+  // When false, hide the target-endpoint DOLLAR label (e.g. "$114K") while keeping
+  // the "Age NN" eyebrow + the curve. Use when the surrounding copy already states the
+  // projected number — so the chart shows the SHAPE and the text carries the figure
+  // (with its honest conditional framing the bare chart number can't). Default true
+  // preserves standalone behavior (Projection.tsx + live dashboards).
+  showTargetValue?: boolean;
 }
 
 function fmtCompact(n: number): string {
@@ -68,6 +82,9 @@ export function ProjectionTrajectoryChart({
   currentValue,
   currentAge,
   heightPx = 168,
+  milestoneAge,
+  milestoneLabel,
+  showTargetValue = true,
 }: Props) {
   // Measure the container so the viewBox ratio MATCHES the rendered
   // box. Previously the viewBox was locked to a fixed 3:1 ratio with
@@ -160,6 +177,20 @@ export function ProjectionTrajectoryChart({
     const targetY = toY(targetPoint.value);
     const startX = toX(points[0].age);
     const startY = toY(points[0].value);
+    // Milestone marker (e.g. the handoff age) — the curve point nearest
+    // milestoneAge, so it sits ON the line and the trajectory visibly
+    // continues to the right of it.
+    let milestone: { x: number; y: number; value: number; age: number } | null = null;
+    if (typeof milestoneAge === "number") {
+      let mIdx = 0;
+      let mDist = Infinity;
+      points.forEach((p, i) => {
+        const d = Math.abs(p.age - milestoneAge);
+        if (d < mDist) { mDist = d; mIdx = i; }
+      });
+      const mp = points[mIdx];
+      milestone = { x: toX(mp.age), y: toY(mp.value), value: mp.value, age: mp.age };
+    }
     return {
       linePath,
       fillPath,
@@ -171,8 +202,9 @@ export function ProjectionTrajectoryChart({
       startY,
       startValue: points[0].value,
       baseY,
+      milestone,
     };
-  }, [ok, points, targetAge, VB_W, VB_H]);
+  }, [ok, points, targetAge, milestoneAge, VB_W, VB_H]);
 
   if (!ok || !drawnArea) return null;
 
@@ -248,8 +280,44 @@ export function ProjectionTrajectoryChart({
           vectorEffect="non-scaling-stroke"
         />
 
+        {/* Milestone marker (e.g. the handoff age) — a hollow dot ON the
+            curve with a tiny label below it. Distinct from the target dot
+            (which is the far endpoint) so the eye reads the climb as
+            CONTINUING past the milestone, not ending at it. */}
+        {drawnArea.milestone && (
+          <>
+            <circle
+              cx={drawnArea.milestone.x}
+              cy={drawnArea.milestone.y}
+              r={5}
+              fill="white"
+              stroke={evergreen}
+              strokeWidth={2.5}
+              vectorEffect="non-scaling-stroke"
+            />
+            {milestoneLabel && (
+              <text
+                x={drawnArea.milestone.x}
+                y={drawnArea.milestone.y + 18}
+                textAnchor="middle"
+                fontSize="9.5"
+                fontWeight="700"
+                fill="hsl(var(--kiddo-ink) / 0.5)"
+                style={{ letterSpacing: "0.05em", textTransform: "uppercase" }}
+              >
+                {milestoneLabel}
+              </text>
+            )}
+          </>
+        )}
+
         {/* Target dot — bigger (r=7 vs 6 in v1) so the focal point
-            actually reads as the focal point on mobile-sized charts. */}
+            actually reads as the focal point on mobile-sized charts.
+            (No position animation: the chart auto-rescales so the target
+            point is always the curve's top-right anchor — max age =
+            rightmost, max value = topmost — so its pixel position is
+            constant across slider values. A "glide" here verifiably moved
+            0px, so it stays a clean mount-only scale-in.) */}
         <motion.circle
           cx={drawnArea.targetX}
           cy={drawnArea.targetY}
@@ -267,29 +335,56 @@ export function ProjectionTrajectoryChart({
             and stronger age eyebrow weight. The calm register said
             "single label, no axis ticks" — that's still true — but
             the one label we DO render needs to anchor the chart's
-            emotional point ("where does this end up"). */}
-        <text
-          x={drawnArea.targetX}
-          y={drawnArea.targetY - 16}
-          textAnchor="middle"
-          fontSize="16"
-          fontWeight="700"
-          fill={evergreen}
-          style={{ fontVariantNumeric: "tabular-nums" }}
-        >
-          {fmtCompact(drawnArea.targetValue)}
-        </text>
-        <text
-          x={drawnArea.targetX}
-          y={drawnArea.targetY - 32}
-          textAnchor="middle"
-          fontSize="10"
-          fontWeight="600"
-          fill="rgba(26,23,16,0.55)"
-          style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
-        >
-          Age {drawnArea.targetAgeReal}
-        </text>
+            emotional point ("where does this end up").
+
+            Horizontal anchoring: the target dot is ALWAYS the rightmost
+            point (max age = rightmost), so it sits at x = VB_W - padX,
+            flush against the right edge. A centered label overflows the
+            viewBox and clips ("$784K" / "Age 65" cut off on the right).
+            Anchor the label to whichever edge it's near — end on the
+            right, start on the left, middle in between — so it grows
+            inward and stays inside the chart. Fixed 2026-06-09 (the
+            horizontal twin of the PAD_TOP "Age 40" vertical-clip fix). */}
+        {(() => {
+          const edgeBand = VB_W * (PAD_X_PCT + 0.06);
+          const labelAnchor =
+            drawnArea.targetX > VB_W - edgeBand
+              ? "end"
+              : drawnArea.targetX < edgeBand
+                ? "start"
+                : "middle";
+          return (
+            <>
+              {showTargetValue && (
+                <text
+                  x={drawnArea.targetX}
+                  y={drawnArea.targetY - 16}
+                  textAnchor={labelAnchor}
+                  fontSize="16"
+                  fontWeight="700"
+                  fill={evergreen}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {fmtCompact(drawnArea.targetValue)}
+                </text>
+              )}
+              {/* When the dollar label is hidden, drop the age eyebrow down to where
+                  the value sat (−16) so it stays snug above the dot instead of floating
+                  with an empty gap below it. */}
+              <text
+                x={drawnArea.targetX}
+                y={drawnArea.targetY - (showTargetValue ? 32 : 16)}
+                textAnchor={labelAnchor}
+                fontSize="10"
+                fontWeight="600"
+                fill="hsl(var(--kiddo-ink) / 0.55)"
+                style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
+              >
+                Age {drawnArea.targetAgeReal}
+              </text>
+            </>
+          );
+        })()}
       </svg>
     </motion.div>
   );

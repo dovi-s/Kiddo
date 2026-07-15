@@ -31,7 +31,11 @@ export default function UtmaByState() {
   useEffect(() => {
     if (state) {
       const age = getMajorityAgeForState(state.code);
-      document.title = `${state.name} UTMA age of majority: ${age} | Kiddo`;
+      // SC: searchers type "south carolina utma" but the state uses UGMA —
+      // title carries both so the result is findable AND correct.
+      document.title = state.code === "SC"
+        ? `${state.name} UGMA (not UTMA) age of majority: ${age} | Kiddo`
+        : `${state.name} UTMA age of majority: ${age} | Kiddo`;
     }
   }, [state]);
 
@@ -41,6 +45,15 @@ export default function UtmaByState() {
 
   const age = getMajorityAgeForState(state.code);
   const isExtended = age > 18;
+  // South Carolina is the ONE state that never adopted UTMA — custodial
+  // accounts there are UGMA (Uniform Gifts to Minors Act), which works the
+  // same way for an investment account (irrevocable gift, custodian manages,
+  // transfers at majority). Saying "South Carolina UTMA" is factually wrong
+  // in exactly the state where the distinction exists; correcting it is also
+  // better SEO content than every generic competitor page (founder check
+  // 2026-06-04). People still SEARCH "south carolina utma," so the route and
+  // index keep the term; the page tells the truth.
+  const isUgmaState = state.code === "SC";
 
   return (
     <div className="kiddo-app-page">
@@ -58,10 +71,14 @@ export default function UtmaByState() {
               {state.name}
             </p>
             <h1 className="mb-4 font-heading text-4xl font-bold tracking-normal text-foreground md:text-5xl">
-              In {state.name}, a UTMA fund transfers to the child at age {age}.
+              {isUgmaState
+                ? `In ${state.name}, a custodial fund transfers to the child at age ${age}.`
+                : `In ${state.name}, a UTMA fund transfers to the child at age ${age}.`}
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-muted-foreground">
-              {isExtended ? (
+              {isUgmaState ? (
+                <>South Carolina is the one state that uses UGMA rather than UTMA (it never adopted the newer statute). For an investment fund, the two work the same way: the custodian manages the account until the child turns {age}; on that birthday, control transfers and the kid decides what to do.</>
+              ) : isExtended ? (
                 <>
                   That's {age - 18} {age - 18 === 1 ? "year" : "years"} longer than the age of 18 used in most states, which means more time for the fund to compound before the child takes legal control.
                 </>
@@ -81,7 +98,9 @@ export default function UtmaByState() {
             </h2>
             <div className="space-y-4 text-base leading-relaxed text-muted-foreground">
               <p>
-                A UTMA (Uniform Transfers to Minors Act) account is a custodial investment account a parent or guardian opens for a child. The child legally owns the assets the moment they're added to the fund; the custodian manages them until the kid reaches the state's age of majority. In {state.name}, that age is {age}.
+                {isUgmaState
+                  ? `A UGMA (Uniform Gifts to Minors Act) account is a custodial investment account a parent or guardian opens for a child. Most states replaced UGMA with the newer UTMA, but South Carolina kept UGMA; for an investment fund the mechanics are identical. The child legally owns the assets the moment they're added to the fund; the custodian manages them until the kid reaches the state's age of majority. In ${state.name}, that age is ${age}.`
+                  : `A UTMA (Uniform Transfers to Minors Act) account is a custodial investment account a parent or guardian opens for a child. The child legally owns the assets the moment they're added to the fund; the custodian manages them until the kid reaches the state's age of majority. In ${state.name}, that age is ${age}.`}
               </p>
               <p>
                 On the child's {age}th birthday, a few things change. The custodian stops acting on the account. The child gains full legal control. The investments themselves stay where they are. They're not automatically sold just because that birthday arrives. What changes is who decides what happens next.

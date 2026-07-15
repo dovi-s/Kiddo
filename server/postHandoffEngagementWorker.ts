@@ -202,6 +202,7 @@ async function sendQuarterlySummary(c: EngagementCandidate, now: Date, log: LogF
       subject,
       text: body,
       html: brandedHtml,
+      fundId: c.fundId, // bereavement freeze (BEREAVEMENT_POSTURE.md)
     } as any);
     await db.update(users)
       .set({ lastQuarterlySummaryAt: now })
@@ -314,6 +315,7 @@ async function sendThirtyDayCheckIn(c: ThirtyDayCandidate, now: Date, log: LogFn
       subject,
       text: body,
       html: brandedHtml,
+      fundId: c.fundId, // bereavement freeze (BEREAVEMENT_POSTURE.md)
     } as any);
     await db
       .update(users)

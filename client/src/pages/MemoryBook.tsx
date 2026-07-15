@@ -54,22 +54,29 @@ import {
   SPRING_SHEET,
 } from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle, ChevronDown, Search, KeyRound, PieChart, Check, Maximize2, type LucideIcon } from "lucide-react";
+import SealedVoiceNote from "@/components/SealedVoiceNote";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog, type ConfirmRequest } from "@/components/ui/confirm-dialog";
+import { investingLiveCopy, INVESTING_LIVE } from "@shared/legal-copy";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
-import { gifterShortName } from "@/lib/gifter-name";
+import { gifterShortName, isAnonGifterName } from "@/lib/gifter-name";
+import { gifterAvatarColor } from "@/lib/gifter-avatar";
 import { prefetchDashboard, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getDeepLinkHighlightStyle, getDeepLinkHighlightCardStyle, hasActiveDeepLink, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { FadeImage } from "@/components/ui/fade-image";
+import { VoiceNotePlayer } from "@/components/ui/voice-note-player";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
+import { readDemoLiveGiftsForFund, recordDemoThankYou } from "@/lib/demo-live-gifts";
+import { isDemoNoop } from "@/lib/demo-block";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useFunds } from "@/hooks/use-funds";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
@@ -79,6 +86,35 @@ import { readLocalCache, writeLocalCache, safeLocalSet } from "@/lib/local-cache
 import { filterMemoryEntries, getVisibleMemoryEntries, validateMemoryMedia } from "./memoryBookUtils";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { projectFundValue } from "@shared/projection";
+
+// A timeline photo that opens the shared lightbox on tap (click-to-enlarge).
+// A quiet corner glyph signals it's tappable without competing with the photo;
+// stopPropagation keeps the tap from firing the entry's own row actions.
+function EnlargeablePhoto({ src, onOpen, imgClassName, wrapClassName, testId }: {
+  src: string;
+  onOpen: () => void;
+  imgClassName?: string;
+  wrapClassName?: string;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); haptic("light"); onOpen(); }}
+      aria-label="View photo full size"
+      data-testid={testId}
+      className={`group relative block w-full cursor-zoom-in ${wrapClassName || ""}`}
+    >
+      <FadeImage src={src} alt="" className={imgClassName} />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/90 opacity-70 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 group-active:opacity-100"
+      >
+        <Maximize2 size={13} />
+      </span>
+    </button>
+  );
+}
 
 const MEMORY_ACTIVE_STALE_MS = 5_000;
 const MEMORY_LIVE_REFRESH_MS = 15_000;
@@ -180,6 +216,11 @@ interface MemoryEntry {
     id?: string;
     senderName: string;
     senderEmail?: string | null;
+    // Resolved from the sender's user record (server join on senderEmail).
+    // Lets the Memory Book label each contributor by THEIR own relationship
+    // ("Marcus Rivera (Dad)") + show their face. Auth endpoint only.
+    gifterAvatarUrl?: string | null;
+    gifterPreferredName?: string | null;
     amount: string;
     // netAmount + status surfaced 2026-05-15 to align the per-gifter
     // roster sum here with Dashboard's gifterRoster: exclude failed/
@@ -230,18 +271,11 @@ const typeConfig: Record<string, { icon: typeof Gift; color: string; dotColor: s
 // variables for a single-purpose rotation would be over-engineering.
 // If the brand palette ever adds a "diverse avatar" token set, this
 // is the migration target.
-const GIFTER_COLORS = [
-  { bg: "rgb(26,61,43)",   text: "white" },
-  { bg: "rgb(161,88,0)",   text: "white" },
-  { bg: "rgb(30,80,170)",  text: "white" },
-  { bg: "rgb(124,58,130)", text: "white" },
-  { bg: "rgb(185,28,28)",  text: "white" },
-];
-function gifterColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return GIFTER_COLORS[h % GIFTER_COLORS.length];
-}
+// Gifter avatar colors now come from the shared @/lib/gifter-avatar source of
+// truth (same palette + per-identity hash as the dashboard roster), so a gifter
+// is the same color in the Memory Book and on the dashboard. `gifterColor` is
+// kept as a thin local alias so the existing call sites read unchanged.
+const gifterColor = gifterAvatarColor;
 
 // ─── Boilerplate / test-pattern message detection ───
 // Single source of truth for "is this message text the kind we suppress
@@ -288,7 +322,7 @@ type EntryIdentity = {
   gifterBg: string | null;
 };
 function getEntryIdentity(
-  entry: { type?: string; gift?: { senderName?: string | null; senderEmail?: string | null } | null; authorName?: string | null },
+  entry: { type?: string; gift?: { senderName?: string | null; senderEmail?: string | null; gifterAvatarUrl?: string | null } | null; authorName?: string | null },
   ownerCtx: {
     emailLower: string;
     profileImageUrl: string | null;
@@ -305,8 +339,7 @@ function getEntryIdentity(
     ? String(entry.gift?.senderName || "").trim()
     : String(entry.authorName || "").trim();
   const lcSender = rawSender.toLowerCase();
-  const isTestSender = TEST_SENDER_NAMES.includes(lcSender);
-  const isAnonSender = !rawSender || /^someone who loves/i.test(rawSender) || lcSender === "anonymous" || isTestSender;
+  const isAnonSender = isAnonGifterName(rawSender);
   const senderEmailLower = String(entry.gift?.senderEmail || "").trim().toLowerCase();
   // Owner detection — gift entries match by senderEmail; parent
   // memories (type='note', 'parent_note', 'photo') match by treating
@@ -345,7 +378,7 @@ function getEntryIdentity(
   return {
     kind: "gifter",
     displayName: named,
-    profileImageUrl: null,
+    profileImageUrl: entry.gift?.gifterAvatarUrl || null,
     avatarLetter: named.slice(0, 1).toUpperCase(),
     avatarStyle: "gifter",
     gifterBg: gifterColor(rawSender).bg,
@@ -354,16 +387,30 @@ function getEntryIdentity(
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
-  // A gift that landed seconds ago reading "May 27, 2026" feels stale — it's
-  // the moment, not a calendar fact. Show "Just now" for the first few minutes
-  // so a brand-new entry feels brand-new. This is a genuine delight for any
-  // real gift the moment it arrives, and it's what makes the demo's just-sent
-  // gift read as truly live when the prospect taps through to watch it land.
-  // Only fires for fresh past-dated entries (guards against clock-skew future
-  // dates); every older entry keeps the exact calendar date.
+  // A gift that landed recently reading "May 27, 2026" feels stale — it's the
+  // moment, not a calendar fact. Soften fresh entries with warm relative
+  // phrasing (Just now → Today → Yesterday → N days ago → Last week) so a new
+  // gift feels new; everything ~2 weeks+ keeps the exact calendar date (the
+  // right grain for a lifetime archive). Only fires for past-dated entries
+  // (guards against clock-skew future dates). UTC day boundaries to match the
+  // absolute format's timeZone:"UTC".
   const sinceMs = Date.now() - d.getTime();
   if (sinceMs >= 0 && sinceMs < 5 * 60 * 1000) return "Just now";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const DAY = 24 * 60 * 60 * 1000;
+  const utcDayIndex = (t: number) => Math.floor(t / DAY);
+  // Time-of-day for the moment (founder ask: "show date AND time"). Kept in UTC to
+  // match the date's timeZone:"UTC" — mixing a UTC date with a local time (or
+  // flipping the date to local) shifts near-midnight entries back a day, the exact
+  // bug the UTC day-boundaries above guard against. Appended to the datestamp'd
+  // entries; the mid-range relative buckets ("3 days ago") stay time-less since an
+  // exact clock time reads oddly next to fuzzy relative days.
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+  const daysAgo = utcDayIndex(Date.now()) - utcDayIndex(d.getTime());
+  if (daysAgo === 0) return `Today · ${timeStr}`;
+  if (daysAgo === 1) return `Yesterday · ${timeStr}`;
+  if (daysAgo >= 2 && daysAgo <= 6) return `${daysAgo} days ago`;
+  if (daysAgo >= 7 && daysAgo <= 13) return "Last week";
+  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} · ${timeStr}`;
 }
 
 function formatMoney(value: number) {
@@ -375,14 +422,24 @@ function formatMoney(value: number) {
   }).format(Number.isFinite(value) ? value : 0);
 }
 
-function displayAmount(value: string | number | null | undefined) {
-  const amount = typeof value === "number" ? value : parseFloat(String(value || "0"));
+// Friendly variant for warm/emotional copy (thank-you letters, the keepsake hero):
+// drops the robotic ".00" on whole amounts, keeps cents only when they're real.
+function formatMoneyFriendly(value: number) {
+  const rounded = Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: amount >= 1000 ? 0 : 2,
-    maximumFractionDigits: amount >= 1000 ? 0 : 2,
-  }).format(Number.isFinite(amount) ? amount : 0);
+    minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(rounded);
+}
+
+function displayAmount(value: string | number | null | undefined) {
+  // Friendly (cut-extra 2026-07): was forcing ".00" on every amount under $1000
+  // ("$100.00"); now drops the robotic cents on whole amounts and keeps them only
+  // when real ("$100" / "$188.84"), matching formatMoneyFriendly everywhere else.
+  const amount = typeof value === "number" ? value : parseFloat(String(value || "0"));
+  return formatMoneyFriendly(Number.isFinite(amount) ? amount : 0);
 }
 
 function visibilityLabel(value?: "public" | "family" | "private") {
@@ -390,6 +447,25 @@ function visibilityLabel(value?: "public" | "family" | "private") {
   if (value === "family") return "Family only";
   return "Anyone with link";
 }
+
+// The three audiences a memory entry can have. The kebab used to expose this as a
+// single "Visibility" row that CYCLED public -> family -> private on each tap —
+// so you couldn't pick a state directly, only advance to whatever came next in an
+// unseen order (founder catch 2026-07: "not really doing its thing"). These render
+// as three directly-selectable rows instead, each spelling out who actually sees
+// it, with a check on the current one. The bare word "Public" also read as
+// ambiguous, so each row carries the plain-language audience.
+type MemoryVisibility = "public" | "family" | "private";
+const MEMORY_VISIBILITY_OPTIONS: Array<{ value: MemoryVisibility; label: string; who: string; Icon: typeof Globe }> = [
+  { value: "public", label: "Public", who: "Anyone with the share link", Icon: Globe },
+  { value: "family", label: "Family", who: "You and co-parents", Icon: Users },
+  { value: "private", label: "Private", who: "Only you", Icon: Lock },
+];
+const MEMORY_VISIBILITY_TOAST: Record<MemoryVisibility, string> = {
+  public: "Now visible to anyone with the link",
+  family: "Now visible to family only",
+  private: "Now private, only you can see it",
+};
 
 function deriveMemoryHeaderStats(
   entries: MemoryEntry[] | undefined,
@@ -407,29 +483,16 @@ function deriveMemoryHeaderStats(
   // people who showed up. So for anon gifts we use a per-entry key (the
   // entry id) to keep them as distinct contributors. Named senders still
   // dedup by lowercased name (Mom giving 5 times = 1 person).
-  const isAnonName = (name: string) => {
-    const n = String(name || "").trim();
-    if (!n) return true;
-    if (/^someone who loves/i.test(n)) return true;
-    if (n.toLowerCase() === "anonymous") return true;
-    // Known test-data sender names — patterns developers used while
-    // testing the gift flow before isTestUser flagging existed. These
-    // shouldn't render as named contributors in production-shaped UI.
-    // Bucketing them with anonymous keeps the roster honest without
-    // requiring a DB cleanup of historical test rows.
-    const lc = n.toLowerCase();
-    if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
-    return false;
-  };
+  const isAnonName = isAnonGifterName;
   // Count every contribution honestly so the Memory Book reconciles with the
-  // Dashboard, the source of truth (Luke = 82 gifts / $9,275). A contribution
+  // Dashboard, the source of truth (Theo = 82 gifts / $9,275). A contribution
   // is a gift_message OR the first-cycle parent_note that carries a recurring
   // auto-invest gift (parentContributionId): the server stores cycle #1 as a
   // note and backfills cycles #2..N as gift entries, so counting only
   // gift_message dropped that one $75 cycle (the "$2,625 vs $2,700 / 35 vs 36"
   // bug). We also no longer collapse the 36 identical monthly cycles to 1 — the
   // Dashboard counts them in full, and a collapsed "47" beside the Dashboard's
-  // "82" was the core mismatch. Non-gift notes (Claire's, parent letters) still
+  // "82" was the core mismatch. Non-gift notes (Elena's, parent letters) still
   // add their author to the people set without counting as a gift.
   for (const entry of entries || []) {
     const isContribution = entry.type === "gift_message" ||
@@ -486,6 +549,13 @@ export default function MemoryBook() {
   const { data: memoryAccessFunds = [] } = useFunds();
   const memoryFundAccessRole = (memoryAccessFunds.find((f: any) => String(f.id) === String(fundId)) as any)?.accessRole;
   const canModerateMemory = memoryFundAccessRole === "owner" || memoryFundAccessRole === "co-admin";
+  // Previous custodian (parent after the at-majority handoff). Read-only on
+  // the fund, but the thank-yous in this book are ones THEY sent during the
+  // custodial years — so they get the ✓ Thanked story (badges + reveal),
+  // never the workflow (Awaiting chips/filters, composer, drafts). Without
+  // this split, Marcus viewing handed-off Mia's book saw every gift badged
+  // "No thanks yet" + actionable chrome that could only 403.
+  const isPreviousOwnerMemory = memoryFundAccessRole === "previous_owner";
   // Honor OS reduced-motion. When set, the heavy slides + zooms in
   // this page become quiet opacity fades. Modal sheets stop sliding
   // 100px from below; the book-page swap stops translating 96px
@@ -503,11 +573,18 @@ export default function MemoryBook() {
     if (!fundId || !isAuthenticated) return;
     const cancel = onIdle(() => {
       prefetchDashboard(queryClient, fundId);
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, fundId);
     });
     return cancel;
   }, [fundId, isAuthenticated, queryClient]);
 
+  // Branded confirm for destructive Memory Book actions (delete entry), replacing
+  // the OS-native window.confirm on this emotional surface.
+  const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
+  // Branded report sheet (replaces the OS-native window.prompt for T&S reports).
+  const [reportEntry, setReportEntry] = useState<{ id: string; sender: string; createdAt: any } | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const [eventFilter, setEventFilter] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(search).get("event") || null;
@@ -537,6 +614,7 @@ export default function MemoryBook() {
   ], []);
   const [content, setContent] = useState("");
   const [authorName, setAuthorName] = useState(user?.firstName || "");
+  const [sealedVoiceOpen, setSealedVoiceOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -576,6 +654,10 @@ export default function MemoryBook() {
   // Lets the parent quickly answer "who haven't I thanked?" without scanning.
   const [thankYouFilter, setThankYouFilter] = useState<"all" | "awaiting" | "thanked" | "drafted">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  // Search collapses to a tap-icon (cut-extra 2026-07): a full always-on search ROW
+  // was heavy chrome before the entries (the comment at its render even flagged it).
+  // Open when toggled OR when a query is active, so a persisted search stays visible.
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<"all" | string>("all");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   // "More filters" disclosure — three primary chips (All / Pinned /
@@ -648,6 +730,14 @@ export default function MemoryBook() {
   // Thank-you composer
   const [composerGiftId, setComposerGiftId] = useState<string | null>(null);
   const [composerTone, setComposerTone] = useState<"warm" | "brief" | "formal" | "custom">("warm");
+  // The template the current draft is *based on* — tracked separately from
+  // composerTone. Editing the textarea flips composerTone -> "custom" (so the chip
+  // reflects that it's been customized), but baseTone stays put so "Reset" knows
+  // which template to restore. Without this split, Reset only showed while the
+  // message still equalled the template (a no-op) and vanished the instant you
+  // edited it — visible exactly when useless, gone exactly when needed (founder
+  // catch 2026-07).
+  const [composerBaseTone, setComposerBaseTone] = useState<"warm" | "brief" | "formal" | "custom">("warm");
   // Portfolio context for the thank-you draft — populated at
   // openComposer time so the draft can specialize: "Your $250 is
   // invested in Google and now worth $267.50." Without it the draft
@@ -664,6 +754,10 @@ export default function MemoryBook() {
   const [composerStep, setComposerStep] = useState<"compose" | "preview">("compose");
   const [composerMessage, setComposerMessage] = useState("");
   const [sendingThankYou, setSendingThankYou] = useState(false);
+  // Which sent thank-you is expanded for viewing. Tapping a "✓ Thanked" badge
+  // reveals the note you actually sent (the badge was a dead status label
+  // before) — closes the loop "what did I write to them again?".
+  const [viewThankYouGiftId, setViewThankYouGiftId] = useState<string | null>(null);
 
   // Bulk thank-you composer — added 2026-05-25 to close the gifter-thanks
   // audit gap. When a gifter has multiple gifts awaiting thanks, the
@@ -816,16 +910,16 @@ export default function MemoryBook() {
       content: g.message ?? null,
       authorName: g.senderName,
       authorPhotoUrl: null,
-      photoUrl: null,
-      videoUrl: null,
-      audioUrl: null,
+      photoUrl: g.photoUrl ?? null,
+      videoUrl: g.videoUrl ?? null,
+      audioUrl: g.audioUrl ?? null,
       visibility: "public",
       createdAt: g.createdAt,
       gift: {
         senderName: g.senderName,
         amount: String(g.amount),
         message: g.message ?? null,
-        photoUrl: null,
+        photoUrl: g.photoUrl ?? null,
         createdAt: g.createdAt,
         selectedTicker: g.ticker || null,
         executionModel: g.ticker ? "pick" : "auto",
@@ -979,6 +1073,9 @@ export default function MemoryBook() {
   // read-heavy and rarely changes inside a single session; mutations
   // (sending a thank-you, marking one as sent) invalidate the query
   // explicitly so the cache stays accurate for actionable events.
+  // previous_owner loads these too (read-only): the sent notes are part
+  // of the book's story and they're the ones who sent them. The server
+  // skips the draft-backfill write for non-moderator reads.
   const { data: thankYouList = [], refetch: refetchThankYous } = useQuery<any[]>({
     queryKey: ["thank-yous", fundId],
     queryFn: async () => {
@@ -990,7 +1087,7 @@ export default function MemoryBook() {
       }
       return data;
     },
-    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
+    enabled: !!fundId && isAuthenticated && !authLoading && (canModerateMemory || isPreviousOwnerMemory),
     initialData: () => (fundId ? readLocalCache<any[]>(`${MEMORY_THANK_YOUS_CACHE_PREFIX}${fundId}`) : undefined),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
@@ -1093,6 +1190,25 @@ export default function MemoryBook() {
   // Per-gift thank-you state for gift cards: ✓ Thanked / ⏳ Awaiting / ✨ From you / etc.
   // Suppressed for anonymous (can't be reached) and senders without an email.
   const ownerEmailLowerForMemory = String(user?.email || "").trim().toLowerCase();
+  // Account-holder emails = the owner + anyone who has a parent-contribution
+  // (recurring) gift on this fund — i.e. a custodian / co-parent. Derived from
+  // the data exactly like the dashboard breakdown (DashboardLab ~7881) so the
+  // two agree. Used to keep account-holders OUT of the thank-you flow: you don't
+  // thank the household — owner OR co-parent — for funding the account. Catches
+  // their NON-recurring one-time adds too (those carry no parentContributionId
+  // but the same sender, which a parentContributionId-only check would miss).
+  const accountHolderEmails = useMemo(() => {
+    const set = new Set<string>();
+    if (ownerEmailLowerForMemory) set.add(ownerEmailLowerForMemory);
+    for (const e of (Array.isArray(rawMemoryEntries) ? rawMemoryEntries : [])) {
+      const g: any = (e as any).gift;
+      if (g?.parentContributionId) {
+        const em = String(g.senderEmail || "").trim().toLowerCase();
+        if (em) set.add(em);
+      }
+    }
+    return set;
+  }, [rawMemoryEntries, ownerEmailLowerForMemory]);
   const thankYouStateForGift = (gift: any): "sent" | "draft" | "missing" | "self" | "anonymous" => {
     const senderEmail = String(gift?.senderEmail || "").trim().toLowerCase();
     const senderName = String(gift?.senderName || "").trim();
@@ -1104,9 +1220,13 @@ export default function MemoryBook() {
     // as "missing" — the parent would see an anonymous-looking entry
     // appear under Awaiting, which can't be acted on. Same predicate
     // shape as deriveMemoryHeaderStats and the gifterRoster aggregate.
-    const isTestSender = ["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lcSender);
-    const isAnon = !senderName || /^someone who loves/i.test(senderName) || lcSender === "anonymous" || isTestSender;
+    const isAnon = isAnonGifterName(senderName);
     if (!!ownerEmailLowerForMemory && senderEmail === ownerEmailLowerForMemory) return "self";
+    // Co-parent / account-holder contributions aren't thankable gifts (the
+    // household funding the account — recurring OR one-time). Before the mom-flip
+    // the co-parent WAS the owner so this fell under the check above; now they're
+    // a distinct sender (e.g. Marcus). The render at ~5258 already expects "self".
+    if (senderEmail && accountHolderEmails.has(senderEmail)) return "self";
     if (isAnon || !senderEmail) return "anonymous";
     const ty = gift?.id ? thankYouByGiftId.get(String(gift.id)) : null;
     if (ty?.status === "sent") return "sent";
@@ -1128,7 +1248,7 @@ export default function MemoryBook() {
     ctx?: { ticker?: string | null; currentValue?: number | null; giftDate?: string | Date | null }
   ): string {
     if (tone === "custom") return "";
-    const fmt = `$${parseFloat(amount || "0").toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const fmt = formatMoneyFriendly(parseFloat(amount || "0"));
     const child = childName || "our child";
     // Capitalize at composition time — the gifter typing "grandpa"
     // shouldn't produce "Dear grandpa,". Defensive: every salutation
@@ -1144,16 +1264,16 @@ export default function MemoryBook() {
     const tickerCo = ctx?.ticker ? ctx.ticker.toUpperCase() : null;
     const valueNow =
       typeof ctx?.currentValue === "number" && Number.isFinite(ctx.currentValue) && ctx.currentValue > 0
-        ? `$${ctx.currentValue.toFixed(2)}`
+        ? formatMoneyFriendly(ctx.currentValue)
         : null;
     const portfolioSentenceWarm = tickerCo && valueNow
-      ? ` It's invested in ${tickerCo} and now worth ${valueNow}.`
+      ? investingLiveCopy(` It's invested in ${tickerCo} and now worth ${valueNow}.`, ` It's going into ${tickerCo}, invested once investing is live.`)
       : "";
     const portfolioSentenceBrief = tickerCo && valueNow
-      ? ` ${tickerCo} now worth ${valueNow}.`
+      ? investingLiveCopy(` ${tickerCo} now worth ${valueNow}.`, ` Going into ${tickerCo} once investing is live.`)
       : "";
     const portfolioSentenceFormal = tickerCo && valueNow
-      ? ` Your gift was allocated to ${tickerCo} and is currently valued at ${valueNow}.`
+      ? investingLiveCopy(` Your gift was allocated to ${tickerCo} and is currently valued at ${valueNow}.`, ` Your gift is set to be invested in ${tickerCo} once investing is live.`)
       : "";
     // Time-aware OWNER variant. When the now-adult owner thanks a gift made
     // before she came of age, name how old she actually was ("when I was 6")
@@ -1169,15 +1289,15 @@ export default function MemoryBook() {
       ageAtGift = Math.floor((giftMs - birthMs) / (365.25 * 24 * 60 * 60 * 1000));
     }
     const useTimeAwareOwner = isOwnerMode && ageAtGift !== null && ageAtGift < majorityAge;
-    const whenAgePhrase = ageAtGift === null ? "" : ageAtGift <= 1 ? "when I was just a baby" : `when I was ${ageAtGift}`;
+    const whenAgePhrase = ageAtGift === null ? "" : ageAtGift <= 1 ? "when I was a baby" : `when I was ${ageAtGift}`;
     switch (tone) {
       case "warm":
         if (useTimeAwareOwner) {
           return `Dear ${name},\n\nThank you for the ${fmt} you gave me ${whenAgePhrase}.${portfolioSentenceWarm} I'm old enough now to understand what you were doing back then, and it means even more to me than it could have at the time.\n\nWith love,\n${ownerName}`;
         }
         return isOwnerMode
-          ? `Dear ${name},\n\nThank you so much for your ${fmt} gift to my fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for my future.\n\nWith love,\n${ownerName}`
-          : `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
+          ? `Dear ${name},\n\nThank you for the ${fmt} you put into my fund.${portfolioSentenceWarm} You showed up for my future, and I won't forget it.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you for the ${fmt} you put into ${child}'s fund.${portfolioSentenceWarm} You showed up for ${child}'s future, and we won't forget it.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
       case "brief":
         return isOwnerMode
           ? `Hi ${name},\n\nThank you for the ${fmt} gift to my fund.${portfolioSentenceBrief} I really appreciate it!\n\nWith gratitude,\n${ownerName}`
@@ -1197,14 +1317,18 @@ export default function MemoryBook() {
     ctx?: { ticker?: string | null; currentValue?: number | null }
   ) => {
     setComposerGiftId(giftId);
-    setComposerTone("warm");
     setComposerContext(ctx ?? {});
     // Post-handoff owner: the stored auto-draft (ty.message) was generated in
-    // the parent era — "Thank you X for your generous gift of $Y to Haley's
-    // Fund!", third person — and reads wrong when Haley thanks her own gifters.
+    // the parent era — "Thank you X for your generous gift of $Y to Mia's
+    // Fund!", third person — and reads wrong when Mia thanks her own gifters.
     // Seed from the first-person warm template instead (buildThankYouMessage is
     // owner-aware). The parent still gets their stored/auto draft as before.
-    setComposerMessage((!isOwnerMode && ty?.message) || buildThankYouMessage("warm", senderName, amount, ctx));
+    // A seeded parent draft is their own words, so start on "custom" (no template
+    // to reset to); everyone else starts on warm.
+    const seededDraft = (!isOwnerMode && ty?.message) ? String(ty.message) : null;
+    setComposerTone(seededDraft ? "custom" : "warm");
+    setComposerBaseTone(seededDraft ? "custom" : "warm");
+    setComposerMessage(seededDraft ?? buildThankYouMessage("warm", senderName, amount, ctx));
     setComposerStep("compose");
     haptic("selection");
   };
@@ -1235,14 +1359,14 @@ export default function MemoryBook() {
     if (tone === "custom") return "";
     const count = pendingGifts.length;
     const totalAmount = pendingGifts.reduce((sum, g) => sum + (parseFloat(String(g.amount || "0")) || 0), 0);
-    const fmtTotal = `$${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const fmtTotal = formatMoneyFriendly(totalAmount);
     const child = childName || "our child";
     const name = titleCaseName(senderName) || senderName;
     switch (tone) {
       case "warm":
         return isOwnerMode
-          ? `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. It means more than you know: not just the money but the fact that you keep showing up for me.\n\nWith love,\n${ownerName}`
-          : `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
+          ? `Dear ${name},\n\nThank you for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. You keep showing up for me, and that is what matters.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one is a real investment ${child} will read about one day. You keep showing up for ${child}, and that is what matters.\n\nWith love,\n${ownerName}`;
       case "brief":
         return isOwnerMode
           ? `Hi ${name},\n\nThank you for the ${count} gifts to my fund (${fmtTotal} total). I really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`
@@ -1283,7 +1407,7 @@ export default function MemoryBook() {
       toast({
         title: `Thanked ${ids.length} gifts at once`,
         description: data?.totalGiftAmount
-          ? `Single email sent covering $${Number(data.totalGiftAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of giving.`
+          ? `Single email sent covering ${formatMoneyFriendly(Number(data.totalGiftAmount))} of giving.`
           : "Single email sent covering every pending gift from this gifter.",
       });
     } catch (err) {
@@ -1329,6 +1453,17 @@ export default function MemoryBook() {
       } else if (data.copiedText) {
         await navigator.clipboard.writeText(data.copiedText).catch(() => {});
         outcome = "copied";
+      }
+      // Demo can't persist the send (server-blocked), so record it client-side
+      // — that's what lets the thank-you show up as a reply under the gift in
+      // Activity, so the demo "actually works" end to end.
+      if (isDemoAccount && ty?.giftId) {
+        recordDemoThankYou({
+          fundId,
+          giftId: String(ty.giftId),
+          message: composerMessage,
+          senderName: typeof ty?.senderName === "string" ? ty.senderName : null,
+        });
       }
       await refetchThankYous();
       setComposerGiftId(null);
@@ -1449,7 +1584,9 @@ export default function MemoryBook() {
     // auto-open the inline composer at that gift. Without this, the user
     // lands on the entry but has to spot and click "Say thanks" to actually
     // do the thing — that's the "lands in random place" complaint.
-    if (giftParam && target.giftId && target.gift) {
+    // Moderators only: a previous_owner/viewer can't send (server 403s
+    // writes), so never auto-open a composer they can't use.
+    if (canModerateMemory && giftParam && target.giftId && target.gift) {
       const tyState = thankYouStateForGift(target.gift);
       if (tyState === "draft" || tyState === "missing") {
         const tyForGift = thankYouByGiftId.get(String(target.giftId));
@@ -1858,11 +1995,15 @@ export default function MemoryBook() {
       { key: "moved-out",         label: "Moved out",           starter: "Moved out on their own. ", age: 18 },
     ];
     const strip = ({ age: _age, ...m }: { key: string; label: string; starter: string; age: number }) => m;
-    if (kidAgeForMoments == null) return ALL.filter((m) => m.age <= 8).map(strip);
+    // Cap at 6, most-recent-first — a tight prompt set, not a checklist. (Was
+    // 10, which for an older kid showed a wall of baby moments plus the
+    // confusingly-similar "First tooth" (age 1) AND "Lost first tooth" (age 6);
+    // the cap drops the age-1 one and keeps the list age-relevant.)
+    if (kidAgeForMoments == null) return ALL.filter((m) => m.age <= 8).slice(0, 6).map(strip);
     return ALL
       .filter((m) => m.age <= kidAgeForMoments + 1)
       .sort((a, b) => b.age - a.age)
-      .slice(0, 10)
+      .slice(0, 6)
       .map(strip);
   }, [kidAgeForMoments]);
 
@@ -2206,7 +2347,12 @@ export default function MemoryBook() {
     e.currentTarget.value = "";
   };
 
-  const updateEntryMeta = async (entryId: string, patch: { visibility?: "public" | "family" | "private"; isFeatured?: boolean }) => {
+  // Returns true if the change persisted. In the demo (or any no-persist case)
+  // the server returns 200 {saved:false}; this is a RAW fetch, so the global
+  // apiRequest demo-toast never fires and res.ok is true — detect {saved:false}
+  // here and surface an honest "not saved in the demo" toast instead of letting
+  // the caller claim a false success. (Same bug class as the child-photo fix.)
+  const updateEntryMeta = async (entryId: string, patch: { visibility?: "public" | "family" | "private"; isFeatured?: boolean }): Promise<boolean> => {
     const res = await fetch(`/api/memory/${entryId}/meta`, {
       method: "PATCH",
       credentials: "include",
@@ -2214,7 +2360,13 @@ export default function MemoryBook() {
       body: JSON.stringify(patch),
     });
     if (!res.ok) throw new Error("Failed to update memory settings");
+    const data = await res.json().catch(() => null);
+    if (data && data.saved === false) {
+      toast({ title: "Not saved in the demo", description: data.message || "Changes save in your own fund." });
+      return false;
+    }
     await queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
+    return true;
   };
 
   // Mark the Memory Book as visited — clears the bottom-nav unread dot.
@@ -2327,18 +2479,12 @@ export default function MemoryBook() {
     const people = new Set<string>();
     // Mirrors computeMemoryStats above — anon gifters are distinct humans,
     // so we key them by the entry id rather than the generic shared name.
-    const isAnonName = (name: string) => {
-      const n = String(name || "").trim();
-      if (!n) return true;
-      if (/^someone who loves/i.test(n)) return true;
-      if (n.toLowerCase() === "anonymous") return true;
-      return false;
-    };
+    const isAnonName = isAnonGifterName;
     for (const e of entries) {
       // Same contribution rule as deriveMemoryHeaderStats: a gift_message OR the
       // first-cycle parent_note carrying a recurring auto-invest gift. Counts in
       // full (no schedule-collapse) and giftTotal sums every cycle's real
-      // dollars — so this reconciles with the Dashboard ($9,275 for Luke).
+      // dollars — so this reconciles with the Dashboard ($9,275 for Theo).
       const isContribution = e.type === "gift_message" ||
         (e.type === "parent_note" && Boolean((e.gift as any)?.parentContributionId));
       if (isContribution) {
@@ -2415,19 +2561,8 @@ export default function MemoryBook() {
     // sees "7 gifts · 7 people" instead of the misleading "7 gifts · 1
     // person." This matches the people-count rule in deriveMemoryHeaderStats
     // (each anon gift = a distinct human) without cluttering the roster.
-    const isAnonName = (name: string) => {
-      const n = String(name || "").trim();
-      if (!n) return true;
-      if (/^someone who loves/i.test(n)) return true;
-      const lc = n.toLowerCase();
-      if (lc === "anonymous") return true;
-      // Test-data sender names — same list as deriveMemoryHeaderStats so
-      // the roster and the people-count agree on what counts as a real
-      // named contributor vs a dev test artifact.
-      if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
-      return false;
-    };
-    const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean }>();
+    const isAnonName = isAnonGifterName;
+    const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean; avatarUrl: string | null }>();
     for (const e of sortedEntries) {
       // A contribution = a gift_message OR the first-cycle parent_note that
       // carries a recurring auto-invest gift. Including the latter restores the
@@ -2476,6 +2611,7 @@ export default function MemoryBook() {
         // homogeneous, but defending against the case where a gifter
         // happens to share a first name with the parent.
         if (isOwnerEntry) existing.isOwnerRow = true;
+        if (!existing.avatarUrl && (e.gift as any).gifterAvatarUrl) existing.avatarUrl = (e.gift as any).gifterAvatarUrl;
       } else {
         map.set(key, {
           name: isAnon ? "Anonymous" : titleCaseName(senderName),
@@ -2485,6 +2621,10 @@ export default function MemoryBook() {
           anonPeople: isAnon ? 1 : 0,
           isAnon,
           isOwnerRow: isOwnerEntry && !isAnon,
+          // Gifter's profile photo (server-enriched by email) so the roster shows
+          // their real face, not just an initial — parity with the dashboard.
+          // Anon gifts carry no email, so they stay initials.
+          avatarUrl: isAnon ? null : ((e.gift as any).gifterAvatarUrl || null),
         });
       }
     }
@@ -2518,7 +2658,7 @@ export default function MemoryBook() {
   const isOwner = isAuthenticated && !!user && !!fundData && String(fundData.userId) === String(user.id);
   // Post-handoff adult OWNER (not a pre-handoff parent, not a previous-owner parent):
   // the fund was transferred and the current viewer holds the owner role. The Memory
-  // Book is now THEIRS, so it reads "Your Memory Book / Your Story", not "Haley's".
+  // Book is now THEIRS, so it reads "Your Memory Book / Your Story", not "Mia's".
   // Same isOwnerMode signal used across Dashboard/Projection/AppHeader. 2026-05-29.
   const isOwnerMode = (fundData as any)?.accessRole === "owner" && !!(fundData as any)?.transferredAt;
   const fundValue =
@@ -2549,6 +2689,41 @@ export default function MemoryBook() {
     liveValue: entryStats.giftCount,
     minDelta: 1,
   });
+
+  // ── The Inscription Leaf (design-panel decision 2026-06-23). The Memory Book
+  // hero LEADS with one real sentence someone who loves {child} actually wrote —
+  // the irreplaceable thing the dashboard never shows and a bank can't hold (the
+  // switching-cost moat, made visible). Deterministic, NEVER-null escalation
+  // ladder: a PINNED note wins, else the most-recent real note, else null (→ the
+  // hero falls to the people "standing" line, then the true-zero line — so it's
+  // precious at 8 notes and still dignified, never an empty void, at 0). Owner
+  // notes are skipped (never quote the viewer to themselves); anon reads
+  // "Someone who loves {child}". Reuses the existing Pin-to-top (isFeatured)
+  // control as the curation hook — no ranking-algorithm-on-love. ──
+  const heroInscription = useMemo(() => {
+    const ownerCtx = {
+      emailLower: ownerEmailLowerForMemory,
+      profileImageUrl: (user as any)?.profileImageUrl || null,
+      preferredName: (user as any)?.preferredName || null,
+      firstName: (user as any)?.firstName || null,
+    };
+    const read = (entry: any) => {
+      const isGift = entry?.type === "gift_message" || !!entry?.gift;
+      const raw = isGift ? entry?.gift?.message : entry?.content;
+      if (isMemoryBookSuppressedMessage(raw)) return null;
+      const ident = getEntryIdentity(entry, ownerCtx);
+      if (ident.avatarStyle === "owner") return null; // never quote the viewer to themselves
+      const isAnon = ident.avatarStyle === "anonymous";
+      return {
+        text: String(raw).trim(),
+        name: isAnon ? `Someone who loves ${childName || "them"}` : ident.displayName,
+        occasion: isGift ? ((entry?.gift?.eventName as string | undefined) || null) : null,
+      };
+    };
+    const chosen = sortedEntries.find((e: any) => e?.isFeatured && read(e))
+      || sortedEntries.find((e: any) => read(e));
+    return chosen ? read(chosen) : null;
+  }, [sortedEntries, user, ownerEmailLowerForMemory, childName]);
   const canSubmit = content.trim().length > 0 && !validateMemoryMedia(photoUrl, videoUrl);
   // Memory Book tier policy (locked 2026-05-13):
   //   - GIFTER-attached media (photos/videos/voice on gifts) is ALWAYS free.
@@ -2641,8 +2816,59 @@ export default function MemoryBook() {
   }
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-memory-book">
+    // No mobile pb-24: `.mobile-app-shell--with-nav` (App.tsx) already adds the bottom-nav
+    // clearance; a page-level pb-24 doubled it into ~190px of dead space. Fixed 2026-06-23.
+    <div className="kiddo-app-page md:ml-[264px] md:pb-8" data-testid="page-memory-book">
       <AppHeader />
+
+      {/* Sealed voice note — record a voice the child hears at 18. Rides the
+          existing memory-audio upload + kidVisibility='kid_at_18' seal; no new
+          backend. Top-level (not inside a framer transform) so the fixed
+          overlay covers the viewport. */}
+      <AnimatePresence>
+        {sealedVoiceOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setSealedVoiceOpen(false)}
+              className="fixed inset-0 z-[90] bg-black/45 backdrop-blur-[2px]"
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 38, stiffness: 400 }}
+              className="fixed inset-x-0 bottom-0 z-[90] mx-auto max-w-md rounded-t-[24px] p-6 pb-9 shadow-2xl"
+              style={{ background: "hsl(var(--kiddo-cream, 40 33% 96%))" }}
+            >
+              <div className="mx-auto mb-5 h-1.5 w-10 rounded-full" style={{ background: "hsl(var(--kiddo-ink) / 0.15)" }} />
+              <SealedVoiceNote
+                fundId={fundId ?? ""}
+                audience="parent"
+                childName={childName ?? undefined}
+                majorityAge={fundMajorityAge}
+                onComplete={({ audioUrl, transcript }) => {
+                  createMutation.mutate({
+                    type: "note",
+                    content: (transcript || "").trim() || `A voice message for ${childName || "you"}, sealed until their ${fundMajorityOrdinal} birthday.`,
+                    authorName: (authorName || user?.firstName || "").trim() || "A parent",
+                    audioUrl,
+                    audioTranscript: transcript ?? undefined,
+                    kidVisibility: "kid_at_18",
+                    visibility: "family",
+                  });
+                  window.setTimeout(() => setSealedVoiceOpen(false), 1800);
+                }}
+              />
+              <button
+                onClick={() => setSealedVoiceOpen(false)}
+                className="mt-5 w-full text-center text-sm font-medium"
+                style={{ color: "hsl(var(--kiddo-ink) / 0.5)" }}
+              >
+                Close
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <main className="kiddo-canvas px-4 py-5 md:py-6">
         {pendingEntries.length > 0 && (
@@ -2681,7 +2907,7 @@ export default function MemoryBook() {
                     {entry.content && (
                       <p className="mt-0.5 line-clamp-2 text-sm text-foreground">{entry.content}</p>
                     )}
-                    <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wide text-amber-800">
+                    <div className="mt-1 flex flex-wrap gap-1.5 text-3xs uppercase tracking-wide text-amber-800">
                       {entry.photoUrl && <span className="rounded-full bg-amber-100 px-2 py-0.5">Photo</span>}
                       {entry.videoUrl && <span className="rounded-full bg-amber-100 px-2 py-0.5">Video</span>}
                       {entry.audioUrl && <span className="rounded-full bg-amber-100 px-2 py-0.5">Voice</span>}
@@ -2743,14 +2969,18 @@ export default function MemoryBook() {
         )}
 
         <EnlighteningReveal>
+          {/* Full-bleed "moment" on mobile — same structural language as the dashboard
+              hero (edge-to-edge, square, no floating-card chrome); contained rounded card
+              at md+ so a wide column doesn't band green edge-to-edge. The -mx-4 breaks out
+              of the main's px-4. Added 2026-06-23 (was a contained rounded card). */}
           <div
+            className="-mx-4 md:mx-0 rounded-none md:rounded-[28px]"
             style={{
               background: "linear-gradient(140deg, hsl(var(--kiddo-evergreen)) 0%, hsl(var(--kiddo-evergreen-deep)) 100%)",
-              borderRadius: 28,
               padding: "28px 28px 24px",
               position: "relative",
               overflow: "hidden",
-              boxShadow: "0 4px 16px rgba(26,23,16,0.12), 0 16px 48px rgba(26,23,16,0.10)",
+              boxShadow: "0 4px 16px hsl(var(--kiddo-ink) / 0.12), 0 16px 48px hsl(var(--kiddo-ink) / 0.10)",
               marginBottom: 24,
             }}
             data-testid="memory-hero"
@@ -2781,76 +3011,146 @@ export default function MemoryBook() {
                 {isOwnerMode ? "Your" : childName ? `${childName}'s` : "Fund"} Memory Book
               </div>
 
+              {/* THE INSCRIPTION LEAF — the words lead; money demoted to a footnote
+                  (it's the dashboard's anchor, not the keepsake's). See heroInscription
+                  ladder above. The 44px formatMoney number was REMOVED here so this
+                  surface stops being a twin of the dashboard money hero (panel, 2026-06-23). */}
               <div style={{ marginBottom: 22 }} data-testid="memory-hero-number">
-                <p className="font-heading" style={{ fontSize: 44, fontWeight: 700, color: "white", lineHeight: 1, letterSpacing: "-0.01em", marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>
-                  {formatMoney(displayMemoryFundValue)}
-                </p>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.45 }}>
-                  {(() => {
-                    const peopleN = Math.round(displayMemoryPeople);
-                    const giftsN = Math.round(displayMemoryGiftCount);
-                    if (peopleN === 0 && giftsN === 0) return `Built one moment at a time.`;
-                    const peopleLabel = peopleN === 1 ? "1 person" : `${peopleN} people`;
-                    const giftsLabel = giftsN === 1 ? "1 gift" : `${giftsN} gifts`;
-                    // Sprout emoji removed 2026-05-19 — was wallpaper
-                    // weight on a daily-view surface. Earned only at
-                    // genuine celebration moments (milestone crossings,
-                    // closing book page). The eyebrow already names
-                    // {child}; trailing "for {child}" was redundant.
-                    return `Built by ${peopleLabel} · ${giftsLabel}`;
-                  })()}
-                </p>
+                {(() => {
+                  const peopleN = Math.round(displayMemoryPeople);
+                  const giftsN = Math.round(displayMemoryGiftCount);
+                  const peopleLabel = peopleN === 1 ? "1 person" : `${peopleN} people`;
+                  const giftsLabel = giftsN === 1 ? "1 gift" : `${giftsN} gifts`;
+                  // The ONE reserved gold mark — a gilt edge separating the voice from
+                  // its source (brass-leaf, used exactly once per render).
+                  const goldRule = (mt: number) => (
+                    <motion.div
+                      style={{ height: 1, width: 32, background: "hsl(var(--kiddo-gold))", marginTop: mt, marginBottom: 10, transformOrigin: "left" }}
+                      initial={prefersReducedMotion ? { scaleX: 1 } : { scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.5, delay: prefersReducedMotion ? 0 : 0.42, ease: [0.16, 1, 0.3, 1] }}
+                      aria-hidden
+                    />
+                  );
+
+                  // TRUE ZERO — no people, no gifts.
+                  if (peopleN === 0 && giftsN === 0) {
+                    return <p style={{ fontSize: 13, color: "rgba(255,255,255,0.62)", lineHeight: 1.45 }}>Built one moment at a time.</p>;
+                  }
+
+                  // LEAD WITH THE WORDS — a real sentence someone who loves {child} wrote.
+                  if (heroInscription) {
+                    return (
+                      <>
+                        <motion.p className="font-heading" style={{ fontSize: 26, fontWeight: 500, lineHeight: 1.4, letterSpacing: "-0.005em", color: "rgba(255,255,255,0.92)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}
+                          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: prefersReducedMotion ? 0.3 : 0.6, ease: "easeOut" }}
+                        >
+                          {heroInscription.text}
+                        </motion.p>
+                        {goldRule(16)}
+                        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.6)", letterSpacing: "0.01em" }}>
+                          {heroInscription.name}{heroInscription.occasion ? ` · ${heroInscription.occasion}` : ""}
+                        </p>
+                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 14, fontVariantNumeric: "tabular-nums" as const }}>
+                          Built by {peopleLabel} · {giftsLabel}
+                        </p>
+                      </>
+                    );
+                  }
+
+                  // COLD-START — gifts exist but no quotable note yet → the people
+                  // "standing" line leads, money/gifts a quiet footnote beneath.
+                  return (
+                    <>
+                      <motion.p className="font-heading" style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.3, letterSpacing: "-0.01em", color: "rgba(255,255,255,0.92)", fontVariantNumeric: "tabular-nums" as const }}
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: prefersReducedMotion ? 0.3 : 0.6, ease: "easeOut" }}
+                      >
+                        {peopleN === 1 ? "1 person is" : `${peopleN} people are`} building {childName ? `${childName}'s` : "this"} book.
+                      </motion.p>
+                      {goldRule(14)}
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" as const }}>
+                        {giftsLabel}
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
 
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                <button
-                  type="button"
-                  onClick={() => { haptic("selection"); setShareOpen(true); }}
-                  className="kiddo-press"
-                  style={{
-                    padding: "9px 16px", fontSize: 13, fontWeight: 600,
-                    background: "rgba(255,255,255,0.10)", color: "white",
-                    border: "1px solid rgba(255,255,255,0.18)", borderRadius: 12,
-                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
-                  }}
-                  data-testid="button-share-memory-update"
-                  title={pastShares.length > 0 ? `${pastShares.length} update${pastShares.length === 1 ? "" : "s"} sent this year. Click to view.` : undefined}
-                >
-                  <Send size={14} />
-                  Share update
-                  {pastShares.length > 0 && (
-                    <span style={{
-                      fontSize: 10.5, fontWeight: 700,
-                      background: "rgba(255,255,255,0.18)",
-                      color: "white",
-                      padding: "1.5px 7px",
-                      borderRadius: 999,
-                      lineHeight: 1.4,
-                    }}>
-                      {/* "4 sent" was ambiguous — sent how, to whom?
-                          Switching to "4 shared" makes the action explicit
-                          and matches the button verb ("Share update"). */}
-                      {pastShares.length} shared
-                    </span>
-                  )}
-                </button>
+              {/* Actions — moderators only. For previous_owner / viewer
+                  these are 403 traps (the /api/funds/:fundId mutator gate
+                  blocks every write for those roles), so the buttons must
+                  not render: a read-only book shows the story, not dead
+                  controls. */}
+              {canModerateMemory && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "flex-start" }}>
+                {/* ONE primary. The three buttons used to be the same size — a 3-way
+                    toolbar on the most emotional surface in the app. Adding a memory IS
+                    the Memory Book; it now clearly dominates, and Share/Voice drop to
+                    quiet secondary links beneath it. (2026-07 hierarchy pass.) */}
                 <button
                   type="button"
                   onClick={() => { haptic("selection"); openAddModal(); }}
                   className="kiddo-press"
                   style={{
-                    padding: "9px 16px", fontSize: 13, fontWeight: 700,
+                    padding: "13px 26px", fontSize: 15, fontWeight: 700,
                     background: "hsl(var(--kiddo-gold))", color: "white",
-                    border: "none", borderRadius: 12,
-                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+                    border: "none", borderRadius: 14,
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9,
+                    boxShadow: "0 10px 24px -8px hsl(var(--kiddo-gold) / 0.6)",
                   }}
                   data-testid="button-add-entry"
                 >
-                  <Plus size={14} />
+                  <Plus size={18} />
                   Add memory
                 </button>
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap" as const, alignItems: "center", paddingLeft: 2 }}>
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setShareOpen(true); }}
+                    className="kiddo-press"
+                    style={{
+                      padding: 0, fontSize: 12.5, fontWeight: 600,
+                      background: "none", color: "rgba(255,255,255,0.72)",
+                      border: "none", cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                    }}
+                    data-testid="button-share-memory-update"
+                    title={pastShares.length > 0 ? `${pastShares.length} update${pastShares.length === 1 ? "" : "s"} sent this year. Click to view.` : undefined}
+                  >
+                    <Send size={13} />
+                    Share update
+                    {pastShares.length > 0 && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700,
+                        background: "rgba(255,255,255,0.18)", color: "white",
+                        padding: "1px 6px", borderRadius: 999, lineHeight: 1.4,
+                      }}>
+                        {pastShares.length} shared
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setSealedVoiceOpen(true); }}
+                    className="kiddo-press"
+                    style={{
+                      padding: 0, fontSize: 12.5, fontWeight: 600,
+                      background: "none", color: "rgba(255,255,255,0.72)",
+                      border: "none", cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                    }}
+                    data-testid="button-sealed-voice"
+                  >
+                    <Mic size={13} />
+                    Voice for 18th
+                  </button>
+                </div>
               </div>
+              )}
             </div>
           </div>
         </EnlighteningReveal>
@@ -2967,14 +3267,14 @@ export default function MemoryBook() {
                 action={
                   <>
                     <Button
-                      className="bg-[hsl(var(--kiddo-evergreen))] rounded-full text-white hover:bg-[hsl(var(--kiddo-evergreen)/0.92)]"
+                      className="kiddo-gold-button rounded-full"
                       onClick={() => {
                         haptic("selection");
                         setLocation("/dashboard");
                       }}
                       data-testid="button-add-first-entry"
                     >
-                      Share
+                      Share the gift link
                     </Button>
                     <Button
                       variant="outline"
@@ -3103,7 +3403,7 @@ export default function MemoryBook() {
                         next.searchParams.delete("event");
                         window.history.replaceState({}, "", `${next.pathname}${next.search}`);
                       }}
-                      className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      className="text-2xs font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                     >
                       <X size={11} />
                       Show all
@@ -3136,9 +3436,9 @@ export default function MemoryBook() {
                         ? new Date(evt.eventDate).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })
                         : null;
                       const typeEmoji: Record<string, string> = {
-                        birthday: "🎂", graduation: "🎓", holiday: "🎄", baby_shower: "🍼", just_because: "💚", custom: "✨"
+                        birthday: "🎂", graduation: "🎓", holiday: "🎉", baby_shower: "🍼", just_because: "💚", custom: "🎁"
                       };
-                      const emoji = typeEmoji[evt.eventType || ""] ?? "✨";
+                      const emoji = typeEmoji[evt.eventType || ""] ?? "🎉";
                       return (
                         <button
                           key={evt.id}
@@ -3167,8 +3467,8 @@ export default function MemoryBook() {
                             textAlign: "left",
                             transition: "transform 0.12s, box-shadow 0.12s",
                             boxShadow: isActive
-                              ? "0 0 0 3px hsl(var(--kiddo-evergreen)/0.18), 0 4px 16px rgba(26,23,16,0.10)"
-                              : "0 1px 4px rgba(26,23,16,0.06)",
+                              ? "0 0 0 3px hsl(var(--kiddo-evergreen)/0.18), 0 4px 16px hsl(var(--kiddo-ink) / 0.10)"
+                              : "0 1px 4px hsl(var(--kiddo-ink) / 0.06)",
                           }}
                           onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
                           onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -3178,14 +3478,23 @@ export default function MemoryBook() {
                               at upload time (event.imageFocalX / imageFocalY).
                               Defaults to center when focal point isn't set
                               (legacy events from before the focal-point ship). */}
-                          <div style={{ height: 90, position: "relative", overflow: "hidden" }}>
+                          {/* Top corners rounded to the button's INNER radius
+                              (outer 18 minus the 1.5px border = 16.5). Without
+                              this the cover is a rectangle clipped only by the
+                              button's overflow:hidden, and the button's white
+                              background bleeds through a 1px hairline along the
+                              top rounded corners. The seam is invisible on the
+                              plain-emoji cards but the shadowed avatar's paint
+                              path surfaces it on "Gift anytime" — rounding the
+                              cover itself kills it on every card identically. */}
+                          <div style={{ height: 90, position: "relative", overflow: "hidden", borderTopLeftRadius: 16.5, borderTopRightRadius: 16.5 }}>
                             {evt.imageUrl ? (() => {
                               const fx = (evt as any).imageFocalX != null ? Number((evt as any).imageFocalX) : 0.5;
                               const fy = (evt as any).imageFocalY != null ? Number((evt as any).imageFocalY) : 0.5;
                               const fxPct = Number.isFinite(fx) ? Math.max(0, Math.min(100, fx * 100)) : 50;
                               const fyPct = Number.isFinite(fy) ? Math.max(0, Math.min(100, fy * 100)) : 50;
                               return (
-                                <img
+                                <FadeImage
                                   src={evt.imageUrl}
                                   // alt="" (decorative). The event name is already
                                   // rendered in the card body directly below this
@@ -3229,7 +3538,7 @@ export default function MemoryBook() {
                                     the ✨ until they pick an icon. */}
                                 {evt.isPermanent ? (
                                   fundData?.childPhotoUrl ? (
-                                    <img
+                                    <FadeImage
                                       src={fundData.childPhotoUrl}
                                       alt=""
                                       style={{
@@ -3237,7 +3546,7 @@ export default function MemoryBook() {
                                         borderRadius: "50%",
                                         objectFit: "cover",
                                         border: "2px solid white",
-                                        boxShadow: "0 2px 8px rgba(26,23,16,0.18)",
+                                        boxShadow: "0 2px 8px hsl(var(--kiddo-ink) / 0.18)",
                                       }}
                                     />
                                   ) : (
@@ -3251,7 +3560,7 @@ export default function MemoryBook() {
                                       boxShadow: "0 2px 8px rgba(184,121,26,0.28)",
                                       letterSpacing: "-0.02em",
                                     }}>
-                                      {(childName || "").charAt(0).toUpperCase() || "✨"}
+                                      {(childName || "").charAt(0).toUpperCase() || "?"}
                                     </div>
                                   )
                                 ) : (
@@ -3259,11 +3568,11 @@ export default function MemoryBook() {
                                 )}
                               </div>
                             )}
-                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(26,23,16,0.5) 0%, transparent 55%)" }} />
+                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, hsl(var(--kiddo-ink) / 0.5) 0%, transparent 55%)" }} />
                             {evt.status === "archived" && (
                               <div style={{
                                 position: "absolute", top: 7, right: 7,
-                                background: "rgba(26,23,16,0.55)", borderRadius: 6,
+                                background: "hsl(var(--kiddo-ink) / 0.55)", borderRadius: 6,
                                 padding: "2px 6px", fontSize: 9, fontWeight: 700, color: "white", letterSpacing: "0.05em",
                               }}>
                                 ARCHIVED
@@ -3275,11 +3584,23 @@ export default function MemoryBook() {
                             <p style={{ fontSize: 12.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {evt.name}
                             </p>
-                            {eventDateLabel && (
-                              <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.45)", marginBottom: 5 }}>{eventDateLabel}</p>
-                            )}
+                            {/* The date line ALWAYS renders to reserve its
+                                height — the permanent "Gift anytime" card has no
+                                date, and without this placeholder its body is
+                                shorter than a dated occasion (e.g. "Birthday ·
+                                Feb 2027"). In the flex strip (align-items
+                                stretch) that shorter card gets stretched to the
+                                tallest sibling, leaving an uneven white band the
+                                dated cards don't have. Reserving the slot makes
+                                every card body identical height. */}
+                            <p
+                              aria-hidden={eventDateLabel ? undefined : true}
+                              style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.45)", marginBottom: 5, visibility: eventDateLabel ? undefined : "hidden" }}
+                            >
+                              {eventDateLabel || " "}
+                            </p>
                             {evt.description && stripHtml(evt.description) && (
-                              <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.55)", lineHeight: 1.4, marginBottom: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                              <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.55)", lineHeight: 1.4, marginBottom: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                                 {stripHtml(evt.description)}
                               </p>
                             )}
@@ -3303,7 +3624,7 @@ export default function MemoryBook() {
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-[hsl(var(--kiddo-evergreen))] truncate">{evt.name}</p>
                             {evt.description && stripHtml(evt.description) && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">{stripHtml(evt.description)}</p>
+                              <p className="text-2xs text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">{stripHtml(evt.description)}</p>
                             )}
                           </div>
                           <button
@@ -3314,7 +3635,7 @@ export default function MemoryBook() {
                               next.searchParams.delete("event");
                               window.history.replaceState({}, "", `${next.pathname}${next.search}`);
                             }}
-                            className="shrink-0 text-[11px] font-semibold text-muted-foreground hover:text-foreground whitespace-nowrap"
+                            className="shrink-0 text-2xs font-semibold text-muted-foreground hover:text-foreground whitespace-nowrap"
                           >
                             Clear filter
                           </button>
@@ -3328,7 +3649,7 @@ export default function MemoryBook() {
 
             {shouldPromptFirstParentEntry && (
               <EnlighteningReveal delay={0.05}>
-                <div className="mb-5 overflow-hidden rounded-3xl border border-[hsl(var(--kiddo-gold)/0.32)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.12),#fff_54%,hsl(var(--kiddo-evergreen)/0.06))] p-5 shadow-premium-sm" data-testid="memory-first-parent-prompt">
+                <div className="mb-5 overflow-hidden rounded-3xl border border-[hsl(var(--kiddo-gold)/0.32)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.12),hsl(var(--card))_54%,hsl(var(--kiddo-evergreen)/0.06))] p-5 shadow-premium-sm" data-testid="memory-first-parent-prompt">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="max-w-xl">
                       <p className="kiddo-section-label">First page</p>
@@ -3372,14 +3693,14 @@ export default function MemoryBook() {
               <section className="kiddo-card mb-5 p-5" data-testid="memory-milestone-capture">
                 <div className="flex items-baseline justify-between gap-3 mb-1">
                   <p className="kiddo-section-label">Capture a moment</p>
-                  <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground/60">
+                  <span className="text-3xs uppercase tracking-wide text-muted-foreground/60">
                     {isOwnerMode ? "Your story" : <>Saved for {childName || "them"} at {fundMajorityAge}</>}
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground mb-3">
                   {isOwnerMode
-                    ? "Tap one. Add a date, a note, a photo to your story."
-                    : <>Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.</>}
+                    ? "Tap one. It's part of your story."
+                    : <>Tap one. {childName || "They"}'ll read it later.</>}
                 </p>
                 {/* Single-row horizontal scroll (was flex-wrap) —
                     locked 2026-05-19 per the chip-row layout audit.
@@ -3479,8 +3800,12 @@ export default function MemoryBook() {
                    fund data settles. */
                 <div className="border-b border-border/70 px-4 py-4" data-testid="memory-gifter-roster">
                   <p className="kiddo-section-label mb-3">{isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "Who gave"}</p>
-                  <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                    {gifterRoster.map((gifter) => {
+                  {/* pt-1 matches pb-1: overflow-x-auto forces overflow-y to clip,
+                      so without top room the avatars' 2px evergreen ring (an outset
+                      box-shadow) gets cut at the top — most visible on the owner's
+                      photo tile. Symmetric padding gives the ring room both sides. */}
+                  <div className="flex gap-4 overflow-x-auto pt-1 pb-1" style={{ scrollbarWidth: "none" }}>
+                    {gifterRoster.map((gifter, faceIdx) => {
                       const isActive = gifterFilter?.toLowerCase() === gifter.name.toLowerCase();
                       // Owner treatment — same as every other surface
                       // (Dashboard sidebar, Memory Book list rows, book
@@ -3491,10 +3816,21 @@ export default function MemoryBook() {
                       // consistency the moment a parent contributed.
                       const ownerProfileImageUrl = gifter.isOwnerRow ? (user as any)?.profileImageUrl || null : null;
                       const ownerPreferredName = gifter.isOwnerRow ? (user as any)?.preferredName || null : null;
+                      // The face to show: the owner's own photo, else the gifter's
+                      // server-enriched profile photo (parity with the dashboard
+                      // roster). Falls back to the initial tile below.
+                      const rosterPhoto = ownerProfileImageUrl || gifter.avatarUrl;
+                      // Per-person initials color, matching the dashboard roster
+                      // exactly (same shared palette + hash). Anonymous has no
+                      // identity to color, so it stays the neutral evergreen
+                      // tint. The owner is colored like anyone else and set apart
+                      // by the evergreen ring below (parity with the dashboard,
+                      // which rings the owner rather than recoloring them).
+                      const personColor = gifter.isAnon ? null : gifterColor(gifter.name);
                       // Shared rule (same as Dashboard): skips weak leaders so
                       // "Aunt Sarah" -> "Sarah", "The Johnsons" -> "Johnsons",
-                      // "Phil's office" -> "office" — not the broken "Aunt / The /
-                      // Phil's" the old name.split(" ")[0] produced here.
+                      // "Marcus's office" -> "office" — not the broken "Aunt / The /
+                      // Marcus's" the old name.split(" ")[0] produced here.
                       const firstName = gifterShortName(gifter.name);
                       const labelName = gifter.isAnon
                         ? (gifter.anonPeople > 1 ? `${gifter.anonPeople} anon` : "Anon")
@@ -3502,45 +3838,76 @@ export default function MemoryBook() {
                           ? `${firstName} (${ownerPreferredName})`
                           : firstName;
                       return (
-                        <button
+                        <motion.button
                           key={gifter.name}
                           type="button"
+                          // Roll-in cascade — the people who love this kid arrive,
+                          // staggered, as the opening beat of their story (the
+                          // timeline animates below). Parity with the dashboard
+                          // roster; the real faces (gifter photos) make it land
+                          // harder than initials would. Honors reduced-motion the
+                          // page's way: opacity-only, no transform. Plays once on
+                          // mount (stable keys, so filtering never replays it).
+                          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.85 }}
+                          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                          transition={{ duration: prefersReducedMotion ? 0.3 : 0.44, delay: Math.min(faceIdx, 12) * (prefersReducedMotion ? 0.02 : 0.06), ease: [0.16, 1, 0.3, 1] }}
+                          // Hover-lift + tap-press so the roster faces feel clickable
+                          // like the rest of the app (they filter the entries on tap).
+                          whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                          whileTap={{ scale: 0.96, transition: { duration: 0.1 } }}
                           onClick={() => setGifterFilter(isActive ? null : gifter.name)}
+                          // Native title = the long-name escape hatch. The label
+                          // truncates at 64px (deliberate: a roster of tiles must
+                          // keep one quiet line each — no wrapping, and no marquee,
+                          // which would put ambient motion on up to a dozen tiles
+                          // at once against the calm register). Desktop hover gets
+                          // the FULL name + totals here; touch gets it via the
+                          // tap-through (the filtered entries render full names).
+                          // Mirrors the Dashboard roster's tooltip discipline.
+                          title={gifter.isAnon ? undefined : `${gifter.name} · ${displayAmount(gifter.totalAmount)} · ${gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}`}
                           className="flex flex-col items-center gap-1.5 min-w-[64px] bg-transparent border-none p-0 cursor-pointer"
                         >
-                          {ownerProfileImageUrl ? (
+                          {rosterPhoto ? (
                             <div
                               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden transition-all"
                               style={{
-                                boxShadow: isActive
-                                  ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))"
-                                  : "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55)",
+                                boxShadow: ownerProfileImageUrl
+                                  ? (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55)")
+                                  : (isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "0 3px 10px hsl(var(--kiddo-ink) / 0.13)"),
                               }}
                             >
-                              <img src={ownerProfileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                              <FadeImage src={rosterPhoto} alt="" loading="lazy" className="h-full w-full object-cover" />
                             </div>
                           ) : (
                             <div
                               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold select-none transition-all"
                               style={{
-                                background: isActive ? "hsl(var(--kiddo-evergreen))" : "hsl(var(--kiddo-evergreen)/0.10)",
-                                color: isActive ? "white" : "hsl(var(--kiddo-evergreen))",
-                                boxShadow: isActive ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))" : "none",
+                                background: isActive
+                                  ? "hsl(var(--kiddo-evergreen))"
+                                  : personColor
+                                    ? personColor.bg
+                                    : "hsl(var(--kiddo-evergreen)/0.10)",
+                                color: isActive || personColor ? "white" : "hsl(var(--kiddo-evergreen))",
+                                boxShadow: isActive
+                                  ? "0 0 0 2.5px hsl(var(--kiddo-evergreen))"
+                                  : gifter.isOwnerRow
+                                    ? "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55), 0 3px 10px hsl(var(--kiddo-ink) / 0.13)"
+                                    : "0 3px 10px hsl(var(--kiddo-ink) / 0.13)",
                               }}
                             >
                               {gifter.name.slice(0, 1).toUpperCase()}
                             </div>
                           )}
-                          <p className="text-[11px] font-semibold text-foreground text-center leading-tight w-[64px] truncate px-0.5">
+                          <p className="text-2xs font-semibold text-foreground text-center leading-tight w-[64px] truncate px-0.5">
                             {labelName}
                           </p>
-                          <p className="text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))] text-center">{displayAmount(gifter.totalAmount)}</p>
-                          <p className="text-[9px] text-muted-foreground text-center">
+                          <p className="text-3xs font-bold text-[hsl(var(--kiddo-evergreen))] text-center">{displayAmount(gifter.totalAmount)}</p>
+                          <p className="text-4xs text-muted-foreground text-center">
                             {gifter.isAnon && gifter.anonPeople > 1
                               ? `${gifter.giftCount} gifts`
                               : gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}
                           </p>
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -3579,7 +3946,14 @@ export default function MemoryBook() {
                   const isPinned = featuredOnly && !isAwaiting;
                   const isAll = !isAwaiting && !isPinned && activeFilter === "all" && thankYouFilter === "all";
                   return (
-                    <div className="flex flex-wrap gap-2" data-testid="memory-primary-filter-bar">
+                    <div className="flex items-center gap-2" data-testid="memory-primary-filter-bar">
+                      {/* Primary lens chips scroll horizontally on a narrow
+                          phone; the More/Hide-filters toggle is a pinned
+                          sibling (shrink-0, right side) so it never scrolls
+                          out of reach. Previously the toggle rode inside the
+                          scroll row and only right-aligned at sm+, so on
+                          mobile it could sit off-screen past the chips. */}
+                      <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0 sm:flex-wrap sm:overflow-visible" style={{ scrollbarWidth: "none" }}>
                       <button
                         onClick={() => {
                           setActiveFilter("all");
@@ -3615,6 +3989,12 @@ export default function MemoryBook() {
                       >
                         <Pin size={12} /> Pinned
                       </button>
+                      {/* Awaiting = the thank-you WORKFLOW, so moderators
+                          only. A previous_owner/viewer can't send thanks;
+                          for them this chip could only ever filter to an
+                          un-actionable (and, with no drafts backfilled,
+                          empty) list. */}
+                      {canModerateMemory && (
                       <button
                         onClick={() => {
                           if (isAwaiting) {
@@ -3633,12 +4013,18 @@ export default function MemoryBook() {
                         }`}
                         data-testid="button-memory-primary-awaiting"
                       >
-                        Awaiting thanks
+                        {/* "Awaiting" (not "Awaiting thanks"): the longer label got
+                            clipped by the pinned "More filters" button on a phone, reading
+                            as a half-cut word. Short form matches the thanks chips in More
+                            filters and lets all three lenses sit without scrolling. */}
+                        Awaiting
                       </button>
+                      )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => setMoreFiltersOpen((v) => !v)}
-                        className="ml-auto rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                        className="shrink-0 rounded-full px-3 py-1.5 text-2xs font-semibold text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
                         data-testid="button-memory-more-filters"
                         aria-expanded={moreFiltersOpen}
                       >
@@ -3655,19 +4041,25 @@ export default function MemoryBook() {
                     the parent opts in to power-user controls. */}
                 {moreFiltersOpen && (
                   <div className="space-y-3 rounded-2xl border border-border/60 bg-background/40 px-3 py-3" data-testid="memory-more-filters">
-                    <div className="flex flex-wrap gap-2" data-testid="memory-filter-bar">
-                      <span className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground self-center mr-1">Type:</span>
+                    {/* Pinned label + horizontal-scroll chips: each filter
+                        group stays a single tidy line on mobile (label fixed
+                        left, chips scroll) instead of ragged-wrapping to two
+                        rows. Nothing is permanently hidden — the track
+                        scrolls. */}
+                    <div className="flex items-center gap-2" data-testid="memory-filter-bar">
+                      <span className="shrink-0 text-3xs font-bold uppercase tracking-wide text-muted-foreground mr-1">Type:</span>
+                      <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
                       {[
                         { key: "all", label: "All" },
                         { key: "gift_message", label: "Gifts" },
                         { key: "milestone", label: "Milestones" },
-                        { key: "photo", label: "Photos" },
+                        { key: "photo", label: "Photos & video" },
                         { key: "note", label: "Notes" },
                       ].map((opt) => (
                         <button
                           key={opt.key}
                           onClick={() => setActiveFilter(opt.key as any)}
-                          className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                          className={`kiddo-press rounded-full px-3 py-1 text-2xs font-semibold transition-colors ${
                             activeFilter === opt.key
                               ? "bg-[hsl(var(--kiddo-evergreen))] text-white"
                               : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3677,10 +4069,12 @@ export default function MemoryBook() {
                           {opt.label}
                         </button>
                       ))}
+                      </div>
                     </div>
-                    {(activeFilter === "all" || activeFilter === "gift_message") && (
-                      <div className="flex flex-wrap gap-2" data-testid="memory-thankyou-filter-bar">
-                        <span className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground self-center mr-1">Thanks:</span>
+                    {canModerateMemory && (activeFilter === "all" || activeFilter === "gift_message") && (
+                      <div className="flex items-center gap-2" data-testid="memory-thankyou-filter-bar">
+                        <span className="shrink-0 text-3xs font-bold uppercase tracking-wide text-muted-foreground mr-1">Thanks:</span>
+                        <div className="flex gap-2 overflow-x-auto [&>*]:shrink-0 flex-1 min-w-0" style={{ scrollbarWidth: "none" }}>
                         {[
                           { key: "all", label: "All" },
                           { key: "awaiting", label: "Awaiting" },
@@ -3690,7 +4084,7 @@ export default function MemoryBook() {
                           <button
                             key={opt.key}
                             onClick={() => setThankYouFilter(opt.key as any)}
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                            className={`kiddo-press rounded-full px-3 py-1 text-2xs font-semibold transition-colors ${
                               thankYouFilter === opt.key
                                 ? "bg-[hsl(var(--kiddo-gold))] text-[hsl(var(--kiddo-ink))]"
                                 : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3700,49 +4094,87 @@ export default function MemoryBook() {
                             {opt.label}
                           </button>
                         ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Year filter — relocated here from the view row (it IS a filter,
+                        and it was the widest control cramming that row on a phone). Shown
+                        only when the story spans two or more calendar years. */}
+                    {yearOptions.length > 1 && (
+                      <div className="flex items-center gap-2" data-testid="memory-year-filter-bar">
+                        <span className="shrink-0 text-3xs font-bold uppercase tracking-wide text-muted-foreground mr-1">Year:</span>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(e.target.value)}
+                          className="h-9 flex-1 min-w-0 rounded-xl border border-border bg-background px-3 text-sm text-foreground"
+                          data-testid="select-memory-year"
+                        >
+                          <option value="all">All years</option>
+                          {yearOptions.map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Search on its own row (full width); year picker +
-                    Story|Timeline + Read share a row below. Was a 4-column
-                    grid that collapsed to 4 stacked rows on mobile (search,
-                    year, segmented, read) — too much vertical chrome before
-                    the entries. View-shaping affordances now group naturally
-                    on a single row regardless of breakpoint, with flex-wrap
-                    handling extreme-narrow widths gracefully. */}
+                {/* Search field on its own row when open; the view row below holds
+                    Search-toggle + Story|Timeline + Open-as-book. The year picker used
+                    to live here too and crammed the row on a phone — it now sits with the
+                    other filters under "More filters", leaving three tidy view affordances
+                    that fit one line at every width. */}
                 <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setVisibleCount(10);
-                    }}
-                    placeholder="Search names, notes, events..."
-                    className="h-11 w-full rounded-2xl border border-border bg-background px-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    data-testid="input-memory-search"
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Year picker hides when entries only span one year —
-                        a brand-new fund doesn't need a year selector that
-                        offers "All years" + "2026" as the only options. The
-                        selector reappears automatically the moment the
-                        Memory Book has entries from a second calendar year. */}
-                    {yearOptions.length > 1 && (
-                      <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(e.target.value)}
-                        className="h-11 rounded-2xl border border-border bg-background px-3 text-sm text-foreground"
-                        data-testid="select-memory-year"
+                  {(searchOpen || searchQuery) && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setVisibleCount(10);
+                      }}
+                      placeholder="Search names, notes, events..."
+                      autoFocus
+                      className="h-11 w-full rounded-2xl border border-border bg-background pl-4 pr-11 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      data-testid="input-memory-search"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(""); setSearchOpen(false); }}
+                      aria-label="Close search"
+                      className="kiddo-press absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      data-testid="button-memory-search-close"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  )}
+                  {/* Two intact clusters (narrow-left / view-right) with
+                      justify-between so on a phone this reads as one deliberate
+                      toolbar and, when it must wrap, breaks between the clusters
+                      rather than orphaning the book link on its own line. */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                    {/* Search toggle — expands the field above (collapsed by default so
+                        the entries lead). Hidden while the field is already open. */}
+                    {!(searchOpen || searchQuery) && (
+                      <button
+                        type="button"
+                        onClick={() => { haptic("selection"); setSearchOpen(true); }}
+                        aria-label="Search"
+                        title="Search names, notes, events"
+                        className="kiddo-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-foreground"
+                        data-testid="button-memory-search-toggle"
                       >
-                        <option value="all">All years</option>
-                        {yearOptions.map((year) => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
+                        <Search className="h-4 w-4" />
+                      </button>
                     )}
+                    {/* Year picker moved into "More filters" (it's a filter, and it was
+                        the widest control cramming this view row on a phone). It reappears
+                        there automatically once the Memory Book spans a second year. */}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                     {/* Story / Timeline segmented control — small polish
                         2026-05-25: added transition-colors so the bg + text
                         color swap on toggle reads as a soft transition not
@@ -3751,13 +4183,13 @@ export default function MemoryBook() {
                     <div className="flex h-11 rounded-2xl border border-border bg-background p-1">
                       <button
                         onClick={() => setViewMode("story")}
-                        className={`rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "story" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`kiddo-press rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "story" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Story
                       </button>
                       <button
                         onClick={() => setViewMode("timeline")}
-                        className={`rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "timeline" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`kiddo-press rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "timeline" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Timeline
                       </button>
@@ -3771,17 +4203,20 @@ export default function MemoryBook() {
                         every visitor wonder "what's this?" on cold
                         load. Now a small muted text link — still
                         discoverable, no longer demanding attention.
-                        Power users who want the ceremony surface find
-                        it; everyone else reads the timeline without
-                        the side-eye. */}
+                        On a phone the label collapses to just the icon
+                        (aria-labelled) so it stops eating toolbar width;
+                        the "Open as book" words return at sm+. */}
                     <button
                       onClick={() => { haptic("medium"); setBookPageIndex(0); setBookSlideDirection(0); setBookOpen(true); }}
-                      className="h-11 inline-flex items-center gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Open as book"
+                      title="Open as book"
+                      className="kiddo-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-muted-foreground transition-colors hover:text-foreground sm:w-auto sm:gap-1.5 sm:border-0 sm:bg-transparent sm:px-2 sm:text-xs sm:font-medium"
                       data-testid="button-open-book-view"
                     >
-                      <BookOpen size={12} />
-                      Open as book
+                      <BookOpen size={16} className="sm:h-3 sm:w-3" />
+                      <span className="hidden sm:inline">Open as book</span>
                     </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3813,6 +4248,10 @@ export default function MemoryBook() {
                 template that enumerates the count + total. Sends ONE
                 consolidated email via POST /thank-yous/bulk-send. */}
             {(() => {
+              // Sending is moderator-only; previous_owner now loads the
+              // thank-you rows (read-only story), so without this guard the
+              // unsent rows would surface a bulk-send card that can only 403.
+              if (!canModerateMemory) return null;
               if (!gifterFilter || gifterFilter.toLowerCase() === "anonymous") return null;
               // Find every thank-you row for this gifter that's unsent
               // AND has a reachable email. Anonymous + contactless are
@@ -3845,7 +4284,7 @@ export default function MemoryBook() {
                           Thank {senderFirst} for all {matchingRows.length} gifts at once
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across {matchingRows.length} gifts. One email instead of {matchingRows.length}.
+                          {formatMoneyFriendly(totalAmount)} across {matchingRows.length} gifts. One email instead of {matchingRows.length}.
                         </p>
                       </div>
                       <button
@@ -3867,7 +4306,7 @@ export default function MemoryBook() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-foreground">
-                            Thanking {senderFirst} for {matchingRows.length} gifts (${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                            Thanking {senderFirst} for {matchingRows.length} gifts ({formatMoneyFriendly(totalAmount)})
                           </p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             One consolidated email. Marks all {matchingRows.length} as thanked at once.
@@ -3890,7 +4329,7 @@ export default function MemoryBook() {
                               setBulkComposerTone(tone);
                               setBulkComposerMessage(buildBulkThankYouMessage(tone, gifterFilter, pendingGifts));
                             }}
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-colors ${bulkComposerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
+                            className={`rounded-full px-3 py-1 text-2xs font-semibold capitalize transition-colors ${bulkComposerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
                             data-testid={`button-bulk-thanks-tone-${tone}`}
                           >
                             {tone}
@@ -3930,11 +4369,11 @@ export default function MemoryBook() {
               // case is the most important: that's a CELEBRATION (every
               // reachable gifter thanked), not a "nothing here" failure
               // signal. Generic copy lost that distinction.
-              type EmptyShape = { icon: string; title: string; subtitle: string; tone: "celebratory" | "neutral" };
+              type EmptyShape = { icon: LucideIcon; title: string; subtitle: string; tone: "celebratory" | "neutral" };
               const empty: EmptyShape = (() => {
                 if (searchQuery.trim()) {
                   return {
-                    icon: "🔍",
+                    icon: Search,
                     title: `No matches for "${searchQuery.trim()}"`,
                     subtitle: "Try a shorter search, or clear it to see the full Memory Book.",
                     tone: "neutral",
@@ -3943,7 +4382,7 @@ export default function MemoryBook() {
                 if (gifterFilter) {
                   const name = gifterFilter.toLowerCase() === "anonymous" ? "anonymous gifters" : gifterShortName(gifterFilter);
                   return {
-                    icon: "🌱",
+                    icon: Users,
                     title: `Nothing from ${name} matches.`,
                     subtitle: "Try a different filter, or clear it to see every story.",
                     tone: "neutral",
@@ -3951,7 +4390,7 @@ export default function MemoryBook() {
                 }
                 if (thankYouFilter === "awaiting") {
                   return {
-                    icon: "🌱",
+                    icon: Check,
                     title: childName ? `Caught up on thanks for ${childName}.` : "Caught up on thanks.",
                     subtitle: "Every reachable gifter has been thanked. (Anonymous gifters can't be reached, so they don't need to count.)",
                     tone: "celebratory",
@@ -3959,7 +4398,7 @@ export default function MemoryBook() {
                 }
                 if (thankYouFilter === "thanked") {
                   return {
-                    icon: "💌",
+                    icon: Send,
                     title: "No thanks sent yet.",
                     subtitle: "When you send your first thank-you, it shows up here.",
                     tone: "neutral",
@@ -3967,7 +4406,7 @@ export default function MemoryBook() {
                 }
                 if (thankYouFilter === "drafted") {
                   return {
-                    icon: "✏️",
+                    icon: Pencil,
                     title: "No drafts in progress.",
                     subtitle: "Thank-you drafts you save and come back to live here.",
                     tone: "neutral",
@@ -3975,15 +4414,15 @@ export default function MemoryBook() {
                 }
                 if (activeFilter === "photo") {
                   return {
-                    icon: "📷",
-                    title: isOwnerMode ? "No photos in your book yet." : childName ? `No photos in ${childName}'s book yet.` : "No photos yet.",
-                    subtitle: "Add a photo memory or attach one when you invest.",
+                    icon: Camera,
+                    title: isOwnerMode ? "No photos or videos in your book yet." : childName ? `No photos or videos in ${childName}'s book yet.` : "No photos or videos yet.",
+                    subtitle: "Add a photo or video memory, or attach one to a gift.",
                     tone: "neutral",
                   };
                 }
                 if (activeFilter === "milestone") {
                   return {
-                    icon: "🌟",
+                    icon: Star,
                     title: "First milestone is on its way.",
                     subtitle: isOwnerMode ? "Each $X crossing in your fund will celebrate here." : childName ? `Each $X crossing in ${childName}'s fund will celebrate here.` : "Each $X crossing in the fund will celebrate here.",
                     tone: "neutral",
@@ -3991,7 +4430,7 @@ export default function MemoryBook() {
                 }
                 if (activeFilter === "note") {
                   return {
-                    icon: "✏️",
+                    icon: Pencil,
                     title: isOwnerMode ? "No memories written for you yet." : childName ? `No memories written for ${childName} yet.` : "No memories written yet.",
                     subtitle: "First steps. First words. First day of school. The moments that matter live here.",
                     tone: "neutral",
@@ -3999,7 +4438,7 @@ export default function MemoryBook() {
                 }
                 if (activeFilter === "gift_message") {
                   return {
-                    icon: "🎁",
+                    icon: Gift,
                     title: isOwnerMode ? "No gifts in your book yet." : childName ? `No gifts in ${childName}'s book yet.` : "No gifts yet.",
                     subtitle: "Share the gift link to get the first one in.",
                     tone: "neutral",
@@ -4007,7 +4446,7 @@ export default function MemoryBook() {
                 }
                 if (featuredOnly) {
                   return {
-                    icon: "📌",
+                    icon: Pin,
                     title: "Nothing pinned yet.",
                     subtitle: "Pin the moments you want at the top of the Memory Book.",
                     tone: "neutral",
@@ -4015,14 +4454,14 @@ export default function MemoryBook() {
                 }
                 if (selectedYear !== "all") {
                   return {
-                    icon: "📅",
+                    icon: Calendar,
                     title: `Nothing in ${selectedYear} yet.`,
                     subtitle: "Try another year, or clear the filter to see the full story.",
                     tone: "neutral",
                   };
                 }
                 return {
-                  icon: "🌱",
+                  icon: BookOpen,
                   title: "Nothing here in this view.",
                   subtitle: isOwnerMode ? "Try a different filter, or clear them all to see your full story." : childName ? `Try a different filter, or clear them all to see ${childName}'s full story.` : "Try a different filter, or clear them all to see the full story.",
                   tone: "neutral",
@@ -4034,7 +4473,7 @@ export default function MemoryBook() {
                   className={`mb-5 md:mb-6 rounded-2xl px-4 py-7 md:py-8 text-center ${isCelebratory ? "border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)]" : "border border-border/50 bg-card"}`}
                   data-testid="empty-filtered-memory"
                 >
-                  <div className="text-3xl leading-none mb-2.5" aria-hidden>{empty.icon}</div>
+                  <empty.icon size={30} strokeWidth={1.75} aria-hidden className={`mx-auto mb-2.5 ${isCelebratory ? "text-[hsl(var(--kiddo-evergreen))]" : "text-muted-foreground"}`} />
                   <p className={`text-sm font-semibold ${isCelebratory ? "text-[hsl(var(--kiddo-evergreen))]" : "text-foreground"}`}>
                     {empty.title}
                   </p>
@@ -4045,11 +4484,11 @@ export default function MemoryBook() {
               );
             })() : (
               <div className="mb-4 flex items-center gap-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-muted-foreground/50">
+                <p className="text-2xs font-bold uppercase tracking-[0.10em] text-muted-foreground/50">
                   {viewMode === "timeline" ? "Timeline" : "Story"}
                 </p>
                 <div className="flex-1 h-px bg-border/40" />
-                <p className="text-[11px] text-muted-foreground/40">{filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"}</p>
+                <p className="text-2xs text-muted-foreground/40">{filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"}</p>
               </div>
             )}
 
@@ -4063,7 +4502,7 @@ export default function MemoryBook() {
                         header pushes this one up and out as you scroll past.
                         Backdrop-blur so content doesn't bleed through. */}
                     <h4
-                      className={`sticky top-[58px] z-20 -mx-4 px-4 py-2 mb-3 text-[11px] font-bold uppercase tracking-[0.10em] backdrop-blur-md bg-background/85 border-b border-border/30 ${
+                      className={`sticky top-[58px] z-20 -mx-4 px-4 py-2 mb-3 text-2xs font-bold uppercase tracking-[0.10em] backdrop-blur-md bg-background/85 border-b border-border/30 ${
                         month === "The Beginning" ? "text-[hsl(var(--kiddo-gold-ink))]" : "text-muted-foreground/70"
                       }`}
                     >
@@ -4129,22 +4568,22 @@ export default function MemoryBook() {
                               style={ident.avatarStyle === "gifter" && ident.gifterBg ? { background: ident.gifterBg } : undefined}
                             >
                               {ident.profileImageUrl
-                                ? <img src={ident.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                ? <FadeImage src={ident.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 : ident.avatarLetter}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <p className="text-sm font-semibold text-foreground truncate">{ident.displayName}</p>
-                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] ${isGift ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]" : "bg-muted text-muted-foreground"}`}>
+                                <span className={`rounded-full px-2 py-0.5 text-4xs font-bold uppercase tracking-[0.08em] ${isGift ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]" : "bg-muted text-muted-foreground"}`}>
                                   {config.label}
                                 </span>
                                 {investLine && (
-                                  <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                                  <span className="rounded-full bg-muted px-2 py-0.5 text-4xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
                                     {investLine}
                                   </span>
                                 )}
                                 {eventName && (
-                                  <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[9px] font-bold text-[hsl(var(--kiddo-gold-ink))]">
+                                  <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-4xs font-bold text-[hsl(var(--kiddo-gold-ink))]">
                                     {eventName}
                                   </span>
                                 )}
@@ -4152,7 +4591,7 @@ export default function MemoryBook() {
                               {noteText ? (
                                 <p className="text-xs text-muted-foreground truncate mt-0.5">&ldquo;{noteText}&rdquo;</p>
                               ) : null}
-                              <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-1.5">
+                              <p className="text-3xs text-muted-foreground/60 mt-0.5 flex items-center gap-1.5">
                                 <span>{formatDate(entry.createdAt)}</span>
                                 {/* Media indicator. Voice (the moat) gets a
                                     soft gold tint to honor its design-lens
@@ -4166,12 +4605,12 @@ export default function MemoryBook() {
                                   </span>
                                 )}
                                 {mediaKind === "video" && (
-                                  <span title="Video" aria-label="Video" style={{ color: "rgba(26,23,16,0.55)", display: "inline-flex" }}>
+                                  <span title="Video" aria-label="Video" style={{ color: "hsl(var(--kiddo-ink) / 0.55)", display: "inline-flex" }}>
                                     <Video size={11} />
                                   </span>
                                 )}
                                 {mediaKind === "photo" && (
-                                  <span title="Photo" aria-label="Photo" style={{ color: "rgba(26,23,16,0.55)", display: "inline-flex" }}>
+                                  <span title="Photo" aria-label="Photo" style={{ color: "hsl(var(--kiddo-ink) / 0.55)", display: "inline-flex" }}>
                                     <Camera size={11} />
                                   </span>
                                 )}
@@ -4179,7 +4618,7 @@ export default function MemoryBook() {
                             </div>
                             {isGift ? (
                               <span className="shrink-0 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
-                                ${amount.toFixed(2)}
+                                {formatMoneyFriendly(amount)}
                               </span>
                             ) : null}
                           </div>
@@ -4259,11 +4698,12 @@ export default function MemoryBook() {
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg leading-none" aria-hidden>🌱</span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10.5px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">
+                            {/* "Where it began" carries the moment on its own — the
+                                "The moment {kid}'s fund became real." subtitle was cut
+                                (2026-07): two editorializing lines stacked said the same
+                                thing twice, even on the emotional surface. */}
+                            <p className="text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">
                               Where it began
-                            </p>
-                            <p className="text-[12px] text-[rgb(95,85,72)] leading-snug mt-0.5">
-                              The moment {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund became real.
                             </p>
                           </div>
                         </div>
@@ -4305,7 +4745,7 @@ export default function MemoryBook() {
                       style={(() => {
                         const baseStyle = getDeepLinkHighlightCardStyle(
                           isHighlighted,
-                          "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)",
+                          "0 1px 3px hsl(var(--kiddo-ink) / 0.06), 0 14px 34px hsl(var(--kiddo-ink) / 0.07)",
                         );
                         // Per-type tint + left-rail accent. The rail is
                         // a 3px colored strip on the inside-left of the
@@ -4332,7 +4772,7 @@ export default function MemoryBook() {
                         return {
                           ...baseStyle,
                           background: accent.tint,
-                          boxShadow: `inset 3px 0 0 0 ${accent.rail}, ${(baseStyle as any).boxShadow ?? "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)"}`,
+                          boxShadow: `inset 3px 0 0 0 ${accent.rail}, ${(baseStyle as any).boxShadow ?? "0 1px 3px hsl(var(--kiddo-ink) / 0.06), 0 14px 34px hsl(var(--kiddo-ink) / 0.07)"}`,
                         };
                       })()}
                       // Hover lift bumped from y:-1 to y:-2 with a soft
@@ -4340,13 +4780,13 @@ export default function MemoryBook() {
                       // language. Subtle, not bouncy. Adds a "this is
                       // alive" feel on desktop without disturbing the
                       // mobile read.
-                      whileHover={{ y: -2, boxShadow: "0 2px 6px rgba(26,23,16,0.07), 0 18px 42px rgba(26,23,16,0.10)" }}
+                      whileHover={{ y: -2, boxShadow: "0 2px 6px hsl(var(--kiddo-ink) / 0.07), 0 18px 42px hsl(var(--kiddo-ink) / 0.10)" }}
                       transition={{ duration: DUR_FAST, ease: EASE_DECEL }}
                     >
                       <div className="flex flex-col gap-3 border-b border-border/50 bg-[hsl(var(--kiddo-cream)/0.42)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {entry.isFeatured ? (
-                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800 inline-flex items-center gap-1">
+                            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.14)] px-2.5 py-1 text-3xs font-bold text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
                               <Pin size={10} /> Pinned
                             </span>
                           ) : null}
@@ -4360,7 +4800,7 @@ export default function MemoryBook() {
                               of an entry isn't actionable info anyway —
                               they're seeing it because they have access. */}
                           {entry.mediaStatus === "broken" ? (
-                            <span className="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-bold text-red-700">Broken media</span>
+                            <span className="rounded-full bg-red-100 px-2.5 py-1 text-3xs font-bold text-red-700">Broken media</span>
                           ) : null}
                         </div>
                         {/* Owner controls collapsed into a single kebab.
@@ -4388,9 +4828,11 @@ export default function MemoryBook() {
                               onSelect={async (e) => {
                                 e.preventDefault();
                                 try {
-                                  await updateEntryMeta(entry.id, { isFeatured: !entry.isFeatured });
-                                  haptic("success");
-                                  toast({ title: entry.isFeatured ? "Unpinned" : "Pinned to top" });
+                                  const ok = await updateEntryMeta(entry.id, { isFeatured: !entry.isFeatured });
+                                  if (ok) {
+                                    haptic("success");
+                                    toast({ title: entry.isFeatured ? "Unpinned" : "Pinned to top" });
+                                  }
                                 } catch {
                                   toast({ title: "Could not update", variant: "destructive" });
                                 }
@@ -4400,29 +4842,42 @@ export default function MemoryBook() {
                               <Pin size={14} className="mr-2" />
                               {entry.isFeatured ? "Unpin from top" : "Pin to top"}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={async (e) => {
-                                e.preventDefault();
-                                const order: Array<"public" | "family" | "private"> = ["public", "family", "private"];
-                                const current = (entry.visibility || "public") as "public" | "family" | "private";
-                                const next = order[(order.indexOf(current) + 1) % order.length];
-                                const labels: Record<string, string> = { public: "Anyone with link", family: "Family only", private: "Private" };
-                                try {
-                                  await updateEntryMeta(entry.id, { visibility: next });
-                                  haptic("selection");
-                                  toast({ title: `Visibility: ${labels[next]}` });
-                                } catch {
-                                  toast({ title: "Could not update", variant: "destructive" });
-                                }
-                              }}
-                              data-testid={`menu-visibility-memory-${entry.id}`}
-                            >
-                              {entry.visibility === "private" ? <Lock size={14} className="mr-2" /> : entry.visibility === "family" ? <Users size={14} className="mr-2" /> : <Globe size={14} className="mr-2" />}
-                              <span className="flex-1">Visibility</span>
-                              <span className="text-xs text-muted-foreground">
-                                {entry.visibility === "private" ? "Private" : entry.visibility === "family" ? "Family" : "Public"}
-                              </span>
-                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="px-2 py-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                              Who can see this
+                            </DropdownMenuLabel>
+                            {MEMORY_VISIBILITY_OPTIONS.map((opt) => {
+                              const isCurrent = (entry.visibility || "public") === opt.value;
+                              return (
+                                <DropdownMenuItem
+                                  key={opt.value}
+                                  className="items-start gap-2"
+                                  onSelect={async (e) => {
+                                    e.preventDefault();
+                                    if (isCurrent) return;
+                                    try {
+                                      const ok = await updateEntryMeta(entry.id, { visibility: opt.value });
+                                      if (ok) {
+                                        haptic("selection");
+                                        toast({ title: MEMORY_VISIBILITY_TOAST[opt.value] });
+                                      }
+                                    } catch {
+                                      toast({ title: "Could not update", variant: "destructive" });
+                                    }
+                                  }}
+                                  data-testid={`menu-visibility-${opt.value}-memory-${entry.id}`}
+                                >
+                                  <opt.Icon size={14} className="mt-0.5 shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-medium">{opt.label}</span>
+                                      {isCurrent && <Check size={13} className="shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
+                                    </div>
+                                    <p className="text-2xs leading-snug text-muted-foreground">{opt.who}</p>
+                                  </div>
+                                </DropdownMenuItem>
+                              );
+                            })}
                             {entry.type !== "gift_message" ? (
                               <>
                                 <DropdownMenuSeparator />
@@ -4436,8 +4891,14 @@ export default function MemoryBook() {
                                 <DropdownMenuItem
                                   onSelect={(e) => {
                                     e.preventDefault();
-                                    if (!window.confirm("Delete this memory entry?")) return;
-                                    deleteMutation.mutate(entry.id);
+                                    setConfirmReq({
+                                      title: "Delete this memory entry?",
+                                      body: "This removes it from the Memory Book. This can't be undone.",
+                                      confirmLabel: "Delete",
+                                      cancelLabel: "Keep it",
+                                      destructive: true,
+                                      onConfirm: () => deleteMutation.mutate(entry.id),
+                                    });
                                   }}
                                   className="text-red-600 focus:text-red-600"
                                   data-testid={`menu-delete-memory-${entry.id}`}
@@ -4452,36 +4913,21 @@ export default function MemoryBook() {
                                     entries. Closes Apple App Store guideline 1.2
                                     requirement (UGC apps must have a report mechanism)
                                     and the "reporting OPEN" gap flagged in
-                                    project_child_safety_architecture.md. Mailto pattern
-                                    mirrors Activity.tsx's transaction-issue reports —
-                                    uses the locked support@kiddofund.com escalation
-                                    path. Server-side T&S queue work (POST /api/reports +
-                                    admin moderation) exists per project_ts_queue_architecture.md;
-                                    a future polish pass could wire this menu item to
-                                    that structured endpoint instead of mailto. */}
+                                    project_child_safety_architecture.md. Wired 2026-06-16
+                                    to the structured T&S queue (POST /api/reports +
+                                    admin moderation, per project_ts_queue_architecture.md) —
+                                    replaced the old mailto so Report works without a mail
+                                    client (rate-limited per-IP + per-target server-side). */}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onSelect={(e) => {
                                     e.preventDefault();
-                                    const sender = entry.gift?.senderName || "anonymous gifter";
-                                    const dateStr = entry.createdAt
-                                      ? new Date(entry.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-                                      : "(date unavailable)";
-                                    const subject = `Report a Memory Book entry · from ${sender}`;
-                                    const body = [
-                                      `Hi Kiddo team,`,
-                                      ``,
-                                      `I want to report a Memory Book entry:`,
-                                      ``,
-                                      `From: ${sender}`,
-                                      `Date: ${dateStr}`,
-                                      `Entry ID: ${entry.id}`,
-                                      fundId ? `Fund ID: ${fundId}` : "",
-                                      ``,
-                                      `What's wrong: `,
-                                      ``,
-                                    ].filter(Boolean).join("\n");
-                                    window.location.href = `mailto:support@kiddofund.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                    // Opens the branded report sheet (below) instead of the
+                                    // OS-native window.prompt this used to fire. Submission
+                                    // still hits POST /api/reports (T&S queue, rate-limited,
+                                    // demo-aware).
+                                    setReportEntry({ id: entry.id, sender: entry.gift?.senderName || "anonymous gifter", createdAt: entry.createdAt });
+                                    setReportReason("");
                                   }}
                                   data-testid={`menu-report-memory-${entry.id}`}
                                 >
@@ -4559,7 +5005,7 @@ export default function MemoryBook() {
                               data-testid={`memory-recurring-compressed-${entry.id}`}
                             >
                               <div
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-3xs font-bold"
                                 style={{ background: compressedGc.bg, color: compressedGc.text }}
                               >
                                 {compressedSender.slice(0, 1).toUpperCase()}
@@ -4567,10 +5013,18 @@ export default function MemoryBook() {
                               <div className="min-w-0 flex-1 flex items-center gap-2 text-xs">
                                 <Repeat size={11} className="shrink-0 text-muted-foreground/70" />
                                 <span className="font-medium text-foreground truncate">{titleCaseName(compressedSender)}</span>
-                                <span className="text-muted-foreground/60">·</span>
-                                <span className="text-muted-foreground tabular-nums">{displayAmount(entry.gift.amount)}</span>
+                                <span className="shrink-0 text-muted-foreground/60">·</span>
+                                <span className="shrink-0 text-muted-foreground tabular-nums">{displayAmount(entry.gift.amount)}</span>
+                                <span className="shrink-0 text-muted-foreground/60">·</span>
+                                {/* Destination — answers "where's the recurring going?" The row
+                                    used to stop at the amount (unlike gift cards + silent-
+                                    contribution rows, which name where the money landed). Show the
+                                    picked stock when there is one, else the managed mix. */}
+                                <span className="truncate text-muted-foreground/75">
+                                  {entry.gift.selectedTicker || (childName ? `${childName}'s mix` : "diversified mix")}
+                                </span>
                               </div>
-                              <p className="text-[10px] text-muted-foreground/70 shrink-0 tabular-nums">
+                              <p className="text-3xs text-muted-foreground/70 shrink-0 tabular-nums">
                                 {formatDate(entry.createdAt)}
                               </p>
                             </div>
@@ -4599,11 +5053,22 @@ export default function MemoryBook() {
                         // the file — single source of truth).
                         const tyState = thankYouStateForGift(entry.gift);
                         const isOwnerEntry = tyState === "self";
-                        const ownerProfileImageUrl = isOwnerEntry ? (user as any)?.profileImageUrl : null;
-                        const ownerPreferredName = isOwnerEntry ? (user as any)?.preferredName : null;
+                        // Relationship label + photo come from the SENDER's OWN
+                        // resolved identity (server join senderEmail->users): a
+                        // co-parent reads "Marcus Rivera (Dad)", the viewing parent's
+                        // own gift reads "Elena Rivera (Mom)". Falls back to the
+                        // viewer's own profile for their gifts when enrichment is
+                        // absent. NEVER stamp the VIEWER's relationship onto someone
+                        // else's gift — that produced the "Marcus Rivera (Mom)" bug
+                        // (tyState === "self" is true for ANY account holder, incl.
+                        // a co-parent with a recurring schedule, not just the viewer).
+                        const giftSenderEmailLower = String(entry.gift?.senderEmail || "").trim().toLowerCase();
+                        const isViewersOwnGift = !!ownerEmailLowerForMemory && giftSenderEmailLower === ownerEmailLowerForMemory;
+                        const ownerProfileImageUrl = entry.gift?.gifterAvatarUrl || (isViewersOwnGift ? (user as any)?.profileImageUrl : null) || null;
+                        const ownerPreferredName = entry.gift?.gifterPreferredName || (isViewersOwnGift ? (user as any)?.preferredName : null) || null;
                         const displaySenderName = isAnonSender
                           ? "Anonymous"
-                          : isOwnerEntry && ownerPreferredName
+                          : ownerPreferredName
                             ? `${titleCaseName(rawSender)} (${ownerPreferredName})`
                             : titleCaseName(rawSender);
                         const avatarLetter = isAnonSender ? "?" : (rawSender || "G").slice(0, 1).toUpperCase();
@@ -4612,7 +5077,7 @@ export default function MemoryBook() {
                         const tagBlock = (
                           <div className="flex flex-wrap items-center gap-1.5">
                             {entry.gift.eventName && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-3xs font-semibold text-[hsl(var(--kiddo-evergreen))]">
                                 <Calendar size={10} />
                                 {entry.gift.eventName}
                               </span>
@@ -4626,23 +5091,30 @@ export default function MemoryBook() {
                               // the visual-richness gap with Dashboard's
                               // "Last contribution" card which already
                               // uses StockLogo.
-                              <span className="inline-flex items-center gap-1 rounded-full bg-muted pl-1 pr-2 py-0.5 text-[10px] font-bold text-foreground">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
                                 <StockLogo ticker={ticker} size={14} />
                                 {ticker}
                               </span>
                             ) : (exec === "family" || exec === "cash") ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-3xs font-medium text-muted-foreground">
                                 Cash
                               </span>
                             ) : null}
                             {/* "✨ From you" pill removed — gifter name already
-                                renders in the row, so the pill duplicated info
-                                the parent could read directly. Thank-you state
-                                pills (Thanked / Awaiting / Missing) carry signal
-                                the row doesn't otherwise expose, so they stay. */}
-                            {tyState === "sent" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">✓ Thanked</span>}
-                            {tyState === "draft" && <span className="inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-2 py-0.5 text-[10px] font-bold text-[hsl(43,55%,28%)]">⏳ Awaiting thanks</span>}
-                            {tyState === "missing" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink)/0.06)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-ink)/0.55)]">No thanks yet</span>}
+                                renders in the row. The "Awaiting thanks" / "No
+                                thanks yet" WORKFLOW pills were ALSO removed
+                                (2026-06-25): on an un-thanked card the owner
+                                already sees the "Say thanks" / "Finish thank-you"
+                                button right here, so the pill was a second
+                                element saying the same thing (and ⏳ was emoji
+                                chrome the lucide sweep is retiring). Only
+                                ✓ Thanked stays — it's STORY (shows for every role
+                                that can see the book's thank-yous), and a thanked
+                                card has no button, so it's the sole confirmation,
+                                not a duplicate. The draft-vs-missing distinction
+                                the old pills carried now lives in the button verb
+                                ("Finish thank-you" vs "Say thanks"). */}
+                            {tyState === "sent" && <span className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.09)] px-2 py-0.5 text-3xs font-bold text-[hsl(var(--kiddo-evergreen))]">✓ Thanked</span>}
                           </div>
                         );
 
@@ -4665,7 +5137,10 @@ export default function MemoryBook() {
                         // were created before that server change.
                         const photoUrl = entry.gift.photoUrl || entry.photoUrl;
                         const audioUrl = entry.audioUrl;
-                        const isSilentSelf = tyState === "self" && !hasNote && !photoUrl && !embeddedVideo && !audioUrl;
+                        // Only the VIEWER's own silent contributions read "You
+                        // added $X". A co-parent's silent contribution must NOT
+                        // claim "You" — fall through to the full card (their name).
+                        const isSilentSelf = isViewersOwnGift && !hasNote && !photoUrl && !embeddedVideo && !audioUrl;
                         if (isSilentSelf) {
                           return (
                             <div className="px-4 sm:px-5 py-2.5">
@@ -4681,7 +5156,7 @@ export default function MemoryBook() {
                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden"
                                     style={{ boxShadow: "0 0 0 1.5px hsl(var(--kiddo-evergreen)/0.55)" }}
                                   >
-                                    <img
+                                    <FadeImage
                                       src={ownerProfileImageUrl}
                                       alt=""
                                       className="w-full h-full object-cover"
@@ -4689,10 +5164,10 @@ export default function MemoryBook() {
                                   </div>
                                 ) : (
                                   <div
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-3xs font-bold"
                                     style={{ background: "hsl(var(--kiddo-evergreen)/0.12)", color: "hsl(var(--kiddo-evergreen))" }}
                                   >
-                                    ✨
+                                    💚
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">
@@ -4707,17 +5182,18 @@ export default function MemoryBook() {
                                       destination-less amount. Same canonical label the
                                       per-gifter detail modal and Dashboard use. */}
                                   {ticker ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-[10px] font-bold text-foreground">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
                                       <StockLogo ticker={ticker} size={12} />
                                       {ticker}
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-foreground">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
+                                      <PieChart size={11} className="text-[hsl(var(--kiddo-evergreen))]" />
                                       {isOwnerMode ? "Your mix" : childName ? `${childName}'s mix` : "Diversified mix"}
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[10.5px] text-muted-foreground shrink-0">{formatDate(entry.createdAt)}</p>
+                                <p className="text-3xs text-muted-foreground shrink-0">{formatDate(entry.createdAt)}</p>
                               </div>
                             </div>
                           );
@@ -4765,7 +5241,7 @@ export default function MemoryBook() {
                                   minHeight: 120,
                                 }}
                               >
-                                <img
+                                <FadeImage
                                   src={photoUrl || ""}
                                   alt=""
                                   style={{
@@ -4782,7 +5258,7 @@ export default function MemoryBook() {
                                   style={{
                                     position: "absolute", right: 10, bottom: 10,
                                     padding: "4px 9px", borderRadius: 999,
-                                    background: "rgba(26,23,16,0.62)", color: "white",
+                                    background: "hsl(var(--kiddo-ink) / 0.62)", color: "white",
                                     fontSize: 10, fontWeight: 700, letterSpacing: "0.04em",
                                     textTransform: "uppercase",
                                     backdropFilter: "blur(4px)",
@@ -4820,9 +5296,9 @@ export default function MemoryBook() {
                                     return (
                                       <div
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden${isRecent ? " kiddo-gifter-avatar-pulse" : ""}`}
-                                        style={{ boxShadow: "0 0 0 2px hsl(var(--kiddo-evergreen)/0.65), 0 1px 4px rgba(26,23,16,0.08)" }}
+                                        style={{ boxShadow: "0 0 0 2px hsl(var(--kiddo-evergreen)/0.65), 0 1px 4px hsl(var(--kiddo-ink) / 0.08)" }}
                                       >
-                                        <img
+                                        <FadeImage
                                           src={ownerProfileImageUrl}
                                           alt=""
                                           className="w-full h-full object-cover"
@@ -4843,7 +5319,7 @@ export default function MemoryBook() {
                                   <p className="text-sm font-semibold text-foreground truncate" data-testid={`text-sender-${entry.id}`}>
                                     {displaySenderName}
                                   </p>
-                                  <p className="text-[11px] text-muted-foreground">{formatDate(entry.createdAt)}</p>
+                                  <p className="text-2xs text-muted-foreground">{formatDate(entry.createdAt)}</p>
                                 </div>
                                 <div className="shrink-0 text-right">
                                   <p className="font-heading text-base font-bold leading-none tabular-nums text-[hsl(var(--kiddo-evergreen))]" data-testid={`text-amount-${entry.id}`}>
@@ -4871,6 +5347,11 @@ export default function MemoryBook() {
                                     if (!giftDate || !Number.isFinite(giftDate.getTime())) return null;
                                     const yearsInvested = (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
                                     if (yearsInvested < 0.08) return null; // < ~1 month, no meaningful growth yet
+                                    // No simulated value while investing is gated — matches the "Now
+                                    // worth $X" gate on ticker gifts, so NO entry shows a fabricated
+                                    // value pre-live (this is a projectFundValue estimate on a gift
+                                    // that isn't actually invested yet).
+                                    if (!INVESTING_LIVE) return null;
                                     // Single-ticker gifts are valued by the richer "Now worth $X (±$Y)"
                                     // investment block below (real shares × live price, with the gain
                                     // delta). Render this terse estimate ONLY for the diversified MIX,
@@ -4886,14 +5367,14 @@ export default function MemoryBook() {
                                     const gain = nowValue - giftAmount;
                                     if (gain < 0.5) return null; // < 50 cents, not worth surfacing
                                     return (
-                                      <p className="mt-1 text-[10.5px] text-green-600 tabular-nums leading-none" data-testid={`text-gift-now-worth-${entry.id}`}>
-                                        now ~${nowValue.toFixed(2)}
+                                      <p className="mt-1 text-3xs text-green-600 tabular-nums leading-none" data-testid={`text-gift-now-worth-${entry.id}`}>
+                                        now ~{formatMoneyFriendly(nowValue)}
                                       </p>
                                     );
                                   })()}
                                 </div>
                               </div>
-                              {(entry.gift.eventName || ticker || exec === "family" || exec === "cash" || (tyState && tyState !== "anonymous")) && (
+                              {(entry.gift.eventName || ticker || exec === "family" || exec === "cash" || tyState === "sent" || (canModerateMemory && tyState && tyState !== "anonymous")) && (
                                 <div className="mt-2.5 ml-12">
                                   {tagBlock}
                                 </div>
@@ -4982,14 +5463,14 @@ export default function MemoryBook() {
                               data-testid={`audio-${entry.id}`}
                             >
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))] text-[14px]" aria-hidden>🎙</span>
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))]" aria-hidden><Mic size={14} strokeWidth={2} /></span>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
-                                  <p className="text-[11px] text-muted-foreground/80 leading-tight">They wanted {isOwnerMode ? "you" : childName ? childName : "her"} to hear this.</p>
+                                  <p className="text-2xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
+                                  <p className="text-2xs text-muted-foreground/80 leading-tight">They wanted {isOwnerMode ? "you" : childName ? childName : "her"} to hear this.</p>
                                 </div>
                                 <span className="text-[hsl(var(--kiddo-gold)/0.55)]" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
-                              <audio src={entry.audioUrl} controls className="w-full h-9" />
+                              <VoiceNotePlayer src={entry.audioUrl} />
                             </div>
                           )}
                           {(() => {
@@ -5047,11 +5528,11 @@ export default function MemoryBook() {
                             // is looking for "where did this gift go,"
                             // not the technical execution-model branch.
                             if (ticker) {
-                              investLine = `Invested in ${ticker}`;
+                              investLine = investingLiveCopy(`Invested in ${ticker}`, `Going into ${ticker}`);
                             } else if (exec === "family" || exec === "cash") {
-                              investLine = `Sent as cash · invested across the diversified mix`;
+                              investLine = investingLiveCopy(`Sent as cash · invested across the diversified mix`, `Sent as cash · going into the diversified mix`);
                             } else {
-                              investLine = `Invested across the diversified mix`;
+                              investLine = investingLiveCopy(`Invested across the diversified mix`, `Going into the diversified mix`);
                             }
                             // Fresh-gift detection — under 7 days old. Used
                             // to OMIT the gain pill (a "+$0 (+0.0%)" delta
@@ -5076,6 +5557,19 @@ export default function MemoryBook() {
                               : null;
                             const isFreshGift = ageDays !== null && ageDays < 7;
                             const showGainPill = !isFreshGift && gainDollars !== null && Math.abs(gainDollars) > 0.01;
+                            // "Just landed" gets a TIGHTER window than the
+                            // gain-pill suppression (which stays 7d — a
+                            // 5-day-old gift's $0.40 move is still noise).
+                            // The pill's claim is "invested, value not
+                            // surfaced YET" — past ~2 days that reads
+                            // stale next to the entry's own "2 days ago"
+                            // timestamp (founder catch 2026-06-04; surfaced
+                            // by a sessionStorage demo-overlay gift, which
+                            // never gains a value in-session and would
+                            // otherwise wear the pill for a week of tab
+                            // life). After the window: silent, same as the
+                            // no-value aged case. Better than wrong.
+                            const isJustLanded = ageDays !== null && ageDays < 2;
                             // Value differs from cost basis by more than a
                             // cent. When false, the "Now worth $X" line is
                             // pure duplication of the gift amount at the
@@ -5094,8 +5588,14 @@ export default function MemoryBook() {
                             // it underneath. Canva-mode: less chrome
                             // when chrome adds no signal.
                             const valueDiffersFromCost = currentValue !== null && giftAmt > 0 && Math.abs(currentValue - giftAmt) > 0.01;
+                            // Single-ticker gifts already show the stock's logo + name in the row
+                            // header, so the "Invested in {ticker}" line here is redundant — and
+                            // while investing is gated there's no honest value to show either. Hide
+                            // the whole box in that case (founder ask: drop the "Going into {X}").
+                            // Diversified-mix / cash gifts KEEP it — it's their only destination cue.
+                            if (ticker && !INVESTING_LIVE) return null;
                             return (
-                              <div className="mt-3 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-2 text-[11px] text-[hsl(var(--kiddo-evergreen)/0.85)]">
+                              <div className="mt-3 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-2 text-2xs text-[hsl(var(--kiddo-evergreen)/0.85)]">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                   <span data-testid={`text-growth-${entry.id}`} className="font-medium">{investLine}</span>
                                   {/* Right-side value badge — three cases:
@@ -5110,25 +5610,30 @@ export default function MemoryBook() {
                                          layer hasn't surfaced a value yet.
                                       3. No value, not fresh → silent.
                                          Better than wrong. */}
-                                  {currentValue !== null && valueDiffersFromCost ? (
-                                    <span className="text-[10.5px] font-semibold flex items-center gap-1.5">
-                                      <span className="text-foreground">Now worth ${currentValue.toFixed(2)}</span>
-                                      {showGainPill && gainDollars !== null && (
-                                        <span className={isUp ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-500"}>
-                                          ({isUp ? "+" : "−"}${Math.abs(gainDollars).toFixed(2)})
-                                        </span>
-                                      )}
+                                  {INVESTING_LIVE && currentValue !== null && valueDiffersFromCost ? (
+                                    <span className="text-3xs font-semibold flex items-center gap-1.5">
+                                      {/* Gain/loss ± pill CUT (2026-07): the performance delta
+                                          — especially a RED loss (−$X) — is a money-lens that
+                                          doesn't belong on the Memory Book's love surface. The
+                                          honest current value ("Now worth $X") stays; the gain/loss
+                                          story lives on the dashboard. Not hiding the loss (the real
+                                          value is shown), just not framing love as performance. */}
+                                      <span className="text-foreground">Now worth {formatMoneyFriendly(currentValue)}</span>
                                     </span>
-                                  ) : currentValue === null && isFreshGift ? (
-                                    <span className="text-[10px] font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
+                                  ) : currentValue === null && isJustLanded ? (
+                                    <span className="text-3xs font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
                                   ) : null}
                                 </div>
                               </div>
                             );
                           })()}
 
-                          {/* Thank-you section */}
-                          {isOwner && entry.giftId && (() => {
+                          {/* Thank-you section. Owner gets the full
+                              workflow; previous_owner gets ONLY the sent
+                              reveal below ("What you sent Sofia" — they
+                              are who sent it, during the custodial years).
+                              Composer/Say-thanks stays owner-only. */}
+                          {(isOwner || isPreviousOwnerMemory) && entry.giftId && (() => {
                             const ty = thankYouByGiftId.get(String(entry.giftId));
                             // Never prompt the owner to thank their OWN
                             // contributions (e.g. a parent's recurring
@@ -5185,25 +5690,51 @@ export default function MemoryBook() {
                               return null;
                             }
 
+                            const isViewingThanks = viewThankYouGiftId === entry.giftId;
                             return (
                               <div className="mt-2">
                                 {isSent ? (
-                                  <div className="flex items-center gap-1.5 px-1">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                                  <div className="px-1">
+                                    {/* Tappable status — reveals the note you sent. */}
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewThankYouGiftId(isViewingThanks ? null : entry.giftId!)}
+                                      aria-expanded={isViewingThanks}
+                                      className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-3xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.14)] transition-colors"
+                                      data-testid={`button-view-thanks-${entry.id}`}
+                                    >
                                       ✓ Thanked{ty.sentAt ? ` · ${new Date(ty.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
-                                    </span>
+                                      <ChevronDown size={11} className="transition-transform" style={{ transform: isViewingThanks ? "rotate(180deg)" : "none" }} />
+                                    </button>
+                                    {isViewingThanks && (
+                                      <div className="mt-2 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.03)] p-3.5">
+                                        <p className="text-4xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen)/0.7)] mb-1.5">
+                                          What you sent {senderName}
+                                        </p>
+                                        {ty.message ? (
+                                          <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-[hsl(var(--kiddo-ink)/0.85)]">{ty.message}</p>
+                                        ) : (
+                                          <p className="text-[12.5px] italic text-[hsl(var(--kiddo-ink)/0.55)]">You sent a thank-you{ty.sentAt ? `` : ""}.</p>
+                                        )}
+                                        {ty.sentAt && (
+                                          <p className="mt-2.5 text-3xs text-[hsl(var(--kiddo-ink)/0.45)]">
+                                            Sent {new Date(ty.sentAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                ) : (
+                                ) : isOwner ? (
                                   <>
                                     {!isOpen && (
                                       <button
                                         type="button"
                                         onClick={() => openComposer(entry.giftId!, ty, senderName, amount, tyCtx)}
-                                        className="flex items-center gap-1 px-1 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity"
+                                        className="flex items-center gap-1 px-1 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity"
                                         data-testid={`button-say-thanks-${entry.id}`}
                                       >
                                         <Send size={10} />
-                                        Say thanks
+                                        {tyState === "draft" ? "Finish thank-you" : "Say thanks"}
                                       </button>
                                     )}
 
@@ -5222,9 +5753,10 @@ export default function MemoryBook() {
                                                   type="button"
                                                   onClick={() => {
                                                     setComposerTone(tone);
+                                                    setComposerBaseTone(tone);
                                                     setComposerMessage(buildThankYouMessage(tone, senderName, amount, tyCtx));
                                                   }}
-                                                  className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-colors ${composerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
+                                                  className={`rounded-full px-3 py-1 text-2xs font-semibold capitalize transition-colors ${composerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
                                                   data-testid={`button-thank-you-tone-${tone}`}
                                                 >
                                                   {tone}
@@ -5237,13 +5769,13 @@ export default function MemoryBook() {
                                                 send. Falls back to "saved as draft" copy when there's
                                                 no email on file (will copy to clipboard instead). */}
                                             <div className="rounded-xl border border-border/60 bg-background/60 px-3 py-2.5">
-                                              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                                              <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
                                                 {hasEmail ? "Send to" : "Will copy for"}
                                               </p>
                                               <p className="mt-0.5 text-sm font-semibold text-foreground">
                                                 {senderName}
                                               </p>
-                                              <p className="text-[11px] text-muted-foreground">
+                                              <p className="text-2xs text-muted-foreground">
                                                 {hasEmail
                                                   ? `Via email · from ${ownerName || "you"}`
                                                   : `Copies to your clipboard · paste it anywhere`}
@@ -5276,10 +5808,20 @@ export default function MemoryBook() {
                                               >
                                                 Preview →
                                               </button>
-                                              {composerTone !== "custom" && (
+                                              {/* Reset restores the template the draft is based on, and only
+                                                  appears once you've actually edited away from it (message !=
+                                                  template). It stays hidden for a from-scratch "custom" draft
+                                                  (nothing to restore) and when the draft is still the pristine
+                                                  template (nothing to undo) — so it's shown only when it does
+                                                  something. */}
+                                              {composerBaseTone !== "custom"
+                                                && composerMessage.trim() !== buildThankYouMessage(composerBaseTone, senderName, amount, tyCtx).trim() && (
                                                 <button
                                                   type="button"
-                                                  onClick={() => setComposerMessage(buildThankYouMessage(composerTone, senderName, amount, tyCtx))}
+                                                  onClick={() => {
+                                                    setComposerMessage(buildThankYouMessage(composerBaseTone, senderName, amount, tyCtx));
+                                                    setComposerTone(composerBaseTone);
+                                                  }}
                                                   className="rounded-xl border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                                                   data-testid={`button-reset-thank-you-${entry.id}`}
                                                 >
@@ -5302,13 +5844,13 @@ export default function MemoryBook() {
                                                 serif body) so it reads like a card, not a
                                                 form. No fake email-client chrome. */}
                                             <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-white px-4 py-4">
-                                              <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                                              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                                                 Preview · what {senderName} will read
                                               </p>
                                               <p className="mt-2 font-serif text-[14px] leading-[1.7] text-foreground italic whitespace-pre-line">
                                                 {composerMessage}
                                               </p>
-                                              <p className="mt-3 pt-2.5 border-t border-border/40 text-[10.5px] text-muted-foreground/70">
+                                              <p className="mt-3 pt-2.5 border-t border-border/40 text-3xs text-muted-foreground/70">
                                                 {hasEmail
                                                   ? `Sent via email to ${senderName} from ${ownerName || "you"}. Also saved to ${childName || "the"} Memory Book.`
                                                   : `Message will copy to your clipboard for you to send.`}
@@ -5341,7 +5883,7 @@ export default function MemoryBook() {
                                       </div>
                                     )}
                                   </>
-                                )}
+                                ) : null}
                               </div>
                             );
                           })()}
@@ -5369,7 +5911,7 @@ export default function MemoryBook() {
                                 <Star size={18} className="text-[hsl(var(--kiddo-gold))]" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">Milestone</span>
+                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">Milestone</span>
                                 <h3 className="mt-1.5 font-heading text-base font-semibold leading-snug text-foreground" data-testid={`text-milestone-${entry.id}`}>
                                   {entry.content}
                                 </h3>
@@ -5380,14 +5922,13 @@ export default function MemoryBook() {
                             </div>
                           </div>
                           {entry.photoUrl && (
-                            <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
-                              <img
-                                src={entry.photoUrl}
-                                alt=""
-                                className="w-full h-48 sm:h-52 object-cover"
-                                data-testid={`img-milestone-${entry.id}`}
-                              />
-                            </div>
+                            <EnlargeablePhoto
+                              src={entry.photoUrl}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              wrapClassName="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]"
+                              imgClassName="w-full h-48 sm:h-52 object-cover"
+                              testId={`img-milestone-${entry.id}`}
+                            />
                           )}
                           {embeddedVideo && (
                             <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
@@ -5409,11 +5950,11 @@ export default function MemoryBook() {
                       {entry.type === "photo" && (
                         <div>
                           {entry.photoUrl && (
-                            <img
+                            <EnlargeablePhoto
                               src={entry.photoUrl}
-                              alt=""
-                              className="w-full h-56 sm:h-64 object-cover"
-                              data-testid={`img-photo-entry-${entry.id}`}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              imgClassName="w-full h-56 sm:h-64 object-cover"
+                              testId={`img-photo-entry-${entry.id}`}
                             />
                           )}
                           {embeddedVideo && (
@@ -5432,18 +5973,18 @@ export default function MemoryBook() {
                           <div className="flex items-start gap-3 p-4">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))] overflow-hidden">
                               {entry.authorPhotoUrl
-                                ? <img src={entry.authorPhotoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                ? <FadeImage src={entry.authorPhotoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 : (entry.authorName || "P").slice(0, 1).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <p className="text-sm font-bold text-foreground">{displayAuthor(entry.authorName)}</p>
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Photo</span>
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-3xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Photo</span>
                               </div>
                               {entry.content && (
                                 <p className="mt-1 text-sm leading-relaxed text-foreground/85" data-testid={`text-caption-${entry.id}`}>{entry.content}</p>
                               )}
-                              <p className="mt-0.5 text-[10px] text-muted-foreground">{formatDate(entry.createdAt)}</p>
+                              <p className="mt-0.5 text-3xs text-muted-foreground">{formatDate(entry.createdAt)}</p>
                             </div>
                           </div>
                         </div>
@@ -5468,7 +6009,7 @@ export default function MemoryBook() {
                                 </p>
                                 <div className="mt-4 flex items-center gap-2.5 text-xs text-muted-foreground">
                                   <div
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                     style={{
                                       background: memoryIdent.avatarStyle === "owner"
                                         ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5482,7 +6023,7 @@ export default function MemoryBook() {
                                     }}
                                   >
                                     {memoryIdent.profileImageUrl
-                                      ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                      ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                       : memoryIdent.avatarLetter}
                                   </div>
                                   <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5491,7 +6032,7 @@ export default function MemoryBook() {
                                   {entry.type === "parent_investment_start" && (
                                     <>
                                       <span className="text-muted-foreground/55">·</span>
-                                      <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-evergreen))]">
+                                      <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-evergreen))]">
                                         Investment
                                       </span>
                                     </>
@@ -5501,7 +6042,7 @@ export default function MemoryBook() {
                             ) : (
                               <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                                 <div
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                   style={{
                                     background: memoryIdent.avatarStyle === "owner"
                                       ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5515,7 +6056,7 @@ export default function MemoryBook() {
                                   }}
                                 >
                                   {memoryIdent.profileImageUrl
-                                    ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : memoryIdent.avatarLetter}
                                 </div>
                                 <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5525,14 +6066,51 @@ export default function MemoryBook() {
                                 <span className="text-muted-foreground/65">{entry.type === "parent_investment_start" ? "Investment started" : "Quiet investment"}</span>
                               </div>
                             )}
+                            {/* Recurring note: show WHERE it's going + the logo, like
+                                every other entry. The note is stamped once from a
+                                recurring auto-invest, so it carries the linked gift's
+                                amount + destination — it was rendering as a bare note
+                                with no money meta, out of step with the gift rows. The
+                                note stays the hero above; this is a small line beneath. */}
+                            {entry.type === "parent_note" && (() => {
+                              const g = entry.gift as any;
+                              if (!g?.parentContributionId) return null;
+                              const t = g.selectedTicker ? String(g.selectedTicker).toUpperCase() : null;
+                              return (
+                                <div className="mt-3 flex items-center gap-2 text-xs" data-testid={`recurring-meta-${entry.id}`}>
+                                  <span className="font-semibold text-foreground/80 tabular-nums">{displayAmount(g.amount)}</span>
+                                  <span className="text-muted-foreground/55">·</span>
+                                  {t ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
+                                      <StockLogo ticker={t} size={12} />
+                                      {t}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/70 pl-1 pr-2 py-0.5 text-3xs font-bold text-foreground">
+                                      <PieChart size={11} className="text-[hsl(var(--kiddo-evergreen))]" />
+                                      {isOwnerMode ? "Your mix" : childName ? `${childName}'s mix` : "Diversified mix"}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
+                          {entry.photoUrl && (
+                            <EnlargeablePhoto
+                              src={entry.photoUrl}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              wrapClassName="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]"
+                              imgClassName="w-full h-48 sm:h-52 object-cover"
+                              testId={`img-parent-${entry.id}`}
+                            />
+                          )}
                           {entry.audioUrl && (
                             <div className="mt-3 rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)] bg-background px-4 py-3" data-testid={`audio-parent-${entry.id}`}>
                               <div className="mb-2 flex items-center gap-2">
-                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
+                                <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
                                 <span className="text-muted-foreground/45 ml-auto" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
-                              <audio src={entry.audioUrl} controls className="w-full h-9" />
+                              <VoiceNotePlayer src={entry.audioUrl} />
                               {(entry as any).audioTranscript && (
                                 <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
                                   &ldquo;{(entry as any).audioTranscript}&rdquo;
@@ -5557,7 +6135,7 @@ export default function MemoryBook() {
                                 </p>
                                 <div className="mt-4 flex items-center gap-2.5 text-xs text-muted-foreground">
                                   <div
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                     style={{
                                       background: memoryIdent.avatarStyle === "owner"
                                         ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5571,7 +6149,7 @@ export default function MemoryBook() {
                                     }}
                                   >
                                     {memoryIdent.profileImageUrl
-                                      ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                      ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                       : memoryIdent.avatarLetter}
                                   </div>
                                   <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5582,7 +6160,7 @@ export default function MemoryBook() {
                             ) : (
                               <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                                 <div
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold overflow-hidden"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-bold overflow-hidden"
                                   style={{
                                     background: memoryIdent.avatarStyle === "owner"
                                       ? "hsl(var(--kiddo-evergreen)/0.12)"
@@ -5596,7 +6174,7 @@ export default function MemoryBook() {
                                   }}
                                 >
                                   {memoryIdent.profileImageUrl
-                                    ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    ? <FadeImage src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : memoryIdent.avatarLetter}
                                 </div>
                                 <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5606,14 +6184,13 @@ export default function MemoryBook() {
                             )}
                           </div>
                           {entry.photoUrl && (
-                            <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
-                              <img
-                                src={entry.photoUrl}
-                                alt=""
-                                className="w-full h-48 sm:h-52 object-cover"
-                                data-testid={`img-note-${entry.id}`}
-                              />
-                            </div>
+                            <EnlargeablePhoto
+                              src={entry.photoUrl}
+                              onOpen={() => setLightboxMedia({ kind: "image", url: entry.photoUrl || "" })}
+                              wrapClassName="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]"
+                              imgClassName="w-full h-48 sm:h-52 object-cover"
+                              testId={`img-note-${entry.id}`}
+                            />
                           )}
                           {embeddedVideo && (
                             <div className="mt-3 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)]">
@@ -5631,10 +6208,10 @@ export default function MemoryBook() {
                           {entry.audioUrl && (
                             <div className="mt-3 rounded-2xl border border-[hsl(var(--kiddo-border)/0.65)] bg-background px-4 py-3" data-testid={`audio-note-${entry.id}`}>
                               <div className="mb-2 flex items-center gap-2">
-                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
+                                <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wide">🎙 Voice note</p>
                                 <span className="text-muted-foreground/45 ml-auto" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
-                              <audio src={entry.audioUrl} controls className="w-full h-9" />
+                              <VoiceNotePlayer src={entry.audioUrl} />
                               {(entry as any).audioTranscript && (
                                 <p className="mt-2 text-[12px] italic text-foreground/75 leading-relaxed">
                                   &ldquo;{(entry as any).audioTranscript}&rdquo;
@@ -5695,7 +6272,7 @@ export default function MemoryBook() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {sharesRemaining < SHARES_PER_YEAR_CAP && (
                     <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                      className={`rounded-full px-2.5 py-1 text-2xs font-bold ${
                         sharesRemaining === 0
                           ? "bg-red-50 text-red-700"
                           : sharesRemaining === 1
@@ -5737,7 +6314,7 @@ export default function MemoryBook() {
                         no server-side change required. */}
                     {sharePhotoUrl ? (
                       <div className="relative rounded-2xl border border-border overflow-hidden bg-muted/30">
-                        <img
+                        <FadeImage
                           src={sharePhotoUrl}
                           alt=""
                           className="w-full max-h-64 object-cover"
@@ -5788,6 +6365,14 @@ export default function MemoryBook() {
                               });
                               const data = await res.json().catch(() => ({}));
                               if (!res.ok) throw new Error(data?.message || data?.error || "Upload failed");
+                              // Demo funds no-op every /memory POST (200 { demo,
+                              // saved:false }, no url) — show the honest demo
+                              // message, not the confusing "No URL returned".
+                              if (isDemoNoop(data)) {
+                                setSharePhotoError(data?.message || "Photos aren't saved in the demo, but your own fund keeps them.");
+                                haptic("light");
+                                return;
+                              }
                               const url = data?.url || data?.photoUrl;
                               if (!url) throw new Error("No URL returned");
                               setSharePhotoUrl(String(url));
@@ -5855,7 +6440,7 @@ export default function MemoryBook() {
                       URL (e.g. paste into a text thread). Newest first. */}
                   {pastShares.length > 0 && (
                     <div className="mt-6 pt-5 border-t border-border">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                      <p className="text-2xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
                         Updates you've sent
                       </p>
                       <div className="space-y-2">
@@ -5877,11 +6462,11 @@ export default function MemoryBook() {
                                   haptic("selection");
                                   setExpandedPastShareToken(isExpanded ? null : share.token);
                                 }}
-                                className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors"
+                                className="kiddo-press w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors"
                               >
                                 <div className="flex items-baseline justify-between gap-3">
-                                  <span className="text-[11px] font-semibold text-foreground">{sentDate}</span>
-                                  <span className="text-[10px] text-muted-foreground">
+                                  <span className="text-2xs font-semibold text-foreground">{sentDate}</span>
+                                  <span className="text-3xs text-muted-foreground">
                                     Sent to {share.recipientCount} {share.recipientCount === 1 ? "gifter" : "gifters"}
                                   </span>
                                 </div>
@@ -5894,7 +6479,7 @@ export default function MemoryBook() {
                               {isExpanded && (
                                 <div className="px-4 pb-3 space-y-2.5">
                                   {share.photoUrl && (
-                                    <img
+                                    <FadeImage
                                       src={share.photoUrl}
                                       alt="Update photo"
                                       className="w-full max-h-40 rounded-xl object-cover"
@@ -5917,7 +6502,7 @@ export default function MemoryBook() {
                                           toast({ title: "Couldn't copy", variant: "destructive" });
                                         }
                                       }}
-                                      className="flex-1 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline py-1"
+                                      className="flex-1 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline py-1"
                                       data-testid={`button-copy-past-share-${share.token}`}
                                     >
                                       {copiedShareToken === share.token ? "Copied" : "Copy share link"}
@@ -5926,7 +6511,7 @@ export default function MemoryBook() {
                                       href={share.shareUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex-1 text-center text-[11px] font-semibold text-muted-foreground hover:text-foreground py-1"
+                                      className="flex-1 text-center text-2xs font-semibold text-muted-foreground hover:text-foreground py-1"
                                       onClick={() => haptic("selection")}
                                     >
                                       Open in new tab
@@ -5947,7 +6532,7 @@ export default function MemoryBook() {
                       counts if the list is empty. Parent should see who they're
                       about to email before they tap Send. */}
                   <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                    <p className="text-2xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                       Going to {optedInCount === 0 ? "no one yet" : `${optedInCount} opted-in ${optedInCount === 1 ? "gifter" : "gifters"}`}
                     </p>
                     {optedInCount === 0 ? (
@@ -5971,12 +6556,12 @@ export default function MemoryBook() {
                       see in their inbox. Same shape as the worker template:
                       subject + body + photo + the parent-written note. */}
                   <div className="rounded-2xl border border-border bg-muted/40 p-4 space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Email preview</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Email preview</p>
                     <p className="text-sm font-semibold text-foreground">
                       An update from {isOwnerMode ? "your" : childName ? `${childName}'s` : "their"} Memory Book
                     </p>
                     {sharePhotoUrl.trim() && (
-                      <img
+                      <FadeImage
                         src={sharePhotoUrl.trim()}
                         alt="Update preview"
                         className="w-full max-h-48 rounded-xl object-cover"
@@ -5986,7 +6571,7 @@ export default function MemoryBook() {
                     <blockquote className="rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                       {shareMessage.trim()}
                     </blockquote>
-                    <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                    <p className="text-2xs text-muted-foreground/80 leading-relaxed">
                       They'll also see "Gift {childName || "again"}" and "Start my own fund" buttons, plus a one-click unsubscribe link.
                     </p>
                   </div>
@@ -6084,7 +6669,7 @@ export default function MemoryBook() {
                         <button
                           key={t}
                           onClick={() => { haptic("selection"); setEntryType(t); }}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                          className={`kiddo-press flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                             isActive
                               ? "bg-primary text-primary-foreground shadow-sm"
                               : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -6182,12 +6767,19 @@ export default function MemoryBook() {
                       title={`When on, this entry stays hidden in Kid View until the child turns ${fundMajorityAge}. The reveal moment.`}
                     >
                       <span className="flex items-center gap-1.5">
-                        <span aria-hidden="true">🔑</span>
+                        <KeyRound size={13} className="shrink-0" aria-hidden="true" />
                         <span className="text-[12px] leading-tight">{saveForBirthday ? `Saved for ${fundMajorityOrdinal} birthday` : `Save for ${fundMajorityOrdinal} birthday`}</span>
                       </span>
                     </button>
                   </div>
                 </div>
+                {/* The two controls above are separate axes: Visibility = WHO can
+                    see it; Save-for-birthday = WHEN the child sees it in Kid View.
+                    Spelled out because a "Family + Saved for 18th" combo isn't
+                    obvious (visible to family now, hidden from the kid until then). */}
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground/70">
+                  Two separate choices: who can see it, and when {childName || "your kid"} unlocks it in Kid View.
+                </p>
 
                 {/* "More options" disclosure — collapsed by default to
                     keep the composer at 5 visible sections (Type / What
@@ -6204,7 +6796,7 @@ export default function MemoryBook() {
                         type="button"
                         onClick={() => setIsFeatured((v) => !v)}
                         className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
-                          isFeatured ? "border-amber-400 bg-amber-50 text-amber-900" : "border-border bg-background text-foreground"
+                          isFeatured ? "border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.1)] text-[hsl(var(--kiddo-gold-ink))]" : "border-border bg-background text-foreground"
                         }`}
                         data-testid="button-memory-featured"
                       >
@@ -6340,7 +6932,7 @@ export default function MemoryBook() {
                   <label className="text-sm font-normal text-foreground mb-2 block">Voice note (optional) 🎙</label>
                   {audioUrl ? (
                     <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3 mb-2">
-                      <audio src={audioUrl} controls className="w-full h-9" data-testid="audio-preview" />
+                      <VoiceNotePlayer src={audioUrl} label="Your voice note" testId="audio-preview" />
                       {audioTranscript && (
                         <p className="mt-2 text-[12px] italic text-foreground/80 leading-relaxed" data-testid="text-audio-transcript">
                           &ldquo;{audioTranscript}&rdquo;
@@ -6349,7 +6941,7 @@ export default function MemoryBook() {
                       <button
                         type="button"
                         onClick={() => { haptic("light"); setAudioUrl(""); setAudioTranscript(""); }}
-                        className="mt-2 text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors"
+                        className="mt-2 text-2xs font-semibold text-muted-foreground hover:text-destructive transition-colors"
                         data-testid="button-clear-audio"
                       >
                         Remove voice note
@@ -6491,7 +7083,7 @@ export default function MemoryBook() {
               }}
             >
               {lightboxMedia.kind === "image" && (
-                <img
+                <FadeImage
                   src={lightboxMedia.url}
                   alt=""
                   style={{
@@ -6622,7 +7214,7 @@ export default function MemoryBook() {
               {/* Decorative spine shadow on the left edge — gives the
                   page a "stacked book" feel without trying to fake a
                   real 3D paper turn. Subtle; mostly suggestion. */}
-              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 24, background: "linear-gradient(to right, rgba(26,23,16,0.12) 0%, rgba(26,23,16,0.04) 60%, transparent 100%)", pointerEvents: "none", zIndex: 1 }} />
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 24, background: "linear-gradient(to right, hsl(var(--kiddo-ink) / 0.12) 0%, hsl(var(--kiddo-ink) / 0.04) 60%, transparent 100%)", pointerEvents: "none", zIndex: 1 }} />
 
               {/* Top bar — close + share */}
               <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 0", flexShrink: 0 }}>
@@ -6633,8 +7225,8 @@ export default function MemoryBook() {
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
                     padding: "8px 14px", borderRadius: 999,
-                    background: "rgba(26,23,16,0.06)", border: "1px solid rgba(26,23,16,0.10)",
-                    color: "rgba(26,23,16,0.65)", fontSize: 12.5, fontWeight: 600,
+                    background: "hsl(var(--kiddo-ink) / 0.06)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
+                    color: "hsl(var(--kiddo-ink) / 0.65)", fontSize: 12.5, fontWeight: 600,
                     cursor: "pointer",
                   }}
                 >
@@ -6649,8 +7241,8 @@ export default function MemoryBook() {
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6,
                       padding: "8px 14px", borderRadius: 999,
-                      background: "rgba(26,23,16,0.06)", border: "1px solid rgba(26,23,16,0.10)",
-                      color: "rgba(26,23,16,0.65)", fontSize: 12.5, fontWeight: 600,
+                      background: "hsl(var(--kiddo-ink) / 0.06)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
+                      color: "hsl(var(--kiddo-ink) / 0.65)", fontSize: 12.5, fontWeight: 600,
                       cursor: "pointer",
                     }}
                   >
@@ -6703,18 +7295,18 @@ export default function MemoryBook() {
                       // the rounded corners of the page so the shadow
                       // hugs the silhouette, not the bounding box.
                       filter: bookSlideDirection >= 0
-                        ? "drop-shadow(0 14px 28px rgba(26,23,16,0.10)) drop-shadow(8px 0 12px rgba(26,23,16,0.05))"
-                        : "drop-shadow(0 14px 28px rgba(26,23,16,0.10)) drop-shadow(-8px 0 12px rgba(26,23,16,0.05))",
+                        ? "drop-shadow(0 14px 28px hsl(var(--kiddo-ink) / 0.10)) drop-shadow(8px 0 12px hsl(var(--kiddo-ink) / 0.05))"
+                        : "drop-shadow(0 14px 28px hsl(var(--kiddo-ink) / 0.10)) drop-shadow(-8px 0 12px hsl(var(--kiddo-ink) / 0.05))",
                     }}
                   >
                     {isCover ? (
                       // ─── Cover page ───
                       <div style={{
                         background: "linear-gradient(160deg, rgba(255,255,255,0.6) 0%, rgba(245,240,232,0.95) 100%)",
-                        border: "1px solid rgba(26,23,16,0.10)",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                         borderRadius: 24,
                         padding: "44px 28px 36px",
-                        boxShadow: "0 12px 40px rgba(26,23,16,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                         textAlign: "center" as const,
                       }} data-testid="book-page-cover">
                         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: "hsl(var(--kiddo-gold))", marginBottom: 18 }}>
@@ -6723,25 +7315,23 @@ export default function MemoryBook() {
                         <h2 className="font-heading" style={{ fontSize: 36, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.15, marginBottom: 14, letterSpacing: "-0.01em" }}>
                           {isOwnerMode ? "Your Story" : childName ? `${childName}'s Story` : "Their Story"}
                         </h2>
-                        <p className="font-serif italic" style={{ fontSize: 16, color: "rgba(26,23,16,0.65)", lineHeight: 1.6, marginBottom: 28, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                        <p className="font-serif italic" style={{ fontSize: 16, color: "hsl(var(--kiddo-ink) / 0.65)", lineHeight: 1.6, marginBottom: 28, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           Every gift has a story.
                           {fundCreated && <><br />This one began {fundCreated}.</>}
                         </p>
                         <div style={{ display: "flex", justifyContent: "center", gap: 22, marginBottom: 28 }}>
                           <div>
                             <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1 }}>{Math.round(displayMemoryGiftCount)}</p>
-                            <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.50)", marginTop: 4 }}>gifts</p>
+                            <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>gifts</p>
                           </div>
-                          <div style={{ width: 1, background: "rgba(26,23,16,0.12)" }} />
+                          <div style={{ width: 1, background: "hsl(var(--kiddo-ink) / 0.12)" }} />
                           <div>
                             <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1 }}>{Math.round(displayMemoryPeople)}</p>
-                            <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.50)", marginTop: 4 }}>people</p>
+                            <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.50)", marginTop: 4 }}>people</p>
                           </div>
-                          <div style={{ width: 1, background: "rgba(26,23,16,0.12)" }} />
-                          <div>
-                            <p className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", lineHeight: 1 }}>{formatMoney(displayMemoryFundValue)}</p>
-                            <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.50)", marginTop: 4 }}>so far</p>
-                          </div>
+                          {/* "$X so far" money stat CUT (2026-07): the Memory Book is the
+                              love/words surface — money lives on the dashboard. (It was also
+                              showing $0: the memory-fund data doesn't carry the live balance.) */}
                         </div>
                         <button
                           type="button"
@@ -6773,10 +7363,10 @@ export default function MemoryBook() {
                       // 18 to see the village, not the ledger.
                       <div style={{
                         background: "linear-gradient(160deg, rgba(255,255,255,0.92) 0%, hsl(var(--kiddo-cream)/0.78) 100%)",
-                        border: "1px solid rgba(26,23,16,0.10)",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                         borderRadius: 24,
                         padding: "36px 28px 30px",
-                        boxShadow: "0 12px 40px rgba(26,23,16,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                       }} data-testid="book-page-community">
                         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: "hsl(var(--kiddo-gold))", marginBottom: 14, textAlign: "center" }}>
                           The Village
@@ -6787,7 +7377,7 @@ export default function MemoryBook() {
                             return `${total} ${total === 1 ? "person" : "people"} built this.`;
                           })()}
                         </h3>
-                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.55, marginBottom: 22, textAlign: "center", maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.55, marginBottom: 22, textAlign: "center", maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           {childName ? `Every gift in this book came from one of them. ${childName} got here because they showed up.` : `Every gift in this book came from one of them.`}
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
@@ -6813,14 +7403,14 @@ export default function MemoryBook() {
                                   padding: "10px 14px",
                                   borderRadius: 14,
                                   background: "rgba(255,255,255,0.62)",
-                                  border: "1px solid rgba(26,23,16,0.06)",
+                                  border: "1px solid hsl(var(--kiddo-ink) / 0.06)",
                                 }}
                                 data-testid={`book-community-row-${idx}`}
                               >
                                 <span style={{ fontSize: 14, fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>
                                   {displayName}
                                 </span>
-                                <span style={{ fontSize: 12, color: "rgba(26,23,16,0.55)" }}>
+                                <span style={{ fontSize: 12, color: "hsl(var(--kiddo-ink) / 0.55)" }}>
                                   {giftCountLabel}
                                 </span>
                               </div>
@@ -6867,10 +7457,10 @@ export default function MemoryBook() {
                         return (
                           <div style={{
                             background: "linear-gradient(160deg, hsl(var(--kiddo-cream)) 0%, rgba(255,255,255,0.92) 60%, hsl(var(--kiddo-cream)/0.85) 100%)",
-                            border: "1px solid rgba(26,23,16,0.10)",
+                            border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                             borderRadius: 24,
                             padding: "44px 28px 36px",
-                            boxShadow: "0 12px 40px rgba(26,23,16,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                            boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                             textAlign: "center" as const,
                           }} data-testid="book-page-sealed">
                             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgb(140,30,30)", marginBottom: 24 }}>
@@ -6908,7 +7498,7 @@ export default function MemoryBook() {
                                 : (childName ? `Write ${childName} a letter for their ${ageOfMajority}th birthday.` : `Write a letter for their ${ageOfMajority}th birthday.`)}
                             </h3>
                             {hasLetter ? (
-                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                                 {isUnsealed
                                   ? "This letter is unsealed."
                                   : unsealDateLabel
@@ -6916,7 +7506,7 @@ export default function MemoryBook() {
                                     : "Sealed for the future."}
                               </p>
                             ) : (
-                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                              <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 22, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                                 One sealed page. Whatever you want them to read on the day the fund becomes theirs.
                               </p>
                             )}
@@ -6957,7 +7547,7 @@ export default function MemoryBook() {
                         border: "1px solid hsl(var(--kiddo-gold)/0.28)",
                         borderRadius: 24,
                         padding: "44px 28px 36px",
-                        boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.10), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
                         textAlign: "center" as const,
                       }} data-testid="book-page-closing">
                         <div style={{ fontSize: 48, lineHeight: 1, marginBottom: 16 }} aria-hidden>🌱</div>
@@ -6967,7 +7557,7 @@ export default function MemoryBook() {
                         <h3 className="font-heading" style={{ fontSize: 24, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 14, letterSpacing: "-0.01em" }}>
                           {isOwnerMode ? "Your story is still being written." : childName ? `${childName}'s story is still being written.` : "This story is still being written."}
                         </h3>
-                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 26, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+                        <p className="font-serif italic" style={{ fontSize: 14.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 26, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           Every gift, every note, every milestone
                           becomes a page here. Come back any time.
                         </p>
@@ -7028,10 +7618,10 @@ export default function MemoryBook() {
                     style={{
                       position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)",
                       width: 40, height: 40, borderRadius: 999,
-                      background: "rgba(255,255,255,0.78)", border: "1px solid rgba(26,23,16,0.10)",
+                      background: "rgba(255,255,255,0.78)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                       cursor: "pointer", display: "none",
                       alignItems: "center", justifyContent: "center",
-                      color: "rgba(26,23,16,0.55)",
+                      color: "hsl(var(--kiddo-ink) / 0.55)",
                       backdropFilter: "blur(6px)",
                     }}
                     className="md:!flex"
@@ -7047,10 +7637,10 @@ export default function MemoryBook() {
                     style={{
                       position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)",
                       width: 40, height: 40, borderRadius: 999,
-                      background: "rgba(255,255,255,0.78)", border: "1px solid rgba(26,23,16,0.10)",
+                      background: "rgba(255,255,255,0.78)", border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                       cursor: "pointer", display: "none",
                       alignItems: "center", justifyContent: "center",
-                      color: "rgba(26,23,16,0.55)",
+                      color: "hsl(var(--kiddo-ink) / 0.55)",
                       backdropFilter: "blur(6px)",
                     }}
                     className="md:!flex"
@@ -7091,12 +7681,12 @@ export default function MemoryBook() {
                       disabled={safeIndex === 0}
                       style={{
                         padding: "4px 8px", borderRadius: 6,
-                        border: "1px solid rgba(26,23,16,0.10)", background: "rgba(255,255,255,0.6)",
-                        color: "rgba(26,23,16,0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === 0 ? "default" : "pointer",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)", background: "rgba(255,255,255,0.6)",
+                        color: "hsl(var(--kiddo-ink) / 0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === 0 ? "default" : "pointer",
                         opacity: safeIndex === 0 ? 0.4 : 1,
                       }}
                     >←</button>
-                    <span style={{ fontSize: 11, color: "rgba(26,23,16,0.50)", padding: "0 6px" }}>
+                    <span style={{ fontSize: 11, color: "hsl(var(--kiddo-ink) / 0.50)", padding: "0 6px" }}>
                       Page {safeIndex + 1} of {totalPages}
                     </span>
                     <button
@@ -7105,14 +7695,14 @@ export default function MemoryBook() {
                       disabled={safeIndex === totalPages - 1}
                       style={{
                         padding: "4px 8px", borderRadius: 6,
-                        border: "1px solid rgba(26,23,16,0.10)", background: "rgba(255,255,255,0.6)",
-                        color: "rgba(26,23,16,0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === totalPages - 1 ? "default" : "pointer",
+                        border: "1px solid hsl(var(--kiddo-ink) / 0.10)", background: "rgba(255,255,255,0.6)",
+                        color: "hsl(var(--kiddo-ink) / 0.55)", fontSize: 11, fontWeight: 700, cursor: safeIndex === totalPages - 1 ? "default" : "pointer",
                         opacity: safeIndex === totalPages - 1 ? 0.4 : 1,
                       }}
                     >→</button>
                   </div>
                 )}
-                <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.40)", letterSpacing: "0.04em" }}>
+                <p style={{ fontSize: 10.5, color: "hsl(var(--kiddo-ink) / 0.40)", letterSpacing: "0.04em" }}>
                   {isCover
                     ? "Cover"
                     : isClosingPage
@@ -7150,7 +7740,7 @@ export default function MemoryBook() {
             aria-label="Sealed letter editor"
             style={{
               position: "fixed", inset: 0, zIndex: 70,
-              background: "rgba(26,23,16,0.62)",
+              background: "hsl(var(--kiddo-ink) / 0.62)",
               display: "flex", alignItems: "center", justifyContent: "center",
               padding: "20px",
               backdropFilter: "blur(3px)",
@@ -7165,14 +7755,14 @@ export default function MemoryBook() {
               onClick={(e) => e.stopPropagation()}
               style={{
                 background: "linear-gradient(160deg, #fff 0%, hsl(var(--kiddo-cream)/0.65) 100%)",
-                border: "1px solid rgba(26,23,16,0.10)",
+                border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                 borderRadius: 24,
                 padding: "28px 26px 24px",
                 width: "100%",
                 maxWidth: 540,
                 maxHeight: "min(86vh, 720px)",
                 display: "flex", flexDirection: "column",
-                boxShadow: "0 24px 64px rgba(26,23,16,0.22)",
+                boxShadow: "0 24px 64px hsl(var(--kiddo-ink) / 0.22)",
               }}
               data-testid="sealed-letter-editor"
             >
@@ -7185,12 +7775,12 @@ export default function MemoryBook() {
                   onClick={() => !sealedSaving && setSealedEditorOpen(false)}
                   aria-label="Close"
                   style={{
-                    background: "rgba(26,23,16,0.06)",
-                    border: "1px solid rgba(26,23,16,0.10)",
+                    background: "hsl(var(--kiddo-ink) / 0.06)",
+                    border: "1px solid hsl(var(--kiddo-ink) / 0.10)",
                     borderRadius: 999,
                     padding: 6,
                     cursor: sealedSaving ? "not-allowed" : "pointer",
-                    color: "rgba(26,23,16,0.55)",
+                    color: "hsl(var(--kiddo-ink) / 0.55)",
                   }}
                   data-testid="button-sealed-editor-close"
                 >
@@ -7200,7 +7790,7 @@ export default function MemoryBook() {
               <h3 className="font-heading" style={{ fontSize: 22, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 6, letterSpacing: "-0.01em" }}>
                 {childName ? `For ${childName}, when they turn ${fundData?.majorityAge ?? 18}.` : `When they turn ${fundData?.majorityAge ?? 18}.`}
               </h3>
-              <p className="font-serif italic" style={{ fontSize: 13.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 16 }}>
+              <p className="font-serif italic" style={{ fontSize: 13.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.6, marginBottom: 16 }}>
                 Whatever you want them to read on the day the fund becomes theirs. You can edit this any time.
               </p>
               <textarea
@@ -7214,7 +7804,7 @@ export default function MemoryBook() {
                   width: "100%",
                   padding: "14px 16px",
                   borderRadius: 14,
-                  border: "1px solid rgba(26,23,16,0.14)",
+                  border: "1px solid hsl(var(--kiddo-ink) / 0.14)",
                   background: "rgba(255,255,255,0.85)",
                   fontSize: 15,
                   lineHeight: 1.6,
@@ -7232,8 +7822,8 @@ export default function MemoryBook() {
                   disabled={sealedSaving}
                   style={{
                     padding: "10px 16px", borderRadius: 999,
-                    background: "white", color: "rgba(26,23,16,0.65)",
-                    border: "1px solid rgba(26,23,16,0.14)",
+                    background: "white", color: "hsl(var(--kiddo-ink) / 0.65)",
+                    border: "1px solid hsl(var(--kiddo-ink) / 0.14)",
                     fontSize: 13, fontWeight: 600,
                     cursor: sealedSaving ? "not-allowed" : "pointer",
                   }}
@@ -7271,6 +7861,93 @@ export default function MemoryBook() {
                   data-testid="button-sealed-editor-save"
                 >
                   {sealedSaving ? "Sealing..." : sealedLetter ? "Save" : "Seal it"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <ConfirmDialog request={confirmReq} onClose={() => setConfirmReq(null)} />
+
+      {/* Branded report sheet — replaces the OS-native window.prompt. Same POST
+          /api/reports (T&S queue, rate-limited, demo-aware) as before. */}
+      <AnimatePresence>
+        {reportEntry && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[90] flex items-center justify-center p-5"
+            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget && !reportSubmitting) setReportEntry(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 8 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ type: "spring", damping: 26, stiffness: 320 }}
+              role="dialog" aria-modal="true" aria-label="Report this content"
+              className="w-full max-w-[360px] rounded-3xl p-6"
+              style={{ background: "hsl(var(--kiddo-cream))", boxShadow: "0 24px 60px -12px rgba(0,0,0,0.35)" }}
+            >
+              <h2 className="font-heading text-lg font-bold text-foreground">Report this content</h2>
+              <p className="mt-1 text-sm text-muted-foreground">From {reportEntry.sender}. Tell us briefly what's wrong and our team will review it.</p>
+              <textarea
+                autoFocus
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="What's wrong with this?"
+                className="mt-4 w-full rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card px-3.5 py-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))] resize-none"
+                data-testid="input-report-reason"
+              />
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  disabled={reportSubmitting || reportReason.trim().length < 3}
+                  onClick={async () => {
+                    if (reportReason.trim().length < 3) return;
+                    setReportSubmitting(true);
+                    haptic("medium");
+                    try {
+                      const res = await fetch("/api/reports", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          targetType: "memory_entry",
+                          targetId: reportEntry.id,
+                          reason: reportReason.trim(),
+                          context: { sender: reportEntry.sender, fundId, createdAt: reportEntry.createdAt },
+                        }),
+                      });
+                      const data = await res.json().catch(() => null);
+                      if (data && data.saved === false) {
+                        toast({ title: "Not saved in the demo", description: data.message || "Reports work in your own fund." });
+                      } else if (res.ok) {
+                        haptic("success");
+                        toast({ title: "Reported", description: "Thanks. Our team will review it." });
+                      } else {
+                        toast({ title: data?.error || "Could not submit report", variant: "destructive" });
+                      }
+                      setReportEntry(null);
+                    } catch {
+                      toast({ title: "Could not submit report", variant: "destructive" });
+                    } finally {
+                      setReportSubmitting(false);
+                    }
+                  }}
+                  className="kiddo-press w-full rounded-full py-3 text-sm font-bold text-white disabled:opacity-50"
+                  style={{ background: "rgb(170,38,38)" }}
+                  data-testid="button-submit-report"
+                >
+                  {reportSubmitting ? "Sending…" : "Submit report"}
+                </button>
+                <button
+                  type="button"
+                  disabled={reportSubmitting}
+                  onClick={() => setReportEntry(null)}
+                  className="kiddo-press w-full rounded-full py-3 text-sm font-semibold text-foreground/70"
+                >
+                  Never mind
                 </button>
               </div>
             </motion.div>
@@ -7345,7 +8022,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           border: "1px solid hsl(var(--kiddo-gold)/0.35)",
           borderRadius: 24,
           padding: "40px 28px 32px",
-          boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.12), 0 2px 6px rgba(26,23,16,0.06)",
+          boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.12), 0 2px 6px hsl(var(--kiddo-ink) / 0.06)",
           textAlign: "center" as const,
         }}
         data-testid={`book-page-milestone-${entry.id}`}
@@ -7358,7 +8035,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           {entry.content}
         </h3>
         {date && (
-          <p style={{ fontSize: 13, color: "rgba(26,23,16,0.55)" }}>{date}</p>
+          <p style={{ fontSize: 13, color: "hsl(var(--kiddo-ink) / 0.55)" }}>{date}</p>
         )}
       </div>
     );
@@ -7369,10 +8046,10 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
     <div
       style={{
         background: "linear-gradient(160deg, rgba(255,255,255,0.85) 0%, hsl(var(--kiddo-cream)/0.65) 100%)",
-        border: "1px solid rgba(26,23,16,0.08)",
+        border: "1px solid hsl(var(--kiddo-ink) / 0.08)",
         borderRadius: 24,
         padding: "32px 28px 28px",
-        boxShadow: "0 12px 40px rgba(26,23,16,0.08), 0 2px 6px rgba(26,23,16,0.05)",
+        boxShadow: "0 12px 40px hsl(var(--kiddo-ink) / 0.08), 0 2px 6px hsl(var(--kiddo-ink) / 0.05)",
       }}
       data-testid={`book-page-${entry.id}`}
     >
@@ -7380,10 +8057,10 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: noteText ? 22 : 16 }}>
         <p className="font-heading" style={{ fontSize: 17, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.2 }}>
           {displayName}
-          {isParentEntry && <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.50)", marginLeft: 8 }}>· memory</span>}
+          {isParentEntry && <span style={{ fontSize: 12, fontWeight: 500, color: "hsl(var(--kiddo-ink) / 0.50)", marginLeft: 8 }}>· memory</span>}
         </p>
         {date && (
-          <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.50)", flexShrink: 0 }}>{date}</p>
+          <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.50)", flexShrink: 0 }}>{date}</p>
         )}
       </div>
 
@@ -7415,7 +8092,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
         <p
           className="font-serif italic"
           style={{
-            fontSize: 18, fontWeight: 500, color: "rgba(26,23,16,0.72)",
+            fontSize: 18, fontWeight: 500, color: "hsl(var(--kiddo-ink) / 0.72)",
             lineHeight: 1.55, marginBottom: 22, textAlign: "center" as const,
           }}
           data-testid={`book-note-empty-${entry.id}`}
@@ -7427,7 +8104,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
       {/* Photo — full-width inside the page. */}
       {photoUrl && (
         <div style={{ marginBottom: 18, borderRadius: 16, overflow: "hidden", background: "hsl(43,28%,92%)" }}>
-          <img
+          <FadeImage
             src={photoUrl}
             alt=""
             style={{ width: "100%", display: "block", maxHeight: 360, objectFit: "cover" }}
@@ -7455,28 +8132,26 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
 
       {/* Voice note — minimal player. */}
       {audioUrl && (
-        <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(26,23,16,0.10)", background: "rgba(255,255,255,0.7)" }}>
+        <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 14, border: "1px solid hsl(var(--kiddo-ink) / 0.10)", background: "rgba(255,255,255,0.7)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(26,23,16,0.55)" }}>
+            <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(var(--kiddo-ink) / 0.55)" }}>
               Voice note
             </p>
-            <span style={{ marginLeft: "auto", color: "rgba(26,23,16,0.32)" }} aria-hidden>
+            <span style={{ marginLeft: "auto", color: "hsl(var(--kiddo-ink) / 0.32)" }} aria-hidden>
               <StaticWaveform size="md" />
             </span>
           </div>
-          <audio src={audioUrl} controls style={{ width: "100%", height: 36 }} data-testid={`book-audio-${entry.id}`} />
+          <VoiceNotePlayer src={audioUrl} testId={`book-audio-${entry.id}`} />
         </div>
       )}
 
       {/* Financial detail — footnote. Always last. Always smallest. */}
       {isGift && giftAmt > 0 && (
-        <div style={{ paddingTop: 16, borderTop: "1px solid rgba(26,23,16,0.10)" }}>
-          <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.55 }}>
+        <div style={{ paddingTop: 16, borderTop: "1px solid hsl(var(--kiddo-ink) / 0.10)" }}>
+          <p style={{ fontSize: 12.5, color: "hsl(var(--kiddo-ink) / 0.62)", lineHeight: 1.55 }}>
             {ticker
-              ? <>$
-{giftAmt.toFixed(2)} invested in <strong style={{ color: "hsl(var(--kiddo-ink))" }}>{ticker}</strong>{childName ? ` · for ${childName}` : ""}</>
-              : <>$
-{giftAmt.toFixed(2)} added to {childName ? `${childName}'s` : "the"} fund</>}
+              ? <>{formatMoneyFriendly(giftAmt)} invested in <strong style={{ color: "hsl(var(--kiddo-ink))" }}>{ticker}</strong>{childName ? ` · for ${childName}` : ""}</>
+              : <>{formatMoneyFriendly(giftAmt)} added to {childName ? `${childName}'s` : "the"} fund</>}
           </p>
         </div>
       )}

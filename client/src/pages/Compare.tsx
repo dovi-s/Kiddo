@@ -1,10 +1,13 @@
 import { Link, useParams } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Scale, ShieldAlert } from "lucide-react";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { usePageSeo } from "@/lib/seo";
+import { investingLiveCopy } from "@shared/legal-copy";
+import { COMPARE_SLUGS } from "@shared/compare-slugs";
 
 type ComparisonCard = {
   slug: string;
@@ -62,7 +65,7 @@ const comparisonCards: ComparisonCard[] = [
   {
     slug: "earlybird",
     title: "EarlyBird vs Kiddo",
-    teaser: "EarlyBird was acquired by Acorns and rolled into Acorns Early. Here is how Kiddo compares and what to do next.",
+    teaser: "EarlyBird was acquired by Acorns and rolled into Acorns Early. How Kiddo compares, and what to do next.",
     href: "/compare/earlybird",
   },
   {
@@ -111,7 +114,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       "EarlyBird was acquired by Acorns and the standalone product retired. Kiddo is the natural replacement: same shareable gifting link, no account needed for gifters, full Memory Book media (note, photo, video, voice), and no monthly fee to start.",
     heroTitle: "EarlyBird was acquired by Acorns. Now what?",
     heroBody: [
-      "EarlyBird was bought by Acorns and rolled into Acorns Early. Your child's money is not gone, but the product families loved is.",
+      "EarlyBird was bought by Acorns in 2025 and the standalone app was shut down. Everyone's balance was liquidated back to their bank as cash. The money is still yours, sitting in your account now, and the gifting experience families actually loved is the part that went away.",
       "If what you want back is a simple gifting link, a personal family experience, and a Memory Book that holds every gift, every note, every voice, Kiddo is the closest fit.",
     ],
     ctaLabel: "Switch to Kiddo",
@@ -146,8 +149,8 @@ const comparisonPages: Record<string, ComparisonPage> = {
       {
         title: "What to do next",
         body: [
-          "Create your Kiddo account and set up your child's fund first. Then email transfers@kiddofund.com so support can help you understand the best transfer path from your current provider.",
-          "Brokerage transfer timing and in-kind eligibility depend on the current custodian and account details, so this is a support-assisted process rather than a fake one-click promise.",
+          "Because EarlyBird already returned your balance as cash to your bank, there is nothing to transfer. Create your Kiddo account, set up your child's fund, and fund it straight from your bank, where that money already landed.",
+          "If you have a separate custodial account somewhere else that you want to move in kind, email transfers@kiddofund.com and support helps with that path directly. No fake one-click promises, and for EarlyBird families, no transfer paperwork at all.",
         ],
       },
       {
@@ -161,18 +164,18 @@ const comparisonPages: Record<string, ComparisonPage> = {
     ],
     bottomTitle: "Start your move from EarlyBird",
     bottomBody:
-      "Start free, set up your child's new fund, and get your gifting flow back online. If you are moving an existing custodial account, Kiddo can help you understand the next step.",
+      "Start free, set up your child's new fund, and fund it from the cash EarlyBird already returned to your bank. If you also have another custodial account to move in kind, Kiddo helps with that next step.",
   },
   "acorns-early": {
     slug: "acorns-early",
     metaTitle: "Acorns Early vs Kiddo | Micro-investing vs investment gifting",
     metaDescription:
-      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does something different: investment gifting. Here's the honest comparison.",
+      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does investment gifting. The two work very differently.",
     heroTitle: "Acorns made micro-investing famous. Kiddo is for the birthday money that actually moves the needle.",
     heroBody: [
       "Acorns created micro-investing. Genuinely category-defining. Every coffee, every Uber, every grocery run quietly building a portfolio in the background. That is elegant.",
-      "But here is the honest math: the average round-up is about $0.50. At 30 transactions a month, that is $15 of micro-investment. At 7% annual returns over 18 years, you are looking at roughly $6,500. That is a nice bonus. Not a head start.",
-      "Kiddo is a different category entirely. Not micro-investing. Investment gifting. The $75 grandma gives at every birthday. The $100 from uncle Joe at Christmas. The $50 from a friend who followed a link in a text message. All of it compounding together for 18 years.",
+      "The honest math: the average round-up is about $0.50. At 30 transactions a month, that is $15 of micro-investment. At a hypothetical 7% over 18 years (not guaranteed), that is roughly $6,500: a nice bonus, not a head start.",
+      "Kiddo is a different category entirely: investment gifting. The $75 grandma gives at every birthday. The $100 from uncle Joe at Christmas. The $50 from a friend who followed a link in a text message. All of it compounding together for 18 years.",
     ],
     ctaLabel: "Start your child's fund",
     heroNote: "Free to start. Takes 2 minutes. Investing involves risk.",
@@ -196,29 +199,29 @@ const comparisonPages: Record<string, ComparisonPage> = {
         title: "Acorns created a real category",
         body: [
           "Micro-investing is a genuine innovation. Acorns built a $2B+ company on the insight that friction is the enemy of saving. Remove the friction, the saving happens. That is true.",
-          "If you already use Acorns and want a custodial account inside that same ecosystem, Acorns Early is a coherent choice. No dishonesty here.",
+          "If you already use Acorns and want a custodial account inside that same ecosystem, Acorns Early is a coherent choice.",
         ],
       },
       {
         title: "The math tells the story",
         body: [
-          "Acorns model: $15/month in round-ups at 7% for 18 years is roughly $6,500. Real money. Not life-changing money.",
-          "Kiddo model: eight people who love your child each gifting $50 to $100 per year is $400 to $800 annually. At 7% over 18 years, that is $14,000 to $28,000. And that is conservative. That is a real head start.",
-          "The difference is not the product. It is the model. One person saving versus a whole community investing.",
+          "Acorns model: $15/month in round-ups at a hypothetical 7% for 18 years is roughly $6,500: real money, not life-changing money.",
+          "Kiddo model: eight people who love your child each gifting $50 to $100 per year is $400 to $800 annually. At a hypothetical 7% over 18 years (not guaranteed), that is $14,000 to $28,000: a real head start.",
+          "The difference is the model: one person saving versus a whole community investing.",
         ],
       },
       {
         title: "Investment gifting is a new category",
         body: [
-          "Acorns = one person investing for themselves. Kiddo = a community investing in a child. Those are different jobs. Different emotional experiences. Different outcomes.",
-          "Nobody had built the category for investing in someone else until now. For the child. For the 18-year relationship. For the birthday and the Christmas and the baby shower that already exist in family life.",
-          "That is what Kiddo is. Gifts that actually last.",
+          "Acorns is one person investing for themselves, while Kiddo is a whole community investing in a child. Those are different jobs, with different outcomes.",
+          "Kiddo was built for a category nobody had: investing in someone else, around the birthdays and holidays already in family life.",
+          "That is what Kiddo is: gifts that actually last.",
         ],
       },
     ],
-    bottomTitle: "Gifts that last. Not just spare change.",
+    bottomTitle: "Gifts that grow into real money.",
     bottomBody:
-      "Round-ups are clever. But the $50 grandma gives at every birthday has always been the bigger opportunity. Kiddo turns that moment into a real investment. In under 60 seconds. No account needed to give.",
+      "Round-ups are clever, but the $50 grandma gives at every birthday has always been the bigger opportunity. Kiddo turns that moment into a real investment in a few seconds, with no account needed to give.",
   },
   greenlight: {
     slug: "greenlight",
@@ -262,7 +265,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       {
         title: "The gifting gap",
         body: [
-          "Greenlight does not give your family a no-account-required link they can use in under 60 seconds to invest for your child.",
+          "Greenlight does not give your family a no-account-required link they can use in seconds to invest for your child.",
           "Kiddo was built around that exact experience. Grandma taps a link, pays, and the gift goes to work.",
         ],
       },
@@ -278,7 +281,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       "Stockpile uses gift cards. Kiddo uses a shareable link. Here is why that difference matters for your family.",
     heroTitle: "Stockpile uses gift cards. Kiddo uses a link.",
     heroBody: [
-      "That sounds like a small difference. It is not.",
+      "It sounds like a small difference.",
       "Gift cards create extra steps. A shareable link removes them. For family gifting, that difference changes whether people actually follow through.",
     ],
     ctaLabel: "Start your child's fund",
@@ -391,7 +394,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "Savings Account",
     comparisonRows: [
       { label: "Primary use", competitor: "Short-term cash savings", kora: "Long-term investing" },
-      { label: "Invests in real stocks", competitor: "No", kora: "Yes" },
+      { label: "Invests in real stocks", competitor: "No", kora: investingLiveCopy("Yes", "Yes, at launch") },
       { label: "Family can gift easily", competitor: "No", kora: "Yes, via shareable link" },
       { label: "FDIC / SIPC coverage", competitor: "FDIC", kora: "SIPC at launch" },
       { label: "Risk of loss", competitor: "Very low", kora: "Yes" },
@@ -447,7 +450,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Annual fee on invested assets", competitor: "None on the UTMA itself. ETF expense ratios apply.", kora: "$1/year per $1,000 invested, all plans (about $10/yr on a $10,000 fund). ETF expense ratios still apply on top." },
       { label: "Account opening time", competitor: "About 20 to 30 minutes including KYC", kora: "About 5 minutes. KYC handled in flow." },
       { label: "Investment universe", competitor: "Full ETFs, mutual funds, individual stocks", kora: "Curated age-appropriate mixes plus custom ticker selection" },
-      { label: "Shareable gifting link", competitor: "None. Brokerages don't do gifting flow.", kora: "Yes. Family opens, picks an amount, pays in under a minute." },
+      { label: "Shareable gifting link", competitor: "None. Brokerages don't do gifting flow.", kora: "Yes. Family opens, picks an amount, pays in seconds." },
       { label: "No-account-needed gifting", competitor: "No. Gifts arrive as a transfer the parent has to wire in.", kora: "Yes. Gifters never sign up." },
       { label: "Occasion pages for birthdays and milestones", competitor: "None", kora: "Custom occasion pages with QR codes" },
       { label: "Memory Book of every gift", competitor: "Statement only", kora: "Every gift, every note, photo, video, voice memory" },
@@ -461,7 +464,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
         title: "What Fidelity does well",
         body: [
           "If your only job is to hold investments for a child until they turn 18, Fidelity is excellent. The fees are competitive, the investment universe is wide, and the brand is established. Many families already have a Fidelity relationship for their own retirement and 529 accounts, and adding a custodial UTMA there is a one-form decision.",
-          "What Fidelity does NOT do is the part most families struggle with: the actual ritual of giving. There's no shareable link. There's no occasion page for the baby shower. There's no clean way for grandma to gift from across the country in under a minute without a paper check. Brokerages were built for self-directed investors, not for the family-and-friends gifting layer that builds a kid's fund over 18 years.",
+          "What Fidelity does NOT do is the part most families struggle with: the actual ritual of giving. There's no shareable link. There's no occasion page for the baby shower. There's no clean way for grandma to gift from across the country in seconds without a paper check. Brokerages were built for self-directed investors, not for the family-and-friends gifting layer that builds a kid's fund over 18 years.",
         ],
       },
       {
@@ -487,9 +490,28 @@ const comparisonPages: Record<string, ComparisonPage> = {
   },
 };
 
+// Dev guard: the comparison content above must stay in lockstep with the shared
+// COMPARE_SLUGS list that the server sitemap is built from (shared/compare-slugs.ts).
+// If they drift, a /compare/:slug page would 404 or fall out of the sitemap. Fail
+// loudly in dev so it's caught before it ships (the sitemap coverage test is the
+// server-side backstop).
+if (import.meta.env.DEV) {
+  const shared = [...COMPARE_SLUGS].slice().sort().join(",");
+  const pageKeys = Object.keys(comparisonPages).sort().join(",");
+  const cardSlugs = comparisonCards.map((c) => c.slug).sort().join(",");
+  if (pageKeys !== shared) {
+    // eslint-disable-next-line no-console
+    console.error(`[compare] comparisonPages keys (${pageKeys}) do not match shared COMPARE_SLUGS (${shared}). Update shared/compare-slugs.ts.`);
+  }
+  if (cardSlugs !== shared) {
+    // eslint-disable-next-line no-console
+    console.error(`[compare] comparisonCards slugs (${cardSlugs}) do not match shared COMPARE_SLUGS (${shared}). Update shared/compare-slugs.ts.`);
+  }
+}
+
 const hubSnapshotRows: HubSnapshotRow[] = [
   { product: "Kiddo", bestFor: "Investment gifting: family gifts that become real investments", giftingLink: "Yes", noAccountGift: "Yes", memoryBook: "Yes" },
-  { product: "Acorns Early", bestFor: "Micro-investing and parent-led saving inside Acorns", giftingLink: "No", noAccountGift: "No", memoryBook: "No" },
+  { product: "Acorns Early", bestFor: "Micro-investing and parent-led saving inside Acorns", giftingLink: "Yes (basic)", noAccountGift: "Yes", memoryBook: "No" },
   { product: "Greenlight", bestFor: "Spending, chores, debit card", giftingLink: "No", noAccountGift: "No", memoryBook: "No" },
   { product: "Stockpile", bestFor: "Gift-card style stock gifting", giftingLink: "Sort of", noAccountGift: "Not cleanly", memoryBook: "No" },
   { product: "529 plan", bestFor: "Education-first tax savings", giftingLink: "Usually awkward", noAccountGift: "No", memoryBook: "No" },
@@ -517,9 +539,13 @@ const fullComparisonRows: FullComparisonRow[] = [
   },
   {
     feature: "Shareable gift link",
-    kiddo: "Yes, anyone can give in under a minute",
+    kiddo: "Yes, anyone can give in seconds",
     earlybird: "Yes (product no longer active)",
-    acornsEarly: "No",
+    // Fact-checked 2026-06-07 against Acorns' own help center: Early Gifts /
+    // Giftlinks DOES exist (per-child link, amount + a message). Previously
+    // "No" — stale. The honest differentiators live in the rows below
+    // (occasions, Memory Book media, stock pick), not in denying the link.
+    acornsEarly: "Yes, a basic link (amount + message)",
     greenlight: "No",
     plan529: "No easy link; awkward workarounds",
     savings: "No",
@@ -529,7 +555,7 @@ const fullComparisonRows: FullComparisonRow[] = [
     feature: "No account needed to give",
     kiddo: "Yes, gifters need only a card",
     earlybird: "Yes (product no longer active)",
-    acornsEarly: "No",
+    acornsEarly: "Yes",
     greenlight: "No",
     plan529: "No",
     savings: "No",
@@ -566,6 +592,35 @@ const fullComparisonRows: FullComparisonRow[] = [
     kiddoHighlight: true,
   },
   {
+    // Acorns' genuine advantage, listed voluntarily — an honest comparison
+    // that names what the other side does well is the only kind worth
+    // publishing. Their terms: 1% match on Early Invest contributions, up
+    // to $7,000/yr, investments must be held 4+ years.
+    feature: "Contribution match",
+    kiddo: "No match. We keep the ongoing fee near zero instead.",
+    earlybird: "No",
+    acornsEarly: "Yes: 1% match up to $7,000/yr (4-year hold)",
+    greenlight: "No",
+    plan529: "Some states offer small matches",
+    savings: "No",
+  },
+  {
+    // The quiet structural difference: opening an Acorns Early account for
+    // someone ELSE's kid requires that child's name, DOB and Social Security
+    // Number (per Acorns' help center) — grandma needs the parents to hand
+    // over their kid's SSN, and the kid ends up fragmented across multiple
+    // custodial accounts with different custodians. Kiddo's model: everyone
+    // gives into the parent's ONE fund; a gifter never touches the SSN.
+    feature: "Give without the child's SSN",
+    kiddo: "Yes. Gifts go into the family's one fund; gifters never need it",
+    earlybird: "Yes (product no longer active)",
+    acornsEarly: "Gift link yes; opening an account for their kid requires the child's SSN",
+    greenlight: "Parents only",
+    plan529: "Opening for someone's child requires beneficiary details",
+    savings: "Varies by bank",
+    kiddoHighlight: true,
+  },
+  {
     feature: "Child view / education layer",
     kiddo: "Yes, age-adapted, fund story, suggestions",
     earlybird: "No",
@@ -582,6 +637,22 @@ const fullComparisonRows: FullComparisonRow[] = [
     greenlight: "Fractional stocks (Greenlight Max tier)",
     plan529: "Limited to plan investment options",
     savings: "No investment; interest only",
+  },
+  {
+    // Honest disclosure of UTMA's genuine downside vs a 529 (2026-06-07). A
+    // custodial account is the child's asset, so the FAFSA weighs it harder
+    // than a parent-owned 529 — true of Kiddo too. We name it plainly here
+    // because the aid-conscious parent IS comparing on this page, and the
+    // trust-anchor brand loses only by omitting a known downside. The 529
+    // genuinely wins this row; we win the flexibility tradeoff. Canonical
+    // wording: FINANCIAL_AID_NOTE in shared/legal-copy.ts.
+    feature: "College financial-aid treatment",
+    kiddo: "Counts as the child's asset (up to ~20% on FAFSA); flexible use",
+    earlybird: "Same: child's asset (custodial)",
+    acornsEarly: "Same: child's asset (custodial)",
+    greenlight: "N/A (not an investment account)",
+    plan529: "Parent asset (up to ~5.64%); best for college-aid optimization",
+    savings: "Depends on owner",
   },
   {
     feature: "Best for",
@@ -649,8 +720,8 @@ function ComparisonDetail({ page }: { page: ComparisonPage }) {
     <>
       <section className="pt-24 pb-14 md:pt-32 md:pb-18">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Compare</p>
-          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-tight text-foreground">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Compare</p>
+          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-[-0.03em] text-foreground">
             {page.heroTitle}
           </h1>
           <div className="mx-auto mt-6 max-w-3xl space-y-4 text-lg leading-relaxed text-muted-foreground">
@@ -723,7 +794,7 @@ function ComparisonDetail({ page }: { page: ComparisonPage }) {
               <CheckCircle2 className="h-4 w-4" />
               Honest comparison, one clear next step
             </div>
-            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-[-0.03em] text-foreground">
               {page.bottomTitle}
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">{page.bottomBody}</p>
@@ -761,9 +832,9 @@ function ComparisonHub() {
     <>
       <section className="pt-24 pb-16 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Compare</p>
-          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-tight text-foreground">
-            Investment gifting didn't exist until we built it.
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Compare</p>
+          <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-[-0.03em] text-foreground">
+            Investment gifting, done right.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
             Acorns created micro-investing. Greenlight owns spending. 529s handle education. None of them built what comes next: a shareable link that turns every birthday, holiday, and baby shower into a real investment for your child.
@@ -787,6 +858,29 @@ function ComparisonHub() {
               </Link>
             </FadeIn>
           ))}
+        </div>
+      </section>
+
+      {/* The differentiator brokerages structurally lack: a place for the gifter */}
+      <section className="pb-16 md:pb-20">
+        <div className="mx-auto max-w-5xl px-4">
+          <FadeIn className="grid items-center gap-8 rounded-3xl border border-border bg-card p-8 shadow-premium-sm md:grid-cols-2 md:p-10">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">The difference</p>
+              <h2 className="mt-3 font-heading text-2xl font-semibold text-foreground md:text-3xl">A place for the people who give.</h2>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                Most accounts are built for one self-directed investor. Kiddo is built around everyone who shows up for a child, each with their own view of what they gave and how it has grown since.
+              </p>
+            </div>
+            <ProductFrame
+              src="/product/mygifts.webp"
+              alt="The gifter's view: every child they've gifted to, the total given, and how each gift kept growing."
+              caption="The gifter's own view."
+              tilt="right"
+              href="/demo"
+              liveLabel="See it live"
+            />
+          </FadeIn>
         </div>
       </section>
 
@@ -819,7 +913,7 @@ function ComparisonHub() {
                   <span className="text-lg font-bold text-foreground">~$6,500</span>
                 </div>
               </div>
-              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Real money. Not a head start. Not the story you want to tell your child when they turn 18.</p>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Real money, but not a head start, and not the story you want to tell your child at 18.</p>
             </div>
 
             <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-premium-sm">
@@ -847,51 +941,11 @@ function ComparisonHub() {
                   <span className="text-lg font-bold text-primary">~$17,000+</span>
                 </div>
               </div>
-              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">And that is conservative. One child. A small circle. No viral loop. Add the people who love your child, and the number grows with them.</p>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">And this is conservative: one child, a small circle, no viral loop. Add the people who love your child, and the number grows with them.</p>
             </div>
           </FadeIn>
           <FadeIn delay={0.1}>
             <p className="mt-5 text-center text-xs text-muted-foreground">Hypothetical projections at 7% annual return, compounded annually. Not guaranteed. Investing involves risk. Past performance does not predict future results.</p>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="pb-16 md:pb-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <FadeIn className="overflow-hidden rounded-3xl border border-border bg-card shadow-premium-sm">
-            <div className="border-b border-border bg-muted/30 px-6 py-5">
-              <h2 className="font-heading text-2xl font-semibold text-foreground">Quick skim: who does what best?</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                If you do not want to open six tabs, this is the fast answer. Kiddo wins when the job is getting family and friends to invest through a link that actually gets used.
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-muted/20 text-foreground">
-                  <tr>
-                    <th className="px-5 py-4 font-medium">Product</th>
-                    <th className="px-5 py-4 font-medium">Best for</th>
-                    <th className="px-5 py-4 font-medium">Shareable gifting link</th>
-                    <th className="px-5 py-4 font-medium">No account needed to give</th>
-                    <th className="px-5 py-4 font-medium">Memory Book / emotional layer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hubSnapshotRows.map((row) => {
-                    const isKiddo = row.product === "Kiddo";
-                    return (
-                      <tr key={row.product} className={`border-t border-border ${isKiddo ? "bg-primary/5" : ""}`}>
-                        <td className={`px-5 py-4 font-medium ${isKiddo ? "text-primary" : "text-foreground"}`}>{row.product}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-foreground" : "text-muted-foreground"}`}>{row.bestFor}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-primary" : "text-muted-foreground"}`}>{row.giftingLink}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-primary" : "text-muted-foreground"}`}>{row.noAccountGift}</td>
-                        <td className={`px-5 py-4 ${isKiddo ? "font-medium text-primary" : "text-muted-foreground"}`}>{row.memoryBook}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
           </FadeIn>
         </div>
       </section>
@@ -949,11 +1003,11 @@ function ComparisonHub() {
               <Scale className="h-4 w-4" />
               A new category
             </div>
-            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              Gifts that last. Not just spare change.
+            <h2 className="mt-6 font-heading text-3xl md:text-4xl font-bold tracking-[-0.03em] text-foreground">
+              Gifts that grow into real money.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. It's invested in real stock, given as a gift, with no account for her to open. That last bit is the part nobody else has actually built.
+              The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. Once investing is live, it gets invested in real stock, given as a gift, with no account for her to open. That last bit is the part nobody else has actually built.
             </p>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
               No account needed to give. No gift card to redeem. No app to download. Just a link and a gift that grows.
@@ -996,7 +1050,7 @@ export default function Compare() {
                   <ShieldAlert className="h-4 w-4" />
                   Comparison not found
                 </div>
-                <h1 className="mt-6 font-heading text-4xl font-bold tracking-tight text-foreground">
+                <h1 className="mt-6 font-heading text-4xl font-bold tracking-[-0.03em] text-foreground">
                   We do not have that comparison page yet.
                 </h1>
                 <p className="mt-4 text-muted-foreground">

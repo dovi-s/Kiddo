@@ -3,6 +3,8 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
+import { isInAppCheckoutEnabled } from "./inAppCheckoutFlag";
+import { isStripeMediaTokenEnabled } from "./stripeMediaTokenFlag";
 import { isSeamlessPlanDowngradeEnabled } from "./planDowngradeFlag";
 import { settleGiftIntentOffSession } from "./giftIntentSettlement";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -15,6 +17,7 @@ import bcrypt from "bcryptjs";
 import { sql, eq, and, desc, inArray, isNotNull, gte } from "drizzle-orm";
 import { db, pool } from "./db";
 import { isAuthenticated, isAdmin } from "./auth";
+import { storeSubscription, removeSubscription, sendPushToUser, getPushPublicKey, isPushConfigured } from "./pushService";
 import { isMagicLinkAuthEnabled } from "./services/magicLinkAuth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
@@ -25,7 +28,7 @@ import { looksLikeTestSender } from "@shared/test-content";
 import { autoPauseOwnershipMismatchedContributions } from "./recurringContributionWorker";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
-import { isDemoFund, isDemoUser, demoMockCheckoutResponse } from "./demoSandbox";
+import { isDemoFund, isDemoUser, demoMockCheckoutResponse, blockDemoMutations } from "./demoSandbox";
 import { queueCustodianTransfer, isCustodianAchEnabled } from "./custodianTransfer";
 import {
   type AgeTransitionRecord as SharedAgeTransitionRecord,
@@ -40,8 +43,14 @@ import { registerFundReadRoutes } from "./routes/funds";
 import { yearOfLifeForDate, getAgeMilestoneState } from "../shared/age18-decisions";
 import { getMajorityAgeForState, US_STATES, UTMA_DEFAULT_MAJORITY_AGE } from "@shared/utma";
 import { recordEvent, eventCtxFromReq } from "./analytics";
-import { uploadMemoryFile } from "./objectStorage";
-import { scanImageBuffer } from "./contentScanner";
+import { uploadMemoryFile, deleteMemoryFile } from "./objectStorage";
+import { scanImageBuffer, getActiveScannerName } from "./contentScanner";
+import { isPublicMediaUploadsEnabled } from "./publicMediaFlag";
+import { normalizeImage } from "./imagePipeline";
+import { stripMediaMetadata } from "./mediaPipeline";
+import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rateLimiter";
+import { verifyEmailUnsubscribeSignature } from "./emailUnsubscribeToken";
+import { senderNameIssue, giftMessageIssue, sanitizeTranscript, isSenderBlocked, SENDER_BLOCKED_RESPONSE } from "./giftTextSafety";
 import { remapOAuthIdentitiesForUser } from "./oauthIdentityStore";
 import { generateTotpSecret, buildOtpauthUri, verifyTotp, generateBackupCodes, hashBackupCodes, findBackupCodeMatch } from "./totp";
 import { deriveActionItemsForUser } from "./actionItems";
@@ -63,14 +72,15 @@ import {
   logMonetizationActivity,
   invalidateMonetizationStateCache,
 } from "./services/monetization";
+import { verifyReminderStopSignature } from "./reminderStopToken";
 import { z } from "zod";
 import { getMobilePushSettings, queueMobilePush, registerMobilePushDevice, updateMobilePushSettings } from "./mobilePushWorker";
 import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllocations } from "./fundStrategyConfig";
 import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fundInvestmentPreferences";
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
-import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftAllocations, giftIntents, pendingGiftMedia, trustedDevices, passkeys, foundingMembers, partnerInquiries, insertPartnerInquirySchema } from "@shared/schema";
+import { toMonthlyEquivalent, sumMonthlyEquivalent, checkRecurringPlausibility } from "@shared/recurring-math";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { isAllowedStockPick } from "@shared/stock-picks";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
@@ -108,10 +118,16 @@ const DEFAULT_INVESTMENT_CONFIG: InvestmentConfig = {
   autoStrategies: {
     growth: {
       label: "Growth Mix",
+      // All-equity by design (2026-06-11). Growth is the TOP tier — there is no
+      // more-aggressive option — so it carries no bond sleeve: on an ~18-year
+      // horizon, and with the gift structure that behaviorally keeps families
+      // invested through dips (it never felt like "their" money to panic-sell),
+      // bonds are pure drag here. Broad market-cap, US-tilted, NO sector bet
+      // (sector tilts are the advice-like allocation the self-directed posture
+      // avoids). Balanced/Conservative below keep their bonds — that's their job.
       allocations: {
-        VTI: 0.62,
-        VXUS: 0.28,
-        BND: 0.10,
+        VTI: 0.70,
+        VXUS: 0.30,
       },
     },
     balanced: {
@@ -133,11 +149,62 @@ const DEFAULT_INVESTMENT_CONFIG: InvestmentConfig = {
   },
 };
 
+// Recovery-aware "does this recurring plan have an UNRESOLVED recent failure?"
+// A charge failed in the last 14 days AND no successful charge for the SAME plan
+// has landed since. That clears the "Charge missed" state the moment the parent
+// recovers ("Add it now" writes a parent_contribution success row) or the next
+// cycle simply succeeds. Safe by construction: with no recovery row it falls back
+// to failure-only (the prior behavior) and can never hide a real unrecovered
+// failure. Keyed by parentContributionId (the plan id). Shared by /api/me/scheduled
+// and attachRecentFailures so the two computations never drift.
+const RECENT_FAILURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+async function computeRecentFailureMap(
+  fundIds: string[],
+): Promise<Map<string, { lastFailureAt: Date; hasRecentFailure: boolean }>> {
+  const out = new Map<string, { lastFailureAt: Date; hasRecentFailure: boolean }>();
+  if (fundIds.length === 0) return out;
+  const latestByPlan = async (types: string[]): Promise<Map<string, Date>> => {
+    const rows = await db
+      .select({ metadata: activities.metadata, createdAt: activities.createdAt })
+      .from(activities)
+      .where(and(inArray(activities.type, types), inArray(activities.fundId, fundIds)))
+      .orderBy(desc(activities.createdAt));
+    const m = new Map<string, Date>();
+    for (const r of rows) {
+      if (!r.metadata || !r.createdAt) continue;
+      try {
+        const cid = JSON.parse(String(r.metadata))?.parentContributionId;
+        if (typeof cid === 'string' && !m.has(cid)) m.set(cid, r.createdAt);
+      } catch { /* skip malformed metadata */ }
+    }
+    return m;
+  };
+  const failures = await latestByPlan(['parent_contribution_failed']);
+  if (failures.size === 0) return out;
+  // A worker cycle or a manual "Add it now" both land as parent_contribution /
+  // gift_invested rows stamped with the plan id — either one counts as recovery.
+  const successes = await latestByPlan(['parent_contribution', 'gift_invested']);
+  const now = Date.now();
+  failures.forEach((lastFailureAt, cid) => {
+    const recovery = successes.get(cid);
+    const recovered = !!recovery && recovery.getTime() > lastFailureAt.getTime();
+    const withinWindow = now - lastFailureAt.getTime() < RECENT_FAILURE_WINDOW_MS;
+    out.set(cid, { lastFailureAt, hasRecentFailure: withinWindow && !recovered });
+  });
+  return out;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   startMarketQuoteCacheRefresher();
+
+  // Demo integrity guard — blocks persisting writes from demo-account visitors
+  // so they can't pollute (or lock/hijack) the shared demo for the next visitor.
+  // Mounted before the route handlers; money-flow POSTs self-sandbox and pass
+  // through. Real users are never affected. See server/demoSandbox.ts.
+  app.use(blockDemoMutations);
 
   const INVESTMENT_CONFIG_PATH = path.join(process.cwd(), ".local", "investment-config.json");
   const PERSONAL_FUNDS_WAITLIST_PATH = path.join(process.cwd(), ".local", "personal-fund-waitlist.jsonl");
@@ -439,7 +506,7 @@ export async function registerRoutes(
 
     return {
       status: "approved" as const,
-      message: "Your identity is verified and your investing account is active.",
+      message: "Your identity is verified and your fund is active.",
       reason: "auto_approved",
     };
   };
@@ -591,6 +658,21 @@ export async function registerRoutes(
     }
     return null;
   };
+
+  // Stable, reset-proof entry to the demo Kid View for the marketing site.
+  // The kid-view share token is random per seed, so the marketing pages can't
+  // hardcode it. This resolves the demo fund by its STABLE slug and redirects
+  // to the built-in demo kid-view token (demo-kid-<fundId>, PIN shown), so a
+  // marketing page can embed a LIVE kid view that survives the nightly reset.
+  app.get("/demo/kidview/:slug", async (req, res) => {
+    try {
+      const fund = await storage.getFundBySlug(String(req.params.slug || ""));
+      if (!fund || !(await isDemoKidViewFund(fund.id))) return res.redirect(302, "/demo");
+      return res.redirect(302, `/kid/demo-kid-${fund.id}`);
+    } catch {
+      return res.redirect(302, "/demo");
+    }
+  });
 
   const createKidViewAccessToken = async (fundId: string, shareToken: string) => {
     const store = await loadKidViewStore();
@@ -1039,15 +1121,26 @@ export async function registerRoutes(
 
   const getAutoBasketForStrategy = async (strategy: string | null | undefined, fundId?: string | null) => {
     const cfg = await loadInvestmentConfig();
-    const strategyKey = String(strategy || "").trim().toLowerCase();
+    let strategyKey = String(strategy || "").trim().toLowerCase();
+    // Normalize the legacy placeholder "auto_invest" (and an empty value) to
+    // "growth" — the SAME normalization the strategy display path uses
+    // (auto_invest renders as "Growth Mix"), and the product default
+    // (GetStarted sends "growth"). Without this, an auto_invest / missing-
+    // strategy fund would DISPLAY as Growth Mix but get the BALANCED basket
+    // (bonds) the moment a parent auto-invests cash — a real label-vs-
+    // allocation mismatch (and a quiet bond drag against the growth default).
+    // growth/balanced/conservative/custom the parent actually chose pass through.
+    if (strategyKey === "auto_invest" || strategyKey === "") strategyKey = "growth";
     let allocations: Record<string, number> = {};
     if (strategyKey === "custom" && fundId) {
       const custom = (await getFundCustomAllocations(fundId)) || DEFAULT_CUSTOM_ALLOCATIONS;
       allocations = custom as Record<string, number>;
     } else {
+      // Last-resort fallback prefers growth (the product default) over balanced,
+      // so a config gap never silently seats a fund in bonds.
       const chosen = cfg.autoStrategies[strategyKey]
-        || cfg.autoStrategies.balanced
         || cfg.autoStrategies.growth
+        || cfg.autoStrategies.balanced
         || Object.values(cfg.autoStrategies)[0];
       allocations = chosen?.allocations || {};
     }
@@ -1475,6 +1568,159 @@ export async function registerRoutes(
     }
   });
 
+  // "Request a company" escape hatch off the curated stock picker. A gifter or
+  // parent who doesn't see the brand they want can request it. Unauthenticated
+  // (gifters have no account), so: validate + length-cap + light per-IP rate
+  // limit. Routed to status 'escape_hatch_requested' and reviewed MANUALLY via
+  // the admin GET below — NEVER auto-added to the offered universe (keeps the
+  // self-directed menu from becoming a moving target; see
+  // project_stock_curation_liability). Mirrors the PMF intake above. Migration
+  // 0044 (stock_requests).
+  app.post("/api/stock-requests", async (req, res) => {
+    try {
+      const requestedText = String(req.body?.company ?? req.body?.requestedText ?? "").trim().slice(0, 120);
+      if (requestedText.length < 2) {
+        return res.status(400).json({ error: "Tell us which company you'd like." });
+      }
+      const email = String(req.body?.email || "").trim().toLowerCase().slice(0, 255) || null;
+      const fundId = req.body?.fundId ? String(req.body.fundId).slice(0, 64) : null;
+      const eventId = req.body?.eventId ? String(req.body.eventId).slice(0, 64) : null;
+      const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null;
+
+      // Light per-IP cap (20/hr) — low-abuse-value write, but bounded anyway.
+      if (ip && !(await checkRateLimit(`stock-request:${ip}`, 20, 60 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many requests. Please try again later." });
+      }
+
+      await db.execute(sql`
+        INSERT INTO stock_requests (requested_text, status, fund_id, event_id, requester_email, ip)
+        VALUES (${requestedText}, 'escape_hatch_requested', ${fundId}, ${eventId}, ${email}, ${ip})
+      `);
+
+      try {
+        recordEvent({ name: "stock_pick_requested", source: "public", props: { hasEmail: Boolean(email) } });
+      } catch (eventErr) {
+        console.warn("stock-request recordEvent failed (non-fatal):", eventErr);
+      }
+
+      return res.status(201).json({ success: true });
+    } catch (error) {
+      console.error("Error saving stock request:", error);
+      return res.status(500).json({ error: "Failed to save your request." });
+    }
+  });
+
+  // Admin view: the manual-review queue for "request a company" intake.
+  // Newest pending first. Reviewing = a founder decides whether to add the
+  // brand (then wires its logo + quote + Kid View explainer per stock-picks.ts);
+  // there is intentionally no automated promotion.
+  app.get("/api/admin/stock-requests", isAdmin, async (_req, res) => {
+    try {
+      const rows = await db.execute(sql`
+        SELECT sr.id, sr.requested_text, sr.status, sr.fund_id, sr.event_id,
+               sr.requester_email, sr.created_at,
+               f.recipient_first_name AS child_name
+        FROM stock_requests sr
+        LEFT JOIN funds f ON f.id = sr.fund_id
+        WHERE sr.status = 'escape_hatch_requested'
+        ORDER BY sr.created_at DESC
+        LIMIT 200
+      `);
+      return res.json({ requests: rows.rows });
+    } catch (error) {
+      console.error("Error reading stock requests:", error);
+      return res.status(500).json({ error: "Failed to load stock requests." });
+    }
+  });
+
+  // ── Parent promotional email unsubscribe ────────────────────────────────
+  // One-click (RFC 8058) + the in-body link target for PARENT promotional
+  // emails (monthly pulse, birthday, anniversary, milestones, holiday warmth,
+  // year-end Wrapped, tax-prep, volatility). Verifies the HMAC signature from
+  // emailUnsubscribeToken, then flips the matching key in users.email_preferences
+  // to false (the same JSONB map workers gate on via isCategoryEnabled).
+  // REQUIRED/transactional categories ignore that map, so this can NEVER suppress
+  // a password reset, verification, or gift receipt. Idempotent; reports ok even
+  // for a non-user email so it never leaks who has an account.
+  const PARENT_UNSUB_CATEGORIES = new Set([
+    "anniversary", "birthday", "milestones", "monthlyPulse",
+    "taxPrep", "wrapped", "volatility", "motherFathersDay",
+  ]);
+  async function applyEmailUnsubscribe(emailRaw: string, catRaw: string, sig: string): Promise<boolean> {
+    const email = String(emailRaw || "").trim().toLowerCase();
+    const cat = String(catRaw || "").trim();
+    if (!email || !PARENT_UNSUB_CATEGORIES.has(cat)) return false;
+    if (!verifyEmailUnsubscribeSignature(email, cat, sig)) return false;
+    await db.execute(sql`
+      UPDATE users
+      SET email_preferences = COALESCE(email_preferences, '{}'::jsonb) || jsonb_build_object(${cat}::text, false)
+      WHERE LOWER(email) = ${email}
+    `);
+    return true;
+  }
+  function unsubscribeResultPage(ok: boolean): string {
+    const body = ok
+      ? `<h1>You're unsubscribed</h1><p>You won't get these updates anymore. You can change this any time in your Kiddo email settings.</p>`
+      : `<h1>This link didn't work</h1><p>It may be expired or incomplete. You can manage your email settings from inside Kiddo instead.</p>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kiddo email settings</title><style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#F9F7F3;color:#1A1710;margin:0;padding:48px 16px;text-align:center}.card{max-width:460px;margin:0 auto;background:#fff;border:1px solid rgba(26,23,16,.1);border-radius:20px;padding:32px 28px}h1{font-family:Georgia,serif;font-size:22px;margin:0 0 12px}p{font-size:14px;line-height:1.6;color:rgba(26,23,16,.6)}.b{font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1B4332;margin-bottom:16px}</style></head><body><div class="card"><div class="b">Kiddo</div>${body}</div></body></html>`;
+  }
+  // GET — the in-body "unsubscribe" link a parent clicks. Renders a confirmation.
+  app.get("/api/email/unsubscribe", async (req, res) => {
+    const ok = await applyEmailUnsubscribe(String(req.query.e || ""), String(req.query.cat || ""), String(req.query.sig || "")).catch(() => false);
+    res.status(ok ? 200 : 400).type("html").send(unsubscribeResultPage(ok));
+  });
+  // POST — RFC 8058 one-click (Gmail/Yahoo hit this directly; no page needed).
+  app.post("/api/email/unsubscribe", async (req, res) => {
+    const ok = await applyEmailUnsubscribe(
+      String(req.query.e || (req.body && req.body.e) || ""),
+      String(req.query.cat || (req.body && req.body.cat) || ""),
+      String(req.query.sig || (req.body && req.body.sig) || ""),
+    ).catch(() => false);
+    res.status(ok ? 200 : 400).json({ ok });
+  });
+
+  // ── Web Push notifications ──────────────────────────────────────────────
+  // Public VAPID key + whether push is configured (client needs both to subscribe).
+  app.get("/api/push/public-key", (_req, res) => {
+    res.json({ publicKey: getPushPublicKey(), enabled: isPushConfigured() });
+  });
+  // Register the current browser's push subscription for the logged-in user.
+  app.post("/api/push/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const sub = req.body?.subscription;
+      if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
+        return res.status(400).json({ error: "invalid subscription" });
+      }
+      await storeSubscription(req.user.id, sub, req.get("user-agent") || undefined);
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ error: "failed to subscribe" });
+    }
+  });
+  // Drop a subscription (user revoked, or signed out of this device).
+  app.post("/api/push/unsubscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const endpoint = req.body?.endpoint;
+      if (endpoint) await removeSubscription(String(endpoint));
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ error: "failed to unsubscribe" });
+    }
+  });
+  // Self-test: push to the caller's own devices — verifies the full pipeline.
+  app.post("/api/push/test", isAuthenticated, async (req: any, res) => {
+    // Durable per-user cap so the self-test can't be hammered into a push-send loop.
+    if (!(await checkRateLimit(`push-test:${req.user.id}`, 10, 10 * 60 * 1000))) {
+      return res.status(429).json({ error: "Too many test notifications. Try again in a few minutes." });
+    }
+    const result = await sendPushToUser(req.user.id, {
+      title: "Kiddo",
+      body: "Push notifications are working.",
+      url: "/dashboard",
+    });
+    res.json(result);
+  });
+
   // Admin view: aggregated PMF survey responses with the 40% Sean
   // Ellis threshold computed against the latest-per-email cohort.
   // The 40% threshold is the canonical PMF gate (per
@@ -1614,12 +1860,16 @@ export async function registerRoutes(
   // schema permits both). The bar to report is intentionally low; the
   // T&S queue handles signal-vs-noise via admin review.
   //
-  // Rate-limited per IP + per target to prevent abuse — a bad actor
+  // Rate-limited per IP AND per target to prevent abuse — a bad actor
   // can't paper-bomb the queue, and the same target can't be reported
-  // 100 times by one viewer.
-  const reportRateLimit = new Map<string, number[]>();
+  // 100 times. Backed by the durable, cross-instance Postgres limiter
+  // (server/rateLimiter.ts) so the cap holds across replicas and process
+  // restarts; the previous in-memory Map only protected a single process
+  // (effective cap was N× under a multi-instance deploy) and claimed a
+  // per-target dedupe it never actually enforced.
   const REPORT_RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-  const REPORT_RATE_MAX = 10; // 10 reports per IP per hour
+  const REPORT_RATE_MAX_PER_IP = 10; // 10 reports per IP per hour
+  const REPORT_RATE_MAX_PER_TARGET = 5; // 5 reports against one target per hour
   app.post("/api/reports", async (req: any, res) => {
     try {
       const targetType = String(req.body?.targetType || "").trim();
@@ -1635,16 +1885,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid email" });
       }
 
-      // Per-IP rate limit. Sliding window — drop timestamps older than
-      // the window, then check if we're under the cap.
+      // Per-IP rate limit (durable, cross-instance). Counts this submission.
       const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
-      const now = Date.now();
-      const recent = (reportRateLimit.get(ip) || []).filter((t) => now - t < REPORT_RATE_WINDOW_MS);
-      if (recent.length >= REPORT_RATE_MAX) {
+      if (!(await checkRateLimit(`report:ip:${ip}`, REPORT_RATE_MAX_PER_IP, REPORT_RATE_WINDOW_MS))) {
         return res.status(429).json({ error: "Too many reports from this device. Try again in a bit." });
       }
-      recent.push(now);
-      reportRateLimit.set(ip, recent);
+      // Per-target rate limit — caps how many times a single entry/gift can be
+      // reported within the window, so one target can't be paper-bombed into the
+      // queue (the dedupe the old comment claimed but never did).
+      if (!(await checkRateLimit(`report:target:${targetType}:${targetId}`, REPORT_RATE_MAX_PER_TARGET, REPORT_RATE_WINDOW_MS))) {
+        return res.status(429).json({ error: "This item has already been reported. Our team is reviewing it." });
+      }
 
       const reporterUserId = (req.user as any)?.id || null;
 
@@ -2234,15 +2485,15 @@ export async function registerRoutes(
 
   const ensureFundSlugAndPermanentEvent = async (fund: any, userId: string) => {
     let ensuredFund = fund;
-    const desiredSlugSource =
-      String(ensuredFund.slug || "").trim() ||
-      String(ensuredFund.name || ensuredFund.recipientFirstName || "fund");
-    const desiredSlug = slugify(desiredSlugSource);
-    const canonicalSlugOwner = desiredSlug ? await storage.getFundBySlug(desiredSlug) : null;
-    if (
-      !desiredSlug ||
-      (canonicalSlugOwner && canonicalSlugOwner.id !== ensuredFund.id)
-    ) {
+    // Fast path (2026-06-04 perf): a fund that already HAS a slug skips the
+    // getFundBySlug collision round trip. Slugs are minted unique at creation
+    // (generateUniqueFundSlug), so an existing slug is already canonical; the
+    // collision re-check only ever mattered for the empty-slug / legacy case,
+    // which still runs the full path. Steady state for every demo fund and
+    // almost every real fund — one fewer remote-DB round trip per fund.
+    const existingSlug = String(ensuredFund.slug || "").trim();
+    if (!existingSlug) {
+      const desiredSlug = slugify(String(ensuredFund.name || ensuredFund.recipientFirstName || "fund"));
       const slug = await generateUniqueFundSlug(
         desiredSlug || String(ensuredFund.name || ensuredFund.recipientFirstName || "fund"),
         ensuredFund.id,
@@ -2261,7 +2512,12 @@ export async function registerRoutes(
     const trimmed = value.trim();
     if (!trimmed) return null;
     if (trimmed.length > 2000) return null;
-    if (trimmed.startsWith("/uploads/")) {
+    // Trusted same-origin static paths: /uploads/ = user-uploaded media,
+    // /demo/ = committed demo assets (seeded Memory Book photos, avatars). Both
+    // are app-served files, not user-fetched remote URLs, so they pass through
+    // as-is instead of being parsed as absolute http(s) URLs (which would null a
+    // leading-slash path and silently drop a seeded demo photo).
+    if (trimmed.startsWith("/uploads/") || trimmed.startsWith("/demo/")) {
       return trimmed;
     }
     try {
@@ -2460,7 +2716,14 @@ export async function registerRoutes(
             SELECT SUM(CAST(g.net_amount AS numeric))
             FROM gifts g
             WHERE g.fund_id = f.id
-              AND g.status NOT IN ('pending', 'failed', 'refunded', 'canceled', 'host_hold')
+              -- 'pending' INCLUDED: a pending gift is always post-charge (money
+              -- received) — its two creators (checkout webhook + gift-intent
+              -- settlement) run only after payment succeeds; the recurring worker
+              -- uses 'processing' and the raw create-gift endpoint is 404'd in prod.
+              -- Its money is already in total_value via pendingBalance, so excluding
+              -- it here showed a stuck pending gift as phantom growth. host_hold stays
+              -- excluded (held, not in the fund / not in pendingBalance). Audit fix 2026-07.
+              AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold')
           ), 0) AS principal_basis
         FROM funds f
         WHERE f.id = ${fundId}
@@ -2486,7 +2749,11 @@ export async function registerRoutes(
               SELECT SUM(CAST(g.net_amount AS numeric))
               FROM gifts g
               WHERE g.fund_id = fs.fund_id
-                AND g.status NOT IN ('pending', 'failed', 'refunded', 'canceled', 'host_hold')
+                -- Mirror the capture query above: 'pending' INCLUDED (post-charge
+                -- money, already in total_value). The backfill self-corrects — it
+                -- recomputes basis from CURRENT statuses on every capture, so a
+                -- pending gift that later fails drops back out automatically.
+                AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold')
                 AND DATE(g.created_at) <= DATE(fs.snapshot_date)
             ), 0)
           )::text
@@ -2589,7 +2856,13 @@ export async function registerRoutes(
       // are blocked by requireFundMutator (which only passes 'owner'
       // and 'co-admin'). Per FUND_STATES_SPEC.md item 4 and the
       // 2026-05-14 funds.previousOwnerId foundation.
-      if ((fund as any).previousOwnerId === userId) {
+      //
+      // REVOCABLE since 2026-06-07 (migration 0042): the adult owner can
+      // close this window from Settings. Once previousOwnerAccessRevokedAt
+      // is set, the former custodian gets the same 403 as any stranger —
+      // a permanent irrevocable observer on an adult's account was a
+      // coercive-control vector in the estranged-parent case.
+      if ((fund as any).previousOwnerId === userId && !(fund as any).previousOwnerAccessRevokedAt) {
         req.ownedFund = fund;
         req.fundAccessRole = 'previous_owner';
         return next();
@@ -2678,6 +2951,23 @@ export async function registerRoutes(
           id: fund.id,
           name: fund.recipientFirstName || fund.name || 'fund',
         });
+        // Ledger entry — the moment the fund went LIVE for investing. fund_created
+        // logs at draft time; without this, a draft flipping to active (after KYC)
+        // was the one user-facing state change with no Activity row. Best-effort:
+        // never fail the activation on a logging hiccup.
+        try {
+          const childName = String(fund.recipientFirstName || '').trim();
+          await storage.createActivity({
+            userId,
+            fundId: fund.id,
+            type: 'fund_activated',
+            title: childName ? `${childName}'s fund is live` : 'Your fund is live',
+            description: 'Identity verified. The fund is active and ready to invest.',
+            metadata: JSON.stringify({ strategy: allowedStrategy, recipientFirstName: fund.recipientFirstName || null }),
+          });
+        } catch (err) {
+          console.error('[activity] fund_activated write failed:', err);
+        }
       }
       if (activated.length > 0) {
         console.log(`[funds:activate-pending-drafts] user=${userId} activated=${activated.length}`);
@@ -2771,15 +3061,27 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: "Fund not found" });
 
       const userId = (req.user as any).id;
+      // ONE parallel wave for every independent read (2026-06-04 perf). This
+      // used to be two serial Promise.all stages, but the only thing in the
+      // second stage that actually depended on the first was largeGiftHolds
+      // (it needs the gifts list) — so snapshots, transactions, parent
+      // contributions, and allocations are folded in here, and largeGiftHolds
+      // runs as a tiny conditional step below. Halves the DB wall-clock from
+      // two round-trip waves to one. parentContributions is unconditional now
+      // (recurring is free across tiers — see hasAutoInvestAccess below).
       const [
         rawHoldings,
-        giftsForFund,
+        giftsForFundRaw,
         eventsForFund,
         investmentPreferences,
         giftCodeRecord,
         recurringGiftRows,
         subscription,
         fundMembership,
+        snapshots,
+        recentTransactionRows,
+        parentContributionRows,
+        giftAllocationsForFund,
       ] = await timeStage("base_parallel_fetch", () =>
         Promise.all([
           storage.getHoldingsByFund(fund.id),
@@ -2790,8 +3092,57 @@ export async function registerRoutes(
           storage.getRecurringGiftsByFund(fund.id),
           storage.getSubscription(userId),
           storage.getFundMembership(userId, fund.id),
+          db
+            .select()
+            .from(fundSnapshots)
+            .where(eq(fundSnapshots.fundId, fund.id))
+            .orderBy(fundSnapshots.snapshotDate)
+            .catch(() => []),
+          db
+            .select({
+              id: transactions.id,
+              type: transactions.type,
+              amount: transactions.amount,
+              status: transactions.status,
+              description: transactions.description,
+              metadata: transactions.metadata,
+              giftId: transactions.giftId,
+              eventId: transactions.eventId,
+              fundId: transactions.fundId,
+              completedAt: transactions.completedAt,
+              createdAt: transactions.createdAt,
+            })
+            .from(transactions)
+            .where(eq(transactions.fundId, fund.id))
+            .orderBy(desc(transactions.completedAt), desc(transactions.createdAt))
+            .limit(12)
+            .catch(() => []),
+          storage.getParentContributionsByFund(fund.id),
+          storage.getGiftAllocationsByFund(fund.id).catch(() => []),
         ]),
       );
+
+      // Server-side keepsake cap (defense-in-depth, 2026-06-10). When the
+      // requester is the previous owner of a transferred fund and hasn't been
+      // granted live access, they see the fund as they knew it AS CUSTODIAN —
+      // gifts up to the handoff, nothing after. Capping here (not just on the
+      // client) means NO downstream surface — gift list, roster, counts, the
+      // since-last-visit digest, large-gift holds — can leak the now-adult's
+      // post-handoff gift activity (or the private notes those gifts carry).
+      const reqIsKeepsakePrevOwner =
+        String((fund as any).previousOwnerId || "") === userId &&
+        !!(fund as any).transferredAt &&
+        !(fund as any).previousOwnerLiveAccessGrantedAt;
+      const giftsForFund = reqIsKeepsakePrevOwner
+        ? (() => {
+            const cutoff = new Date((fund as any).transferredAt).getTime();
+            if (!Number.isFinite(cutoff)) return giftsForFundRaw;
+            return giftsForFundRaw.filter((g: any) => {
+              const ts = g?.createdAt ? new Date(g.createdAt).getTime() : 0;
+              return !Number.isFinite(ts) || ts === 0 || ts <= cutoff;
+            });
+          })()
+        : giftsForFundRaw;
 
       // Self-heal: re-invest any gifts stuck in pending/processing so holdings are complete
       const hasStuckGifts = giftsForFund.some((g: any) => {
@@ -2821,49 +3172,169 @@ export async function registerRoutes(
       // need to know the subscriber's tier (not for recurring access).
       void plan; void isGlobalActive; void fundMembership;
 
-      // Run all remaining DB queries in parallel - none depend on each other
-      const [snapshots, recentTransactionRows, parentContributionRows, largeGiftHoldsRaw, giftAllocationsForFund] = await timeStage("second_parallel_fetch", () =>
-        Promise.all([
-          db
-            .select()
-            .from(fundSnapshots)
-            .where(eq(fundSnapshots.fundId, fund.id))
-            .orderBy(fundSnapshots.snapshotDate)
-            .catch(() => []),
-          db
-            .select({
-              id: transactions.id,
-              type: transactions.type,
-              amount: transactions.amount,
-              status: transactions.status,
-              description: transactions.description,
-              metadata: transactions.metadata,
-              giftId: transactions.giftId,
-              eventId: transactions.eventId,
-              fundId: transactions.fundId,
-              completedAt: transactions.completedAt,
-              createdAt: transactions.createdAt,
-            })
-            .from(transactions)
-            .where(eq(transactions.fundId, fund.id))
-            .orderBy(desc(transactions.completedAt), desc(transactions.createdAt))
-            .limit(12)
-            .catch(() => []),
-          hasAutoInvestAccess
-            ? storage.getParentContributionsByFund(fund.id)
-            : Promise.resolve([]),
-          (async () => {
-            const heldGifts = giftsForFund.filter((gift: any) => String(gift.status || "").toLowerCase() === "host_hold");
-            if (heldGifts.length === 0) return { heldGifts: [], entitlement: null, coverageStatus: null };
-            const [entitlement, coverageStatus] = await Promise.all([
-              hasPaidPlanForFund(fund.userId, fund.id),
-              getFundCoverageState(fund.userId, fund.id),
-            ]);
-            return { heldGifts, entitlement, coverageStatus };
-          })(),
-          storage.getGiftAllocationsByFund(fund.id).catch(() => []),
-        ])
-      );
+      // largeGiftHolds is the ONLY read that depends on the gifts list, and it
+      // only touches the DB when there are actually host-held gifts (rare). So
+      // it runs as a tiny conditional step after the single parallel wave above
+      // — a no-op (zero round trips) for the overwhelmingly common case.
+      // ── Second wave kickoff (2026-06-04 perf) ───────────────────────────
+      // The six remaining stages (large-gift holds, per-event gift codes,
+      // kid-claimed welcome, co-parent acceptance, recurring coverage, gift
+      // enrichment) each depend ONLY on base-wave results (gifts, events,
+      // fund, userId) — never on each other — but they used to run as six
+      // SERIAL round-trip waves (recurring-coverage alone does ~4 internal
+      // serial queries). Kick them ALL off here so they run concurrently;
+      // each stage below just awaits its already-running promise. Every promise
+      // keeps the stage's original try/catch so one failing surface never
+      // fails the whole summary.
+      const customEvents = eventsForFund.filter((e: any) => !e.isPermanent);
+      const viewerIsOwner = fund.userId === userId;
+
+      const largeGiftHoldsRawP = (async () => {
+        const heldGifts = giftsForFund.filter((gift: any) => String(gift.status || "").toLowerCase() === "host_hold");
+        if (heldGifts.length === 0) return { heldGifts: [] as any[], entitlement: null as any, coverageStatus: null as any };
+        const [entitlement, coverageStatus] = await Promise.all([
+          hasPaidPlanForFund(fund.userId, fund.id),
+          getFundCoverageState(fund.userId, fund.id),
+        ]);
+        return { heldGifts, entitlement, coverageStatus };
+      })();
+
+      const eventGiftCodeEntriesP = Promise.all(
+        customEvents.map(async (e: any) => {
+          try {
+            const record = await ensureGiftCodeForEvent(e, fund);
+            return [e.id, { code: record.code, lookupUrl: `${getAppBaseUrl(req)}/gift` }] as const;
+          } catch {
+            return null;
+          }
+        }),
+      ).then((results) => Object.fromEntries(results.filter(Boolean) as [string, { code: string; lookupUrl: string }][]));
+
+      const kidClaimedAtP = (async (): Promise<string | null> => {
+        try {
+          const transitionRecord = await getAgeTransitionRecord(fund.id);
+          if (transitionRecord.ownershipTransferredAt && transitionRecord.childClaimedByUserId === userId) {
+            const claimedAt = transitionRecord.childClaimedAt || transitionRecord.ownershipTransferredAt;
+            const ageMs = Date.now() - new Date(claimedAt).getTime();
+            if (ageMs >= 0 && ageMs < 60 * 24 * 60 * 60 * 1000) return claimedAt as any;
+          }
+        } catch {
+          // Treat errors here as "not the kid" — the welcome banner just
+          // doesn't render. No reason to fail the entire dashboard summary.
+        }
+        return null;
+      })();
+
+      const coparentAcceptanceP = (async (): Promise<{ collaboratorId: string; name: string; acceptedAt: string } | null> => {
+        if (!viewerIsOwner) return null;
+        try {
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          const acceptedRows = await db.execute(sql`
+            SELECT
+              fc.id AS collaborator_id,
+              fc.email,
+              fc.accepted_at,
+              fc.user_id,
+              u.first_name,
+              u.last_name,
+              u.preferred_name
+            FROM fund_collaborators fc
+            LEFT JOIN users u ON u.id = fc.user_id
+            WHERE fc.fund_id = ${fund.id}
+              AND fc.status = 'accepted'
+              AND fc.accepted_at IS NOT NULL
+              AND fc.accepted_at >= ${thirtyDaysAgo.toISOString()}
+            ORDER BY fc.accepted_at DESC
+            LIMIT 1
+          `);
+          const row = (acceptedRows.rows as any[])?.[0];
+          if (row) {
+            const first = String(row.first_name || row.preferred_name || "").trim();
+            const last = String(row.last_name || "").trim();
+            const fullName = [first, last].filter(Boolean).join(" ").trim();
+            const displayName = fullName || String(row.email || "Your co-parent").split("@")[0];
+            return {
+              collaboratorId: String(row.collaborator_id),
+              name: displayName,
+              acceptedAt: new Date(row.accepted_at).toISOString(),
+            };
+          }
+        } catch {
+          // Best-effort; never block dashboard summary on this surface.
+        }
+        return null;
+      })();
+
+      const recurringEnabledP = (async () => {
+        const [coverage, fundIsDemo] = await Promise.all([
+          getFundCoverageState(fund.userId, fund.id),
+          isDemoFund(fund.id),
+        ]);
+        // Post-handoff owner: the now-adult owns the fund (transferredAt set,
+        // and fund.userId is them). Recurring is FREE for them — the parent
+        // subscription retires at majority and AUM (0.10%) is the only
+        // post-handoff revenue, so the owner auto-invests in their OWN account
+        // with no Plus sub. Per kid-2.0.
+        const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === (req.user as any)?.id;
+        return fundIsDemo
+          || isPostHandoffOwner
+          || coverage === "covered_starter"
+          || coverage === "covered_family"
+          || coverage === "trial_active";
+      })();
+
+      const enrichedGiftsForFundP = (async () => {
+        const giftEmails = Array.from(new Set(
+          giftsForFund
+            .filter((g: any) => g.isAnonymous !== true)
+            .map((g: any) => String(g.senderEmail || "").trim().toLowerCase())
+            .filter(Boolean),
+        ));
+        const infoByEmail = new Map<string, { preferredName: string | null; avatarUrl: string | null }>();
+        if (giftEmails.length > 0) {
+          try {
+            const rows = await db
+              .select({
+                email: users.email,
+                preferredName: users.preferredName,
+                profileImageUrl: users.profileImageUrl,
+              })
+              .from(users)
+              .where(inArray(sql`lower(${users.email})`, giftEmails));
+            for (const r of rows) {
+              if (!r.email) continue;
+              infoByEmail.set(String(r.email).trim().toLowerCase(), {
+                preferredName: (r.preferredName && String(r.preferredName).trim()) || null,
+                avatarUrl: (r as any).profileImageUrl || null,
+              });
+            }
+          } catch (enrichErr) {
+            console.warn("[dashboard-summary] gifter enrichment failed (non-fatal):", (enrichErr as any)?.message || enrichErr);
+          }
+        }
+        return giftsForFund.map((g: any) => {
+          if (g.isAnonymous === true) return { ...g, gifterPreferredName: null, gifterAvatarUrl: null };
+          const match = infoByEmail.get(String(g.senderEmail || "").trim().toLowerCase());
+          return { ...g, gifterPreferredName: match?.preferredName || null, gifterAvatarUrl: match?.avatarUrl || null };
+        });
+      })();
+
+      // Await all six concurrently (they've been running since kickoff above).
+      const [
+        largeGiftHoldsRaw,
+        eventGiftCodeEntries,
+        kidClaimedAt,
+        coparentAcceptance,
+        recurringEnabled,
+        enrichedGiftsForFund,
+      ] = await timeStage("second_wave_parallel", () => Promise.all([
+        largeGiftHoldsRawP,
+        eventGiftCodeEntriesP,
+        kidClaimedAtP,
+        coparentAcceptanceP,
+        recurringEnabledP,
+        enrichedGiftsForFundP,
+      ]));
 
       // Fallback principal_basis here MUST come from gifts, not from balance.
       // f.balance mirrors current market value, so balance+cash+pending equals
@@ -2930,99 +3401,8 @@ export async function registerRoutes(
           : { hostPlan: "free", coverageStatus: "uncovered", holds: [] };
       })();
 
-      const customEvents = eventsForFund.filter((e: any) => !e.isPermanent);
-      const eventGiftCodeEntries = await timeStage("event_gift_codes", () =>
-        Promise.all(
-          customEvents.map(async (e: any) => {
-            try {
-              const record = await ensureGiftCodeForEvent(e, fund);
-              return [e.id, { code: record.code, lookupUrl: `${getAppBaseUrl(req)}/gift` }] as const;
-            } catch {
-              return null;
-            }
-          }),
-        ).then((results) => Object.fromEntries(results.filter(Boolean) as [string, { code: string; lookupUrl: string }][])),
-      );
-
-      // Detect: is the current viewer the kid who just claimed this fund?
-      // Look up the age-transition record and check if the user is the
-      // childClaimedByUserId AND the ownership has been transferred to them.
-      // The Dashboard uses kidClaimedAt to render a one-time at-18 welcome
-      // banner above the parent-style hero — replacing the "share with
-      // gifters / set up auto-invest" CTAs (which assume a parent viewer)
-      // with a kid-appropriate "this is yours, here's what changed, here's
-      // the parent letter, here are your gifters to thank" surface. Null
-      // when the viewer isn't the kid OR the claim/transfer was more than
-      // 60 days ago (one-time welcome, not a permanent banner).
-      let kidClaimedAt: string | null = null;
-      try {
-        const transitionRecord = await getAgeTransitionRecord(fund.id);
-        if (
-          transitionRecord.ownershipTransferredAt &&
-          transitionRecord.childClaimedByUserId === userId
-        ) {
-          const claimedAt = transitionRecord.childClaimedAt || transitionRecord.ownershipTransferredAt;
-          const ageMs = Date.now() - new Date(claimedAt).getTime();
-          if (ageMs >= 0 && ageMs < 60 * 24 * 60 * 60 * 1000) {
-            kidClaimedAt = claimedAt;
-          }
-        }
-      } catch {
-        // Treat errors here as "not the kid" — the welcome banner just
-        // doesn't render. No reason to fail the entire dashboard summary.
-      }
-
-      // Co-parent acceptance celebration (Tier-2 deferred item #1, shipped
-      // 2026-05-23). When the fund OWNER views the dashboard and a
-      // co-parent collaborator was added/accepted within the last 30 days,
-      // surface the acceptance so the Dashboard can render a one-time
-      // banner ("Claire accepted your invite to Emma's fund"). Renders
-      // only for the inviter (fund.userId === viewer); the accepted
-      // co-parent themselves doesn't see this — they see normal access.
-      // Banner is one-time + dismissable via per-fund-per-collab-id
-      // localStorage flag on the client side.
-      let coparentAcceptance: {
-        collaboratorId: string;
-        name: string;
-        acceptedAt: string;
-      } | null = null;
-      if (fund.userId === userId) {
-        try {
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-          const acceptedRows = await db.execute(sql`
-            SELECT
-              fc.id AS collaborator_id,
-              fc.email,
-              fc.accepted_at,
-              fc.user_id,
-              u.first_name,
-              u.last_name,
-              u.preferred_name
-            FROM fund_collaborators fc
-            LEFT JOIN users u ON u.id = fc.user_id
-            WHERE fc.fund_id = ${fund.id}
-              AND fc.status = 'accepted'
-              AND fc.accepted_at IS NOT NULL
-              AND fc.accepted_at >= ${thirtyDaysAgo.toISOString()}
-            ORDER BY fc.accepted_at DESC
-            LIMIT 1
-          `);
-          const row = (acceptedRows.rows as any[])?.[0];
-          if (row) {
-            const first = String(row.first_name || row.preferred_name || "").trim();
-            const last = String(row.last_name || "").trim();
-            const fullName = [first, last].filter(Boolean).join(" ").trim();
-            const displayName = fullName || String(row.email || "Your co-parent").split("@")[0];
-            coparentAcceptance = {
-              collaboratorId: String(row.collaborator_id),
-              name: displayName,
-              acceptedAt: new Date(row.accepted_at).toISOString(),
-            };
-          }
-        } catch {
-          // Best-effort; never block dashboard summary on this surface.
-        }
-      }
+      // (customEvents, eventGiftCodeEntries, kidClaimedAt, and coparentAcceptance
+      // are produced by the concurrent second wave above.)
 
       // Plus first-media unlock celebration (Tier-2 deferred item #2,
       // shipped 2026-05-23). When the fund owner is on Kiddo+ and the
@@ -3051,37 +3431,14 @@ export async function registerRoutes(
         // Best-effort; never block dashboard summary on this surface.
       }
 
-      // Whether recurring investments are unlocked for this fund. The
-      // client uses this for hasAutoInvestAccess (the recurring CTA + the
-      // parent-authored Memory Book media gate). Derived from the FUND
-      // OWNER's coverage so a co-parent on a free personal plan still sees
-      // recurring on a paid fund; OR'd with the demo bypass so the seeded
-      // demo recurring plans always render (mirrors the parent-contributions
-      // GET). Same predicate the GET/POST gate on — single source of truth.
-      const recurringEnabled = await timeStage("recurring_coverage", async () => {
-        const [coverage, fundIsDemo] = await Promise.all([
-          getFundCoverageState(fund.userId, fund.id),
-          isDemoFund(fund.id),
-        ]);
-        // Post-handoff owner: the now-adult owns the fund (transferredAt set,
-        // and fund.userId is them). Recurring is FREE for them — the parent
-        // subscription retires at majority and AUM (0.10%) is the only
-        // post-handoff revenue, so the owner auto-invests in their OWN account
-        // with no Plus sub. (Charging a sub to invest in your own account would
-        // contradict subscription-retires-at-majority.) Per kid-2.0.
-        const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === (req.user as any)?.id;
-        return fundIsDemo
-          || isPostHandoffOwner
-          || coverage === "covered_starter"
-          || coverage === "covered_family"
-          || coverage === "trial_active";
-      });
+      // (recurringEnabled and enrichedGiftsForFund are produced by the
+      // concurrent second wave above.)
 
       const responsePayload = await timeStage("response_assembly", async () => ({
           fundId: fund.id,
           recurringEnabled,
           holdings: holdingsForFund,
-          gifts: giftsForFund,
+          gifts: enrichedGiftsForFund,
           events: eventsForFund,
           history,
           investmentPreferences,
@@ -3094,7 +3451,12 @@ export async function registerRoutes(
           eventGiftCodes: eventGiftCodeEntries,
           largeGiftHolds,
           recurringGifts: recurringGiftRows,
-          parentContributions: parentContributionRows,
+          // Enrich with `hasRecentFailure` so the dashboard recurring cards can
+          // show a "Retrying" state consistent with the Activity Scheduled tab.
+          // This summary payload SEEDS + overwrites the parent-contributions
+          // query cache client-side, so the flag must live here too (not only on
+          // the /parent-contributions endpoint).
+          parentContributions: await attachRecentFailures(parentContributionRows, [fund.id]),
           transactions: recentTransactionRows,
           giftAllocations: giftAllocationsForFund,
           // Drives the one-time at-18 welcome banner on the Dashboard. See
@@ -3274,6 +3636,32 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const existingFunds = await storage.getFundsByUser(userId);
       const body = { ...req.body } as Record<string, unknown>;
+      // IDEMPOTENCY (audit catch 2026-06-04): a refresh mid-POST (or a
+      // network retry) used to mint a duplicate fund — the client's
+      // `creating` flag only guards the button, not the wire. Heuristic,
+      // schema-free dedupe: if this user created a fund with the SAME child
+      // first name + birthdate within the last 2 minutes, that IS this
+      // request retried — return the existing fund as if freshly created.
+      // Deliberately narrow (name + birthdate + 2-minute window) so twins
+      // with different names, re-creating after a deliberate delete, and
+      // legitimate same-name-different-birthdate funds all still work.
+      {
+        const reqFirst = String((body as any).recipientFirstName || "").trim().toLowerCase();
+        const reqDob = String((body as any).recipientBirthdate || "").slice(0, 10);
+        if (reqFirst) {
+          const twoMinAgo = Date.now() - 2 * 60 * 1000;
+          const dupe = existingFunds.find((f: any) => {
+            const created = f?.createdAt ? new Date(f.createdAt).getTime() : 0;
+            if (!created || created < twoMinAgo) return false;
+            if (String(f?.recipientFirstName || "").trim().toLowerCase() !== reqFirst) return false;
+            const fDob = f?.recipientBirthdate ? new Date(f.recipientBirthdate).toISOString().slice(0, 10) : "";
+            return fDob === reqDob || (!fDob && !reqDob);
+          });
+          if (dupe) {
+            return res.status(200).json(dupe);
+          }
+        }
+      }
       // SECURITY (mass-assignment): insertFundSchema does not omit the
       // server-managed financial/custody columns, so a client could create a
       // fund pre-seeded with balance/cashBalance and status:"active" (KYC
@@ -3726,7 +4114,9 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const userFunds = await storage.getFundsByUser(userId);
       const ensuredFundsById = new Map<string, any>();
-      for (const fund of userFunds) {
+      // Parallelized — was a sequential per-fund await loop (N round-trips; a multi-fund
+      // parent like the demo paid ~N× latency, a chunk of the /api/events cold-load time).
+      await Promise.all(userFunds.map(async (fund) => {
         try {
           const ensured = await ensureFundSlugAndPermanentEvent(fund, userId);
           ensuredFundsById.set(ensured.id, ensured);
@@ -3734,7 +4124,7 @@ export async function registerRoutes(
           console.error("Failed to ensure permanent event for fund:", fund.id, err);
           ensuredFundsById.set(fund.id, fund);
         }
-      }
+      }));
       const events = await storage.getEventsByUser(userId);
       // Owner email — used to exclude parent contributions from the
       // permanent "Gift anytime" event's totals. Without this filter,
@@ -3751,7 +4141,8 @@ export async function registerRoutes(
         events.filter((e: any) => e.isPermanent).map((e: any) => e.fundId)
       ));
       const unattributedGiftStatsByFund = new Map<string, { volume: number; count: number }>();
-      for (const fundId of permanentEventFundIds) {
+      // Parallelized — was a sequential getGiftsByFund per permanent-event fund.
+      await Promise.all(permanentEventFundIds.map(async (fundId) => {
         try {
           const fundGifts = await storage.getGiftsByFund(fundId);
           const unattributed = fundGifts.filter((g: any) => {
@@ -3771,7 +4162,7 @@ export async function registerRoutes(
             count: unattributed.length,
           });
         } catch { /* ignore */ }
-      }
+      }));
       res.json(events.map((event: any) => {
         if (event.isPermanent) {
           const unattributed = unattributedGiftStatsByFund.get(event.fundId);
@@ -3999,7 +4390,7 @@ export async function registerRoutes(
           WHERE COALESCE(f.status, 'draft') NOT IN ('draft', 'archived', 'deleted')
             AND f.recipient_birthdate IS NOT NULL
             -- Exclude test/demo-owned funds from the public homepage
-            -- numbers. The Dunphy demo is production-intended + shareable
+            -- numbers. The Rivera demo is production-intended + shareable
             -- with seeded balances, and dev accounts carry junk gifts;
             -- counting either would present fictional traction as real.
             -- Uses the canonical is_test_user / is_demo_account flags
@@ -4121,7 +4512,10 @@ export async function registerRoutes(
           name: fund?.name,
           slug: fund?.slug,
           recipientFirstName: fund?.recipientFirstName,
-          childPhotoUrl: fund?.childPhotoUrl || null,
+          // childPhotoUrl intentionally NOT exposed on this PUBLIC endpoint —
+          // see the gating note on /api/public/funds/:slug. Public minor pages
+          // show first name only; authenticated surfaces keep the photo.
+          // Gated 2026-06-09 (data-privacy audit C1).
           accountType: fund?.accountType,
           investmentStrategy: fund?.investmentStrategy,
           status: fund?.status,
@@ -4317,6 +4711,12 @@ export async function registerRoutes(
 
   app.post('/api/public/fund-code/resolve', async (req, res) => {
     try {
+      // Per-IP rate limit (security audit 2026-06-15) — unauthenticated code
+      // lookup; cap to stop brute-force enumeration of fund codes / DB hammering.
+      const fcIp = (req as any).ip || "unknown";
+      if (!(await checkRateLimit(`fund-code-resolve:${fcIp}`, 20, 10 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many attempts. Please try again in a few minutes." });
+      }
       const inputCode = normalizeGiftCode(req.body?.code);
       if (!inputCode) return res.status(400).json({ error: "Enter a valid fund code." });
 
@@ -4387,6 +4787,15 @@ export async function registerRoutes(
       const requesterName = String(req.body?.requesterName || "").trim();
       if (!parentContact) {
         return res.status(400).json({ error: "A parent email or phone is required." });
+      }
+      // Anti-bombing rate limit (security audit 2026-06-15) — this is an
+      // unauthenticated endpoint that emails a parent, so cap per IP AND per
+      // target contact to stop an attacker flooding an inbox.
+      const giIp = (req as any).ip || "unknown";
+      const giIpOk = await checkRateLimit(`gift-invite-ip:${giIp}`, 8, 15 * 60 * 1000);
+      const giTargetOk = await checkRateLimit(`gift-invite-to:${parentContact.toLowerCase()}`, 3, 60 * 60 * 1000);
+      if (!giIpOk || !giTargetOk) {
+        return res.status(429).json({ error: "Too many requests. Please try again in a little while." });
       }
 
       // Detect contact type. Email gets actual outreach. Anything else
@@ -5149,9 +5558,16 @@ export async function registerRoutes(
       if (email) {
         giftRows = (await db.execute(sql`
           SELECT
+            g.id,
             g.fund_id,
             g.amount,
-            g.created_at
+            g.created_at,
+            g.selected_ticker,
+            g.message,
+            g.sender_name,
+            g.parent_contribution_id,
+            g.recurring_gift_id,
+            g.source
           FROM gifts g
           WHERE LOWER(COALESCE(g.sender_email, '')) = ${email}
           ORDER BY g.created_at DESC
@@ -5159,6 +5575,7 @@ export async function registerRoutes(
       }
 
       const statsByFund = new Map<string, { totalGifted: number; giftCount: number; lastGiftAt: string | null }>();
+      const giftRowsByFund = new Map<string, any[]>();
       for (const row of giftRows) {
         const fundId = String(row.fund_id || "");
         const current = statsByFund.get(fundId) || { totalGifted: 0, giftCount: 0, lastGiftAt: null };
@@ -5166,16 +5583,57 @@ export async function registerRoutes(
         current.giftCount += 1;
         current.lastGiftAt = current.lastGiftAt || row.created_at || null;
         statsByFund.set(fundId, current);
+        const list = giftRowsByFund.get(fundId) || [];
+        list.push(row);
+        giftRowsByFund.set(fundId, list);
       }
 
       const allFundIds = Array.from(new Set([...savedFundIds, ...Array.from(statsByFund.keys())]));
-      const fundRecords = await Promise.all(allFundIds.map(async (fundId) => storage.getFund(fundId)));
+      // The gifter dashboard is for EXTERNAL gifting. Funds where the viewer is
+      // part of the HOUSEHOLD — the owner/custodian, the previous owner (the
+      // pre-handoff parent of a now-adult fund), or an accepted co-parent
+      // collaborator — hold their own PARENTAL contributions, NOT gifts. Those
+      // belong on the parent dashboard ("Your contributions"), and showing them
+      // here framed as "89 gifts sent" muddles a parent into a gifter (founder
+      // catch 2026-06-04). Exclude them; the summary stats below reduce over the
+      // filtered list, so the whole page stays consistent. A true external
+      // gifter (grandparent/uncle) owns none of these, so their view is
+      // unchanged. 2026-06-04.
+      const [fundRecords, collaboratedFunds] = await Promise.all([
+        Promise.all(allFundIds.map(async (fundId) => storage.getFund(fundId))),
+        storage.getCollaboratedFunds(userId).catch(() => [] as any[]),
+      ]);
+      const householdFundIds = new Set(collaboratedFunds.map((f: any) => String(f.id)));
       const fundsPayload = fundRecords
-        .filter((fund) => Boolean(fund))
+        .filter((fund) =>
+          Boolean(fund) &&
+          String((fund as any).userId || "") !== userId &&
+          String((fund as any).previousOwnerId || "") !== userId &&
+          !householdFundIds.has(String((fund as any).id || "")),
+        )
         .map(async (fund: any) => {
           const stats = statsByFund.get(fund.id) || { totalGifted: 0, giftCount: 0, lastGiftAt: null };
           const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
-          const holdingsForFund = await storage.getHoldingsByFund(fund.id);
+          // Batch the five INDEPENDENT per-fund reads into one concurrent round
+          // trip instead of ~6 serial ones (2026-06-04 perf). Each keeps its
+          // original non-fatal fallback via .catch so one failing read still
+          // renders the card. Downstream derivations are unchanged.
+          const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const [holdingsForFund, filteredEntries, activeEventCountRows, snapshotRowsRes, fundCoverageState] = await Promise.all([
+            storage.getHoldingsByFund(fund.id).catch((err) => { console.warn("[gifter-dashboard] holdings fetch failed:", err); return [] as any[]; }),
+            storage.getMemoryEntriesByFund(fund.id).catch((err) => { console.warn("[gifter-dashboard] memory fetch failed:", err); return [] as any[]; }),
+            db.select({ count: sql<number>`count(*)::int` }).from(events)
+              .where(and(eq(events.fundId, fund.id), eq(events.status, "active")))
+              .catch((err) => { console.warn("[gifter-dashboard] event-count failed:", err); return [{ count: 0 }] as any[]; }),
+            db.execute(sql`
+              SELECT snapshot_date, total_value
+              FROM fund_snapshots
+              WHERE fund_id = ${fund.id}
+                AND snapshot_date >= ${thirtyDaysAgoIso}
+              ORDER BY snapshot_date ASC
+            `).catch((err) => { console.warn("[gifter-dashboard] sparkline fetch failed:", err); return { rows: [] } as any; }),
+            getFundCoverageState(fund.userId, fund.id).catch((err) => { console.warn("[gifter-dashboard] coverage lookup failed:", err); return null; }),
+          ]);
           // Memory preview MUST go through storage.getMemoryEntriesByFund
           // not a direct table SELECT — the storage helper applies the
           // locked filters from feedback_memory_book_inversion:
@@ -5186,20 +5644,64 @@ export async function registerRoutes(
           // surfaced junk like "Someone who loves Emma sent a gift of
           // $50.00." as the "Latest Memory Book moment" on the gifter
           // dashboard — exactly the failure the locked filters exist
-          // to prevent. User flagged this 2026-05-23.
-          const filteredEntries = await storage.getMemoryEntriesByFund(fund.id);
-          const recentMemory = filteredEntries[0]
+          // to prevent. User flagged this 2026-05-23. (filteredEntries is
+          // fetched in the batched Promise.all above.)
+          // Entry-level VISIBILITY gate (2026-06-04). The storage helper's
+          // locked filters handle junk/moderation, not privacy — without this
+          // gate the gifter dashboard surfaced Marcus's SEALED letter ("Nora, if
+          // you're reading this you're 21...") as the "Latest Memory Book
+          // moment" to every gifter: content even the kid can't see yet.
+          // Mirrors the gate on /api/age-transition/:token, plus one stricter
+          // rule: parent_letter NEVER shows to gifters (even after it unlocks,
+          // the letter is parent→child, not gifter content).
+          const isAdultRecipient = ageInfo.phase === "adult";
+          const nowMsForGifterGate = Date.now();
+          const gifterVisibleEntries = filteredEntries.filter((entry: any) => {
+            if (String(entry.type || "") === "parent_letter") return false;
+            const entryVis = String(entry.visibility || "kid_now");
+            if (entryVis === "parent_only") return false;
+            if (entryVis === "kid_at_18" && !isAdultRecipient) return false;
+            if (entryVis === "sealed") {
+              const deliverAt = (entry as any).deliverAt ? new Date((entry as any).deliverAt).getTime() : null;
+              if (!deliverAt || Number.isNaN(deliverAt) || deliverAt > nowMsForGifterGate) return false;
+            }
+            return true;
+          });
+          // PRIVACY (founder catch 2026-06-04): the "Latest Memory Book
+          // moment" must be the GIFTER'S OWN note, or a fund-level system /
+          // milestone entry (Kiddo-authored, no human author) — NEVER another
+          // named person's personal note. Before this, the card surfaced
+          // whatever the single newest broadly-visible entry was, so Robert (a
+          // grandfather) saw Sofia's intimate note to her grandchild
+          // ("pensando en ti hoy mi amor, llamame") and Marcus's "love you, dad"
+          // contribution note. The "child is loved by many" social proof
+          // lives elsewhere (gift counts, thank-yous); this card is the
+          // gifter's OWN moment reflected back, which is warmer AND private.
+          const myGiftIdSet = new Set(
+            (giftRowsByFund.get(fund.id) || []).map((g: any) => String(g.id || "")),
+          );
+          const myAuthorNames = new Set(
+            (giftRowsByFund.get(fund.id) || [])
+              .map((g: any) => String(g.sender_name || "").trim().toLowerCase())
+              .filter(Boolean),
+          );
+          const isOwnOrSystemMemory = (e: any): boolean => {
+            if (e.giftId && myGiftIdSet.has(String(e.giftId))) return true; // the gifter's own gift entry
+            const author = String(e.authorName || "").trim();
+            if (!author) return true; // Kiddo-authored fund-level/system entry (e.g. milestone crossings)
+            const t = String(e.type || "");
+            if (t === "milestone" || t.startsWith("milestone_")) return true;
+            return myAuthorNames.has(author.toLowerCase()); // own note matched by name (giftId-less legacy rows)
+          };
+          const ownMemory = gifterVisibleEntries.find(isOwnOrSystemMemory);
+          const recentMemory = ownMemory
             ? {
-                content: filteredEntries[0].content,
-                authorName: filteredEntries[0].authorName,
-                createdAt: filteredEntries[0].createdAt,
+                content: ownMemory.content,
+                authorName: ownMemory.authorName,
+                createdAt: ownMemory.createdAt,
               }
             : undefined;
-          const [activeEventCountRow] = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(events)
-            .where(and(eq(events.fundId, fund.id), eq(events.status, "active")));
-          const currentFundValue = Number(fund.balance || 0) + Number(fund.pendingBalance || 0);
+          const activeEventCountRow = activeEventCountRows[0];
           const nextMilestoneTarget = [100, 500, 1000, 2500].find((target) => Number(stats.totalGifted || 0) < target) || null;
           const nextMilestoneProgress = nextMilestoneTarget
             ? Math.max(0, Math.min(100, (Number(stats.totalGifted || 0) / nextMilestoneTarget) * 100))
@@ -5208,35 +5710,14 @@ export async function registerRoutes(
             ? notificationStore.subscribersByFund?.[fund.id]?.[email] || null
             : null;
 
-          // 30-day balance sparkline — added 2026-05-19 as the gifter-side
-          // Read-Only Fund Tracking enrichment from the Five Towns roadmap.
-          // Pulls snapshots from the last 30 days for this fund so the
-          // Gifter Dashboard card can render a small SVG sparkline showing
-          // recent fund trajectory. Same data source as the parent
-          // Dashboard's trend chart — exposed to gifters because total
-          // balance is ALREADY exposed (currentFundValue above); adding
-          // 30-day history is the same domain, not a step-change in
-          // privacy. No PII (no gifter names, no per-position breakdown);
-          // just the total fund value over time.
-          const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          let valueHistory30d: Array<{ at: string; totalValue: number }> = [];
-          try {
-            const snapRes = await db.execute(sql`
-              SELECT snapshot_date, total_value
-              FROM fund_snapshots
-              WHERE fund_id = ${fund.id}
-                AND snapshot_date >= ${thirtyDaysAgoIso}
-              ORDER BY snapshot_date ASC
-            `);
-            valueHistory30d = ((snapRes.rows as any[]) || []).map((r) => ({
-              at: new Date(r.snapshot_date).toISOString(),
-              totalValue: Number(r.total_value || 0),
-            }));
-          } catch (err) {
-            // Non-fatal — sparkline gracefully renders nothing if data
-            // missing. Card still shows currentFundValue.
-            console.warn("[gifter-dashboard] sparkline fetch failed:", err);
-          }
+          // 30-day fund-VALUE sparkline REMOVED from the gifter payload
+          // (founder call 2026-06-04). It plotted the child's total fund value
+          // over time — the child's net-worth trajectory + the parent's
+          // performance, shown to anyone who gifted once via a public link.
+          // A gifter's function (gift, see what they gave, gift again) never
+          // needed it. The snapshot fetch itself is left in the batched
+          // Promise.all for now (harmless; other future per-fund reads may
+          // reuse it) but its output no longer leaves the server for a gifter.
 
           // Sponsorship eligibility per fund. True when the fund is on
           // the Free tier (i.e., the gifter could meaningfully cover a
@@ -5250,21 +5731,95 @@ export async function registerRoutes(
           // when applicable, replacing the previously-removed
           // 'discovery card' that made a false claim about scrolling
           // up to find the option.
-          let eligibleForSponsorship = false;
+          // eligibleForSponsorship derives from the coverage state fetched in
+          // the batched Promise.all above. A null (lookup failed) leaves it
+          // false — the sponsor pill simply doesn't render, same as before.
+          const eligibleForSponsorship =
+            fundCoverageState != null &&
+            fundCoverageState !== 'covered_family' &&
+            fundCoverageState !== 'covered_starter' &&
+            fundCoverageState !== 'trial_active';
+
+          // Per-gift detail for the card's "Your gifts" expandable
+          // (2026-06-04). "7 gifts sent" is a number; "your $200 in 2019 is
+          // $560 today" is the loop's emotional engine shown to the person
+          // who spreads it. nowWorth = this gift's allocation shares ×
+          // the holding's CURRENT per-share value (currentValue/shares —
+          // same already-priced data the card's fund value uses, no live
+          // quote). Refunded gifts price to null automatically (their
+          // allocation rows are deleted on refund). thankYou attaches the
+          // parent's SENT note (the loop's payoff — previously gifters
+          // never saw these anywhere). Newest-first; capped at 100 rows.
+          // CHILD-MONEY MINIMIZATION (founder call 2026-06-04): the per-gift
+          // `nowWorth` (live current value) is no longer sent. It could become
+          // a LIE the moment the parent sells the gift's shares (the gift row
+          // keeps the recorded allocation; the holding is gone), it implies a
+          // donor claim on a gift that is the child's now, and it leaks fund
+          // performance to an outsider. The gifter sees the gift AMOUNT + what
+          // it bought + their note + the family's thank-you; the growth story
+          // is the forward "if invested" projection only. Dropping nowWorth
+          // also removes the per-gift allocation + price-per-share work below.
+          let yourGifts: Array<{
+            id: string;
+            amount: number;
+            createdAt: string | null;
+            ticker: string | null;
+            message: string | null;
+            // Did this contribution buy a single stock, or go into the diversified
+            // managed mix? (no ticker = managed mix). Answers the gifter's "what
+            // is this $100 — cash?" — it's invested in a basket of index funds.
+            managedMix: boolean;
+            // A recurring auto-invest cycle (parent auto-invest OR a gifter's
+            // recurring schedule), so the UI can mark the row "↻ Monthly" instead
+            // of rendering 89 identical anonymous rows.
+            recurring: boolean;
+            thankYou: { message: string; sentAt: string | null } | null;
+          }> = [];
           try {
-            const fundCoverage = await getFundCoverageState(fund.userId, fund.id);
-            eligibleForSponsorship =
-              fundCoverage !== 'covered_family' &&
-              fundCoverage !== 'covered_starter' &&
-              fundCoverage !== 'trial_active';
+            const myGiftRows = (giftRowsByFund.get(fund.id) || []).slice(0, 100);
+            if (myGiftRows.length > 0) {
+              const giftIds = myGiftRows.map((r: any) => String(r.id));
+              const thankRows = await db.select().from(thankYous).where(and(inArray(thankYous.giftId, giftIds), eq(thankYous.status, "sent")));
+              const thankByGift = new Map<string, { message: string; sentAt: string | null }>();
+              for (const t of thankRows) {
+                const key = String(t.giftId);
+                if (!thankByGift.has(key)) {
+                  thankByGift.set(key, {
+                    message: String(t.message || ""),
+                    sentAt: t.sentAt ? new Date(t.sentAt as any).toISOString() : null,
+                  });
+                }
+              }
+              yourGifts = myGiftRows.map((r: any) => {
+                const ticker = r.selected_ticker ? String(r.selected_ticker) : null;
+                const recurring = Boolean(
+                  r.parent_contribution_id || r.recurring_gift_id || String(r.source || "") === "recurring_worker",
+                );
+                return {
+                  id: String(r.id),
+                  amount: Number(r.amount || 0),
+                  createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+                  ticker,
+                  message: r.message ? String(r.message) : null,
+                  managedMix: !ticker,
+                  recurring,
+                  thankYou: thankByGift.get(String(r.id)) || null,
+                };
+              });
+            }
           } catch (err) {
-            // Non-fatal — pill simply doesn't render on this fund.
-            console.warn("[gifter-dashboard] coverage lookup failed:", err);
+            // Non-fatal — the card simply renders without the per-gift list.
+            console.warn("[gifter-dashboard] per-gift detail failed:", err);
           }
 
           return {
             fundId: fund.id,
             childName: fund.recipientFirstName || fund.name,
+            // Family grouping aid. Raw last name here; nulled below for any
+            // SINGLETON family so a one-off gifter never sees a last name —
+            // it's only exposed when the gifter has gifted to 2+ kids who
+            // share it (a relative who already knows the family). T&S-minimal.
+            familyName: fund.recipientLastName ? String(fund.recipientLastName).trim() : null,
             fundName: fund.name,
             sharePath: buildFundSharePath(fund),
             totalGifted: Number(stats.totalGifted.toFixed(2)),
@@ -5277,19 +5832,29 @@ export async function registerRoutes(
               : null,
             // Birthdate + majorityAge added 2026-05-21 so the gifter
             // dashboard can compute per-gift / per-relationship projected
-            // impact ("Your $1,500 to Haley could be worth ~$X when she
-            // turns 21"). Treatment 3 of the five DUNPHY_DEMO_SPEC.md
-            // projection treatments. Same data the parent dashboard
-            // already exposes; not a privacy step-change for the gifter
-            // surface — birthdate ALREADY round-trips via nextBirthdayLabel.
-            recipientBirthdate: fund.recipientBirthdate
-              ? new Date(fund.recipientBirthdate).toISOString().slice(0, 10)
-              : null,
+            // impact ("Your $1,500 to Mia could be worth ~$X when she
+            // CHILD-EXPOSURE MINIMIZATION (founder T&S call 2026-06-04: a
+            // gifter is not family — strangers reach this via a public link;
+            // give them only what their function needs). The gifter projection
+            // needs YEARS-UNTIL-MAJORITY, not the child's birthdate. Sending
+            // the full ISO DOB leaked the birth YEAR = exact age (the prior
+            // comment's "not a privacy step-change" was wrong: nextBirthdayLabel
+            // is month+day only, never the year). Now we send the computed
+            // integer; the raw DOB never leaves the server for a gifter.
+            yearsUntilMajority: (() => {
+              if (!fund.recipientBirthdate) return null;
+              const md = new Date(fund.recipientBirthdate);
+              md.setFullYear(md.getFullYear() + (Number((fund as any).majorityAge) || 18));
+              const yrs = (md.getTime() - Date.now()) / (365.25 * 24 * 60 * 60 * 1000);
+              return yrs > 0 ? Math.round(yrs * 100) / 100 : 0;
+            })(),
             majorityAge: Number((fund as any).majorityAge) || 18,
             childPhase: ageInfo.phase,
             fundStatus: String(fund.status || "draft"),
-            currentFundValue: Number(currentFundValue.toFixed(2)),
-            holdingsCount: holdingsForFund.filter((holding) => Number(holding.currentValue || 0) > 0).length,
+            // currentFundValue + holdingsCount removed from the gifter payload
+            // (founder call 2026-06-04): a gifter sees neither the child's
+            // total net worth nor the portfolio size. Only gifter-owned
+            // context + occasions remain.
             activeEventCount: Number(activeEventCountRow?.count || 0),
             nextMilestoneTarget,
             nextMilestoneProgress: Number(nextMilestoneProgress.toFixed(1)),
@@ -5298,7 +5863,7 @@ export async function registerRoutes(
             recentMemoryAt: recentMemory?.createdAt ? new Date(recentMemory.createdAt).toISOString() : null,
             updatesEnabled: Boolean(subscriber && !subscriber.unsubscribed),
             eligibleForSponsorship,
-            valueHistory30d,
+            yourGifts,
           };
         });
 
@@ -5308,6 +5873,27 @@ export async function registerRoutes(
           const bTs = new Date(b.lastGiftAt || b.savedAt || 0).getTime();
           return bTs - aTs;
         });
+
+      // Family grouping (founder 2026-06-04: the cross-family super-gifter — the
+      // loop's actual engine — needs context; "just Theo doesn't do anything").
+      // EXPOSE a last name only when the gifter has gifted to 2+ kids who share
+      // it: that's a relative who knows the family. A one-off gifter (one fund
+      // in a "family") gets familyName=null — no last name leaves the server.
+      // Grouped by last name (NOT owner) so siblings stay together even after
+      // one hands off at 18 and gets their own self-owned account (Mia).
+      {
+        const lastNameCounts = new Map<string, number>();
+        for (const row of resolvedFundsPayload) {
+          const ln = (row as any).familyName ? String((row as any).familyName).toLowerCase() : "";
+          if (ln) lastNameCounts.set(ln, (lastNameCounts.get(ln) || 0) + 1);
+        }
+        for (const row of resolvedFundsPayload) {
+          const ln = (row as any).familyName ? String((row as any).familyName).toLowerCase() : "";
+          if (!ln || (lastNameCounts.get(ln) || 0) < 2) {
+            (row as any).familyName = null; // singleton → never expose a last name
+          }
+        }
+      }
 
       // Sponsor-Plus history — the gifter's active + past sponsored
       // Plus/Family subscriptions on other people's funds. Added 2026-05-23
@@ -5387,7 +5973,8 @@ export async function registerRoutes(
           savedFundCount: resolvedFundsPayload.length,
           totalGifted: Number(resolvedFundsPayload.reduce((sum, row) => sum + row.totalGifted, 0).toFixed(2)),
           totalGifts: resolvedFundsPayload.reduce((sum, row) => sum + row.giftCount, 0),
-          trackedFundValue: Number(resolvedFundsPayload.reduce((sum, row) => sum + row.currentFundValue, 0).toFixed(2)),
+          // trackedFundValue (Σ child net worth across all funds) removed —
+          // same minimization (was never rendered anyway). 2026-06-04.
           followingUpdatesCount: resolvedFundsPayload.filter((row) => row.updatesEnabled).length,
         },
         funds: resolvedFundsPayload,
@@ -5528,7 +6115,7 @@ export async function registerRoutes(
     }
     const rows = await db.execute(sql`
       SELECT rg.id, rg.sender_email, rg.sender_name, rg.stripe_subscription_id,
-             rg.status, rg.amount, rg.frequency, rg.fund_id,
+             rg.status, rg.amount, rg.frequency, rg.fund_id, rg.next_charge_date,
              f.recipient_first_name, f.name AS fund_name
       FROM recurring_gifts rg
       INNER JOIN funds f ON f.id = rg.fund_id
@@ -5553,6 +6140,14 @@ export async function registerRoutes(
     yearly: "year",
   };
 
+  // Demo-seeded schedules carry fake Stripe ids ("demo_sub_..." — see
+  // script/seed-dunphys.ts). Real Stripe calls on them fail, which 500'd
+  // History and hard-502'd Edit for the demo's recurring persona
+  // (David) — the one persona whose whole point is recurring
+  // management. Treat demo ids as Stripe-less everywhere: mutations fall
+  // through to the local-only path, history returns empty instead of 500.
+  const isDemoStripeSubId = (id: unknown): boolean => String(id || "").startsWith("demo_");
+
   // Pause: stop future charges without losing the schedule. Stripe-backed
   // rows use pause_collection behavior 'void' (invoices during the pause
   // are voided, not stacked up to back-charge on resume). Reminder-only
@@ -5563,7 +6158,7 @@ export async function registerRoutes(
       const row = await loadOwnedRecurring(req, res);
       if (!row) return;
       if (String(row.status) === "paused") return res.json({ ok: true, alreadyPaused: true });
-      if (row.stripe_subscription_id) {
+      if (row.stripe_subscription_id && !isDemoStripeSubId(row.stripe_subscription_id)) {
         try {
           const stripe = await getUncachableStripeClient();
           await stripe.subscriptions.update(String(row.stripe_subscription_id), {
@@ -5596,7 +6191,7 @@ export async function registerRoutes(
       if (!row) return;
       if (String(row.status) === "active") return res.json({ ok: true, alreadyActive: true });
       let nextChargeMs: number | null = null;
-      if (row.stripe_subscription_id) {
+      if (row.stripe_subscription_id && !isDemoStripeSubId(row.stripe_subscription_id)) {
         try {
           const stripe = await getUncachableStripeClient();
           const sub = await stripe.subscriptions.update(String(row.stripe_subscription_id), {
@@ -5617,13 +6212,19 @@ export async function registerRoutes(
           WHERE id = ${String(row.id)}
         `);
       } else {
-        // Reminder-only (or Stripe period unavailable): advance the cadence
-        // forward from now so the next reminder fires on schedule.
+        // Reminder-only / demo / Stripe period unavailable: advance from the
+        // STORED next_charge_date when there is one, stepping the cadence
+        // forward until it's in the future. Re-anchoring to "now" (the old
+        // behavior) silently moved occasion-anchored schedules — an annual
+        // birthday gift resumed in June drifted to a June charge date.
         const interval = RECURRING_INTERVAL[String(row.frequency)] || "month";
-        const next = new Date();
-        if (interval === "week") next.setDate(next.getDate() + 7);
-        else if (interval === "year") next.setFullYear(next.getFullYear() + 1);
-        else next.setMonth(next.getMonth() + 1);
+        const stored = row.next_charge_date ? new Date(row.next_charge_date) : null;
+        const next = stored && !Number.isNaN(stored.getTime()) ? stored : new Date();
+        while (next.getTime() <= Date.now()) {
+          if (interval === "week") next.setDate(next.getDate() + 7);
+          else if (interval === "year") next.setFullYear(next.getFullYear() + 1);
+          else next.setMonth(next.getMonth() + 1);
+        }
         await db.execute(sql`
           UPDATE recurring_gifts
           SET status = 'active', pause_reason = NULL, paused_at = NULL,
@@ -5660,7 +6261,7 @@ export async function registerRoutes(
       }
       const amount = Math.round(rawAmount * 100) / 100;
       let nextChargeMs: number | null = null;
-      if (row.stripe_subscription_id) {
+      if (row.stripe_subscription_id && !isDemoStripeSubId(row.stripe_subscription_id)) {
         try {
           const stripe = await getUncachableStripeClient();
           const recipientName = String(row.recipient_first_name || row.fund_name || "the child");
@@ -5721,6 +6322,12 @@ export async function registerRoutes(
       if (!row) return;
       if (!row.stripe_subscription_id) {
         return res.json({ charges: [], totalCharged: 0, count: 0, reminderOnly: true });
+      }
+      if (isDemoStripeSubId(row.stripe_subscription_id)) {
+        // Demo schedule: no real Stripe sub to list invoices for. Empty
+        // (non-reminder) history renders the honest "No charges yet" state
+        // instead of the 500 this used to throw.
+        return res.json({ charges: [], totalCharged: 0, count: 0, reminderOnly: false });
       }
       const stripe = await getUncachableStripeClient();
       const invoices = await stripe.invoices.list({
@@ -5947,7 +6554,7 @@ export async function registerRoutes(
               id: "birthday-soon",
               tone: "info",
               title: `${primaryFund.recipientFirstName || primaryFund.name}'s birthday is coming up`,
-              description: "This is the best moment to create a gifting page and give family a reason to act now.",
+              description: "A birthday page gives family an easy reason to gift.",
               ctaLabel: "Create a moment",
               ctaHref: "/event/create",
             });
@@ -5958,7 +6565,7 @@ export async function registerRoutes(
           items.push({
             id: "gift-pending",
             tone: "info",
-            title: "A gift is still moving through the system",
+            title: "A gift is still on its way",
             description: "One or more gifts are pending, processing, or waiting on a protection check before they settle.",
             ctaLabel: "Open activity",
             ctaHref: "/activity",
@@ -5970,7 +6577,7 @@ export async function registerRoutes(
             id: "first-gift",
             tone: "warning",
             title: `${primaryFund.recipientFirstName || primaryFund.name}'s first gift has not landed yet`,
-            description: "Share the fund once so the first gift can arrive and the story can finally begin.",
+            description: "Share the fund once so the first gift can land.",
             ctaLabel: "Share fund",
             ctaHref: buildFundSharePath(primaryFund),
           });
@@ -5979,7 +6586,7 @@ export async function registerRoutes(
             id: "first-memory",
             tone: "success",
             title: "The fund has gifts. Now write the first Memory Book note.",
-            description: "This is the page your child may read first someday. Give the story its opening line.",
+            description: "Write the first note your child may read here someday.",
             ctaLabel: "Open Memory Book",
             ctaHref: `/memory/${primaryFund.id}`,
           });
@@ -6141,6 +6748,71 @@ export async function registerRoutes(
     }
   });
 
+  // Owner-side revocation of the previous custodian's read-only window
+  // (2026-06-07, migration 0042 — founder-approved adult-autonomy fix).
+  // After handoff the former parent keeps view-only access by default;
+  // this lets the now-adult OWNER close that window. Design choices:
+  //   • Owner ONLY (not co-admin — post-handoff funds have no co-admins
+  //     anyway; belt-and-suspenders).
+  //   • One-way from the product: re-granting is a support flow, on
+  //     purpose — an estranged parent must not be able to pressure the
+  //     owner into a casual "turn it back on" toggle.
+  //   • SILENT: the former custodian is NOT notified (same posture as
+  //     social-platform blocking — notifying a controlling parent that
+  //     they've been cut off invites escalation). Their sidebar entry
+  //     simply disappears on next load.
+  //   • previousOwnerId itself is preserved (custodial attribution is
+  //     audit/compliance history); only the access flag flips.
+  app.post('/api/funds/:fundId/revoke-previous-owner-access', isAuthenticated, requireOwnedFundParam, requireFundMutator, async (req: any, res) => {
+    try {
+      const fund: any = req.ownedFund;
+      if (req.fundAccessRole !== 'owner') {
+        return res.status(403).json({ error: 'Only the fund owner can change this.' });
+      }
+      if (!fund.previousOwnerId) {
+        return res.status(400).json({ error: 'This fund has no previous custodian.' });
+      }
+      if (fund.previousOwnerAccessRevokedAt) {
+        return res.json({ ok: true, alreadyRevoked: true });
+      }
+      await storage.updateFund(fund.id, { previousOwnerAccessRevokedAt: new Date() } as any);
+      await writeAudit(req, 'previous_owner_access_revoked', 'fund', fund.id, {
+        previousOwnerId: fund.previousOwnerId,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Error revoking previous-owner access:', error);
+      res.status(500).json({ error: 'Could not update access. Please try again.' });
+    }
+  });
+
+  // Phase 2 of the post-handoff keepsake (2026-06-09): the now-adult OWNER can
+  // opt to let the previous owner see this fund LIVE again (vs the frozen
+  // keepsake default), and freely toggle it back off. Distinct from the one-way
+  // safety revoke above — this is a reversible visibility preference. Owner-only,
+  // transferred funds only. The previous-owner dashboard reads
+  // previousOwnerLiveAccessGrantedAt to choose keepsake vs live.
+  app.post('/api/funds/:fundId/previous-owner-live-access', isAuthenticated, requireOwnedFundParam, requireFundMutator, async (req: any, res) => {
+    try {
+      const fund: any = req.ownedFund;
+      if (req.fundAccessRole !== 'owner') {
+        return res.status(403).json({ error: 'Only the fund owner can change this.' });
+      }
+      if (!fund.previousOwnerId || !fund.transferredAt) {
+        return res.status(400).json({ error: 'This fund has no previous custodian.' });
+      }
+      const grant = req.body?.grant === true;
+      await storage.updateFund(fund.id, { previousOwnerLiveAccessGrantedAt: grant ? new Date() : null } as any);
+      await writeAudit(req, grant ? 'previous_owner_live_access_granted' : 'previous_owner_live_access_revoked', 'fund', fund.id, {
+        previousOwnerId: fund.previousOwnerId,
+      });
+      res.json({ ok: true, live: grant });
+    } catch (error) {
+      console.error('Error updating previous-owner live access:', error);
+      res.status(500).json({ error: 'Could not update access. Please try again.' });
+    }
+  });
+
   app.patch('/api/funds/:fundId/kid-view-suggestions/:suggestionId', isAuthenticated, async (req: any, res) => {
     try {
       const fund = await storage.getFund(req.params.fundId);
@@ -6220,7 +6892,7 @@ export async function registerRoutes(
       // serve the now-wrong "yours when you turn N" copy. (The pre-claim adult-
       // phase celebration still works: transferredAt isn't set until claim.)
       if ((fund as any).transferredAt) {
-        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+        return res.status(404).json({ error: "This fund now belongs to its owner. If that's you, log in to your account to see it." });
       }
       const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
       res.json({
@@ -6237,21 +6909,50 @@ export async function registerRoutes(
     }
   });
 
+  // PIN brute-force guard (audit catch 2026-06-04; hardened 2026-06-06 = T&S
+  // H4): a 4-digit PIN is ~10k possibilities. The first fix used an in-memory
+  // Map keyed on IP+token — two evasion holes the audit named: (1) per-process
+  // state means a multi-instance deploy multiplies the attempt budget by N,
+  // and (2) IP-keying means a VPN/proxy rotation resets the counter at will.
+  // Now: the durable Postgres limiter (rateLimiter.ts), keyed on the TOKEN
+  // alone (the protected resource — rotating IPs doesn't help), counting only
+  // actual PIN FAILURES (peek → verify → increment-on-failure), with a
+  // successful unlock wiping the window so a family re-opening Kid View is
+  // never locked out by its own successes.
   app.post('/api/kid-view/:token/unlock', async (req, res) => {
     try {
+      const pinKey = `kidview-pin:${String(req.params.token || "")}`;
+      const PIN_WINDOW_MS = 15 * 60 * 1000;
+      const PIN_MAX_FAILURES = 5;
+      if (!(await peekRateLimit(pinKey, PIN_MAX_FAILURES, PIN_WINDOW_MS))) {
+        return res.status(429).json({ error: "Too many tries. Wait 15 minutes, then try again." });
+      }
       const record = await getKidViewRecordByShareToken(req.params.token);
       if (!record) return res.status(404).json({ error: "Child view not found." });
       // Gate transferred (claimed) funds — see /meta. No PIN/token issued for a
-      // fund the owner now holds directly.
+      // fund the owner now holds directly. Copy points the claimed owner home:
+      // the kid who just claimed often revisits their old Kid View link and
+      // "no longer viewable" read like the fund vanished (audit 2026-06-04).
       const unlockFund = await storage.getFund(record.fundId);
       if (unlockFund && (unlockFund as any).transferredAt) {
-        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+        return res.status(404).json({ error: "This fund now belongs to its owner. If that's you, log in to your account to see it." });
       }
       const pin = String(req.body?.pin || "").trim();
       if (record.pinHash) {
         const ok = await bcrypt.compare(pin, record.pinHash);
-        if (!ok) return res.status(401).json({ error: "That PIN does not match." });
+        if (!ok) {
+          await checkRateLimit(pinKey, PIN_MAX_FAILURES, PIN_WINDOW_MS); // count the failure (durable)
+          return res.status(401).json({ error: "That PIN does not match." });
+        }
+        await resetRateLimit(pinKey);
       }
+      // Teen-ownership signal (moat leading indicator): a kid_view_open = a
+      // deliberate PIN unlock (not a reload). Post-setup the Kid View link is
+      // predominantly the teen's surface (the parent uses the dashboard), so this
+      // is the closest direct early proxy for at-18 retention. Fire-and-forget so
+      // it never slows or blocks the unlock. See /api/admin/moat-indicators +
+      // MOAT_LEADING_INDICATORS.md.
+      void db.execute(sql`INSERT INTO analytics_events (event_name, fund_id, source) VALUES ('kid_view_open', ${record.fundId}, 'public')`).catch(() => {});
       const accessToken = await createKidViewAccessToken(record.fundId, req.params.token);
       res.json({ accessToken });
     } catch (error) {
@@ -6274,7 +6975,7 @@ export async function registerRoutes(
       // Transferred-fund gate — see /meta. A claimed fund is the owner's
       // personal account; Kid View no longer applies.
       if ((fund as any).transferredAt) {
-        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+        return res.status(404).json({ error: "This fund now belongs to its owner. If that's you, log in to your account to see it." });
       }
 
       // Test-user gate (durable hygiene). When the fund's owner is flagged as
@@ -6298,9 +6999,25 @@ export async function registerRoutes(
       const fundHoldings = await storage.getHoldingsByFund(fund.id);
       const fundEvents = await storage.getEventsByFund(fund.id);
       const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
-      const totalContributed = fundGifts
-        .filter((g: any) => ["processing", "invested", "settled", "host_hold"].includes(String(g.status || "").toLowerCase()))
+      const realGifts = fundGifts
+        .filter((g: any) => ["processing", "invested", "settled", "host_hold"].includes(String(g.status || "").toLowerCase()));
+      const totalContributed = realGifts
         .reduce((sum: number, g: any) => sum + parseFloat(g.netAmount || g.amount || "0"), 0);
+      // Lifetime aggregate counts over ALL real gifts. The `gifts` array below
+      // is capped to a recent display window (12 / 5), so the kid's hero stats
+      // ("gifts received" / "people gave") MUST come from here instead — else a
+      // richly-funded fund (e.g. 134 gifts from 12 people) renders as "12 gifts
+      // / 4 people", undercounting the whole community and contradicting both
+      // the contributed total and the Memory Book authors. noNote feeds the
+      // "the gift was the message" framing.
+      const giftStats = {
+        total: realGifts.length,
+        gifters: new Set(realGifts.map((g: any) => g.senderName)).size,
+        noNote: realGifts.filter((g: any) => {
+          const m = String(g.message || "").trim();
+          return !m || /^auto-invest contribution to /i.test(m);
+        }).length,
+      };
 
       // Community compounding chart data. The single most-powerful
       // visualization Kiddo can render: each gifter's cumulative
@@ -6425,6 +7142,9 @@ export async function registerRoutes(
         age: ageInfo.age,
         monthsUntil18: ageInfo.monthsUntil18,
         daysUntil18: ageInfo.daysUntil18,
+        // Lifetime counts (all gifts) — the `gifts` array below is only the
+        // recent display window, so the hero stats read these instead.
+        giftStats,
         gifts: fundGifts.slice(0, ageInfo.phase === "teen" ? 12 : 5).map((gift) => {
           // Suppress the auto-invest boilerplate message ("Auto-invest
           // contribution to Emma's Fund") at the API boundary. The
@@ -6454,13 +7174,30 @@ export async function registerRoutes(
         // badge. The entries array has already been filtered for parent_only
         // and (when not adult) kid_at_18 above; what reaches here is what
         // the kid is allowed to see.
-        memories: entries
-          .filter((e) => e.type !== "parent_letter" && e.type !== "sealed_letter")
-          .slice(0, ageInfo.phase === "teen" ? 8 : 3)
+        // The kid's WHOLE Memory Book — no cap. It's their own history and the
+        // emotional moat ("the account my grandmother started for me"); a kid
+        // should never be locked out of notes left FOR them, and the abundance is
+        // the point. Human notes (gift messages + parent notes) sort FIRST so an
+        // auto "crossed $X" milestone can never crowd a grandmother's note out of
+        // the top; newest first within each group. The client paginates the
+        // display (a generous default + "see all"), so the full book is a one-time
+        // payload, not a render problem.
+        memories: [...entries]
+          .filter((e: any) => e.type !== "parent_letter" && e.type !== "sealed_letter")
+          .sort((a: any, b: any) => {
+            const ah = (a.type === "gift_message" || a.type === "parent_note") ? 0 : 1;
+            const bh = (b.type === "gift_message" || b.type === "parent_note") ? 0 : 1;
+            if (ah !== bh) return ah - bh;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          })
           .map((e: any) => ({
             ...e,
             visibility: String(e.visibility || "kid_now"),
           })),
+        // Count of human notes (gift messages + parent notes) — drives the kid's
+        // "N notes from people who love you" line, the single number that conveys
+        // the moat better than any list. Excludes auto milestones (not from a person).
+        memoryNoteCount: entries.filter((e: any) => e.type === "gift_message" || e.type === "parent_note").length,
         // Count of entries that were specifically reserved for the at-18
         // reveal and just became visible (visibility='kid_at_18'). Drives
         // the "N things were saved specifically for today" line in the
@@ -6822,6 +7559,13 @@ export async function registerRoutes(
 
   app.get('/api/public/funds/:slug', async (req, res) => {
     try {
+      // Per-IP rate limit (security audit 2026-06-15) — unauthenticated fund-page
+      // read; cap to stop slug enumeration / DB DoS while staying generous for
+      // legit gifters viewing a page a few times.
+      const fsIp = (req as any).ip || "unknown";
+      if (!(await checkRateLimit(`public-fund-view:${fsIp}`, 60, 5 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many requests. Please slow down." });
+      }
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.slug);
       let fund = await storage.getFundBySlug(req.params.slug);
       if (!fund && isUUID) fund = await storage.getFund(req.params.slug) ?? undefined;
@@ -6899,7 +7643,14 @@ export async function registerRoutes(
           name: fund.name,
           slug: fund.slug,
           recipientFirstName: fund.recipientFirstName,
-          childPhotoUrl: fund.childPhotoUrl || null,
+          // childPhotoUrl intentionally NOT exposed on this PUBLIC endpoint.
+          // A child's photo is COPPA "personal information," and our privacy
+          // policy promises public-facing minor pages show "only the child's
+          // first name." Keeping the face off an unauthenticated, forwardable
+          // link makes that promise true and removes the deception risk.
+          // Authenticated parent/co-admin surfaces still resolve the photo.
+          // Gated 2026-06-09 (data-privacy audit C1). To reverse, restore the
+          // field AND update the privacy-policy copy, with counsel sign-off.
           accountType: fund.accountType,
           investmentStrategy: fund.investmentStrategy,
           status: fund.status,
@@ -6920,7 +7671,7 @@ export async function registerRoutes(
           // Age of majority (18/19/21 per state) so the gift-checkout
           // projection reads "when {child} turns {N}" with the real handoff
           // age. Without it the client's fundMajorityAge falls back to 18 —
-          // wrong for CA's 21 (e.g. Haley showed "turns 18").
+          // wrong for CA's 21 (e.g. Mia showed "turns 18").
           majorityAge: Number((fund as any).majorityAge) || 18,
           // Pricing-v3: tells the gifter UI whether to surface recurring
           // or the reminder-only path. NEVER exposed as the parent's
@@ -6937,6 +7688,22 @@ export async function registerRoutes(
           // controls both the server-side password validation (in the
           // gift-recurring endpoint) and the client-side UI gating.
           magicLinkAuth: isMagicLinkAuthEnabled(),
+          // Guestbook media capability — TRUE only when a real content
+          // scanner is configured (CONTENT_SCANNER != noop). The no-payment
+          // guestbook path may only carry photo/video/voice once uploads are
+          // scanned: payment gates the gift flow's media, a scanner gates the
+          // free path's. The client renders the media picker on the guestbook
+          // card iff this is true, so wiring a scanner vendor lights the
+          // feature up with zero further code. Per the 2026-06-04 guestbook
+          // safety model (text-only until then).
+          guestbookMediaEnabled: getActiveScannerName() !== "noop",
+          // Public / gifter media uploads (photo/video/voice on the public gift
+          // link). Gated OFF at launch (PUBLIC_MEDIA_UPLOADS_ENABLED, default
+          // false) per the 2026-06-18 founder decision — untrusted-sender media
+          // is the largest child-safety surface. The client hides the media
+          // picker when false so a gifter never hits a dead button; the upload
+          // routes refuse server-side regardless. See server/publicMediaFlag.ts.
+          gifterMediaEnabled: isPublicMediaUploadsEnabled(),
         },
         availability,
         permanentEventSlug: permanentEvent?.slug,
@@ -7158,7 +7925,31 @@ export async function registerRoutes(
       // 'pending_review' and stay invisible until the parent approves.
       // Other gifters / the public flow must NEVER see them — they're
       // effectively in a parent-only inbox at that point.
-      const entries = allEntries.filter((e) => String((e as any).status || 'published') !== 'pending_review');
+      const pendingFiltered = allEntries.filter((e) => String((e as any).status || 'published') !== 'pending_review');
+      // Entry-level VISIBILITY gate for the PUBLIC surface (2026-06-04).
+      // This endpoint is fully UNAUTHENTICATED, and the meta-level filter
+      // below (parseVisibility(entry.visibility) === "public") is useless as
+      // a privacy gate because absent meta defaults to "public" — so Marcus's
+      // SEALED letter ("Nora, if you're reading this you're 21...") was
+      // retrievable by anyone with the fund's public link. Same bug class as
+      // the gifter-dashboard leak fixed at /api/gifter-account/dashboard;
+      // gate mirrors /api/age-transition/:token, with the stricter rule that
+      // parent_letter NEVER appears on a public surface (even after it
+      // unlocks, the letter is parent→child, not public-stream content).
+      const agePhaseForPublic = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
+      const isAdultForPublic = agePhaseForPublic.phase === "adult";
+      const nowMsForPublic = Date.now();
+      const entries = pendingFiltered.filter((e: any) => {
+        if (String(e.type || "") === "parent_letter") return false;
+        const entryVis = String(e.visibility || "kid_now");
+        if (entryVis === "parent_only") return false;
+        if (entryVis === "kid_at_18" && !isAdultForPublic) return false;
+        if (entryVis === "sealed") {
+          const deliverAt = e.deliverAt ? new Date(e.deliverAt).getTime() : null;
+          if (!deliverAt || Number.isNaN(deliverAt) || deliverAt > nowMsForPublic) return false;
+        }
+        return true;
+      });
       const giftsForFund = await storage.getGiftsByFund(req.params.id);
       const fundEvents = await storage.getEventsByFund(req.params.id);
       const fundHoldings = await storage.getHoldingsByFund(req.params.id);
@@ -7440,23 +8231,42 @@ export async function registerRoutes(
         tokenType,
         mode,
         supportEmail: "support@kiddofund.com",
-        fund: {
-          id: fund.id,
-          name: fund.name,
-          recipientFirstName: fund.recipientFirstName,
-          recipientBirthdate: fund.recipientBirthdate,
-          balance: fund.balance,
-          totalGain: fund.totalGain,
-          totalContributed: totalContributed.toFixed(2),
-          giftCount: giftsForFund.length,
-          contributorCount,
-        },
+        fund: (() => {
+          // PII minimization: the screen only needs the majority DATE, not the
+          // raw DOB. Precompute it server-side so the exact birthdate never
+          // leaves the server on this token-gated, UNAUTHENTICATED endpoint.
+          const rawMajorityAge = Number((fund as any).majorityAge);
+          const majorityAge =
+            Number.isFinite(rawMajorityAge) && rawMajorityAge >= 18 && rawMajorityAge <= 25
+              ? Math.floor(rawMajorityAge)
+              : 18;
+          let majorityDate: string | null = null;
+          if (fund.recipientBirthdate) {
+            const dob = new Date(fund.recipientBirthdate);
+            if (!Number.isNaN(dob.getTime())) {
+              const d = new Date(dob);
+              d.setFullYear(d.getFullYear() + majorityAge);
+              majorityDate = d.toISOString();
+            }
+          }
+          return {
+            id: fund.id,
+            name: fund.name,
+            recipientFirstName: fund.recipientFirstName,
+            majorityAge,
+            majorityDate,
+            balance: fund.balance,
+            totalGain: fund.totalGain,
+            totalContributed: totalContributed.toFixed(2),
+            giftCount: giftsForFund.length,
+            contributorCount,
+          };
+        })(),
         // PII minimization on this token-gated, UNAUTHENTICATED endpoint
         // (security-audit 2026-05-28): the parent's email is not used by the
         // claim/preview screen, so it is no longer exposed to token holders.
-        // recipientBirthdate (above) is retained because the screen computes the
-        // majority countdown from it; if exact-DOB exposure must also go, the
-        // follow-up is gating this endpoint to a verified recipient.
+        // The recipient's raw DOB is NO LONGER exposed either — only the
+        // precomputed majorityDate (above), which is all the screen renders.
         parent: {
           firstName: parent?.firstName || null,
           message: nextRecord.parentMessage,
@@ -7563,6 +8373,25 @@ export async function registerRoutes(
         return res.status(409).json({ error: "This handoff link is for the child, not the parent." });
       }
 
+      // Idempotency: once a DIFFERENT user has claimed, refuse — stops a second
+      // token-holder (a sibling, or anyone the link leaks to) from overriding the
+      // real recipient's claim. Trust-safety audit C4.
+      if (found.record.childClaimedByUserId && found.record.childClaimedByUserId !== userId) {
+        return res.status(409).json({ error: "This fund has already been claimed." });
+      }
+      // Account-takeover guard: when the parent put the child's email on file, the
+      // claim may only come FROM that address — closes the sibling/token-leak
+      // takeover where someone else signs in and claims ownership. When no child
+      // email is on file (the parent shared the link out-of-band on purpose), there
+      // is nothing to match against, so the idempotency guard above is the control.
+      const intendedClaimEmail = String(found.record.childEmail || "").trim().toLowerCase();
+      if (intendedClaimEmail) {
+        const claimantEmail = String((req.user as any).email || "").trim().toLowerCase();
+        if (claimantEmail !== intendedClaimEmail) {
+          return res.status(403).json({ error: "This handoff link can only be claimed from the email address it was sent to. Please sign in with that email and try again." });
+        }
+      }
+
       const claimed = await patchAgeTransitionRecord(fund.id, {
         childClaimedAt: new Date().toISOString(),
         childClaimedByUserId: userId,
@@ -7633,6 +8462,11 @@ export async function registerRoutes(
         // owner-mode UX activated (the demo seed set them by hand, masking it).
         transferredAt: new Date(),
         previousOwnerId,
+        // Freeze the handoff value as the previous owner's keepsake number.
+        // Capture the live total now; after this the fund is the now-adult's
+        // private account and the parent's view shows this frozen value, not
+        // her live balance. Mirror in the kid-view claim door (auth.ts).
+        valueAtTransfer: (fund as any).balance ?? "0",
       } as any);
       if (!updatedFund) {
         return res.status(500).json({ error: "Could not complete the transfer." });
@@ -7700,13 +8534,13 @@ export async function registerRoutes(
             "",
             `${childName} just turned ${majorityAge} and now legally owns the Kiddo fund you shared access to. Under state UTMA law, control transfers to them at this age, and the fund has moved into their own account.`,
             "",
-            `Because the account is now ${childName}'s, shared access has ended — that's the normal, expected part of a handoff, not something you need to fix. Nothing was sold; the investments stay exactly where they are.`,
+            `Because the account is now ${childName}'s, shared access has ended. That's the normal, expected part of a handoff, not something you need to fix. Nothing was sold; the investments stay exactly where they are.`,
             "",
             `If ${childName} wants to share the fund with you again, they can invite you from their own account.`,
             "",
             "Thank you for showing up for them all these years.",
             "",
-            "— The Kiddo team",
+            "The Kiddo team",
           ].join("\n");
           const { html } = renderKiddoEmail({
             heading: `${childName} now owns their Kiddo fund`,
@@ -7896,6 +8730,13 @@ export async function registerRoutes(
 
   app.post('/api/public/funds/:id/memory/upload-photo', async (req, res) => {
     try {
+      // Gifter (public/unauthenticated) media is gated OFF at launch
+      // (PUBLIC_MEDIA_UPLOADS_ENABLED, default false). Honest refusal so the
+      // client can hide the picker; the scanner fail-closed below stays as
+      // defense in depth. See server/publicMediaFlag.ts.
+      if (!isPublicMediaUploadsEnabled()) {
+        return res.status(403).json({ error: 'media_uploads_disabled', message: 'Photo, video, and voice gifts are not available yet. You can still add a written note.' });
+      }
       const fund = await storage.getFund(req.params.id);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
@@ -7950,11 +8791,21 @@ export async function registerRoutes(
         return res.status(500).json({ error: 'Upload failed. Please try again later.' });
       }
 
+      // Normalize the scanned-clean original before storing: STRIP EXIF/GPS, bake
+      // orientation, re-encode to webp (also neutralizes smuggled payloads). A throw
+      // = undecodable → reject. Wired 2026-06-23 (was: raw buffer to object storage).
+      let normalizedPublicPhoto;
+      try {
+        normalizedPublicPhoto = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
+
       const uploaded = await uploadMemoryFile({
         fundId: req.params.id,
-        ext: parsed.ext,
-        mime: parsed.mime,
-        buffer: parsed.buffer,
+        ext: 'webp',
+        mime: 'image/webp',
+        buffer: normalizedPublicPhoto.full,
       });
 
       // Audit every accepted upload. Provides traceability for any later
@@ -7978,6 +8829,12 @@ export async function registerRoutes(
 
   app.post('/api/public/funds/:id/memory/upload-video', async (req, res) => {
     try {
+      // Gifter media gated OFF at launch (PUBLIC_MEDIA_UPLOADS_ENABLED, default
+      // false). Honest refusal; the prod fail-closed below stays as defense in
+      // depth. See server/publicMediaFlag.ts.
+      if (!isPublicMediaUploadsEnabled()) {
+        return res.status(403).json({ error: 'media_uploads_disabled', message: 'Photo, video, and voice gifts are not available yet. You can still add a written note.' });
+      }
       const fund = await storage.getFund(req.params.id);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
@@ -7996,6 +8853,19 @@ export async function registerRoutes(
       }
       if (parsed.buffer.length > 25 * 1024 * 1024) {
         return res.status(400).json({ error: 'Video too large. Please use a video under 25MB.' });
+      }
+
+      // FAIL-CLOSED: there is no video content scanner yet (the Scanner interface
+      // only scans images), so in production we must NOT accept unscanned video on
+      // this PUBLIC (stranger-gifter) child-facing surface. Allowed in dev/test so
+      // local work isn't blocked; mirrors the photo path's prod fail-closed.
+      // Trust-safety audit C2 — lift when a scanVideo capability lands.
+      if (process.env.NODE_ENV === 'production') {
+        await writeAudit(req, 'public_upload_scan_rejected', 'fund', fund.id, {
+          mediaType: 'video', provider: 'none', reason: 'no-video-scanner',
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        return res.status(500).json({ error: 'Upload failed. Please try again later.' });
       }
 
       const uploaded = await uploadMemoryFile({
@@ -8022,6 +8892,12 @@ export async function registerRoutes(
 
   app.post('/api/public/funds/:id/memory/upload-audio', async (req, res) => {
     try {
+      // Gifter media gated OFF at launch (PUBLIC_MEDIA_UPLOADS_ENABLED, default
+      // false). Honest refusal; the prod fail-closed below stays as defense in
+      // depth. See server/publicMediaFlag.ts.
+      if (!isPublicMediaUploadsEnabled()) {
+        return res.status(403).json({ error: 'media_uploads_disabled', message: 'Photo, video, and voice gifts are not available yet. You can still add a written note.' });
+      }
       const fund = await storage.getFund(req.params.id);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
@@ -8040,6 +8916,19 @@ export async function registerRoutes(
       }
       if (parsed.buffer.length > 10 * 1024 * 1024) {
         return res.status(400).json({ error: 'Voice note too large. Max 10MB.' });
+      }
+
+      // FAIL-CLOSED: no audio content scanner exists yet (and audioTranscript is
+      // rendered to the child unscanned), so in production we must NOT accept
+      // unscanned voice notes on this PUBLIC (stranger-gifter) child-facing
+      // surface. Allowed in dev/test; mirrors the photo path. Trust-safety audit
+      // C2 — lift when a scanAudio (+ transcript scan) capability lands.
+      if (process.env.NODE_ENV === 'production') {
+        await writeAudit(req, 'public_upload_scan_rejected', 'fund', fund.id, {
+          mediaType: 'audio', provider: 'none', reason: 'no-audio-scanner',
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        return res.status(500).json({ error: 'Upload failed. Please try again later.' });
       }
 
       const uploaded = await uploadMemoryFile({
@@ -8134,9 +9023,33 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       const code = String(req.body?.code || '');
-      const [u] = await db.select({ pending: users.totpPendingSecret, enabled: users.totpEnabled }).from(users).where(eq(users.id, userId)).limit(1);
+      const [u] = await db.select({
+        pending: users.totpPendingSecret,
+        enabled: users.totpEnabled,
+        passwordHash: users.passwordHash,
+        googleId: users.googleId,
+      }).from(users).where(eq(users.id, userId)).limit(1);
       if (u?.enabled) return res.status(400).json({ error: 'Two-factor is already on.' });
       if (!u?.pending) return res.status(400).json({ error: 'Start setup first.' });
+      // Step-up reauth. Enabling a second factor changes account recovery and
+      // lockout behavior, so it must prove it's the account holder — not just a
+      // ride-along on a live session (stolen cookie, shared device). Mirrors the
+      // current-password check on /api/user/change-password. OAuth-only accounts
+      // (Google sign-in, no user-set password) can't supply one and already
+      // carry the provider's own 2FA, so they're exempt — the live TOTP code
+      // below still proves authenticator possession. The client reveals a
+      // password field on the `needsPassword` flag and re-submits.
+      const isPasswordAccount = Boolean(u.passwordHash) && !u.googleId;
+      if (isPasswordAccount) {
+        const currentPassword = String(req.body?.currentPassword || '');
+        if (!currentPassword) {
+          return res.status(400).json({ error: 'Enter your current password to turn on two-factor.', needsPassword: true });
+        }
+        const pwOk = await bcrypt.compare(currentPassword, u.passwordHash as string);
+        if (!pwOk) {
+          return res.status(400).json({ error: 'Current password is incorrect.', needsPassword: true });
+        }
+      }
       if (!verifyTotp(u.pending, code)) return res.status(400).json({ error: 'That code did not match. Check your authenticator and try again.' });
       const backupCodes = generateBackupCodes();
       const hashed = await hashBackupCodes(backupCodes);
@@ -8313,7 +9226,7 @@ export async function registerRoutes(
           fundId: userFunds[0]?.id,
           type: 'kyc_approved',
           title: 'Identity verified',
-          description: 'Your identity has been verified. Your funds are now active and investing.',
+          description: 'Your identity has been verified. Your funds are now active.',
         });
       } else if (decision.status === 'pending') {
         await storage.createActivity({
@@ -8339,7 +9252,7 @@ export async function registerRoutes(
         userId,
         title:
           decision.status === "approved"
-            ? "Your investing account is active"
+            ? "Your fund is active"
             : decision.status === "pending"
               ? "Your identity check is in review"
               : "Your identity details need attention",
@@ -8368,7 +9281,7 @@ export async function registerRoutes(
       const kycStatus = user?.kycStatus || 'none';
       const statusMessage =
         kycStatus === 'approved'
-          ? 'Your investing account is active.'
+          ? 'Your fund is active.'
           : kycStatus === 'pending'
             ? 'We are reviewing your identity details now.'
             : kycStatus === 'failed'
@@ -8598,6 +9511,20 @@ export async function registerRoutes(
         });
       }
 
+      // KNOWN GAP — attribution doesn't follow proceeds into cash (deferred,
+      // 2026-06-08). On a sell, the proceeds land in fund cash (below) but the
+      // gift→ticker allocations are deleted (full) or scaled down (partial), so
+      // that value is no longer attributed to the gifts that funded it. Effect:
+      // a partial sell makes a contributor's "worth now" shrink, and a full sell
+      // erases the "what your gift grew to" mapping — even though the value is
+      // sitting in cash. The gift RECORD + Memory Book survive (the contribution
+      // is remembered); only the live worth-attribution is lost. Mostly invisible
+      // today: pre-custody selling is simulated + rare (buy-and-hold product).
+      // The real fix is a gift→cash allocation so proceeds stay attributed, but
+      // it's a data-model change across the allocation system + every attribution
+      // surface — earns its lines once custody makes sells real, not before. See
+      // project_sell_attribution_gap. DON'T treat the shrink/erase as a bug until
+      // then; it's the documented, accepted trade.
       if (remainingShares <= 0.0001) {
         await storage.deleteHolding(holdingId);
         // Holding is gone. Drop its allocation rows so per-gift attribution doesn't
@@ -9381,6 +10308,17 @@ export async function registerRoutes(
       if (!bankName || !accountLast4) {
         return res.status(400).json({ error: 'Bank name and account last 4 digits are required' });
       }
+      // Input hygiene: last-4 fields must be exactly 4 digits. Without this the
+      // route stored arbitrary user-typed strings as a "linked" destination,
+      // which the withdrawal path then trusts. This is validation only — the
+      // deeper destination-verification (micro-deposit / Plaid) is the
+      // founder-owned money-out decision tracked in SECURITY_HARDENING_FOLLOWUPS.md.
+      if (!/^\d{4}$/.test(String(accountLast4))) {
+        return res.status(400).json({ error: 'Account last 4 must be exactly 4 digits.' });
+      }
+      if (routingLast4 != null && routingLast4 !== '' && !/^\d{4}$/.test(String(routingLast4))) {
+        return res.status(400).json({ error: 'Routing last 4 must be exactly 4 digits.' });
+      }
 
       const existingAccounts = await storage.getBankAccountsByUser(userId);
       const shouldBeDefault = Boolean(isDefault) || existingAccounts.length === 0;
@@ -9685,7 +10623,7 @@ export async function registerRoutes(
         }
         investBasket = [{ ticker: requestedTicker, name: asset.name, weight: 1.0 }];
       } else {
-        const defaultBasket = await getAutoBasketForStrategy(fund.investmentStrategy || "balanced", fund.id);
+        const defaultBasket = await getAutoBasketForStrategy(fund.investmentStrategy || "growth", fund.id);
         if (defaultBasket.length === 0) {
           // This error surface is admin-facing in practice (only fires
           // when an investment strategy has zero allocations, which is
@@ -9951,7 +10889,7 @@ export async function registerRoutes(
       // anywhere in the UI.
       const labelOf = (k: string) =>
         k === "growth" || k === "auto_invest" ? "Growth Mix"
-          : k === "balanced" ? "Steady & Balanced"
+          : k === "balanced" ? "Balanced Mix"
             : k === "conservative" ? "Conservative Mix"
               : k === "custom" ? "Custom ETF Mix"
                 : k;
@@ -10132,8 +11070,9 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const requestedFundId = String(req.body?.fundId || "");
 
+      let selectedFund: any = null;
       if (requestedFundId) {
-        const selectedFund = await storage.getFund(requestedFundId);
+        selectedFund = await storage.getFund(requestedFundId);
         if (!selectedFund) return res.status(404).json({ error: "Fund not found" });
         // Owner OR accepted co-admin can create events. Events are the
         // canonical co-parent use case — birthday parties, graduation
@@ -10149,8 +11088,19 @@ export async function registerRoutes(
         }
       }
 
-      const paidEntitlement = await hasPaidPlanForFund(userId, requestedFundId || null);
-      const existingEvents = await storage.getEventsByUser(userId);
+      // Entitlement is FUND-keyed, not viewer-keyed (2026-06-04). This
+      // endpoint admits co-admins (above), and the old check computed the
+      // plan from the VIEWER's id and counted the VIEWER's events — so a
+      // co-parent with no subscription of her own hit `free`/limit-1
+      // (against the wrong event set) on a fund whose owner pays for Family
+      // with unlimited occasions. Key the plan to the fund OWNER and count
+      // the FUND's active custom occasions. Fund-less requests (legacy
+      // callers) keep the viewer key — there's no fund to key to.
+      const entitlementUserId = selectedFund ? String(selectedFund.userId) : userId;
+      const paidEntitlement = await hasPaidPlanForFund(entitlementUserId, requestedFundId || null);
+      const existingEvents = requestedFundId
+        ? await storage.getEventsByFund(requestedFundId)
+        : await storage.getEventsByUser(userId);
       const activeCustomEvents = existingEvents.filter((e: any) => !e.isPermanent && e.status === "active");
       const activeEventLimit = paidEntitlement.family ? Number.POSITIVE_INFINITY : paidEntitlement.starter ? 3 : 1;
 
@@ -10344,12 +11294,44 @@ export async function registerRoutes(
       const parsed = parseImageDataUrl(req.body?.dataUrl);
       if (!parsed) return res.status(400).json({ error: 'Invalid image. Upload PNG/JPG/WEBP/GIF.' });
       if (parsed.buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large. Max 5MB.' });
+      // Content-safety scan on the ORIGINAL bytes (occasion covers are often photos of
+      // the child). Same silent-log-and-refuse gate as the other image paths; noop is
+      // fail-CLOSED in prod / fail-open in dev, so covers stay OFF in prod until a real
+      // vendor is wired — uniform with profile/child-photo/public paths. Wired 2026-06-23.
+      const scan = await scanImageBuffer(parsed.buffer, parsed.mime);
+      if (!scan.safe) {
+        await writeAudit(req, 'event_image_scan_rejected', 'event', req.params.id, {
+          provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch,
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        try {
+          await sendOpsAlert({
+            severity: 'critical',
+            title: 'Content scanner rejected an occasion image',
+            message: `Occasion image for event ${req.params.id} rejected by ${scan.provider}. Reason: ${scan.reason || 'unknown'}.`,
+            context: { eventId: req.params.id, provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch },
+          });
+        } catch (alertErr) {
+          console.error('[event-image] Ops alert failed for scanner-rejected image:', alertErr);
+        }
+        return res.status(500).json({ error: 'Could not save that image. Please try again later.' });
+      }
+      // Normalize before storing: STRIP EXIF/GPS (occasion covers are often photos of
+      // the child and render on the dashboard tile + gifter hero), bake orientation,
+      // re-encode to webp (also neutralizes smuggled payloads). A throw = undecodable
+      // → reject. Wired 2026-06-23.
+      let normalizedEventImage;
+      try {
+        normalizedEventImage = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
       const safeId = String(req.params.id).replace(/[^a-zA-Z0-9_-]/g, "");
       const dir = path.resolve(process.cwd(), "uploads", "events", safeId);
       await fs.mkdir(dir, { recursive: true });
-      const filename = `${Date.now()}-${crypto.randomUUID()}.${parsed.ext}`;
+      const filename = `${Date.now()}-${crypto.randomUUID()}.webp`;
       const abs = path.join(dir, filename);
-      await fs.writeFile(abs, parsed.buffer);
+      await fs.writeFile(abs, normalizedEventImage.full);
       const url = `/uploads/events/${safeId}/${filename}`;
       // Accept focal-point coords alongside the upload so the parent's
       // pan/zoom framing intent persists across all destination surfaces
@@ -10391,7 +11373,22 @@ export async function registerRoutes(
         return res.status(404).json({ error: 'Fund not found' });
       }
       // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      const gifts = await storage.getGiftsByFund(req.params.fundId);
+      const giftsRaw = await storage.getGiftsByFund(req.params.fundId);
+      // Keepsake cap (mirror of dashboard-summary): a previous owner viewing a
+      // transferred fund without live access granted sees gifts only up to the
+      // handoff — never the now-adult's post-handoff gift activity.
+      const reqUserId = (req.user as any)?.id;
+      const isKeepsakePrevOwner =
+        String((fund as any).previousOwnerId || "") === reqUserId &&
+        !!(fund as any).transferredAt &&
+        !(fund as any).previousOwnerLiveAccessGrantedAt;
+      const gifts = isKeepsakePrevOwner
+        ? giftsRaw.filter((g: any) => {
+            const cutoff = new Date((fund as any).transferredAt).getTime();
+            const ts = g?.createdAt ? new Date(g.createdAt).getTime() : 0;
+            return !Number.isFinite(cutoff) || !Number.isFinite(ts) || ts === 0 || ts <= cutoff;
+          })
+        : giftsRaw;
       // Enrich each gift with the matched account's preferred display name +
       // avatar (by senderEmail) so the "Who loves you" roster can show how the
       // family actually refers to a gifter ("Dad", "Mom") with a real photo,
@@ -10596,6 +11593,13 @@ export async function registerRoutes(
         return res.status(403).json({ error: 'You do not own this fund' });
       }
 
+      // Capture the ORIGINAL fund BEFORE the move so we can debit it. Without
+      // this, moving a gift that was already credited to its original fund (by
+      // the webhook's completeGiftPostPayment) double-counts the money: the
+      // original stays credited AND the target gets credited (security audit
+      // 2026-06-15, CRITICAL).
+      const originalFundId = gift.fundId;
+
       await storage.updateGift(gift.id, {
         fundId: targetFundId,
         status: 'settled',
@@ -10607,6 +11611,13 @@ export async function registerRoutes(
         pendingBalance: (parseFloat(targetFund.pendingBalance) + giftAmount).toFixed(2),
         contributorCount: targetFund.contributorCount + 1,
       });
+
+      // Re-reconcile the ORIGINAL fund from its remaining gifts, so the moved
+      // gift is removed from its pending balance + contributor count. Idempotent
+      // and authoritative (recomputes from actual gifts) — closes the double-credit.
+      if (originalFundId && originalFundId !== targetFundId) {
+        await WebhookHandlers.reconcileFundFromGifts(originalFundId);
+      }
 
       await storage.createActivity({
         userId,
@@ -10624,7 +11635,7 @@ export async function registerRoutes(
     }
   });
 
-  // Create gift (public, for gift givers)
+  // Create gift (public, for gifters)
   app.post('/api/public/gifts', async (req, res) => {
     try {
       // SECURITY: real gifts are created only by the Stripe webhook after a
@@ -10708,6 +11719,43 @@ export async function registerRoutes(
         }
       }
 
+      // ── N+1 KILL (perf) ──────────────────────────────────────────────
+      // The per-activity enrichment below used to await getFund + getGift + an
+      // owner-users query FOR EVERY ROW. On a fund-scoped feed every row shares the
+      // same fund + owner, so it refetched identical rows dozens of times — the cause
+      // of the ~7.4s, all-skeleton feed. Batch each lookup into a Map ONCE instead.
+      const distinctFundIds = Array.from(new Set(activities.map((a) => a.fundId).filter(Boolean) as string[]));
+      const fundMap = new Map<string, any>();
+      await Promise.all(distinctFundIds.map(async (fid) => {
+        try { const f = await storage.getFund(fid); if (f) fundMap.set(fid, f); } catch { /* skip */ }
+      }));
+
+      const giftIdSet = new Set<string>();
+      for (const a of activities) {
+        if (!a.metadata) continue;
+        try { const m = JSON.parse(a.metadata as string); if (m?.giftId) giftIdSet.add(String(m.giftId)); } catch { /* skip */ }
+      }
+      const giftMap = new Map<string, any>();
+      if (giftIdSet.size > 0) {
+        try {
+          const giftRows = await db.select().from(gifts).where(inArray(gifts.id, Array.from(giftIdSet)));
+          for (const g of giftRows) giftMap.set(String(g.id), g);
+        } catch (err) { console.warn('[Activities] Gift batch enrichment failed', err); }
+      }
+
+      const ownerEmailMap = new Map<string, string>(); // fund.userId -> lowercased owner email
+      const ownerUserIds = Array.from(new Set(Array.from(fundMap.values()).map((f: any) => f?.userId).filter(Boolean).map(String)));
+      if (ownerUserIds.length > 0) {
+        try {
+          const ownerRows = await db.select().from(users).where(inArray(users.id, ownerUserIds));
+          for (const o of ownerRows) {
+            const e = String((o as any)?.email || "").trim().toLowerCase();
+            if (e) ownerEmailMap.set(String((o as any).id), e);
+          }
+        } catch { /* owner batch non-fatal */ }
+      }
+      // ─────────────────────────────────────────────────────────────────
+
       const enriched = await Promise.all(
         activities.map(async (activity) => {
           let fund = null;
@@ -10723,11 +11771,7 @@ export async function registerRoutes(
           let resolvedEventName: string | null = null;
 
           if (activity.fundId) {
-            try {
-              fund = await storage.getFund(activity.fundId);
-            } catch (err) {
-              console.warn('[Activities] Fund enrichment failed for activity', activity.id, err);
-            }
+            fund = fundMap.get(activity.fundId) ?? null;
           }
 
           if (activity.metadata) {
@@ -10747,24 +11791,19 @@ export async function registerRoutes(
                 resolvedEventName = activityEventNameMap.get(meta.eventId) ?? null;
               }
               if (meta?.giftId) {
-                const gift = await storage.getGift(meta.giftId);
+                const gift = giftMap.get(String(meta.giftId)) ?? null;
                 if (gift) {
                   giftStatus = gift.status || null;
                   resolvedSenderEmail = (gift as any).senderEmail || null;
                   // Parent's own contribution = sender email matches owner.
                   // Compute it here so the client doesn't need both pieces.
                   if (resolvedSenderEmail && fund && (fund as any).userId) {
-                    try {
-                      // storage.getUser doesn't exist on DatabaseStorage; query
-                      // users table directly via the same db handle the rest of
-                      // this file uses. Pre-existing bug surfaced by tsc once
-                      // the typed-mutation work landed in this region.
-                      const [owner] = await db.select().from(users).where(eq(users.id, String((fund as any).userId))).limit(1);
-                      const ownerEmail = String((owner as any)?.email || "").trim().toLowerCase();
-                      if (ownerEmail) {
-                        resolvedIsParentContribution = String(resolvedSenderEmail).trim().toLowerCase() === ownerEmail;
-                      }
-                    } catch { /* owner lookup non-fatal */ }
+                    // Owner email comes from the batched ownerEmailMap (was a per-row
+                    // users query refetching the same owner dozens of times).
+                    const ownerEmail = ownerEmailMap.get(String((fund as any).userId));
+                    if (ownerEmail) {
+                      resolvedIsParentContribution = String(resolvedSenderEmail).trim().toLowerCase() === ownerEmail;
+                    }
                   }
                   // metadata.isParentContribution still wins when present
                   // (truthy or false) — only fall back when not provided.
@@ -10824,12 +11863,30 @@ export async function registerRoutes(
           console.warn('[Activities] Fund enrichment failed for detail', activity.id, err);
         }
       }
+      // Status enrichment — mirrors the /api/activities list endpoint's rule
+      // (the activities table has no status column). Without this the deep-link
+      // detail page showed no status pill while the feed row it was opened from
+      // showed "Invested"/"Pending"/"Processing" — same transaction, different
+      // story. Source of truth is the linked gift row; metadata.status is the
+      // fallback for non-gift in-flight rows (e.g. withdrawals).
+      let detailStatus: string | null = null;
+      if (activity.metadata) {
+        try {
+          const meta = JSON.parse(activity.metadata as string);
+          if (typeof meta?.status === "string") detailStatus = meta.status;
+          if (meta?.giftId) {
+            const gift = await storage.getGift(meta.giftId);
+            if (gift) detailStatus = gift.status || detailStatus;
+          }
+        } catch { /* malformed metadata - skip */ }
+      }
       res.json({
         ...activity,
         type: activity.type || "event_update",
         title: activity.title || "Fund update",
         fundName: fund?.name || null,
         recipientFirstName: fund?.recipientFirstName || null,
+        status: detailStatus,
       });
     } catch (error) {
       console.error('Error fetching activity:', error);
@@ -10868,9 +11925,19 @@ export async function registerRoutes(
         hasEntitlementFromStatus(row.status, row.currentPeriodEnd),
       ).length;
       const userFunds = await storage.getFundsByUser(userId);
-      const coverageByFundEntries = await Promise.all(
-        userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
-      );
+      // Coverage is a property of the FUND (the owner's plan), not the viewer
+      // (2026-06-04). The map only covered OWNED funds, so a co-parent with no
+      // subscription of her own (Elena) got an empty map and the Dashboard
+      // read the owner's Family-covered fund as "uncovered" — upselling her
+      // Kiddo+ for a fund the owner already pays for (and a collaborator
+      // buying Plus would double-pay the household). Include collaborated
+      // funds, keyed to the OWNER's id (getFundCoverageState's first param).
+      const collaboratedFundsForCoverage = await storage.getCollaboratedFunds(userId).catch(() => []);
+      const coverageByFundEntries = await Promise.all([
+        ...userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
+        ...collaboratedFundsForCoverage.map(async (fund) =>
+          [String(fund.id), await getFundCoverageState(String(fund.userId), fund.id)] as const),
+      ]);
       const coverageByFund = Object.fromEntries(coverageByFundEntries);
       // Per-fund sponsored-subscription metadata (Prong B of pricing-v3
       // conversion, locked 2026-05-23). Drives the "Plus from {Grandma}"
@@ -10969,9 +12036,19 @@ export async function registerRoutes(
         hasEntitlementFromStatus(row.status, row.currentPeriodEnd),
       ).length;
       const userFunds = await storage.getFundsByUser(userId);
-      const coverageByFundEntries = await Promise.all(
-        userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
-      );
+      // Coverage is a property of the FUND (the owner's plan), not the viewer
+      // (2026-06-04). The map only covered OWNED funds, so a co-parent with no
+      // subscription of her own (Elena) got an empty map and the Dashboard
+      // read the owner's Family-covered fund as "uncovered" — upselling her
+      // Kiddo+ for a fund the owner already pays for (and a collaborator
+      // buying Plus would double-pay the household). Include collaborated
+      // funds, keyed to the OWNER's id (getFundCoverageState's first param).
+      const collaboratedFundsForCoverage = await storage.getCollaboratedFunds(userId).catch(() => []);
+      const coverageByFundEntries = await Promise.all([
+        ...userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
+        ...collaboratedFundsForCoverage.map(async (fund) =>
+          [String(fund.id), await getFundCoverageState(String(fund.userId), fund.id)] as const),
+      ]);
       const coverageByFund = Object.fromEntries(coverageByFundEntries);
       const householdPlan =
         (subscription.plan === "legacy" || subscription.plan === "family") &&
@@ -11830,6 +12907,76 @@ export async function registerRoutes(
     }
   });
 
+  // In-app embedded checkout (CHECKOUT_IN_APP_SPEC.md), flag-gated (default off). Creates
+  // an ON-SESSION deposit PaymentIntent for the embedded Payment Element — card +
+  // Apple/Google Pay + Link, no hosted redirect, method vaulted for one-tap next time.
+  // Stripe coupling stays in stripeService (this handler just orchestrates).
+  app.post('/api/checkout/payment-intent', async (req, res) => {
+    try {
+      if (!isInAppCheckoutEnabled()) return res.status(404).json({ error: 'Not found' });
+      const amountCents = Math.round(Number(req.body?.amountCents ?? Number(req.body?.amount) * 100));
+      if (!Number.isFinite(amountCents) || amountCents < 100) {
+        return res.status(400).json({ error: 'Minimum $1.' });
+      }
+      // The user authorizes this charge live (on-session). Use the authed user's
+      // Customer when present; otherwise a stable preview Customer so the element can
+      // render for the /checkout-preview demo without an account.
+      const u = (req as any).user;
+      const email = (u?.email as string) || 'checkout-preview@kiddo.test';
+      const customer = await stripeService.getOrCreateCustomer(email, u?.firstName, u?.id);
+      const pi = await stripeService.createDepositPaymentIntent({
+        customerId: customer.id,
+        amountCents,
+        metadata: { surface: 'in_app_deposit_preview' },
+      });
+      res.json({ clientSecret: pi.client_secret });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create payment intent';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Saved methods for the RETURN-USER one-tap surface ("Pay with •••• 4242").
+  app.get('/api/checkout/payment-methods', async (req, res) => {
+    try {
+      if (!isInAppCheckoutEnabled()) return res.status(404).json({ error: 'Not found' });
+      const u = (req as any).user;
+      const email = (u?.email as string) || 'checkout-preview@kiddo.test';
+      const customer = await stripeService.getOrCreateCustomer(email, u?.firstName, u?.id);
+      const methods = await stripeService.listSavedPaymentMethods(customer.id);
+      res.json({ methods: methods.map((m) => ({ id: m.id, brand: m.card?.brand || 'card', last4: m.card?.last4 || '' })) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to list methods';
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // RETURN-USER one tap: charge a saved method on-session, no element. Returns the PI
+  // status (succeeded) or a clientSecret for the client to finish 3DS via
+  // stripe.handleNextAction. Card declines surface as 402 with a clean message.
+  app.post('/api/checkout/charge-saved', async (req, res) => {
+    try {
+      if (!isInAppCheckoutEnabled()) return res.status(404).json({ error: 'Not found' });
+      const amountCents = Math.round(Number(req.body?.amountCents ?? Number(req.body?.amount) * 100));
+      const paymentMethodId = String(req.body?.paymentMethodId || '');
+      if (!Number.isFinite(amountCents) || amountCents < 100) return res.status(400).json({ error: 'Minimum $1.' });
+      if (!paymentMethodId) return res.status(400).json({ error: 'No saved method.' });
+      const u = (req as any).user;
+      const email = (u?.email as string) || 'checkout-preview@kiddo.test';
+      const customer = await stripeService.getOrCreateCustomer(email, u?.firstName, u?.id);
+      const pi = await stripeService.chargeSavedMethodOnSession({
+        customerId: customer.id,
+        paymentMethodId,
+        amountCents,
+        metadata: { surface: 'in_app_deposit_onetap' },
+      });
+      res.json({ status: pi.status, clientSecret: pi.client_secret });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Charge failed';
+      res.status(402).json({ error: message });
+    }
+  });
+
   app.post('/api/stripe/calculate-fees', async (req, res) => {
     try {
       const { amount, coverFees, eventId, fundId, fundSlug, eventSlug, paymentMethod, giftAddOn } = req.body;
@@ -11946,7 +13093,7 @@ export async function registerRoutes(
 
   app.post('/api/stripe/checkout/gift', async (req, res) => {
     try {
-      const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous, clientSource } = req.body;
+      const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, voiceSealUntil18, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous, clientSource } = req.body;
       const baseUrl = getAppBaseUrl(req);
       // Allowed client-source values. Mobile sends one of these
       // explicitly; web omits the field and the server defaults to
@@ -11968,7 +13115,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "That stock isn't available to pick. Choose one from the list." });
       }
 
-      // Demo-fund sandbox: if this is a Dunphy demo fund, return a mock
+      // Demo-fund sandbox: if this is a Rivera demo fund, return a mock
       // success response that completes the flow without hitting Stripe.
       // Per server/demoSandbox.ts + DUNPHY_DEMO_SPEC.md Phase 2. Real
       // funds (the 99.99% case) fall through to the normal Stripe path.
@@ -11984,11 +13131,17 @@ export async function registerRoutes(
         if (demoName) demoQs.set("senderName", demoName);
         if (demoTicker) demoQs.set("ticker", demoTicker);
         if (demoMessage) demoQs.set("message", demoMessage);
+        // Carry the execution model so a one-time "add cash" lands in the demo's
+        // cash bucket instead of being invested into a holding on return.
+        if (typeof executionModel === "string" && executionModel) demoQs.set("execModel", executionModel);
         // Carry which media the gifter attached at checkout so the success page
         // reflects it instead of re-prompting "add a photo/video/voice".
-        if (photoUrl) demoQs.set("hasPhoto", "1");
-        if (videoUrl) demoQs.set("hasVideo", "1");
-        if (audioUrl) demoQs.set("hasAudio", "1");
+        // Carry both the flag (success page "already added" state) AND the
+        // actual URL (so the demo's "just now" Memory Book entry shows the
+        // media, not just acknowledges it). The upload already stored the file.
+        if (photoUrl) { demoQs.set("hasPhoto", "1"); demoQs.set("photoUrl", String(photoUrl)); }
+        if (videoUrl) { demoQs.set("hasVideo", "1"); demoQs.set("videoUrl", String(videoUrl)); }
+        if (audioUrl) { demoQs.set("hasAudio", "1"); demoQs.set("audioUrl", String(audioUrl)); }
         return res.json({
           url: `${baseUrl}/gift/success?${demoQs.toString()}`,
           sessionId: `demo_${Date.now()}`,
@@ -11998,6 +13151,20 @@ export async function registerRoutes(
       }
       const trimmedSenderName = typeof senderName === "string" ? senderName.trim() : "";
       const trimmedEmail = typeof senderEmail === "string" ? senderEmail.trim() : "";
+
+      // Trust-safety H2/H9 (2026-06-06: inline rules extracted to
+      // server/giftTextSafety.ts and now enforced on EVERY public gift path —
+      // the audit found them on only this one). Name: no contact info /
+      // brand impersonation (family titles like "Grandma" untouched).
+      // Message: no links/shorteners (phishing) and no emails/phones/@handles
+      // (a contact channel from a stranger to a child). This is contact-
+      // pattern matching, NOT content moderation (that's the H1 decision).
+      {
+        const nameIssue = senderNameIssue(trimmedSenderName, !!isAnonymous);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const messageIssue = giftMessageIssue(message);
+        if (messageIssue) return res.status(400).json({ error: messageIssue });
+      }
       const hasEmail = trimmedEmail.length > 0;
       const validEmail = !hasEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
       const isAnonymousFlag = !!isAnonymous;
@@ -12044,25 +13211,24 @@ export async function registerRoutes(
         });
       }
 
-      // Block-list enforcement. Refuse the gift before payment if the
-      // sender email (lowercased) matches a global or fund-scoped block.
-      // Returns a deliberately vague 403 — we don't want to confirm to a
-      // bad actor that they're specifically blocked, just that they
-      // can't proceed. Admins can audit the block via the T&S queue.
-      if (trimmedEmail) {
-        const emailLower = trimmedEmail.toLowerCase();
-        const blockRows = await db.execute(sql`
-          SELECT id, scope, fund_id FROM blocked_gifters
-          WHERE unblocked_at IS NULL
-            AND email = ${emailLower}
-            AND (scope = 'global' OR (scope = 'fund' AND fund_id = ${fundId}))
-          LIMIT 1
-        `);
-        if (blockRows.rows?.[0]) {
-          return res.status(403).json({
-            error: 'sender_blocked',
-            message: 'This gift cannot be processed. If you believe this is a mistake, contact support@kiddofund.com.',
-          });
+      // Block-list enforcement (shared helper since 2026-06-06 — H6/H7: the
+      // same check now runs on recurring + gift-intents + guestbook too).
+      // Deliberately vague 403 — never confirm to a bad actor that they're
+      // specifically blocked. Admins audit blocks via the T&S queue.
+      if (await isSenderBlocked(trimmedEmail, fundId)) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
+
+      // H8 — payment velocity. Card-testing rings run dozens of small
+      // charges per minute through public checkout forms; a real gifter
+      // doesn't start 10 checkout sessions in an hour (grandma doing all
+      // three grandkids' birthdays is 3). Keyed on sender email when given,
+      // else IP. Durable cross-instance counter (rateLimiter.ts); counts
+      // checkout ATTEMPTS, which is exactly what card-testing generates.
+      {
+        const velocityKey = `gift-velocity:${trimmedEmail ? trimmedEmail.toLowerCase() : `ip:${String(req.ip || "unknown")}`}`;
+        if (!(await checkRateLimit(velocityKey, 10, 60 * 60 * 1000))) {
+          return res.status(429).json({ error: "That's a lot of gifts in a short time. Please wait a bit and try again." });
         }
       }
 
@@ -12123,6 +13289,90 @@ export async function registerRoutes(
         req.get('Idempotency-Key') || req.body?.idempotencyKey,
       );
 
+      // C3 (data-privacy): when enabled, persist the gift media server-side and
+      // pass only an opaque token through Stripe so child Memory Book media URLs
+      // never reach the payment processor's metadata. Best-effort — any failure
+      // (or the flag being off) falls back to the legacy URL-in-metadata path so
+      // a gift never loses its media. See stripeMediaTokenFlag.ts + migration 0046.
+      let giftMediaToken: string | undefined;
+      if (
+        isStripeMediaTokenEnabled() &&
+        (normalizedPhotoUrl || normalizedVideoUrl || normalizedAudioUrl)
+      ) {
+        try {
+          const token = crypto.randomUUID();
+          await db.insert(pendingGiftMedia).values({
+            token,
+            photoUrl: normalizedPhotoUrl || null,
+            videoUrl: normalizedVideoUrl || null,
+            audioUrl: normalizedAudioUrl || null,
+          });
+          giftMediaToken = token;
+        } catch (mediaErr) {
+          console.warn('[gift-checkout] pending media persist failed; using legacy metadata path:', (mediaErr as any)?.message || mediaErr);
+        }
+      }
+
+      // EMBEDDED in-app checkout (CHECKOUT_IN_APP_SPEC.md), flag-gated. When the client
+      // asks for embedded mode, return a PaymentIntent client_secret + the in-app success
+      // path instead of a hosted Checkout Session URL. Identical fees/metadata; settles
+      // via the guarded source:'in_app' branch. Hosted stays the default when `embedded`
+      // is absent or the flag is off — pure additive, instant fallback.
+      if (req.body?.embedded === true && isInAppCheckoutEnabled()) {
+        const giftPi = await stripeService.createGiftPaymentIntent({
+          fundId,
+          eventId,
+          amount: parseFloat(amount),
+          senderName: normalizedSenderName,
+          senderEmail: hasEmail ? trimmedEmail : undefined,
+          message,
+          photoUrl: normalizedPhotoUrl || undefined,
+          videoUrl: normalizedVideoUrl || undefined,
+          audioUrl: normalizedAudioUrl || undefined,
+          voiceSealUntil18: Boolean(voiceSealUntil18),
+          mediaToken: giftMediaToken,
+          coverFees: coverFees || false,
+          hasLegacyPremiumEventCoverage,
+          hostPlan: (coverageStatus === "trial_active"
+            ? "free"
+            : (hostPlan as 'free' | 'starter' | 'family' | 'legacy')) || "free",
+          coverageStatus,
+          fundUserId: fund.userId,
+          recipientName,
+          paymentMethod: paymentMethod || 'card',
+          executionModel: executionModel || 'auto',
+          selectedTicker: selectedTicker || undefined,
+          giftAddOn: getGiftAddOn(giftAddOn).id,
+          isAnonymous: isAnonymousFlag,
+          idempotencyKey,
+          source: normalizedSource,
+          isParentContribution,
+        });
+        // Relative path — the client navigates internally after confirmPayment (no
+        // session_id; the embedded flow has no Checkout Session, and GiftSuccess reads
+        // the gift from these params + the webhook-created row).
+        const successPath = isParentContribution
+          ? `/dashboard?parentContrib=1&fundId=${encodeURIComponent(fundId)}&syncGifts=1`
+          : `/gift/success?fundId=${encodeURIComponent(fundId)}` +
+            `&eventId=${encodeURIComponent(eventId || '')}` +
+            `&fundSlug=${encodeURIComponent(fund.slug || '')}` +
+            `&eventSlug=${encodeURIComponent(event?.slug || '')}` +
+            `&eventName=${encodeURIComponent(event?.name || '')}` +
+            `&amount=${encodeURIComponent(String(parseFloat(amount)))}` +
+            `&senderName=${encodeURIComponent(normalizedSenderName)}` +
+            `&executionModel=${encodeURIComponent(executionModel || 'auto')}` +
+            `&ticker=${encodeURIComponent(selectedTicker || '')}` +
+            `&fundName=${encodeURIComponent(recipientName)}`;
+        recordEvent({
+          ...eventCtxFromReq(req),
+          name: "gift_started",
+          fundId,
+          source: isParentContribution ? "web" : "public",
+          props: { amount: Number(amount) || 0, executionModel: executionModel || null, isParentContribution: !!isParentContribution, hasMessage: !!message, embedded: true },
+        });
+        return res.json({ clientSecret: giftPi.client_secret, paymentIntentId: giftPi.id, successPath });
+      }
+
       const session = await stripeService.createGiftCheckoutSession({
         fundId,
         eventId,
@@ -12133,6 +13383,10 @@ export async function registerRoutes(
         photoUrl: normalizedPhotoUrl || undefined,
         videoUrl: normalizedVideoUrl || undefined,
         audioUrl: normalizedAudioUrl || undefined,
+        voiceSealUntil18: Boolean(voiceSealUntil18),
+        // C3: opaque token when media was persisted server-side (above). When
+        // undefined, stripeService keeps the media URLs inline (legacy).
+        mediaToken: giftMediaToken,
         coverFees: coverFees || false,
         hasLegacyPremiumEventCoverage,
         hostPlan: (coverageStatus === "trial_active"
@@ -12282,6 +13536,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Password must be at least 8 characters" });
       }
 
+      // T&S H2/H9 parity with the one-time checkout (2026-06-06): the audit
+      // found name/message validation on the one-time path only — a blocked
+      // sender or smuggled contact info could simply use the recurring form.
+      // Same shared rules, same copy.
+      {
+        const nameIssue = senderNameIssue(trimmedSenderName, !!isAnonymous);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const messageIssue = giftMessageIssue(message);
+        if (messageIssue) return res.status(400).json({ error: messageIssue });
+      }
+
       // Demo-fund sandbox: same pattern as one-time. Mock success.
       if (await isDemoFund(fundId)) {
         return res.json({
@@ -12299,6 +13564,19 @@ export async function registerRoutes(
           error: "fund_closed",
           message: "This fund is no longer accepting gifts.",
         });
+      }
+
+      // T&S H6/H7 + H8 parity with the one-time checkout (2026-06-06): the
+      // blocklist + velocity caps were missing here entirely — a blocked
+      // gifter could route around their block via the recurring form.
+      if (await isSenderBlocked(trimmedEmail, fundId)) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
+      {
+        const velocityKey = `gift-velocity:${trimmedEmail}`;
+        if (!(await checkRateLimit(velocityKey, 10, 60 * 60 * 1000))) {
+          return res.status(429).json({ error: "That's a lot of gifts in a short time. Please wait a bit and try again." });
+        }
       }
 
       // Pricing-v3 fund-tier gate (locked 2026-05-23, see
@@ -12653,11 +13931,12 @@ export async function registerRoutes(
         eventSlug: eventForSlug?.slug || null,
         event: eventBlock,
         fundName: fund?.recipientFirstName || fund?.name || null,
-        // The kid's photo anchors the gifter's success moment (who did I
-        // give to?). Already public on the gift page the gifter came
-        // from, so this adds no new exposure. Null when the family hasn't
-        // uploaded one — the page falls back to the sprout treatment.
-        childPhotoUrl: fund?.childPhotoUrl || null,
+        // childPhotoUrl intentionally NOT exposed on this unauthenticated
+        // post-payment summary. The prior rationale ("already public on the
+        // gift page") no longer holds now that the gift page itself is gated
+        // (see /api/public/funds/:slug). The success page falls back to the
+        // sprout treatment when null. Gated 2026-06-09 (data-privacy audit C1).
+        childPhotoUrl: null,
         amount: gift?.amount || metadata.baseAmount || metadata.amount || metadata.netToFund || null,
         senderName: gift?.senderName || metadata.senderName || null,
         senderEmail: gift?.senderEmail || metadata.senderEmail || null,
@@ -12740,6 +14019,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'At least one of note, photoUrl, videoUrl, or audioUrl is required' });
       }
       if (note.length > 1000) return res.status(400).json({ error: 'note too long' });
+      // T&S H9 (2026-06-06): the after-payment note renders in the child's
+      // Memory Book like any other gift message — same shared link/contact
+      // rules as checkout. The TRANSCRIPT is machine-generated (the gifter
+      // didn't type it, may have already left) so it can't be bounced with a
+      // 400 — sanitizeTranscript DROPS it on a contact-pattern hit instead
+      // (M4): the voice clip stays, the risky derived text never renders.
+      {
+        const noteIssue = giftMessageIssue(note);
+        if (noteIssue) return res.status(400).json({ error: noteIssue });
+      }
+      const safeAudioTranscript = sanitizeTranscript(audioTranscript) || '';
 
       const session = await stripeService.getCheckoutSession(sessionId);
       if (!session || session.metadata?.type !== 'gift') {
@@ -12809,7 +14099,7 @@ export async function registerRoutes(
         if (existingAudio) skipped.push('audio');
         else {
           updates.audioUrl = audioUrl;
-          if (audioTranscript) updates.audioTranscript = audioTranscript;
+          if (safeAudioTranscript) updates.audioTranscript = safeAudioTranscript;
         }
       }
 
@@ -12852,15 +14142,53 @@ export async function registerRoutes(
       if (!parsed) return res.status(400).json({ error: 'Invalid image data. Upload PNG/JPG/WEBP.' });
       if (parsed.buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large. Please use an image under 5MB.' });
 
+      // Content-safety scan on the ORIGINAL bytes — a child's photo is the most
+      // sensitive surface in the app, so it gets the SAME gate as the profile +
+      // public-photo paths: silent-log-and-refuse (generic client error, audit + ops
+      // alert with the real reason). The noop scanner is fail-CLOSED in prod /
+      // fail-open in dev, so child photos stay effectively OFF in production until a
+      // real vendor (PhotoDNA/Rekognition + NCMEC) is wired — uniform with the other
+      // image paths so the central scanner swap covers everything at once. Wired 2026-06-23.
+      const scan = await scanImageBuffer(parsed.buffer, parsed.mime);
+      if (!scan.safe) {
+        await writeAudit(req, 'child_photo_scan_rejected', 'fund', fund.id, {
+          provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch,
+          sizeBytes: parsed.buffer.length, mime: parsed.mime,
+        });
+        try {
+          await sendOpsAlert({
+            severity: 'critical',
+            title: 'Content scanner rejected a child photo',
+            message: `Child photo for fund ${fund.id} rejected by ${scan.provider}. Reason: ${scan.reason || 'unknown'}.`,
+            context: { fundId: fund.id, provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch },
+          });
+        } catch (alertErr) {
+          console.error('[child-photo] Ops alert failed for scanner-rejected photo:', alertErr);
+        }
+        return res.status(500).json({ error: 'Could not save that photo. Please try again later.' });
+      }
+
+      // Normalize before storing: STRIP EXIF/GPS — a CHILD'S photo would otherwise
+      // carry home coordinates, the single most sensitive EXIF leak in the app, and
+      // it's served from a public /uploads path. Bake orientation, re-encode to webp
+      // (also neutralizes any payload smuggled in the container). A throw = undecodable
+      // bytes → reject (never store an unprocessed original of a minor). Wired 2026-06-23.
+      let normalizedChildPhoto;
+      try {
+        normalizedChildPhoto = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
+
       const safeFundId = String(req.params.fundId).replace(/[^a-zA-Z0-9_-]/g, "");
       const dir = path.resolve(process.cwd(), "uploads", "child-photos", safeFundId);
       await fs.mkdir(dir, { recursive: true });
       // Unguessable filename. A timestamp-only name (`child-<Date.now()>`)
       // under the publicly-served /uploads path is guessable per known
       // fundId, exposing a minor's photo. A random UUID removes that.
-      const filename = `child-${crypto.randomUUID()}.${parsed.ext}`;
+      const filename = `child-${crypto.randomUUID()}.webp`;
       const abs = path.join(dir, filename);
-      await fs.writeFile(abs, parsed.buffer);
+      await fs.writeFile(abs, normalizedChildPhoto.full);
       const relUrl = `/uploads/child-photos/${safeFundId}/${filename}`;
 
       await storage.updateFund(req.params.fundId, { childPhotoUrl: relUrl });
@@ -12924,14 +14252,26 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Image too large. Please use an image under 3MB.' });
       }
 
+      // Normalize before storing: STRIPS EXIF/GPS (child-privacy / COPPA — a
+      // photo of the kid would otherwise carry home coordinates), bakes
+      // orientation, and re-encodes to right-sized webp. A throw means the bytes
+      // aren't a decodable image → reject (never store an unprocessed original on
+      // a child-facing surface). Security audit 2026-06-15 (EXIF leak).
+      let normalized;
+      try {
+        normalized = await normalizeImage(parsed.buffer);
+      } catch {
+        return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
+      }
+
       const uploaded = await uploadMemoryFile({
         fundId: req.params.fundId,
-        ext: parsed.ext,
-        mime: parsed.mime,
-        buffer: parsed.buffer,
+        ext: 'webp',
+        mime: 'image/webp',
+        buffer: normalized.full,
       });
 
-      res.json({ url: uploaded.url, mime: parsed.mime, size: parsed.buffer.length });
+      res.json({ url: uploaded.url, mime: 'image/webp', size: normalized.full.length });
     } catch (error) {
       console.error('Error uploading memory photo:', error);
       res.status(500).json({ error: 'Failed to upload memory photo' });
@@ -12961,11 +14301,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Video too large. Please use a video under 25MB.' });
       }
 
+      // Strip GPS/location + other metadata before storing — the moving-image counterpart
+      // to normalizeImage for photos. DORMANT until `ffmpeg-static` + `fluent-ffmpeg` are
+      // installed (see server/mediaPipeline.ts): until then it's a lossless pass-through, so
+      // it never breaks the upload. The audit records whether the strip actually ran, so a
+      // shared Memory Book can't silently leak a home video's coordinates once it's active.
+      const cleaned = await stripMediaMetadata(parsed.buffer, parsed.ext);
       const uploaded = await uploadMemoryFile({
         fundId: req.params.fundId,
         ext: parsed.ext,
         mime: parsed.mime,
-        buffer: parsed.buffer,
+        buffer: cleaned.buffer,
+      });
+
+      await writeAudit(req, 'memory_media_upload', 'fund', fund.id, {
+        mediaType: 'video', filename: uploaded.filename,
+        sizeBytes: cleaned.buffer.length, mime: parsed.mime,
+        storage: uploaded.storage, metadataStripped: cleaned.stripped,
       });
 
       res.json({ url: uploaded.url, mime: parsed.mime, size: parsed.buffer.length });
@@ -13048,11 +14400,15 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Voice note too large. Max 10MB.' });
       }
 
+      // Strip metadata before storing (dormant pass-through until ffmpeg is installed;
+      // see server/mediaPipeline.ts). Audio rarely carries GPS, but this keeps the voice
+      // path consistent with video and lossless (-c copy: the voice is byte-identical).
+      const cleaned = await stripMediaMetadata(parsed.buffer, parsed.ext);
       const uploaded = await uploadMemoryFile({
         fundId: req.params.fundId,
         ext: parsed.ext,
         mime: parsed.mime,
-        buffer: parsed.buffer,
+        buffer: cleaned.buffer,
       });
 
       // Best-effort Whisper transcription. Returns null when OPENAI_API_KEY
@@ -13062,7 +14418,15 @@ export async function registerRoutes(
       // memory entry so it persists into Memory Book + KidView.
       // Buffer-based now so it works regardless of where the file landed
       // (Supabase Storage in prod, local disk in dev).
-      const transcript = await transcribeAudioBuffer(parsed.buffer, uploaded.filename, parsed.mime);
+      const transcript = await transcribeAudioBuffer(cleaned.buffer, uploaded.filename, parsed.mime);
+
+      // Audit parity with the public voice path (which the authed path was missing).
+      // metadataStripped reflects whether the strip actually ran (false until ffmpeg lands).
+      await writeAudit(req, 'memory_media_upload', 'fund', fund.id, {
+        mediaType: 'audio', filename: uploaded.filename,
+        sizeBytes: cleaned.buffer.length, mime: parsed.mime,
+        storage: uploaded.storage, metadataStripped: cleaned.stripped, transcribed: Boolean(transcript),
+      });
 
       res.json({ url: uploaded.url, mime: parsed.mime, size: parsed.buffer.length, transcript });
     } catch (error) {
@@ -13073,22 +14437,65 @@ export async function registerRoutes(
 
   app.get('/api/funds/:fundId/memory', isAuthenticated, async (req: any, res) => {
     try {
-      const fund = await storage.getFund(req.params.fundId);
+      // Reuse the fund the requireOwnedFundParam middleware already loaded
+      // (req.ownedFund) instead of a redundant getFund round trip. 2026-06-04 perf.
+      const fund = req.ownedFund || await storage.getFund(req.params.fundId);
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
       // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      const allEntries = await storage.getMemoryEntriesByFund(req.params.fundId);
+      // The four fund-scoped reads below are independent — fetch them
+      // concurrently instead of four serial remote-DB round trips. 2026-06-04 perf.
+      const [allEntries, giftsForFund, fundEvents, fundHoldings] = await Promise.all([
+        storage.getMemoryEntriesByFund(req.params.fundId),
+        storage.getGiftsByFund(req.params.fundId),
+        storage.getEventsByFund(req.params.fundId),
+        storage.getHoldingsByFund(req.params.fundId),
+      ]);
       // Filter out pending-review entries from the parent's MAIN Memory Book
       // view. The pending tray is a separate endpoint (GET .../memory/pending)
       // so the main view stays clean — pending items appear as a distinct
       // tray + dot, not mixed in with approved entries.
       const entries = allEntries.filter((e) => String((e as any).status || 'published') !== 'pending_review');
-      const giftsForFund = await storage.getGiftsByFund(req.params.fundId);
-      const fundEvents = await storage.getEventsByFund(req.params.fundId);
-      const fundHoldings = await storage.getHoldingsByFund(req.params.fundId);
+      // Index the gifts already loaded above so per-entry enrichment is a Map
+      // lookup, not a getGift() round trip per entry (the worst N+1 here:
+      // a fund with N gift-linked entries fired N redundant queries for rows
+      // already in giftsForFund). 2026-06-04 perf.
+      const giftById = new Map(giftsForFund.map((g: any) => [String(g.id), g]));
       const singleHolding = fundHoldings.length === 1 ? fundHoldings[0] : null;
       const eventNameById = new Map(fundEvents.filter((e: any) => !e.isPermanent).map((e: any) => [String(e.id), e.name as string]));
+      // Gifter avatars by email — so the parent's "Who loves [child]" roster
+      // shows each gifter's real face (same as the dashboard roster), not just an
+      // initial. Previously only the owner's photo resolved here; gifters who'd
+      // set a profile photo still rendered a letter tile. Batch lookup (mirrors
+      // the /gifts endpoint enrichment), non-fatal. AUTH'd endpoint only — the
+      // public memory endpoint intentionally omits gifter identity.
+      const gifterAvatarByEmail = new Map<string, string | null>();
+      // Sender's relationship label (preferredName: "Mom"/"Dad"/...) resolved the
+      // same way as the avatar, so the Memory Book labels EACH contributor by THEIR
+      // OWN relationship ("Marcus Rivera (Dad)") instead of the viewer's. Mirrors the
+      // /gifts endpoint's gifterPreferredName enrichment.
+      const gifterPrefNameByEmail = new Map<string, string | null>();
+      try {
+        const giftEmails = Array.from(new Set(
+          giftsForFund.map((g: any) => String(g.senderEmail || "").trim().toLowerCase()).filter(Boolean),
+        ));
+        if (giftEmails.length > 0) {
+          const rows = await db
+            .select({ email: users.email, profileImageUrl: users.profileImageUrl, preferredName: users.preferredName })
+            .from(users)
+            .where(inArray(sql`lower(${users.email})`, giftEmails));
+          for (const r of rows) {
+            if (r.email) {
+              const k = String(r.email).trim().toLowerCase();
+              gifterAvatarByEmail.set(k, (r as any).profileImageUrl || null);
+              gifterPrefNameByEmail.set(k, (r as any).preferredName || null);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[memory] gifter identity enrichment failed (non-fatal):", (e as any)?.message || e);
+      }
       const enriched = await Promise.all(
         entries.map(async (entry) => {
           const meta = await getMemoryMeta(entry.id);
@@ -13105,7 +14512,7 @@ export async function registerRoutes(
             ),
             gift: null,
           };
-          const gift = await storage.getGift(entry.giftId);
+          const gift = giftById.get(String(entry.giftId)) || null;
           const giftEventName = gift?.eventId ? (eventNameById.get(String(gift.eventId)) ?? null) : null;
           return {
             ...entry,
@@ -13142,6 +14549,11 @@ export async function registerRoutes(
                     id: gift.id,
                     senderName: gift.senderName,
                     senderEmail: (gift as any).senderEmail || null,
+                    // Gifter's profile photo (resolved by email) so the parent's
+                    // roster shows their face, not just an initial. Owner's own
+                    // photo resolves client-side; this covers everyone else.
+                    gifterAvatarUrl: gifterAvatarByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null,
+                    gifterPreferredName: (gift as any).isAnonymous ? null : (gifterPrefNameByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null),
                     amount: gift.amount,
                     // netAmount + status added 2026-05-15 so the client-side
                     // gifterRoster in MemoryBook can: (a) exclude
@@ -13221,6 +14633,8 @@ export async function registerRoutes(
               id: gift.id,
               senderName: gift.senderName,
               senderEmail: (gift as any).senderEmail || null,
+              gifterAvatarUrl: gifterAvatarByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null,
+              gifterPreferredName: (gift as any).isAnonymous ? null : (gifterPrefNameByEmail.get(String((gift as any).senderEmail || "").trim().toLowerCase()) || null),
               amount: gift.amount,
               message: gift.message,
               photoUrl: normalizeHttpUrl(gift.photoUrl),
@@ -13303,7 +14717,7 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       const [entry] = await db
-        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, status: memoryEntries.status, content: memoryEntries.content })
+        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, status: memoryEntries.status, content: memoryEntries.content, authorName: memoryEntries.authorName })
         .from(memoryEntries)
         .where(eq(memoryEntries.id, req.params.id));
       if (!entry) return res.status(404).json({ error: 'Memory entry not found' });
@@ -13329,6 +14743,44 @@ export async function registerRoutes(
         });
       } catch {
         // Audit write is best-effort.
+      }
+      // Guestbook loop-closer: if this entry came from the no-payment
+      // guestbook AND the guest left an email, tell them their note made it
+      // into the book ("we'll tell you when it's in" is the form's promise —
+      // this is the keeping). Fires ONLY on the real pending→published
+      // transition (the idempotent early-return above means re-taps can't
+      // re-send), and ONLY on approve — rejection stays silent by design.
+      // Best-effort: the approval itself already succeeded.
+      try {
+        const gbActivity = await db
+          .select({ metadata: activities.metadata })
+          .from(activities)
+          .where(and(
+            eq(activities.fundId, entry.fundId),
+            eq(activities.type, 'memory_guestbook_note'),
+            sql`${activities.metadata}::text LIKE ${`%"${String(entry.id)}"%`}`,
+          ))
+          .limit(1);
+        if (gbActivity.length > 0) {
+          let gbMeta: any = {};
+          try { gbMeta = JSON.parse(String(gbActivity[0].metadata || '{}')) || {}; } catch { gbMeta = {}; }
+          const guestEmail = String(gbMeta.guestbookEmail || '').trim().toLowerCase();
+          if (guestEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+            const { buildGuestbookNoteApprovedEmail } = await import('./templates/guestbookNoteApproved');
+            const { sendEmail } = await import('./emailDelivery');
+            const giftPageUrl = (fund as any).slug
+              ? `${getAppBaseUrl(req)}/${String((fund as any).slug)}`
+              : `${getAppBaseUrl(req)}/gift/${String(entry.fundId)}`;
+            await sendEmail(buildGuestbookNoteApprovedEmail({
+              to: guestEmail,
+              guestName: String((entry as any).authorName || ''),
+              childFirstName: String(fund.recipientFirstName || fund.name || ''),
+              giftPageUrl,
+            }));
+          }
+        }
+      } catch (gbErr) {
+        console.warn('[guestbook] approval email skipped:', (gbErr as any)?.message || gbErr);
       }
       res.json({ ok: true });
     } catch (error) {
@@ -13664,7 +15116,7 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       const [entry] = await db
-        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, type: memoryEntries.type, content: memoryEntries.content, createdAt: memoryEntries.createdAt })
+        .select({ id: memoryEntries.id, fundId: memoryEntries.fundId, type: memoryEntries.type, content: memoryEntries.content, createdAt: memoryEntries.createdAt, photoUrl: memoryEntries.photoUrl, videoUrl: memoryEntries.videoUrl, audioUrl: memoryEntries.audioUrl })
         .from(memoryEntries)
         .where(eq(memoryEntries.id, req.params.id));
 
@@ -13682,6 +15134,13 @@ export async function registerRoutes(
 
       await storage.deleteMemoryEntry(req.params.id);
       await deleteMemoryMeta(req.params.id);
+
+      // Purge the stored media too — deleting only the DB row left the file
+      // living at its public URL indefinitely (trust-safety audit H5). Best-
+      // effort; never blocks the delete (the row is already gone).
+      for (const mediaUrl of [entry.photoUrl, entry.videoUrl, entry.audioUrl]) {
+        if (mediaUrl) await deleteMemoryFile(mediaUrl);
+      }
 
       // Activity ledger — Memory Book is the kid-domain story; deletions are
       // load-bearing edits the parent should be able to audit. Snippet of
@@ -13922,13 +15381,70 @@ export async function registerRoutes(
         trustedContactRelation,
       } = body;
       const maxProfileImageDataUrlBytes = 7 * 1024 * 1024;
+      // Holds the NORMALIZED (EXIF/GPS-stripped, oriented, right-sized webp) avatar
+      // data-url that we actually persist — never the raw upload. Set below.
+      let normalizedProfileImageUrl: string | undefined;
 
-      if (profileImageUrl != null) {
+      // Empty string = explicit photo REMOVAL (clears to null). Added
+      // 2026-06-05 for the gifter-dashboard avatar editor — until then the
+      // endpoint could set a photo but never delete one (empty string failed
+      // the data-url check, null was ignored as "no change").
+      if (profileImageUrl != null && profileImageUrl !== '') {
         if (typeof profileImageUrl !== 'string' || !profileImageUrl.startsWith('data:image/')) {
           return res.status(400).json({ error: 'Invalid image format. Please upload an image file.' });
         }
         if (profileImageUrl.length > maxProfileImageDataUrlBytes) {
           return res.status(400).json({ error: 'Image too large. Please use an image under 5MB.' });
+        }
+        // Content-safety gate (2026-06-05, per GIFTER_AVATAR_SPEC.md's
+        // non-negotiable): profile photos render on family surfaces (gifter
+        // roster, Memory Book bylines, the printed fund snapshot) via the
+        // gifts.senderEmail -> users enrichment, so they go through the SAME
+        // scanner as gift media — strict data-url parse, scan, and on a
+        // positive hit the silent-log-and-refuse pattern (generic error to
+        // the client, audit + ops alert with the real reason). The noop
+        // scanner is fail-closed in prod / fail-open in dev, identical to
+        // the gift-media path: profile photos stay effectively OFF in
+        // production until a real vendor is wired.
+        const parsedPhoto = parseImageDataUrl(profileImageUrl);
+        if (!parsedPhoto) {
+          return res.status(400).json({ error: 'Invalid image format. Please upload a PNG, JPG, WEBP or GIF.' });
+        }
+        const scan = await scanImageBuffer(parsedPhoto.buffer, parsedPhoto.mime);
+        if (!scan.safe) {
+          await writeAudit(req, 'profile_photo_scan_rejected', 'user', userId, {
+            provider: scan.provider,
+            reason: scan.reason,
+            hashMatch: scan.hashMatch,
+            sizeBytes: parsedPhoto.buffer.length,
+            mime: parsedPhoto.mime,
+          });
+          try {
+            await sendOpsAlert({
+              severity: 'critical',
+              title: 'Content scanner rejected a profile photo',
+              message: `Profile photo for user ${userId} rejected by ${scan.provider}. Reason: ${scan.reason || 'unknown'}.`,
+              context: { userId, provider: scan.provider, reason: scan.reason, hashMatch: scan.hashMatch },
+            });
+          } catch (alertErr) {
+            console.error('[profile] Ops alert failed for scanner-rejected photo:', alertErr);
+          }
+          return res.status(500).json({ error: 'Could not update photo. Please try again later.' });
+        }
+
+        // Normalize the SCANNED-clean original before persisting: STRIP all metadata
+        // (incl. GPS — child-privacy/COPPA, a photo would otherwise carry home
+        // coordinates), bake EXIF orientation, and re-encode to right-sized webp
+        // (re-encoding also neutralizes any payload smuggled in the container). We
+        // store the THUMB derivative as the data-url — avatars never need >256px and
+        // it loads with every roster face, so a small row matters — NEVER the raw
+        // upload. Mirrors the memory-photo path (normalizeImage, 2026-06-15 EXIF
+        // audit); wired into profile photos 2026-06-23. A throw = undecodable → reject.
+        try {
+          const normalizedPhoto = await normalizeImage(parsedPhoto.buffer);
+          normalizedProfileImageUrl = `data:image/webp;base64,${normalizedPhoto.thumb.toString('base64')}`;
+        } catch {
+          return res.status(400).json({ error: 'Could not process that image. Please try a different photo.' });
         }
       }
 
@@ -13949,7 +15465,10 @@ export async function registerRoutes(
 
       type UserUpdate = Partial<typeof users.$inferInsert>;
       const updates: UserUpdate = { updatedAt: new Date() };
-      if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl;
+      // Empty string clears the photo; otherwise store the NORMALIZED webp avatar
+      // (guaranteed set above when non-empty — we'd have returned on parse/scan/normalize
+      // failure), never the raw EXIF-bearing upload.
+      if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl === '' ? null : (normalizedProfileImageUrl ?? profileImageUrl);
       if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
       if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
       if (preferredName !== undefined) updates.preferredName = String(preferredName).trim().slice(0, 50) || null;
@@ -14140,26 +15659,40 @@ export async function registerRoutes(
     try {
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
-      // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      // Backfill missing drafts so existing gifts always have a thank-you entry.
-      const [fundGifts, existingThankYous] = await Promise.all([
-        storage.getGiftsByFund(req.params.fundId),
-        storage.getThankYousByFund(req.params.fundId),
-      ]);
-      const thankedGiftIds = new Set(existingThankYous.map((ty) => ty.giftId).filter(Boolean));
-      for (const gift of fundGifts) {
-        if (thankedGiftIds.has(gift.id)) continue;
-        const giftAmt = parseFloat(gift.amount || '0');
-        const formattedAmt = giftAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const message = `Thank you ${gift.senderName} for your generous gift of $${formattedAmt} to ${fund.name}!`;
-        await storage.createThankYou({
-          fundId: fund.id,
-          giftId: gift.id,
-          senderName: gift.senderName,
-          senderEmail: gift.senderEmail || null,
-          message,
-          status: 'draft',
-        });
+      // Access enforced by requireOwnedFundParam (owner or accepted collaborator,
+      // plus previous_owner read-only).
+      // Backfill missing drafts so existing gifts always have a thank-you entry —
+      // but ONLY for roles that can actually send (owner/co-admin). A
+      // previous_owner/viewer GET is a read; it must not write draft rows the
+      // reader can't act on.
+      const accessRole = String(req.fundAccessRole || '');
+      if (accessRole === 'owner' || accessRole === 'co-admin') {
+        const [fundGifts, existingThankYous] = await Promise.all([
+          storage.getGiftsByFund(req.params.fundId),
+          storage.getThankYousByFund(req.params.fundId),
+        ]);
+        const thankedGiftIds = new Set(existingThankYous.map((ty) => ty.giftId).filter(Boolean));
+        for (const gift of fundGifts) {
+          if (thankedGiftIds.has(gift.id)) continue;
+          // Parent-contribution money (recurring auto-invest cycles, linked to
+          // a schedule) is family money, not a thankable external gift — don't
+          // manufacture drafts for it. Pre-handoff the client suppressed these
+          // as "self" by sender email; post-handoff the OWNER is the grown kid,
+          // so without this skip their first Memory Book load drafted a
+          // thank-you for every one of Dad's auto-invest cycles.
+          if ((gift as any).parentContributionId || String((gift as any).source || '') === 'recurring_worker') continue;
+          const giftAmt = parseFloat(gift.amount || '0');
+          const formattedAmt = giftAmt % 1 === 0 ? giftAmt.toLocaleString('en-US') : giftAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const message = `Thank you, ${gift.senderName}, for the $${formattedAmt} you put into ${fund.name}.`;
+          await storage.createThankYou({
+            fundId: fund.id,
+            giftId: gift.id,
+            senderName: gift.senderName,
+            senderEmail: gift.senderEmail || null,
+            message,
+            status: 'draft',
+          });
+        }
       }
       const items = await storage.getThankYousByFund(req.params.fundId);
       res.json(items);
@@ -14261,7 +15794,7 @@ export async function registerRoutes(
       }
       // Demo funds: the status flip already landed and the mailto fallback
       // below still returns, so the UI confirms "sent" — but DON'T enqueue a
-      // real email. Demo gifters are illustrative (@dunphyfamily.com) and would
+      // real email. Demo gifters are illustrative (@riverafamily.com) and would
       // just bounce. Per server/demoSandbox.ts, demo actions complete the flow
       // without touching real rails.
       const isDemoThankYou = await isDemoFund(req.params.fundId);
@@ -14426,7 +15959,7 @@ export async function registerRoutes(
       const senderNameOnRow = unsentRows[0]?.senderName || null;
 
       // Demo funds: rows are flipped to sent + the mailto fallback returns, but
-      // skip the real email (illustrative @dunphyfamily.com gifters would just
+      // skip the real email (illustrative @riverafamily.com gifters would just
       // bounce). Same demo-safe posture as the per-gift send + demoSandbox.
       const isDemoBulkThankYou = await isDemoFund(req.params.fundId);
       if (!isDemoBulkThankYou) {
@@ -14509,6 +16042,50 @@ export async function registerRoutes(
   });
 
   // ===== REFERRALS =====
+  // Inbound partnership interest from the (unlisted) /partners page. Persisted
+  // instead of a mailto so a lead survives email deliverability and is retrievable.
+  // Public + rate-limited (5/hour/IP). No minor data; a business contact only.
+  app.post('/api/partners/inquiry', async (req, res) => {
+    try {
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      if (!(await checkRateLimit(`partner-inquiry:${ip}`, 5, 60 * 60 * 1000))) {
+        return res.status(429).json({ error: "Too many requests. Please try again in a little while." });
+      }
+      const parsed = insertPartnerInquirySchema.safeParse({
+        orgName: req.body.orgName,
+        orgType: req.body.orgType || null,
+        contactName: req.body.contactName || null,
+        email: req.body.email,
+        message: req.body.message || null,
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Please add your organization name and a valid email." });
+      }
+      await db.insert(partnerInquiries).values({
+        ...parsed.data,
+        ipAddress: ip,
+        userAgent: req.get("user-agent") || null,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Error saving partner inquiry:", error);
+      res.status(500).json({ error: "Something went wrong. Please try again." });
+    }
+  });
+
+  // Super-admin: list partnership inquiries (newest first). No admin tab yet;
+  // retrievable here until one is added.
+  app.get('/api/admin/partner-inquiries', isAuthenticated, async (req: any, res) => {
+    if (!requireSuperAdmin(req, res)) return;
+    try {
+      const rows = await db.select().from(partnerInquiries).orderBy(desc(partnerInquiries.createdAt)).limit(500);
+      res.json({ inquiries: rows });
+    } catch (error) {
+      console.error("Error listing partner inquiries:", error);
+      res.status(500).json({ error: "Failed to load partner inquiries." });
+    }
+  });
+
   app.post('/api/referrals/events', async (req, res) => {
     try {
       const parsed = insertReferralEventSchema.safeParse({
@@ -14553,6 +16130,13 @@ export async function registerRoutes(
         'event_created_no_share_24h',
         'share_no_checkout_48h',
         'no_gift_14d',
+        // Parent-to-parent "pass it along" loop (founder-locked 2026-06-04):
+        // the quiet end-of-dashboard referral with NO bounty (paying for the
+        // loop is the EarlyBird trap — locked discipline). share = the parent
+        // tapped/shared the link; visit = a referred visitor landed on the
+        // homepage carrying the ref. Judged by funded-k like every channel.
+        'parent_referral_share',
+        'parent_referral_visit',
       ]);
       if (!validActions.has(parsed.data.action)) {
         return res.status(400).json({ error: 'Invalid referral action' });
@@ -14817,9 +16401,220 @@ export async function registerRoutes(
         requiresBankConnection: false,
         message: "Reminder saved. We'll email you when it's time to gift again.",
       });
+      // Mark the recurring SETUP in the fund's feed (the fires arrive later as
+      // gift_received; this is the "{gifter} set up a recurring gift" moment that
+      // previously logged nowhere). 2026-06-07.
+      try {
+        const fund = await storage.getFund(fundId);
+        if (fund?.userId) {
+          await storage.createActivity({
+            userId: fund.userId,
+            fundId,
+            type: "gifter_recurring_started",
+            title: "Gifter set up recurring",
+            description: `${senderName || "A gifter"} set up a ${frequency === "yearly" ? "yearly" : "monthly"} recurring gift of $${parseFloat(amount).toFixed(0)}.`,
+          });
+        }
+      } catch (actErr) {
+        console.error("Failed to log gifter_recurring_started activity:", actErr);
+      }
     } catch (error) {
       console.error('Error creating gift reminder:', error);
       res.status(500).json({ error: 'Failed to save reminder' });
+    }
+  });
+
+  // One-click stop for reminder-only recurring_gifts (the signed link in
+  // every reminder email, also the RFC 8058 List-Unsubscribe target).
+  // PUBLIC + unauthenticated BY DESIGN: reminder signup creates no user
+  // account, so the gifter has no login to gate on — the HMAC signature
+  // (reminderStopToken.ts, keyed by SESSION_SECRET over id:email) is the
+  // auth. Idempotent; GET because it's an email click. Returns a minimal
+  // branded HTML page, not JSON — the clicker is a human in a mail app.
+  // Added 2026-06-03: without this, "Unsubscribe any time" had no
+  // implementing mechanism for account-less reminder gifters.
+  app.get('/api/recurring-gifts/:id/stop', async (req: any, res) => {
+    const page = (title: string, body: string) =>
+      `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${title} | Kiddo</title></head>` +
+      `<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAF7F2;color:#1A1710;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;">` +
+      `<div style="max-width:420px;text-align:center;"><p style="font-size:22px;font-weight:700;margin:0 0 10px;">${title}</p><p style="font-size:15px;line-height:1.6;color:rgba(26,23,16,0.65);margin:0;">${body}</p></div></body></html>`;
+    try {
+      const scheduleId = String(req.params.id || "").trim();
+      const email = String(req.query.e || "").trim().toLowerCase();
+      const sig = String(req.query.sig || "");
+      if (!scheduleId || !email || !verifyReminderStopSignature(scheduleId, email, sig)) {
+        return res.status(403).send(page("That link didn't work", "It may be incomplete or expired. You can also just ignore the reminder emails, or write to support@kiddofund.com and we'll stop them for you."));
+      }
+      const rows = await db.execute(sql`
+        SELECT id, sender_email, stripe_subscription_id, status
+        FROM recurring_gifts
+        WHERE id = ${scheduleId}
+        LIMIT 1
+      `);
+      const row = (rows.rows as any[])?.[0];
+      if (!row || String(row.sender_email || "").trim().toLowerCase() !== email) {
+        return res.status(403).send(page("That link didn't work", "It may be incomplete or expired. You can also just ignore the reminder emails, or write to support@kiddofund.com and we'll stop them for you."));
+      }
+      // Reminder-only rows only. A Stripe-subscription row charges a card;
+      // stopping THAT belongs in the authenticated gifter dashboard (and its
+      // emails never carry this link), so refuse rather than half-cancel.
+      if (row.stripe_subscription_id) {
+        return res.status(400).send(page("This one needs your dashboard", "This schedule charges a card, so it's managed from your gifter dashboard. Request a sign-in link from the login page and you can cancel it there."));
+      }
+      if (String(row.status || "") !== 'cancelled') {
+        await db.execute(sql`
+          UPDATE recurring_gifts
+          SET status = 'cancelled', pause_reason = 'unsubscribe_link', paused_at = NOW()
+          WHERE id = ${scheduleId}
+        `);
+      }
+      return res.send(page("Reminders stopped", "You won't get any more gift reminders for this schedule. You can always set up a new one from the gift page."));
+    } catch (error) {
+      console.error('Error stopping gift reminder:', error);
+      return res.status(500).send(page("Something went wrong", "Please try the link again, or write to support@kiddofund.com and we'll stop the reminders for you."));
+    }
+  });
+
+  // ── Guestbook notes (note-first occasion CTA, founder-locked 2026-06-04) ──
+  // A no-payment way for an event guest to put a note in the kid's Memory
+  // Book: "the occasion is a guestbook; the money sits under it." The CTA on
+  // occasion pages reads note-first (a guestbook is a century-old norm a host
+  // will happily put on a table card; "scan to give money" is not), with
+  // gifting as the graceful second beat.
+  //
+  // SAFETY MODEL — payment was accidentally the spam filter (the only other
+  // gifter-content path is the paid-gift webhook), so a free write path gets
+  // three explicit replacements:
+  //   1. ALWAYS lands status='pending_review' — parent approval from the
+  //      existing Memory Book tray, REGARDLESS of fund.gifterMemoryModeration.
+  //      Nothing renders anywhere until the parent approves.
+  //   2. TEXT ONLY, length-capped, URL-rejected (spam links die at submit even
+  //      though review would catch them — don't make the parent moderate spam).
+  //   3. Rate-limited per ip+fund and per fund (in-memory; same documented
+  //      limitation class as the other public limiters — see
+  //      LOCAL_STATE_TO_POSTGRES_SPEC.md).
+  // Photos/voice stay EXCLUDED until the content scanner is live (Tier-1
+  // child-safety gate).
+  const guestbookRate = new Map<string, { count: number; windowStart: number }>();
+  const GUESTBOOK_MAX_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const guestbookAllow = (key: string, max: number, windowMs: number): boolean => {
+    const now = Date.now();
+    // Prune expired buckets when the map grows (per-IP keys are unbounded on
+    // a public surface; without this the long-lived process leaks one entry
+    // per visitor IP forever — code-review catch 2026-06-04).
+    if (guestbookRate.size > 1000) {
+      guestbookRate.forEach((v, k) => {
+        if (now - v.windowStart > GUESTBOOK_MAX_WINDOW_MS) guestbookRate.delete(k);
+      });
+    }
+    const entry = guestbookRate.get(key);
+    if (!entry || now - entry.windowStart > windowMs) {
+      guestbookRate.set(key, { count: 1, windowStart: now });
+      return true;
+    }
+    if (entry.count >= max) return false;
+    entry.count += 1;
+    return true;
+  };
+  app.post('/api/public/funds/:fundId/guestbook-note', async (req: any, res) => {
+    try {
+      const fundId = String(req.params.fundId || "").trim();
+      const name = String(req.body?.name || "").trim().slice(0, 80);
+      const note = String(req.body?.note || "").trim().slice(0, 500);
+      const email = String(req.body?.email || "").trim().toLowerCase().slice(0, 254);
+      if (!fundId || !name || note.length < 2) {
+        return res.status(400).json({ error: "A name and a note are required." });
+      }
+      // Media on guestbook notes — SCANNER-CAPABILITY-GATED. The paid gift
+      // flow's media is gated by payment friction; the free path may only
+      // carry media once a real content scanner is configured (the same
+      // public upload endpoints then scan what they store). Until then,
+      // media fields are rejected with honest copy, and even with a scanner
+      // live, only OUR own /uploads/ paths are accepted (no hotlinks).
+      const mediaFields = {
+        photoUrl: String(req.body?.photoUrl || "").trim(),
+        videoUrl: String(req.body?.videoUrl || "").trim(),
+        audioUrl: String(req.body?.audioUrl || "").trim(),
+      };
+      const hasMedia = Boolean(mediaFields.photoUrl || mediaFields.videoUrl || mediaFields.audioUrl);
+      const scannerLive = getActiveScannerName() !== "noop";
+      if (hasMedia && !scannerLive) {
+        return res.status(400).json({ error: "Notes are words-only for now. Photos and voice are coming." });
+      }
+      if (hasMedia && Object.values(mediaFields).some((u) => u && !u.startsWith("/uploads/"))) {
+        return res.status(400).json({ error: "Media must be uploaded here, not linked from elsewhere." });
+      }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "That email doesn't look right. It's optional — feel free to leave it blank." });
+      }
+      // T&S H2/H9 upgrade (2026-06-06): the original check here caught only
+      // https/www. Now the shared rules — names also reject emails/phones/
+      // @handles/brand-impersonation, notes also reject shorteners + contact
+      // patterns. This text lands UNPAID in a child's Memory Book; it gets at
+      // least the rigor of the paid path.
+      {
+        const nameIssue = senderNameIssue(name);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const noteIssue = giftMessageIssue(note);
+        if (noteIssue) return res.status(400).json({ error: noteIssue });
+      }
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: "Fund not found" });
+      if (String(fund.status || "").toLowerCase() !== "active") {
+        return res.status(410).json({ error: "This fund isn't accepting new notes right now." });
+      }
+      // Demo funds: mock success, write nothing — a visitor's note must never
+      // land in the shared Rivera data (same discipline as demo money flows).
+      if (await isDemoFund(fundId)) {
+        return res.status(201).json({ ok: true, demo: true, message: "Demo mode. Nothing was saved." });
+      }
+      // T&S H6/H7 (2026-06-06): a blocked gifter could still reach the child's
+      // Memory Book through this free path. Enforce when they left an email
+      // (the no-email anonymous path is covered by the per-IP caps below).
+      if (email && (await isSenderBlocked(email, fundId))) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
+      const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown");
+      if (!guestbookAllow(`gb:${ip}:${fundId}`, 3, 60 * 60 * 1000) || !guestbookAllow(`gbf:${fundId}`, 60, 24 * 60 * 60 * 1000)) {
+        return res.status(429).json({ error: "Too many notes for now. Please try again later." });
+      }
+      const entry = await storage.createMemoryEntry({
+        fundId,
+        giftId: null,
+        type: "note",
+        content: note,
+        authorName: name,
+        photoUrl: mediaFields.photoUrl || null,
+        videoUrl: mediaFields.videoUrl || null,
+        audioUrl: mediaFields.audioUrl || null,
+        visibility: "kid_now",
+        status: "pending_review",
+      } as any);
+      const childName = String(fund.recipientFirstName || fund.name || "the child");
+      try {
+        await storage.createActivity({
+          userId: fund.userId,
+          fundId,
+          type: "memory_guestbook_note",
+          title: `${name} left a note for ${childName}`,
+          description: note.length > 120 ? `${note.slice(0, 117)}...` : note,
+          metadata: JSON.stringify({
+            memoryEntryId: (entry as any)?.id || null,
+            // Optional contact: the warmest non-gifter pipeline there is —
+            // someone who showed up and wrote. Mined later (never emailed
+            // without a real reason; no marketing list).
+            guestbookEmail: email || null,
+            pendingReview: true,
+          }),
+        } as any);
+      } catch {
+        // Activity row is discovery sugar; the note itself (the thing the
+        // guest cares about) already landed in the pending tray.
+      }
+      return res.status(201).json({ ok: true });
+    } catch (error) {
+      console.error("Error saving guestbook note:", error);
+      return res.status(500).json({ error: "Could not save your note. Please try again." });
     }
   });
 
@@ -14874,14 +16669,20 @@ export async function registerRoutes(
       // Stripe subscription. Rows where setup completed to "ready" but the
       // subscription create failed silently never charge — surfacing them in
       // the Scheduled tab would lie to the parent about upcoming activity.
+      // EXCEPTION: demo funds never touch Stripe, so their seeded gifter
+      // recurring carries no subscription id — the guard would wrongly hide it.
+      // Demo money is illustrative anyway, so show it (e.g. David's annual
+      // birthday gift lands in the demo's Scheduled tab).
+      const userIsDemo = await isDemoUser(userId);
+      const reminderConds = [
+        inArray(recurringGifts.fundId, fundIds),
+        eq(recurringGifts.status, "active"),
+      ];
+      if (!userIsDemo) reminderConds.push(isNotNull(recurringGifts.stripeSubscriptionId));
       const reminderRows = await db
         .select()
         .from(recurringGifts)
-        .where(and(
-          inArray(recurringGifts.fundId, fundIds),
-          eq(recurringGifts.status, "active"),
-          isNotNull(recurringGifts.stripeSubscriptionId),
-        ));
+        .where(and(...reminderConds));
 
       // Recent failure detection. The recurring worker writes
       // `parent_contribution_failed` activity rows on Stripe declines /
@@ -14890,26 +16691,41 @@ export async function registerRoutes(
       // the Scheduled tab can show "⚠ Last cycle failed" without making
       // the client reconcile activity rows itself.
       const contribIds = contribRows.map((r) => r.id);
-      const failureMap = new Map<string, Date>();
+      // Recovery-aware failure state (shared helper, twin of attachRecentFailures):
+      // a failure only reads as "recent" while it is still UNRESOLVED — it clears
+      // once the parent adds it back ("Add it now") or the next cycle succeeds.
+      const failureInfo = await computeRecentFailureMap(fundIds);
+
+      // Most recent successful charge's card per schedule, so a card-charged
+      // schedule shows "Visa •••• 4242" instead of the generic "card on file".
+      // Read from the stored reconcile metadata on the fired charge's activity
+      // row (gift_invested) — NO live Stripe call, staying inside the provider
+      // boundary. Only fills for schedules that have actually charged; a
+      // never-fired one keeps "card on file" until its first run (honest).
+      const cardMap = new Map<string, { last4: string; brand: string | null }>();
       if (contribIds.length > 0) {
-        const failureRows = await db
-          .select({
-            metadata: activities.metadata,
-            createdAt: activities.createdAt,
-          })
+        const chargeRows = await db
+          .select({ metadata: activities.metadata })
           .from(activities)
           .where(and(
-            eq(activities.type, 'parent_contribution_failed'),
+            // Include the FAILED attempt too: the schedule "Charges" the card that
+            // was tried, even when the try declined — so the card on the plan and
+            // the decline row read the SAME method (no "bank here / Visa there"
+            // mismatch). Newest row wins (ordered desc), so a later success still
+            // supersedes an older failure.
+            inArray(activities.type, ["gift_invested", "parent_contribution", "parent_contribution_failed"]),
             inArray(activities.fundId, fundIds),
           ))
           .orderBy(desc(activities.createdAt));
-        for (const r of failureRows) {
-          if (!r.metadata || !r.createdAt) continue;
+        for (const r of chargeRows) {
+          if (!r.metadata) continue;
           try {
             const meta = JSON.parse(String(r.metadata));
-            const cid = typeof meta?.parentContributionId === 'string' ? meta.parentContributionId : null;
-            if (!cid || failureMap.has(cid)) continue;
-            failureMap.set(cid, r.createdAt);
+            const cid = typeof meta?.parentContributionId === "string" ? meta.parentContributionId : null;
+            const last4 = typeof meta?.paymentMethodLast4 === "string" ? meta.paymentMethodLast4.trim() : "";
+            if (!cid || !last4 || cardMap.has(cid)) continue; // first row = most recent (ordered desc)
+            const brandRaw = typeof meta?.paymentMethodBrand === "string" ? meta.paymentMethodBrand.trim() : "";
+            cardMap.set(cid, { last4, brand: brandRaw || null });
           } catch { /* skip malformed metadata */ }
         }
       }
@@ -14917,28 +16733,70 @@ export async function registerRoutes(
       const contributions = contribRows.map((row) => {
         const fund = fundIndex.get(row.fundId);
         const bank = row.bankAccountId ? bankIndex.get(row.bankAccountId) : null;
-        const lastFailureAt = failureMap.get(row.id) ?? null;
-        // "Recent" = within last 14 days. Older failures probably already
-        // resolved (parent paid manually or pickled). Avoids surfacing
-        // ancient incidents as if they're current.
-        const recentFailure = lastFailureAt && (Date.now() - lastFailureAt.getTime()) < 14 * 24 * 60 * 60 * 1000;
+        const failInfo = failureInfo.get(row.id) ?? null;
+        const lastFailureAt = failInfo?.lastFailureAt ?? null;
+        const recentFailure = !!failInfo?.hasRecentFailure;
+        const card = bank ? null : cardMap.get(row.id);
         return {
           ...row,
           fundName: fund?.name ?? null,
           recipientFirstName: fund?.recipientFirstName ?? null,
+          // The client renders "{label} •••• {last4}" when last4 is present, so for a
+          // card the label is the brand (or "Card") — "Visa •••• 4242". No charge yet →
+          // no last4 → the honest "card on file".
           paymentSource: bank
             ? { kind: "bank" as const, last4: bank.last4, label: bank.bankName }
-            : { kind: "card" as const, last4: null, label: "card on file" },
+            : card
+              ? { kind: "card" as const, last4: card.last4, label: card.brand ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1) : "Card" }
+              // No bank on the schedule and no charged-card on record → honest
+              // "card on file" (last4 null, so the client hides the line rather than
+              // inventing a method). The demo's active plan now resolves to its real
+              // card via the failed-attempt row above, so it no longer lands here.
+              : { kind: "card" as const, last4: null, label: "card on file" },
           lastFailureAt: lastFailureAt ? lastFailureAt.toISOString() : null,
           hasRecentFailure: !!recentFailure,
         };
       });
+      // Lifetime total each gifter has given to the fund, so the Scheduled tab's
+      // gifter row can show "$X given · N gifts". The recurring_gifts row tracks no
+      // total (unlike parent_contributions), so we sum the gifter's actual gifts.
+      // Match by fund + lowercased email and exclude failed/refunded/canceled/
+      // host_hold — the SAME rules as the year-end recap worker, so the number can
+      // never mislead. Only reminders carrying an email get a total (we never guess
+      // by name, which could collide across gifters).
+      const reminderEmails = new Set(
+        reminderRows.map((r) => String(r.senderEmail || "").trim().toLowerCase()).filter(Boolean),
+      );
+      const gifterTotals = new Map<string, { total: number; count: number }>();
+      if (reminderEmails.size > 0) {
+        const giftAggRows = await db
+          .select({ fundId: gifts.fundId, senderEmail: gifts.senderEmail, amount: gifts.amount, status: gifts.status })
+          .from(gifts)
+          .where(inArray(gifts.fundId, fundIds));
+        const EXCLUDED = new Set(["failed", "refunded", "canceled", "cancelled", "host_hold"]);
+        for (const g of giftAggRows) {
+          const email = String(g.senderEmail || "").trim().toLowerCase();
+          if (!email || !reminderEmails.has(email)) continue;
+          if (EXCLUDED.has(String(g.status || "").toLowerCase())) continue;
+          const amt = parseFloat(String(g.amount || "0")) || 0;
+          if (amt <= 0) continue;
+          const key = `${g.fundId}|${email}`;
+          const cur = gifterTotals.get(key) || { total: 0, count: 0 };
+          cur.total += amt;
+          cur.count += 1;
+          gifterTotals.set(key, cur);
+        }
+      }
       const reminders = reminderRows.map((row) => {
         const fund = fundIndex.get(row.fundId);
+        const gifterEmail = String(row.senderEmail || "").trim().toLowerCase();
+        const agg = gifterEmail ? gifterTotals.get(`${row.fundId}|${gifterEmail}`) : null;
         return {
           ...row,
           fundName: fund?.name ?? null,
           recipientFirstName: fund?.recipientFirstName ?? null,
+          totalGiven: agg ? Math.round(agg.total * 100) / 100 : null,
+          giftCount: agg ? agg.count : null,
         };
       });
 
@@ -14997,9 +16855,55 @@ export async function registerRoutes(
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      const subscription = await storage.getSubscription(userId);
-      if (!subscription || (subscription.plan !== 'family' && subscription.plan !== 'legacy') || subscription.status !== 'active') {
-        return res.status(403).json({ error: 'Family or Legacy plan required to manage gift reminders' });
+      // Plan gate applies to REMINDER management only (reminders are the
+      // Family-plan feature). An AUTO-CHARGING row (stripeSubscriptionId set)
+      // is money-safety territory: any fund owner must be able to stop a
+      // gifter's real card charges regardless of their own plan. Gifter
+      // auto-charge subs exist on Plus/trial/sponsored funds too
+      // (covered_starter / trial_active unlock recurring at checkout), and
+      // Activity renders the "Stop this recurring gift" button for all of
+      // them — gating the stop on Family meant a Plus parent's stop click
+      // 403'd while Stripe kept charging the gifter's card (code-review
+      // catch, 2026-06-04).
+      const isAutoChargeRow = Boolean(giftRecord.stripeSubscriptionId);
+      if (!isAutoChargeRow) {
+        const subscription = await storage.getSubscription(userId);
+        if (!subscription || (subscription.plan !== 'family' && subscription.plan !== 'legacy') || subscription.status !== 'active') {
+          return res.status(403).json({ error: 'Family or Legacy plan required to manage gift reminders' });
+        }
+      }
+
+      // MONEY SAFETY (2026-06-04): if this row is a real auto-charging Stripe
+      // subscription (not a reminder-only cadence), the status change MUST
+      // reach Stripe — a local-only 'cancelled' left the subscription billing
+      // the gifter's card forever while the parent believed it was stopped
+      // (and the invoice.paid webhook kept bumping next_charge_date on a
+      // cancelled row). Stripe-first, fail-closed: if Stripe errors, return
+      // 502 and change NOTHING locally, so the UI never claims a stop that
+      // didn't happen. Demo subscriptions (demo_sub_*) skip Stripe — they
+      // exist only so the demo renders the auto-charge treatment.
+      const subId = String(giftRecord.stripeSubscriptionId || '');
+      if (subId && !subId.startsWith('demo_')) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          if (status === 'cancelled') {
+            await stripe.subscriptions.cancel(subId);
+          } else if (status === 'paused') {
+            await stripe.subscriptions.update(subId, { pause_collection: { behavior: 'void' } });
+          } else if (status === 'active') {
+            await stripe.subscriptions.update(subId, { pause_collection: null } as any);
+          }
+        } catch (stripeErr: any) {
+          // Already-canceled subs are fine to proceed past (the goal state
+          // holds); anything else must block the local write.
+          const code = String(stripeErr?.code || stripeErr?.raw?.code || '');
+          const msg = String(stripeErr?.message || '');
+          const alreadyCanceled = status === 'cancelled' && (code === 'resource_missing' || /No such subscription|canceled subscription/i.test(msg));
+          if (!alreadyCanceled) {
+            console.error('Stripe update failed for recurring gift status change:', stripeErr);
+            return res.status(502).json({ error: "Couldn't reach the payment processor to stop the charges. Nothing was changed — please try again." });
+          }
+        }
       }
 
       const updated = await storage.updateRecurringGift(req.params.id, { status });
@@ -15100,6 +17004,20 @@ export async function registerRoutes(
       if (!trimmedKidFirstName) return res.status(400).json({ error: "The child's first name is required" });
       if (!Number.isFinite(parsedAmount) || parsedAmount < 5) return res.status(400).json({ error: "Amount must be at least $5" });
       if (parsedAmount > 10000) return res.status(400).json({ error: "Amounts over $10,000. Contact us at hello@kiddofund.com" });
+
+      // T&S H2/H9/H6 (2026-06-06): this warm-promise path renders the gifter's
+      // name + message in the PARENT'S email/onboarding — same contact-info and
+      // impersonation rules as checkout, plus global blocklist (no fund exists
+      // yet, so fund-scoped blocks can't apply — pass null).
+      {
+        const nameIssue = senderNameIssue(trimmedGifterName);
+        if (nameIssue) return res.status(400).json({ error: nameIssue });
+        const messageIssue = giftMessageIssue(message);
+        if (messageIssue) return res.status(400).json({ error: messageIssue });
+      }
+      if (await isSenderBlocked(trimmedGifterEmail, null)) {
+        return res.status(403).json(SENDER_BLOCKED_RESPONSE);
+      }
 
       // Anti-spam V1: rate-limit at 5 unique recipient emails per
       // gifter email per 7 days. Cheap defense; tighter abuse
@@ -15546,22 +17464,43 @@ export async function registerRoutes(
       // pending"). The aggregate coParentInvitedCount is preserved
       // for backwards compatibility with any consumer still reading
       // the original field.
-      const coParents = await db.select({ id: fundCollaborators.id, status: fundCollaborators.status })
+      const coParents = await db.select({ userId: fundCollaborators.userId, email: fundCollaborators.email, status: fundCollaborators.status })
         .from(fundCollaborators)
         .where(and(
           inArray(fundCollaborators.fundId, fundIds),
           eq(fundCollaborators.role, "co-admin"),
         ));
-      const coParentActiveCount = coParents.filter((c) => c.status === "accepted").length;
-      const coParentPendingCount = coParents.filter((c) => c.status === "pending").length;
+      // Dedupe by PERSON, not row: one co-parent on N funds is ONE co-parent,
+      // not N. A household co-parent (e.g. Mom) is typically on every fund, so
+      // the old per-row count rendered "2 active" for a single person across
+      // two funds. Key by userId when present, else email. A person counts as
+      // active if any of their grants is accepted, else pending.
+      const coParentByPerson = new Map<string, "accepted" | "pending" | "other">();
+      for (const c of coParents) {
+        const key = String(c.userId || c.email || "").toLowerCase();
+        if (!key) continue;
+        const prev = coParentByPerson.get(key);
+        if (c.status === "accepted") coParentByPerson.set(key, "accepted");
+        else if (c.status === "pending") { if (prev !== "accepted") coParentByPerson.set(key, "pending"); }
+        else if (!prev) coParentByPerson.set(key, "other");
+      }
+      const coParentStatuses = Array.from(coParentByPerson.values());
+      const coParentActiveCount = coParentStatuses.filter((s) => s === "accepted").length;
+      const coParentPendingCount = coParentStatuses.filter((s) => s === "pending").length;
       const coParentInvitedCount = coParentActiveCount + coParentPendingCount;
 
-      // Active occasions across the user's funds.
+      // Active occasions across the user's funds. Exclude the permanent
+      // "Gift anytime" catch-all — it's auto-created on every fund, isn't a
+      // user-created occasion, and doesn't count against the plan's active-
+      // occasion limit (mirrors the !isPermanent filter the occasion gate and
+      // every other surface use). Counting it inflated the stat by one per
+      // fund: 2 birthdays + 2 permanents rendered as "4 active occasions".
       const occasions = await db.select({ id: events.id })
         .from(events)
         .where(and(
           inArray(events.fundId, fundIds),
           eq(events.status, "active"),
+          eq(events.isPermanent, false),
         ));
       const activeOccasionsCount = occasions.length;
 
@@ -15586,6 +17525,90 @@ export async function registerRoutes(
   // interest flag in one round-trip so Settings can render the whole
   // section without three separate fetches. Per AGE_18_HANDOFF_SPEC.md
   // bucket 3 (Settings tax section).
+  // Data-subject access export (DSAR / CCPA right-to-access + parental access).
+  // Returns a JSON download of the AUTHENTICATED user's OWN data only: account
+  // profile, the funds they own (child name/DOB/state + Memory Book), the gifts
+  // received on those funds, and the memory entries. Every query is scoped to the
+  // requester's userId — no cross-user or co-admin'd data. Allowlist mapping (not
+  // raw rows), so the child's SSN and account secrets (password hash, OAuth id,
+  // KYC blob) are NEVER included. Read-only. See policies/child-data-protection.md §9.
+  app.get('/api/me/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [account] = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        preferredName: users.preferredName,
+        profileImageUrl: users.profileImageUrl,
+      }).from(users).where(eq(users.id, userId)).limit(1);
+
+      const ownedFunds = await storage.getFundsByUser(userId);
+      const fundsExport = [];
+      for (const f of ownedFunds) {
+        const giftRows = await storage.getGiftsByFund(f.id);
+        const memoryRows = await storage.getMemoryEntriesByFund(f.id, { includePending: true });
+        fundsExport.push({
+          fund: {
+            id: f.id,
+            name: f.name,
+            slug: f.slug,
+            accountType: f.accountType,
+            status: f.status,
+            balance: f.balance,
+            recipientFirstName: f.recipientFirstName,
+            recipientLastName: f.recipientLastName,
+            recipientBirthdate: f.recipientBirthdate,
+            recipientState: f.recipientState,
+            recipientRelation: f.recipientRelation,
+            childPhotoUrl: f.childPhotoUrl,
+            majorityAge: f.majorityAge,
+            transferredAt: f.transferredAt,
+            // recipient SSN (full + last-4) intentionally EXCLUDED from the export.
+          },
+          giftsReceived: giftRows.map((g) => ({
+            id: g.id,
+            senderName: g.senderName,
+            senderEmail: g.senderEmail,
+            amount: g.amount,
+            netAmount: g.netAmount,
+            message: g.message,
+            photoUrl: g.photoUrl,
+            videoUrl: g.videoUrl,
+            audioUrl: g.audioUrl,
+            status: g.status,
+            isAnonymous: g.isAnonymous,
+            createdAt: g.createdAt,
+          })),
+          memoryBook: memoryRows.map((m) => ({
+            id: m.id,
+            type: m.type,
+            content: m.content,
+            authorName: m.authorName,
+            photoUrl: m.photoUrl,
+            videoUrl: m.videoUrl,
+            audioUrl: m.audioUrl,
+            audioTranscript: m.audioTranscript,
+            visibility: m.visibility,
+          })),
+        });
+      }
+
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="kiddo-data-export.json"');
+      res.status(200).send(JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        note: "Your Kiddo data. The recipient SSN and account security fields are intentionally excluded.",
+        account: account || null,
+        funds: fundsExport,
+      }, null, 2));
+    } catch (error) {
+      console.error("Error generating data export:", error);
+      res.status(500).json({ error: "Could not generate your data export. Please try again." });
+    }
+  });
+
   app.get('/api/me/tax-profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
@@ -15797,6 +17820,31 @@ export async function registerRoutes(
 
   // ===== PARENT AUTO-INVEST (Kiddo+ / Family exclusive) =====
 
+  // Attach `hasRecentFailure` (a charge failed in the last 14 days) to parent
+  // contributions so surfaces beyond the Scheduled tab — the dashboard recurring
+  // cards — can show a "Retrying" state that stays CONSISTENT with Activity
+  // (which reads the same flag from /api/me/scheduled). Same computation as that
+  // endpoint: scan `parent_contribution_failed` activity rows and match them to a
+  // contribution via `metadata.parentContributionId`.
+  const attachRecentFailures = async <T extends { id: string }>(
+    contributions: T[],
+    fundIds: string[],
+  ): Promise<(T & { hasRecentFailure: boolean; lastFailureAt: string | null })[]> => {
+    if (contributions.length === 0) return [];
+    // Recovery-aware (see computeRecentFailureMap): a recent failure clears once a
+    // successful charge for the same plan lands after it, so the "Charge missed"
+    // state and "Add it now" prompt disappear the moment the parent recovers.
+    const failureInfo = await computeRecentFailureMap(fundIds);
+    return contributions.map((row) => {
+      const info = failureInfo.get(row.id) ?? null;
+      return {
+        ...row,
+        lastFailureAt: info ? info.lastFailureAt.toISOString() : null,
+        hasRecentFailure: !!info?.hasRecentFailure,
+      };
+    });
+  };
+
   app.get('/api/funds/:fundId/parent-contributions', isAuthenticated, async (req: any, res) => {
     try {
       const fund = await storage.getFund(req.params.fundId);
@@ -15813,7 +17861,7 @@ export async function registerRoutes(
       // df0112ae console-403 the report surfaced). Fixed 2026-05-29.
       if (await isDemoFund(req.params.fundId)) {
         const contributions = await storage.getParentContributionsByFund(req.params.fundId);
-        return res.json(contributions);
+        return res.json(await attachRecentFailures(contributions, [req.params.fundId]));
       }
 
       // Recurring is a paid fund-tier feature (pricing-v3). Gate on the
@@ -15838,7 +17886,7 @@ export async function registerRoutes(
       }
 
       const contributions = await storage.getParentContributionsByFund(req.params.fundId);
-      res.json(contributions);
+      res.json(await attachRecentFailures(contributions, [req.params.fundId]));
     } catch (error) {
       console.error('Error fetching parent contributions:', error);
       res.status(500).json({ error: 'Failed to fetch recurring investment plans' });
@@ -15851,6 +17899,23 @@ export async function registerRoutes(
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
+
+      // Sanity guard (mirrors the client check): reject a recurring amount whose
+      // monthly-equivalent is implausibly high — almost always a fat-finger, most
+      // often a DAILY amount typed as if it were monthly (daily x ~30.4). The
+      // client blocks this too, but a client guard is bypassable; the server is
+      // the real enforcement point, and it stops the projection from ever
+      // compounding a garbage input. Runs before the demo branch so the sandbox
+      // rejects it as well.
+      {
+        const amtNum = parseFloat(String(req.body?.amount ?? 0));
+        if (Number.isFinite(amtNum) && amtNum > 0) {
+          const plaus = checkRecurringPlausibility(amtNum, String(req.body?.frequency || "monthly"));
+          if (!plaus.ok) {
+            return res.status(400).json({ error: `That works out to about $${Math.round(plaus.monthlyEquivalent).toLocaleString()} a month, which looks like a typo. Lower the amount or change how often it runs.` });
+          }
+        }
+      }
 
       // Demo-fund sandbox. Return a synthetic ParentContribution row so the
       // client's success state fires (and the schedule shows up in the
@@ -15921,6 +17986,14 @@ export async function registerRoutes(
       const validFrequencies = ['daily', 'weekly', 'monthly', 'yearly'];
       if (!validFrequencies.includes(frequency)) {
         return res.status(400).json({ error: 'Frequency must be daily, weekly, monthly, or yearly' });
+      }
+
+      // Guard the ticker the same way the gift path does (isAllowedStockPick).
+      // Without this a crafted request could set a "pick" recurring to any off-list
+      // or unsuitable ticker, and once custody is live the recurring worker would
+      // try to buy it. Only enforced for pick mode; auto/managed carry no ticker.
+      if (executionModel === "pick" && !isAllowedStockPick(selectedTicker)) {
+        return res.status(400).json({ error: "That stock isn't available to pick." });
       }
 
       if (!bankAccountId) {
@@ -16064,7 +18137,26 @@ export async function registerRoutes(
           updates.nextRunDate = nextRunDate;
         }
       }
+      // Sanity guard (mirrors POST + client): an edit that lands the monthly-
+      // equivalent implausibly high is almost always a fat-finger (esp. switching
+      // to daily). Check the EFFECTIVE amount + frequency (new if changed, else the
+      // stored value) so changing EITHER one is validated.
+      {
+        const effAmount = updates.amount != null ? parseFloat(String(updates.amount)) : parseFloat(String(record.amount ?? 0));
+        const effFreq = String(updates.frequency ?? record.frequency ?? "monthly");
+        if (Number.isFinite(effAmount) && effAmount > 0) {
+          const plaus = checkRecurringPlausibility(effAmount, effFreq);
+          if (!plaus.ok) {
+            return res.status(400).json({ error: `That works out to about $${Math.round(plaus.monthlyEquivalent).toLocaleString()} a month, which looks like a typo. Lower the amount or change how often it runs.` });
+          }
+        }
+      }
       if (executionModel && ['auto', 'pick', 'family'].includes(executionModel)) {
+        // Same allowlist guard as create + the gift path: an edit must not be able to
+        // point a "pick" schedule at an off-list / unsuitable ticker either.
+        if (executionModel === 'pick' && !isAllowedStockPick(selectedTicker)) {
+          return res.status(400).json({ error: "That stock isn't available to pick." });
+        }
         updates.executionModel = executionModel;
         updates.selectedTicker = executionModel === 'pick' && selectedTicker ? String(selectedTicker).toUpperCase() : null;
       }
@@ -16168,6 +18260,72 @@ export async function registerRoutes(
     }
   });
 
+  // Skip the NEXT scheduled charge without cancelling the plan. Advances
+  // next_run_date by exactly one cadence period so the worker fires the cycle
+  // after next. The gentle alternative to pausing (which stops everything):
+  // "tight month / already gave a big gift — skip just this one, keep going."
+  // Reduces churn (a skip beats a cancel). Moves no money, so it's a lifecycle
+  // event, not a contribution.
+  app.post('/api/parent-contributions/:id/skip-cycle', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      // Demo sandbox: never mutate the shared demo record. The client overlays
+      // the skip per-tab so it still visibly advances the next-charge date.
+      if (req.params.id.startsWith("demo_") || (await isDemoUser(userId))) {
+        return res.json({ ok: true, demo: true, saved: false });
+      }
+      const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
+      if (!record) return res.status(404).json({ error: 'Plan not found' });
+      if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      // Post-handoff lockout (see PATCH above).
+      const recordFund = await storage.getFund(record.fundId);
+      if (recordFund && recordFund.userId !== record.userId) {
+        return res.status(403).json({ error: 'fund_transferred', message: "This fund is the recipient's now. You can no longer change this recurring plan." });
+      }
+      if (String(record.status).toLowerCase() !== 'active') {
+        return res.status(400).json({ error: 'Only an active plan can skip a charge.' });
+      }
+      const freq = String(record.frequency || 'monthly').toLowerCase();
+      const base = record.nextRunDate ? new Date(record.nextRunDate as any) : new Date();
+      const skippedFrom = new Date(base);
+      const next = new Date(base);
+      if (freq === 'daily') next.setDate(base.getDate() + 1);
+      else if (freq === 'weekly') next.setDate(base.getDate() + 7);
+      else if (freq === 'yearly') next.setFullYear(base.getFullYear() + 1);
+      else next.setMonth(base.getMonth() + 1);
+      const updated = await storage.updateParentContribution(req.params.id, { nextRunDate: next });
+      // Ledger row — moved no money, so it's a lifecycle title (Activity treats
+      // it as a schedule change, not an invest event).
+      try {
+        const fund = recordFund || await storage.getFund(record.fundId);
+        const freqWord = freq === 'weekly' ? 'week' : freq === 'yearly' ? 'year' : freq === 'daily' ? 'day' : 'month';
+        const destination = record.executionModel === 'pick' && record.selectedTicker
+          ? String(record.selectedTicker).toUpperCase()
+          : fund?.recipientFirstName ? `${fund.recipientFirstName}'s fund` : 'the fund';
+        const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        await storage.createActivity({
+          userId,
+          fundId: record.fundId,
+          type: 'auto_invest',
+          title: 'Recurring charge skipped',
+          description: `Skipped the ${fmt(skippedFrom)} charge into ${destination}. Next charge ${fmt(next)}.`,
+          metadata: JSON.stringify({
+            amount: record.amount,
+            frequency: record.frequency,
+            executionModel: record.executionModel,
+            selectedTicker: record.selectedTicker || null,
+            skippedDate: skippedFrom.toISOString(),
+            nextRunDate: next.toISOString(),
+          }),
+        });
+      } catch (_) { /* non-fatal */ }
+      res.json(updated);
+    } catch (error) {
+      console.error('Error skipping recurring cycle:', error);
+      res.status(500).json({ error: 'Failed to skip charge' });
+    }
+  });
+
   // Trigger a manual one-time contribution (creates a Stripe checkout for the planned amount)
   app.post('/api/parent-contributions/:id/contribute-now', isAuthenticated, async (req: any, res) => {
     try {
@@ -16191,7 +18349,7 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
 
       // Defensive second-line check after the lookup — covers the case
-      // where a Dunphy parent has a real (non-demo-prefix) parent_contributions
+      // where a Rivera parent has a real (non-demo-prefix) parent_contributions
       // row, however unlikely. Same shape as the gift-checkout sandbox.
       if (await isDemoFund(record.fundId)) {
         const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
@@ -16257,6 +18415,76 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error creating contribute-now session:', error);
       res.status(500).json({ error: 'Failed to start contribution checkout' });
+    }
+  });
+
+  // Update the card a recurring plan charges going forward. "Add it now" recovers a
+  // single missed charge; this fixes the ROOT when the card is permanently dead. The
+  // auto-charge worker pulls the customer's invoice_settings.default_payment_method
+  // (recurringContributionWorker ~L171) — the exact card the Stripe billing portal
+  // edits — so "update the card" is the portal, NOT a bespoke SetupIntent flow.
+  //
+  // Flag-gated (recurring_card_update, DEFAULT OFF). Two things must be true before
+  // flipping it on, both founder/Stripe-owned: (1) the billing-portal configuration in
+  // the Stripe dashboard exposes "Update payment method", and (2) a live `stripe listen`
+  // test confirms the update propagates to the default PM the worker charges. Until then
+  // the endpoint 404s and the client hides the surface.
+  app.post('/api/parent-contributions/:id/update-card', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { isFeatureEnabled } = await import("./featureFlags");
+      if (!(await isFeatureEnabled('recurring_card_update', false))) {
+        return res.status(404).json({ error: 'not_available' });
+      }
+
+      const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+
+      // Demo sandbox — seeded accounts have no real Stripe customer; land back on
+      // Activity with a flag the client treats like any other portal url.
+      if (req.params.id.startsWith("demo_") || (await isDemoUser(userId))) {
+        return res.json({ url: `${origin}/activity?portal=unavailable&demo=1`, isDemo: true });
+      }
+
+      const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
+      if (!record) return res.status(404).json({ error: 'Plan not found' });
+      if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      // Resolve the SAME customer the worker charges: any of the user's subscription
+      // rows with a non-null customer id, active preferred else most recent. Mirrors
+      // the worker's scalar subquery (recurringContributionWorker ~L642) so the portal
+      // edits the right card even for a churned/grandfathered parent (a canceled
+      // subscription row keeps its customer id; the worker still charges it).
+      const { rows } = await pool.query(
+        `SELECT stripe_customer_id FROM subscriptions
+           WHERE user_id = $1 AND stripe_customer_id IS NOT NULL
+           ORDER BY (status = 'active') DESC, created_at DESC
+           LIMIT 1`,
+        [userId],
+      );
+      const stripeCustomerId = rows?.[0]?.stripe_customer_id ? String(rows[0].stripe_customer_id) : null;
+      if (!stripeCustomerId) {
+        return res.status(404).json({ error: 'no_billing_account', message: "There's no card on file to update yet." });
+      }
+
+      const session = await stripeService.createCustomerPortalSession(stripeCustomerId, `${origin}/activity`);
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating card-update portal session:', error);
+      res.status(500).json({ error: 'Failed to open card update' });
+    }
+  });
+
+  // Client-readable feature flags (whitelist only). Lets the UI hide a flag-gated
+  // surface by default without a bespoke config channel per feature. Never expose a
+  // flag here that gates anything sensitive server-side — this is display-gating.
+  app.get('/api/feature-flags/public', isAuthenticated, async (_req: any, res) => {
+    try {
+      const { isFeatureEnabled } = await import("./featureFlags");
+      res.json({
+        recurring_card_update: await isFeatureEnabled('recurring_card_update', false),
+      });
+    } catch {
+      res.json({ recurring_card_update: false });
     }
   });
 
@@ -17840,6 +20068,20 @@ export async function registerRoutes(
       const kBroad = Math.round(giftersPerFund * broadConvRate * 1000) / 1000;
       const kStrict = Math.round(giftersPerFund * strictConvRate * 1000) / 1000;
 
+      // Parent-to-parent "pass it along" channel (2026-06-04): shares tapped
+      // on the dashboard row vs referred homepage visits. Deliberately a
+      // separate, secondary loop from the gifter loop above — measured here
+      // so it's judged by the same funded-k lens before anyone is tempted to
+      // pay for it.
+      const parentRefResult = await db.execute(sql`
+        SELECT action, COUNT(*)::int AS c
+        FROM referral_events
+        WHERE action IN ('parent_referral_share', 'parent_referral_visit')
+        GROUP BY action
+      `);
+      const parentRef: Record<string, number> = {};
+      for (const r of (parentRefResult.rows || []) as any[]) parentRef[String(r.action)] = Number(r.c) || 0;
+
       return res.json({
         basis: "all-time, business-state (gifts/funds). Windowed event-store loop conversion: /api/admin/funnels",
         reach: {
@@ -17871,6 +20113,10 @@ export async function registerRoutes(
           totalIntents: n(gd.total_intents),
           multiFundGifters: n(mf.multi_fund_gifters),           // one gifter, gifts across >1 family
         },
+        parentReferral: {
+          shares: parentRef["parent_referral_share"] || 0,   // dashboard "pass it along" taps
+          visits: parentRef["parent_referral_visit"] || 0,   // referred homepage landings
+        },
         byOccasion: (occasionResult.rows || []).map((r: any) => ({
           occasion: String(r.occasion || "unspecified"),
           gifts: n(r.gifts),
@@ -17887,6 +20133,163 @@ export async function registerRoutes(
     } catch (error) {
       console.error("admin k-factor error", error);
       return res.status(500).json({ error: "Failed to load k-factor" });
+    }
+  });
+
+  // Moat leading indicators — "is the moat FORMING?" (companion to k-factor,
+  // which is gate #1 / the loop). The durable moat is relationship origination,
+  // realized only at AT-18 RETENTION (gate #2), ~18 yrs out — so we surface the
+  // leading indicators that predict it. Identity proxies (Memory Book richness,
+  // gifter density) over vanity gift count. See MOAT_LEADING_INDICATORS.md.
+  // Read-model over existing tables; no new tracking. Demo data dominates
+  // pre-launch (see caveats) — directional, not precise.
+  app.get('/api/admin/moat-indicators', isAdmin, async (_req: any, res) => {
+    try {
+      const PAID = sql`status IN ('processing','settled','completed','invested')`;
+
+      // Memory Book richness — human notes (the moat's literal substance), per
+      // fund. Counts gift messages + parent notes only; auto "crossed $X"
+      // milestones are not "from a person" and don't count.
+      const memResult = await db.execute(sql`
+        WITH human AS (
+          SELECT fund_id, COUNT(*)::int AS n
+          FROM memory_entries
+          WHERE type IN ('gift_message','parent_note')
+          GROUP BY fund_id
+        )
+        SELECT
+          COALESCE(SUM(n),0)::int                       AS total_human_notes,
+          COUNT(*)::int                                 AS funds_with_any_note,
+          COUNT(*) FILTER (WHERE n >= 5)::int           AS funds_rich,
+          COALESCE(ROUND(AVG(n)::numeric, 2), 0)        AS avg_notes_per_fund
+        FROM human
+      `);
+
+      // Distinct-gifter density — "peopled-ness". A fund 8 people built is a
+      // different psychological object than one only mom funded.
+      const gifterResult = await db.execute(sql`
+        WITH paid AS (
+          SELECT fund_id, LOWER(TRIM(sender_email)) AS ge
+          FROM gifts
+          WHERE ${PAID} AND sender_email IS NOT NULL AND TRIM(sender_email) <> ''
+        ),
+        per_fund AS (SELECT fund_id, COUNT(DISTINCT ge)::int AS gifters FROM paid GROUP BY fund_id)
+        SELECT
+          COUNT(*)::int                              AS funds_with_gifts,
+          COUNT(*) FILTER (WHERE gifters >= 3)::int  AS funds_peopled,
+          COALESCE(ROUND(AVG(gifters)::numeric, 2),0) AS avg_gifters_per_fund
+        FROM per_fund
+      `);
+
+      // Repeat gifting — habit + the substantial-balance-at-18 that makes
+      // ownership feel real. Repeat gifters + funds with an active recurring.
+      const repeatResult = await db.execute(sql`
+        WITH paid AS (
+          SELECT LOWER(TRIM(sender_email)) AS ge, COUNT(*)::int AS gifts
+          FROM gifts
+          WHERE ${PAID} AND sender_email IS NOT NULL AND TRIM(sender_email) <> ''
+          GROUP BY LOWER(TRIM(sender_email))
+        )
+        SELECT COUNT(*)::int AS distinct_gifters, COUNT(*) FILTER (WHERE gifts >= 2)::int AS repeat_gifters
+        FROM paid
+      `);
+      const recurringResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT fund_id)::int AS funds_with_recurring FROM recurring_gifts WHERE status = 'active'
+      `);
+
+      // Stake formation — the sticky-zone thresholds. Trivial balances get
+      // cashed out at 18; real ones create ownership psychology (NORTH_STAR).
+      const stakeResult = await db.execute(sql`
+        WITH bal AS (
+          SELECT (COALESCE(balance,0)+COALESCE(pending_balance,0)+COALESCE(cash_balance,0)) AS total FROM funds
+        )
+        SELECT
+          COUNT(*) FILTER (WHERE total > 0)::int     AS funded_funds,
+          COUNT(*) FILTER (WHERE total >= 500)::int  AS funds_500,
+          COUNT(*) FILTER (WHERE total >= 2000)::int AS funds_2k
+        FROM bal
+      `);
+
+      // Handoff cohort — funds that have transferred to the now-adult. Their
+      // RETENTION is gate #2 itself; measuring it early needs the pilot.
+      const handoffResult = await db.execute(sql`
+        SELECT COUNT(*)::int AS handed_off FROM funds WHERE transferred_at IS NOT NULL
+      `);
+
+      // Teen ownership — the closest direct early proxy for at-18 retention.
+      // (a) Kid-view opens (deliberate PIN unlocks), last 30 days.
+      const openResult = await db.execute(sql`
+        SELECT COUNT(*)::int AS opens, COUNT(DISTINCT fund_id)::int AS funds_opened
+        FROM analytics_events
+        WHERE event_name = 'kid_view_open' AND occurred_at > NOW() - INTERVAL '30 days'
+      `);
+      // (b) Suggest-a-stock submissions (active teen intent). Stored in the
+      // file-backed kid-view record store, not Postgres, so counted here.
+      let suggestionCount = 0;
+      let fundsWithSuggestion = 0;
+      try {
+        const kvStore = await loadKidViewStore();
+        for (const rec of Object.values(kvStore.byFundId || {})) {
+          const n = Array.isArray((rec as any).suggestions) ? (rec as any).suggestions.length : 0;
+          if (n > 0) { suggestionCount += n; fundsWithSuggestion += 1; }
+        }
+      } catch { /* store unreadable -> 0, non-fatal */ }
+
+      const m: any = (memResult.rows || [])[0] || {};
+      const g: any = (gifterResult.rows || [])[0] || {};
+      const rp: any = (repeatResult.rows || [])[0] || {};
+      const rc: any = (recurringResult.rows || [])[0] || {};
+      const st: any = (stakeResult.rows || [])[0] || {};
+      const ho: any = (handoffResult.rows || [])[0] || {};
+      const op: any = (openResult.rows || [])[0] || {};
+      const num = (x: any) => Number(x ?? 0);
+      const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
+
+      return res.json({
+        memoryBook: {
+          totalHumanNotes: num(m.total_human_notes),
+          fundsWithAnyNote: num(m.funds_with_any_note),
+          fundsRich: num(m.funds_rich), // >=5 human notes = a "rich" book
+          avgNotesPerFund: num(m.avg_notes_per_fund),
+        },
+        gifterDensity: {
+          fundsWithGifts: num(g.funds_with_gifts),
+          fundsPeopled: num(g.funds_peopled), // >=3 distinct gifters
+          avgGiftersPerFund: num(g.avg_gifters_per_fund),
+          peopledPct: pct(num(g.funds_peopled), num(g.funds_with_gifts)),
+        },
+        repeatGifting: {
+          distinctGifters: num(rp.distinct_gifters),
+          repeatGifters: num(rp.repeat_gifters),
+          repeatPct: pct(num(rp.repeat_gifters), num(rp.distinct_gifters)),
+          fundsWithRecurring: num(rc.funds_with_recurring),
+        },
+        stakeFormation: {
+          fundedFunds: num(st.funded_funds),
+          funds500: num(st.funds_500),
+          funds2k: num(st.funds_2k),
+        },
+        handoff: {
+          handedOff: num(ho.handed_off),
+          note: "Retention of this cohort IS gate #2 — needs the near-majority handoff pilot to read early.",
+        },
+        teenOwnership: {
+          instrumented: true,
+          kidViewOpens30d: num(op.opens),
+          fundsOpened30d: num(op.funds_opened),
+          suggestions: suggestionCount,
+          fundsWithSuggestion,
+          note: "Closest direct proxy for at-18 retention. Opens = deliberate PIN unlocks (30d); suggest-a-stock = active teen intent. Opens accrue from now, so both read low until real teens engage.",
+        },
+        caveats: [
+          "Demo (Rivera) data dominates pre-launch — directional, not precise; the real-user signal emerges post-launch.",
+          "Identity proxies (Memory Book richness, gifter density) predict at-18 retention; raw gift count does not.",
+          "Memory Book richness counts human notes only (gift messages + parent notes), not auto-milestones.",
+        ],
+      });
+    } catch (error) {
+      console.error("admin moat-indicators error", error);
+      return res.status(500).json({ error: "Failed to load moat indicators" });
     }
   });
 
@@ -20735,9 +23138,17 @@ export async function registerRoutes(
   app.delete('/api/admin/memory/:id', isAdmin, async (req: any, res) => {
     try {
       const id = String(req.params.id);
-      const before = await db.execute(sql`SELECT id, fund_id, type, content FROM memory_entries WHERE id = ${id}`);
+      const before = await db.execute(sql`SELECT id, fund_id, type, content, photo_url, video_url, audio_url FROM memory_entries WHERE id = ${id}`);
       if (!before.rows?.[0]) return res.status(404).json({ error: 'Entry not found' });
       await storage.deleteMemoryEntry(id);
+      // Purge the stored media too (trust-safety audit H5) — admin "remove" of
+      // flagged/CSAM content must not leave the file recoverable at its URL.
+      {
+        const row: any = before.rows[0];
+        for (const mediaUrl of [row?.photo_url, row?.video_url, row?.audio_url]) {
+          if (mediaUrl) await deleteMemoryFile(String(mediaUrl));
+        }
+      }
       await writeAudit(req, 'admin_memory_deleted', 'memory_entries', id, { reason: req.body?.reason || null, before: before.rows[0] });
       res.json({ ok: true });
     } catch (error) {
@@ -20918,6 +23329,23 @@ export async function registerRoutes(
               audio_transcript = NULL
           WHERE id = ${id}
         `);
+        // T&S H5 (2026-06-06): nulling the DB columns left the actual files
+        // on disk — content an admin judged bad enough to REMOVE stayed
+        // fetchable by anyone holding the old /uploads URL. Purge the bytes
+        // too (same pattern as the parent-delete + admin-delete handlers).
+        // Best-effort per file: a failed unlink must not abort the
+        // moderation action itself (the DB removal already hides it from
+        // every surface); the audit row's before-snapshot keeps the URLs
+        // for manual cleanup if a purge fails.
+        for (const mediaUrl of [beforeRow.photo_url, beforeRow.video_url, beforeRow.audio_url]) {
+          if (mediaUrl) {
+            try {
+              await deleteMemoryFile(String(mediaUrl));
+            } catch (purgeErr) {
+              console.error('[moderation] media purge failed (URL preserved in audit row):', purgeErr);
+            }
+          }
+        }
       } else {
         await db.execute(sql`
           UPDATE memory_entries
@@ -21036,14 +23464,20 @@ export async function registerRoutes(
       const id = String(req.params.id);
       const adminId = (req.user as any).id;
       const reason = String(req.body?.reason || '').trim().slice(0, 500);
-      await db.execute(sql`
+      const result = await db.execute(sql`
         UPDATE blocked_gifters
         SET unblocked_at = NOW(),
             unblocked_by_user_id = ${adminId}
         WHERE id = ${id} AND unblocked_at IS NULL
       `);
-      await writeAudit(req, 'admin_gifter_unblocked', 'blocked_gifters', id, { reason });
-      res.json({ ok: true });
+      // rowCount === 0 means no matching still-blocked row (wrong id, or
+      // already unblocked). Report that honestly so the admin isn't told an
+      // unblock succeeded when nothing changed.
+      const unblocked = (((result as any)?.rowCount ?? 0) as number) > 0;
+      if (unblocked) {
+        await writeAudit(req, 'admin_gifter_unblocked', 'blocked_gifters', id, { reason });
+      }
+      res.json({ ok: unblocked, unblocked });
     } catch (error) {
       console.error('Error unblocking gifter:', error);
       res.status(500).json({ error: 'Failed to unblock gifter' });
@@ -21095,6 +23529,11 @@ export async function registerRoutes(
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'Nothing to update' });
       const updated = await storage.updateParentContribution(id, updates);
+      // updateParentContribution returns undefined when no row matched the id.
+      // Don't audit or report success for a no-op write.
+      if (!updated) {
+        return res.status(404).json({ error: 'No recurring schedule matched that id', updated: false });
+      }
       await writeAudit(req, 'admin_recurring_updated', 'parent_contributions', id, updates);
       res.json(updated);
     } catch (error) {
@@ -21190,14 +23629,19 @@ export async function registerRoutes(
       const kidViewPath = path.join(process.cwd(), '.local', 'kid-view.json');
       const raw = await fs.readFile(kidViewPath, 'utf-8').catch(() => '{}');
       const store = JSON.parse(raw);
-      if (store?.byFundId?.[fundId]) {
+      // Whether a token actually existed for this fund. Revoking gates a
+      // child's PIN access, so a no-match must NOT report success — the admin
+      // needs to know the token wasn't here (stale list / race / stored
+      // elsewhere) rather than believe access was cut.
+      const existed = Boolean(store?.byFundId?.[fundId]);
+      if (existed) {
         store.byFundId[fundId].enabled = false;
         store.byFundId[fundId].shareToken = null;
         store.byFundId[fundId].updatedAt = new Date().toISOString();
         await fs.writeFile(kidViewPath, JSON.stringify(store, null, 2), 'utf-8');
       }
-      await writeAudit(req, 'admin_kid_view_revoked', 'kid_views', fundId);
-      res.json({ ok: true });
+      await writeAudit(req, 'admin_kid_view_revoked', 'kid_views', fundId, { revoked: existed });
+      res.json({ ok: true, revoked: existed });
     } catch (error) {
       console.error('Error revoking kid view:', error);
       res.status(500).json({ error: 'Failed to revoke kid view' });
@@ -21423,13 +23867,20 @@ export async function registerRoutes(
 
     // Brokerage / custodian
     {
-      const vars = evs([["CUSTODIAN_TRANSFER_WEBHOOK_URL", false], ["CUSTODIAN_TRANSFER_WEBHOOK_SECRET", false]]);
+      const vars = evs([
+        ["CUSTODIAN_TRANSFER_WEBHOOK_URL", false],
+        ["CUSTODIAN_TRANSFER_WEBHOOK_SECRET", false],
+        ["CUSTODIAN_PROVIDER", false],
+        ["ALPACA_BROKER_API_KEY", false],
+        ["ALPACA_BROKER_API_SECRET", false],
+      ]);
+      const provider = String(process.env.CUSTODIAN_PROVIDER || "stub").toLowerCase();
       integrations.push({
-        id: "custodian", label: "DriveWealth (custodian)", category: "Brokerage",
-        purpose: "UTMA brokerage account provider. Webhook receives custody events. funds.drivewealthAccountId links Kiddo funds to brokerage accounts.",
+        id: "custodian", label: "Custodian (DriveWealth / Alpaca)", category: "Brokerage",
+        purpose: "UTMA brokerage account provider behind a provider-agnostic interface (server/custodianService.ts → getCustodianProvider). Transfer webhook receives custody events; funds.drivewealthAccountId stores the custodian account id.",
         envVars: vars, configured: vars[0].set,
-        health: { status: vars[0].set ? "ok" : "unknown", message: vars[0].set ? "Webhook URL configured" : "Webhook integration not yet enabled", checkedAt: new Date().toISOString() },
-        notes: "Integration scaffolded but full DriveWealth API client not yet wired. funds.drivewealthAccountId column exists for future use.",
+        health: { status: vars[0].set ? "ok" : "unknown", message: `provider=${provider}; transfer webhook ${vars[0].set ? "configured" : "not enabled"}`, checkedAt: new Date().toISOString() },
+        notes: "Provider selected via CUSTODIAN_PROVIDER (stub|drivewealth|alpaca; default stub). DriveWealth account-open is scaffolded; the Alpaca Broker API client (server/alpacaBrokerClient.ts) is sandbox-ready (set ALPACA_BROKER_API_KEY/_SECRET, run `npm run smoke:alpaca-custodial`). Account-open route is NOT yet wired — gated on the provider pick + counsel. See CUSTODIAN_VENDOR_DILIGENCE.md.",
       });
     }
 
@@ -21877,6 +24328,10 @@ export async function registerRoutes(
 
   app.put('/api/admin/feature-flags/:key', isAdmin, async (req: any, res) => {
     try {
+      // Flipping production feature flags is a privileged action — gate it
+      // behind super-admin, matching the investment-config editor. Plain
+      // admins can still read flags (GET stays isAdmin-only).
+      if (!requireSuperAdmin(req, res)) return;
       const key = String(req.params.key || "").trim().toLowerCase();
       if (!/^[a-z0-9_]+$/.test(key) || key.length > 64) {
         return res.status(400).json({ error: 'Flag key must be lowercase alphanumeric+underscore, ≤64 chars.' });
@@ -21909,6 +24364,7 @@ export async function registerRoutes(
 
   app.delete('/api/admin/feature-flags/:key', isAdmin, async (req: any, res) => {
     try {
+      if (!requireSuperAdmin(req, res)) return;
       const key = String(req.params.key || "").trim().toLowerCase();
       await db.execute(sql`DELETE FROM feature_flags WHERE key = ${key}`);
       const { invalidateFlagCache } = await import("./featureFlags");
@@ -21962,6 +24418,8 @@ export async function registerRoutes(
 
   app.post('/api/admin/stripe/products', isAdmin, async (req: any, res) => {
     try {
+      // Creating live Stripe billing products is privileged — super-admin only.
+      if (!requireSuperAdmin(req, res)) return;
       const name = String(req.body?.name || "").trim();
       const description = String(req.body?.description || "").trim();
       const unitAmount = parseInt(String(req.body?.unitAmount || "0"), 10);
@@ -21987,6 +24445,7 @@ export async function registerRoutes(
 
   app.post('/api/admin/stripe/products/:id/archive', isAdmin, async (req: any, res) => {
     try {
+      if (!requireSuperAdmin(req, res)) return;
       const id = String(req.params.id);
       const stripe = await getUncachableStripeClient();
       const updated = await stripe.products.update(id, { active: false });
@@ -22000,6 +24459,7 @@ export async function registerRoutes(
 
   app.post('/api/admin/stripe/products/:id/unarchive', isAdmin, async (req: any, res) => {
     try {
+      if (!requireSuperAdmin(req, res)) return;
       const id = String(req.params.id);
       const stripe = await getUncachableStripeClient();
       const updated = await stripe.products.update(id, { active: true });
@@ -22751,6 +25211,17 @@ export async function registerRoutes(
         return res.status(410).json({ error: 'Invitation declined. Ask the fund owner to resend.' });
       }
 
+      // 30-day expiry on PENDING tokens. The token-trust model is deliberate
+      // (we don't require an email match), so a token that never expired would
+      // be a standing access grant. Legacy rows with a null invitedAt are
+      // treated as non-expiring (Number.isFinite guards that), so this never
+      // breaks old invites; the resend path bumps invitedAt to re-arm.
+      const invitedAtMs = new Date(row.invitedAt as any).getTime();
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      if (Number.isFinite(invitedAtMs) && Date.now() - invitedAtMs > THIRTY_DAYS_MS) {
+        return res.status(410).json({ error: 'This invitation has expired. Ask the fund owner to resend it.' });
+      }
+
       const userId = (req.user as any).id;
       // Self-acceptance guard. If somehow the fund owner clicked their
       // own invitation link, refuse — they already have full access and
@@ -22770,6 +25241,21 @@ export async function registerRoutes(
         collaboratorId: row.id,
         role: row.role,
       });
+      // Surface the relationship moment in the fund's Activity feed — not just
+      // the audit log + the one-time dashboard banner. 2026-06-07.
+      try {
+        const accepterName = (req.user as any)?.preferredName || (req.user as any)?.firstName || (req.user as any)?.email || "A co-parent";
+        const childName = fund?.recipientFirstName?.trim();
+        await storage.createActivity({
+          userId: fund?.userId || userId,
+          fundId: row.fundId,
+          type: "collaborator_accepted",
+          title: "Co-parent joined",
+          description: `${accepterName} joined as a co-parent on ${childName ? `${childName}'s` : "the"} fund.`,
+        });
+      } catch (actErr) {
+        console.error("Failed to log collaborator_accepted activity:", actErr);
+      }
     } catch (error) {
       console.error('Error accepting invitation:', error);
       res.status(500).json({ error: 'Failed to accept invitation' });
@@ -23050,7 +25536,15 @@ export async function registerRoutes(
           FROM gifts
           WHERE fund_id IN (${fundIdsSql})
             AND created_at >= ${thirtyDaysAgo.toISOString()}
-            AND status NOT IN ('failed', 'refunded', 'canceled')
+            AND status NOT IN ('failed', 'refunded', 'canceled', 'pending')
+            -- "Gifts from people" must mean gifts from OTHERS. The parent's own
+            -- contributions (auto-invest fires + one-time adds) are gift rows
+            -- under the parent's email; without this clause they were summed in,
+            -- so "$X from people" DOUBLE-COUNTED the parent's "You added $Y" and
+            -- failed to reconcile with the per-fund "in gifts" inflow (which
+            -- already excludes the parent). Mirror that query's sender filter +
+            -- its 'pending' exclusion so the header and the per-fund cards agree.
+            AND (sender_email IS NULL OR LOWER(sender_email) != LOWER(${String((req.user as any)?.email || '')}))
         `);
         giftStats = (giftStatsRow.rows?.[0] as any) || {};
       } catch (err) {
@@ -23128,16 +25622,39 @@ export async function registerRoutes(
       // funds without snapshots simply don't contribute to the sum.
       let aggregateHistory: Array<{ date: string; total: number }> = [];
       try {
+        // Carry-forward household aggregate, FIXED 2026-06-10. The prior query
+        // SUM'd only the snapshots that EXISTED on each day, so any day a fund
+        // was missing its snapshot undercounted the whole household — full-
+        // coverage days spiked up, partial days dipped down, producing a fake
+        // "sharp rise then crash" that contradicted the (already-corrected)
+        // +$X callout. Now each day sums EACH fund's most-recent snapshot
+        // on-or-before that day, so the shape reflects real value movement, not
+        // snapshot coverage. A fund with no snapshot yet contributes nothing.
         const histRes = await db.execute(sql`
+          WITH days AS (
+            SELECT generate_series(
+              DATE_TRUNC('day', NOW() - INTERVAL '29 days'),
+              DATE_TRUNC('day', NOW()),
+              INTERVAL '1 day'
+            ) AS day
+          ),
+          hh_funds AS (
+            SELECT DISTINCT fund_id FROM fund_snapshots WHERE fund_id IN (${fundIdsSql})
+          )
           SELECT
-            DATE_TRUNC('day', snapshot_date) AS day,
-            SUM(CAST(total_value AS numeric))::numeric AS total
-          FROM fund_snapshots
-          WHERE fund_id IN (${fundIdsSql})
-            AND snapshot_date >= NOW() - INTERVAL '30 days'
-          GROUP BY DATE_TRUNC('day', snapshot_date)
-          ORDER BY day ASC
-          LIMIT 31
+            d.day AS day,
+            COALESCE(SUM((
+              SELECT CAST(s.total_value AS numeric)
+              FROM fund_snapshots s
+              WHERE s.fund_id = f.fund_id
+                AND s.snapshot_date < d.day + INTERVAL '1 day'
+              ORDER BY s.snapshot_date DESC
+              LIMIT 1
+            )), 0) AS total
+          FROM days d
+          CROSS JOIN hh_funds f
+          GROUP BY d.day
+          ORDER BY d.day ASC
         `);
         aggregateHistory = ((histRes.rows as any[]) || []).map((r) => ({
           date: new Date(r.day).toISOString().slice(0, 10),
@@ -23381,7 +25898,7 @@ export async function registerRoutes(
             // (client hides the line rather than showing "+$0").
             // Family-tier roll-up signal — comparing inflow across
             // kids tells the family-of-three "Emma got more love
-            // this month, Alex was quieter."
+            // this month, Nora was quieter."
             thisMonthGiftUsd: (thisMonthGiftMap.get(String(f.id)) || 0) > 0
               ? Number((thisMonthGiftMap.get(String(f.id)) || 0).toFixed(2))
               : null,
@@ -23933,6 +26450,13 @@ export async function registerRoutes(
       const seedInvested = seedRow ? Number(seedRow.invested_value || 0) : 0;
       const seedTotal = seedRow ? Number(seedRow.total_value || 0) : 0;
 
+      // For the IN-PROGRESS year, cap the averaging window (and the fee
+      // proration below) at "now" instead of Dec 31 — otherwise the last
+      // snapshot is projected flat to year-end and the fee reads as the whole-
+      // year run-rate inside what is otherwise a year-to-date summary. For a
+      // completed year periodEndMs === endMs, so nothing changes.
+      const nowMs = Date.now();
+      const periodEndMs = Math.min(endMs, nowMs);
       let avgInvestedBalanceUsd = 0;
       if (snaps.length > 0) {
         // Use a list of (startMs, value) and (gap to next) for the
@@ -23949,7 +26473,7 @@ export async function registerRoutes(
         let totalWeight = 0;
         for (let i = 0; i < points.length; i += 1) {
           const cur = points[i];
-          const next = i + 1 < points.length ? points[i + 1].start : endMs;
+          const next = i + 1 < points.length ? points[i + 1].start : periodEndMs;
           const span = Math.max(0, next - Math.max(cur.start, startMs));
           if (span <= 0) continue;
           weightedSum += cur.value * span;
@@ -23964,13 +26488,19 @@ export async function registerRoutes(
         avgInvestedBalanceUsd = seedInvested;
       }
 
-      // 5. Estimated fees — 0.10% AUM applied to the time-weighted
-      //    average invested balance. Honest "estimated" framing in
-      //    the response key + the client surface so a CPA reading
-      //    the number knows it's not the exact DriveWealth-issued
-      //    fee accrual. Once DriveWealth wires up actual accruals
-      //    this can be replaced with the authoritative number.
-      const estimatedFeesUsd = avgInvestedBalanceUsd * 0.001;
+      // 5. Estimated fees — 0.10% AUM accrued over the ELAPSED portion of the
+      //    year (prorated daily). For a completed year the fraction is 1, so
+      //    this is the full-year fee (unchanged). For the in-progress year it's
+      //    the fee accrued Jan 1 -> today, consistent with the other year-to-
+      //    date figures in this summary — previously the balance was projected
+      //    flat to Dec 31 and charged the full 0.10%, showing the whole-year
+      //    run-rate (~$22) when only a few months had actually accrued (~$9).
+      //    Honest "estimated" framing stays in the response key + client
+      //    surface; once DriveWealth wires real accruals this pulls the
+      //    authoritative number.
+      const periodDays = Math.max(0, (periodEndMs - startMs) / 86400000);
+      const yearFraction = Math.min(1, periodDays / 365);
+      const estimatedFeesUsd = avgInvestedBalanceUsd * 0.001 * yearFraction;
 
       // 6. Year start / end values. Pull the closest in-year
       //    snapshots to Jan 1 + Dec 31. yearStart prefers the
@@ -24255,11 +26785,16 @@ export async function registerRoutes(
       if (existing) {
         // If they previously declined, treat this as a fresh invite.
         const nextStatus = existing.status === 'declined' ? 'pending' : existing.status;
+        // Re-arm the 30-day accept window. The accept handler expires PENDING
+        // tokens older than 30 days; bumping invitedAt here makes the
+        // "ask the fund owner to resend it" remedy actually restore access.
+        // (invitedAt is omitted from the insert schema, so cast to set it.)
         collaborator = await storage.updateCollaborator(existing.id, {
           role,
           status: nextStatus,
           lastNotifiedAt: new Date(),
-        });
+          invitedAt: new Date(),
+        } as any);
       } else {
         collaborator = await storage.createCollaborator({
           fundId: req.params.fundId,
@@ -24291,6 +26826,18 @@ export async function registerRoutes(
         role,
         reinvite: !!existing,
       });
+      try {
+        const childName = fund?.recipientFirstName?.trim();
+        await storage.createActivity({
+          userId: fund?.userId || (req.user as any).id,
+          fundId: req.params.fundId,
+          type: "collaborator_invited",
+          title: "Co-parent invited",
+          description: `Invited ${rawEmail} to help manage ${childName ? `${childName}'s` : "the"} fund.`,
+        });
+      } catch (actErr) {
+        console.error("Failed to log collaborator_invited activity:", actErr);
+      }
     } catch (error) {
       console.error('Error creating collaborator:', error);
       res.status(500).json({ error: 'Failed to create collaborator' });
@@ -24333,6 +26880,22 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ error: 'Collaborator not found' });
       res.json(updated);
       await writeAudit(req, 'collaborator_updated', 'fund', req.params.fundId, { collaboratorId: req.params.id, update: updateData });
+      // Only log a feed event when the role actually changed (status flips are
+      // routine plumbing, not relationship moments).
+      if (updateData.role) {
+        try {
+          const childName = fund?.recipientFirstName?.trim();
+          await storage.createActivity({
+            userId: fund?.userId || (req.user as any).id,
+            fundId: req.params.fundId,
+            type: "collaborator_role_changed",
+            title: "Co-parent role changed",
+            description: `A co-parent's access on ${childName ? `${childName}'s` : "the"} fund was updated.`,
+          });
+        } catch (actErr) {
+          console.error("Failed to log collaborator_role_changed activity:", actErr);
+        }
+      }
     } catch (error) {
       console.error('Error updating collaborator:', error);
       res.status(500).json({ error: 'Failed to update collaborator' });
@@ -24351,6 +26914,18 @@ export async function registerRoutes(
       await storage.deleteCollaborator(req.params.id, req.params.fundId);
       res.status(204).send();
       await writeAudit(req, 'collaborator_removed', 'fund', req.params.fundId, { collaboratorId: req.params.id });
+      try {
+        const childName = fund?.recipientFirstName?.trim();
+        await storage.createActivity({
+          userId: fund?.userId || (req.user as any).id,
+          fundId: req.params.fundId,
+          type: "collaborator_removed",
+          title: "Co-parent removed",
+          description: `A co-parent was removed from ${childName ? `${childName}'s` : "the"} fund.`,
+        });
+      } catch (actErr) {
+        console.error("Failed to log collaborator_removed activity:", actErr);
+      }
     } catch (error) {
       console.error('Error deleting collaborator:', error);
       res.status(500).json({ error: 'Failed to delete collaborator' });

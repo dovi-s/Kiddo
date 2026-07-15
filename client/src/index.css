@@ -3,9 +3,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Metric-matched fallback fonts — kill the FOUT/CLS flash while the real variable
+   fonts load. Arial is size-adjusted (values computed by `fontaine` from the
+   @fontsource woff2 metrics) to occupy the SAME box as DM Sans / Bricolage, so when
+   the real font swaps in there is ZERO layout shift — the jarring part of FOUT is
+   gone. These names sit in the font stacks below AFTER the real font, so they render
+   only during the brief load window. Regenerate with fontaine (readMetrics +
+   generateFontFace) if the fonts ever change. */
+@font-face {
+  font-family: "DM Sans Fallback";
+  src: local("Arial");
+  size-adjust: 105.6526%;
+  ascent-override: 93.8926%;
+  descent-override: 29.3415%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial");
+  size-adjust: 100.0447%;
+  ascent-override: 92.9585%;
+  descent-override: 26.9879%;
+  line-gap-override: 0%;
+}
+
 @theme inline {
-  --font-sans: 'DM Sans', system-ui, sans-serif;
-  --font-serif: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-sans: 'DM Sans Variable', 'DM Sans', 'DM Sans Fallback', system-ui, sans-serif;
+  --font-serif: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Bricolage Grotesque Fallback', system-ui, sans-serif;
+
+  /* Micro-type scale (DESIGN_SYSTEM §9). 11px/10px are used app-wide for dense
+     chrome — labels, captions, chips — below Tailwind's text-xs (12px) floor.
+     Named so they sit on the scale instead of hand-typed text-[11px]. Font-size
+     only (no paired line-height), so they render IDENTICALLY to the arbitrary
+     values they replace; line-height inherits exactly as before. */
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-3xs: 0.625rem;  /* 10px */
+  --text-4xs: 0.5625rem; /* 9px  — floor of the micro-ladder (legal fine print) */
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -129,21 +162,29 @@
      are regenerated against the canonical kiddo evergreen + gold so
      the whole palette stays internally consistent. */
   --kora-evergreen: var(--kiddo-evergreen);
-  --kora-evergreen-light: 152 32% 27%; /* derived: lighter than --kiddo-evergreen */
-  --kora-evergreen-hover: 152 37% 21%; /* derived: hover lifts ~4% above base */
-  --kora-evergreen-active: 152 37% 14%; /* derived: pressed dims ~3% below base */
+  --kora-evergreen-light: 158 42% 25%; /* derived: lighter than the bottle --kiddo-evergreen */
+  --kora-evergreen-hover: 158 48% 19%; /* derived: hover lifts above base */
+  --kora-evergreen-active: 157 50% 12%; /* derived: pressed dims below base */
   --kora-gold: var(--kiddo-gold);
   --kora-gold-light: var(--kiddo-gold-light);
   --kora-gold-ink: var(--kiddo-gold-ink); /* alias, see --kiddo-gold-ink for rationale */
-  --kora-gold-glow: 34 78% 58%;        /* derived: glowing variant of --kiddo-gold */
+  --kora-gold-glow: 40 70% 60%;        /* derived: glowing variant of the brass --kiddo-gold */
   --kora-cream: var(--kiddo-cream);
   --kora-ink: var(--kiddo-ink);
-  --kiddo-evergreen: 152 37% 17%;       /* #1B3A2D */
-  --kiddo-evergreen-deep: 152 45% 10%;  /* #0E2518 — hero gradient endpoint */
-  --kiddo-cream: 38 36% 96%;            /* #F8F5F0 */
-  --kiddo-cream-dark: 36 28% 90%;       /* #EDE7DC */
-  --kiddo-gold: 34 74% 45%;             /* #C5821E */
-  --kiddo-gold-light: 40 78% 66%;       /* #EDC164 — balance flash + warm highlight */
+  /* GILT LEDGER palette (2026-06-23, design judge-panel decision). Anchored to a
+     real heirloom: a Smythson bottle-green leather ledger with a 23k gold-leaf
+     gilt spine on aged ivory rag paper — the Memory Book itself. Premium comes
+     from VALUE-DEPTH + hue choice + ONE disciplined metallic accent, NOT from
+     saturation (the prior "enrich" chased chroma → marigold/toy, eroded trust).
+     Evergreen → deeper bottle-green; gold → antique BRASS-LEAF (sat 86→61) that
+     glints like stamped gilt instead of a candy badge; cream → ivory rag paper.
+     Was: evergreen 152 37% 17% / gold 34 74% 45% / cream 38 36% 96%. */
+  --kiddo-evergreen: 158 49% 15%;       /* bottle racing-green #143A2C */
+  --kiddo-evergreen-deep: 157 49% 8%;   /* hero / handoff gradient floor #0B2018 */
+  --kiddo-cream: 38 41% 95%;            /* aged ivory rag paper #F7F3EC */
+  --kiddo-cream-dark: 38 32% 90%;       /* derived from the ivory */
+  --kiddo-gold: 38 61% 48%;             /* antique brass-leaf #C68F30 — fill/glint only, not text */
+  --kiddo-gold-light: 40 70% 63%;       /* gilt highlight #E3B860 */
   /* Gold ink. Darker gold suitable for TEXT use on cream + on
      gold-tinted backgrounds (the chip / pill / love-mark pattern).
      The brand --kiddo-gold (#C5821E) is too light for text on
@@ -156,7 +197,7 @@
      defined, falling back silently to inherited color. Defining
      the token fixes those latent references AND closes Issue 2 of
      ACCESSIBILITY_AUDIT_2026-05-13.md. */
-  --kiddo-gold-ink: 34 74% 25%;         /* #6F4611 */
+  --kiddo-gold-ink: 34 74% 25%;         /* #6F4611 — canonical gold-TEXT token (AA on cream); the brass --kiddo-gold stays fill-only */
   --kiddo-ink: 40 23% 8%;               /* #1A1710 */
   /* Darkened from 32 7% 44% (#7A7268) to 32 7% 38% (~#61615A) on
      2026-05-14 to clear WCAG AA normal-text contrast against cream.
@@ -166,14 +207,29 @@
      (single-token darken, brand-preserving). */
   --kiddo-muted: 32 7% 38%;
   --kiddo-border: 33 24% 86%;           /* #E5DDD4 */
+  --kiddo-divider: 40 23% 8% / 0.26;    /* section separators: warm ink @26% — a defined-but-editorial hairline (the old #E5DDD4 border read as a near-invisible whisper). One knob tunes every section divider; nudge the alpha to taste. */
   --kiddo-border-light: 33 24% 86% / 0.6; /* faded variant for inner row dividers */
   
-  --background: 40 30% 97%;            /* Warm off-white cream */
+  --background: 38 30% 96%;            /* Warm off-cream canvas. Re-warmed 2026-07 (was 8%/98%
+                                          near-white). Finding from a 3-way render (current /
+                                          pure-white / full-cream): the near-white sat one point
+                                          off the 99%-L cards, so they barely separated and the
+                                          whole surface read FLAT. Pure white made it flatter still
+                                          (white-on-white). The crispness/layering the eye wants
+                                          comes from bg↔card CONTRAST — a warm canvas with near-
+                                          white cards that POP — not from going whiter. Held below
+                                          the full 41% cream so it reads intentional, not beige. */
   --foreground: 150 15% 12%;           /* Near-black ink */
   
   /* Mobile-first touch targets */
   --touch-target-min: 44px;
   --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Status-bar / notch inset the sticky AppHeader reserves so its content sits
+     BELOW the clock / Dynamic Island. In a browser tab the browser owns the
+     status bar, so this is the raw inset (0 on non-notched, real value with
+     viewport-fit=cover). See the standalone override below. */
+  --app-safe-top: env(safe-area-inset-top, 0px);
 
   --card: 38 38% 99%;
   --card-foreground: 150 15% 12%;
@@ -204,16 +260,17 @@
      needed the same shift. */
   --muted-foreground: 150 8% 38%;
 
-  /* Accent - Warm Gold */
-  --accent: 36 72% 52%;
+  /* Accent - brass, unified to --kiddo-gold (one gold) */
+  --accent: 38 61% 48%;
   --accent-foreground: 150 15% 12%;
 
-  /* Success - Softer green for positive states */
-  --success: 152 55% 35%;
+  /* Success — GAIN green #3E9468, LIFTED in lightness so a growth number stays
+     unmistakable on the evergreen hero (the reassurance moment) AND on cream */
+  --success: 149 41% 41%;
   --success-foreground: 40 30% 97%;
 
-  /* Destructive */
-  --destructive: 0 65% 50%;
+  /* Destructive — dignified oxblood #B5503C: a loss on a 21-year horizon, not a fire-alarm */
+  --destructive: 10 50% 47%;
   --destructive-foreground: 0 0% 100%;
 
   /* Borders - Soft gray with warmth */
@@ -235,6 +292,24 @@
   --chart-3: 36 72% 52%;
   --chart-4: 36 50% 65%;
   --chart-5: 180 30% 40%;
+}
+
+/* Installed PWA (Add to Home Screen). The status bar is black-translucent
+   (index.html), so iOS draws the app UNDER the clock / Dynamic Island and the
+   header must reserve that strip itself. env(safe-area-inset-top) is the correct
+   inset on a notched device — but iOS can report 0 in standalone (a launch
+   config cached before viewport-fit=cover, i.e. an older install, or a device
+   quirk), which jams the header up into the status bar. Floor the inset so the
+   header always clears it. max() means a real inset is used unchanged and never
+   doubled; the floor only engages when the reported inset collapses to 0. Floor is
+   59px (the Dynamic Island inset on current iPhones) so a collapsed-inset install
+   still clears the clock on the newest hardware — was 50px, which left the header
+   jammed ~9px under the Dynamic Island. Older notched devices that report a real
+   inset use it unchanged; only the rare collapsed-to-0 case sees the 59px floor. */
+@media (display-mode: standalone) {
+  :root {
+    --app-safe-top: max(env(safe-area-inset-top, 0px), 59px);
+  }
 }
 
 .dark {
@@ -275,6 +350,15 @@
   * {
     @apply border-border;
   }
+  /* On-brand text selection — the browser default is blue, off-brand against the
+     evergreen/gold/cream palette (most visible on amount inputs that auto-select
+     on focus, e.g. the recurring/one-time amount). Evergreen-tinted instead. */
+  ::selection {
+    background-color: hsl(var(--kiddo-evergreen) / 0.28);
+  }
+  ::-moz-selection {
+    background-color: hsl(var(--kiddo-evergreen) / 0.28);
+  }
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-feature-settings: "cv11", "ss01", "kern" 1;
@@ -282,16 +366,37 @@
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: 0;
     overflow-x: hidden;
+    /* Kill accidental DOUBLE-TAP zoom (the "weird, I can drag the whole page
+       around" gesture — a zoomed page pans in every direction). `manipulation`
+       still allows scrolling AND pinch-zoom, so the low-vision pinch-zoom we
+       deliberately keep (see index.html viewport note) is preserved. Bonus:
+       removes the 300ms tap delay, so taps feel snappier. */
+    touch-action: manipulation;
+    /* Remove the browser's default gray tap-flash on mobile — it's off-brand and
+       reads as "website," and the app already provides its own press feedback
+       (Button active:scale-[0.97], the bottom-nav whileTap spring, .card-tactile /
+       .kiddo-press). -webkit-tap-highlight-color is inherited, so body covers every
+       descendant. The one tradeoff: long-tail tappables that DON'T have a custom
+       press state lose their only feedback — but the gray flash was never the
+       feedback we'd want anyway; the fix is to give those elements .kiddo-press. */
+    -webkit-tap-highlight-color: transparent;
+    /* Stop iOS from auto-inflating body text on rotation — keeps the tuned type
+       scale honest (a subtle but real "native, not webpage" detail). */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-semibold;
-    letter-spacing: 0;
+    /* Slight negative tracking on headings only (body stays at 0). Large display
+       type reads tight + crafted when letters are pulled in a hair; flat 0 was an
+       accreted default. Premium-type discipline; scales by heading size below. */
+    letter-spacing: -0.011em;
   }
   h1 {
-    letter-spacing: 0;
+    letter-spacing: -0.025em;
   }
   h2 {
-    letter-spacing: 0;
+    letter-spacing: -0.018em;
   }
   button, [role="button"], .btn {
     cursor: pointer;
@@ -363,8 +468,12 @@ input:focus, textarea:focus, select:focus {
   transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
 }
 input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:disabled) {
-  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.08);
-  border-color: hsl(var(--kora-evergreen) / 0.4);
+  /* Soft brand glow stays, but the FOCUS BORDER goes full evergreen (it was
+     being diluted to 0.4 here, overriding input.tsx's focus:border-primary).
+     A full-evergreen 2px border on cream is ~12:1 — well past WCAG 2.4.7's
+     3:1 — so keyboard focus is unmistakable without a heavy ring. */
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.18);
+  border-color: hsl(var(--kora-evergreen));
   outline: none;
 }
 
@@ -376,7 +485,9 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 [role="switch"]:focus-visible {
-  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.1);
+  /* A switch has no border to lean on, so the ring itself must clear WCAG.
+     Evergreen at 0.55 over cream is ~3.4:1 (vs the old 0.1 ≈ 1.2:1). */
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.55);
   outline: none;
 }
 
@@ -480,6 +591,64 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   0% { opacity: 0.6; transform: scale(0.95); }
   70% { opacity: 0; transform: scale(1.18); }
   100% { opacity: 0; transform: scale(1.18); }
+}
+
+/* ── Page-transition vocabulary (Wise register: a SMALL, semantic set, not a
+   zoo of effects). Built on the motion tokens above, so every transition shares
+   the app's perceived speed + easing. Three meanings, each tied to intent —
+   "one pattern per need, always intentional":
+     .kiddo-enter-up   — "a NEW flow/action starts here" (gift, deposit). Rises
+                          from below like a sheet taking over. Pair with a
+                          dismiss control top-left; on a money action that
+                          escape hatch is trust, not decoration.
+     .kiddo-enter-side — "CONTINUING a flow" (consecutive steps). Slides in from
+                          the trailing edge, hinting at forward progress.
+     .kiddo-fade-in    — top-level destinations + content settling. A quiet fade;
+                          top-level screens aren't related, so the motion makes
+                          NO spatial connection on purpose (the M3 top-level rule).
+   Reduced motion collapses all three to a bare fade — no travel, no overshoot. */
+@keyframes kiddo-enter-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes kiddo-enter-side {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes kiddo-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.kiddo-enter-up   { animation: kiddo-enter-up   var(--duration-slow)   var(--ease-out-expo) both; }
+.kiddo-enter-side { animation: kiddo-enter-side var(--duration-normal) var(--ease-out-expo) both; }
+.kiddo-fade-in    { animation: kiddo-fade-in    var(--duration-normal) var(--ease-out-expo) both; }
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-enter-up,
+  .kiddo-enter-side,
+  .kiddo-fade-in { animation: kiddo-fade-in var(--duration-fast) linear both; }
+}
+/* Fund-composition / "Last 30 days" breakdown rows (DashboardLab):
+   every row must stay a SINGLE clean line on mobile. A long label like
+   "Gifts from people who love {child}" against a wide amount used to wrap the
+   row onto two lines on narrow screens (founder: "sometimes becomes two rows
+   and shouldn't"). Fix: the label (left) truncates with an ellipsis and the
+   amount (right) never shrinks, so the row can never wrap. Scoped to the
+   breakdown container so it can't touch other rows. The selector specificity
+   (.last30-breakdown > button = 0,1,1) intentionally beats Tailwind's
+   `items-baseline` (0,1,0) so alignment is clean without an inline change, and
+   the span children are flex items (blockified) so text-overflow:ellipsis
+   applies. */
+.last30-breakdown > button {
+  align-items: center;
+}
+.last30-breakdown > button > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.last30-breakdown > button > span:last-child {
+  flex-shrink: 0;
 }
 /* Print stylesheet — sophisticated parents (or their CPAs) Cmd/Ctrl+P
    the Tax Documents page at year-end to attach to the kid's tax
@@ -589,6 +758,39 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   }
 }
 
+/* Skeleton loaders use Tailwind's `animate-pulse` (a 2s opacity cycle),
+   which Tailwind itself does NOT guard for reduced motion. Our reduced-
+   motion handling is a set of targeted kills (above/below) with no global
+   `* { animation: none }` net, so without this rule every loading
+   skeleton app-wide (SkeletonBlock, KiddoSkeleton, and any ad-hoc
+   animate-pulse) keeps cycling for vestibular-sensitive users. The static
+   tinted block still reads clearly as "loading". WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse { animation: none; }
+}
+
+/* Radix entrance/exit animations (tailwindcss-animate `animate-in`/`animate-out`
+   on Sheets, Dialogs, Popovers, Dropdowns) are NOT guarded by the plugin for
+   reduced motion — the same gap as `animate-pulse` above, and the reason a
+   bottom sheet still SLID up/down for vestibular-sensitive users even though the
+   count-up inside it already honored the preference. Zero ONLY the translate /
+   scale / rotate enter/exit vars so any opacity fade is preserved (a cross-fade
+   is reduced-motion-safe); the slide motion is removed, the appearance stays
+   soft. App-wide: covers every Radix overlay in one rule. WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-rotate: 0 !important;
+  }
+}
+
 /* Milestone celebration — restraint version of the original "stars
    burst from the balance" idea. No particles, no sparkle elements
    (locked: feedback_no_ai_slop). Instead: a brief gold-ring breath
@@ -636,20 +838,32 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   -webkit-backdrop-filter: blur(16px) saturate(1.08);
   border-bottom: 1px solid hsl(var(--border) / 0.8);
   box-shadow: 0 1px 0 hsl(var(--background) / 0.75);
+  /* Reserve the iOS status-bar / Dynamic Island inset so this sticky top bar
+     clears the notch in the black-translucent PWA (0 in a normal browser tab).
+     Mirrors AppHeader / Nav. */
+  padding-top: var(--app-safe-top);
 }
 
 .mobile-nav-shell {
-  border: 1px solid hsl(var(--border) / 0.9);
-  border-radius: 24px;
+  border: none;
+  border-top: 1px solid hsl(var(--border) / 0.9);
+  border-radius: 20px 20px 0 0;
   background:
     linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.98));
   box-shadow:
-    0 18px 40px -26px rgba(24, 33, 28, 0.42),
-    0 8px 18px -16px rgba(24, 33, 28, 0.22),
+    0 -10px 30px -18px rgba(24, 33, 28, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.52);
   backdrop-filter: blur(14px) saturate(1.04);
   -webkit-backdrop-filter: blur(14px) saturate(1.04);
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  /* Flush, edge-to-edge bottom bar (native posture, 2026-07 — was a floating
+     pill: border-radius 24, all-round border, floating drop-shadow). Now: rounded
+     TOP only, a top hairline, and a soft UPWARD shadow lifting it off the content
+     above. The home-indicator safe-area rides here as INTERNAL padding so the
+     glass extends behind the indicator (no gap). Non-notched phones (inset = 0)
+     keep the 6px floor. padding-top balances the row so the icons+labels sit
+     centered in the bar proper rather than jammed against the top hairline. */
+  padding-top: 9px;
+  padding-bottom: calc(7px + env(safe-area-inset-bottom));
 }
 
 .get-started-screen {
@@ -908,22 +1122,8 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   }
 }
 
-/* Pull-to-refresh indicator */
-.pull-indicator {
-  position: absolute;
-  top: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 24px;
-  border: 2px solid hsl(var(--muted-foreground));
-  border-top-color: hsl(var(--primary));
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin {
-  to { transform: translateX(-50%) rotate(360deg); }
-}
+/* (Pull-to-refresh indicator CSS removed 2026-06-07 — never wired; see the
+   note in lib/animations.ts for the deliberate no-web-PTR decision.) */
 
 /* Swipe card hint */
 .swipe-hint {
@@ -991,6 +1191,27 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 .momentum-scroll {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+}
+
+/* Pull-to-refresh was firing by accident on mobile (founder report 2026-06-25:
+   "too sensitive, tries to refresh as though I pulled down"). `contain` on
+   html/body kills the browser's pull-to-refresh + scroll-chaining in a TAB while
+   leaving normal scrolling intact — so a slightly-overscrolled swipe no longer
+   reloads the app. (Previously this was locked in standalone only, which left the
+   accidental refresh live in mobile Safari/Chrome before install.) We don't have
+   a real refresh action anyway — the app keeps itself fresh on focus/visibility. */
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Installed-PWA (standalone) viewport lock — no browser chrome, so the page
+   rubber-bands and can be dragged in every direction without this. Lock all axes. */
+@media all and (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior: none;
+  }
 }
 
 /* Subtle grain texture */
@@ -1143,17 +1364,6 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   transform: scale(0.92);
 }
 
-/* Premium visual effects */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.dark .glass-effect {
-  background: rgba(20, 30, 25, 0.8);
-}
-
 /* Subtle gradient overlay for premium feel */
 .gradient-overlay {
   position: relative;
@@ -1173,9 +1383,9 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 
 /* Premium shadow levels */
 .shadow-premium-sm {
-  box-shadow: 
-    0 1px 3px rgba(26, 23, 16, 0.06),
-    0 4px 16px rgba(26, 23, 16, 0.06);
+  box-shadow:
+    0 1px 3px rgba(26, 23, 16, 0.08),
+    0 8px 24px rgba(26, 23, 16, 0.10);
 }
 .shadow-premium {
   box-shadow: 
@@ -1277,12 +1487,14 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 .kiddo-app-page {
   min-height: 100vh;
   background: hsl(var(--kiddo-cream));
-  font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "DM Sans Variable", "DM Sans", "DM Sans Fallback", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .font-heading {
-  font-family: "Bricolage Grotesque", system-ui, sans-serif;
-  letter-spacing: -0.01em;
+  font-family: "Bricolage Grotesque Variable", "Bricolage Grotesque", "Bricolage Grotesque Fallback", system-ui, sans-serif;
+  /* -0.018em: large display type (the balance number, section headings) reads
+     tighter + more crafted. Was -0.01em; the body sledgehammer keeps text at 0. */
+  letter-spacing: -0.018em;
 }
 
 .kiddo-canvas {
@@ -1306,9 +1518,48 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
      Transition covers hover lift + active press without affecting layout. */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 3px rgba(26, 23, 16, 0.06),
-    0 4px 16px rgba(26, 23, 16, 0.06);
+    0 1px 3px rgba(26, 23, 16, 0.08),
+    0 8px 24px rgba(26, 23, 16, 0.10);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Calmer cards on Settings + Activity (founder 2026-07-01: "settings/activity —
+   lots going on, cut down, on par"). These pages are DENSE with real controls +
+   info cards, so the heavy floaty shadow + hover-lift made every block read
+   "loud." Flatten to a quiet, list-like weight — content + features unchanged,
+   just calmer. Scoped by page testid so the dashboard (which earns its depth) is
+   untouched. Reversible: delete this block. */
+/* On-par-with-dashboard pass (2026-07-02). Settings + Activity are built from
+   inline `bg-card` (near-white 99% L) + `shadow-premium-*` cards on the cream page
+   (95% L), so every block pops as a white box — the opposite of the dashboard,
+   where content flows on the cream. Recede them: (1) remap the card fill to the
+   cream tone so cards stop popping, (2) kill the float shadow, (3) flatten the
+   .kiddo-card modules (Money Summary). Interactive fills (bg-primary/5, evergreen
+   tints) are untouched, so selected/tappable states still read. Delete to revert. */
+[data-testid="page-settings"],
+[data-testid="page-activity"] {
+  --card: 38 41% 95%; /* == --kiddo-cream: bg-card cards match the page → recede */
+  /* Soften every outline toward the cream so the receded groups read as flowing
+     page sections (the dashboard's near-borderless language), not outlined boxes. */
+  --kiddo-border: 36 24% 91%;
+  --border: 36 24% 91%;
+}
+[data-testid="page-settings"] [class*="shadow-premium"],
+[data-testid="page-activity"] [class*="shadow-premium"] {
+  box-shadow: none !important;
+}
+[data-testid="page-settings"] .kiddo-card,
+[data-testid="page-settings"] .kiddo-card-soft,
+[data-testid="page-activity"] .kiddo-card,
+[data-testid="page-activity"] .kiddo-card-soft {
+  background: transparent;
+  border-color: rgba(26, 23, 16, 0.08);
+  box-shadow: none;
+}
+[data-testid="page-settings"] .kiddo-card:hover,
+[data-testid="page-activity"] .kiddo-card:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .kiddo-card:hover {
@@ -1419,7 +1670,13 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 }
 
 .kiddo-tab-row {
-  display: inline-flex;
+  /* Full-width flex with equal columns so the strip fills its container
+     (matching Activity's grid) instead of hugging left and leaving a gap on
+     the right. Applies on all sizes; Settings/Account both use this class.
+     The Settings "Notifications" tab uses a responsive "Alerts" label on
+     mobile so 4 equal columns fit a phone without clipping. Added 2026-07. */
+  display: flex;
+  width: 100%;
   gap: 4px;
   border-radius: 16px;
   background: hsl(var(--kiddo-cream-dark));
@@ -1427,8 +1684,11 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 }
 
 .kiddo-tab-item {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
   border-radius: 10px;
-  padding: 8px 18px;
+  padding: 8px 12px;
   font-size: 0.82rem;
   color: hsl(var(--kiddo-muted));
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
@@ -2001,6 +2261,10 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   background: hsl(var(--background) / 0.85);
   border-bottom: 1px solid hsl(var(--border) / 0.3);
   transition: backdrop-filter 0.3s ease, background 0.3s ease;
+  /* Reserve the iOS status-bar / Dynamic Island inset so this sticky top bar
+     clears the notch in the black-translucent PWA (0 in a normal browser tab).
+     Mirrors AppHeader / Nav. */
+  padding-top: var(--app-safe-top);
 }
 .gemini-glass-nav.scrolled {
   background: hsl(var(--background) / 0.92);
@@ -2294,4 +2558,33 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+/* ── View Transitions: forward two-sided push ──────────────────────────────
+   Native iOS/Android push feel on the web. The whole page (root) is snapshotted;
+   forward navigation parallaxes the OUTGOING page left + dims it while the
+   incoming page slides in from the right OVER it (a leading-edge shadow sells the
+   depth). Driven by the JS installer in lib/view-transition.ts, which is
+   feature-detected + reduced-motion + tab-switch aware and sets data-vt-dir only
+   for a real forward push. Back stays on NavTransition's framer slide (the
+   History API gives no hook to wrap a popstate re-render). */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(root) { animation-duration: 320ms; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 320ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+    /* A push SLIDES; override the API's default cross-fade so pages don't ghost. */
+    mix-blend-mode: normal;
+  }
+  html[data-vt-dir="forward"]::view-transition-old(root) { animation-name: vt-push-old; }
+  html[data-vt-dir="forward"]::view-transition-new(root) { animation-name: vt-push-new; }
+  @keyframes vt-push-old {
+    from { transform: translateX(0);     filter: brightness(1); }
+    to   { transform: translateX(-24%);  filter: brightness(0.8); }
+  }
+  @keyframes vt-push-new {
+    from { transform: translateX(100%); box-shadow: -16px 0 44px rgba(20, 58, 44, 0.18); }
+    to   { transform: translateX(0);    box-shadow: -16px 0 0 rgba(20, 58, 44, 0); }
+  }
 }

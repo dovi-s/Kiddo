@@ -59,20 +59,27 @@ export function CloseFundCard({
 
   return (
     <SectionCard className="border-border/60">
+      {/* Title-left, action top-right — matching the sibling fund cards
+          (Successor custodian, Co-parent access) so the Child tab's card
+          actions line up instead of this one hanging below-left. The
+          close action's safety comes from its confirmation dialog + this
+          card sitting last in the tab, not from burying the button. */}
       <div className="p-5">
-        <h2 className="text-base font-bold text-foreground">Close this fund</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Stop accepting gifts to {fundPossessive} fund. The Memory Book and history stay intact, and you can reopen anytime.
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-foreground">Close this fund</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 rounded-xl h-8 px-3 text-xs"
+            onClick={() => { haptic("light"); onOpenCloseDialog(); }}
+            data-testid="button-open-close-fund"
+          >
+            Close fund
+          </Button>
+        </div>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Stop accepting gifts to {fundPossessive} fund. Memory Book and history stay, reopen anytime.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-4 rounded-xl"
-          onClick={() => { haptic("light"); onOpenCloseDialog(); }}
-          data-testid="button-open-close-fund"
-        >
-          Close fund
-        </Button>
       </div>
     </SectionCard>
   );

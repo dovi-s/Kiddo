@@ -1,12 +1,14 @@
 // FundDetailsCard — the read-only fund-metadata block in
 // Settings.tsx's Child tab. Fund name, account type, status,
-// UTMA transfer date, plus an "Edit fund" row that opens the
-// in-page edit modal.
+// UTMA transfer date.
 //
 // Extracted on 2026-05-14 as Phase 2 sheet-extraction chunk 3.
-// Pure display + one callback for the Edit-fund modal trigger
-// (the modal itself stays in Settings because it's a wider
-// surface shared with other affordances).
+// The "Edit fund" row was removed 2026-07: it opened the EXACT
+// same combined editor as the Child card's "Edit child details"
+// (both were wired to onEditFund in FundSettingsChildPanel), so
+// two differently-labeled buttons led to one modal. The child-card
+// entry is the single door now; that modal still edits the fund
+// name alongside the child fields. This card is now pure display.
 //
 // The transfer-date row only renders for UTMA funds with a real
 // recipient birthdate. Personal funds and unfilled UTMA funds
@@ -15,7 +17,6 @@
 // majority ages (Mississippi 21, California 21, etc.) are
 // respected without duplicating the math here.
 
-import { ChevronRight } from "lucide-react";
 import { getMajorityDate } from "@shared/utma";
 import { capFirst } from "@/lib/format-name";
 
@@ -38,10 +39,8 @@ type FundDetailsShape = {
 
 export function FundDetailsCard({
   fund,
-  onEditFund,
 }: {
   fund: FundDetailsShape;
-  onEditFund: () => void;
 }) {
   const isUtma = !fund?.accountType || String(fund.accountType).toUpperCase() === "UTMA";
   const transferDate = isUtma && fund?.recipientBirthdate
@@ -93,15 +92,6 @@ export function FundDetailsCard({
             </span>
           </div>
         )}
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
-          onClick={onEditFund}
-          data-testid="button-edit-fund-child-tab"
-        >
-          <span className="text-sm text-muted-foreground">Edit fund</span>
-          <ChevronRight size={16} className="text-muted-foreground" />
-        </button>
       </div>
     </SectionCard>
   );

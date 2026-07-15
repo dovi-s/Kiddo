@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { haptic } from "@/lib/haptics"
+import { useSheetDragDismiss } from "@/lib/use-sheet-drag-dismiss"
 
 const Sheet = SheetPrimitive.Root
 
@@ -63,29 +64,45 @@ const SheetContent = React.forwardRef<
   React.useEffect(() => {
     haptic('light')
   }, [])
-  
+
+  // Swipe-down-to-dismiss on the bottom sheet (founder ask 2026-06-14). The
+  // existing handle row becomes the drag grab zone via the shared hook; it
+  // never fights body scroll and triggers the real Radix close past a threshold.
+  const { setContentRef, closeRef, handleProps } = useSheetDragDismiss<HTMLDivElement>(ref)
+  const bottomRef = side === "bottom" ? setContentRef : ref
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
-        ref={ref}
+        ref={bottomRef}
         className={cn(sheetVariants({ side }), className)}
         {...props}
       >
         {side === "bottom" ? (
           <>
-            <div className="flex justify-center mb-5">
+            {/* Handle row = the drag grab zone (touch-none so it never scrolls
+                the body); swipe it down past the threshold to dismiss. */}
+            <div {...handleProps} className="flex justify-center mb-5 -mt-1 py-1.5 touch-none cursor-grab active:cursor-grabbing" data-testid="sheet-drag-handle">
               <div className="w-10 h-1 rounded-full bg-muted-foreground/25 transition-colors hover:bg-muted-foreground/40" />
             </div>
+            <SheetPrimitive.Close ref={closeRef} aria-hidden="true" tabIndex={-1} className="sr-only">close</SheetPrimitive.Close>
             {children}
           </>
         ) : (
           <>
-            <SheetPrimitive.Close 
-              className="absolute right-4 top-4 rounded-xl p-2.5 bg-muted/50 opacity-80 ring-offset-background transition-all duration-150 hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none active:scale-95"
-              onClick={() => haptic('light')}
+            {/* Canonical close affordance — matches ModalCloseButton exactly
+                (44px hit target, 28px muted chip, X size 15, `selection` haptic)
+                so the close is identical across every modal/sheet. DESIGN_SYSTEM
+                §9: one close, everywhere. Kept on the Radix Close mechanism. */}
+            <SheetPrimitive.Close
+              aria-label="Close"
+              className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+              onClick={() => haptic('selection')}
             >
-              <X className="h-5 w-5" />
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted">
+                <X size={15} />
+              </span>
               <span className="sr-only">Close</span>
             </SheetPrimitive.Close>
             {children}

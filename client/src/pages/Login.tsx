@@ -11,11 +11,27 @@ import { useQueryClient } from "@tanstack/react-query";
 import { prefetchDashboard } from "@/lib/prefetch";
 import { PasskeySignInButton } from "@/components/PasskeySignInButton";
 import { getActiveFundId } from "@/hooks/use-active-fund";
+import { getLastAuthMethod, setLastAuthMethod, type AuthMethod } from "@/lib/last-auth-method";
 
 function getSafeRedirectTarget(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   if (value.startsWith("/login")) return "/dashboard";
   return value;
+}
+
+// "Last used" hint shown next to the method a returning user signed in with last
+// time (the Lovable pattern). Only rendered for the ALTERNATIVE methods (magic /
+// passkey) — if password was last, the default form is already the obvious path,
+// so no badge is needed there.
+function LastUsedBadge() {
+  return (
+    <span
+      className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.1)] px-2 py-0.5 text-3xs font-semibold uppercase tracking-[0.04em] text-[hsl(var(--kiddo-evergreen))]"
+      data-testid="badge-last-used"
+    >
+      Last used
+    </span>
+  );
 }
 
 export default function Login() {
@@ -45,6 +61,10 @@ export default function Login() {
   // enabled (password verified, session NOT yet established).
   const [twoFactorStep, setTwoFactorStep] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  // "Last used" sign-in hint. Read AFTER mount (localStorage is client-only, so
+  // this stays SSR-safe). Local-only, method-only — see lib/last-auth-method.
+  const [lastMethod, setLastMethod] = useState<AuthMethod | null>(null);
+  useEffect(() => { setLastMethod(getLastAuthMethod()); }, []);
   const { login, isLoggingIn, loginError, verifyTwoFactor, isVerifyingTwoFactor, verifyTwoFactorError } = useAuth();
   const queryClient = useQueryClient();
   // Respect prefers-reduced-motion (parity with the other animated pages, e.g.
@@ -99,6 +119,7 @@ export default function Login() {
         return;
       }
       haptic('success');
+      setLastAuthMethod("password");
       // Pre-warm the dashboard the user is about to land on. Fires in
       // parallel with setLocation — by the time React renders the new route,
       // /api/funds is in flight (or already settled). Saves the post-login
@@ -120,6 +141,7 @@ export default function Login() {
     try {
       await verifyTwoFactor(twoFactorCode.trim());
       haptic('success');
+      setLastAuthMethod("password");
       if (redirectTarget === "/dashboard" || redirectTarget.startsWith("/dashboard")) {
         prefetchDashboard(queryClient, getActiveFundId());
       }
@@ -169,6 +191,10 @@ export default function Login() {
     } finally {
       setMagicLoading(false);
       setMagicSent(true);
+      // Proxy: record the CHOICE of magic-link here. The actual session lands via
+      // the email-link callback, but requesting it is a strong "this is my method"
+      // signal — good enough for a returning-user hint.
+      setLastAuthMethod("magic");
       haptic('success');
     }
   };
@@ -189,10 +215,16 @@ export default function Login() {
                 <Logo> lockup is now the only brand mark, matching GetStarted. */}
             <div className="space-y-2">
               <div className="flex items-center justify-center">
-                <Logo size="lg" showWordmark={true} linkTo={null} />
+                <Logo size="lg" showWordmark={true} linkTo="/" />
               </div>
               <h1 className="text-3xl font-semibold text-foreground">Welcome back</h1>
-              <p className="text-base text-muted-foreground">Your child's future is growing.</p>
+              {/* Role-neutral by design (2026-06-07): login is the shared entry
+                  for parents AND gifters, and pre-auth we don't know which. The
+                  old "Your child's future is growing" assumed parent — wrong for
+                  a grandparent signing into their gifter dashboard (no "child"
+                  in the app). This line is true for both and echoes the locked
+                  relational doorway language ("for someone you love"). */}
+              <p className="text-base text-muted-foreground">The future you're growing for someone you love.</p>
             </div>
           </div>
 
@@ -243,7 +275,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={!twoFactorCode.trim() || isVerifyingTwoFactor}
-                  className="w-full h-11 rounded-xl bg-foreground text-background font-semibold disabled:opacity-50"
+                  className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                   data-testid="button-2fa-verify"
                 >
                   {isVerifyingTwoFactor ? "Verifying..." : "Verify and sign in"}
@@ -364,11 +396,12 @@ export default function Login() {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <button
                   type="button"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+                  className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
                   onClick={() => { haptic('light'); setMagicEmail(email); setShowMagicLink(true); setMagicSent(false); }}
                   data-testid="button-magic-link-signin"
                 >
                   Email me a sign-in link
+                  {lastMethod === "magic" && <LastUsedBadge />}
                 </button>
                 <button
                   type="button"
@@ -413,9 +446,15 @@ export default function Login() {
               which establishes the same session shape the password
               flow does. Falls through silently when no passkey is
               registered or the browser doesn't support WebAuthn. */}
+          {lastMethod === "passkey" && (
+            <div className="flex justify-center mb-2">
+              <LastUsedBadge />
+            </div>
+          )}
           <PasskeySignInButton
             onSuccess={() => {
               haptic('success');
+              setLastAuthMethod("passkey");
               if (redirectTarget === "/dashboard" || redirectTarget.startsWith("/dashboard")) {
                 prefetchDashboard(queryClient, getActiveFundId());
               }

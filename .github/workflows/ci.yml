@@ -80,6 +80,7 @@ jobs:
           npm run test:dashboard-money-math
           npm run test:monetization
           npm run test:memory-utils
+          npm run test:sitemap-coverage
 
       - name: Content lint (em-dashes, banned words)
         # Catches the user-facing copy violations that the locked

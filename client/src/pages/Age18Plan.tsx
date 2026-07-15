@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { safeLocalSet } from "@/lib/local-cache";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail, BookOpen } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,13 @@ import { Slider } from "@/components/ui/slider";
 import { NoteEditorSheet } from "@/components/NoteEditorSheet";
 import { ScheduledLetterEditor } from "@/components/ScheduledLetterEditor";
 import { ScheduledLettersList } from "@/components/ScheduledLettersList";
-import { useFunds } from "@/hooks/use-funds";
+import { useFunds, fundsFromCaches } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { getAge18Transition, formatAgeTransitionDate } from "@/lib/age-transition";
-import { projectFundValue } from "@shared/projection";
+import { projectFundValue, PROJECTION_DISCLAIMER } from "@shared/projection";
 import { sumMonthlyEquivalent } from "@shared/recurring-math";
 import { getPronouns } from "@/lib/pronouns";
 import { capFirst } from "@/lib/format-name";
@@ -24,8 +24,8 @@ import { haptic } from "@/lib/haptics";
 import { useCountUp } from "@/hooks/use-count-up";
 
 // Checklist items factory — parameterized on majorityAge so copy reflects the
-// fund's state-specific transfer age (18 in most states, 21 in CA/KY/IN,
-// 19 in AL/NE, 20 in MS). For 21-state customers, hardcoded "18" reads as
+// fund's state-specific transfer age (21 in most states; 18 in some, e.g. CA/KY;
+// 19 in AL/NE). For 21-state customers, hardcoded "18" reads as
 // factually wrong and contradicts the state-aware lifecycle worker. Same
 // shape as buildTimeline / buildFaq below.
 function buildChecklist(majorityAge: number) {
@@ -99,7 +99,7 @@ function buildTimeline(childName: string, majorityAge: number, majorityOrdinal: 
     {
       label: `Age ${majorityAge}`,
       heading: "Control transfers",
-      detail: `Legal custodianship ends. ${childName} gets full control. The investments stay exactly where they are. Nothing sells. Nothing changes except who decides.`,
+      detail: `Legal custodianship ends and ${childName} gets full control. The investments stay exactly where they are. Nothing sells; the only thing that changes is who decides.`,
     },
   ];
 }
@@ -116,7 +116,7 @@ function buildFaq(childName: string, majorityAge: number, majorityOrdinal: strin
     },
     {
       q: `What if ${childName} doesn't want the money at ${majorityAge}?`,
-      a: "The fund can stay invested. Nothing forces a decision. It keeps compounding. There's no rush.",
+      a: "The fund can stay invested and keep compounding. Nothing forces a decision, so there's no rush.",
     },
     {
       q: "What taxes are owed?",
@@ -137,7 +137,7 @@ function formatCurrency(n: number) {
 // 7% historical average, 0.10% AUM fee netted, effective monthly compounding,
 // contributions capped at the majority window. The disclaimer travels with
 // every render so a parent who reconciles against reality never feels oversold.
-const KIDDO_PROJECTION_DISCLAIMER = "Assuming 7% yearly average. Markets vary. Time is what compounds.";
+const KIDDO_PROJECTION_DISCLAIMER = PROJECTION_DISCLAIMER;
 
 function projectAt18(balance: number, yearsLeft: number, monthlyContrib: number): number {
   return projectFundValue({ startingValue: balance, monthlyContribution: monthlyContrib, yearsAhead: yearsLeft });
@@ -173,7 +173,12 @@ export default function Age18Plan() {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  const activeFund = funds.find((f) => f.id === storedFundId) ?? funds[0];
+  // Frame-one fund resolution (see findFundInCaches / Projection.tsx): useFunds()
+  // briefly returns [] on push-nav (async auth re-check), which flashed the loading
+  // skeleton — and a View Transition would FREEZE it. Fall back to the durable caches
+  // (query cache → localStorage snapshot) so the fund is present on frame one.
+  const effectiveFunds = funds.length ? funds : fundsFromCaches(queryClient);
+  const activeFund = effectiveFunds.find((f) => f.id === storedFundId) ?? effectiveFunds[0];
   // Post-handoff adult owner. NOTE: Age18Plan is otherwise parent-framed throughout (it's the
   // pre-handoff prep surface); this only fixes the flagged third-person self-reference on the
   // letter CTA. The page as a whole still needs a fuller owner-mode pass (like TaxDocuments got).
@@ -181,7 +186,7 @@ export default function Age18Plan() {
 
   // Active recurring on THIS fund — used to seed the projection slider's
   // default so the "Projected value at {majority}" centerpiece reflects
-  // the parent's REAL monthly (e.g. Luke's $75/mo), not a hardcoded $50
+  // the parent's REAL monthly (e.g. Theo's $75/mo), not a hardcoded $50
   // that matched no schedule and made this page's headline disagree with
   // the Dashboard's "On track for $X when {child} turns {majority}" number.
   // Same endpoint + monthly-normalization the Dashboard uses.
@@ -328,7 +333,7 @@ export default function Age18Plan() {
   // slider in a sprint; they cannot match the family record next to it.
   //
   // Per the locked decision in DUNPHY_DEMO_SPEC.md and the 2026-05-20
-  // strategic reset: ships inside the public Dunphy demo first, not
+  // strategic reset: ships inside the public Rivera demo first, not
   // into the live product yet. The user.isDemoAccount gate below keeps
   // real customer accounts on the existing 4-row static projection
   // until we're ready to graduate this.
@@ -353,7 +358,7 @@ export default function Age18Plan() {
   }, [activeRecurringMonthly]);
   // When the slider is hidden (yearsLeft < 1), the hero number must
   // NOT silently bake in the slider's $50 default — that'd inflate
-  // Haley's "what you inherit" number by money that doesn't exist.
+  // Mia's "what you inherit" number by money that doesn't exist.
   // Force zero monthly in that branch so the hero shows the honest
   // current-balance-compounded-over-the-remaining-runway value.
   const sliderVisible = yearsLeft >= 1;
@@ -553,6 +558,22 @@ export default function Age18Plan() {
             Locked 2026-05-18 per user feedback "needs a back button
             top left." */}
 
+        {/* Post-handoff owner context. The rest of this page is written for
+            the custodian PREPARING for the handoff, so for someone who now
+            owns the fund it can read as the wrong audience. Rather than
+            re-voice every heading/checklist/FAQ (a founder-owned copy pass,
+            like TaxDocuments got), surface a calm banner that names the
+            audience and reframes the page as a record of what was planned.
+            isOwnerMode = transferredAt && accessRole === "owner". */}
+        {isOwnerMode && (
+          <div className="kiddo-card p-4 mb-5 border-2 border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.04)]">
+            <p className="text-sm font-semibold text-foreground">This fund is yours now.</p>
+            <p className="text-sm text-muted-foreground mt-1 leading-snug">
+              This page was written to help the custodian plan for the handoff, so some of it still speaks to them. It is here as a record of what was set up for you.
+            </p>
+          </div>
+        )}
+
         {/* Page title */}
         <div className="mb-6">
           <h1 className="font-heading text-2xl font-bold text-foreground">
@@ -577,7 +598,7 @@ export default function Age18Plan() {
           <div className="kiddo-card p-5 mb-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Time remaining</p>
+                <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Time remaining</p>
                 {age18Transition.monthsUntil18 <= 18 ? (
                   // Final 18 months — months as the headline unit so the
                   // number doesn't read "0 years" the whole runway.
@@ -621,7 +642,7 @@ export default function Age18Plan() {
               </div>
               {totalValue > 0 && (
                 <div className="text-right shrink-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">On track for</p>
+                  <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">On track for</p>
                   <p
                     className="text-2xl font-bold text-[hsl(var(--kiddo-evergreen))] font-heading leading-none tabular-nums"
                     aria-live={heroProjectionAnimating ? "off" : "polite"}
@@ -629,7 +650,7 @@ export default function Age18Plan() {
                   >
                     {formatCurrency(animatedHeroProjection)}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1.5">at 7% yearly average*</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">at 7% average (gifts only)*</p>
                 </div>
               )}
             </div>
@@ -639,7 +660,7 @@ export default function Age18Plan() {
                 The investments stay exactly where they are.
               </p>
               {totalValue > 0 && (
-                <p className="text-[10px] text-muted-foreground/55 leading-snug mt-2">
+                <p className="text-3xs text-muted-foreground/55 leading-snug mt-2">
                   *{KIDDO_PROJECTION_DISCLAIMER}
                 </p>
               )}
@@ -653,11 +674,11 @@ export default function Age18Plan() {
             accounts see the simpler 4-row static projection further
             down. Per the 2026-05-20 strategic decision: this is
             Kiddo's answer to Acorns' Potential slider, and ships in
-            the public Dunphy demo first. */}
+            the public Rivera demo first. */}
         {isDemoUser && totalValue > 0 && (
           <div className="kiddo-card mb-4 overflow-hidden border-2 border-[hsl(var(--kiddo-evergreen)/0.25)]">
             <div className="px-5 pt-5 pb-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
+              <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
                 What {childName} inherits at {majorityAge}
               </p>
               <p className="text-xs text-muted-foreground/80 leading-snug mb-4">
@@ -666,7 +687,7 @@ export default function Age18Plan() {
 
               {/* Hero number — slider-driven projection */}
               <div className="rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)] px-5 py-5 mb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--kiddo-evergreen))/0.85] mb-1.5">
+                <p className="text-3xs font-semibold uppercase tracking-widest text-[hsl(var(--kiddo-evergreen))/0.85] mb-1.5">
                   Projected value at {majorityAge}
                 </p>
                 <p className="text-4xl font-bold text-[hsl(var(--kiddo-evergreen))] font-heading leading-none tabular-nums">
@@ -674,6 +695,15 @@ export default function Age18Plan() {
                 </p>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                   Enough for {whatThisCouldPayFor(sliderProjectedValue)}.
+                </p>
+                {/* Anchor this number to the gifts-only floor (the hero figure) so
+                    the page's two "at {majority}" numbers read as ONE range —
+                    with-monthly vs gifts-alone — instead of two competing headline
+                    figures a parent has to reconcile. */}
+                <p className="text-2xs text-muted-foreground/70 mt-2 leading-snug">
+                  {sliderMonthly > 0
+                    ? <>With <span className="font-medium text-foreground tabular-nums">${sliderMonthly}/mo</span> added. Gifts alone reach <span className="tabular-nums">{formatCurrency(heroProjection)}</span>.</>
+                    : "Gifts only, no monthly added."}
                 </p>
               </div>
 
@@ -688,7 +718,7 @@ export default function Age18Plan() {
                       </span>
                       {sliderMonthly > 0 ? " each month" : " on top"}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/70 tabular-nums">
+                    <p className="text-3xs text-muted-foreground/70 tabular-nums">
                       {yearsLeft.toFixed(1)} years to go
                     </p>
                   </div>
@@ -707,7 +737,7 @@ export default function Age18Plan() {
                     step={25}
                     aria-label="Monthly add to fund"
                   />
-                  <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground/60 tabular-nums">
+                  <div className="flex justify-between mt-1.5 text-3xs text-muted-foreground/60 tabular-nums">
                     <span>$0</span>
                     <span>$150</span>
                     <span>$300</span>
@@ -716,7 +746,7 @@ export default function Age18Plan() {
               )}
 
               {/* Emotional layer — the part Acorns can't match in a sprint */}
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
+              <p className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
                 And the family record so far
               </p>
               <div className="grid grid-cols-2 gap-2 mb-4">
@@ -760,7 +790,7 @@ export default function Age18Plan() {
 
               {/* First thing she'll see — the parent's sealed letter */}
               <div className="rounded-xl border border-border bg-card/50 px-4 py-3.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1.5">
+                <p className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1.5">
                   First thing {she} {reads} on {her} {majorityOrdinal}
                 </p>
                 {parentLetter ? (
@@ -770,8 +800,8 @@ export default function Age18Plan() {
                         ? parentLetter.content.slice(0, 140).trim() + "…"
                         : parentLetter.content}"
                     </p>
-                    <p className="text-[11px] text-muted-foreground/80 mt-2">
-                      — {parentLetter.authorName || parentName || "Dad"}
+                    <p className="text-2xs text-muted-foreground/80 mt-2">
+                      From {parentLetter.authorName || parentName || "Dad"}
                     </p>
                   </>
                 ) : (
@@ -785,7 +815,7 @@ export default function Age18Plan() {
                 )}
               </div>
 
-              <p className="text-[10px] text-muted-foreground/55 leading-snug mt-3">
+              <p className="text-3xs text-muted-foreground/55 leading-snug mt-3">
                 Projection assumes 7% yearly average. Illustrative payment examples; costs vary by region and typically rise with inflation.
               </p>
             </div>
@@ -795,14 +825,14 @@ export default function Age18Plan() {
         {/* THE FUND */}
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The fund</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The fund</p>
             {/* Italic pull-quote "Everything stays exactly where it is..."
                 removed 2026-05-20. Same anti-pattern as the
                 "doesn't just receive a fund / She receives a letter"
                 teaser audited out 2026-05-11 (see comments in "Your
                 note" and "Memory Book" cards below): authorial prose
                 styled as a quote with no source, marketing voice on a
-                product surface. The three ✅ bullets below already
+                product surface. The three check bullets below already
                 say the same thing (Legal control transfers, UTMA law,
                 nothing automatic) without the serif-italic register
                 or the borrowed-authority quote marks. */}
@@ -820,24 +850,22 @@ export default function Age18Plan() {
                   : "Nothing happens automatically.",
               ].map((line, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className="text-sm mt-0.5 shrink-0">✅</span>
+                  <Check size={15} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
                   <p className="text-sm text-muted-foreground leading-snug">{line}</p>
                 </div>
               ))}
             </div>
-            {totalValue > 0 && age18Transition && (
-              <div className="mt-4 bg-[hsl(var(--kiddo-evergreen)/0.08)] rounded-xl px-4 py-3">
-                <p className="text-xs text-[hsl(var(--kiddo-evergreen))] font-medium">
-                  On track for <strong>{formatCurrency(projectFundValue({ startingValue: totalValue, monthlyContribution: 0, yearsAhead: age18Transition.daysUntil18 / 365.25 }))}</strong> by {majorityAge} at 7% yearly average.<span className="opacity-60">*</span>
-                </p>
-              </div>
-            )}
+            {/* The "On track for $X (gifts only)" restatement was removed here — it
+                repeated the hero number verbatim (same projectFundValue call), and
+                on a page that also leads with the "Projected value" centerpiece, a
+                third number reading made "which figure is it?" worse. The number
+                lives once, in the hero. */}
           </div>
           <div className="h-px bg-border/40 mx-5 mt-5" />
           <div className="px-5 py-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              What can {childName} do at {majorityAge}? Keep investing. Add to it. Manage it {fundPronouns.reflexive}.
-              Withdraw some or all for college, a business, a house. Anything. No restrictions. No penalties.
+              What can {childName} do at {majorityAge}? Keep investing, add to it, or manage it {fundPronouns.reflexive}.
+              Withdraw some or all for college, a business, or a house. There are no restrictions or penalties.
             </p>
           </div>
         </div>
@@ -845,7 +873,7 @@ export default function Age18Plan() {
         {/* YOUR NOTE */}
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your note</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your note</p>
             {/* Italic "doesn't just receive a fund. She receives a letter."
                 teaser removed 2026-05-11. Three things wrong:
                   1. Marketing voice on a product surface (AI-slop
@@ -871,8 +899,8 @@ export default function Age18Plan() {
                   if (parentLetter.photoUrl) parts.push("photo");
                   const summary = parts.length === 0 ? "Letter started" : parts.join(" + ") + " saved";
                   return (
-                    <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] mb-1">
-                      ✓ {summary}
+                    <p className="flex items-center gap-1 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] mb-1">
+                      <Check size={13} strokeWidth={2.5} className="shrink-0" /> {summary}
                     </p>
                   );
                 })()}
@@ -884,7 +912,7 @@ export default function Age18Plan() {
                   onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
                   className="inline-flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/60 hover:bg-muted transition-colors rounded-full px-4 py-2"
                 >
-                  ✉️ Edit →
+                  <Mail size={13} /> Edit →
                 </button>
               </div>
             ) : (
@@ -896,7 +924,7 @@ export default function Age18Plan() {
                   className="rounded-full text-xs h-9 px-5"
                   onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
                 >
-                  ✉️ Write {isOwnerMode ? "your" : childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
+                  <Mail size={13} /> Write {isOwnerMode ? "your" : childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
                 </Button>
               </div>
             )}
@@ -919,10 +947,10 @@ export default function Age18Plan() {
               <button
                 type="button"
                 onClick={() => { haptic("selection"); setScheduledLetterOpen(true); }}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
                 data-testid="button-schedule-sealed-letter"
               >
-                🕯️ Schedule another letter for a specific moment (13th birthday, graduation, every birthday, etc.) →
+                <Mail size={13} className="shrink-0" aria-hidden="true" /> Schedule another letter for a specific moment (13th birthday, graduation, every birthday, etc.) →
               </button>
             </div>
           </div>
@@ -952,7 +980,7 @@ export default function Age18Plan() {
         {/* THE MEMORY BOOK */}
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The Memory Book</p>
+            <p className="text-3xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The Memory Book</p>
             {/* Italic teaser removed (same anti-pattern as the "Your
                 note" card above — marketing rhythm, wrong verb,
                 hardcoded pronoun). Bullets below describe what the
@@ -976,11 +1004,11 @@ export default function Age18Plan() {
                 card. */}
             <div className="space-y-2 mb-4">
               {[
-                "Gifts, notes, photos, and milestones, kept in one place.",
-                "Names and messages from everyone who gave.",
-              ].map((line, i) => (
+                { line: "Gifts, notes, photos, and milestones, kept in one place.", Icon: BookOpen },
+                { line: "Names and messages from everyone who gave.", Icon: Users },
+              ].map(({ line, Icon }, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className="text-sm shrink-0">📖</span>
+                  <Icon size={16} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" aria-hidden="true" />
                   <p className="text-sm text-muted-foreground leading-snug">{line}</p>
                 </div>
               ))}
@@ -1054,7 +1082,7 @@ export default function Age18Plan() {
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] mt-2 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{item.label}</p>
+                      <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{item.label}</p>
                       <p className="text-sm font-semibold text-foreground">{item.heading}</p>
                       <AnimatePresence>
                         {openTimeline === i && (
@@ -1111,7 +1139,7 @@ export default function Age18Plan() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+              <p className="text-2xs text-muted-foreground mt-3 leading-relaxed">
                 *{KIDDO_PROJECTION_DISCLAIMER} Illustrative only. Past performance does not guarantee future results. Kiddo does not provide investment advice.
               </p>
             </div>
@@ -1214,17 +1242,16 @@ export default function Age18Plan() {
               beat — connects the future Roth to the existing fund
               metaphor). Per project_kid_2.0_handoff_funnel.md. */}
           <p className="text-xs text-muted-foreground leading-relaxed mt-4 pt-3 border-t border-border/50">
-            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). Tax-free growth is uniquely valuable when you're 17, not 47. Earned-income dollars compound the same way the gifts in this fund have.
+            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). Tax-free growth is worth the most when you start it young. Earned-income dollars compound the same way the gifts in this fund have.
           </p>
         </div>
 
         {/* The money conversation */}
         <div className="kiddo-card mb-4 p-5">
-          <p className="text-sm font-bold text-foreground mb-2">The money conversation does not start at {majorityAge}.</p>
+          <p className="text-sm font-bold text-foreground mb-2">Start the money conversation early.</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Families who do this well start at 13 or 14. Not about the numbers.
-            About the values behind the numbers. What does money mean? What would you do with it?
-            What does {childName} care about?
+            Families who do this well start at 13 or 14, and they talk about the values behind the
+            numbers more than the numbers. Ask {childName} what money means and what they'd want to do with it.
           </p>
         </div>
 
@@ -1298,6 +1325,7 @@ export default function Age18Plan() {
         parentName={parentName}
         pronoun={(activeFund as any)?.pronoun}
         recipientBirthdate={activeFund?.recipientBirthdate ? String(activeFund.recipientBirthdate) : null}
+        majorityAge={majorityAge}
         // Same Plus-on-fund gate the NoteEditorSheet's media picker
         // uses: noteEditorRequiresPlus=true means the parent is on
         // Free for this fund (the picker shows the wall). For the

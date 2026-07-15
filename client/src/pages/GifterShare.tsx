@@ -5,6 +5,7 @@ import { BookOpen, Gift, Heart } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Mascot } from "@/components/ui/mascot";
 
 type SharePayload = {
@@ -65,7 +66,7 @@ export default function GifterShare() {
                 </div>
 
                 {data.photoUrl ? (
-                  <img
+                  <FadeImage
                     src={data.photoUrl}
                     alt={`${data.childName} memory`}
                     className="h-64 w-full rounded-2xl object-cover"

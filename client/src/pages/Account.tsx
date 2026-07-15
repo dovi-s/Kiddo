@@ -6,10 +6,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 import { Button } from "@/components/ui/button";
+import { FadeImage } from "@/components/ui/fade-image";
 import { FounderBadge } from "@/components/ui/founder-badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star } from "lucide-react";
+import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star, Download } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
@@ -73,6 +75,12 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
         setError(body?.error || "Could not request the change. Try again.");
         return;
       }
+      const data = await res.json().catch(() => null);
+      if (data?.demo === true && data?.saved === false) {
+        // Demo no-op: don't advance to the "check both inboxes" success screen.
+        setError(data?.message || "Email changes save in your own account.");
+        return;
+      }
       setSubmitted(true);
       haptic("success");
     } catch (err: any) {
@@ -104,7 +112,7 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 text-[hsl(var(--kiddo-evergreen))] hover:text-[hsl(var(--kiddo-evergreen))]"
+            className="shrink-0 h-8 rounded-xl border border-[hsl(var(--kiddo-border))] px-3 text-xs font-semibold text-foreground hover:bg-muted/40"
             onClick={() => { setEditing(true); haptic("light"); }}
             data-testid="button-change-email"
           >
@@ -125,10 +133,10 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
         value={newEmail}
         onChange={(e) => setNewEmail(e.target.value)}
         placeholder="you@example.com"
-        className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="h-10 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         data-testid="input-new-email"
       />
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <p className="text-2xs leading-snug text-muted-foreground">
         We send a confirmation link to the new address and a heads-up to {currentEmail}. The change only happens once the new address confirms.
       </p>
       {error && <p className="text-xs text-red-700" data-testid="text-change-email-error">{error}</p>}
@@ -325,9 +333,33 @@ export default function Account() {
   // Account-deletion modal state. Modal handles the multi-step flow
   // (review → confirm → submit → done) + the blocked-for-balance state.
   const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  // Data-subject access: download a JSON export of the user's own data
+  // (GET /api/me/export). fetch+blob carries the session cookie and works in
+  // both dev and prod. The export is read-only and excludes SSN + secrets.
+  const [exportingData, setExportingData] = useState(false);
+  const handleExportData = async () => {
+    if (exportingData) return;
+    setExportingData(true);
+    try {
+      const res = await fetch("/api/me/export", { credentials: "include" });
+      if (!res.ok) throw new Error("export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kiddo-data-export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Couldn't prepare your export", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setExportingData(false);
+    }
+  };
   const profileNeedsName = !displayName;
   const profileNeedsPhoto = !user?.profileImageUrl;
-  const profileNeedsCompletion = profileNeedsName || profileNeedsPhoto;
 
   // Stripe billing portal — inline action on the plan card so paid users
   // can manage their billing without bouncing to Settings. Per the
@@ -444,7 +476,7 @@ export default function Account() {
           : null;
         const childSuffix = planFit?.fund?.childName ? ` for ${planFit.fund.childName}` : "";
         toast({
-          title: "You're all set",
+          title: "Plan updated",
           description: isStop
             ? `Kiddo Family stays active${until ? ` until ${until}` : ""}, then stops. Your Memory Books stay safe.`
             : data?.seamless
@@ -482,7 +514,7 @@ export default function Account() {
       } else if (res.status === 410 && data.expired) {
         // Sub fully expired — start a new checkout instead. Mirrors
         // the Settings reactivate flow.
-        toast({ title: "Subscription expired", description: "Starting a new checkout for you..." });
+        toast({ title: "Subscription expired", description: "Starting a new checkout for you…" });
         if (opts?.plan === "starter" && opts?.fundId) {
           await handleUpgradeStarter(opts.fundId);
         } else {
@@ -748,6 +780,7 @@ export default function Account() {
         });
         const payload = await res.json().catch(() => ({}));
         if (res.ok) {
+          if (demoBlocked(payload, toast)) { setUploadingPhoto(false); return; }
           queryClient.setQueryData(["/api/auth/user"], payload);
           haptic("success");
           toast({ title: "Photo updated" });
@@ -775,7 +808,8 @@ export default function Account() {
         body: JSON.stringify({ firstName, lastName }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setEditingName(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         haptic("success");
         toast({ title: "Name updated" });
@@ -799,7 +833,8 @@ export default function Account() {
         body: JSON.stringify({ preferredName: preferredName.trim() }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setSavingPreferredName(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         haptic("success");
         toast({ title: "Saved" });
@@ -830,7 +865,8 @@ export default function Account() {
         }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setSavingTrustedContact(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         haptic("success");
         toast({ title: "Trusted contact saved" });
@@ -861,7 +897,8 @@ export default function Account() {
         }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const updated = await res.json().catch(() => null);
+        if (demoBlocked(updated, toast)) { setSavingTrustedContact(false); return; }
         queryClient.setQueryData(["/api/auth/user"], updated);
         setTrustedContactName("");
         setTrustedContactEmail("");
@@ -897,6 +934,7 @@ export default function Account() {
       });
       const payload = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (demoBlocked(payload, toast)) { setSavingPassword(false); return; }
         haptic("success");
         toast({ title: "Password updated" });
         setChangingPassword(false);
@@ -932,11 +970,15 @@ export default function Account() {
           className="px-1"
           data-testid="account-hero"
         >
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+          <p className="text-3xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
             Account
           </p>
+          {/* Lead with the account holder's REAL name, not preferredName.
+              preferredName is the KID-facing nickname ("Mom", "Dad") — it belongs
+              on the Memory Book / Kid View, not on the legal-identity account
+              page, where showing "Mom" as the account holder read as a bug. */}
           <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
-            {((user as any)?.preferredName?.trim() || (user as any)?.firstName?.trim()) || "Your account"}
+            {displayName || (user as any)?.email || "Your account"}
           </h1>
           {/* Cross-link to per-fund settings. From the Account
               context the user expects a fund picker, not a jump
@@ -964,6 +1006,11 @@ export default function Account() {
           </p>
         </motion.div>
 
+        {/* Sticky tab strip: pins under the AppHeader (~56px) so Personal /
+            Plan & billing / Security stay reachable while scrolling a long tab.
+            Frosted-cream wrapper matches the header + Settings/Activity tabs;
+            -mx-4 px-4 bleeds to the screen edges. Added 2026-07. */}
+        <div className="sticky top-[calc(var(--app-safe-top)+56px)] z-30 -mx-4 px-4 py-2 bg-[hsl(var(--kiddo-cream)/0.94)] backdrop-blur-[20px]">
         <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="account-tabs" role="tablist" aria-label="Account sections">
           {[
             { id: "personal", label: "Personal info" },
@@ -984,6 +1031,7 @@ export default function Account() {
             </button>
           ))}
         </div>
+        </div>
 
         {/* ── Personal Info ── */}
         {/* Tab fade-ins added 2026-05-25 per the secondary-page polish
@@ -998,12 +1046,17 @@ export default function Account() {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-4"
           >
-            {profileNeedsCompletion && (
+            {/* Scoped to NAME-only (2026-07). This nudge also used to prompt for a
+                photo — but the profile card's avatar right below already prompts that,
+                warmly ("a real face behind it") and on the actual tap target — so with a
+                photo missing you got the SAME nag twice. De-duped: photo → the avatar
+                caption; name → this nudge. No overlap, both keep their value. */}
+            {profileNeedsName && (
               <SectionCard className="border-primary/20 bg-primary/5">
                 <div className="p-4">
                   <p className="text-sm font-semibold text-foreground">Complete your profile</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add your {profileNeedsName && profileNeedsPhoto ? "name and photo" : profileNeedsName ? "name" : "photo"} so it appears in {isNonParentOwner ? "your" : "your child's"} Memory Book.
+                    Add your name so it appears in {isNonParentOwner ? "your" : "your child's"} Memory Book.
                   </p>
                 </div>
               </SectionCard>
@@ -1022,7 +1075,7 @@ export default function Account() {
                     data-testid="button-change-profile-photo"
                   >
                     {user?.profileImageUrl ? (
-                      <img src={user.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                      <FadeImage src={user.profileImageUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-xl font-bold text-foreground">{initial}</span>
                     )}
@@ -1065,11 +1118,11 @@ export default function Account() {
                           value={nameValue}
                           onChange={e => setNameValue(e.target.value)}
                           onKeyDown={e => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setEditingName(false); }}
-                          className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                           autoFocus
                           data-testid="input-profile-name"
                         />
-                        <Button size="sm" onClick={handleSaveName} data-testid="button-save-profile-name">Save</Button>
+                        <Button size="sm" className="!bg-[hsl(var(--kiddo-evergreen))] hover:!bg-[hsl(var(--kiddo-evergreen))]/90 text-white" onClick={handleSaveName} data-testid="button-save-profile-name">Save</Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
                       </div>
                     ) : (
@@ -1087,7 +1140,7 @@ export default function Account() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="shrink-0 text-[hsl(var(--kiddo-evergreen))] hover:text-[hsl(var(--kiddo-evergreen))]"
+                      className="shrink-0 h-8 rounded-xl border border-[hsl(var(--kiddo-border))] px-3 text-xs font-semibold text-foreground hover:bg-muted/40"
                       onClick={() => { setNameValue(displayName); setEditingName(true); haptic("light"); }}
                       data-testid="button-edit-profile-name"
                     >
@@ -1116,7 +1169,7 @@ export default function Account() {
 
 
                 {/* Preferred name. NOTE: one field doing two jobs — owner mode
-                    ("What should we call you?", self-name like "Haley") vs parent
+                    ("What should we call you?", self-name like "Mia") vs parent
                     mode ("What do your kids call you?", kid-facing like "Mom").
                     The label flips correctly via isNonParentOwner. Known edge: a
                     BOTH-role user (owns their own fund AND has a kid) gets one
@@ -1136,15 +1189,15 @@ export default function Account() {
                     value={preferredName}
                     onChange={(e) => setPreferredName(e.target.value.slice(0, 50))}
                     placeholder={isNonParentOwner ? "Your name or nickname…" : "Dad, Mom, Papa, Mama…"}
-                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     data-testid="input-preferred-name"
                   />
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <p className="mt-1.5 text-2xs text-muted-foreground">
                     {isNonParentOwner ? "Shows up in your Memory Book. Optional." : "Shows up in the Memory Book and Kid's View. Optional."}
                   </p>
                   <Button
                     size="sm"
-                    className="mt-3 rounded-xl"
+                    className="mt-3 rounded-xl !bg-[hsl(var(--kiddo-evergreen))] hover:!bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
                     disabled={savingPreferredName || preferredName === ((user as any)?.preferredName || "")}
                     onClick={handleSavePreferredName}
                     data-testid="button-save-preferred-name"
@@ -1158,25 +1211,26 @@ export default function Account() {
             {/* Plan + legal */}
             <SectionCard>
               <div className="divide-y divide-[hsl(var(--kiddo-border))]">
-                <div className="flex items-center justify-between gap-4 p-4">
+                {/* Tap-through to the Plan & billing tab instead of a static
+                    duplicate of the plan status that already lives there. */}
+                <button
+                  type="button"
+                  onClick={() => selectTab("plan")}
+                  className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/30 kiddo-press"
+                  data-testid="link-current-plan"
+                >
                   <span className="text-sm text-muted-foreground">Current plan</span>
-                  <span className="text-sm font-semibold text-foreground">{planLabel}</span>
-                </div>
-                <a href="/legal" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">{planLabel}</span>
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  </span>
+                </button>
+                <a href="/legal" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30 kiddo-press">
                   <span className="text-sm text-muted-foreground">Legal disclosures</span>
                   <ChevronRight size={16} className="text-muted-foreground" />
                 </a>
               </div>
             </SectionCard>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
-            >
-              <LogOut size={15} />
-              Log out
-            </button>
           </motion.div>
         )}
 
@@ -1251,7 +1305,7 @@ export default function Account() {
                             </li>
                           ))}
                         </ul>
-                        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/85">
+                        <p className="mt-3 text-2xs leading-relaxed text-muted-foreground/85">
                           We'll send you a renewal reminder before each one expires. Your card won't be charged automatically; you choose whether to take over the bill.
                         </p>
                       </div>
@@ -1300,7 +1354,7 @@ export default function Account() {
                       </p>
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" className="rounded-xl" disabled={downgrading} onClick={handleDowngradeToPlus} data-testid="button-account-planfit-confirm">
-                          {downgrading ? "Saving..." : "Confirm"}
+                          {downgrading ? "Saving…" : "Confirm"}
                         </Button>
                         <Button size="sm" variant="ghost" className="rounded-xl" disabled={downgrading} onClick={() => setDowngradeConfirm(false)} data-testid="button-account-planfit-cancel">
                           Not now
@@ -1340,7 +1394,7 @@ export default function Account() {
                       onClick={() => handleReactivateSubscription({ plan: userPlan === "starter" ? "starter" : "family" })}
                       data-testid="button-account-reactivate-plan"
                     >
-                      {reactivating ? "Reactivating..." : "Keep my plan"}
+                      {reactivating ? "Reactivating…" : "Keep my plan"}
                     </Button>
                   </div>
                 </div>
@@ -1395,7 +1449,7 @@ export default function Account() {
                         disabled={openingPortal}
                         data-testid="button-account-manage-billing"
                       >
-                        {openingPortal ? "Opening..." : "Manage billing"}
+                        {openingPortal ? "Opening…" : "Manage billing"}
                       </Button>
                       <Button
                         size="sm"
@@ -1445,7 +1499,7 @@ export default function Account() {
                 <div className="p-5">
                   <p className="text-sm font-semibold text-foreground">This fund is yours</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    There's no subscription on a fund you own. Kiddo's only ongoing cost is the annual fee: $1/year per $1,000 invested, charged on invested assets only.
+                    There's no subscription on a fund you own. Kiddo's only ongoing cost is the annual fee: $1/year per $1,000 invested, charged on invested assets only once investing is live.
                   </p>
                 </div>
               </SectionCard>
@@ -1503,13 +1557,13 @@ export default function Account() {
                 : null;
               const badgeClass = (tone: "current" | "gold" | "evergreen") =>
                 tone === "current"
-                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white"
                   : tone === "gold"
-                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
-                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white";
+                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white"
+                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em] text-white";
               return (
                 <div className={`grid gap-4 ${isLegacyCurrent ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
-                  <SectionCard className={`relative border-2 ${isStarterCurrent ? "border-[hsl(var(--kiddo-evergreen))]" : "border-[hsl(var(--kiddo-gold))]"} shadow-[0_2px_8px_rgba(26,23,16,0.10),0_8px_24px_rgba(26,23,16,0.08)]`}>
+                  <SectionCard className={`relative border-2 ${isStarterCurrent ? "border-[hsl(var(--kiddo-evergreen))]" : "border-[hsl(var(--kiddo-gold))]"} shadow-[0_2px_8px_hsl(var(--kiddo-ink) / 0.10),0_8px_24px_hsl(var(--kiddo-ink) / 0.08)]`}>
                     {starterBadge && (
                       <div className={`absolute left-5 top-0 -translate-y-1/2 ${badgeClass(starterBadge.tone)}`}>
                         {starterBadge.label}
@@ -1521,7 +1575,7 @@ export default function Account() {
                         ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
-                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
+                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Build it up, month after month.</p>
                       <div className="mt-5 space-y-2 text-sm text-muted-foreground">
                         {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />{item}</p>
@@ -1529,9 +1583,9 @@ export default function Account() {
                       </div>
                       {/* Fee as a footnote, NOT a checkmarked bullet — a charge
                           under a green check reads as a perk you receive. */}
-                      <p className="mt-3 text-xs text-muted-foreground/70">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
+                      <p className="mt-3 text-xs text-muted-foreground/70">Annual fee once investing is live: $1/year per $1,000 invested (only on invested assets).</p>
                       {includedHint("starter") && (
-                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
+                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
                           <Check size={10} />
                           {includedHint("starter")}
                         </p>
@@ -1550,11 +1604,11 @@ export default function Account() {
                   </SectionCard>
 
                   <div
-                    className={`relative overflow-hidden rounded-2xl ${isFamilyCurrent ? "border-2 border-[hsl(var(--kiddo-evergreen))]" : "border border-[hsl(var(--kiddo-evergreen)/0.22)]"} bg-[linear-gradient(145deg,hsl(var(--kiddo-evergreen))_0%,hsl(153_48%_11%)_100%)] text-white shadow-[0_2px_8px_rgba(26,23,16,0.10),0_18px_38px_rgba(27,58,45,0.20)]`}
+                    className={`relative overflow-hidden rounded-2xl ${isFamilyCurrent ? "border-2 border-[hsl(var(--kiddo-evergreen))]" : "border border-[hsl(var(--kiddo-evergreen)/0.22)]"} bg-[linear-gradient(145deg,hsl(var(--kiddo-evergreen))_0%,hsl(153_48%_11%)_100%)] text-white shadow-[0_2px_8px_hsl(var(--kiddo-ink) / 0.10),0_18px_38px_rgba(27,58,45,0.20)]`}
                     data-testid="card-account-kiddo-family"
                   >
                     {familyBadge && (
-                      <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em]`}>
+                      <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-3xs font-bold uppercase tracking-[0.12em]`}>
                         {familyBadge.label}
                       </div>
                     )}
@@ -1583,9 +1637,9 @@ export default function Account() {
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
                         ))}
                       </div>
-                      <p className="mt-3 text-xs text-[hsl(var(--kiddo-cream)/0.6)]">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
+                      <p className="mt-3 text-xs text-[hsl(var(--kiddo-cream)/0.6)]">Annual fee once investing is live: $1/year per $1,000 invested (only on invested assets).</p>
                       {includedHint("family") && (
-                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
+                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-3xs font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
                           <Check size={10} />
                           {includedHint("family")}
                         </p>
@@ -1739,7 +1793,7 @@ export default function Account() {
                           className="rounded-xl"
                           data-testid="button-save-password"
                         >
-                          {savingPassword ? "Saving..." : "Update password"}
+                          {savingPassword ? "Saving…" : "Update password"}
                         </Button>
                         <Button
                           size="sm"
@@ -1772,9 +1826,8 @@ export default function Account() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-foreground">Trusted contact</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Someone we can reach if we can't reach you. Used only for account
-                      safety, identity confirmation, or suspected financial exploitation.
-                      Required for FINRA-regulated accounts via our broker-dealer partner.
+                      Someone we can reach if we can't reach you, only for account safety
+                      or suspected fraud. Optional now; required once investing is live.
                     </p>
                   </div>
                 </div>
@@ -1858,10 +1911,10 @@ export default function Account() {
                       size="sm"
                       onClick={handleSaveTrustedContact}
                       disabled={savingTrustedContact || !trustedContactDirty}
-                      className="rounded-xl"
+                      className="rounded-xl !bg-[hsl(var(--kiddo-evergreen))] hover:!bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
                       data-testid="button-save-trusted-contact"
                     >
-                      {savingTrustedContact ? "Saving..." : trustedContactHasAny ? "Update" : "Save"}
+                      {savingTrustedContact ? "Saving…" : trustedContactHasAny ? "Update" : "Save"}
                     </Button>
                     {trustedContactHasAny && (
                       <Button
@@ -1886,7 +1939,7 @@ export default function Account() {
                 <div>
                   <p className="text-sm font-bold text-foreground">SIPC protection</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Our broker-dealer partner is a registered broker-dealer and member of FINRA/SIPC. Once your investing account is open, eligible securities are protected up to $500,000 against brokerage failure. This does not protect against market losses.
+                    Once investing is live, securities are held by our broker-dealer partner (Member FINRA/SIPC), and eligible accounts are protected up to $500,000 against broker-dealer failure, not against market losses.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>
@@ -1902,34 +1955,62 @@ export default function Account() {
                 add/remove ceremonies, falls through silently when
                 no passkeys are registered. */}
             <PasskeyManager />
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
-            >
-              <LogOut size={15} />
-              Log out
-            </button>
-
-            {/* Account deletion — App Store 5.1.1(v) compliance. Quiet but
-                findable at the bottom of Account settings, below logout.
-                Apple-Settings register per project_cancellation_dark_pattern_avoidance.md:
-                no "please stay" upsell, no guilt phrasing, no hidden cancel
-                button. Confirmation modal is rendered separately so the
-                destructive action requires a deliberate second step. */}
-            <button
-              type="button"
-              onClick={() => setDeleteAccountModalOpen(true)}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-red-600"
-              data-testid="button-delete-account"
-            >
-              Delete my account
-            </button>
           </motion.div>
         )}
 
-        <TrustMicroStrip />
+        {/* Account-actions footer — persistent below EVERY tab (was previously
+            duplicated: a standalone Log out on the Personal tab AND this cluster
+            on Security). Account-level actions aren't tab-specific, so they live
+            once, at the page bottom, always findable. Order: log out → export →
+            delete (the standard data-rights cluster). Delete stays quiet-but-
+            findable (App Store 5.1.1(v)); its confirmation modal is rendered
+            separately so the destructive action needs a deliberate second step. */}
+        {/* Grouped as a single row-card (matching the Plan + legal group above and
+            the Settings metadata rows) rather than two heavy full-width bordered
+            pills, which read as dated next to the rest of the page. */}
+        <div className="mt-2">
+          <div className="kiddo-card overflow-hidden">
+            <div className="divide-y divide-[hsl(var(--kiddo-border))]">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 p-4 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/30 kiddo-press"
+              >
+                <LogOut size={16} className="shrink-0 text-muted-foreground" />
+                Log out
+              </button>
+
+              {/* Data-subject access (CCPA / parental access). Downloads a JSON
+                  export of the user's own data; SSN + secrets excluded server-side.
+                  See GET /api/me/export + policies/child-data-protection.md. */}
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={exportingData}
+                className="flex w-full items-center gap-2.5 p-4 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted/30 disabled:opacity-60 kiddo-press"
+                data-testid="button-export-data"
+              >
+                {exportingData ? <Loader2 size={16} className="shrink-0 animate-spin text-muted-foreground" /> : <Download size={16} className="shrink-0 text-muted-foreground" />}
+                {exportingData ? "Preparing your data…" : "Download my data"}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setDeleteAccountModalOpen(true)}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-red-600 kiddo-press"
+            data-testid="button-delete-account"
+          >
+            Delete my account
+          </button>
+        </div>
+
+        {/* The Security tab already carries the SIPC disclosure in its richer
+            "SIPC protection" card (with the sipc.org / FINRA / how-we-protect
+            links), so the footer strip would be a duplicate there. Show it on the
+            other tabs so the disclosure stays present everywhere. */}
+        {accountTab !== "security" && <TrustMicroStrip />}
 
         {/* Account deletion confirmation dialog. Renders the multi-step
             flow described in project_account_deletion_spec.md:
@@ -1961,7 +2042,7 @@ export default function Account() {
             already know they want to cancel and want the action to
             fire without surface-bouncing. */}
         <Dialog open={showCancelConfirm} onOpenChange={(o) => { if (!o && !canceling) { setShowCancelConfirm(false); setCancelStep("warn"); } }}>
-          <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
+          <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-hidden" aria-describedby={undefined}>
             <DialogTitle className="sr-only">Cancel plan</DialogTitle>
             {cancelStep === "warn" ? (
               <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto">
@@ -2025,7 +2106,7 @@ export default function Account() {
                     onClick={() => handleCancelSubscription()}
                     data-testid="button-account-confirm-cancel"
                   >
-                    {canceling ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Canceling...</> : "Yes, cancel"}
+                    {canceling ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Canceling…</> : "Yes, cancel"}
                   </Button>
                 </div>
               </div>

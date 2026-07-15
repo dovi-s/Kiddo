@@ -1,5 +1,13 @@
 // State-by-state UTMA / UGMA age of majority.
 //
+// NAMING (2026-06-04): South Carolina is the one state that never adopted
+// UTMA — custodial accounts there are UGMA (Uniform Gifts to Minors Act).
+// For a securities-only fund the mechanics are identical (irrevocable gift,
+// custodian manages, transfers at majority — 18 in SC, captured below), so
+// the product says "UTMA" generally and special-cases SC copy where the
+// statute is named (see UtmaByState.tsx). When the custodian is wired, the
+// account's statute label should come from the custodian record per state.
+//
 // UTMA (Uniform Transfers to Minors Act) age of majority is set by state law.
 // Most states default to 18, several extend higher, and a few let the custodian
 // pick a higher age (e.g. California up to 25). This map captures the most

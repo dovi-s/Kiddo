@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { ShieldCheck, ShieldOff, Copy, Check } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
+import { demoBlocked } from "@/lib/demo-block";
 
 async function postJson(url: string, body?: unknown) {
   const res = await fetch(url, {
@@ -17,7 +18,11 @@ async function postJson(url: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as any)?.error || "Something went wrong");
+  if (!res.ok) {
+    const err = new Error((data as any)?.error || "Something went wrong") as Error & { data?: any };
+    err.data = data;
+    throw err;
+  }
   return data as any;
 }
 
@@ -28,6 +33,8 @@ export function TwoFactorCard() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [setupData, setSetupData] = useState<{ secret: string; otpauthUri: string } | null>(null);
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [needsPassword, setNeedsPassword] = useState(false);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
 
@@ -41,7 +48,7 @@ export function TwoFactorCard() {
     staleTime: 30_000,
   });
 
-  const reset = () => { setPhase("idle"); setCode(""); setSetupData(null); };
+  const reset = () => { setPhase("idle"); setCode(""); setPassword(""); setNeedsPassword(false); setSetupData(null); };
 
   const setupMutation = useMutation({
     mutationFn: () => postJson("/api/auth/2fa/setup"),
@@ -50,20 +57,35 @@ export function TwoFactorCard() {
   });
 
   const enableMutation = useMutation({
-    mutationFn: () => postJson("/api/auth/2fa/enable", { code: code.trim() }),
+    mutationFn: () => postJson("/api/auth/2fa/enable", { code: code.trim(), currentPassword: password }),
     onSuccess: (d) => {
+      if (demoBlocked(d, toast)) return;
       haptic("success");
       setBackupCodes(Array.isArray(d?.backupCodes) ? d.backupCodes : []);
       setCode("");
+      setPassword("");
+      setNeedsPassword(false);
       setPhase("backup");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/2fa/status"] });
     },
-    onError: (e: any) => { haptic("error"); toast({ title: "Verification failed", description: e.message }); },
+    onError: (e: any) => {
+      // Step-up: a password account must confirm its password before 2FA turns
+      // on. Reveal the field and let the user re-submit. (OAuth accounts never
+      // hit this — the server exempts them.)
+      if (e?.data?.needsPassword) {
+        setNeedsPassword(true);
+        toast({ title: "Confirm your password", description: "Enter your account password to turn on two-factor." });
+        return;
+      }
+      haptic("error");
+      toast({ title: "Verification failed", description: e.message });
+    },
   });
 
   const disableMutation = useMutation({
     mutationFn: () => postJson("/api/auth/2fa/disable", { code: code.trim() }),
-    onSuccess: () => {
+    onSuccess: (d) => {
+      if (demoBlocked(d, toast)) return;
       haptic("success");
       reset();
       queryClient.invalidateQueries({ queryKey: ["/api/auth/2fa/status"] });
@@ -115,7 +137,7 @@ export function TwoFactorCard() {
                   type="button"
                   onClick={() => { haptic("selection"); setupMutation.mutate(); }}
                   disabled={setupMutation.isPending}
-                  className="rounded-xl bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                  className="rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[hsl(var(--kiddo-evergreen))]/90 disabled:opacity-50"
                   data-testid="button-2fa-enable-start"
                 >
                   {setupMutation.isPending ? "Starting..." : "Turn on two-factor"}
@@ -131,7 +153,7 @@ export function TwoFactorCard() {
               <div className="mt-3 flex justify-center rounded-lg bg-white p-3">
                 <QRCodeSVG value={setupData.otpauthUri} size={160} />
               </div>
-              <p className="mt-3 text-[11px] text-muted-foreground">Can't scan? Enter this key manually:</p>
+              <p className="mt-3 text-2xs text-muted-foreground">Can't scan? Enter this key manually:</p>
               <p className="mt-1 break-all rounded-lg bg-background px-2 py-1.5 text-center text-xs font-mono tabular-nums text-foreground" data-testid="text-2fa-secret">{setupData.secret}</p>
               <p className="mt-3 text-xs font-semibold text-foreground">2. Enter the 6-digit code it shows</p>
               <input
@@ -142,13 +164,27 @@ export function TwoFactorCard() {
                 className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-center text-base tracking-[0.3em] tabular-nums outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                 data-testid="input-2fa-enable-code"
               />
+              {needsPassword && (
+                <>
+                  <p className="mt-3 text-xs font-semibold text-foreground">3. Confirm your password</p>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Your account password"
+                    className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                    data-testid="input-2fa-enable-password"
+                  />
+                </>
+              )}
               <div className="mt-3 flex gap-2">
                 <button type="button" onClick={reset} className="flex-1 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground">Cancel</button>
                 <button
                   type="button"
                   onClick={() => enableMutation.mutate()}
-                  disabled={!code.trim() || enableMutation.isPending}
-                  className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background disabled:opacity-50"
+                  disabled={!code.trim() || (needsPassword && !password) || enableMutation.isPending}
+                  className="flex-1 rounded-xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                   data-testid="button-2fa-enable-confirm"
                 >
                   {enableMutation.isPending ? "Verifying..." : "Verify & turn on"}
@@ -161,7 +197,7 @@ export function TwoFactorCard() {
           {phase === "backup" && (
             <div className="mt-4 rounded-xl border border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.06)] p-4">
               <p className="text-xs font-bold text-foreground">Save your backup codes</p>
-              <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
+              <p className="mt-1 text-2xs text-muted-foreground leading-relaxed">
                 Each works once if you lose your authenticator. Store them somewhere safe. You won't see them again.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-1.5">
@@ -173,7 +209,7 @@ export function TwoFactorCard() {
                 <button type="button" onClick={copyBackup} className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground">
                   {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? "Copied" : "Copy codes"}
                 </button>
-                <button type="button" onClick={reset} className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background" data-testid="button-2fa-backup-done">
+                <button type="button" onClick={reset} className="flex-1 rounded-xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 px-3 py-2 text-xs font-semibold text-white" data-testid="button-2fa-backup-done">
                   I've saved them
                 </button>
               </div>
@@ -184,7 +220,7 @@ export function TwoFactorCard() {
           {phase === "disable" && (
             <div className="mt-4 rounded-xl border border-border bg-muted/20 p-4">
               <p className="text-xs font-semibold text-foreground">Enter a code to turn off two-factor</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">A current authenticator code or a backup code.</p>
+              <p className="mt-1 text-2xs text-muted-foreground">A current authenticator code or a backup code.</p>
               <input
                 inputMode="text"
                 value={code}

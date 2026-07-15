@@ -16,6 +16,7 @@ import { giftIntents } from "@shared/schema";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { WebhookHandlers } from "./webhookHandlers";
+import { shouldSilenceForFund } from "./memorialized";
 
 export interface SettleableIntent {
   id: string;
@@ -62,6 +63,13 @@ export async function settleGiftIntentOffSession(
       .set({ paymentStatus: "declined", failedChargeCount: (Number(intent.failedChargeCount) || 0) + 1 })
       .where(eq(giftIntents.id, intent.id));
   };
+
+  // Bereavement freeze: never settle (charge) a gift toward a memorialized fund.
+  // Hold it silently — the card is fine, so this is NOT a decline; don't mark
+  // failed or retry. See BEREAVEMENT_POSTURE.md.
+  if (await shouldSilenceForFund(intent.fundId)) {
+    return { settled: false, declined: false, reason: "bereavement-silenced" };
+  }
 
   let pi;
   try {

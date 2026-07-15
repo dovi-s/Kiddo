@@ -1,0 +1,75 @@
+# Builds the Kiddo Capacitor apps for Android + iOS in GitHub's cloud runners.
+# Free alternative to Codemagic; iOS builds on a hosted macOS runner (no Mac of
+# your own needed). See CAPACITOR_BUILD.md for the full picture.
+#
+# WHAT YOU GET WITHOUT ANY SETUP: unsigned debug builds you can download from the
+# Actions run (Android .apk installs directly on a phone; the iOS job verifies it
+# compiles). To produce SIGNED store builds + auto-submit, add the secrets noted
+# inline (Apple App Store Connect API key, Android keystore) and switch the build
+# steps to the release/signed variants — I can wire that once your accounts exist.
+
+name: Mobile build (Capacitor)
+
+# MANUAL-ONLY for now. Native CI (Android SDK licenses, iOS pods/signing) needs a
+# real debugging pass against the run logs before it's trusted — and it was firing
+# on every push and emailing failures. Run it from the Actions tab ("Run workflow")
+# when you want to iterate on it. Codemagic (codemagic.yaml) is the recommended
+# path for actual store builds; this is the free fallback once it's green.
+on:
+  workflow_dispatch: {}        # run manually from the Actions tab
+
+jobs:
+  android:
+    name: Android (.apk)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install deps
+        run: npm ci
+      - name: Build web + sync
+        # For a STORE build, set VITE_API_URL to your deployed backend and remove
+        # the `server` block from capacitor.config.ts so it bundles the web app.
+        run: |
+          npm run build
+          npx cap sync android
+      - name: Assemble debug APK
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kiddo-android-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+
+  ios:
+    name: iOS (compile check / .ipa)
+    runs-on: macos-14            # hosted macOS runner — no Mac of your own needed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install deps
+        run: npm ci
+      - name: Build web + sync
+        run: |
+          npm run build
+          npx cap sync ios
+      - name: CocoaPods
+        run: cd ios/App && pod install
+      - name: Build (unsigned — verifies it compiles)
+        # For a signed App Store build, add the App Store Connect API key + a
+        # distribution profile as secrets and use `xcodebuild -archive` +
+        # export with signing. (Auto-TestFlight upload is a few more lines.)
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Debug -sdk iphonesimulator \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build

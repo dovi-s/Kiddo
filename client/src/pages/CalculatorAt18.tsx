@@ -149,6 +149,26 @@ export default function CalculatorAt18() {
     enabled: hysa > 0,
   });
 
+  // Cost of waiting — the calculator's most honest urgency. The SAME plan
+  // started WAIT_YEARS later has that many fewer years to compound, and for a
+  // kid with real runway almost the entire gap is lost GROWTH (the earliest
+  // dollars compound the longest). So it shows "time is the input you can't get
+  // back" without a single fear word — the bars do the talking. Hidden near
+  // majority (< 5 years left), where a 3-year wait isn't meaningful and the
+  // message would read as pressure rather than math.
+  const WAIT_YEARS = 3;
+  const projectionWaited = useMemo(
+    () => projectFund(startingGift, monthly, 0.07, Math.max(0, yearsToMajority - WAIT_YEARS)),
+    [startingGift, monthly, yearsToMajority],
+  );
+  const costOfWaiting = Math.max(0, projectionMid - projectionWaited);
+  const showCostOfWaiting = projectionMid > 0 && yearsToMajority >= 5;
+  const waitedBarPct = projectionMid > 0
+    ? Math.max(6, Math.min(100, Math.round((projectionWaited / projectionMid) * 100)))
+    : 0;
+  const { value: animatedProjectionWaited } = useCountUp({ to: projectionWaited, duration: 600, enabled: projectionWaited > 0 });
+  const { value: animatedCostOfWaiting } = useCountUp({ to: costOfWaiting, duration: 600, enabled: costOfWaiting > 0 });
+
   const dynamicHeadline =
     monthly > 0
       ? `What does ${fmtMoney(monthly)} a month become for a kid by ${majorityAge}?`
@@ -200,7 +220,7 @@ export default function CalculatorAt18() {
                     className="w-full"
                     data-testid="slider-child-age"
                   />
-                  <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+                  <div className="mt-1.5 flex justify-between text-2xs text-muted-foreground">
                     <span>Newborn</span>
                     <span>17</span>
                   </div>
@@ -223,7 +243,7 @@ export default function CalculatorAt18() {
                     className="w-full"
                     data-testid="slider-monthly"
                   />
-                  <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+                  <div className="mt-1.5 flex justify-between text-2xs text-muted-foreground">
                     <span>$0</span>
                     <span>$500/mo</span>
                   </div>
@@ -245,7 +265,7 @@ export default function CalculatorAt18() {
                     className="w-full"
                     data-testid="slider-starting-gift"
                   />
-                  <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+                  <div className="mt-1.5 flex justify-between text-2xs text-muted-foreground">
                     <span>$0</span>
                     <span>$5,000</span>
                   </div>
@@ -277,7 +297,7 @@ export default function CalculatorAt18() {
                     className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                     data-testid="select-state-majority"
                   >
-                    <option value="">Most states (18)</option>
+                    <option value="">If unsure (18)</option>
                     {US_STATES.map((s) => {
                       const age = getMajorityAgeForState(s.code);
                       return (
@@ -288,10 +308,10 @@ export default function CalculatorAt18() {
                       );
                     })}
                   </select>
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <p className="mt-1.5 text-2xs text-muted-foreground">
                     {selectedState
                       ? `In ${US_STATES.find((s) => s.code === selectedState)?.name || "this state"}, the UTMA custodian's control transfers at age ${majorityAge}.`
-                      : "Most states use 18. A few extend custodianship to 19, 20, or 21. Pick yours for accurate math."}
+                      : "Most states use 21; others use 18; Alabama and Nebraska use 19. Pick yours for accurate math."}
                   </p>
                 </div>
               </div>
@@ -299,7 +319,7 @@ export default function CalculatorAt18() {
               {/* Result — cream-on-evergreen card matches the locked palette
                   and the projection-card pattern from Projection.tsx. */}
               <div className="mt-10 rounded-2xl border-2 border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-cream))] p-6 md:p-8">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">
+                <p className="mb-2 text-2xs font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">
                   Projected balance at age {majorityAge}
                 </p>
                 <p
@@ -340,7 +360,7 @@ export default function CalculatorAt18() {
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-card p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total added</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Total added</p>
                     <p
                       className="mt-1 font-heading text-lg font-bold tabular-nums text-foreground"
                       aria-live={totalAddedAnimating ? "off" : "polite"}
@@ -350,7 +370,7 @@ export default function CalculatorAt18() {
                     </p>
                   </div>
                   <div className="rounded-xl bg-card p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                       Same money at 4% savings APY
                     </p>
                     <p
@@ -367,7 +387,7 @@ export default function CalculatorAt18() {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-muted/30 px-4 py-3.5 text-[12.5px] leading-relaxed text-muted-foreground">
                 <Info size={14} className="mt-0.5 flex-shrink-0" />
                 <p>
-                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's annual fee ($1/yr per $1,000 invested) is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (18 in most states; some extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
+                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's annual fee ($1/yr per $1,000 invested) is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (21 in most states, 18 in others, 19 in Alabama and Nebraska). For the full state-by-state table, see the{" "}
                   <Link href="/tools/utma-by-state" className="text-primary hover:underline">
                     UTMA by state
                   </Link>{" "}
@@ -379,6 +399,72 @@ export default function CalculatorAt18() {
         </div>
       </section>
 
+      {/* Cost of waiting — show, don't preach. Two proportional bars (start
+          today vs start three years later) + the gap as the punch. The frame is
+          the preciousness of TIME, not fear/FOMO: warm, forward-looking, and the
+          numbers carry the urgency. Live-reacts to every slider. */}
+      {showCostOfWaiting && (
+        <section className="pb-12 md:pb-16">
+          <div className="mx-auto max-w-4xl px-4">
+            <FadeIn>
+              <div className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.35)] p-6 md:p-9"
+                style={{ background: "linear-gradient(135deg, hsl(var(--kiddo-gold)/0.12) 0%, hsl(var(--kiddo-cream)) 58%)" }}>
+                <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
+                  The cost of waiting
+                </p>
+                <h2 className="font-heading text-2xl font-bold text-foreground md:text-3xl">
+                  Time is the one gift you can&apos;t get back.
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  The earliest dollars compound the longest. The same plan started three years from now gives the fund three fewer years to grow, and that head start never comes back.
+                </p>
+
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-foreground">
+                        Start today {childAge === 0 ? "(newborn)" : `(age ${childAge})`}
+                      </span>
+                      <span className="font-heading text-lg font-bold tabular-nums text-[hsl(var(--kiddo-evergreen))]">
+                        {fmtMoney(projectionMid)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <div className="h-full rounded-full bg-[hsl(var(--kiddo-evergreen))]" style={{ width: "100%" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        Wait until age {childAge + WAIT_YEARS}
+                      </span>
+                      <span className="font-heading text-lg font-bold tabular-nums text-muted-foreground">
+                        {fmtMoney(animatedProjectionWaited)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <div
+                        className="h-full rounded-full bg-[hsl(var(--kiddo-evergreen)/0.50)] transition-[width] duration-700 ease-out"
+                        style={{ width: `${waitedBarPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-t border-[hsl(var(--kiddo-gold)/0.25)] pt-4">
+                  <span className="font-heading text-2xl font-bold tabular-nums text-foreground md:text-3xl">
+                    {fmtMoney(animatedCostOfWaiting)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    less by {majorityAge}, just from waiting three years.
+                  </span>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+      )}
+
       <section className="py-16 md:py-24">
         <div className="mx-auto max-w-4xl px-4">
           <FadeIn>
@@ -388,13 +474,13 @@ export default function CalculatorAt18() {
               </h2>
               <div className="space-y-4 text-base leading-relaxed text-muted-foreground">
                 <p>
-                  A UTMA fund is a custodial investment account a parent or guardian opens for a child. The child legally owns the assets; the custodian manages them until the kid reaches the age of majority (18 in most states, 21 in some). At that point, control transfers and the kid decides what to do.
+                  A UTMA fund is a custodial investment account a parent or guardian opens for a child. The child legally owns the assets; the custodian manages them until the kid reaches the age of majority (21 in most states, 18 in some). At that point, control transfers and the kid decides what to do.
                 </p>
                 <p>
-                  The math above shows what consistent investing produces over a long time horizon. The reason early matters more than amount: the same dollar invested for a baby compounds for 18 years; the same dollar invested for a 14-year-old compounds for 4. Time does the heavy lifting, not the dollar amount.
+                  The math above shows what consistent investing produces over a long time horizon. Early matters more than amount: a dollar invested for a baby compounds for 18 years, while a dollar invested for a 14-year-old compounds for 4. Time does most of the heavy lifting.
                 </p>
                 <p>
-                  Kiddo's UTMA isn't only for college. It stays flexible at 18: first car, gap year, business, down payment, whatever the kid decides. That flexibility is the whole point. (See our FAQ on UTMA versus 529 for the financial-aid tradeoff.)
+                  Kiddo's UTMA stays flexible at 18: college, first car, gap year, business, down payment, whatever the kid decides. That flexibility is what makes it useful. (See our FAQ on UTMA versus 529 for the financial-aid tradeoff.)
                 </p>
               </div>
             </div>

@@ -271,7 +271,7 @@ genuinely sticky for the price to hold.
 Three triggers:
 
 1. **DriveWealth IRA support ships.** Single biggest blocker.
-2. **The first wave of Dunphy-demo-era kid-owners hit 18 in real life.**
+2. **The first wave of Rivera-demo-era kid-owners hit 18 in real life.**
    The cohort exists, the tier has customers waiting.
 3. **A competitor launches a similar adult-from-custodial tier.**
    Don't be the only one without it.

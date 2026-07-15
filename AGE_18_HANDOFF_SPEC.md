@@ -49,7 +49,7 @@ sits on top of:
 | Kid View phases 14-17 | "Participation" — kid sees holdings, can suggest stocks if `allowTeenSuggestions` is on. | Adult-life framing (taxes, diversification, Roth) doesn't appear here. |
 | `accountType` flip parent → kid | `funds.userId` reassigned. `accountType` "UTMA" → "Personal." Parent-era collaborators revoked. | Kid lands on the standard dashboard with no orientation. |
 
-Per-fund `majorityAge` matters here: CA = 21 (Dunphys), AL/NE = 19,
+Per-fund `majorityAge` matters here: CA = 21 (Riveras), AL/NE = 19,
 most states = 18, PA/MS = 21. The handoff fires based on the
 fund's locked majority age, not a hardcoded 18.
 
@@ -513,7 +513,7 @@ the implications of that lock; it does not re-litigate the lock.
 | Case | Behavior |
 |---|---|
 | Kid closes tab between `/complete` and walkthrough | Dashboard.tsx detects `kidWelcomeCompletedAt == null` on a freshly-transferred fund and redirects to `/welcome-at-18` on next visit. |
-| Kid is in a state with majority age 21 (CA Dunphys) | Walkthrough fires at 21 instead of 18. Copy says "21" everywhere it would have said "18" — driven off `fund.majorityAge`. Headline copy uses "now that you're the owner" rather than "now that you're 18." |
+| Kid is in a state with majority age 21 (CA Riveras) | Walkthrough fires at 21 instead of 18. Copy says "21" everywhere it would have said "18" — driven off `fund.majorityAge`. Headline copy uses "now that you're the owner" rather than "now that you're 18." |
 | Kid has multiple funds (e.g. parent set up two for them) | Each fund's walkthrough fires once. The kid can dismiss one and have a different one waiting. We don't bundle them — each fund is its own emotional moment. |
 | Kid's parent never wrote the at-18 letter | Screen 5 doesn't show the letter hero; surfaces the gifters thumbnail grid instead. Falls back gracefully. |
 | Kid sells everything immediately (within 24h of claim) | The 24h cooldown still fires. The walkthrough doesn't gate — it informs. If a kid finishes the walkthrough and immediately tries to liquidate, the guardrail catches it. |

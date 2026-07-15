@@ -30,7 +30,7 @@ export const users = pgTable("users", {
   // again. Toggleable by admins; defaults false so production users are
   // unaffected.
   isTestUser: boolean("is_test_user").notNull().default(false),
-  // Demo account flag for the public-facing shareable Dunphy demo at
+  // Demo account flag for the public-facing shareable Rivera demo at
   // /login (creds in DUNPHY_DEMO_SPEC.md). When true, the user is part
   // of the paper-trading demo experience: a banner renders on every
   // authenticated page, the seeded fund state is canonical and reset-

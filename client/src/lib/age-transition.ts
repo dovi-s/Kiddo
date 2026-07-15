@@ -4,14 +4,14 @@ const MONTH_MS = 30.44 * DAY_MS;
 
 // Field names retain the "18" suffix for backwards compatibility — many call
 // sites read these fields directly. Internally they refer to the kid's UTMA
-// majority age (18 in most states, 19 in AL/NE, 21 in MS/PA/etc.) which
+// majority age (21 in most states, 18 in some, 19 in AL/NE) which
 // arrives as the optional `majorityAge` argument to getAge18Transition.
 // Treat these names as "majority" and the comments will keep you honest.
 export type Age18TransitionInfo = {
   birthDate: Date;
   /** One year before majority (the "preview window opens" date). */
   seventeenthBirthday: Date;
-  /** The actual UTMA majority date — 18 in most states, varies by state. */
+  /** The actual UTMA majority date — 21 in most states, 18 in some; varies by state. */
   eighteenthBirthday: Date;
   ageYears: number;
   /** Days until preview window opens (majority age − 1). */

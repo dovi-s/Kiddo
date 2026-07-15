@@ -3,7 +3,13 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Bold, Italic } from "lucide-react";
 import { useEffect } from "react";
-import DOMPurify from "dompurify";
+
+// RichText (the DOMPurify-only read-only renderer) now lives in its own module
+// so importers that only RENDER stored HTML don't pull tiptap. Re-exported here
+// for the authoring pages (Events/EventCreate) that import both from this file
+// and already bundle the editor anyway. The public GiftCheckout funnel imports
+// RichText directly from rich-text-view to stay tiptap-free. 2026-06-04.
+export { RichText } from "./rich-text-view";
 
 interface RichTextEditorProps {
   value: string;
@@ -77,7 +83,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Write something
         <ToolbarBtn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
           <Italic size={13} />
         </ToolbarBtn>
-        <div className="ml-auto text-[10px] text-muted-foreground select-none hidden sm:block">
+        <div className="ml-auto text-3xs text-muted-foreground select-none hidden sm:block">
           <span className="opacity-60">⌘B bold · ⌘I italic · Enter new line</span>
         </div>
       </div>
@@ -89,26 +95,3 @@ export function RichTextEditor({ value, onChange, placeholder = "Write something
   );
 }
 
-/** Render stored rich text HTML safely, with basic prose styling */
-export function RichText({ html, className }: { html: string; className?: string }) {
-  if (!html || html === "<p></p>") return null;
-  // SECURITY: this stored HTML (event description, etc.) is rendered on the
-  // PUBLIC, unauthenticated gift page. The API accepts the raw string, so a
-  // crafted payload (`<img src=x onerror=...>`) posted directly to the events
-  // endpoint would otherwise execute in any visitor's session (the prod CSP
-  // still allows 'unsafe-inline'). Sanitize before injection with a hard
-  // allowlist matching what the editor can produce — basic inline formatting,
-  // and ZERO attributes, so no event handlers / styles / URL-bearing attrs
-  // survive. Defense-in-depth alongside any server-side sanitization.
-  const clean = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["p", "br", "strong", "em", "b", "i", "u", "s"],
-    ALLOWED_ATTR: [],
-  });
-  if (!clean || clean === "<p></p>") return null;
-  return (
-    <div
-      className={`rich-text text-sm leading-relaxed [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_em]:italic ${className ?? ""}`}
-      dangerouslySetInnerHTML={{ __html: clean }}
-    />
-  );
-}

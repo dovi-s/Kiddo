@@ -80,7 +80,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      <DialogContent sheet className="sm:max-w-md p-0 gap-0 max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Create an Occasion</DialogTitle>
         <div className="p-6 pb-2 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
@@ -97,7 +97,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
             <button
               onClick={handleStarterPlan}
               disabled={loading !== null}
-              className="group w-full rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary/30"
+              className="group w-full rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary/30 kiddo-press"
               data-testid="button-gate-kora-plus"
             >
               <div className="flex items-start gap-3">
@@ -117,7 +117,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
                   <ul className="mt-2 space-y-1">
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Check size={12} className="shrink-0 text-primary" />
-                      Up to 3 active occasions at a time
+                      Unlimited active occasions
                     </li>
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Check size={12} className="shrink-0 text-primary" />
@@ -150,7 +150,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
           <button
             onClick={handleFamilyPlan}
             disabled={loading !== null}
-            className="group w-full rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 text-left transition-all hover:border-primary/40"
+            className="group w-full rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 text-left transition-all hover:border-primary/40 kiddo-press"
             data-testid="button-gate-family-plan"
           >
             <div className="flex items-start gap-3">

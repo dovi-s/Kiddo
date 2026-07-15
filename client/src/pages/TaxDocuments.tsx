@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Download, FileText, Info, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useFunds } from "@/hooks/use-funds";
+import { useFunds, fundsFromCaches } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { haptic } from "@/lib/haptics";
@@ -105,13 +105,17 @@ export default function TaxDocuments() {
   // we don't add a redundant picker here. Falls back to the first fund if no
   // active is stored. If the parent has zero funds, render the empty state.
   const activeFund = useMemo<Fund | null>(() => {
-    if (funds.length === 0) return null;
+    // Frame-one fund resolution (see findFundInCaches): useFunds() briefly returns []
+    // on push-nav (auth-gated), flashing the loading skeleton a View Transition would
+    // freeze. Fall back to the durable caches (query cache → localStorage snapshot).
+    const fs = funds.length ? funds : fundsFromCaches(queryClient);
+    if (fs.length === 0) return null;
     if (storedFundId) {
-      const match = funds.find((f) => f.id === storedFundId);
+      const match = fs.find((f) => f.id === storedFundId);
       if (match) return match;
     }
-    return funds[0];
-  }, [funds, storedFundId]);
+    return fs[0];
+  }, [funds, storedFundId, queryClient]);
 
   // Post-handoff owner: the UTMA terminated at the age of majority and this is
   // now the owner's own individual account. Kiddie tax, the custodian/beneficiary
@@ -402,8 +406,8 @@ export default function TaxDocuments() {
               <p className="text-sm font-bold text-foreground">Tax information is not tax advice.</p>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                 {isOwnerMode
-                  ? "This is your own individual investment account. Numbers shown here are informational; realized gains are taxed at your own rate when positions are sold. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."
-                  : "UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."}
+                  ? "This is your own individual investment account. Numbers shown here are informational; realized gains (the profit when you sell a position) are taxed at your own rate. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."
+                  : "Custodial (UTMA) accounts have unique tax rules, including the kiddie tax (the IRS rule for a child's investment income). Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."}
               </p>
             </div>
           </div>
@@ -415,7 +419,7 @@ export default function TaxDocuments() {
         {basisRows.length > 0 && (
           <div className="grid grid-cols-3 gap-2.5">
             <div className="kiddo-card p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cost basis</p>
+              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Cost basis</p>
               <p
                 className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums"
                 aria-live={costAnimating ? "off" : "polite"}
@@ -423,7 +427,7 @@ export default function TaxDocuments() {
               >{fmt0(animatedCost)}</p>
             </div>
             <div className="kiddo-card p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Current value</p>
+              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Current value</p>
               <p
                 className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums"
                 aria-live={valueAnimating ? "off" : "polite"}
@@ -431,7 +435,7 @@ export default function TaxDocuments() {
               >{fmt0(animatedValue)}</p>
             </div>
             <div className="kiddo-card p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Unrealized {totals.gain >= 0 ? "gain" : "loss"}</p>
+              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Unrealized {totals.gain >= 0 ? "gain" : "loss"}</p>
               <p
                 className={`mt-1 font-heading text-lg font-bold tabular-nums ${totals.gain >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-700"}`}
                 aria-live={gainAnimating ? "off" : "polite"}
@@ -469,7 +473,7 @@ export default function TaxDocuments() {
               summary + realized sales). The headline cost basis / value / gain
               and the positions table are ALWAYS current — they don't change by
               year — so say so, or clicking years reads as "nothing happened." */}
-          <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+          <p className="text-2xs text-muted-foreground/70 leading-relaxed">
             Scopes the forms and the {yearFilter} summary below. Your cost basis, value, and positions are current. They don't change by year.
           </p>
         </div>
@@ -494,12 +498,12 @@ export default function TaxDocuments() {
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-2 max-w-md">
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">1099-DIV</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">Dividends &amp; distributions paid out during the year.</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">1099-DIV</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">Dividends &amp; distributions paid out during the year.</p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">1099-B</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">Proceeds from any sales or exchanges. None to report unless positions were sold.</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">1099-B</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">Proceeds from any sales or exchanges. None to report unless positions were sold.</p>
                   </div>
                 </div>
                 {/* Plain-English explainer link — surfaced even in the
@@ -557,7 +561,7 @@ export default function TaxDocuments() {
                   downloadCsvFile(`kiddo-cost-basis-${childFirst}-${stamp}.csv`, rows);
                   toast({ title: "CSV downloaded", description: "Open in Excel or share with your CPA." });
                 }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
+                className="inline-flex items-center gap-1.5 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
                 data-testid="button-export-cost-basis-csv"
                 aria-label="Download cost basis CSV"
               >
@@ -574,28 +578,28 @@ export default function TaxDocuments() {
             </div>
           ) : (
             <div className="kiddo-card overflow-hidden">
-              <div className="hidden md:grid md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.4)] border-b border-[hsl(var(--kiddo-border))]">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ticker</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Position</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Shares</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Cost basis</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Value</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Unrealized</div>
+              <div className="hidden md:grid md:grid-cols-[72px_1fr_72px_96px_104px_110px] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.4)] border-b border-[hsl(var(--kiddo-border))]">
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Ticker</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Position</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Shares</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Cost basis</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Value</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Unrealized</div>
               </div>
               {basisRows.map((r, i) => (
                 <div
                   key={r.ticker}
-                  className={`grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-3 ${i < basisRows.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""}`}
+                  className={`grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_72px_96px_104px_110px] gap-3 px-4 py-3 ${i < basisRows.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""}`}
                 >
                   <div className="hidden md:flex items-center">
-                    <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
+                    <span className="text-2xs font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
                   </div>
                   <div className="min-w-0">
                     <div className="md:hidden flex items-center gap-2 mb-1">
-                      <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
+                      <span className="text-2xs font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
                     </div>
                     <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
-                    <div className="md:hidden grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                    <div className="md:hidden grid grid-cols-3 gap-2 mt-2 text-2xs">
                       <div>
                         <p className="text-muted-foreground">Shares</p>
                         <p className="text-foreground tabular-nums">{r.shares >= 1 ? r.shares.toFixed(2) : r.shares.toFixed(4)}</p>
@@ -619,13 +623,13 @@ export default function TaxDocuments() {
                     <p className={`text-sm font-bold tabular-nums ${r.gain >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-700"}`}>
                       {r.gain >= 0 ? "+" : ""}{fmt(r.gain)}
                     </p>
-                    <p className={`text-[10.5px] tabular-nums ${r.gain >= 0 ? "text-[hsl(var(--kiddo-evergreen)/0.7)]" : "text-red-700/70"}`}>
+                    <p className={`text-3xs tabular-nums ${r.gain >= 0 ? "text-[hsl(var(--kiddo-evergreen)/0.7)]" : "text-red-700/70"}`}>
                       {r.gain >= 0 ? "+" : ""}{r.gainPct.toFixed(1)}%
                     </p>
                   </div>
                 </div>
               ))}
-              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
+              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_72px_96px_104px_110px] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
                 <div className="hidden md:block" />
                 <div className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">Total</div>
                 <div className="hidden md:block" />
@@ -637,7 +641,7 @@ export default function TaxDocuments() {
               </div>
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+          <p className="mt-2 text-2xs text-muted-foreground/80 leading-relaxed">
             Cost basis is the total you've invested in each position. Gains are <span className="font-semibold">unrealized</span> until positions are sold. No tax is owed on growth alone. Actual tax treatment depends on the holding period{isOwnerMode ? "." : " and the kiddie tax rules below."}
           </p>
         </section>
@@ -684,7 +688,7 @@ export default function TaxDocuments() {
                   downloadCsvFile(`kiddo-realized-sales-${childFirst}-${yearFilter}.csv`, rows);
                   toast({ title: "CSV downloaded", description: "Open in Excel or share with your CPA." });
                 }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
+                className="inline-flex items-center gap-1.5 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
                 data-testid="button-export-realized-csv"
                 aria-label="Download realized sales CSV"
               >
@@ -700,7 +704,7 @@ export default function TaxDocuments() {
                   on a 1099-B Box 1d. */}
               <div className="grid grid-cols-3 gap-2.5 p-4 bg-[hsl(var(--kiddo-cream-dark)/0.4)] border-b border-[hsl(var(--kiddo-border))]">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Short-term gain</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Short-term gain</p>
                   <p
                     className={`mt-1 font-heading text-lg font-bold tabular-nums ${
                       realizedShortTerm >= 0
@@ -713,10 +717,10 @@ export default function TaxDocuments() {
                     {realizedShortTerm >= 0 ? "+" : ""}
                     {fmt(animatedShortTerm)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Held &lt; 1 year</p>
+                  <p className="text-3xs text-muted-foreground mt-0.5">Held &lt; 1 year</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Long-term gain</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Long-term gain</p>
                   <p
                     className={`mt-1 font-heading text-lg font-bold tabular-nums ${
                       realizedLongTerm >= 0
@@ -729,16 +733,16 @@ export default function TaxDocuments() {
                     {realizedLongTerm >= 0 ? "+" : ""}
                     {fmt(animatedLongTerm)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Held ≥ 1 year</p>
+                  <p className="text-3xs text-muted-foreground mt-0.5">Held ≥ 1 year</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total proceeds</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Total proceeds</p>
                   <p
                     className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums"
                     aria-live={proceedsAnimating ? "off" : "polite"}
                     aria-label={fmt(realizedProceeds)}
                   >{fmt(animatedProceeds)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{realizedTotals.count} {realizedTotals.count === 1 ? "sale" : "sales"}</p>
+                  <p className="text-3xs text-muted-foreground mt-0.5">{realizedTotals.count} {realizedTotals.count === 1 ? "sale" : "sales"}</p>
                 </div>
               </div>
 
@@ -746,13 +750,13 @@ export default function TaxDocuments() {
                   as the cost-basis table above. Pre-migration sales
                   surface NULL realizedGain as "—" so the user knows
                   the data exists but isn't computed for that row. */}
-              <div className="hidden md:grid md:grid-cols-[80px_1fr_auto_auto_auto_110px] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.2)] border-b border-[hsl(var(--kiddo-border))]">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Ticker</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Date</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Proceeds</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Cost basis</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground text-right">Realized</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Holding</div>
+              <div className="hidden md:grid md:grid-cols-[72px_1fr_100px_100px_104px_110px] gap-3 px-4 py-2.5 bg-[hsl(var(--kiddo-cream-dark)/0.2)] border-b border-[hsl(var(--kiddo-border))]">
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Ticker</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Date</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Proceeds</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Cost basis</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground text-right">Realized</div>
+                <div className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Holding</div>
               </div>
               {realizedSales.map((s, i) => {
                 const date = s.completedAt
@@ -778,25 +782,25 @@ export default function TaxDocuments() {
                 return (
                   <div
                     key={s.id}
-                    className={`grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_110px] gap-3 px-4 py-3 ${
+                    className={`grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_100px_100px_104px_110px] gap-3 px-4 py-3 ${
                       i < realizedSales.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""
                     }`}
                     data-testid={`realized-sale-${s.id}`}
                   >
                     <div className="hidden md:flex items-center">
-                      <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
+                      <span className="text-2xs font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
                         {s.ticker || "—"}
                       </span>
                     </div>
                     <div className="min-w-0">
                       <div className="md:hidden flex items-center gap-2 mb-1">
-                        <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
+                        <span className="text-2xs font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
                           {s.ticker || "—"}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">{periodLabel}</span>
+                        <span className="text-3xs text-muted-foreground">{periodLabel}</span>
                       </div>
                       <p className="text-sm text-foreground">{date}</p>
-                      <div className="md:hidden grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                      <div className="md:hidden grid grid-cols-3 gap-2 mt-2 text-2xs">
                         <div>
                           <p className="text-muted-foreground">Proceeds</p>
                           <p className="text-foreground tabular-nums">{fmt(s.proceeds)}</p>
@@ -816,11 +820,11 @@ export default function TaxDocuments() {
                       {s.costBasisSold == null ? "—" : fmt(s.costBasisSold)}
                     </div>
                     <div className={`hidden md:block text-sm font-bold tabular-nums text-right self-center ${gainTone}`}>{gainStr}</div>
-                    <div className="hidden md:block text-[11px] text-muted-foreground self-center">{periodLabel}</div>
+                    <div className="hidden md:block text-2xs text-muted-foreground self-center">{periodLabel}</div>
                   </div>
                 );
               })}
-              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_110px] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
+              <div className="grid grid-cols-[1fr_auto] md:grid-cols-[72px_1fr_100px_100px_104px_110px] gap-3 px-4 py-3 bg-[hsl(var(--kiddo-evergreen)/0.06)] border-t border-[hsl(var(--kiddo-evergreen)/0.18)]">
                 <div className="hidden md:block" />
                 <div className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">Total realized · {yearFilter}</div>
                 <div className="hidden md:block" />
@@ -840,7 +844,7 @@ export default function TaxDocuments() {
                 <div className="hidden md:block" />
               </div>
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+            <p className="mt-2 text-2xs text-muted-foreground/80 leading-relaxed">
               Realized gains here are computed on an average-cost basis. Your broker's 1099-B may instead use FIFO or specific-lot identification, so these figures can differ; the 1099-B is the authoritative number to file from. Short-term sales (held under 1 year) are taxed as ordinary income; long-term sales (held 1 year or more) get preferred capital-gains rates. Compare the total against the kiddie-tax thresholds below.
             </p>
           </section>
@@ -857,7 +861,7 @@ export default function TaxDocuments() {
           <p className="kiddo-section-label mb-2">Understanding the kiddie tax</p>
           <div className="kiddo-card p-5">
             <p className="text-sm text-foreground leading-relaxed">
-              For children under 19 (or full-time students under 24), <span className="font-semibold">unearned income</span> above the IRS thresholds is taxed at the parent's rate, not the child's. Only applies when positions are sold and gains are realized. Growth alone isn't taxable.
+              For children under 19 (or full-time students under 24), <span className="font-semibold">unearned income</span> above the IRS thresholds is taxed at the parent's rate, not the child's. It applies to dividends and interest in the year they're paid, and to capital gains when positions are sold. Unrealized growth alone isn't taxable.
             </p>
             <div className="mt-4 rounded-xl bg-[hsl(var(--kiddo-cream-dark)/0.4)] p-4 space-y-2.5">
               <div className="flex items-baseline justify-between gap-3 pb-2 border-b border-[hsl(var(--kiddo-border-light))]">
@@ -873,7 +877,7 @@ export default function TaxDocuments() {
                 <span className="text-xs text-muted-foreground text-right">Taxed at the parent's marginal rate</span>
               </div>
             </div>
-            <p className="mt-3 flex items-start gap-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+            <p className="mt-3 flex items-start gap-2 text-2xs text-muted-foreground/80 leading-relaxed">
               <Info size={11} className="mt-0.5 flex-shrink-0" />
               <span>{KIDDIE_TAX_2025.year} thresholds. The IRS adjusts these for inflation each year. This is general information about the rules, not tax advice. Consult a qualified CPA before filing.</span>
             </p>
@@ -901,38 +905,38 @@ export default function TaxDocuments() {
             <div className="kiddo-card p-5">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Deposits</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Deposits</p>
                   <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
                     {fmt0(yearSummary.totalDepositsUsd)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">Gifts + contributions</p>
+                  <p className="text-3xs text-muted-foreground/80 mt-0.5">Gifts + contributions</p>
                 </div>
                 <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Withdrawals</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Withdrawals</p>
                   <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
                     {fmt0(yearSummary.withdrawalsUsd)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">{yearSummary.withdrawalsUsd > 0 ? "Cash out" : "None"}</p>
+                  <p className="text-3xs text-muted-foreground/80 mt-0.5">{yearSummary.withdrawalsUsd > 0 ? "Cash out" : "None"}</p>
                 </div>
                 <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Realized gains</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Realized gains</p>
                   <p className={`mt-1 font-heading text-lg font-bold tabular-nums ${yearSummary.realizedGainsUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-700"}`}>
                     {yearSummary.realizedGainsUsd >= 0 ? "+" : ""}{fmt0(yearSummary.realizedGainsUsd)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">From sales</p>
+                  <p className="text-3xs text-muted-foreground/80 mt-0.5">From sales</p>
                 </div>
                 <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Fees (est.)</p>
+                  <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Fees (est.)</p>
                   <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
                     {fmt0(yearSummary.estimatedFeesUsd)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">$1/yr per $1,000 invested</p>
+                  <p className="text-3xs text-muted-foreground/80 mt-0.5">$1/yr per $1,000 invested</p>
                 </div>
               </div>
               {(yearSummary.yearStartValue != null || yearSummary.yearEndValue != null) && (
                 <div className="mt-4 flex flex-wrap items-baseline justify-between gap-3 rounded-xl bg-[hsl(var(--kiddo-cream-dark)/0.4)] px-4 py-3 border-t border-[hsl(var(--kiddo-border))]">
                   <div className="min-w-0">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Year start → year end</p>
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Year start → year end</p>
                     <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">
                       {yearSummary.yearStartValue != null ? fmt0(yearSummary.yearStartValue) : "—"}
                       <span className="mx-2 text-muted-foreground/60">→</span>
@@ -945,11 +949,11 @@ export default function TaxDocuments() {
                       const pct = yearSummary.yearStartValue! > 0 ? (delta / yearSummary.yearStartValue!) * 100 : null;
                       return (
                         <div className="text-right">
-                          <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Net change</p>
+                          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Net change</p>
                           <p className={`mt-1 text-sm font-bold tabular-nums ${delta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-700"}`}>
                             {delta >= 0 ? "+" : ""}{fmt0(delta)}
                             {pct != null && (
-                              <span className="ml-1.5 text-[11px] font-medium opacity-80">
+                              <span className="ml-1.5 text-2xs font-medium opacity-80">
                                 ({delta >= 0 ? "+" : ""}{pct.toFixed(1)}%)
                               </span>
                             )}
@@ -960,7 +964,7 @@ export default function TaxDocuments() {
                   )}
                 </div>
               )}
-              <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
+              <p className="mt-3 text-2xs text-muted-foreground/80 leading-relaxed">
                 Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Once investing is live, realized gains and the broker-dealer-issued 1099 will be the authoritative numbers. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
               </p>
             </div>
@@ -1043,9 +1047,9 @@ export default function TaxDocuments() {
                     });
                   }
                   // The majority age is set by the GOVERNING STATE's UTMA
-                  // statute (18 in most; 19 in AL/NE; 21 in MS/PA and others).
+                  // statute (21 in most; 18 in some; 19 in AL/NE).
                   // Only assert a definitive age when the state is known —
-                  // otherwise the 18 default is a guess presented as law on a
+                  // otherwise the 18 fallback is a guess presented as law on a
                   // tax/legal page. Per project_age_milestone_majorityage_footgun.
                   const ma = Number((activeFund as any).majorityAge) || 18;
                   if (!isOwnerMode) {
@@ -1053,7 +1057,7 @@ export default function TaxDocuments() {
                       label: "Age of majority",
                       value: stateCode
                         ? `${ma} (per ${stateCode} UTMA law)`
-                        : "18 in most states; set your state to confirm",
+                        : "21 in most states; set your state to confirm",
                     });
                   }
                   // Fund open date.
@@ -1080,7 +1084,7 @@ export default function TaxDocuments() {
                   }
                   return items.map((row) => (
                     <div key={row.label} className="min-w-0">
-                      <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">{row.label}</p>
+                      <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">{row.label}</p>
                       <p className="mt-0.5 text-sm font-semibold text-foreground break-words" data-testid={`particular-${row.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
                         {row.value ?? <span className="font-normal italic text-muted-foreground/70">Not set</span>}
                       </p>
@@ -1088,7 +1092,7 @@ export default function TaxDocuments() {
                   ));
                 })()}
               </div>
-              <p className="mt-4 text-[11px] text-muted-foreground/70 leading-relaxed">
+              <p className="mt-4 text-2xs text-muted-foreground/70 leading-relaxed">
                 {isOwnerMode
                   ? "These details come from your account setup. Update them in Settings → Account if anything changes (a legal-name change, etc.)."
                   : <>These details come from your account setup. The custodian, beneficiary, state, and majority age all govern how UTMA tax rules apply to {activeFund.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "this"} fund. Update them in Settings → Child if anything changes (a move to a new state, a legal-name change, etc.).</>}
@@ -1122,36 +1126,36 @@ export default function TaxDocuments() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2.5">
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">SIPC protection</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Up to $500,000 per account (including $250,000 for cash) against brokerage failure. Not protection against market losses.
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">SIPC protection</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">
+                      Up to $500,000 per account (including $250,000 for cash) against brokerage failure. It does not cover market losses.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares are {isOwnerMode ? "yours" : (activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's")}, not the broker's.
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">
+                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares belong to {isOwnerMode ? "you" : (activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}` : "the child")}.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Account type</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Account type</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">
                       {isOwnerMode
                         ? "Individual brokerage account held in your name. The UTMA ended at the age of majority. You own and control the account directly now."
                         : <>UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName ? capFirst(activeFund.recipientFirstName) : "the child"} reaches majority age in your state.</>}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fees</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                    <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">Fees</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground leading-snug">
                       Kiddo's annual fee ($1 per $1,000 invested, about $10/yr on a $10,000 fund) applies to invested assets only, not on cash or pending gifts. Prorated daily, so you only pay for the days assets are invested. No trading commissions, no account fees.
                     </p>
                   </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                <p className="text-2xs text-muted-foreground/80 leading-relaxed">
                   Once investing is live, tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. The cost basis shown above is computed by Kiddo from settled gift and contribution amounts; our broker-dealer partner issues the authoritative figures on the 1099-B. Verify your CPA reconciles both before filing.
                 </p>
-                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                <p className="text-2xs text-muted-foreground/60 leading-relaxed">
                   More on SIPC at <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>.
                 </p>
               </div>

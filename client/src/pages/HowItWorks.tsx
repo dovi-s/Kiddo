@@ -1,19 +1,24 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { Link } from "wouter";
-import { ArrowRight, BookOpen, Gift, MousePointerClick, QrCode, TrendingUp, UserRoundPlus } from "lucide-react";
+import { ArrowRight, BookOpen, Gift, QrCode, Shield, Sprout, TrendingUp, UserRoundPlus } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Mascot } from "@/components/ui/mascot";
+import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { ProductFrame } from "@/components/marketing/ProductFrame";
+import { BrowserFrame } from "@/components/marketing/BrowserFrame";
+import { EmbeddedDemo } from "@/components/marketing/EmbeddedDemo";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+  const reduceMotion = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+      whileInView={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.65, delay, ease: [0.22, 1, 0.36, 1] }}
       className={className}
     >
       {children}
@@ -21,345 +26,338 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
   );
 }
 
-const parentSteps = [
+const parentFlow = [
   {
     icon: UserRoundPlus,
-    title: "Step 1: Create your account.",
-    body: "Sign up with your email. Takes 30 seconds. No credit card required.",
+    title: "Open the fund",
+    body: "Create the account, add your child, and establish the custodial structure that will eventually become theirs.",
   },
   {
     icon: TrendingUp,
-    title: "Step 2: Set up your child's fund.",
-    body: "Enter your child's name and date of birth. Pick one default path for new gifts: a diversified managed mix, a specific default stock, or cash until you invest later. You can change it any time.",
+    title: "Choose the default path",
+    body: "Decide how new gifts should land: a managed mix, a default stock, or cash until you invest later.",
   },
   {
     icon: QrCode,
-    title: "Step 3: Get your gift link.",
-    body: "Kiddo generates a private, shareable link, QR code, and fund code for your child's fund. This is what you share with family and friends. It is not public. It is not searchable. Only people you share it with can access it.",
+    title: "Share one private link",
+    body: "Kiddo gives you a private gift link, QR code, and fund code you can send anywhere you would share an invitation or registry.",
   },
-  {
-    icon: MousePointerClick,
-    title: "Step 4: Share it.",
-    body: "Send the link in a text, an email, a group chat, or a family WhatsApp. Put the QR code on a birthday invitation. Or share the fund code verbally. Post it in a baby shower event. Share it anywhere you would normally share a gift registry.",
-  },
-  {
-    icon: Gift,
-    title: "Step 5: Watch gifts arrive.",
-    body: "Every time someone gifts through your link, the money follows your fund's default investing path. You get a notification. The gifter gets a confirmation. The Memory Book captures the moment.",
-  },
-];
+] as const;
 
-const giverSteps = [
-  {
-    icon: MousePointerClick,
-    title: "Step 1: Access the fund.",
-    body: "Three ways: tap the link the parent shared, scan the QR code at a party, or go to /gift and enter the gift code.",
-  },
+const gifterFlow = [
   {
     icon: Gift,
-    title: "Step 2: Choose your amount.",
-    body: "Pick from suggested amounts or enter your own. The minimum is shown before checkout, and every gift is transparent before anyone pays.",
+    title: "Open the gift page",
+    body: "The gifter taps the link, scans the QR code, or enters the fund code. No account required.",
   },
   {
-    icon: TrendingUp,
-    title: "Step 3: See where your gift goes.",
-    body: "Before you pay, Kiddo shows you the family's default. Most gifts simply follow that default. If the parent allows it, you can choose a different stock or send the gift to cash instead.",
+    icon: Sprout,
+    title: "Choose an amount",
+    body: "They choose an amount, optionally leave a note or voice message, and complete checkout in a few taps.",
   },
   {
-    icon: QrCode,
-    title: "Step 4: Pay.",
-    body: "Apple Pay. Google Pay. Card. One tap if you have Apple Pay or Google Pay set up. Done.",
+    icon: BookOpen,
+    title: "Join the child's story",
+    body: "The gift becomes part of the fund and the Memory Book, so the child can one day see who helped build it.",
   },
-  {
-    icon: Gift,
-    title: "Step 5: Your gift is invested.",
-    body: "The parent is notified. You get a confirmation. The gift becomes part of the child's fund and Memory Book.",
-  },
-];
+] as const;
 
-const occasions = [
-  {
-    title: "Baby showers",
-    body: "Set up your fund before the shower. Share the link on the invitation. Guests gift instead of buying something that will be outgrown in three months.",
-  },
-  {
-    title: "Birthdays",
-    body: "Create a birthday event page. Share the link in the family group chat. Every gift goes straight to the fund.",
-  },
-  {
-    title: "Holidays",
-    body: "Share your fund link at Thanksgiving. By Christmas, the family knows exactly what to give.",
-  },
-  {
-    title: "Graduations",
-    body: "A graduation fund is a gift that actually matches the milestone.",
-  },
-  {
-    title: "Any occasion",
-    body: "There is no wrong time to invest in a child's future.",
-  },
-];
+const kidViewStages = [
+  "Ages 5 to 8: simple ownership language, familiar brands, and the idea that money can grow.",
+  "Ages 9 to 13: fractional shares, why companies move, and how gifts are meant to grow over time.",
+  "Ages 14 to 17: portfolio understanding, stock suggestions, and real family conversations before adulthood.",
+] as const;
+
+const payoffBullets = [
+  "The investments do not automatically get sold at the age-of-majority handoff.",
+  "At the handoff the legal control passes to the child while the fund itself carries on.",
+  "The Memory Book gives the transfer emotional context instead of making it feel abrupt.",
+] as const;
 
 export default function HowItWorks() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="kiddo-app-page">
       <Nav />
+      <main className="overflow-x-hidden">
+        <section className="relative overflow-hidden pb-16 pt-20 md:pb-24 md:pt-28">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,hsl(var(--kiddo-gold)/0.16),transparent_58%)]" />
+          <div className="relative z-10 mx-auto max-w-6xl px-4">
+            <div className="grid items-center gap-14 lg:grid-cols-[0.96fr_1.04fr]">
+              <motion.div
+                initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 22 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Mascot size="md" variant="planting" className="mb-5 drop-shadow-sm" context="how-it-works" />
+                <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">How it works</p>
+                <h1 className="font-heading text-4xl font-bold tracking-[-0.03em] text-foreground md:text-6xl" data-testid="text-how-headline">
+                  How Kiddo works, from the first gift to the handoff.
+                </h1>
+                <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
+                  Kiddo is designed so a parent can set up the structure once, a family member can gift without friction, and the child can grow up
+                  understanding what was built for them.
+                </p>
+                <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                  <Link href="/get-started">
+                    <Button size="lg" className="h-14 px-8 text-base" data-testid="button-how-hero-primary">
+                      Start your child's fund
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/demo">
+                    <Button variant="outline" size="lg" className="h-14 px-8 text-base">
+                      See a real fund
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
 
-      <section className="relative overflow-hidden pb-16 pt-20 md:pb-24 md:pt-32">
-        <div className="relative z-10 mx-auto max-w-5xl px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Mascot size="md" variant="planting" className="mx-auto mb-5 drop-shadow-sm" context="how-it-works" />
-            <h1 className="mb-4 font-heading text-4xl font-bold tracking-normal text-foreground md:text-6xl" data-testid="text-how-headline">
-              Here is exactly how it works.
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-              For parents. For gifters. For grandparents who have never bought a stock in their life.
-            </p>
-            <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-card/80 p-4 text-left shadow-premium-sm">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">1. Create</p>
-                <p className="mt-2 text-sm font-semibold text-foreground">Set up the fund and choose the investing approach.</p>
-              </div>
-              <div className="rounded-2xl border border-border bg-card/80 p-4 text-left shadow-premium-sm">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">2. Share</p>
-                <p className="mt-2 text-sm font-semibold text-foreground">One link, one QR code, one fund code.</p>
-              </div>
-              <div className="rounded-2xl border border-border bg-card/80 p-4 text-left shadow-premium-sm">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">3. Invest</p>
-                <p className="mt-2 text-sm font-semibold text-foreground">Gifts land in a real account and get invested.</p>
-              </div>
+              <FadeIn delay={0.12}>
+                <BrowserFrame
+                  src="/product/dashboard-desktop.webp"
+                  alt="The Kiddo dashboard showing the fund balance, gifts, and family story."
+                  caption="One home for the money, the milestones, and the people behind them."
+                  href="/demo"
+                  liveLabel="See a real fund"
+                />
+              </FadeIn>
             </div>
-          </motion.div>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-4">
-          <FadeIn className="mb-12 text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
-              Setting up your child&apos;s fund.
-            </h2>
-          </FadeIn>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {parentSteps.map((step, index) => (
-              <FadeIn key={step.title} delay={index * 0.06}>
-                <div className="h-full rounded-2xl bg-card p-7 shadow-premium-sm">
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-                    <step.icon className="h-6 w-6 text-primary" />
+        <section className="pb-8">
+          <div className="mx-auto max-w-6xl px-4">
+            <TrustMicroStrip />
+          </div>
+        </section>
+
+        <section className="py-16 md:py-24">
+          <div className="mx-auto max-w-6xl px-4">
+            <FadeIn className="mx-auto max-w-3xl text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">The parent flow</p>
+              <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-5xl">
+                The parent makes a few key decisions.
+              </h2>
+            </FadeIn>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {parentFlow.map((step, index) => (
+                <FadeIn key={step.title} delay={index * 0.08}>
+                  <div className="h-full rounded-[1.75rem] border border-border/60 bg-card/90 p-7 shadow-premium-sm">
+                    <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)]">
+                      <step.icon className="h-5 w-5 text-[hsl(var(--kiddo-evergreen))]" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
+                    <p className="mt-3 leading-relaxed text-muted-foreground">{step.body}</p>
                   </div>
-                  <h3 className="mb-3 font-heading text-lg font-semibold text-foreground">{step.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-          <FadeIn className="mt-10 text-center">
-            <p className="mx-auto max-w-2xl text-muted-foreground">
-              That is it. Nothing to manage after setup.
-            </p>
-            <div className="mt-6">
-              <Link href="/get-started">
-                <Button size="lg" className="h-14 px-10 text-base" data-testid="button-how-parent-cta">
-                  Start your child&apos;s fund
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+                </FadeIn>
+              ))}
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">Free. Takes 2 minutes.</p>
-          </FadeIn>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-4">
-          <FadeIn className="mb-12 text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
-              Giving is even simpler.
-            </h2>
-            <p className="mx-auto mt-4 max-w-3xl text-muted-foreground">
-              You do not need a Kiddo account. You do not need to download an app. You do not need to know anything about investing.
-            </p>
-          </FadeIn>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {giverSteps.map((step, index) => (
-              <FadeIn key={step.title} delay={index * 0.06}>
-                <div className="h-full rounded-2xl bg-card p-7 shadow-premium-sm">
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-                    <step.icon className="h-6 w-6 text-primary" />
+        <section className="py-16 md:py-24">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
+              <FadeIn>
+                <div className="rounded-[2rem] border border-border/60 bg-card/90 p-8 shadow-premium-sm md:p-10">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">The gifter flow</p>
+                  <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
+                    Giving feels like sending a gift.
+                  </h2>
+                  <div className="mt-8 space-y-6">
+                    {gifterFlow.map((step) => (
+                      <div key={step.title} className="flex gap-4">
+                        <div className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)]">
+                          <step.icon className="h-4 w-4 text-[hsl(var(--kiddo-evergreen))]" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-foreground">{step.title}</h3>
+                          <p className="mt-2 leading-relaxed text-muted-foreground">{step.body}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <h3 className="mb-3 font-heading text-lg font-semibold text-foreground">{step.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{step.body}</p>
                 </div>
               </FadeIn>
-            ))}
-          </div>
-          <FadeIn className="mt-10 text-center">
-            <p className="text-muted-foreground">No account to open, nothing to download. Just a gift that actually grows.</p>
-          </FadeIn>
-        </div>
-      </section>
 
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-5xl px-4">
-          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <div>
-                <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">
-                  What actually happens to the money.
-                </h2>
-                <p className="mb-4 leading-relaxed text-muted-foreground">
-                  When a gift is received, Kiddo follows the family's chosen default. For most funds that means a diversified managed mix. Some families set one default stock. Others keep gifts in cash until they invest later.
-                </p>
-                <p className="mb-4 leading-relaxed text-muted-foreground">
-                  If a gift amount is smaller than the price of one full share, Kiddo purchases a fractional share when the gift is invested into a stock or ETF. A $25 gift can still buy a fraction of one share. Over time, those fractions add up.
-                </p>
-                <p className="leading-relaxed text-muted-foreground">
-                  Every investment is held in your child&apos;s fund. Most child funds use a UTMA legal structure underneath, which means you manage it until your child reaches adulthood, typically 18 or 21 depending on your state. Then it becomes fully theirs.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                <p className="mb-2 text-sm font-medium text-foreground">Gift flow</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Gift amount received</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Family default applied</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Stock, managed mix, or cash path used</p>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Simple for families. Real brokerage rails when investing is live.
-                </p>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-5xl px-4">
-          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  For children
-                </div>
-                <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">
-                  The part that changes everything.
-                </h2>
-                <p className="mb-4 leading-relaxed text-muted-foreground">
-                  When a child is old enough, Kiddo gives them an age-appropriate view of their fund. They see the brands they own, the people who gifted them, and the story being built in their name.
-                </p>
-                <p className="leading-relaxed text-muted-foreground">
-                  The education does not live in a separate classroom tab. It happens inside the fund itself, through the companies they already know and the gifts their family already gave.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                <div className="space-y-4 text-sm text-muted-foreground">
-                  <p><span className="font-medium text-foreground">Ages 5 to 8:</span> brand logos, simple ownership language, and the idea that money can grow.</p>
-                  <p><span className="font-medium text-foreground">Ages 9 to 13:</span> why companies move, what fractional shares mean, and what a gift could grow into.</p>
-                  <p><span className="font-medium text-foreground">Ages 14 to 17:</span> portfolio understanding, stock suggestions, and real money conversations before adulthood.</p>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-5xl px-4">
-          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
-            <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">
-              The part nobody expects.
-            </h2>
-            <p className="mb-4 leading-relaxed text-muted-foreground">
-              Every gift that comes into your child&apos;s fund gets captured in the Memory Book. The amount. The stock it was invested in. The note the gifter left. The occasion.
-            </p>
-            <p className="mb-4 leading-relaxed text-muted-foreground">
-              When your child is old enough to understand it, you can show them: here is every person who believed in your future. Here is what they gave. Here is what it grew into.
-            </p>
-            <p className="font-medium text-foreground">It is not a ledger. It is a story.</p>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-5xl px-4">
-          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <div>
-                <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-4xl">
-                  The age-18 moment.
-                </h2>
-                <p className="mb-4 leading-relaxed text-muted-foreground">
-                  When your child reaches the age of majority for your state, the fund legally becomes
-                  theirs. In most states that is age 18 or 21. The investments do not automatically get
-                  sold just because that birthday arrives.
-                </p>
-                <p className="leading-relaxed text-muted-foreground">
-                  What changes is control. Kiddo helps prepare that handoff so your child can inherit the
-                  account and the full story behind it, not just a balance.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border bg-muted/30 p-6">
-                <p className="mb-2 text-sm font-medium text-foreground">What carries forward</p>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>The investments stay where they are.</p>
-                  <p>The parent stops acting as custodian.</p>
-                  <p>The child gains full legal control at the required age.</p>
-                  <p>The Memory Book becomes part of that transition story.</p>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-4">
-          <FadeIn className="mb-12 text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
-              Kiddo works for every occasion.
-            </h2>
-          </FadeIn>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
-            {occasions.map((occasion, index) => (
-              <FadeIn key={occasion.title} delay={index * 0.05}>
-                <div className="h-full rounded-2xl bg-card p-6 shadow-premium-sm">
-                  <h3 className="mb-3 font-heading text-lg font-semibold text-foreground">{occasion.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{occasion.body}</p>
+              <FadeIn delay={0.08}>
+                <div className="rounded-[2rem] border border-border/60 bg-card/90 p-8 shadow-premium-sm">
+                  <EmbeddedDemo
+                    src="/theo-rivera"
+                    poster="/product/giftflow.webp"
+                    alt="The live Kiddo gift page, where a gifter picks an amount and leaves a message."
+                    caption="The real gifting surface."
+                    tilt="right"
+                  />
                 </div>
               </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <FadeIn>
-            <h2 className="mb-4 font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
-              Ready to start?
-            </h2>
-            <p className="mx-auto mb-8 max-w-2xl text-muted-foreground">
-              Your child&apos;s fund takes 2 minutes to set up. Free to start. Your family and friends can begin gifting today.
-            </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Link href="/get-started">
-                <Button size="lg" className="h-14 px-10 text-base" data-testid="button-how-cta-primary">
-                  Start your child&apos;s fund
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
             </div>
-            <p className="mt-5 text-sm text-muted-foreground">
-              Questions? <Link href="/faq" className="text-primary hover:underline">Read our FAQ</Link>
-            </p>
-          </FadeIn>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <Footer />
+        <section id="mix" className="scroll-mt-24 py-16 md:py-24">
+          <div className="mx-auto max-w-6xl px-4">
+            <FadeIn className="rounded-[2rem] border border-border/60 bg-card/90 p-8 shadow-premium-sm md:p-10">
+              <div className="grid items-center gap-8 lg:grid-cols-[0.92fr_1.08fr]">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">What happens to the money</p>
+                  <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
+                    Each new gift follows the family's chosen path.
+                  </h2>
+                  <p className="mt-5 leading-relaxed text-muted-foreground">
+                    For most families that means a diversified managed mix. Some choose a default stock. Others hold gifts in cash until they decide how to
+                    invest later.
+                  </p>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                    If the gift is smaller than the cost of a full share, Kiddo can still buy a fractional share when that gift is invested into a stock or ETF.
+                    Small gifts can still become real ownership.
+                  </p>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                    The legal structure underneath is typically UTMA, which means the parent manages the fund until the child reaches the age of majority in
+                    their state.
+                  </p>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                    Gifts land in a real account and are invested when investing is live.
+                  </p>
+                </div>
+                <ProductFrame
+                  src="/product/dashboard-full.webp"
+                  alt="The parent's dashboard showing gifts, holdings, and the projection for the child's fund."
+                  caption="The real gifting and fund experience."
+                  mode="scroll"
+                  imgHeight={3154}
+                  tilt="right"
+                />
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section id="kid-view" className="scroll-mt-24 py-16 md:py-24">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="grid gap-8 lg:grid-cols-[1.02fr_0.98fr]">
+              <FadeIn>
+                <div className="rounded-[2rem] border border-border/60 bg-card/90 p-8 shadow-premium-sm md:p-10">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Kid View</p>
+                  <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
+                    The child grows into the product over time.
+                  </h2>
+                  <p className="mt-5 leading-relaxed text-muted-foreground">
+                    Kiddo helps a child get comfortable with ownership long before adulthood arrives.
+                  </p>
+                  <div className="mt-8 space-y-4 rounded-[1.5rem] border border-border/60 bg-[hsl(var(--kiddo-cream))] p-6">
+                    {kidViewStages.map((stage) => (
+                      <div key={stage} className="flex gap-3">
+                        <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+                        <p className="leading-relaxed text-muted-foreground">{stage}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </FadeIn>
+
+              <FadeIn delay={0.08}>
+                <ProductFrame
+                  src="/product/kidview.webp"
+                  alt="The child's view of their Kiddo fund with familiar brands and family gifts."
+                  caption="The child's own view of their fund, grown into over the years."
+                  tilt="left"
+                />
+              </FadeIn>
+            </div>
+          </div>
+        </section>
+
+        <section id="memory" className="scroll-mt-24 py-16 md:py-24">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="grid gap-8 lg:grid-cols-[0.98fr_1.02fr]">
+              <FadeIn>
+                <ProductFrame
+                  src="/product/memory-full.webp"
+                  alt="The Kiddo Memory Book with gifts, notes, and milestones."
+                  caption="The record of what they received, and from whom."
+                  mode="scroll"
+                  imgHeight={3762}
+                  tilt="right"
+                />
+              </FadeIn>
+
+              <FadeIn delay={0.08}>
+                <div className="rounded-[2rem] border border-border/60 bg-card/90 p-8 shadow-premium-sm md:p-10">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Memory Book</p>
+                  <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
+                    Every gift can stay attached to the moment it came from.
+                  </h2>
+                  <p className="mt-5 leading-relaxed text-muted-foreground">
+                    The amount, the occasion, the note, the photo, the voice memo, and what the gift eventually became all live together. The child inherits a
+                    real family record they can read through.
+                  </p>
+                </div>
+              </FadeIn>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-24">
+          <div className="mx-auto max-w-5xl px-4">
+            <FadeIn className="rounded-[2rem] border border-border/60 bg-card/90 p-8 shadow-premium-sm md:p-10">
+              <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">The age-18 handoff</p>
+                  <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-4xl">
+                    The transfer should feel like something the family saw coming.
+                  </h2>
+                  <p className="mt-5 leading-relaxed text-muted-foreground">
+                    At the age of majority, the fund legally becomes the child's. Kiddo's job is to make that moment understandable and emotionally grounded.
+                  </p>
+                </div>
+                <div className="rounded-[1.5rem] border border-border/60 bg-[hsl(var(--kiddo-cream))] p-6">
+                  <div className="space-y-4">
+                    {payoffBullets.map((item) => (
+                      <div key={item} className="flex gap-3">
+                        <Shield className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+                        <p className="leading-relaxed text-muted-foreground">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-24">
+          <div className="mx-auto max-w-4xl px-4 text-center">
+            <FadeIn>
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">Start here</p>
+              <h2 className="font-heading text-3xl font-bold tracking-[-0.03em] text-foreground md:text-5xl">
+                Set it up once, and it keeps building as the years go by.
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                Free to start. Takes a couple of minutes. The family can start adding to the fund right away.
+              </p>
+              <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
+                <Link href="/get-started">
+                  <Button size="lg" className="h-14 px-10 text-base" data-testid="button-how-cta-primary">
+                    Start your child's fund
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/faq">
+                  <Button variant="outline" size="lg" className="h-14 px-10 text-base">
+                    Read the FAQ
+                  </Button>
+                </Link>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        <Footer />
+      </main>
     </div>
   );
 }

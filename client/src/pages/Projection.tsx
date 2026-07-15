@@ -4,9 +4,9 @@ import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Share2, Info } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useFunds } from "@/hooks/use-funds";
+import { useFunds, findFundInCaches } from "@/hooks/use-funds";
 import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAge18Transition } from "@/lib/age-transition";
 import { getPronouns } from "@/lib/pronouns";
 import { sumMonthlyEquivalent, WEEKS_PER_MONTH, DAYS_PER_MONTH } from "@shared/recurring-math";
@@ -93,8 +93,15 @@ export default function Projection() {
   const [, params] = useRoute("/projection/:fundId");
   const fundId = params?.fundId || "";
 
+  const queryClient = useQueryClient();
   const { data: funds = [] } = useFunds();
-  const activeFund = funds.find((f) => f.id === fundId);
+  // Frame-one fund resolution. useFunds() briefly returns [] on this page's first
+  // render (its query is gated on an async auth re-check), which flashed the
+  // "!activeFund" skeleton mid-transition — and a View Transition would FREEZE that
+  // skeleton. findFundInCaches walks the durable caches (query cache → localStorage
+  // snapshot useFunds persists) so the fund is present on frame one and the page
+  // lands straight on content.
+  const activeFund = funds.find((f) => f.id === fundId) ?? findFundInCaches(queryClient, fundId);
 
   // Subscription state for the proactive Plus prompt below (only fires
   // for Free-plan users on 3rd+ view of this page). Read via the
@@ -184,8 +191,13 @@ export default function Projection() {
   const yearsTo18 = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
   const currentAge = age18Transition ? Math.max(0, majorityAge - yearsTo18) : 0;
 
-  const { data: parentContributions = [] } = useQuery<any[]>({
-    queryKey: ["projection-parent-contributions", fundId],
+  // SAME query key + endpoint as the dashboard's parent-contributions query, so
+  // arriving here from the dashboard (the "Potential ›" tap) reuses the already-
+  // cached rows — the monthly lever seeds INSTANTLY instead of sitting at $0/mo
+  // during a re-fetch and rendering a lower, dashboard-mismatched projection
+  // (founder catch 2026-07-09). A cold deep-link still fetches, then settles.
+  const { data: parentContributions = [], isFetched: contributionsFetched } = useQuery<any[]>({
+    queryKey: ["/api/funds", fundId, "parent-contributions"],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/parent-contributions`, { credentials: "include" });
       if (!res.ok) return [];
@@ -248,9 +260,15 @@ export default function Projection() {
   // milestone when none is far enough out (e.g. an adult-owned fund near 65).
   useEffect(() => {
     if (visibleMilestones.length === 0) return;
+    // Default to the HANDOFF (majority age) — the meaningful "this becomes theirs"
+    // milestone, and the same age the dashboard hero rests on, so "At 21" reads the
+    // same on both surfaces. Falls back to the long-horizon default when majority
+    // isn't a visible milestone (rare states) or is already behind the child.
+    const handoffIdx = visibleMilestones.indexOf(majorityAge as any);
+    if (handoffIdx !== -1 && majorityAge > currentAge) { setMilestoneIdx(handoffIdx); return; }
     const smart = visibleMilestones.findIndex((a) => a - currentAge >= MIN_DEFAULT_HORIZON_YEARS);
     setMilestoneIdx(smart === -1 ? visibleMilestones.length - 1 : smart);
-  }, [visibleMilestones, currentAge]);
+  }, [visibleMilestones, currentAge, majorityAge]);
 
   // Seed from `activeMonthly` once schedules load. The page entry has to MATCH
   // the dashboard hero's number, otherwise the parent taps "$165k at 65" on the
@@ -270,6 +288,21 @@ export default function Projection() {
       setMonthlySeeded(true);
     }
   }, [activeMonthly, monthlySeeded]);
+
+  // Don't paint the projected number / chart until the recurring is actually known,
+  // so a COLD deep-link to /projection never flashes a low, $0/mo-based figure before
+  // contributions load (founder catch 2026-07-09). True immediately on a warm nav
+  // from the dashboard (shared cache seeds the monthly), so no skeleton shows there.
+  // Ready = we've seeded a real monthly, OR the query settled and there's genuinely
+  // no recurring (a correct $0 for that parent). Safety net: never let the skeleton
+  // persist — if the query is slow or the session is odd, reveal after a short beat
+  // regardless. A bounded ~1.8s wait beats an indefinite skeleton.
+  const [projectionRevealTimeout, setProjectionRevealTimeout] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setProjectionRevealTimeout(true), 1800);
+    return () => window.clearTimeout(t);
+  }, []);
+  const projectionReady = monthlySeeded || (contributionsFetched && activeMonthly === 0) || projectionRevealTimeout;
 
   // UTMA accounts cap parent contributions at age 18 (control transfers to the
   // child). Personal accounts have no such cap — the parent funds their own
@@ -337,8 +370,17 @@ export default function Projection() {
       const value = projectFund(totalValue, monthly, rate.rate, years, contribYears);
       pts.push({ age, value });
     }
+    // Pin the final point to the EXACT hero projection. The integer-age loop
+    // above draws the curve's SHAPE, but its last point lands on ceil(targetAge)
+    // measured from floor(currentAge) — slightly MORE compounding than the
+    // hero's fractional (targetAge − currentAge) horizon. That made the chart's
+    // peak label read ~$5K above the headline (e.g. "$137K" vs $131,855). The
+    // endpoint is the truth: overwrite it so the curve ends ON the big number.
+    if (pts.length > 0) {
+      pts[pts.length - 1] = { age: Math.round(targetAge), value: projected };
+    }
     return pts;
-  }, [currentAge, targetAge, totalValue, monthly, rate.rate, isUtma, yearsTo18]);
+  }, [currentAge, targetAge, totalValue, monthly, rate.rate, isUtma, yearsTo18, projected]);
 
   // All three rates' projections, so the hero can show the band as a
   // calm subtitle without forcing the parent to chip-tap through each.
@@ -365,6 +407,16 @@ export default function Projection() {
     [totalValue, monthly, contributionYearsCap],
   );
   const marketAdded = Math.max(0, projected - totalContributed);
+
+  // Count-up the headline AND the breakdown together, so a slider drag moves
+  // the whole hero as one living object — previously only the big number
+  // rolled while "Money in" / "Market added" hard-snapped beside it. These
+  // live ABOVE the early return so the hook call order stays stable
+  // (rules-of-hooks) regardless of activeFund. The shared useCountUp honors
+  // reduced-motion and never rolls downward (losses snap — brand rule).
+  const projectedDisplay = useCountUp(projected);
+  const moneyInDisplay = useCountUp(totalContributed);
+  const marketAddedDisplay = useCountUp(marketAdded);
 
   // Pending preview (used inside the change sheet so the parent can see what tapping a
   // preset would do at the slider's current age before committing).
@@ -417,7 +469,7 @@ export default function Projection() {
     const verb = named ? "is" : "are";
     const childPossessive = named ? `${childOrPronoun}'s` : "their";
     const monthlyTag = monthly > 0 ? ` (with ${fmtMoney(monthly)}/mo)` : "";
-    const text = `I started a fund for ${childOrPronoun}. ${fmtMoney(totalValue)} today → could be ${fmtMoney(projected)} by the time ${childOrPronoun} ${verb} ${targetAge}${monthlyTag} 🌱
+    const text = `I started a fund for ${childOrPronoun}. ${fmtMoney(totalValue)} today → could be ${fmtMoney(projected)} by the time ${childOrPronoun} ${verb} ${targetAge}${monthlyTag}
 
 Add a gift if you want to be part of ${childPossessive} story:
 ${shareUrl}`;
@@ -448,18 +500,31 @@ ${shareUrl}`;
   };
 
   if (!activeFund) {
+    // Skeleton in the page's own shape (not a bare text line) — matches the
+    // pulse-gate loading discipline used across the app: muted blocks that
+    // mirror title → hero → chart → monthly lever → rate row, so the layout
+    // doesn't jump when the real content swaps in.
     return (
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
         <AppHeader />
-        <div className="kiddo-canvas px-4 py-6 max-w-lg">
-          <p className="text-sm text-muted-foreground">Loading projection…</p>
+        <div
+          className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg"
+          aria-busy="true"
+          aria-label="Loading projection"
+        >
+          <div className="space-y-2">
+            <div className="h-7 w-44 rounded-lg bg-primary/10 animate-pulse" />
+            <div className="h-4 w-64 rounded bg-primary/10 animate-pulse" />
+          </div>
+          <div className="h-64 rounded-3xl bg-primary/10 animate-pulse" />
+          <div className="h-44 rounded-2xl bg-primary/10 animate-pulse" />
+          <div className="h-16 rounded-2xl bg-primary/10 animate-pulse" />
+          <div className="h-20 rounded-2xl bg-primary/10 animate-pulse" />
         </div>
       </div>
     );
   }
 
-  // Smoothly animate the projected number on every slider/lever change.
-  const projectedDisplay = useCountUp(projected);
   // Filled portion of the slider track for the gradient. With N stops, slot i fills
   // i/(N-1) of the track. Single-stop case renders fully filled.
   const sliderFillPct = visibleMilestones.length > 1
@@ -469,7 +534,7 @@ ${shareUrl}`;
   return (
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
-      <div className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg">
+      <div className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg md:max-w-4xl">
         {/* Inline Back button REMOVED 2026-05-20. The AppHeader now
             renders a mobile Back arrow on every fund sub-page (Age18Plan,
             Projection, Tax Documents) via the isFundSubPage() helper
@@ -489,14 +554,22 @@ ${shareUrl}`;
             "Feel the future" subhead retoned to product-register —
             the slider's purpose is to explore projections, not perform
             emotion. */}
-        <div>
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
+          <h1 className="font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
             {isOwnerMode ? "Your" : possessive} Potential
           </h1>
-          <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-            Drag the age slider to explore projected values. The number updates as you move.
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+            Drag the slider to any age to see where the fund could grow.
           </p>
-        </div>
+        </motion.div>
+
+        {/* Desktop: two columns — hero (number + slider) on the left, the
+            chart + levers + share on the right — so the page reads as
+            designed-for-desktop instead of a phone column stretched wide.
+            Mobile keeps a single stack in the SAME order via flex-col gap-6,
+            so the responsive change is additive (mobile is unchanged). */}
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-[1.05fr_0.95fr] md:gap-7 md:items-start">
+          <div className="flex flex-col gap-6 md:min-w-0">
 
         {/* HERO: today + slider + projected number + breakdown + tagline */}
         <motion.section
@@ -505,14 +578,18 @@ ${shareUrl}`;
           transition={{ duration: 0.4 }}
           className="rounded-3xl p-6 text-white space-y-6"
           style={{
-            background: "linear-gradient(135deg, rgb(26,67,50) 0%, rgb(34,80,60) 50%, rgb(46,94,72) 100%)",
-            boxShadow: "0 12px 40px rgba(26,67,50,0.25)",
+            // Match the canonical dashboard hero's evergreen (brand tokens, deep at
+            // the bottom) instead of a bespoke lighter-at-the-bottom green, so both
+            // "hero" surfaces read as the same material. 160deg (not the dashboard's
+            // 180) because this one is a card, so a slight diagonal catches the light.
+            background: "linear-gradient(160deg, hsl(158 45% 19%) 0%, hsl(var(--kiddo-evergreen)) 52%, hsl(var(--kiddo-evergreen-deep)) 100%)",
+            boxShadow: "0 12px 40px hsl(158 45% 19% / 0.28)",
           }}
           data-testid="section-headline"
         >
           {/* Today */}
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-white/60 mb-1">Today</p>
+            <p className="text-2xs font-bold uppercase tracking-wide text-white/60 mb-1">Today</p>
             <p className="text-2xl font-bold tabular-nums" data-testid="text-projection-current">
               {fmtMoney(totalValue, 2)}
             </p>
@@ -528,7 +605,7 @@ ${shareUrl}`;
                   WebKit track is generated below from sliderFillPct so the filled portion
                   follows the thumb position smoothly as the parent drags. */}
               <style>{`
-                input.kiddo-age-slider { -webkit-appearance: none; appearance: none; background: transparent; height: 28px; padding: 0; cursor: pointer; }
+                input.kiddo-age-slider { -webkit-appearance: none; appearance: none; background: transparent; height: 44px; padding: 0; cursor: pointer; } /* 44px = Apple-HIG min touch band for easy one-handed drag (2026-06-10). The visible track stays 6px and the thumb stays 22px and centered (both auto-center on the track, so input height does not move them); only the invisible grab area grows from 28px to 44px. */
                 input.kiddo-age-slider:focus { outline: none; }
                 input.kiddo-age-slider::-webkit-slider-runnable-track {
                   height: 6px; border-radius: 9999px;
@@ -548,16 +625,16 @@ ${shareUrl}`;
                 }
                 input.kiddo-age-slider::-webkit-slider-thumb {
                   -webkit-appearance: none; appearance: none;
-                  width: 22px; height: 22px; border-radius: 9999px;
+                  width: 28px; height: 28px; border-radius: 9999px;
                   background: rgb(255,255,255);
                   border: 3px solid rgb(184,121,26);
                   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-                  margin-top: -8px; cursor: grab;
+                  margin-top: -11px; cursor: grab;
                   transition: transform 0.12s ease;
                 }
                 input.kiddo-age-slider:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.08); }
                 input.kiddo-age-slider::-moz-range-thumb {
-                  width: 22px; height: 22px; border-radius: 9999px;
+                  width: 28px; height: 28px; border-radius: 9999px;
                   background: rgb(255,255,255);
                   border: 3px solid rgb(184,121,26);
                   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
@@ -585,8 +662,8 @@ ${shareUrl}`;
                   // slider's two-phase nature reads visually: dragging past
                   // majority means "this is what compounds without your
                   // contributions." Only fires for UTMA; personal accounts
-                  // have no such inflection. State-aware: 18 in most states,
-                  // 21 in some (CA, MD, etc.). Fund's majorityAge field
+                  // have no such inflection. State-aware: 21 in most states,
+                  // 18 in some (CA, etc.). Fund's majorityAge field
                   // drives the comparison. Edge case: states with majority
                   // 19/20 don't have those in MILESTONE_AGES so no inflection
                   // mark renders — acceptable since those are rare states.
@@ -629,7 +706,7 @@ ${shareUrl}`;
                   set (18/21 are; 19/20 aren't, so the caption hides for those
                   rare states — same edge case as the dot itself). */}
               {isUtma && visibleMilestones.includes(majorityAge as any) && (
-                <p className="text-[10px] italic text-white/55 mt-1 text-center">
+                <p className="text-3xs italic text-white/55 mt-1 text-center text-balance">
                   {childName} takes control at {majorityAge} · what grows past then is pure market compound
                 </p>
               )}
@@ -639,7 +716,7 @@ ${shareUrl}`;
           {/* The big projected number — count-up animated. Fades in slightly on each
               update too so the change feels alive, not a hard repaint. */}
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-white/60 mb-1">
+            <p className="text-2xs font-bold uppercase tracking-wide text-white/60 mb-1">
               At age {targetAge}
             </p>
             <p
@@ -647,7 +724,9 @@ ${shareUrl}`;
               data-testid="text-projection-value"
               style={{ letterSpacing: "-0.02em" }}
             >
-              {fmtMoney(projectedDisplay)}
+              {projectionReady
+                ? fmtMoney(projectedDisplay)
+                : <span className="inline-block h-[0.8em] w-[3.4em] align-[-0.06em] rounded-xl bg-white/15 animate-pulse" aria-hidden />}
             </p>
             {/* Rate-band subtitle — shows the OTHER two rates' projections
                 alongside the headline so the parent feels the variance
@@ -658,8 +737,8 @@ ${shareUrl}`;
                 (nothing to project) so the line doesn't appear with
                 three identical "today" values. Per the 2026-05-13 audit
                 on whether we're showing the magnitude brilliantly. */}
-            {yearsAhead > 0 && (
-              <p className="text-[11px] text-white/55 mt-2 tabular-nums">
+            {projectionReady && yearsAhead > 0 && (
+              <p className="text-2xs text-white/55 mt-2 tabular-nums">
                 {projectedByRate
                   .filter((r) => r.id !== rateId)
                   .map((r) => `${r.sub.replace(" / yr", "")}: ${fmtMoney(r.value)}`)
@@ -675,7 +754,7 @@ ${shareUrl}`;
                 continued for 47 years (which would be incorrect for UTMA);
                 this surfaces the actual model in one quiet sentence. */}
             {monthly > 0 && targetAge > currentAge && contributionYearsCap > 0 && (
-              <p className="text-xs italic text-white/65 mt-2 leading-relaxed">
+              <p className="text-xs italic text-white/65 mt-2 leading-relaxed text-balance">
                 {isUtma
                   ? targetAge <= majorityAge
                     ? <>Assumes {fmtMoney(monthly)}/mo through {childName}'s {majorityOrdinal} birthday.</>
@@ -688,7 +767,7 @@ ${shareUrl}`;
 
           {/* Contribution breakdown — the "feel it working" moment */}
           <div className="rounded-2xl bg-white/8 border border-white/10 p-4 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Of that</p>
+            <p className="text-3xs font-bold uppercase tracking-wide text-white/55">Of that</p>
             <div className="flex items-baseline justify-between">
               {/* Source-neutral on UTMA funds: this bucket is today's whole
                   balance + future deposits, most of which on a gift-funded
@@ -697,12 +776,12 @@ ${shareUrl}`;
                   contributions) is a misattribution here. Personal/self-
                   funded accounts keep the warm "You added". */}
               <p className="text-sm text-white/80">{isUtma ? "Money in" : "You added"}</p>
-              <p className="text-sm font-bold tabular-nums text-white">{fmtMoney(totalContributed)}</p>
+              <p className="text-sm font-bold tabular-nums text-white">{projectionReady ? fmtMoney(moneyInDisplay) : <span className="inline-block h-[0.7em] w-[3em] rounded bg-white/15 animate-pulse align-middle" aria-hidden />}</p>
             </div>
             <div className="flex items-baseline justify-between">
               <p className="text-sm text-white/80">Market added</p>
               <p className="text-sm font-bold tabular-nums text-[hsl(143,55%,72%)]">
-                +{fmtMoney(marketAdded)}
+                {projectionReady ? <>+{fmtMoney(marketAddedDisplay)}</> : <span className="inline-block h-[0.7em] w-[3em] rounded bg-white/15 animate-pulse align-middle" aria-hidden />}
               </p>
             </div>
           </div>
@@ -716,6 +795,9 @@ ${shareUrl}`;
               already lands the message; the italic line was rhetorical-
               marketing-voice noise on a calm product surface. */}
         </motion.section>
+          </div>{/* /left column (hero) */}
+
+          <div className="flex flex-col gap-6 md:min-w-0">
 
         {/* Growth trajectory chart — visual axis for the slider+text
             projection above. The slider drags = the target dot on
@@ -731,18 +813,22 @@ ${shareUrl}`;
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.05 }}
-          className="rounded-2xl border border-border bg-card p-5"
+          className="kiddo-card p-5"
           data-testid="projection-trajectory-card"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-3">
+          <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground mb-3">
             Growth trajectory
           </p>
-          <ProjectionTrajectoryChart
-            points={trajectoryPoints}
-            targetAge={targetAge}
-            currentValue={totalValue}
-            currentAge={currentAge}
-          />
+          {projectionReady ? (
+            <ProjectionTrajectoryChart
+              points={trajectoryPoints}
+              targetAge={targetAge}
+              currentValue={totalValue}
+              currentAge={currentAge}
+            />
+          ) : (
+            <div className="h-40 rounded-xl bg-muted/40 animate-pulse" aria-hidden />
+          )}
         </motion.div>
 
         {/* Monthly contribution lever. The "until [Child] turns 18" subline matters:
@@ -753,24 +839,32 @@ ${shareUrl}`;
           type="button"
           onClick={openChangeSheet}
           data-testid="button-change-monthly"
-          className="w-full flex items-center justify-between rounded-2xl border border-border bg-card hover:bg-muted/40 transition-colors p-4"
+          className="w-full flex items-center justify-between kiddo-card hover:bg-muted/40 transition-colors p-4"
         >
           <div className="text-left min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
               Monthly contribution
             </p>
             <p className="font-heading text-xl font-bold tabular-nums text-foreground">
               {fmtMoney(monthly)}<span className="text-xs font-normal text-muted-foreground">/mo</span>
             </p>
             {monthly > 0 && isUtma && yearsTo18 > 0 && (() => {
-              // Months remaining until 18, rounded honest.
+              // How long the parent's monthly actually flows (contributions stop
+              // at majority). Months read great when the runway is SHORT and
+              // urgent ("1 month until Alex turns 21"), but "89 months" is
+              // unparseable — past ~2 years a parent thinks in years. So: months
+              // under 2 years, rounded years beyond. (The branch here used to be
+              // named yearsLeftDisplay but emitted months in both cases.)
               const monthsLeft = Math.max(0, Math.round(yearsTo18 * 12));
-              const yearsLeftDisplay = yearsTo18 >= 1
-                ? `${monthsLeft} months until ${childName} turns ${majorityAge}`
-                : `${monthsLeft === 1 ? "1 month" : `${monthsLeft} months`} until ${childName} turns ${majorityAge}`;
+              const left =
+                monthsLeft < 1 ? "less than a month"
+                  : monthsLeft === 1 ? "1 month"
+                    : monthsLeft < 24 ? `${monthsLeft} months`
+                      : monthsLeft % 12 === 0 ? `${monthsLeft / 12} years`
+                        : `about ${Math.round(monthsLeft / 12)} years`;
               return (
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {yearsLeftDisplay}
+                <p className="text-2xs text-muted-foreground mt-0.5">
+                  {left} until {childName} turns {majorityAge}
                 </p>
               );
             })()}
@@ -782,16 +876,16 @@ ${shareUrl}`;
         </button>
 
         {/* Return rate — tertiary, below the monthly lever */}
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <div className="kiddo-card p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
               Assumed return
             </p>
             <button
               type="button"
               onClick={() => { haptic("selection"); setExplainerOpen(true); }}
               data-testid="button-rate-explainer"
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <Info size={11} />
               How we calculate this
@@ -812,8 +906,8 @@ ${shareUrl}`;
                       : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
                   }`}
                 >
-                  <p className="text-[10px] font-semibold leading-tight">{r.label}</p>
-                  <p className="text-[11px] font-bold tabular-nums leading-tight">{r.sub}</p>
+                  <p className="text-3xs font-semibold leading-tight">{r.label}</p>
+                  <p className="text-2xs font-bold tabular-nums leading-tight">{r.sub}</p>
                 </button>
               );
             })}
@@ -836,16 +930,18 @@ ${shareUrl}`;
           type="button"
           onClick={handleShare}
           data-testid="button-share-projection"
-          className="w-full rounded-2xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.92)] text-white py-4 font-bold transition-colors flex items-center justify-center gap-2"
+          className="w-full rounded-2xl kiddo-gold-button py-4 font-bold transition-colors flex items-center justify-center gap-2"
         >
           <Share2 size={16} />
-          Share {isOwnerMode ? "your" : possessive} potential 🎁
+          Share {isOwnerMode ? "your" : possessive} potential
         </button>
+          </div>{/* /right column (chart + levers + share) */}
+        </div>{/* /two-column wrapper */}
 
         {/* Disclaimer. Honest about the model: contributions stop at 18 for UTMAs
             (which matches the math), continuous for personal accounts. No em-dashes
             per the locked copy rule. */}
-        <p className="text-[10.5px] text-muted-foreground/80 leading-relaxed text-center px-2">
+        <p className="text-3xs text-muted-foreground/80 leading-relaxed text-center px-2 text-pretty">
           For illustrative purposes only. Based on long-term historical market averages, not guaranteed.{" "}
           {isOwnerMode
             // Post-handoff OWNER: isUtma is false for them (a transferred fund is an
@@ -884,7 +980,7 @@ ${shareUrl}`;
 
       {/* Change-monthly bottom sheet */}
       <Dialog open={changeSheetOpen} onOpenChange={(o) => { if (!o) setChangeSheetOpen(false); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Change monthly amount</DialogTitle>
           <div className="p-6 space-y-5">
             <div>
@@ -917,20 +1013,20 @@ ${shareUrl}`;
                     : "bg-[hsl(var(--kiddo-cream))] border-[hsl(var(--kiddo-evergreen)/0.3)] hover:bg-[hsl(var(--kiddo-cream)/0.7)]"
                 }`}
               >
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                <p className="text-3xs font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
                   Use my current rate
                 </p>
                 <p className="text-sm font-bold text-foreground tabular-nums">
                   {fmtMoney(activeMonthly)}/mo
                   {activeScheduleBreakdown.length > 1 && (
-                    <span className="text-[11px] font-normal text-muted-foreground"> combined</span>
+                    <span className="text-2xs font-normal text-muted-foreground"> combined</span>
                   )}
                 </p>
                 {/* Source breakdown — when the combined number wraps multiple schedules,
                     surface them here in their native frequencies so the math is visible.
                     E.g. "$25/mo + $50/wk + $100/wk" → why the combined is $677/mo. */}
                 {activeScheduleBreakdown.length > 1 && (
-                  <p className="text-[10.5px] text-muted-foreground mt-1 leading-relaxed">
+                  <p className="text-3xs text-muted-foreground mt-1 leading-relaxed">
                     {activeScheduleBreakdown.join(" + ")}
                   </p>
                 )}
@@ -963,7 +1059,7 @@ ${shareUrl}`;
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+              <label className="block text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
                 Custom amount
               </label>
               <div className="flex items-center gap-2">
@@ -989,7 +1085,7 @@ ${shareUrl}`;
             </div>
 
             <div className="rounded-xl bg-[hsl(var(--kiddo-cream))] border border-[hsl(var(--kiddo-gold)/0.25)] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <p className="text-3xs font-bold uppercase tracking-wide text-muted-foreground">
                 At {fmtMoney(pendingMonthly)}/mo · age {targetAge}
               </p>
               {/* Cadence equivalence — translates the monthly amount into
@@ -1010,16 +1106,29 @@ ${shareUrl}`;
                     ? `$${v.toFixed(2)}`
                     : `$${Math.round(v)}`;
                 return (
-                  <p className="text-[10.5px] italic text-muted-foreground/75 mt-0.5">
+                  <p className="text-3xs italic text-muted-foreground/75 mt-0.5">
                     ≈ {formatPer(perDay)}/day · {formatPer(perWeek)}/week
                   </p>
                 );
               })()}
+              {/* Two-phase cap — the sheet was the one surface that dropped it.
+                  The hero says "$X/mo through {child}'s {ordinal} birthday, then
+                  market growth alone"; without the same line here, "$50/mo · age
+                  40" + the daily/weekly cadence read as if the contribution runs
+                  the whole way (badly so for a kid near handoff, where only a
+                  month or two of it ever invests). Mirrors the hero's exact
+                  framing + the same isUtma && targetAge>majorityAge test, so the
+                  truth sits right above the number it qualifies. */}
+              {pendingMonthly > 0 && isUtma && targetAge > majorityAge && (
+                <p className="text-3xs text-muted-foreground mt-1 leading-relaxed text-balance">
+                  Flows through {childName}'s {majorityOrdinal} birthday, then market growth alone.
+                </p>
+              )}
               <p className="font-heading text-2xl font-bold text-foreground tabular-nums mt-1">
                 {fmtMoney(pendingPreview)}
               </p>
               {pendingMonthly !== monthly && (
-                <p className="text-[11px] text-muted-foreground mt-1">
+                <p className="text-2xs text-muted-foreground mt-1">
                   {pendingPreview > projected ? "+" : "−"}
                   {fmtMoney(Math.abs(pendingPreview - projected))} vs current scenario
                 </p>
@@ -1041,7 +1150,7 @@ ${shareUrl}`;
                   type="button"
                   onClick={handleIncreaseAutoInvest}
                   data-testid="button-go-to-settings"
-                  className="w-full text-center text-[11px] text-muted-foreground hover:text-foreground transition-colors py-1"
+                  className="w-full text-center text-2xs text-muted-foreground hover:text-foreground transition-colors py-1"
                 >
                   Want to actually set this up? Open recurring investment settings →
                 </button>
@@ -1053,7 +1162,7 @@ ${shareUrl}`;
 
       {/* Return-rate explainer */}
       <Dialog open={explainerOpen} onOpenChange={(o) => { if (!o) setExplainerOpen(false); }}>
-        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogContent sheet className="sm:max-w-sm p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">How we calculate the return rate</DialogTitle>
           <div className="p-6 space-y-4">
             <div>
@@ -1062,6 +1171,9 @@ ${shareUrl}`;
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               <strong className="text-foreground">7%</strong> is roughly the historical average annual return of the US stock market over multi-decade windows. Some years are higher, some are lower, sometimes much lower. Over decades it tends to land in this neighborhood.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              That 7% is a <strong className="text-foreground">real return</strong>: it already accounts for inflation. So the projected number is in <strong className="text-foreground">today's dollars</strong>, roughly what it could buy now, not a bigger future figure that buys less.
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               <strong className="text-foreground">5%</strong> is a more conservative pick, closer to a bond-heavy mix.

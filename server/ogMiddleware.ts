@@ -1,7 +1,9 @@
 import { type Express } from "express";
 import { eq, sql } from "drizzle-orm";
+import sharp from "sharp";
 import { db } from "./db";
 import { funds, events } from "@shared/schema";
+import { BRICOLAGE_BOLD_B64 } from "./ogFont";
 
 const SCRAPER_RE = /facebookexternalhit|facebookbot|twitterbot|whatsapp|slackbot|linkedinbot|discordbot|telegrambot|iMessage|Googlebot-Image|Pinterest|Embedly|Flipboard|Baiduspider|vkShare/i;
 
@@ -66,7 +68,80 @@ async function getFamilyCount(): Promise<number> {
   }
 }
 
+// ── Dynamic per-fund OG image ────────────────────────────────────────────────
+// Renders a 1200x630 PNG card personalized to the child ("Gift {name}'s
+// future.") in the real brand font, so a shared gift link shows the child's name
+// ON the preview image, not only in the (already per-fund) OG title. sharp
+// rasterizes an SVG with the Bricolage Bold font embedded (base64, deploy-safe).
+// Cached in-memory per slug; on ANY failure the endpoint falls back to the
+// static brand card so a scraper never gets a broken image.
+const OG_IMAGE_TTL_MS = 60 * 60 * 1000;
+const ogImageCache = new Map<string, { buf: Buffer; ts: number }>();
+
+function escSvg(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function buildFundOgSvg(childName: string): string {
+  const headline = `Gift ${escSvg(childName)}'s future.`;
+  // Down-size the headline for long names so it never overflows 1200px.
+  const size = headline.length > 22 ? 84 : headline.length > 17 ? 100 : 116;
+  return `<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @font-face { font-family: 'BrandHead'; font-weight: 700; src: url(data:font/truetype;charset=utf-8;base64,${BRICOLAGE_BOLD_B64}); }
+      /* MUST request weight 700: librsvg registers the embedded TTF at its
+         intrinsic weight (Bold) and falls back to a system font for a 400
+         request, so every text element below inherits font-weight:700. */
+      .t { font-family: 'BrandHead', sans-serif; font-weight: 700; }
+    </style>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FBF9F5"/><stop offset="0.55" stop-color="#F8F5F0"/><stop offset="1" stop-color="#F3EFE7"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.88" cy="-0.1" r="0.6">
+      <stop offset="0" stop-color="rgba(197,130,30,0.12)"/><stop offset="1" stop-color="rgba(197,130,30,0)"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <text x="80" y="118" class="t" font-size="30" letter-spacing="6" fill="#1B3A2D" opacity="0.85">KIDDO</text>
+  <text x="80" y="320" class="t" font-size="${size}" fill="#1B3A2D">${headline}</text>
+  <rect x="82" y="356" width="92" height="6" rx="3" fill="#C5821E"/>
+  <text x="80" y="430" class="t" font-size="38" fill="rgba(26,23,16,0.55)">A real investment gift that grows with them.</text>
+  <text x="80" y="582" class="t" font-size="24" fill="rgba(26,23,16,0.45)">getkiddo · invest in a child's future</text>
+</svg>`;
+}
+
+async function renderFundOgPng(slug: string, childName: string): Promise<Buffer> {
+  const cached = ogImageCache.get(slug);
+  if (cached && Date.now() - cached.ts < OG_IMAGE_TTL_MS) return cached.buf;
+  const buf = await sharp(Buffer.from(buildFundOgSvg(childName))).png().toBuffer();
+  ogImageCache.set(slug, { buf, ts: Date.now() });
+  return buf;
+}
+
 export function registerOGMiddleware(app: Express) {
+  // Dynamic per-fund preview image. 4-segment path can't collide with the
+  // catch-all `/:fundSlug/:eventSlug?` below. Falls back to the static card.
+  app.get("/og/fund/:slug/card.png", async (req, res) => {
+    try {
+      const [fund] = await db
+        .select({ recipientFirstName: funds.recipientFirstName })
+        .from(funds)
+        .where(eq(funds.slug, req.params.slug))
+        .limit(1);
+      if (!fund) return res.redirect(302, "/kiddo-og-image.png");
+      const child = (fund.recipientFirstName || "").trim() || "a child";
+      const png = await renderFundOgPng(req.params.slug, child);
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("X-Robots-Tag", "noindex");
+      return res.end(png);
+    } catch {
+      return res.redirect(302, "/kiddo-og-image.png");
+    }
+  });
+
   app.get("/:fundSlug/:eventSlug?", async (req, res, next) => {
     try {
       const ua = req.headers["user-agent"] || "";
@@ -122,7 +197,9 @@ export function registerOGMiddleware(app: Express) {
 
       const origin = `${req.protocol}://${req.get("host")}`;
       const pageUrl = `${origin}${req.path}`;
-      const image = `${origin}/kiddo-og-image.png`;
+      // Per-fund dynamic card (child's name ON the image). Endpoint falls back
+      // to the static brand card if rendering fails, so this is always safe.
+      const image = `${origin}/og/fund/${encodeURIComponent(fundSlug)}/card.png`;
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=300");

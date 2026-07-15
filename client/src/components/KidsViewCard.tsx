@@ -32,6 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { demoBlocked } from "@/lib/demo-block";
 import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -106,6 +107,7 @@ export function KidsViewCard({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save PIN.");
+      if (demoBlocked(data, toast)) { setShowPinManager(false); return; }
       haptic("success");
       toast({ title: "PIN saved", description: "Kid's View is active with the new PIN." });
       setNewPin("");
@@ -127,6 +129,7 @@ export function KidsViewCard({
       const res = await fetch(`/api/funds/${fund.id}/kid-view-link`, { method: "POST", credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Kid View is not set up yet.");
+      if (demoBlocked(data, toast)) return;
       await navigator.clipboard.writeText(data.shareLink);
       haptic("success");
       toast({ title: "Kid View link copied!", description: "Share this link and PIN with your child." });
@@ -146,7 +149,7 @@ export function KidsViewCard({
 
   return (
     <SectionCard>
-      <div className="p-4 flex items-center justify-between gap-3">
+      <div className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             {isOwnerMode ? "Your View" : fund?.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s View` : "Kid's View"}
@@ -155,14 +158,14 @@ export function KidsViewCard({
             {isActive ? "Active · PIN protected" : "Not set up yet"}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           {isActive ? (
             <>
               <button
                 type="button"
                 disabled={copyingKidLink}
                 onClick={handleCopyKidViewLink}
-                className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity px-3 py-1.5 rounded-lg border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
+                className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity px-3 py-1.5 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
               >
                 {copyingKidLink ? "Copying..." : "Copy link"}
               </button>
@@ -170,7 +173,7 @@ export function KidsViewCard({
                 <>
                   <a
                     href={`mailto:?subject=${encodeURIComponent(isOwnerMode ? "Your Kiddo fund" : `${capFirst(fund?.recipientFirstName) || "Your child"}'s Kiddo fund`)}&body=${encodeURIComponent(`Here's your fund link: ${kidViewSettings.shareLink}\n\nYou'll need the PIN to get in.`)}`}
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl border border-border"
                   >
                     Email
                   </a>
@@ -178,7 +181,7 @@ export function KidsViewCard({
                     href={kidViewSettings.shareLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl border border-border"
                   >
                     Open
                   </a>
@@ -187,7 +190,7 @@ export function KidsViewCard({
               <button
                 type="button"
                 onClick={() => { setShowPinManager((v) => !v); setNewPin(""); setNewPinHint(""); haptic("selection"); }}
-                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl border border-border"
               >
                 {showPinManager ? "Cancel" : "Edit PIN"}
               </button>

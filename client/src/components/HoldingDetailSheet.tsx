@@ -8,10 +8,18 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { TrendChartSkeleton } from "@/components/TrendChartSkeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { AssetToken, hasAssetToken } from "@/components/ui/asset-token";
+import { HoldingStoryRing } from "@/components/HoldingStories";
+import { motion } from "framer-motion";
+import { SHARED_ELEMENT_HOLDING_MORPH, holdingMorphId } from "@/lib/shared-element-flag";
+import { isAnonGifterName } from "@/lib/gifter-name";
 import { haptic } from "@/lib/haptics";
 import { friendlyHoldingName } from "@/lib/ticker-names";
+import { gifterIdentityKey } from "@/lib/gifter-name";
 import { getEtfHoldings } from "@/lib/etf-holdings";
+import { STRATEGY_ICONS } from "@/lib/strategy";
 import { useCountUp } from "@/hooks/use-count-up";
 import type { Holding, Gift } from "@shared/schema";
 
@@ -51,8 +59,8 @@ interface HoldingDetailSheetProps {
   // open for read-only roles; only the parent actions disappear.
   isReadOnly?: boolean;
   // True when the current viewer OWNS this fund post-handoff (the kid, now the
-  // adult owner). Flips third-person child framing ("% of Haley's fund", "chose
-  // AAPL for Haley") to second person ("% of your fund", "chose AAPL for you").
+  // adult owner). Flips third-person child framing ("% of Mia's fund", "chose
+  // AAPL for Mia") to second person ("% of your fund", "chose AAPL for you").
   isOwnerMode?: boolean;
   // True when this ticker is a slice of the active managed mix (VTI/BND/etc).
   // When true, per-ETF actions are replaced by strategy-level actions —
@@ -70,6 +78,9 @@ interface HoldingDetailSheetProps {
   onAdjustStrategy?: () => void;
   onNavigateToGift?: (giftId: string) => void;
   onNavigateToGifter?: (name: string) => void;
+  // Opens the "what's going on with what you own" stories for this ticker,
+  // fired by tapping the header logo (same as the dashboard row's ring).
+  onOpenStory?: (ticker: string) => void;
 }
 
 type PricePoint = { date: string; ts: number; value: number };
@@ -81,7 +92,7 @@ const CHART_RANGES: ChartRange[] = ["1D", "1W", "1M", "1Y", "ALL"];
 // historical price point. Multiple gifts on the same chart point merge
 // into one marker (count > 1) so dots don't overlap visually.
 type BuyMarker = {
-  x: string;       // matches PricePoint.date (the categorical x-axis value)
+  x: number;       // PricePoint.ts — the NUMERIC x-axis value (timestamp)
   y: number;       // price at that point (so the dot sits on the line)
   count: number;   // how many gifts collapsed into this marker
 };
@@ -102,12 +113,38 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
       .catch(() => { setError(true); setLoading(false); });
   }, [ticker, range]);
 
+  // Hold the trend's draw-in until JUST AFTER the header numbers' count-up
+  // (900ms) settles, so it reads as its own beat — numbers roll in first, then
+  // the line draws in (founder 2026-06-05: "the trend should come right after
+  // the roll in of the numbers, a tiny drop after, smooth"). The sheet remounts
+  // per holding open, so this mount-timer re-anchors to each open's numbers.
+  // ~1050ms = 900 (count-up) + a ~150ms breath, mirroring the hero
+  // balance→projection stagger. Data still fetches immediately; we just gate the
+  // VISUAL so the line never races the numbers, even on a warm cache.
+  const [canDrawChart, setCanDrawChart] = useState(false);
+  useEffect(() => {
+    // Keyed on `ticker` so the stagger REPLAYS every time a different holding
+    // opens (the header numbers re-roll then too), whether the sheet remounts
+    // or just receives a new ticker. NOT keyed on `range` — a range change
+    // mid-session should redraw immediately, not wait out the stagger again.
+    setCanDrawChart(false);
+    const t = setTimeout(() => setCanDrawChart(true), 1050);
+    return () => clearTimeout(t);
+  }, [ticker]);
+
   const min = data.length ? Math.min(...data.map((d) => d.value)) * 0.98 : 0;
   const max = data.length ? Math.max(...data.map((d) => d.value)) * 1.02 : 0;
   const isUp = data.length >= 2 && data[data.length - 1].value >= data[0].value;
   const color = isUp ? "#16a34a" : "#dc2626";
   const stride = Math.max(1, Math.floor((data.length || 1) / 5));
-  const ticks = data.filter((_, i) => i % stride === 0 || i === data.length - 1).map((d) => d.date);
+  // Ticks + dots are positioned on the NUMERIC ts (a real time axis), not the
+  // date STRING (2026-06-08). The string axis was categorical, and coarse
+  // ranges (ALL) repeat labels — Yahoo's ALL series ends "...Mar 2026, Jun
+  // 2026, Jun 2026" — which poisoned the category scale so EVERY gold gift-dot
+  // silently dropped (ifOverflow hidden) on ALL while the legend still
+  // promised them. Numeric positioning is immune to duplicate/coarse labels.
+  const ticks = data.filter((_, i) => i % stride === 0 || i === data.length - 1).map((d) => d.ts);
+  const tsToLabel = new Map(data.map((d) => [d.ts, d.date]));
 
   // Buy markers — for each gift to this ticker, find the closest chart
   // point by timestamp and stack on its x. Filtered down to settled +
@@ -118,15 +155,20 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
   // Implementation: O(gifts x data) lookup. With data ~250 points (1Y
   // daily) and gifts typically < 20 per ticker, this is ~5000 ops —
   // negligible, no memoization needed.
+  // Settled/invested gifts to THIS ticker that carry a real date — the ones
+  // eligible to plot as gold dots. Extracted from the marker builder so the
+  // caption can compare how many such gifts EXIST against how many actually land
+  // inside the visible range (older gifts drop off on 1Y), instead of claiming
+  // "all gifts are marked" when some fall off-range (founder catch 2026-07).
+  const matchedGifts = data.length === 0 ? [] : gifts.filter((g) => {
+    const status = String(g.status || "").toLowerCase();
+    if (status !== "settled" && status !== "invested") return false;
+    if (String(g.selectedTicker || "").toUpperCase() !== ticker.toUpperCase()) return false;
+    return !!(g.createdAt && new Date(g.createdAt).getTime());
+  });
+
   const buyMarkers: BuyMarker[] = (() => {
-    if (data.length === 0) return [];
-    const tickerUpper = ticker.toUpperCase();
-    const matched = gifts.filter((g) => {
-      const status = String(g.status || "").toLowerCase();
-      if (status !== "settled" && status !== "invested") return false;
-      return String(g.selectedTicker || "").toUpperCase() === tickerUpper;
-    });
-    if (matched.length === 0) return [];
+    if (matchedGifts.length === 0) return [];
 
     // Range tolerance: if the gift date is more than 4 intervals away
     // from the nearest chart point, the gift is considered out-of-range
@@ -138,10 +180,12 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
       : Number.POSITIVE_INFINITY;
     const tolerance = ms_per_interval * 4;
 
-    const grouped = new Map<string, BuyMarker>();
-    for (const gift of matched) {
-      const giftTs = gift.createdAt ? new Date(gift.createdAt).getTime() : 0;
-      if (!giftTs) continue;
+    // Group by the matched point's ts (a stable unique key per chart point —
+    // date strings can repeat on coarse ranges, which previously merged
+    // distinct points and broke positioning).
+    const grouped = new Map<number, BuyMarker>();
+    for (const gift of matchedGifts) {
+      const giftTs = new Date(gift.createdAt as any).getTime();
       // Binary search would be cleaner but linear is fine at this size.
       let closest = data[0];
       let closestDelta = Math.abs(closest.ts - giftTs);
@@ -153,12 +197,12 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
         }
       }
       if (closestDelta > tolerance) continue;
-      const existing = grouped.get(closest.date);
+      const existing = grouped.get(closest.ts);
       if (existing) {
         existing.count += 1;
       } else {
-        grouped.set(closest.date, {
-          x: closest.date,
+        grouped.set(closest.ts, {
+          x: closest.ts,
           y: closest.value,
           count: 1,
         });
@@ -166,6 +210,11 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
     }
     return Array.from(grouped.values());
   })();
+
+  // Gifts actually represented on the chart right now (dots stack same-day gifts,
+  // so sum counts, not dots) vs. how many fall outside the visible range.
+  const shownGiftCount = buyMarkers.reduce((sum, m) => sum + m.count, 0);
+  const offRangeGiftCount = matchedGifts.length - shownGiftCount;
 
   return (
     <div className="space-y-2">
@@ -176,7 +225,7 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
             key={r}
             type="button"
             onClick={() => setRange(r)}
-            className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-3xs font-semibold transition-colors ${
               range === r
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -189,13 +238,18 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
 
       {/* Chart area */}
       {loading ? (
-        <div className="w-full rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center" style={{ height: 160 }}>
-          <span className="text-xs text-muted-foreground animate-pulse">Loading...</span>
-        </div>
+        // Chart-shaped skeleton (matches the dashboard/trend chart's loading
+        // treatment) instead of a bare "Loading…" — the area resolves into a
+        // price chart, so the placeholder should look like one.
+        <TrendChartSkeleton heightPx={160} />
       ) : error || data.length < 2 ? (
         <div className="w-full rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center" style={{ height: 160 }}>
           <span className="text-xs text-muted-foreground">Chart unavailable</span>
         </div>
+      ) : !canDrawChart ? (
+        // Data's ready, but hold the draw until the header numbers settle. Same
+        // calm box (no layout shift) — the line draws into it a beat later.
+        <div className="w-full rounded-2xl overflow-hidden border border-border/40 bg-background" style={{ height: 160 }} />
       ) : (
         <div className="w-full rounded-2xl overflow-hidden border border-border/40 bg-background" style={{ height: 160 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -207,8 +261,11 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
                 </linearGradient>
               </defs>
               <XAxis
-                dataKey="date"
+                dataKey="ts"
+                type="number"
+                domain={["dataMin", "dataMax"]}
                 ticks={ticks}
+                tickFormatter={(ts) => tsToLabel.get(Number(ts)) ?? ""}
                 tick={{ fontSize: 10, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
@@ -234,6 +291,11 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
                 fill={`url(#sg-${ticker}-${range})`}
                 dot={false}
                 activeDot={{ r: 4, fill: color }}
+                // Smooth left-to-right draw-in. Gated to start ~1050ms after the
+                // sheet opens (see canDrawChart) so it follows the numbers, not
+                // races them. 1300ms reads smooth without dragging.
+                isAnimationActive={true}
+                animationDuration={1300}
               />
               {/* Buy markers — one gold ReferenceDot per (chart point, gift)
                   pair. Multiple gifts on the same point merge into a
@@ -273,10 +335,18 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
           marker is on the chart so the line stays clean for tickers
           with no on-range gifts. Keeps the gifter loop's "you bought
           here" story legible without needing a tooltip on each dot. */}
-      {buyMarkers.length > 0 && !loading && !error && data.length >= 2 && (
-        <p className="text-[10px] text-muted-foreground/80 leading-snug px-1">
-          <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: "hsl(43, 75%, 55%)", verticalAlign: "middle" }} />
-          {buyMarkers.length === 1 ? "Gold dot marks when this gift was made." : `Gold dots mark when gifts to ${ticker} were made.`}
+      {matchedGifts.length > 0 && !loading && !error && data.length >= 2 && (
+        <p className="text-3xs text-muted-foreground/80 leading-snug px-1">
+          {shownGiftCount > 0 && (
+            <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: "hsl(43, 75%, 55%)", verticalAlign: "middle" }} />
+          )}
+          {shownGiftCount === 0
+            ? `No gifts to ${ticker} fall in this range. Tap ALL to see ${matchedGifts.length === 1 ? "it" : "them"}.`
+            : offRangeGiftCount > 0
+              ? `Gold dots mark gifts in this range. ${offRangeGiftCount} older ${offRangeGiftCount === 1 ? "gift is" : "gifts are"} outside it; tap ALL to see every one.`
+              : shownGiftCount === 1
+                ? "Gold dot marks when this gift was made."
+                : `Gold dots mark when gifts to ${ticker} were made.`}
         </p>
       )}
     </div>
@@ -299,7 +369,7 @@ const TICKER_INFO: Record<string, { about: string; category: string }> = {
   SPOT:  { about: "The world's leading music streaming platform. 600M+ listeners, millions of podcasts.", category: "Entertainment" },
   META:  { about: "Facebook, Instagram, WhatsApp, and a big bet on the metaverse.", category: "Social / Technology" },
   NVDA:  { about: "Makes the chips that power AI, gaming, and data centers. At the center of the AI revolution.", category: "Technology" },
-  VTI:   { about: "Owns a tiny piece of every major US company: over 3,600 stocks in one fund.", category: "ETF · US Total Market" },
+  VTI:   { about: "Owns a fractional share of every major US company: over 3,600 stocks in one fund.", category: "ETF · US Total Market" },
   VXUS:  { about: "Owns thousands of international stocks outside the US. 50+ countries in one fund.", category: "ETF · International" },
   BND:   { about: "Owns thousands of US investment-grade bonds. The steady, reliable layer of a portfolio.", category: "ETF · US Bonds" },
   AGG:   { about: "Tracks the broad US bond market. The classic stability layer.", category: "ETF · US Bonds" },
@@ -324,6 +394,12 @@ const TICKER_INFO: Record<string, { about: string; category: string }> = {
   CHWY:  { about: "Chewy. Ships food and supplies to millions of pets. Customers send Chewy more handwritten thank-yous than any retailer.", category: "Consumer / Pets" },
   ADBE:  { about: "Adobe. Photoshop, Illustrator, Premiere. The software behind most of the world's creative work.", category: "Technology" },
   Z:     { about: "Zillow. The first place most Americans look when imagining their next home.", category: "Real Estate" },
+  // Roster 2026-06-17 additions
+  PEP:   { about: "PepsiCo. Pepsi, Gatorade, Doritos, Cheetos, and Lay's. A snack and drink giant in nearly every pantry.", category: "Consumer" },
+  ELF:   { about: "e.l.f. Beauty. Affordable makeup and skincare that became a favorite with younger shoppers.", category: "Consumer / Beauty" },
+  BBW:   { about: "Build-A-Bear. The make-your-own stuffed-animal experience, in malls and online.", category: "Consumer / Retail" },
+  CMG:   { about: "Chipotle. Burritos and bowls made to order. A fast-casual favorite with a devoted following.", category: "Consumer / Restaurants" },
+  SONY:  { about: "Sony. PlayStation, Spider-Man and Sony Pictures, music, and the camera sensors inside many phones.", category: "Entertainment / Technology" },
 };
 
 function formatCurrency(v: number) {
@@ -348,7 +424,7 @@ function formatShareCount(s: string | number | null | undefined): string {
 function displayGifterName(name?: string | null, isAnonymous?: boolean): string {
   if (isAnonymous === true) return "Anonymous";
   const n = String(name || "").trim();
-  if (!n || /^someone who loves/i.test(n) || n.toLowerCase() === "anonymous") return "Anonymous";
+  if (isAnonGifterName(name)) return "Anonymous";
   return n;
 }
 
@@ -395,7 +471,12 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
 
   const inner = (
     <>
-      <div className="flex items-center gap-2.5 min-w-0">
+      {/* Top row: identity on the left, value/gain on the right. The gift
+          QUOTE was moved OUT of the left column (it crammed into a narrow
+          width on mobile, fighting the value block) to a full-width line
+          below this row — matching the roomier per-gift breakdowns. 2026-07. */}
+      <div className="flex w-full items-center justify-between gap-2">
+      <div className="flex flex-1 items-center gap-2.5 min-w-0">
         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
           {name === "Anonymous" ? "?" : name.slice(0, 1).toUpperCase()}
         </div>
@@ -405,28 +486,31 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
             {isRecurring && (
               <span
                 title="Has an active recurring investment in this holding"
-                className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]"
+                className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]"
               >
                 ↻ Recurring
               </span>
             )}
             {thankYouState === "sent" && (
-              <span title="You've thanked them" className="shrink-0 inline-flex items-center rounded-full bg-[rgba(26,61,43,0.09)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[rgb(26,61,43)]">
+              <span title="You've thanked them" className="shrink-0 inline-flex items-center rounded-full bg-[rgba(26,61,43,0.09)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[rgb(26,61,43)]">
                 ✓ Thanked
               </span>
             )}
             {thankYouState === "partial" && (
-              <span title="Some of their gifts are thanked, some are still awaiting" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
+              <span title="Some of their gifts are thanked, some are still awaiting" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
                 Some thanks pending
               </span>
             )}
             {thankYouState === "draft" && (
-              <span title="A thank-you is drafted but not sent yet" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
-                ⏳ Awaiting thanks
+              // Kept here (unlike the Memory Book card): this sheet has no
+              // "Say thanks" CTA, so the pill is the only thank-you signal —
+              // not redundant. Dropped the ⏳ emoji to match the lucide chrome sweep.
+              <span title="A thank-you is drafted but not sent yet" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(43,75%,92%)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(43,55%,28%)]">
+                Awaiting thanks
               </span>
             )}
             {thankYouState === "missing" && (
-              <span title="No thank-you on record" className="shrink-0 inline-flex items-center rounded-full bg-[rgba(26,23,16,0.06)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.07em] text-[rgba(26,23,16,0.55)]">
+              <span title="No thank-you on record" className="shrink-0 inline-flex items-center rounded-full bg-[hsl(var(--kiddo-ink) / 0.06)] px-1.5 py-0.5 text-4xs font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-ink) / 0.55)]">
                 No thanks yet
               </span>
             )}
@@ -436,20 +520,16 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
                 hero, Dashboard event-list, gifter detail modal, and Memory
                 Book list. */}
           </div>
-          <p className="text-[11px] text-muted-foreground">{subtitleText}</p>
-          {fullMessage && (
-            <p
-              className="font-heading italic text-[hsl(var(--kiddo-evergreen))] mt-1.5 leading-snug"
-              style={{ fontSize: 13.5, letterSpacing: "-0.005em" }}
-            >
-              &ldquo;{fullMessage}&rdquo;
-            </p>
-          )}
+          <p className="text-2xs text-muted-foreground">{subtitleText}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      {/* max-w-[55%] so a long "gain · Original $X" tail WRAPS instead of
+          eating the whole row and shoving the identity block (name + badge)
+          into an overlap on narrow phones. Short gains (no Original tail)
+          stay on one line; only the long ones wrap. 2026-07. */}
+      <div className="flex items-center gap-2 shrink-0 max-w-[55%]">
         <div className="text-right">
-          <p className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(total)}</p>
+          <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">{formatCurrency(total)}</p>
           {showGain && gainPct != null ? (
             // When there's a meaningful gain/loss for a single-gift
             // contributor, append "· Original $X" so the trajectory is
@@ -460,14 +540,14 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
             // "·" separator matches the date/cost separator pattern used
             // in the expanded rows. Was "from $X" — replaced 2026-05-12
             // for consistency.
-            <p className={`text-[10px] font-semibold tabular-nums ${gain! >= 0 ? "text-green-600" : "text-red-500"}`}>
-              {gain! >= 0 ? "+" : ""}{formatCurrency(gain!)} ({gain! >= 0 ? "+" : ""}{gainPct.toFixed(1)}%)
+            <p className={`text-3xs font-semibold tabular-nums ${gain! >= 0 ? "text-green-600" : "text-red-500"}`}>
+              {gain! >= 0 ? "+" : ""}{gainPct.toFixed(1)}%
               {count === 1 && costBasisSlice != null && costBasisSlice > 0.01 && (
                 <span className="text-muted-foreground/70 font-normal"> · Original {formatCurrency(costBasisSlice)}</span>
               )}
             </p>
           ) : sharesLabel ? (
-            <p className="text-[10px] text-muted-foreground/70 tabular-nums">{sharesLabel}</p>
+            <p className="text-3xs text-muted-foreground/70 tabular-nums">{sharesLabel}</p>
           ) : null}
         </div>
         {showExpandChevron ? (
@@ -478,9 +558,18 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
             aria-hidden="true"
           />
         ) : (
-          <span className="text-[10px] text-muted-foreground/50 leading-none select-none">›</span>
+          <span className="text-3xs text-muted-foreground/50 leading-none select-none">›</span>
         )}
       </div>
+      </div>
+      {fullMessage && (
+        <p
+          className="font-heading italic text-[hsl(var(--kiddo-evergreen))] mt-1.5 leading-snug"
+          style={{ fontSize: 13.5, letterSpacing: "-0.005em" }}
+        >
+          &ldquo;{fullMessage}&rdquo;
+        </p>
+      )}
     </>
   );
   if (onNavigate) {
@@ -488,14 +577,14 @@ function ContributorRow({ name, total, costBasisSlice, count, subtitle, estimate
       <button
         type="button"
         onClick={onNavigate}
-        className="flex w-full items-center justify-between rounded-xl bg-muted/30 px-3.5 py-2.5 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left"
+        className="flex flex-col w-full rounded-xl bg-muted/30 px-3.5 py-2.5 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left kiddo-press"
       >
         {inner}
       </button>
     );
   }
   return (
-    <div className="flex items-center justify-between rounded-xl bg-muted/30 px-3.5 py-2.5">
+    <div className="flex flex-col rounded-xl bg-muted/30 px-3.5 py-2.5">
       {inner}
     </div>
   );
@@ -546,6 +635,7 @@ function HoldingDetailSheetBody({
   onAdjustStrategy,
   onNavigateToGift,
   onNavigateToGifter,
+  onOpenStory,
   isReadOnly = false,
 }: HoldingDetailSheetProps & { holding: Holding }) {
   const ticker = holding.ticker;
@@ -623,7 +713,7 @@ function HoldingDetailSheetBody({
   type ThankYouState = "sent" | "partial" | "draft" | "missing" | "self" | "anonymous";
   const ownerEmailLower = String(ownerEmail || "").trim().toLowerCase();
 
-  const uniqueMap = new Map<string, { name: string; total: number; costBasisSlice: number; count: number; date?: string | null; giftId?: string; mostRecentGiftId?: string; mostRecentGiftDate?: number; message?: string | null; isRecurring: boolean; sentCount: number; draftCount: number; missingCount: number; isAnonymous: boolean; isOwner: boolean }>();
+  const uniqueMap = new Map<string, { id: string; name: string; total: number; costBasisSlice: number; count: number; date?: string | null; giftId?: string; mostRecentGiftId?: string; mostRecentGiftDate?: number; message?: string | null; isRecurring: boolean; sentCount: number; draftCount: number; missingCount: number; isAnonymous: boolean; isOwner: boolean }>();
 
   // Helper to fold a single gift into its sender's bucket, including thank-you accounting.
   const accumulateGift = (
@@ -631,29 +721,41 @@ function HoldingDetailSheetBody({
     amt: number,
     basisSlice: number,
   ) => {
-    const key = displayGifterName(gift.senderName, (gift as any).isAnonymous);
+    // Group by stable IDENTITY (email-when-present), not display name — so one
+    // person signing different names ("Sofia Rivera" once, "Grandma" next)
+    // is ONE contributor, and two different people who share a name stay
+    // separate. Same root fix as the Dashboard roster (gifterIdentityKey,
+    // 2026-06-08). BOTH this map and giftDetailsByContributor key on idKey so
+    // the render's detail lookup (by c.id) stays aligned; the DISPLAYED name
+    // resolves to the most-recent gift's name below.
+    const displayName = displayGifterName(gift.senderName, (gift as any).isAnonymous);
+    const idKey = gifterIdentityKey(gift.senderName, (gift as any).senderEmail, (gift as any).isAnonymous);
     const giftDate = (gift as any).settledAt || (gift as any).createdAt || null;
     const giftDateMs = giftDate ? new Date(String(giftDate)).getTime() : 0;
     const giftIsRecurring = !!(gift as any).parentContributionId;
     const giftEmailLower = String((gift as any).senderEmail || "").trim().toLowerCase();
-    const isAnon = key === "Anonymous" || !giftEmailLower;
+    // Thank-you anonymity is SEPARATE from grouping: a gift with no email can't
+    // be thanked, but a named no-email gifter ("The Johnsons", cash) still gets
+    // its own bucket via idKey. Only true-anonymous collapses to one row.
+    const isAnon = displayName === "Anonymous" || !giftEmailLower;
     const isOwnerGift = !!ownerEmailLower && giftEmailLower === ownerEmailLower;
     const ty = gift.id ? thankYousByGiftId?.get(String(gift.id)) : null;
     const tyStatus = String(ty?.status || "").toLowerCase();
     const isSent = tyStatus === "sent";
     const isDraft = !!ty && !isSent;
-    const ex = uniqueMap.get(key);
+    const ex = uniqueMap.get(idKey);
     if (ex) {
       ex.total += amt; ex.costBasisSlice += basisSlice; ex.count += 1;
       ex.date = undefined; ex.giftId = undefined; ex.message = undefined;
-      // Track the most recent gift's ID per contributor — used as the
-      // deep-link target when navigating to Memory Book. For multi-gift
-      // contributors (especially Anonymous, who can't be filtered by name),
-      // landing on the most recent gift's entry is more useful than dumping
-      // the user into the unfiltered timeline.
-      if (giftDateMs > (ex.mostRecentGiftDate || 0) && gift.id) {
-        ex.mostRecentGiftId = gift.id;
+      // Track the most recent gift per contributor — drives BOTH the displayed
+      // name (most-recent self-identification, for an email-collapsed gifter)
+      // and the Memory Book deep-link target. For multi-gift contributors
+      // (especially Anonymous), landing on the most recent gift's entry is more
+      // useful than dumping the user into the unfiltered timeline.
+      if (giftDateMs > (ex.mostRecentGiftDate || 0)) {
         ex.mostRecentGiftDate = giftDateMs;
+        ex.name = displayName;
+        if (gift.id) ex.mostRecentGiftId = gift.id;
       }
       if (giftIsRecurring) ex.isRecurring = true;
       if (isAnon) ex.isAnonymous = true;
@@ -664,8 +766,9 @@ function HoldingDetailSheetBody({
         else ex.missingCount += 1;
       }
     } else {
-      uniqueMap.set(key, {
-        name: key,
+      uniqueMap.set(idKey, {
+        id: idKey,
+        name: displayName,
         total: amt,
         costBasisSlice: basisSlice,
         count: 1,
@@ -780,7 +883,10 @@ function HoldingDetailSheetBody({
       const pct = original > 0 ? (delta / original) * 100 : 0;
       const giftIdStr = gift.id ? String(gift.id) : null;
       const giftDate = (gift as any).settledAt || (gift as any).createdAt || null;
-      const senderKey = displayGifterName(gift.senderName, (gift as any).isAnonymous);
+      // Keyed by the SAME identity as uniqueMap (gifterIdentityKey), so the
+      // contributor row's c.id lookup below finds its detail rows even when the
+      // person used different names across gifts.
+      const senderKey = gifterIdentityKey(gift.senderName, (gift as any).senderEmail, (gift as any).isAnonymous);
       // React key MUST be the allocation row's PK, not the gift's PK.
       // A single gift can produce multiple gift_allocations rows for the
       // same ticker (managed-mix splits, rebalance top-ups, partial
@@ -828,25 +934,68 @@ function HoldingDetailSheetBody({
   // question being asked. New behavior: any multi-gift row (named or
   // anon) expands inline to show its specific gifts. State is the
   // expanded contributor's name (or null) so only one expands at a time.
-  const [expandedContributorName, setExpandedContributorName] = useState<string | null>(null);
-  useEffect(() => { setExpandedContributorName(null); }, [holding?.id]);
+  // Keyed on the contributor's stable id, not display name — two different people
+  // who share a name (e.g. two "Grandma" with different emails) must expand
+  // independently, matching the id-based dedup used to build the list.
+  const [expandedContributorId, setExpandedContributorId] = useState<string | null>(null);
+  // Whether the contributor list is expanded past the first 6. The "+N more"
+  // footer toggles this to reveal the rest IN PLACE (it was a dead <p>, not a
+  // button, so tapping did nothing). Reset on holding change. 2026-07.
+  const [showAllContributors, setShowAllContributors] = useState(false);
+  useEffect(() => { setExpandedContributorId(null); setShowAllContributors(false); }, [holding?.id]);
 
   return (
     <Sheet open={!!holding} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent side="bottom" className="overflow-y-auto max-h-[92vh]">
-        <SheetTitle className="sr-only">{name} ({ticker}) holding details</SheetTitle>
+        {/* `name` (friendlyHoldingName) already carries a " (TICKER)" suffix
+            for ETFs, so "{name} ({ticker})" rendered "Bonds (BND) (BND)" — a
+            screen reader announced the ticker twice. Strip the suffix first,
+            then append once, so it's always "Bonds (BND) holding details" /
+            "Apple (AAPL) holding details" — ticker present once, never doubled.
+            (2026-06-07, same redundancy fix as the dashboard holding rows.) */}
+        <SheetTitle className="sr-only">{name.replace(new RegExp(`\\s*\\(${ticker}\\)\\s*$`, "i"), "").trim() || name} ({ticker}) holding details</SheetTitle>
         <SheetDescription className="sr-only">
           Position summary, price history, contributors, and actions for {name}.
         </SheetDescription>
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <StockLogo ticker={ticker} size={44} />
+          {/* Shared-element morph destination: same layoutId as the dashboard holding
+              row's logo, so Framer animates the logo from the row into this header. The
+              row side carries the reduced-motion guard (undefined layoutId there = no match). */}
+          {onOpenStory ? (
+            <HoldingStoryRing ticker={ticker} size={44} onOpen={() => onOpenStory(ticker)}>
+              <motion.div layoutId={holdingMorphId(ticker, SHARED_ELEMENT_HOLDING_MORPH)}>
+                {hasAssetToken(ticker) ? <AssetToken ticker={ticker} size={44} /> : <StockLogo ticker={ticker} size={44} />}
+              </motion.div>
+            </HoldingStoryRing>
+          ) : (
+            <motion.div layoutId={holdingMorphId(ticker, SHARED_ELEMENT_HOLDING_MORPH)}>
+              <StockLogo ticker={ticker} size={44} />
+            </motion.div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="font-heading text-lg font-bold text-foreground leading-tight">{name}</p>
             <p className="text-sm text-muted-foreground font-medium">
               {ticker}{info?.category ? ` · ${info.category}` : ""}
             </p>
+            {/* Managed-mix sleeve: surface the type + the strategy glyph so a mix ETF
+                (VXUS/BND/etc) reads as "part of the mix", not a standalone hand-picked
+                stock. The glyph is derived from the strategy label (the sheet gets the
+                label, not the key). */}
+            {isManagedMix && (() => {
+              const lbl = (strategyLabel || "").toLowerCase();
+              const MixIcon = lbl.includes("growth") ? STRATEGY_ICONS.growth
+                : lbl.includes("conservative") ? STRATEGY_ICONS.conservative
+                : lbl.includes("custom") ? STRATEGY_ICONS.custom
+                : STRATEGY_ICONS.balanced;
+              return (
+                <p className="mt-0.5 flex items-center gap-1 text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                  <MixIcon size={11} strokeWidth={2.5} aria-hidden />
+                  Part of {strategyLabel || "the managed mix"}
+                </p>
+              );
+            })()}
           </div>
           <div className="text-right shrink-0">
             <p
@@ -900,10 +1049,10 @@ function HoldingDetailSheetBody({
           return (
             <div className="mb-4 px-0.5">
               <div className="flex items-baseline justify-between mb-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {sectionLabel}
                 </p>
-                <p className="text-[10px] text-muted-foreground/70">
+                <p className="text-3xs text-muted-foreground/70">
                   As of {etfData.asOf}
                 </p>
               </div>
@@ -929,16 +1078,16 @@ function HoldingDetailSheetBody({
                     {!isBondFund && (
                       <StockLogo ticker={h.ticker} size={14} className="shrink-0" />
                     )}
-                    <span className="text-[11px] font-bold text-[hsl(var(--kiddo-evergreen))] tabular-nums">
+                    <span className="text-2xs font-bold text-[hsl(var(--kiddo-evergreen))] tabular-nums">
                       {h.ticker}
                     </span>
-                    <span className="text-[10.5px] font-medium text-muted-foreground tabular-nums">
+                    <span className="text-3xs font-medium text-muted-foreground tabular-nums">
                       {h.weight.toFixed(h.weight >= 10 ? 1 : 2)}%
                     </span>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[10px] text-muted-foreground/60 leading-relaxed">
+              <p className="mt-2 text-3xs text-muted-foreground/60 leading-relaxed">
                 Source: {etfData.source}{etfData.totalAssets ? ` · ${etfData.totalAssets} total assets` : ""}
               </p>
             </div>
@@ -959,25 +1108,25 @@ function HoldingDetailSheetBody({
         {/* Position summary grid */}
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Shares owned</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Shares owned</p>
             <p className="text-base font-bold text-foreground tabular-nums">{shareCount}</p>
             {pricePerShare > 0 && (
-              <p className="text-[11px] text-muted-foreground mt-0.5">{formatCurrency(pricePerShare)}/share now</p>
+              <p className="text-2xs text-muted-foreground mt-0.5">{formatCurrency(pricePerShare)}/share now</p>
             )}
           </div>
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Cost basis</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Cost basis</p>
             <p
               className="text-base font-bold text-foreground tabular-nums"
               aria-live={costBasisAnimating ? "off" : "polite"}
               aria-label={formatCurrency(costBasis)}
             >{formatCurrency(animatedCostBasis)}</p>
             {avgCostPerShare > 0 && (
-              <p className="text-[11px] text-muted-foreground mt-0.5">avg {formatCurrency(avgCostPerShare)}/share</p>
+              <p className="text-2xs text-muted-foreground mt-0.5">avg {formatCurrency(avgCostPerShare)}/share</p>
             )}
           </div>
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Since first gift</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Since first gift</p>
             {costBasis > 0 && Math.abs(gain) > 0.01 ? (
               <>
                 <p
@@ -987,7 +1136,7 @@ function HoldingDetailSheetBody({
                 >
                   {isUp ? "+" : ""}{formatCurrency(animatedGain)}
                 </p>
-                <p className={`text-[11px] mt-0.5 font-medium ${isUp ? "text-green-500" : "text-red-400"}`}>
+                <p className={`text-2xs mt-0.5 font-medium ${isUp ? "text-green-500" : "text-red-400"}`}>
                   {isUp ? "+" : ""}{gainPct.toFixed(2)}%
                 </p>
               </>
@@ -996,14 +1145,14 @@ function HoldingDetailSheetBody({
             )}
           </div>
           <div className="rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Today</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Today</p>
             {todayQuote?.changePercent != null ? (
               <>
                 <p className={`text-base font-bold tabular-nums ${todayQuote.changePercent >= 0 ? "text-green-600" : "text-red-500"}`}>
                   {todayQuote.changePercent >= 0 ? "+" : ""}{todayQuote.changePercent.toFixed(2)}%
                 </p>
                 {todayQuote.change != null && shares > 0 && (
-                  <p className={`text-[11px] mt-0.5 font-medium ${todayQuote.change >= 0 ? "text-green-500" : "text-red-400"}`}>
+                  <p className={`text-2xs mt-0.5 font-medium ${todayQuote.change >= 0 ? "text-green-500" : "text-red-400"}`}>
                     {todayQuote.change >= 0 ? "+" : ""}{formatCurrency(todayQuote.change * shares)} on your shares
                   </p>
                 )}
@@ -1014,13 +1163,13 @@ function HoldingDetailSheetBody({
           </div>
         </div>
         <div className="mt-2.5 rounded-2xl bg-muted/40 border border-border/30 p-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             {isOwnerMode ? "% of your fund" : recipientName ? `% of ${recipientName}'s fund` : "% of fund"}
           </p>
           <p className="text-base font-bold text-foreground tabular-nums">
             {portfolioPct > 0 ? `${portfolioPct.toFixed(1)}%` : "--"}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-2xs text-muted-foreground mt-0.5">
             {formatCurrency(currentValue)} of {formatCurrency(totalPortfolioValue)}
           </p>
         </div>
@@ -1048,9 +1197,14 @@ function HoldingDetailSheetBody({
               </p>
             )}
             <div className="space-y-2">
-              {contributorList.slice(0, 6).map((c, i) => {
-                const refPrice = isManaged ? pricePerShare : avgCostPerShare;
-                const estShares = refPrice > 0 ? c.total / refPrice : null;
+              {contributorList.slice(0, showAllContributors ? contributorList.length : 6).map((c) => {
+                // Per-person share estimate = their current-value slice ÷ the holding's
+                // current price-per-share (both current-dollar terms, so it reconciles to
+                // their real share count). The hand-picked branch used to divide current
+                // value by AVG COST per share, which overstated shares on a winner
+                // (159.53 / 52.10 = ~3.06 vs the real ~2.88) and understated on a loser
+                // (founder catch 2026-07). Managed already used the current price.
+                const estShares = pricePerShare > 0 ? c.total / pricePerShare : null;
                 // Three row archetypes, each with a distinct tap behavior:
                 //
                 //   1. SINGLE GIFT (any name) — row IS the gift. Tap →
@@ -1079,16 +1233,16 @@ function HoldingDetailSheetBody({
                 //      goes somewhere useful when tapped.
                 const singleGiftId = c.count === 1 ? c.giftId : null;
                 const isMultiGift = c.count > 1;
-                const detailRows = isMultiGift ? (giftDetailsByContributor.get(c.name) || []) : [];
+                const detailRows = isMultiGift ? (giftDetailsByContributor.get(c.id) || []) : [];
                 const visibleDetailRows = detailRows.slice(0, 5);
                 const canExpandInline = isMultiGift && detailRows.length > 0;
-                const isExpanded = canExpandInline && expandedContributorName === c.name;
+                const isExpanded = canExpandInline && expandedContributorId === c.id;
                 const navigateFn = singleGiftId && onNavigateToGift
                   ? () => { haptic("selection"); onClose(); onNavigateToGift(singleGiftId); }
                   : canExpandInline
                     ? () => {
                         haptic("selection");
-                        setExpandedContributorName((cur) => cur === c.name ? null : c.name);
+                        setExpandedContributorId((cur) => cur === c.id ? null : c.id);
                       }
                     : isMultiGift && c.name !== "Anonymous" && onNavigateToGifter
                       ? () => { haptic("selection"); onClose(); onNavigateToGifter(c.name); }
@@ -1096,7 +1250,7 @@ function HoldingDetailSheetBody({
                         ? () => { haptic("selection"); onClose(); onNavigateToGift(c.mostRecentGiftId!); }
                         : undefined;
                 return (
-                <div key={i}>
+                <div key={c.id}>
                   <ContributorRow
                     name={c.name}
                     total={c.total}
@@ -1120,9 +1274,15 @@ function HoldingDetailSheetBody({
                         const inner = (
                           <>
                             <div className="min-w-0">
-                              <p className="text-[11.5px] text-muted-foreground tabular-nums">
-                                {r.date ? `${formatGiftDate(r.date)} · ` : ""}Original {formatCurrency(r.original)}
-                              </p>
+                              {/* Date is the row's metadata anchor. The original
+                                  gift amount is the primary number (right), mirroring
+                                  the gift cards' hierarchy: the gift is the real,
+                                  honest figure; today's value is the bonus. */}
+                              {formatGiftDate(r.date) && (
+                                <p className="text-2xs text-muted-foreground tabular-nums">
+                                  {formatGiftDate(r.date)}
+                                </p>
+                              )}
                               {/* Gift message (when present). Same italic-evergreen
                                   treatment as the single-gift contributor row's
                                   message preview — consistent register across
@@ -1140,13 +1300,16 @@ function HoldingDetailSheetBody({
                               )}
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="text-xs font-semibold text-foreground tabular-nums">{formatCurrency(r.todayVal)}</p>
+                              <p className="text-xs font-semibold text-foreground tabular-nums">{formatCurrency(r.original)}</p>
                               {showDelta ? (
-                                <p className={`text-[10px] font-semibold tabular-nums ${r.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                  {r.delta >= 0 ? "+" : ""}{formatCurrency(r.delta)} ({r.delta >= 0 ? "+" : ""}{r.pct.toFixed(1)}%)
+                                <p className="text-3xs text-muted-foreground tabular-nums">
+                                  Now worth {formatCurrency(r.todayVal)}
+                                  <span className={`ml-1 font-semibold ${r.delta >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                    ({r.delta >= 0 ? "+" : ""}{r.pct.toFixed(1)}%)
+                                  </span>
                                 </p>
                               ) : (
-                                <p className="text-[10px] text-muted-foreground/70">at cost</p>
+                                <p className="text-3xs text-muted-foreground/70 tabular-nums">Now worth {formatCurrency(r.todayVal)}</p>
                               )}
                             </div>
                           </>
@@ -1182,11 +1345,11 @@ function HoldingDetailSheetBody({
                           (detailRows is empty for other types). Navigates to
                           the most recent of the anon gifts since we can't
                           filter Memory Book by "Anonymous" as a name. */}
-                      {detailRows.length > 3 && c.mostRecentGiftId && onNavigateToGift && (
+                      {detailRows.length > visibleDetailRows.length && c.mostRecentGiftId && onNavigateToGift && (
                         <button
                           type="button"
                           onClick={() => { haptic("selection"); onClose(); onNavigateToGift(c.mostRecentGiftId!); }}
-                          className="w-full text-left text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline px-2.5 py-1"
+                          className="w-full text-left text-2xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline px-2.5 py-1"
                         >
                           See all {detailRows.length} gifts in Memory Book →
                         </button>
@@ -1197,9 +1360,14 @@ function HoldingDetailSheetBody({
                 );
               })}
               {contributorList.length > 6 && (
-                <p className="text-center text-xs text-muted-foreground pt-1">
-                  +{contributorList.length - 6} more
-                </p>
+                <button
+                  type="button"
+                  onClick={() => { haptic("selection"); setShowAllContributors((v) => !v); }}
+                  className="w-full text-center text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline pt-1.5"
+                  data-testid="button-toggle-all-contributors"
+                >
+                  {showAllContributors ? "Show fewer" : `+${contributorList.length - 6} more`}
+                </button>
               )}
             </div>
           </div>
@@ -1219,7 +1387,12 @@ function HoldingDetailSheetBody({
             For managed mix the unit of action is the strategy, not the ETF. */}
         {isReadOnly ? null : isManagedMix ? (
           <>
-            <div className="mt-5 flex gap-2.5">
+            {/* Stack full-width on mobile, side-by-side on desktop (2026-06-07,
+                founder "the CTAs are crammed"). "Add to Growth Mix" + "Adjust
+                strategy" are both long labels — at half-width on a phone they
+                cram / wrap. Full-width stacked = roomy labels + bigger tap
+                targets; sm:flex-row restores the pair where there's room. */}
+            <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
               <Button
                 className="flex-1 rounded-2xl gap-2"
                 onClick={() => { haptic("medium"); onClose(); onAddToStrategy?.(); }}
@@ -1238,18 +1411,28 @@ function HoldingDetailSheetBody({
                 <ArrowRight size={14} />
               </Button>
             </div>
-            {/* "the managed mix" fallback → "the diversified mix"
-                2026-05-20. Cross-surface unification per the locked
-                product-language pass. See twin notes on Activity.tsx
-                and MemoryBook.tsx for the reasoning ("managed"
-                connotes active management; "diversified" is factual
-                and matches the rest of the product's vocabulary). */}
-            <p className="mt-3 text-center text-[11.5px] text-muted-foreground leading-relaxed">
-              Part of {strategyLabel || "the diversified mix"}. Adding spreads across every position to keep the ratio. To sell or rebalance, switch the strategy.
+            {/* Copy-only honesty fix 2026-07: the old tail read "To sell or
+                rebalance, switch the strategy", but switching the strategy is
+                target-only and sells/moves NOTHING (no rebalance code exists;
+                the mix only drifts toward target via new gifts), so we state the
+                real behavior instead. Deliberately NO per-holding "Move to cash"
+                here: this branch is reached ONLY for a holding that IS in the
+                CURRENT strategy's basket (isManagedMix keys on
+                managedStrategyTickerSet), and selling one on-target ETF breaks
+                the ratio and is a needless taxable event, per the rationale
+                above. An OFF-target leftover (e.g. BND after moving off
+                Conservative) is NOT in the current strategy, so it falls to the
+                hand-picked branch below and is ALREADY sellable there, no special
+                case needed. "diversified mix" fallback per the 2026-05-20
+                product-language pass. */}
+            <p className="mt-3 text-center text-2xs text-muted-foreground leading-relaxed">
+              Part of {strategyLabel || "the diversified mix"}. Adding spreads across every position to keep the ratio. We don't sell to rebalance. New gifts steer the mix toward target over time.
             </p>
           </>
         ) : (
-          <div className="mt-5 flex gap-2.5">
+          // Stack full-width on mobile, side-by-side on desktop — matches the
+          // managed-mix actions above so both holding types feel consistent.
+          <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
             <Button
               className="flex-1 rounded-2xl gap-2"
               onClick={() => { haptic("medium"); onClose(); onAddMore(ticker); }}
@@ -1270,7 +1453,7 @@ function HoldingDetailSheetBody({
           </div>
         )}
 
-        <p className="mt-3 text-center text-[11px] text-muted-foreground">
+        <p className="mt-3 text-center text-2xs text-muted-foreground">
           Price data via Yahoo Finance · 1-year daily closes · may be delayed{shares > 0 ? " · Share counts are estimates based on avg cost" : ""}
         </p>
       </SheetContent>

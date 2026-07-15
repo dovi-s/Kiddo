@@ -1,6 +1,6 @@
 import { Link, useLocation, useSearch } from "wouter";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, BookOpen, Activity, LogOut, ShieldCheck, ChevronDown, Check, Plus, ChevronRight, Settings as SettingsIcon, ArrowLeft } from "lucide-react";
+import { Home, BookOpen, History, LogOut, ShieldCheck, ChevronDown, Check, Plus, ChevronRight, Settings as SettingsIcon, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { haptic } from "@/lib/haptics";
@@ -10,10 +10,13 @@ import { ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT, getActiveFundId, setActiveFun
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav } from "@/lib/page-scope";
 import { readLastAppLocation, formatBackLabel, backTargetHref } from "@/lib/last-location";
 import { capFirst } from "@/lib/format-name";
+import { FadeImage } from "@/components/ui/fade-image";
 import { Logo } from "@/components/ui/logo";
 import { toast } from "@/hooks/use-toast";
 import type { Fund, Event } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { applyDemoLiveGiftsToFunds, useDemoOverlayVersion } from "@/lib/demo-live-gifts";
+import { readFundLiveValue, useFundLiveValue } from "@/lib/fund-live-value";
 import { useNotificationUnreadCount } from "@/components/NotificationsPanel";
 import { useMemoryUnreadCount } from "@/pages/MemoryBook";
 
@@ -36,7 +39,7 @@ export function DesktopSidebar() {
     } else if (href.startsWith("/memory") && fundId) {
       prefetchMemoryBook(queryClient, fundId);
     } else if (href.startsWith("/activity")) {
-      prefetchActivity(queryClient, 50);
+      prefetchActivity(queryClient, fundId);
     }
   }, [queryClient]);
 
@@ -57,7 +60,7 @@ export function DesktopSidebar() {
 
   const enabled = isAuthenticated && !shouldHide && !isPublicPage;
 
-  const { data: funds = [] } = useQuery<Fund[]>({
+  const { data: rawFunds = [] } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
     queryFn: async () => {
       const res = await fetch("/api/funds", { credentials: "include" });
@@ -72,6 +75,18 @@ export function DesktopSidebar() {
     staleTime: 30000,
     refetchOnMount: "always",
   });
+  // Demo-only: merge the session's live demo gifts, the SAME merge useFunds()
+  // does (this component rolls its own /api/funds query for the localStorage
+  // initialData warm paint, so it missed the overlay). Without it, a demo
+  // gift bumped the Dashboard hero (holdings overlay) but not this sidebar
+  // balance — two totals $50 apart in the same viewport (founder catch
+  // 2026-06-05). Non-demo: pure pass-through.
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  const overlayVersion = useDemoOverlayVersion();
+  const funds = useMemo(
+    () => applyDemoLiveGiftsToFunds(rawFunds, isDemoAccount),
+    [rawFunds, isDemoAccount, overlayVersion],
+  );
 
   // Active fund id is held in state + kept in sync with the global
   // ACTIVE_FUND_CHANGE_EVENT. Without this listener, switching funds via
@@ -79,7 +94,14 @@ export function DesktopSidebar() {
   // /settings) leaves the sidebar's Memory link and unread dot scoped to
   // the previous fund. URL ?fund= still wins when present (Dashboard's
   // canonical pattern); the listener is the localStorage-driven fallback.
-  const [storedFundId, setStoredFundId] = useState<string>(() => getActiveFundId());
+  // Seed from the URL ?fund (cold deep-link to /dashboard?fund=X) when present,
+  // else the stored active id. After mount, the fund is driven by whichever
+  // signal CHANGED most recently — the active-fund event OR a real URL change —
+  // not by a persistent "URL always wins" rule.
+  const [storedFundId, setStoredFundId] = useState<string>(() => {
+    const fromUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("fund") : null;
+    return fromUrl || getActiveFundId();
+  });
   useEffect(() => {
     // Parameter typed as `globalThis.Event` to disambiguate from the
     // schema `Event` (gifting event row) imported above.
@@ -90,7 +112,18 @@ export function DesktopSidebar() {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  const selectedFundId = new URLSearchParams(search).get("fund") || storedFundId || "";
+  // Follow REAL URL ?fund changes (deep-link nav, browser back/forward), but only
+  // when the param is actually present and changes — so a STALE ?fund left behind
+  // by a non-wouter URL write (DashboardLab's setActiveFundId-on-render / a
+  // replaceState switch) can't persistently override a fund switch that fired the
+  // change event. Previously the sidebar read `useSearch().get("fund")` inline and
+  // let it WIN unconditionally, which pinned the sidebar to the old fund's name +
+  // balance + quick links after an in-dashboard switch (founder-reported 2026-06-12).
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(search).get("fund");
+    if (fromUrl) setStoredFundId(fromUrl);
+  }, [search]);
+  const selectedFundId = storedFundId || "";
   // Defensive: funds can be null/undefined when the API errors out
   // (initialData reads from local cache which may serialize JSON
   // null; the queryFn falls back to [] on non-OK responses but
@@ -154,7 +187,13 @@ export function DesktopSidebar() {
       if (!res.ok) return null;
       return res.json();
     },
-    enabled: enabled && !!activeFund?.id,
+    // Don't even fire for a HANDED-OFF fund (transferredAt) or one the viewer
+    // only PREVIOUSLY owned — Kid View no longer applies, and the request 403'd
+    // (logging a console error) since the parent no longer owns it. 2026-06-04.
+    enabled: enabled
+      && !!activeFund?.id
+      && !(activeFund as any)?.transferredAt
+      && (activeFund as any)?.accessRole !== "previous_owner",
     staleTime: 60_000,
   });
 
@@ -187,7 +226,13 @@ export function DesktopSidebar() {
         parseFloat(String((fund as any).pendingBalance || "0")) +
         parseFloat(String((fund as any).cashBalance || "0"))
       : 0;
-  const fundValue = getFundValue(activeFund);
+  // Quote the Dashboard hero's published live total when available — same
+  // number, same formula, can't disagree (fund.balance is settlement-synced
+  // not price-synced, so the funds-list math below can drift from the hero;
+  // see lib/fund-live-value.ts). Falls back to the funds-list math when no
+  // Dashboard has computed this fund yet (e.g. cold load straight to /memory).
+  const liveValue = useFundLiveValue(activeFund?.id);
+  const fundValue = liveValue ?? getFundValue(activeFund);
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(value);
 
@@ -270,7 +315,18 @@ export function DesktopSidebar() {
       // to /settings, /activity, /memory — those have their own
       // sidebar items with their own isActive matchers, so the
       // dashboard item doesn't need to mirror them.
-      isActive: location === "/dashboard" || location.startsWith("/dashboard?") || location.startsWith("/dashboard/"),
+      // /design-lab is the dashboard FORK (being groomed to replace /dashboard),
+      // so it's a "home" surface too: landing there should highlight this item
+      // on load (you ARE on the kid's dashboard), and tapping it scroll-to-tops
+      // the lab like home does — tapActiveNavScrollToTop ignores the href and
+      // acts on the current page, so this never yanks you off the lab.
+      // /staging is the other dashboard rebuild sandbox (same reasoning as
+      // /design-lab) — a "home" surface, so it highlights this item and the
+      // tap scroll-to-tops the staging page instead of yanking to /dashboard.
+      isActive:
+        location === "/dashboard" || location.startsWith("/dashboard?") || location.startsWith("/dashboard/") ||
+        location === "/staging" || location.startsWith("/staging?") || location.startsWith("/staging/") ||
+        location === "/design-lab" || location.startsWith("/design-lab?") || location.startsWith("/design-lab/"),
     },
     {
       href: memoryBookHref,
@@ -280,7 +336,7 @@ export function DesktopSidebar() {
     },
     {
       href: "/activity",
-      icon: Activity,
+      icon: History,
       label: "Activity",
       isActive: location.startsWith("/activity"),
     },
@@ -303,21 +359,9 @@ export function DesktopSidebar() {
   // active Share quick-link there silently fires Emma's link, same
   // stealth-context-switch foot-gun the AppHeader Share button has.
   const quickLinks = suppressFundChrome ? [] : [
-    activeFund && {
-      id: "share",
-      // Compound copy disambiguates from the financial-noun reading
-      // of "share" (stock-share). "Share Emma's link" reads as the
-      // verb-action. See feedback_share_vs_gift_distinction.md.
-      label: copiedLink
-        ? "Copied!"
-        : isOwnerMode
-          ? "Share your link"
-          : activeFund.recipientFirstName
-            ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
-            : "Share gift link",
-      onClick: handleShareLink,
-      href: null,
-    },
+    // Share quick-link dropped (2026-06-22): the hero owns the primary Share CTA,
+    // so this sidebar echo was the 3rd "Share … link" on one screen. See
+    // DASHBOARD_CHROME_PORT_SPEC.md (chrome de-dup).
     fundSlug && {
       id: "gifter-page",
       // Same-tab navigation matches every other Quick Link (Share, Kid's
@@ -326,14 +370,14 @@ export function DesktopSidebar() {
       // affordance that punched the user out to a new window. The gifter
       // page is a real route in the SPA, not an external destination, so
       // setLocation is the correct semantics.
-      label: "View gifter page",
+      label: "Gifter page",
       href: `/${fundSlug}`,
       external: false,
       onClick: null,
     },
-    activeFund?.id && !isOwnerMode && {
+    activeFund?.id && !isOwnerMode && !(activeFund as any)?.transferredAt && (activeFund as any)?.accessRole !== "previous_owner" && {
       id: "kid-view",
-      label: childName ? `${childName}'s View` : "Kid's View",
+      label: childName ? `${childName}'s view` : "Kid's view",
       href: null,
       external: false,
       onClick: () => {
@@ -344,27 +388,36 @@ export function DesktopSidebar() {
         }
       },
     },
-    activeFund?.id && {
-      id: "new-occasion",
-      label: "New occasion",
-      href: null,
-      external: false,
-      onClick: () => window.dispatchEvent(new CustomEvent("kiddo:create-event")),
-    },
-    featuredEvent && {
-      id: "active-event",
-      label: featuredEvent.name || "Active occasion",
-      // Route to the actual gift page for this event (/{fundSlug}/{eventSlug}),
-      // NOT /dashboard?fund=ID. The previous /dashboard route just switched the
-      // active fund and went home — it never opened the event itself, which is
-      // the whole point of a "quick link to active occasion." Falls back to
-      // dashboard only when slugs are somehow missing (legacy data).
-      href: activeFund?.slug && (featuredEvent as any).slug
-        ? `/${activeFund.slug}/${(featuredEvent as any).slug}`
-        : `/dashboard?fund=${activeFund?.id}`,
-      external: false,
-      onClick: null,
-    },
+    // ONE dynamic occasion link (was a separate "New occasion" + active-occasion
+    // PAIR — collapsed 2026-06-22 to match the staging in-content row): the
+    // active/featured occasion if there is one, otherwise the create-occasion entry.
+    activeFund?.id && (featuredEvent
+      ? {
+          id: "active-event",
+          label: featuredEvent.name || "Active occasion",
+          // Route to the actual gift page for this event (/{fundSlug}/{eventSlug}),
+          // falling back to dashboard only when slugs are missing (legacy data).
+          href: activeFund?.slug && (featuredEvent as any).slug
+            ? `/${activeFund.slug}/${(featuredEvent as any).slug}`
+            : `/dashboard?fund=${activeFund?.id}`,
+          external: false,
+          onClick: null,
+        }
+      : {
+          id: "new-occasion",
+          label: "New occasion",
+          href: null,
+          external: false,
+          // Only the dashboard listens for kiddo:create-event; off-dashboard, deep-link
+          // to the dashboard with a param that opens the create-occasion sheet.
+          onClick: () => {
+            if (location.startsWith("/dashboard")) {
+              window.dispatchEvent(new CustomEvent("kiddo:create-event"));
+            } else {
+              setLocation("/dashboard?openCreateEvent=1");
+            }
+          },
+        }),
   ].filter(Boolean) as Array<{
     id: string;
     label: string;
@@ -376,14 +429,14 @@ export function DesktopSidebar() {
   return (
     <aside
       className="kiddo-sidebar hidden md:flex fixed left-0 top-0 bottom-0 z-50 flex-col bg-white"
-      style={{ borderRight: "1px solid rgba(26,23,16,0.10)" }}
+      style={{ borderRight: "1px solid hsl(var(--kiddo-ink) / 0.10)" }}
       data-testid="desktop-sidebar"
     >
       {/* Logo. Wordmark is solid evergreen — the gradient-text version drifted
           from the no-AI-slop guideline (no gradient bleeds) AND from the Home
           page's plain wordmark. Brand identity belongs in the Logo mark itself;
           the wordmark just labels it. */}
-      <div className="flex items-center gap-2.5 px-5 py-5" style={{ borderBottom: "1px solid rgba(26,23,16,0.06)" }}>
+      <div className="flex items-center gap-2.5 px-5 py-5" style={{ borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.06)" }}>
         <Logo size="md" className="text-foreground" showWordmark={false} />
         <div>
           <div
@@ -459,7 +512,7 @@ export function DesktopSidebar() {
                 // so the same metaphor reads top-to-bottom.
                 <span style={{ fontSize: 16 }}>🌱</span>
               ) : activeFund.childPhotoUrl ? (
-                <img
+                <FadeImage
                   src={activeFund.childPhotoUrl}
                   alt=""
                   loading="eager"
@@ -481,11 +534,17 @@ export function DesktopSidebar() {
                       ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
                       : activeFund.name || "Fund"}
               </div>
-              <div className="text-[11.5px] text-muted-foreground mt-px tabular-nums">
-                {isFundsOverview
-                  ? `${funds.length} fund${funds.length === 1 ? "" : "s"}`
-                  : formatMoney(Number.isFinite(fundValue) ? fundValue : 0)}
-              </div>
+              {/* CHROME DE-DUP (2026-06-22): the sidebar no longer echoes the hero's
+                  balance — nav repeating the hero's one big number gutted its impact
+                  (see DASHBOARD_CHROME_PORT_SPEC.md). Identity only here: the fund name
+                  above + the avatar. The funds-overview COUNT stays (not a dup of
+                  anything); per-fund balances still show inside the switcher dropdown,
+                  which only appears on open and helps compare funds. */}
+              {isFundsOverview && (
+                <div className="text-2xs text-muted-foreground mt-px tabular-nums">
+                  {`${funds.length} fund${funds.length === 1 ? "" : "s"}`}
+                </div>
+              )}
             </div>
             <ChevronDown
               className={`h-3 w-3 shrink-0 text-muted-foreground transition-transform ${fundMenuOpen ? "rotate-180" : ""}`}
@@ -494,7 +553,7 @@ export function DesktopSidebar() {
 
           {fundMenuOpen && (
             <div
-              className="absolute left-3 right-3 top-[calc(100%+4px)] z-50 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_rgba(26,23,16,0.16)]"
+              className="absolute left-3 right-3 top-[calc(100%+4px)] z-50 overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-border))] bg-white shadow-[0_22px_60px_hsl(var(--kiddo-ink) / 0.16)]"
               role="listbox"
               data-testid="sidebar-fund-dropdown"
             >
@@ -522,7 +581,7 @@ export function DesktopSidebar() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold text-foreground">Your funds</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">All {funds.length} together</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground">All {funds.length} together</p>
                   </div>
                   {isFundsOverview && <Check className="h-4 w-4 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />}
                 </button>
@@ -532,7 +591,8 @@ export function DesktopSidebar() {
                 // household-glance surface — the "Your funds" entry up
                 // top owns the selected state in that mode.
                 const selected = !isFundsOverview && fund.id === activeFund.id;
-                const value = getFundValue(fund);
+                // Same live-value-first sourcing as the headline number above.
+                const value = readFundLiveValue(queryClient, fund.id) ?? getFundValue(fund);
                 return (
                   <button
                     key={fund.id}
@@ -547,7 +607,7 @@ export function DesktopSidebar() {
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-sm font-bold text-white shadow-[inset_0_-7px_14px_rgba(0,0,0,0.14)] overflow-hidden">
                       {fund.childPhotoUrl
-                        ? <img src={fund.childPhotoUrl} alt="" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
+                        ? <FadeImage src={fund.childPhotoUrl} alt="" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
                         : (fund.recipientFirstName || fund.name || "F").slice(0, 1).toUpperCase()
                       }
                     </div>
@@ -555,7 +615,7 @@ export function DesktopSidebar() {
                       <p className="truncate text-[13px] font-semibold text-foreground">
                         {fund.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s Fund` : fund.name || "Fund"}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+                      <p className="mt-0.5 text-2xs text-muted-foreground tabular-nums">
                         {formatMoney(Number.isFinite(value) ? value : 0)}
                       </p>
                     </div>
@@ -687,7 +747,9 @@ export function DesktopSidebar() {
                 }`}
                 data-testid={`sidebar-nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
-                <Icon size={17} strokeWidth={item.isActive ? 2.2 : 1.8} />
+                {/* App icon stroke scale: 2.0 resting / 2.5 active (matches the
+                    LabCollapse section icons + the mobile nav). Was 1.8/2.2. */}
+                <Icon size={17} strokeWidth={item.isActive ? 2.5 : 2.0} />
                 <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
                 {showDot && (
                   <span
@@ -721,7 +783,7 @@ export function DesktopSidebar() {
       {/* Quick links */}
       {quickLinks.length > 0 && (
         <div className="px-2.5 pb-3">
-          <div style={{ height: 1, background: "rgba(26,23,16,0.06)", marginBottom: 12 }} />
+          <div style={{ height: 1, background: "hsl(var(--kiddo-ink) / 0.06)", marginBottom: 12 }} />
           <div
             style={{
               fontSize: 10,
@@ -804,7 +866,7 @@ export function DesktopSidebar() {
             counter-productive. */}
 
       {/* Profile footer */}
-      <div style={{ borderTop: "1px solid rgba(26,23,16,0.10)", padding: "12px 14px 14px" }}>
+      <div style={{ borderTop: "1px solid hsl(var(--kiddo-ink) / 0.10)", padding: "12px 14px 14px" }}>
         {user && (
           <Link href="/account">
             <button
@@ -820,11 +882,11 @@ export function DesktopSidebar() {
                   background: "rgb(238,231,220)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   overflow: "hidden",
-                  border: "1.5px solid rgba(26,23,16,0.10)",
+                  border: "1.5px solid hsl(var(--kiddo-ink) / 0.10)",
                 }}
               >
                 {user.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                  <FadeImage src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <span style={{ fontSize: 13, fontWeight: 700, color: "rgb(44,39,32)" }}>
                     {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "U"}
@@ -836,7 +898,7 @@ export function DesktopSidebar() {
                   {user.firstName || user.email?.split("@")[0] || "Account"}
                   {(user as any).preferredName ? <span className="font-normal text-muted-foreground"> ({(user as any).preferredName})</span> : null}
                 </div>
-                <div className="text-[11px] text-muted-foreground truncate">{user.email}</div>
+                <div className="text-2xs text-muted-foreground truncate">{user.email}</div>
               </div>
               <ChevronRight size={13} className="shrink-0 text-muted-foreground" />
             </button>

@@ -65,7 +65,7 @@ export default function SponsorSuccess() {
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
             {isDemo
-              ? `Demo mode. No card was charged. In production this is where ${childName}'s family would see Kiddo ${tierLabel} active on their fund.`
+              ? `Demo mode. No card was charged. On a real fund, ${childName}'s family would see Kiddo ${tierLabel} active right now.`
               : `${childName}'s family was just emailed that it was you. Kiddo ${tierLabel} is now active on their fund for the next 12 months. That unlocks recurring contributions for everyone, custom fund mix, photo and voice memos in the Memory Book, and co-parent access.`}
           </p>
           <div className="mx-auto mt-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-foreground">

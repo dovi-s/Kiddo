@@ -29,14 +29,33 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1B4332" />
+    <!-- theme-color must match the color DIRECTLY under the iOS status bar — the
+         cream AppHeader / body — so the status strip blends into the app instead
+         of floating as a colored band above a cream header (the Acorns "seamless"
+         effect is just bar-color === top-content-color). The app renders cream in
+         BOTH OS appearances (no .dark class is ever applied — there is no theme
+         provider), so the bar stays cream even when the phone is in dark mode;
+         a dark-mode variant here would paint a black band over the cream app. -->
+    <meta name="theme-color" content="#F9F7F3" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- black-translucent (re-chosen 2026-06-27, founder: "the iphone part should
+         change on scroll to MATCH the header"). iOS IGNORES theme-color in a
+         standalone PWA, so the only way to make the status-bar strip follow the
+         header's green↔cream scroll color is black-translucent: the web content
+         (the AppHeader, which has paddingTop: safe-area-inset-top) draws UNDER the
+         notch, so its background fills the status-bar area and tracks on scroll.
+         KNOWN TRADEOFF (previously why we used "default"): black-translucent forces
+         the clock/wifi/battery glyphs to ALWAYS be white — crisp over the green hero,
+         but faint over cream once scrolled. iOS gives a PWA no way to flip glyph
+         color per-scroll (only the native shell can). Revert to "default" if the
+         cream-glyph faintness outweighs the green-hero match. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Kiddo" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <!-- Fonts are self-hosted via @fontsource-variable (imported in
+         src/main.tsx), not hotlinked. This removes third-party font CDN
+         IP egress on child-viewed pages (Kid View). See
+         COPPA_APPLICABILITY_MEMO.md. -->
   </head>
   <body>
     <div id="root"></div>

@@ -23,6 +23,19 @@ headline is never "10% returns" or "$3.8M."
 
 ## 🔴 Hard guardrails (do NOT cross)
 
+0. **The horizon peg is 65 — never raise it for headline size.** (2026-06-06,
+   founder noticed Acorns projects to 68.) Every extra year on the endpoint is
+   +7% on the terminal number compounding — 68 vs 65 inflates the headline
+   ~22% for free, which is the same manipulation as the banned 10% rate
+   through a different dial. 65 is the culturally legible retirement idiom
+   (Medicare age, "retire at 65") and deliberately CONSERVATIVE vs both
+   Acorns' 68 and the technically-precise alternative. If the peg ever
+   changes, the only defensible destination is **67** (Social Security FRA
+   for everyone born after 1960 — i.e., every kid we will ever serve),
+   changed for stated accuracy reasons — never 68/69/70 for size. "Why is
+   your number smaller than Acorns'?" is a question we WANT: "we round the
+   horizon down, not up."
+
 1. **7% net of fee, NEVER 10%.** The brainstorm's memorable "rules" are 10%-only
    and do not survive the swap. At Kiddo's 7%:
    | | lump-sum multiplier | $100/mo factor |
@@ -53,6 +66,22 @@ headline is never "10% returns" or "$3.8M."
    retirement: ~$Y (a 65-yr hypothetical)." The second number IS the born-invested
    / kid-2.0 story; honesty and strategy point the same way. Never headline the
    35/65-yr shock as if it were the 18-yr reality.
+6. **The doubling device — YES at ~10-year cadence, NEVER "every 7 years."**
+   (Added 2026-06-07; founder asked about the "SPY doubles every 7 years" frame.)
+   Rule of 72: "doubles every 7 years" = 72/7 ≈ **10.3%** — it silently imports
+   the 10% banned in #1. At our locked 7% net, money roughly **doubles about
+   every 10 years** (72/6.9 ≈ 10.4). The doubling FRAME is the single most
+   intuitive way to feel compounding and is encouraged — at the honest cadence
+   ("left invested, it doubles itself roughly every decade — the gift at 5 can
+   double before they're 15, and again by their mid-20s"). The "7-year" number
+   is forbidden on EVERY surface: it's not just optimistic, it contradicts the
+   one-conservative-number-everywhere discipline (projection disclaimer, at-65
+   hero, snapshot, horizon peg all = 7%), and a visible seam between surfaces is
+   the exact dial-manipulation guardrail #0 warns about. Literal S&P history
+   (~10% / ~7-yr doubling, gross/nominal/pre-fee/dividends-reinvested) is true
+   as PAST market fact but must never sit next to a projection of THEIR fund —
+   it reads as a forward promise and re-breaks the one-number rule; prefer not
+   citing it at all. Plan and project at 7%; never headline market history at 10%.
 
 ## The two strategic unlocks the brainstorm misses (the real value)
 
@@ -60,6 +89,10 @@ headline is never "10% returns" or "$3.8M."
   lands (a kid looking at money that's theirs). No retirement calculator reaches a
   child; ours can. Direct answer to "why not a free Fidelity UTMA?" Age-aware:
   wonder for the little ones, the real "leave-it-alone" math for teens.
+  *(2026-06-05: this same view is also the kid-pull acquisition artifact — the
+  thing a kid shows a friend, who goes home and asks. See the Kid-Pull section
+  of `GIFTER_TO_PARENT_LOOP.md`. Showability is a design value for this surface;
+  never a kid-facing share mechanic.)*
 - **The handoff (18-21) as the retention mechanism.** The compounding view is the
   decisive don't-cash-out tool ("here's what this becomes if you don't touch it")
   = the revenue-cliff answer made visual. Highest-leverage use, period.
@@ -75,6 +108,9 @@ handoff.
   existing helper today.
 - **"Slow, then fast"** — framed honestly: the first stretch is the quiet
   foundation; the magic needs a lifetime, which is why keeping it past 18 matters.
+- **The doubling device (~every 10 years, 7% net)** — the most intuitive way to
+  feel compounding; pairs naturally with "slow then fast." Honest cadence only;
+  see guardrail #6 (never the 10%-implied "every 7 years").
 - **Gift-impact count-up** — animate to the 18-yr number; lifetime as optional
   "the long game" reveal.
 - **Ticker-abstract projection lane** ("historical market average," not "VTI")

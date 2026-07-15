@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { Check, X, ChevronDown } from "lucide-react";
+import { Check, X, ChevronDown, Gift, Repeat, BookOpen, CheckCircle2, Building2, GraduationCap, Star, TrendingUp, Cake, Baby, Lightbulb, Bell, type LucideIcon } from "lucide-react";
 import { useActivities, useFundActivities } from "@/hooks/use-activities";
 import { useFunds } from "@/hooks/use-funds";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,6 +87,37 @@ export function markNotificationsRead(latestActivityTime?: number): void {
     // localStorage write failures are non-fatal; the dot just stays
     // until the next successful write.
   }
+}
+
+// Seed an ABSOLUTE lastReadAt (no max(now) clamp). Demo-only use: open the demo
+// "caught up as of N days ago" so the bell shows only the genuinely-recent
+// activity (the same window the SinceLastVisitDigest summarizes) instead of the
+// full worn backlog (which reads "9+") OR an empty bell. Everything older than
+// `ts` reads as seen; the recent gifts / co-parent-joined / occasion items stay
+// unread — true to the worn account. 2026-06-08.
+export function markNotificationsReadAsOf(ts: number): void {
+  if (typeof window === "undefined") return;
+  if (!Number.isFinite(ts)) return;
+  try {
+    safeLocalSet(NOTIF_LAST_READ_KEY, String(Math.floor(ts)));
+    saveReadIds(new Set());
+    saveUnreadIds(new Set());
+    broadcastReadStateChange();
+  } catch {
+    // non-fatal — see markNotificationsRead.
+  }
+}
+
+// Read the persisted lastReadAt (ms epoch) WITHOUT mutating it. The Activity
+// page uses this to capture "what had I already seen" on ARRIVAL, before its own
+// markNotificationsRead() clears the badge — so it can mark the genuinely-new
+// rows ("badge said 2, here are the 2"). Returns 0 when never set / corrupt
+// (treat everything as new), matching the comparison semantics below.
+export function getLastReadAt(): number {
+  if (typeof window === "undefined") return 0;
+  const stored = localStorage.getItem(NOTIF_LAST_READ_KEY);
+  const parsed = stored ? parseInt(stored, 10) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 // Shared subscriber hook — reads lastReadAt + readIds from localStorage
@@ -187,7 +218,11 @@ const BELL_EXCLUDED_TYPES = new Set<string>([
   "bank_unlinked",
   "ssn_provided",
 ]);
-function isBellNoise(type?: string | null): boolean {
+// Exported so the Activity feed's "New since last visit" tag can apply the SAME
+// noise filter the tab badge uses — otherwise the count of "New" rows (which
+// included your own actions like "You contributed") didn't match the badge
+// number (which excludes them). 2026-06-16.
+export function isBellNoise(type?: string | null): boolean {
   const t = String(type || "");
   // Engagement nudges (lifecycle_no_gift_14d, lifecycle_share_no_checkout_48h,
   // lifecycle_event_*, lifecycle_first_gift_received, …) are internal growth
@@ -226,7 +261,7 @@ const ACTION_ITEM_REPRESENTED_TYPES = new Set<string>([
   // is doing the work.
   "age18_handoff_ready",
 ]);
-function isRepresentedByActionItem(type?: string | null): boolean {
+export function isRepresentedByActionItem(type?: string | null): boolean {
   return ACTION_ITEM_REPRESENTED_TYPES.has(String(type || ""));
 }
 
@@ -278,27 +313,30 @@ function saveUnreadIds(ids: Set<string>) {
 
 type FeedActivity = Activity & { fundName?: string | null; recipientFirstName?: string | null };
 
-function getNotifEmoji(a: Activity): string {
+// Branded glyph per notification type (Lucide, not emoji) so the panel
+// matches the dashboard's icon system. Color is applied at the call site
+// from the row's tone.
+function getNotifIcon(a: Activity): LucideIcon {
   const t = a.type || "";
   const title = (a.title || "").toLowerCase();
   const desc = (a.description || "").toLowerCase();
-  if (t === "gift_received" || t === "gift_invested") return "🎁";
-  if (t === "auto_invest" || t === "cash_invested") return "↻";
-  if (t.startsWith("memory_") || t === "memory_entry_added") return "📖";
-  if (t === "kyc_approved") return "✅";
-  if (t === "bank_linked") return "🏦";
-  if (t === "age18_handoff_ready") return "🎓";
-  if (t.includes("plan_activated") || t === "subscription_started") return "⭐";
-  if (title.includes("crossed") || title.includes("milestone") || title.includes("hit ")) return "🌟";
+  if (t === "gift_received" || t === "gift_invested") return Gift;
+  if (t === "auto_invest" || t === "cash_invested") return Repeat;
+  if (t.startsWith("memory_") || t === "memory_entry_added") return BookOpen;
+  if (t === "kyc_approved") return CheckCircle2;
+  if (t === "bank_linked") return Building2;
+  if (t === "age18_handoff_ready") return GraduationCap;
+  if (t.includes("plan_activated") || t === "subscription_started") return Star;
+  if (title.includes("crossed") || title.includes("milestone") || title.includes("hit ")) return TrendingUp;
   // Birthday-specific: only when title/description actually mentions birthday
-  if (title.includes("birthday") || desc.includes("birthday")) return "🎂";
+  if (title.includes("birthday") || desc.includes("birthday")) return Cake;
   // Graduation / holiday / other event types by title keywords
-  if (title.includes("graduation") || title.includes("graduate")) return "🎓";
-  if (title.includes("baby") || title.includes("shower")) return "🍼";
-  if (title.includes("holiday") || title.includes("christmas") || title.includes("hanukkah")) return "🎄";
+  if (title.includes("graduation") || title.includes("graduate")) return GraduationCap;
+  if (title.includes("baby") || title.includes("shower")) return Baby;
+  if (title.includes("holiday") || title.includes("christmas") || title.includes("hanukkah")) return Gift;
   // Lifecycle nudges - these are reminders/prompts, not celebrations
-  if (t.startsWith("lifecycle_")) return "💡";
-  return "📣";
+  if (t.startsWith("lifecycle_")) return Lightbulb;
+  return Bell;
 }
 
 type IconTone = "green" | "gold" | "amber" | "sage";
@@ -314,11 +352,11 @@ function getIconTone(a: Activity): IconTone {
   return "green";
 }
 
-const toneStyles: Record<IconTone, { bg: string; border: string }> = {
-  green: { bg: "rgba(26,61,43,0.086)", border: "rgba(26,61,43,0.125)" },
-  sage:  { bg: "rgba(43,88,64,0.086)", border: "rgba(43,88,64,0.125)" },
-  amber: { bg: "rgba(122,92,30,0.086)", border: "rgba(122,92,30,0.125)" },
-  gold:  { bg: "rgba(197,130,30,0.086)", border: "rgba(197,130,30,0.125)" },
+const toneStyles: Record<IconTone, { bg: string; border: string; fg: string }> = {
+  green: { bg: "rgba(26,61,43,0.086)", border: "rgba(26,61,43,0.125)", fg: "#1A3D2B" },
+  sage:  { bg: "rgba(43,88,64,0.086)", border: "rgba(43,88,64,0.125)", fg: "#2B5840" },
+  amber: { bg: "rgba(122,92,30,0.086)", border: "rgba(122,92,30,0.125)", fg: "#7A5C1E" },
+  gold:  { bg: "rgba(197,130,30,0.086)", border: "rgba(197,130,30,0.125)", fg: "#C5821E" },
 };
 
 const fundPillColors = [
@@ -1026,7 +1064,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
               width: "min(380px, 100vw)",
               height: "100dvh",
               maxHeight: "100dvh",
-              boxShadow: "-4px 0 40px rgba(26,23,16,0.18)",
+              boxShadow: "-4px 0 40px hsl(var(--kiddo-ink) / 0.18)",
             }}
             data-testid="notifications-panel"
           >
@@ -1039,7 +1077,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 800, color: "#1A1710", lineHeight: "20px" }}>
+                  <h2 style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 800, color: "hsl(var(--kiddo-ink))", lineHeight: "20px" }}>
                     Notifications
                   </h2>
                   {(unreadCount + actionItemCount) > 0 && (
@@ -1155,8 +1193,8 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 <div
                   style={{
                     padding: "10px 16px 14px",
-                    borderBottom: "1px solid rgba(26,23,16,0.07)",
-                    background: "rgba(26,23,16,0.015)",
+                    borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.07)",
+                    background: "hsl(var(--kiddo-ink) / 0.015)",
                   }}
                 >
                   <ActionItemList
@@ -1175,9 +1213,9 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 // are static (already-read; nothing to dismiss).
                 const renderRow = (activity: FeedActivity, opts: { dim?: boolean; index?: number } = {}) => {
                   const isUnread = isActivityUnread(activity);
-                  const emoji = getNotifEmoji(activity);
+                  const NotifIcon = getNotifIcon(activity);
                   const tone = getIconTone(activity);
-                  const { bg: iconBg, border: iconBorder } = toneStyles[tone];
+                  const { bg: iconBg, border: iconBorder, fg: iconFg } = toneStyles[tone];
                   const fundIdx = activity.fundId ? (fundIndexMap.get(activity.fundId) ?? 0) : 0;
                   const pillStyle = fundPillColors[fundIdx % fundPillColors.length];
                   const childName = capFirst((activity as FeedActivity).recipientFirstName) || capFirst(funds.find((f) => f.id === activity.fundId)?.recipientFirstName) || null;
@@ -1235,7 +1273,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         padding: "14px 22px",
                         gap: 12,
                         background: rowBg,
-                        borderBottom: "1px solid rgba(26,23,16,0.06)",
+                        borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.06)",
                         cursor: "pointer",
                         transition: "background 0.2s",
                         opacity: opts.dim ? 0.72 : 1,
@@ -1252,15 +1290,23 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 17,
                           lineHeight: 1,
                         }}
                       >
-                        {emoji}
+                        <NotifIcon size={18} strokeWidth={2} color={iconFg} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1A1710", lineHeight: "17px", flex: 1, minWidth: 0 }}>
+                          {/* Line-clamp (2026-06-07, founder density pass): the
+                              title/description had no clamp, so a long server
+                              string (a gift message, a multi-clause sell
+                              description) wrapped to unlimited lines and blew up
+                              the row height unevenly — the row-level "cram." Title
+                              caps at 2 lines, description at 2; short notifications
+                              (the vast majority) are unaffected, only the rare
+                              long one gets a clean "…" cap so every row has a
+                              predictable max height. */}
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: "17px", flex: 1, minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
                             {activity.title}
                           </p>
                           {isUnread && (
@@ -1268,7 +1314,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                           )}
                         </div>
                         {activity.description && (
-                          <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px", marginTop: 3 }}>
+                          <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px", marginTop: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
                             {activity.description}
                           </p>
                         )}
@@ -1347,7 +1393,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.05 } }}
                       className="flex flex-col items-center justify-center h-40 gap-2 px-6 text-center"
                     >
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#1A1710" }}>Nothing needs your attention</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--kiddo-ink))" }}>Nothing needs your attention</p>
                       <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px" }}>
                         Gifts arriving, milestones crossed, or anything that needs a decision will show up here.
                       </p>
@@ -1386,10 +1432,10 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         style={{
                           width: "100%",
                           padding: "11px 22px",
-                          background: "rgba(26,23,16,0.03)",
+                          background: "hsl(var(--kiddo-ink) / 0.03)",
                           border: "none",
-                          borderTop: "1px solid rgba(26,23,16,0.07)",
-                          borderBottom: "1px solid rgba(26,23,16,0.07)",
+                          borderTop: "1px solid hsl(var(--kiddo-ink) / 0.07)",
+                          borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.07)",
                           fontSize: 11.5,
                           fontWeight: 700,
                           color: "#6F6860",
@@ -1461,7 +1507,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         >
                           🌱
                         </motion.div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A1710" }}>You're all caught up</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "hsl(var(--kiddo-ink))" }}>You're all caught up</p>
                         <p style={{ fontSize: 12, color: "#6F6860", lineHeight: "18px" }}>
                           Past notifications stay below. Full history lives in Activity.
                         </p>
@@ -1472,10 +1518,10 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         style={{
                           width: "100%",
                           padding: "11px 22px",
-                          background: "rgba(26,23,16,0.03)",
+                          background: "hsl(var(--kiddo-ink) / 0.03)",
                           border: "none",
-                          borderTop: "1px solid rgba(26,23,16,0.07)",
-                          borderBottom: "1px solid rgba(26,23,16,0.07)",
+                          borderTop: "1px solid hsl(var(--kiddo-ink) / 0.07)",
+                          borderBottom: "1px solid hsl(var(--kiddo-ink) / 0.07)",
                           fontSize: 11.5,
                           fontWeight: 700,
                           color: "#6F6860",
@@ -1533,7 +1579,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         // muted-evergreen tint deepens slightly on cursor
                         // approach — same Apple Settings register as the
                         // sidebar fund switcher button.
-                        className="block w-full bg-[rgba(26,61,43,0.04)] border-0 border-t border-b border-t-[rgba(26,23,16,0.06)] border-b-[rgba(26,23,16,0.06)] text-left cursor-pointer transition-colors hover:bg-[rgba(26,61,43,0.08)] focus-visible:bg-[rgba(26,61,43,0.08)] focus-visible:outline-none"
+                        className="block w-full bg-[rgba(26,61,43,0.04)] border-0 border-t border-b border-t-[hsl(var(--kiddo-ink) / 0.06)] border-b-[hsl(var(--kiddo-ink) / 0.06)] text-left cursor-pointer transition-colors hover:bg-[rgba(26,61,43,0.08)] focus-visible:bg-[rgba(26,61,43,0.08)] focus-visible:outline-none"
                         style={{
                           padding: "12px 22px",
                           fontSize: 12,
@@ -1552,7 +1598,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         // tappable. Border-bottom appears only when expanded
                         // so the divider isn't redundant with the closed
                         // state's already-implicit top edge.
-                        className={`flex w-full items-center justify-between gap-2 bg-transparent border-0 border-t border-t-[rgba(26,23,16,0.07)] text-left cursor-pointer transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none ${showRead ? "border-b border-b-[rgba(26,23,16,0.07)]" : ""}`}
+                        className={`flex w-full items-center justify-between gap-2 bg-transparent border-0 border-t border-t-[hsl(var(--kiddo-ink) / 0.07)] text-left cursor-pointer transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none ${showRead ? "border-b border-b-[hsl(var(--kiddo-ink) / 0.07)]" : ""}`}
                         style={{
                           padding: "11px 22px",
                           fontSize: 11.5,
@@ -1667,7 +1713,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 don't have context for" handoff. */}
             {!shouldSuppressFundChrome(location) && (
               <div style={{
-                borderTop: "1.5px solid rgba(26,23,16,0.10)",
+                borderTop: "1.5px solid hsl(var(--kiddo-ink) / 0.10)",
                 paddingTop: 11,
                 paddingLeft: 22,
                 paddingRight: 22,
@@ -1846,6 +1892,15 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
       // visit (markNotificationsRead clears unreadIds too).
       const idStr = String(a.id);
       if (unreadIds.has(idStr)) return true;
+      // No read reference yet (lastReadAt === 0): mirror the Activity feed's
+      // `seenBeforeArrival > 0` guard (Activity.tsx). With no "new since" anchor,
+      // nothing is naturally new — only explicit swipe-unread (above) counts.
+      // Without this, an unseeded read-state counted the whole worn backlog as
+      // unread → the badge read "9+" while the feed (guarding on
+      // seenBeforeArrival > 0) marked nothing new: the "9+ but nothing's new"
+      // divergence — e.g. the demo before DemoGiftMoment's read-state seed lands,
+      // or a real user whose localStorage was cleared. 2026-06-15.
+      if (lastReadAt === 0) return false;
       if (new Date(a.createdAt!).getTime() <= lastReadAt) return false;
       if (readIds.has(idStr)) return false;
       return true;
@@ -1882,18 +1937,19 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  // Fund-scope the feed on a fund page so the badge counts THIS fund's own
-  // 40-row window, not a global 40 shared across every fund then narrowed.
-  // On a busy multi-fund account the shared window let other funds' rows
-  // crowd out the active fund's, so the bell under-reported (e.g. read "6"
-  // while the fund-scoped Activity-tab dot correctly read "9+"). Mirrors
-  // useScopedNotifActivities' query scoping so all four surfaces agree.
-  const scopedFundId = scope === "active" ? (activeFundId || null) : null;
-  const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated, scopedFundId);
-  const activities = useMemo(
-    () => dedupeGiftPairs(activitiesRaw as Activity[]),
-    [activitiesRaw],
-  );
+  // Source the feed through the SAME hook the Activity-tab dot uses, which is
+  // what the useScopedNotifActivities doc-block already promised ("Bell badge +
+  // mobile activity-tab dot use this hook") but the bell had drifted away from.
+  // For a normal fund this is the identical fund-scoped /api/me 40-row window the
+  // bell read before (non-owner behavior is byte-for-byte unchanged), so the bell
+  // and the dot now compute from one source and cannot diverge by feed. It ALSO
+  // adds the owner-mode branch: a fund transferred TO this viewer at majority
+  // reads the FUND ledger (/api/funds/:id/activities), because the viewer's
+  // /api/me feed returns nothing for a fund whose history lives under the previous
+  // owner's userId. Before this, the bell badge under-counted to ~0 on a
+  // post-handoff owner's own fund while the dot read correctly. dedupe is applied
+  // inside the hook.
+  const activities = useScopedNotifActivities(scope, activeFundId, isAuthenticated);
 
   // Cross-fund realtime nudge. The activities query (and the fund list)
   // both contribute to the bell badge — on any new gift across any of
@@ -1962,6 +2018,15 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
       if (scope === "active" && (!activeFundId || a.fundId !== activeFundId)) return false;
       const idStr = String(a.id);
       if (unreadIds.has(idStr)) return true;
+      // No read reference yet (lastReadAt === 0): mirror the Activity feed's
+      // `seenBeforeArrival > 0` guard (Activity.tsx). With no "new since" anchor,
+      // nothing is naturally new — only explicit swipe-unread (above) counts.
+      // Without this, an unseeded read-state counted the whole worn backlog as
+      // unread → the badge read "9+" while the feed (guarding on
+      // seenBeforeArrival > 0) marked nothing new: the "9+ but nothing's new"
+      // divergence — e.g. the demo before DemoGiftMoment's read-state seed lands,
+      // or a real user whose localStorage was cleared. 2026-06-15.
+      if (lastReadAt === 0) return false;
       if (new Date(a.createdAt!).getTime() <= lastReadAt) return false;
       if (readIds.has(idStr)) return false;
       return true;
